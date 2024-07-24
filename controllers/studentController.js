@@ -1,0 +1,123 @@
+import { checkEmail, checkEnroll } from '../repository/studentRepository.js';
+import * as studentService from '../services/studentService.js'
+
+// 1. create student
+export const addStudent = async (req,res) => {
+    const file = req.files;
+    let {universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId,courseId,email,enrollNumber} = req.body
+    const checkExistingEmail = await checkEmail(email)
+    const checkExistingEnroll = await checkEnroll(enrollNumber)
+    try {
+        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)){
+            res.status(400).send("universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
+        }
+        if(email){
+            if(checkExistingEmail){
+                if (email.toLowerCase() === checkExistingEmail.dataValues.email.toLowerCase()){
+                    res.status(400).send("Email is already existing");
+                }          
+            }
+        }else{
+            res.status(400).send("email is required");
+        }
+        if(enrollNumber){
+            if(checkExistingEnroll){
+                if (enrollNumber.toLowerCase() === checkExistingEnroll.dataValues.enroll_number.toLowerCase()){
+                    res.status(400).send("Enroll is already existing");
+                }          
+            }
+        }
+        const info = req.body
+        const result = await studentService.addStudent(info,file);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in add Student:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+// 2. get all student
+export const getAllStudents = async (req,res) => {
+    let {search} = req.query
+     search = search || 'all' 
+    try {
+        const result = await studentService.getAllStudents(search);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting all student details:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+// 3. get single student details
+export const getSingleStudentDetail = async (req,res) => {
+    const studentId = req.query.studentId;
+    try {
+        if (!studentId){
+            res.status(400).send("studentId is required");
+        }
+        const result = await studentService.getSingleStudentDetail(studentId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in getting ${studentId} details , single student details:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+// import student data
+
+export const importStudentData = async (req,res) => {
+    const files = req.files.student.name;
+   const file = req.files;
+    const fileType = files.split('.').pop();
+  try {
+    await studentService.importStudentData(fileType,file);
+    // await importService.importFile(fileType,file);
+    res.status(200).send({ message: 'Data imported successfully' });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+};
+
+// update student 
+export const updateStudentDetails = async (req,res) => {
+    const {studentId,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId,courseId} = req.body;
+    const info = req.body;
+    const file = req.files;  
+    try {
+        if (!(studentId && universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId )){
+            res.status(400).send("student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
+        }
+        const result = await studentService.updateStudentDetails(studentId, info,file);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in updating student Id ${studentId} and ${campusId}:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const deleteStudentDetail = async (req,res) => {
+    const {studentId} = req.params;
+    try {
+        if (!studentId){
+            res.status(400).send("student Id is required");
+        }else{
+            const result = await studentService.deleteStudentDetail(studentId);
+            res.status(200).send(result);
+        }
+    } catch (error) {
+        console.error(`Error in deleting student Id ${studentId}:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getEmptyEnrollNumber = async (req,res) => {
+    const studentId = req.query.studentId;
+    try {
+        const result = await studentService.getEmptyEnrollNumber(studentId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in getting EMpty Enroll Number:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
