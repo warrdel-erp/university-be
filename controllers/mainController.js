@@ -21,11 +21,11 @@ export const addCampus = async (req,res) => {
         if(!universityId){
             res.status(400).send('University Id is required')
         }
-        else if(req){
-            res.status(400).send('For Add Campus Contact TO Warrdel Team')
-        }
-        // const result = await mainServices.addCampus(data);
-        // res.status(200).send(result);
+        // else if(req){
+        //     res.status(400).send('For Add Campus Contact TO Warrdel Team')
+        // }
+        const result = await mainServices.addCampus(data);
+        res.status(200).send(result);
     } catch (error) {
         console.error("Error in Add Campus:", error);
         res.status(500).send("Internal Server Error");
@@ -39,11 +39,11 @@ export const addInstitute = async (req,res) => {
         if(!(universityId && campusId)){
             res.status(400).send('University Id and Campus Id is required')
         }
-        else if(req){
-            res.status(400).send('For Add Institute Contact TO Warrdel Team')
-        } 
-        // const result = await mainServices.addInstitute(data);
-        // res.status(200).send(result);
+        // else if(req){
+        //     res.status(400).send('For Add Institute Contact TO Warrdel Team')
+        // } 
+        const result = await mainServices.addInstitute(data);
+        res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Institute:", error);
         res.status(500).send("Internal Server Error");
@@ -106,6 +106,21 @@ export const addSpecialization = async (req,res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Course:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const addSubject = async (req,res) => {
+    try {
+        const {courseId,universityId} = req.body;
+        const data = req.body
+        if(!(courseId && universityId)){
+            res.status(400).send('universityId and course Id is required')
+        } 
+        const result = await mainServices.addSubject(data);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add SUbject:", error);
         res.status(500).send("Internal Server Error");
     }
 };

@@ -189,10 +189,6 @@ export default sequelize.define(
             type:DataTypes.ENUM(...counselor),
             allowNull: true,
         },
-        // specialization:{
-        //     type: DataTypes.ENUM(...specialization),
-        //     allowNull: false,
-        // },
         courseMedium:{
             type:DataTypes.ENUM(...courseMedium),
             allowNull: true,
@@ -362,7 +358,6 @@ export default sequelize.define(
         email:{
             type: DataTypes.STRING,
             allowNull: false,
-            unique:true
         },
         panNumber:{
             type: DataTypes.STRING,
@@ -417,60 +412,6 @@ export default sequelize.define(
             allowNull: true,
             field:'student_name_alias'
         },
-        pAddress:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'p_address'
-        },
-        pCountry:{
-            type: DataTypes.ENUM(...country),
-            allowNull: true,
-            field:'p_country'
-        },
-        pState:{
-            type:DataTypes.ENUM(...state),
-            allowNull: true,
-            field:'p_state'
-        },
-        pcity:{
-            type: DataTypes.ENUM(...city),
-            allowNull: true,
-            field:'p_city'
-        },
-        pPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'p_pincode'
-		},
-        cAddress:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'c_address'
-        },
-        cCountry:{
-            type: DataTypes.ENUM(...country),
-            allowNull: true,
-            field:'c_country'
-        },
-        cState:{
-            type:DataTypes.ENUM(...state),
-            allowNull: true,
-            field:'c_state'
-        },
-        ccity:{
-            type: DataTypes.ENUM(...city),
-            allowNull: true,
-            field:'c_city'
-        },
-        cPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'c_pincode'
-		},
-        contact:{
-            type:DataTypes.STRING,
-            allowNull:true
-        },
         studentStatus:{
             type:DataTypes.ENUM(...studentStatus),
             allowNull:true,
@@ -490,58 +431,6 @@ export default sequelize.define(
             type:DataTypes.STRING,
             allowNull:true,
             field:'general_remark'
-        },
-        entranceExam:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'entrance_exam'
-        },
-        allotmentList:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'allotment_list'
-        },
-        allotmentCategory:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'allotment_category'
-        },
-        categoryRank:{
-            type:DataTypes.INTEGER,
-            allowNull:true,
-            field:'category_rank'
-        },
-        rollNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'roll_number'
-        },
-        marks:{
-            type:DataTypes.FLOAT,
-            allowNull:true,
-        },
-        percentile:{
-            type:DataTypes.FLOAT,
-            allowNull:true,
-        },
-        applicationId:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'application_id'
-        },
-        counselingPlace:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'counseling_place'
-        },
-        counselingDate:{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field:'counseling_date'
-        },
-        remarks:{
-            type:DataTypes.STRING,
-            allowNull:true,
         },
         preference:{
             type:DataTypes.STRING,

@@ -105,10 +105,24 @@ export async function getAllSpecialization(universityId) {
     }
 };
 
+export async function getAllSubject(universityId) {
+    try {
+        const result = await model.subjectModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+            where: {
+                university_id: universityId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in get all subject details:", error);
+        throw error;
+    }
+};
+
 // for Add
 
 export async function addCampus(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.campusModel.create(data);
         return result;
@@ -119,7 +133,6 @@ export async function addCampus(data) {
 };
 
 export async function addInstitute(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.instituteModel.create(data);
         return result;
@@ -130,7 +143,6 @@ export async function addInstitute(data) {
 };
 
 export async function addAffiliatedUniversity(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.affiliatedIniversityModel.create(data);
         return result;
@@ -141,7 +153,6 @@ export async function addAffiliatedUniversity(data) {
 };
 
 export async function addCourseLevel(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.courseLevelModel.create(data);
         return result;
@@ -152,7 +163,6 @@ export async function addCourseLevel(data) {
 };
 
 export async function addCourse(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.courseModel.create(data);
         return result;
@@ -163,12 +173,21 @@ export async function addCourse(data) {
 };
 
 export async function addSpecialization(data) {
-    console.log(`>>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.specializationModel.create(data);
         return result;
     } catch (error) {
         console.error("Error in add specialization :", error);
+        throw error;
+    }
+};
+
+export async function addSubject(data) {
+    try {
+        const result = await model.subjectModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add subject :", error);
         throw error;
     }
 };

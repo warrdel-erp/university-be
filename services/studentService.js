@@ -35,17 +35,36 @@ export async function addStudent(info, files) {
       info.documentStatus = 'Complete Documents';
     }
 
-    info.scholarNumber = await generateScholarNumber(info.courseId,info.instituteId);
+    info.scholarNumber = await generateScholarNumber(info.courseId, info.instituteId);
     info.email = info.email.toLowerCase();
-    const newStudent = await studentRepository.addStudent(info, { transaction });
+    const student = await studentRepository.addStudent(info, { transaction });
+    const studentId = student.dataValues.studentId;
+
+    //  entranceDetails
+    let entranceDetails = [];
+    if (info.entranceDetails && info.entranceDetails.length > 0) {
+      const entranceDetailsWithStudentId = info.entranceDetails.map(detail => ({
+        ...detail,
+        studentId: studentId
+      }));
+    entranceDetails =  await studentRepository.addStudentsEntranceDetail(entranceDetailsWithStudentId, { transaction });
+    }
+
+    //  addressDetails
+    let addressDetails = null
+    if (info.addressDetails) {
+      info.addressDetails.studentId = studentId;
+    addressDetails = await studentRepository.addStudentsAddress(info.addressDetails, { transaction });
+    };
+    const result = {student,entranceDetails,addressDetails} 
     await transaction.commit();
-    return newStudent;
+    return result;
   } catch (error) {
     await transaction.rollback();
     console.error('Error adding student:', error);
     throw error;
-  }
-}
+  };
+};
 
 async function generateScholarNumber(courseId,instituteId) {
   const getCourseCodeDetail = await getCourseCode(courseId);
@@ -112,7 +131,6 @@ export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
   const settingKey = 'studentDocument';
   const getstudentDocuments = await getSettingValue(settingKey);
-  console.log(`>>>>>>>>getstudentDocuments>>>>>>..`,getstudentDocuments);
   const studentRequiredDocuments = getstudentDocuments.dataValues.setting_value;
   try {
     if (files && typeof files === 'object') {

@@ -11,6 +11,26 @@ export async function addStudent(data) {
     }
 };
 
+export async function addStudentsEntranceDetail(data) {
+    try {
+        const result = await model.studentsEntranceDetail.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add students Entrance Detail:", error);
+        throw error;
+    }
+};
+
+export async function addStudentsAddress(data) {
+    try {
+        const result = await model.studentsAddress.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add students Address:", error);
+        throw error;
+    }
+};
+
 export async function getAllStudents(firstName) {
     let result;
     try {
@@ -184,7 +204,8 @@ export async function checkEmail(email) {
         const result = await model.studentModel.findOne({
             attributes: attribute,
             where: {
-                email: email
+                email: email,
+                deleted_at: null
             }
         });
         return result;

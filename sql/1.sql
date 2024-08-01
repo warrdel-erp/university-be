@@ -60,10 +60,6 @@ CREATE TABLE campus (
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
-INSERT INTO campus (university_id, campus_name, campus_code) VALUES 
-(1, 'PUNE', 'PU'),
-(1, 'JAIPUR', 'JA');
-
 CREATE TABLE institute (
   institute_id INT AUTO_INCREMENT PRIMARY KEY,
   campus_id INT NOT NULL,
@@ -76,10 +72,6 @@ CREATE TABLE institute (
   FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
-
-INSERT INTO institute (campus_id, university_id, institute_name, institute_code) VALUES 
-(1, 1, 'AAYOJAN SCHHOL OF ARCHITECTURE', 'ASA'),
-(2, 1, 'AAYOJAN SCHHOL OF ARCHITECTURE', 'ASA');
 
 CREATE TABLE affiliated_university (
   affiliated_university_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,12 +86,6 @@ CREATE TABLE affiliated_university (
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
-INSERT INTO affiliated_university (institute_id, university_id, affiliated_university_name, affiliated_university_code) VALUES 
-(1, 1, 'Rajasthan Technical University', 'RTU'),
-(1, 1, 'RISU', 'RISU'),
-(2, 1, 'Rajasthan Technical University', 'RTU'),
-(2, 1, 'RISU', 'RISU');
-
 CREATE TABLE course_level (
   course_level_id INT AUTO_INCREMENT PRIMARY KEY,
   affiliated_university_id INT NOT NULL,
@@ -112,32 +98,6 @@ CREATE TABLE course_level (
   FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university (affiliated_university_id),
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
-
-INSERT INTO course_level (affiliated_university_id, university_id, course_level_name, course_level_code) VALUES 
-(1, 1, 'BACHELOR DEGREE', 'BD'),
-(1, 1, 'DIPLOMA DEGREE', 'DD'),
-(1, 1, 'M.PHIL PROGRAMME', 'MPD'),
-(1, 1, 'MASTER PROGRAMME', 'MP'),
-(1, 1, 'PG DIPLOMA', 'PD'),
-(1, 1, 'PHD PROGRAMME', 'PHD'),
-(2, 1, 'BACHELOR DEGREE', 'BD'),
-(2, 1, 'DIPLOMA DEGREE', 'DD'),
-(2, 1, 'M.PHIL PROGRAMME', 'MPD'),
-(2, 1, 'MASTER PROGRAMME', 'MP'),
-(2, 1, 'PG DIPLOMA', 'PD'),
-(2, 1, 'PHD PROGRAMME', 'PHD'),
-(3, 1, 'BACHELOR DEGREE', 'BD'),
-(3, 1, 'DIPLOMA DEGREE', 'DD'),
-(3, 1, 'M.PHIL PROGRAMME', 'MPD'),
-(3, 1, 'MASTER PROGRAMME', 'MP'),
-(3, 1, 'PG DIPLOMA', 'PD'),
-(3, 1, 'PHD PROGRAMME', 'PHD'),
-(4, 1, 'BACHELOR DEGREE', 'BD'),
-(4, 1, 'DIPLOMA DEGREE', 'DD'),
-(4, 1, 'M.PHIL PROGRAMME', 'MPD'),
-(4, 1, 'MASTER PROGRAMME', 'MP'),
-(4, 1, 'PG DIPLOMA', 'PD'),
-(4, 1, 'PHD PROGRAMME', 'PHD');
 
 CREATE TABLE course (
   course_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -152,80 +112,6 @@ CREATE TABLE course (
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
-INSERT INTO course (course_level_id, university_id, course_name, course_code) VALUES 
-(1, 1, 'B.ARCH', 'BARCH'),
--- (1, 1, 'M.ARCH', 'MARCH'),
--- (1, 1, 'B.DES', 'BDES'),
--- (2, 1, 'B.ARCH', 'BARCH'),
-(2, 1, 'M.ARCH', 'MARCH'),
-(2, 1, 'B.DES', 'BDES'),
-(3, 1, 'B.ARCH', 'BARCH'),
-(3, 1, 'M.ARCH', 'MARCH'),
-(3, 1, 'B.DES', 'BDES'),
-(4, 1, 'B.ARCH', 'BARCH'),
-(4, 1, 'M.ARCH', 'MARCH'),
-(4, 1, 'B.DES', 'BDES'),
-(5, 1, 'B.ARCH', 'BARCH'),
-(5, 1, 'M.ARCH', 'MARCH'),
-(5, 1, 'B.DES', 'BDES'),
-(6, 1, 'B.ARCH', 'BARCH'),
-(6, 1, 'M.ARCH', 'MARCH'),
-(6, 1, 'B.DES', 'BDES'),
-(7, 1, 'B.ARCH', 'BARCH'),
-(7, 1, 'M.ARCH', 'MARCH'),
-(7, 1, 'B.DES', 'BDES'),
-(8, 1, 'B.ARCH', 'BARCH'),
-(8, 1, 'M.ARCH', 'MARCH'),
-(8, 1, 'B.DES', 'BDES'),
-(9, 1, 'B.ARCH', 'BARCH'),
-(9, 1, 'M.ARCH', 'MARCH'),
-(9, 1, 'B.DES', 'BDES'),
-(10, 1, 'B.ARCH', 'BARCH'),
-(10, 1, 'M.ARCH', 'MARCH'),
-(10, 1, 'B.DES', 'BDES'),
-(11, 1, 'B.ARCH', 'BARCH'),
-(11, 1, 'M.ARCH', 'MARCH'),
-(11, 1, 'B.DES', 'BDES'),
-(12, 1, 'B.ARCH', 'BARCH'),
-(12, 1, 'M.ARCH', 'MARCH'),
-(12, 1, 'B.DES', 'BDES'),
-(13, 1, 'B.ARCH', 'BARCH'),
-(13, 1, 'M.ARCH', 'MARCH'),
-(13, 1, 'B.DES', 'BDES'),
-(14, 1, 'B.ARCH', 'BARCH'),
-(14, 1, 'M.ARCH', 'MARCH'),
-(14, 1, 'B.DES', 'BDES'),
-(15, 1, 'B.ARCH', 'BARCH'),
-(15, 1, 'M.ARCH', 'MARCH'),
-(15, 1, 'B.DES', 'BDES'),
-(16, 1, 'B.ARCH', 'BARCH'),
-(16, 1, 'M.ARCH', 'MARCH'),
-(16, 1, 'B.DES', 'BDES'),
-(17, 1, 'B.ARCH', 'BARCH'),
-(17, 1, 'M.ARCH', 'MARCH'),
-(17, 1, 'B.DES', 'BDES'),
-(18, 1, 'B.ARCH', 'BARCH'),
-(18, 1, 'M.ARCH', 'MARCH'),
-(18, 1, 'B.DES', 'BDES'),
-(19, 1, 'B.ARCH', 'BARCH'),
-(19, 1, 'M.ARCH', 'MARCH'),
-(19, 1, 'B.DES', 'BDES'),
-(20, 1, 'B.ARCH', 'BARCH'),
-(20, 1, 'M.ARCH', 'MARCH'),
-(20, 1, 'B.DES', 'BDES'),
-(21, 1, 'B.ARCH', 'BARCH'),
-(21, 1, 'M.ARCH', 'MARCH'),
-(21, 1, 'B.DES', 'BDES'),
-(22, 1, 'B.ARCH', 'BARCH'),
-(22, 1, 'M.ARCH', 'MARCH'),
-(22, 1, 'B.DES', 'BDES'),
-(23, 1, 'B.ARCH', 'BARCH'),
-(23, 1, 'M.ARCH', 'MARCH'),
-(23, 1, 'B.DES', 'BDES'),
-(24, 1, 'B.ARCH', 'BARCH'),
-(24, 1, 'M.ARCH', 'MARCH'),
-(24, 1, 'B.DES', 'BDES');
-
 CREATE TABLE specialization (
     specialization_id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
@@ -239,8 +125,9 @@ CREATE TABLE specialization (
     FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
-INSERT INTO specialization ( course_id, university_id, specialization_name, specialization_code ) VALUES 
-( 1, 1, 'Computer Science', 'CS101' );
+ALTER TABLE campus
+ADD COLUMN latitude FLOAT NULL,
+ADD COLUMN longitude FLOAT NULL;
 
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -307,7 +194,7 @@ CREATE TABLE students (
     signature JSON NULL,
     phone_number VARCHAR(255) NOT NULL,
     mobile_number VARCHAR(255) NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
     pan_number VARCHAR(255) NULL,
     parent_email VARCHAR(255) NULL,
     parent_number VARCHAR(255) NULL,
@@ -319,32 +206,10 @@ CREATE TABLE students (
     shift ENUM('Morning', 'Evening', 'AfterNoon') NULL,
     whatsapp_number VARCHAR(255) NULL,
     student_name_alias VARCHAR(255) NULL,
-    p_address VARCHAR(255) NULL,
-    p_country ENUM('INDIA', 'USA') NULL,
-    p_state ENUM('RAJASTHAN', 'HARYANA', 'Punjab') NULL,
-    p_city ENUM('JAIPUR', 'KOTA', 'KOTPUTLI', 'REWARI', 'GURUGRAM') NULL,
-    p_pincode INT NULL,
-    c_address VARCHAR(255) NULL,
-    c_country ENUM('INDIA', 'USA') NULL,
-    c_state ENUM('RAJASTHAN', 'HARYANA', 'Punjab') NULL,
-    c_city ENUM('JAIPUR', 'KOTA', 'KOTPUTLI', 'REWARI', 'GURUGRAM') NULL,
-    c_pincode INT NULL,
-    contact VARCHAR(255) NULL,
     student_status ENUM('Cancel Student', 'Left Student', 'Long Absent', 'Non Attendant') NULL,
     cancel_date DATE NULL,
     cancel_reason VARCHAR(255) NULL,
     general_remark VARCHAR(255) NULL,
-    entrance_exam VARCHAR(255) NULL,
-    allotment_list VARCHAR(255) NULL,
-    allotment_category VARCHAR(255) NULL,
-    category_rank INT NULL,
-    roll_number VARCHAR(255) NULL,
-    marks FLOAT NULL,
-    percentile FLOAT NULL,
-    application_id VARCHAR(255) NULL,
-    counseling_place VARCHAR(255) NULL,
-    counseling_date DATE NULL,
-    remarks VARCHAR(255) NULL,
     preference VARCHAR(255) NULL,
     document_status ENUM('Pending Documents', 'Complete Documents') DEFAULT 'Pending Documents',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -359,6 +224,71 @@ CREATE TABLE students (
     FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
 );
 
-ALTER TABLE campus
-ADD COLUMN latitude FLOAT NULL,
-ADD COLUMN longitude FLOAT NULL;
+
+CREATE TABLE students_entrance_detail (
+    students_entrance_detail_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    entrance_exam VARCHAR(255),
+    allotment_list VARCHAR(255),
+    allotment_category VARCHAR(255),
+    category_rank INT,
+    roll_number VARCHAR(255),
+    marks FLOAT,
+    percentile FLOAT,
+    application_id VARCHAR(255),
+    counseling_place VARCHAR(255),
+    counseling_date DATE,
+    remarks VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+);
+
+CREATE TABLE students_address (
+    students_address_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    p_address VARCHAR(255),
+    p_country ENUM('INDIA', 'USA'),
+    p_state ENUM('RAJASTHAN', 'HARYANA', 'Punjab'),
+    p_city ENUM('JAIPUR', 'KOTA', 'KOTPUTLI', 'REWARI', 'GURUGRAM'),
+    p_pincode INT,
+    c_address VARCHAR(255),
+    c_country ENUM('INDIA', 'USA'),
+    c_state ENUM('RAJASTHAN', 'HARYANA', 'Punjab'),
+    c_city ENUM('JAIPUR', 'KOTA', 'KOTPUTLI', 'REWARI', 'GURUGRAM'),
+    c_pincode INT,
+    contact VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students (student_id)
+);
+
+CREATE TABLE subject (
+    subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    university_id INT NOT NULL,
+    specialization_id INT,
+    subject_name VARCHAR(255) NOT NULL,
+    subject_code VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
+);
+
+CREATE TABLE subject_mapper (
+    subject_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    semester VARCHAR(255),
+    batch VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+);

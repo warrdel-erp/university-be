@@ -6,7 +6,6 @@ export const readCSV = (file) => {
     return new Promise((resolve, reject) => {
       const results = [];
       const filePath = file.tempFilePath || file.student.data;
-  console.log(`>>>>>>>>>>>>>>>file.student.data`,file.student.data);
       if (!fs.existsSync(filePath)) {
         return reject(new Error('CSV file not found'));
       }

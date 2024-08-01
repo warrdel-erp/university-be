@@ -2,37 +2,46 @@ import { checkEmail, checkEnroll } from '../repository/studentRepository.js';
 import * as studentService from '../services/studentService.js'
 
 // 1. create student
-export const addStudent = async (req,res) => {
+
+export const addStudent = async (req, res) => {
     const file = req.files;
-    let {universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId,courseId,email,enrollNumber} = req.body
-    const checkExistingEmail = await checkEmail(email)
-    const checkExistingEnroll = await checkEnroll(enrollNumber)
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber } = req.body;
+
     try {
-        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)){
-            res.status(400).send("universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
+        // Check for required fields
+        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)) {
+            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, and courseId are required");
         }
-        if(email){
-            if(checkExistingEmail){
-                if (email.toLowerCase() === checkExistingEmail.dataValues.email.toLowerCase()){
-                    res.status(400).send("Email is already existing");
-                }          
+
+        // Check if email already exists
+        if (email) {
+            const checkExistingEmail = await checkEmail(email);
+            if (checkExistingEmail) {
+                if (email.toLowerCase() === checkExistingEmail.dataValues.email.toLowerCase()) {
+                    return res.status(400).send("Email is already existing");
+                }
             }
-        }else{
-            res.status(400).send("email is required");
+        } else {
+            return res.status(400).send("Email is required");
         }
-        if(enrollNumber){
-            if(checkExistingEnroll){
-                if (enrollNumber.toLowerCase() === checkExistingEnroll.dataValues.enroll_number.toLowerCase()){
-                    res.status(400).send("Enroll is already existing");
-                }          
+
+        // Check if enrollment number already exists
+        if (enrollNumber) {
+            const checkExistingEnroll = await checkEnroll(enrollNumber);
+            if (checkExistingEnroll) {
+                if (enrollNumber.toLowerCase() === checkExistingEnroll.dataValues.enroll_number.toLowerCase()) {
+                    return res.status(400).send("Enrollment number is already existing");
+                }
             }
         }
-        const info = req.body
-        const result = await studentService.addStudent(info,file);
-        res.status(200).send(result);
+
+        // Add the student
+        const info = req.body;
+        const result = await studentService.addStudent(info, file);
+        return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in add Student:", error);
-        res.status(500).send("Internal Server Error");
+        console.error("Error in addStudent:", error);
+        return res.status(500).send("Internal Server Error");
     }
 };
 

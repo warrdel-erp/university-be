@@ -7,6 +7,10 @@ import courseLevelModel from './courseLevelModel.js';
 import courseModel from './courseModel.js';
 import studentModel from './studentModel.js';
 import specializationModel from './specializationModel.js';
+import subjectModel from './subjectModel.js';
+import studentsEntranceDetail from './studentsEntranceDetailModel.js';
+import studentsAddress from './studentsAddressModel.js';
+import subjectMapperModel from './subjectMapperModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -36,4 +40,8 @@ export {
     courseModel,
     specializationModel,
 	studentModel,
+    subjectModel,
+    studentsEntranceDetail,
+    studentsAddress,
+    subjectMapperModel,
   };
