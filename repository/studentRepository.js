@@ -67,6 +67,16 @@ export async function getAllStudents(firstName) {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                    },
+                    {
+                        model: model.studentsEntranceDetail,
+                        as: "entranceDetails",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    },
+                    {
+                        model: model.studentsAddress,
+                        as: "studentAddress",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     }
                     ],
                 where: {
@@ -107,6 +117,16 @@ export async function getAllStudents(firstName) {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                    },
+                    {
+                        model: model.studentsEntranceDetail,
+                        as: "entranceDetails",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    },
+                    {
+                        model: model.studentsAddress,
+                        as: "studentAddress",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     }
                     ],
             });
@@ -152,6 +172,16 @@ export async function getSingleStudentDetail(studentId) {
                 model: model.specializationModel,
                 as: "specialization",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+            },
+            {
+                model: model.studentsEntranceDetail,
+                as: "entranceDetails",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+                model: model.studentsAddress,
+                as: "studentAddress",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             }
             ],
             where: {
@@ -194,6 +224,36 @@ export async function updateStudentDetails(studentId, data) {
      return result; 
     } catch (error) {
         console.error(`Error updating student details ${studentId} :`, error);
+        throw error; 
+    }
+};
+
+export async function updateStudentEntranceDetails(studentsEntranceDetailId, data) {
+    console.log(`>>>>updateStudentEntranceDetails>>>>>>studentsEntranceDetailId, data>>>>`,studentsEntranceDetailId, data);
+    try {
+        const result = await model.studentsEntranceDetail.update(data, {
+            where: {
+                studentsEntranceDetailId: studentsEntranceDetailId
+            }
+        });
+     return result; 
+    } catch (error) {
+        console.error(`Error updating student entrance details ${studentsEntranceDetailId} :`, error);
+        throw error; 
+    }
+};
+
+export async function updateStudentAddressDetails(studentsAddressId, data) {
+    console.log(`>>>updateStudentAddressDetails>>>>>>>studentsAddressId, data>>>>>`,studentsAddressId, data);
+    try {
+        const result = await model.studentsAddress.update(data, {
+            where: {
+                studentsAddressId: studentsAddressId
+            }
+        });
+     return result; 
+    } catch (error) {
+        console.error(`Error updating student address details ${studentsAddressId} :`, error);
         throw error; 
     }
 };
@@ -259,5 +319,65 @@ export async function deleteStudentDetail (studentId) {
     } catch (error) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
+    }
+};
+
+export async function deleteStudentEntranceDetail (studentsEntranceDetailId) {
+    try {
+        const result = await model.studentsEntranceDetail.destroy({
+            where: { studentsEntranceDetailId },
+            individualHooks: true
+        });
+        return { message: 'Student entrance details deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};
+
+export async function deleteStudentAddressDetail (studentsAddressId) {
+    try {
+        const result = await model.studentsAddress.destroy({
+            where: { studentsAddressId },
+            individualHooks: true
+        });
+        return { message: 'Student address deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};
+
+export async function findEntranceDetailsByStudentId(studentId) {
+    try {
+        const attribute = ["students_entrance_detail_id"];
+        const result = await model.studentsEntranceDetail.findAll({
+            attributes: attribute,
+            where: {
+                studentId: studentId,
+                deleted_at: null
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in Entrance Details by student Id for${studentId}:`, error);
+        throw error;
+    }
+};
+
+export async function findStudentAddressByStudentId(StudentId) {
+    try {
+        const attribute = ["students_address_id"];
+        const result = await model.studentsAddress.findOne({
+            attributes: attribute,
+            where: {
+                student_id: StudentId,
+                deleted_at: null
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in student address by student Id for ${StudentId}:`, error);
+        throw error;
     }
 };

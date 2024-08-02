@@ -30,6 +30,12 @@ courseModel.hasMany(studentModel, { foreignKey: 'course_id', as: 'course' });
 studentModel.belongsTo(specializationModel, { foreignKey: 'specialization_id', as: 'specialization' });
 specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as: 'specialization' });
 
+studentsEntranceDetail.belongsTo(studentModel, { foreignKey: 'student_id', as: 'entranceDetails' });
+studentModel.hasMany(studentsEntranceDetail, { foreignKey: 'student_id', as: 'entranceDetails' });
+
+studentsAddress.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentAddress' });
+studentModel.hasMany(studentsAddress, { foreignKey: 'student_id', as: 'studentAddress' });
+
 export {
     settingModel,
 	universityModel,

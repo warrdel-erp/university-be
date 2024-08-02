@@ -42,20 +42,46 @@ export async function addStudent(info, files) {
 
     //  entranceDetails
     let entranceDetails = [];
-    if (info.entranceDetails && info.entranceDetails.length > 0) {
-      const entranceDetailsWithStudentId = info.entranceDetails.map(detail => ({
-        ...detail,
-        studentId: studentId
-      }));
-    entranceDetails =  await studentRepository.addStudentsEntranceDetail(entranceDetailsWithStudentId, { transaction });
+    if (info.entranceDetails) {
+      try {
+        // Parse entranceDetails if it JSON string
+        const entranceDetailsArray = typeof info.entranceDetails === 'string'
+          ? JSON.parse(info.entranceDetails)
+          : info.entranceDetails;
+
+        if (Array.isArray(entranceDetailsArray)) {
+          const entranceDetailsWithStudentId = entranceDetailsArray.map(detail => ({
+            ...detail,
+            studentId: studentId
+          }));
+          entranceDetails = await studentRepository.addStudentsEntranceDetail(entranceDetailsWithStudentId, { transaction });
+        }
+      } catch (error) {
+        console.error('Error parsing entranceDetails:', error);
+        throw error;
+      }
     }
 
     //  addressDetails
     let addressDetails = null
     if (info.addressDetails) {
-      info.addressDetails.studentId = studentId;
-    addressDetails = await studentRepository.addStudentsAddress(info.addressDetails, { transaction });
-    };
+      try {
+        // Parse addressDetails if it JSON string
+        const addressDetailsObject = typeof info.addressDetails === 'string'
+          ? JSON.parse(info.addressDetails)
+          : info.addressDetails;
+
+        if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
+          addressDetailsObject.studentId = studentId;
+          addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, { transaction });
+        } else {
+          throw new Error('Address details should be an object.');
+        }
+      } catch (error) {
+        console.error('Error parsing addressDetails:', error);
+        throw error;
+      }
+    }
     const result = {student,entranceDetails,addressDetails} 
     await transaction.commit();
     return result;
@@ -126,41 +152,69 @@ export async function addAdmissionNoForBulkImport(data) {
   }
 };
 
-
 export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
   const settingKey = 'studentDocument';
   const getstudentDocuments = await getSettingValue(settingKey);
   const studentRequiredDocuments = getstudentDocuments.dataValues.setting_value;
+  
   try {
+    // Upload files if present
     if (files && typeof files === 'object') {
-      // Upload files and update info object
-      const uploadPromises = Object.keys(files).map(async key => {
+      for (const key of Object.keys(files)) {
         const file = files[key];
         if (file) {
           const s3Response = await uploadFile(file);
           info[key] = s3Response.Location;
         }
-      });
-      await Promise.all(uploadPromises);
-    }
-
-    //update documents status
-    let allFilesUploaded = true;
-    for (let i = 0; i < studentRequiredDocuments.length; i++) {
-      const key = studentRequiredDocuments[i];
-      if (!info[key]) {
-        allFilesUploaded = false;
-        break;
       }
     }
 
+    // Update documents status
+    const allFilesUploaded = studentRequiredDocuments.every(key => info[key]);
     if (allFilesUploaded) {
       info.documentStatus = 'Complete Documents';
     }
 
-    const result = await studentRepository.updateStudentDetails(StudentId, info, { transaction });
+    // Update student details
+    const student = await studentRepository.updateStudentDetails(StudentId, info, { transaction });
+
+    // Update entranceDetails
+    let entranceDetails = [];
+    if (info.entranceDetails) {
+      const entranceDetailsArray = typeof info.entranceDetails === 'string'
+        ? JSON.parse(info.entranceDetails)
+        : info.entranceDetails;
+
+      if (Array.isArray(entranceDetailsArray)) {
+        for (const detail of entranceDetailsArray) {
+          const { studentsEntranceDetailId, ...allDetails } = detail;
+          if (studentsEntranceDetailId) {
+            entranceDetails =  await studentRepository.updateStudentEntranceDetails(studentsEntranceDetailId, allDetails, { transaction });
+          }
+        }
+      }
+    }
+
+    // Update addressDetails
+    let addressDetails = null;
+    if (info.addressDetails) {
+      const addressDetailsObject = typeof info.addressDetails === 'string'
+        ? JSON.parse(info.addressDetails)
+        : info.addressDetails;
+
+      if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
+        const { studentsAddressId, ...allDetails } = addressDetailsObject;
+        if (studentsAddressId) {
+          addressDetails =  await studentRepository.updateStudentAddressDetails(studentsAddressId, allDetails, { transaction });
+        }
+      } else {
+        throw new Error('Address details should be an object.');
+      }
+    }
+
     await transaction.commit();
+    const result = { student, entranceDetails, addressDetails};
     return result;
   } catch (error) {
     await transaction.rollback();
@@ -171,11 +225,28 @@ export async function updateStudentDetails(StudentId, info, files) {
 
 export async function deleteStudentDetail(studentId) {
   try {
-    const result = await studentRepository.deleteStudentDetail(studentId);
-    if (result) {
-      return { message: 'Student deleted successfully' };
+    // Fetch entrance and address details in parallel
+    const [entranceDetails, addressDetails] = await Promise.all([
+      studentRepository.findEntranceDetailsByStudentId(studentId),
+      studentRepository.findStudentAddressByStudentId(studentId)
+    ]);
+
+    // Extract IDs
+    const entranceIds = entranceDetails.map(detail => detail.dataValues.students_entrance_detail_id);
+    const addressId = addressDetails?.dataValues?.students_address_id;
+
+    // Perform deletions in parallel
+    const [deleteEntranceResult, deleteAddressResult, deleteStudentResult] = await Promise.all([
+      studentRepository.deleteStudentEntranceDetail(entranceIds),
+      studentRepository.deleteStudentAddressDetail(addressId),
+      studentRepository.deleteStudentDetail(studentId)
+    ]);
+
+    // Check if all deletions successful
+    if (deleteEntranceResult && deleteAddressResult && deleteStudentResult) {
+      return { message: 'Student and related records deleted successfully' };
     } else {
-      return { message: 'No student found with the given ID' };
+      return { message: 'Some records were not found or not deleted' };
     }
   } catch (error) {
     console.error('Error deleting student:', error);
