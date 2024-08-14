@@ -130,3 +130,69 @@ export const getEmptyEnrollNumber = async (req,res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const studentCourseMapping = async (req, res) => {
+    let { subjectId, studentId, courseId, semesterId} = req.body;
+    const data = req.body
+    try {
+        // required fields
+        if (!( subjectId && studentId && courseId && semesterId)) {
+            return res.status(400).send(" subjectId, studentId, courseId, semesterId is required");
+        }
+
+        // Add the student course mapping
+        const info = req.body;
+        const result = await studentService.studentCourseMapping(data);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in student course mapping:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
+export const classStudentMapping = async (req, res) => {
+    let { studentId, classSectionId} = req.body;
+    const data = req.body
+    try {
+        //  required fields
+        if (!( studentId && classSectionId)) {
+            return res.status(400).send(" studentId, classSectionId is required");
+        }
+
+        const info = req.body;
+        const result = await studentService.classStudentMapping(data);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in class Student Mapping:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getclassStudentMapping = async (req, res) => {
+    const classSectionId = req.query.classSectionId || 0;    
+    try {
+        const result = await studentService.getclassStudentMapping(classSectionId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class Student Mapping:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
+export const addElectiveSubject = async (req, res) => {
+    let { studentId, subjectId} = req.body;
+    const data = req.body
+    try {
+        //  required fields
+        if (!( studentId && subjectId)) {
+            return res.status(400).send(" subjectId, studentId is required");
+        }
+
+        const info = req.body;
+        const result = await studentService.addElectiveSubject(data);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in student add Elective Subject:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};

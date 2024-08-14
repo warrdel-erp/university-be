@@ -1,0 +1,149 @@
+import sequelize from "../database/sequelizeConfig.js";
+import { DataTypes } from 'sequelize';
+import campus from './campusModel.js';
+import institute from './instituteModel.js';
+
+export default sequelize.define(
+    'employee',
+    {
+        employeeId: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true,
+            field: 'employee_id',
+        },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'campus_id',
+            references: {
+                model: campus,
+                key: 'campus_id',
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id',
+            }
+        }, 
+        resumeNumber:{
+            type: DataTypes.STRING,
+            allowNull:true,
+            field: 'resume_number',
+        },
+        employeePhoto:{
+			type:DataTypes.JSON,
+			allowNull:true,
+            field:'employee_photo',
+		},
+        employeeSignature:{
+			type:DataTypes.JSON,
+			allowNull:true,
+            field:'employee_signature',
+		},
+        employeeCode: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'employee_Code',
+        },
+        employeeName: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'employee_name',
+        },
+        shortName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'short_name',
+        },
+        dateOfBirth:{
+            type:DataTypes.DATE,
+            allowNull:true,
+            field:'date_of_birth',
+        },
+        anniversaryDate:{
+            type:DataTypes.DATE,
+            allowNull:true,
+            field:'anniversary_date',
+        },
+        fatherName:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'father_name',
+        },
+        motherName:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'mother_name',
+        },
+        bodySign:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'body_sign',
+        },
+        workingHours:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'working_hours',
+        },
+        aicteCode:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'aicte_code',
+        },
+        from:{
+            type:DataTypes.DATE,
+            allowNull:true,
+        },
+        to:{
+            type:DataTypes.DATE,
+            allowNull:true,
+        },
+        vehicleNumber:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'vehicle_number',
+        },
+        drivingLicense:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'driving_license',
+        },
+        drivingLicenseExpireDate:{
+            type:DataTypes.DATE,
+            allowNull:true,
+            field:'driving_license_expire_date',
+        },
+        pickColor:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'pick_color',
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+            field: 'created_at'
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+            field: 'updated_at'
+        },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deleted_at'
+        },
+    },
+    {
+        tableName: 'employee',
+        timestamps: true,
+        paranoid: true
+    }
+);

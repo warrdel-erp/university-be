@@ -2,13 +2,12 @@ import * as mainRepository from '../repository/mainRepository.js';
 
 export async function getAllCollegesAndCourses(universityId) {
     try {
-        const [ allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourseLevel, allCourse,allSpecialization,allSubject ]= 
+        const [ allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse,allSpecialization,allSubject ]= 
         await Promise.all([
             mainRepository.getAllUniversity(universityId),
             mainRepository.getAllCampus(universityId),
             mainRepository.getAllInstitute(universityId),
             mainRepository.getAllAffiliatedUniversity(universityId),
-            mainRepository.getAllCourseLevel(universityId),
             mainRepository.getAllCourse(universityId),
             mainRepository.getAllSpecialization(universityId),
             mainRepository.getAllSubject(universityId)
@@ -19,7 +18,6 @@ export async function getAllCollegesAndCourses(universityId) {
             allCampus,
             allInstitute,
             allAffiliatedIniversity,
-            allCourseLevel,
             allCourse,
             allSpecialization,
             allSubject
@@ -86,28 +84,6 @@ export async function addAffiliatedUniversity(data) {
     }
 }
 
-
-export async function addCourseLevel(data) {
-    const results = [];
-    try {
-        const { affiliatedUniversityId, universityId, courseLevels } = data;
-
-        for (const courseLevel of courseLevels) {
-            const result = await mainRepository.addCourseLevel({
-                ...courseLevel,
-                affiliatedUniversityId,
-                universityId
-            });
-            results.push(result);
-        }
-        return results;
-    } catch (error) {
-        console.error('Error adding course levels:', error);
-        return { message: 'Error adding course levels', error };
-    }
-}
-
-
 export async function addCourse(data) {
     const results = [];
     try {
@@ -168,3 +144,56 @@ export async function addSubject(data) {
         return { message: 'Error adding subjects', error };
     }
 };
+
+export async function addClass(data) {
+    try {
+        const { courseId, specializationId, acedmicPeriodId, section } = data;
+        const entries = [];
+
+        // Generate entries based on the section value
+        for (let i = 1; i <= section; i++) {
+            const section = `A${i}`;
+            entries.push({
+                courseId,
+                specializationId,
+                acedmicPeriodId,
+                section
+            });
+        }
+
+        // Insert multiple entries into the database
+        const result = await mainRepository.addClass(entries);
+        return result;
+    } catch (error) {
+        console.error('Error adding class:', error);
+        return { message: 'Error adding class', error };
+    }
+}
+
+export async function getClassDetails(classSectionId){
+    return await mainRepository.getClassDetails(classSectionId)
+}
+
+export async function addClassSubjectMapper(data) {
+    try {
+        const { classSectionId, semesterId, subjectIds } = data;
+
+        // Generate separate entries for each subjectId
+        const entries = subjectIds.map(subjectId => ({
+            classSectionId,
+            semesterId,
+            subjectId
+        }));
+
+        // Insert multiple entries into the database
+        const result = await mainRepository.addClassSubjectMapper(entries);
+        return result;
+    } catch (error) {
+        console.error('Error adding class subject mappings:', error);
+        return { message: 'Error adding class subject mappings', error };
+    }
+}
+
+export async function getClassSubjectMapper(classSectionId){
+    return await mainRepository.getClassSubjectMapper(classSectionId)
+}

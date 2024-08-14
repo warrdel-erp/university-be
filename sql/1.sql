@@ -86,30 +86,17 @@ CREATE TABLE affiliated_university (
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
-CREATE TABLE course_level (
-  course_level_id INT AUTO_INCREMENT PRIMARY KEY,
-  affiliated_university_id INT NOT NULL,
-  university_id INT NOT NULL,
-  course_level_name VARCHAR(255) NOT NULL,
-  course_level_code VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP NULL,
-  FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university (affiliated_university_id),
-  FOREIGN KEY (university_id) REFERENCES university(university_id)
-);
-
 CREATE TABLE course (
-  course_id INT AUTO_INCREMENT PRIMARY KEY,
-  course_level_id INT NOT NULL,
-  university_id INT NOT NULL,
-  course_name VARCHAR(255) NOT NULL,
-  course_code VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP NULL,
-  FOREIGN KEY (course_level_id) REFERENCES course_level(course_level_id),
-  FOREIGN KEY (university_id) REFERENCES university(university_id)
+    course_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_level_id INT NOT NULL,
+    university_id INT NOT NULL,
+    course_name VARCHAR(255) NOT NULL,
+    course_code VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
 CREATE TABLE specialization (
@@ -219,7 +206,7 @@ CREATE TABLE students (
     FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
     FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
     FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university(affiliated_university_id),
-    FOREIGN KEY (course_level_id) REFERENCES course_level(course_level_id),
+    FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
 );
@@ -280,15 +267,110 @@ CREATE TABLE subject (
     FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
 );
 
+CREATE TABLE class_sections (
+    class_sections_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    specialization_id INT NULL,
+    acedmic_period_id INT NOT NULL,
+    section VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (acedmic_period_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
+);
+
+CREATE TABLE class_subject_mapper (
+    class_subject_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
+    FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
+);
+
+CREATE TABLE class_student_mapper (
+    class_student_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id)
+);
+
 CREATE TABLE subject_mapper (
     subject_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_id INT NOT NULL,
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    specialization_id INT,
+    semester_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
+);
+
+CREATE TABLE student_elective_subject (
+    student_elective_subject_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     subject_id INT NOT NULL,
-    semester VARCHAR(255),
-    batch VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id)
+);
+
+CREATE TABLE employee_code_master (
+    employee_code_master_id INT AUTO_INCREMENT PRIMARY KEY,
+    code_master_type VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+INSERT INTO employee_code_master (code_master_type) VALUES 
+  ('employeeGroup'),
+  ('salutation'),
+  ('gender'),
+  ('religion'),
+  ('bloodGroup'),
+  ('Nationality'),
+  ('caste'),
+  ('appointmentType'),
+  ('experienceType'),
+  ('achievementCategory'),
+  ('document'),
+  ('nomineeRelation'),
+  ('iTCategory'),
+  ('degreeLevel'),
+  ('stream'),
+  ('qualification'),
+  ('longLeaveDetails');
+
+  INSERT INTO employee_code_master (code_master_type) VALUES ('CourseLevel');
+  INSERT INTO employee_code_master (code_master_type) VALUES ('semester');
+  INSERT INTO employee_code_master (code_master_type) VALUES ('acedmicPeriod');
+
+  CREATE TABLE employee_code_master_type (
+    employee_code_master_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_code_master_id INT NOT NULL,
+    code VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
-    FOREIGN KEY (student_id) REFERENCES students(student_id)
+    FOREIGN KEY (employee_code_master_id) REFERENCES employee_code_master(employee_code_master_id)
 );

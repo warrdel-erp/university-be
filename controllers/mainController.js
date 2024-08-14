@@ -65,21 +65,6 @@ export const addAffiliatedUniversity = async (req,res) => {
     }
 };
 
-export const addCourseLevel = async (req,res) => {
-    try {
-        const {universityId,affiliatedUniversityId} = req.body;
-        const data = req.body
-        if(!(universityId && affiliatedUniversityId)){
-            res.status(400).send('University Id and affiliated UniversityId is required')
-        } 
-        const result = await mainServices.addCourseLevel(data);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in  Add Course Level:", error);
-        res.status(500).send("Internal Server Error");
-    }
-};
-
 export const addCourse = async (req,res) => {
     try {
         const {universityId,course_levelId} = req.body;
@@ -121,6 +106,59 @@ export const addSubject = async (req,res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const addClass = async (req,res) => {
+    try {
+        const {courseId,acedmicPeriodId} = req.body;
+        const data = req.body
+        if(!(courseId && acedmicPeriodId)){
+            res.status(400).send('acedmicPeriodId and course Id is required')
+        } 
+        const result = await mainServices.addClass(data);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add Class:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getClass = async (req,res) => {
+    try {
+        const classSectionIds = req.query.classSectionId;
+        const classSectionId = classSectionIds || 0
+        const result = await mainServices.getClassDetails(classSectionId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class Section Details:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const addClassSubjectMapper = async (req,res) => {
+    try {
+        const {classSectionId,semesterId} = req.body;
+        const data = req.body
+        if(!(classSectionId && semesterId)){
+            res.status(400).send('classSectionId and semesterId is required')
+        } 
+        const result = await mainServices.addClassSubjectMapper(data);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add Class Subject Mapper:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getClassSubjectMapper = async (req,res) => {
+    try {
+        const classSectionId = req.query.classSectionId  || 0;
+        const result = await mainServices.getClassSubjectMapper(classSectionId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class Section Details:", error);
         res.status(500).send("Internal Server Error");
     }
 };

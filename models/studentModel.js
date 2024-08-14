@@ -4,10 +4,11 @@ import university from './universityModel.js';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
 import affiliatedUniversity from './affiliatedUniversityModel.js';
-import courseLevel from './courseLevelModel.js';
+// import courseLevel from './courseLevelModel.js';
 import course from './courseModel.js';
 import specialization from "./specializationModel.js";
 import {additionalCategory, bloodGroup, caste, consultant, counselor, courseMedium, courseOpted, curricularActivity, documentStatus, feeCategory, feePlan, feeSession, gender, iindExam, istExam, nationality, region, registerClass, religion, shift, specializationMinor, studentHouseId, studentAdmissionStatus, country, state, city, studentStatus, formSession, admissionCategory} from '../constant.js'; 
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'students',
@@ -59,10 +60,19 @@ export default sequelize.define(
             allowNull: false,
             field: 'course_level_id',
             references: {
-                model: courseLevel,
-                key: 'course_level_id'
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
             }
         },
+        // courseLevelId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'course_level_id',
+        //     references: {
+        //         model: courseLevel,
+        //         key: 'course_level_id'
+        //     }
+        // },
         courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,

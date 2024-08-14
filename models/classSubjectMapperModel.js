@@ -1,44 +1,44 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
+import subject from "./subjectModel.js";
+import classSection from "./classSectionModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
-    'course',
+    'class_subject_mapper',
     {
-        courseId: {
+        classSubjectMapperId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'course_id'
+            field: 'class_subject_mapper_id'
         },
-        course_levelId: {
+        subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_level_id',
+            field: 'subject_id',
+            references: {
+                model: subject,
+                key: 'subject_id'
+            }
+        },
+        classSectionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_sections_id',
+            references: {
+                model: classSection,
+                key: 'class_sections_id'
+            }
+        },
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'semester_id',
             references: {
                 model: employeeCodeMasterType,
                 key: 'employee_code_master_type_id'
             }
-        },
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
-        },
-        courseName: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_name'
-        },
-        courseCode: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_code'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -59,7 +59,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'course',
+        tableName: 'class_subject_mapper',
         timestamps: true,
         paranoid: true
     }

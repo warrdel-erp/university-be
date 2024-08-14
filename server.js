@@ -10,6 +10,7 @@ import main from './router/mainRoute.js';
 import setting from './router/settingRoute.js';
 import student from './router/studentRoute.js';
 import download from './router/downloadRoute.js';
+import codeMaster from './router/codeMasterRoute.js';
 
 
 // middleware
@@ -23,6 +24,7 @@ app.use("/main", main);
 app.use("/setting", setting);
 app.use("/student", student);
 app.use("/download", download);
+app.use("/codeMaster",codeMaster);
 
 
 app.listen(PORT, () => {

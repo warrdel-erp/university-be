@@ -257,3 +257,33 @@ export async function deleteStudentDetail(studentId) {
 export async function getEmptyEnrollNumber(){
   return await studentRepository.getEmptyEnrollNumber()
 };
+
+export async function studentCourseMapping(data){
+  return await studentRepository.studentCourseMapping(data)
+};
+
+export async function classStudentMapping(data) {
+  try {
+    const { studentId, classSectionId } = data;
+    const results = [];
+
+    for (const id of studentId) {
+      const entryData = { studentId: id, classSectionId };
+      const result = await studentRepository.classStudentMapping(entryData);
+      results.push(result);
+    }
+    
+    return results;
+  } catch (error) {
+    console.error('Error in classStudentMapping:', error);
+    throw error;
+  }
+}; 
+
+export async function getclassStudentMapping(classSectionId){
+  return await studentRepository.getclassStudentMapping(classSectionId)
+};
+
+export async function addElectiveSubject(data){
+  return await studentRepository.addElectiveSubject(data)
+};

@@ -1,45 +1,39 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import affiliatedUniversity from "./affiliatedUniversityModel.js";
-import university from "./universityModel.js";
+import employee from "./employeeModel.js"
 
 export default sequelize.define(
-    'course_level',
+    'employee_long_leave',
     {
-        courseLevelId: {
+        employeeLongLeaveId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'course_level_id'
+            field: 'employee_long_leave_id'
         },
-        affiliatedUniversityId: {
+        employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'affiliated_university_id',
+            field: 'employee_id',
             references: {
-                model: affiliatedUniversity,
-                key: 'affiliated_university_id'
+                model: employee,
+                key: 'employee_id'
             }
         },
-        universityId: {
-            type: DataTypes.INTEGER,
+        DateOfLeaving: {
+            type: DataTypes.DATE,
             allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
-        },
-        courseLevelName: {
+            field: 'date_of_leaving'
+        },   
+        DateOfRejoining: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'date_of_rejoining'
+        },   
+        remark: {
             type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_level_name'
-        },
-        courseLevelCode: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_level_code'
-        },
+            allowNull: true,
+        },   
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -59,7 +53,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'course_level',
+        tableName: 'employee_long_leave',
         timestamps: true,
         paranoid: true
     }

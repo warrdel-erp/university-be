@@ -57,3 +57,23 @@ export const city = ['JAIPUR','KOTA','KOTPUTLI','REWARI','GURUGRAM']
 export const studentStatus = ['Cancel Student','Left Student','Long Absent','Non Attendant']
 
 export const admissionCategory = ['11A','11B','11C']
+
+export const appointmentType = ['Permanent','Regular','Regular(Tenure)','Temporary','Visiting']
+
+export const employeeGroup = ['ADMINISTRAATION','NON-TEACHING','TEACHING']
+
+export const salutation = ['Mr','Ms','Mrs']
+
+export const maritalStatus = ['Single', 'Married', 'Widowed', 'Divorced']
+
+export const jobStatus =['Current']
+
+export const experienceType =['ACADEMIC','FUEL(DIESEL)','PETROL','PROFESSIONAL']
+
+export const achievementCategory = ['AA','BB']
+
+export const Document = ['10th','12th','Graduation','Post Graduation']
+
+export const nomineeRelation = ['Aunt','Brother','Father','Mother','Sister','Uncle']
+
+export const itCategory = ['INCOME TAX']

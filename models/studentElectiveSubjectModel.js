@@ -1,44 +1,34 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import student from "./studentModel.js";
+import subject from "./subjectModel.js";
 
 export default sequelize.define(
-    'course',
+    'student_elective_subject',
     {
-        courseId: {
+        studentElectiveSubjectId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'course_id'
+            field: 'student_elective_subject_id'
         },
-        course_levelId: {
+        studentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_level_id',
+            field: 'student_id',
             references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
+                model: student,
+                key: 'student_id'
             }
         },
-        universityId: {
+        subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'university_id',
+            field: 'subject_id',
             references: {
-                model: university,
-                key: 'university_id'
+                model: subject,
+                key: 'subject_id'
             }
-        },
-        courseName: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_name'
-        },
-        courseCode: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'course_code'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -59,7 +49,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'course',
+        tableName: 'student_elective_subject',
         timestamps: true,
         paranoid: true
     }

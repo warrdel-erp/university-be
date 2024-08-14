@@ -1,7 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import subject from "./subjectModel.js";
-import student from "./studentModel.js"
+import student from "./studentModel.js";
+import course from "./courseModel.js";
+import specialization from "./specializationModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'subject_mapper',
@@ -30,13 +33,32 @@ export default sequelize.define(
                 key: 'student_id'
             }
         },
-        batch: {
-            type: DataTypes.STRING,
-            allowNull: true,
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: course,
+                key: 'course_id'
+            }
         },
-        semester: {
-            type: DataTypes.STRING,
+        specializationId: {
+            type: DataTypes.INTEGER,
             allowNull: true,
+            field: 'specialization_id',
+            references: {
+                model: specialization,
+                key: 'specialization_id'
+            }
+        },
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'semester_id',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,

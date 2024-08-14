@@ -1,45 +1,47 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import employee from "./employeeModel.js"
 
 export default sequelize.define(
-    'course',
+    'employee_research',
     {
-        courseId: {
+        employeeResearchId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'course_id'
+            field: 'employee_research_id'
         },
-        course_levelId: {
+        employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_level_id',
+            field: 'employee_id',
             references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
+                model: employee,
+                key: 'employee_id'
             }
         },
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
-        },
-        courseName: {
+        thesisName: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'course_name'
-        },
-        courseCode: {
+            field: 'thesis_name'
+        },   
+        associate: {
             type: DataTypes.STRING,
+            allowNull: true,
+        },   
+        periodFrom: {
+            type: DataTypes.DATE,
             allowNull: false,
-            field: 'course_code'
+            field: 'period_from'
         },
+        to: {
+            type: DataTypes.DATE,
+            allowNull: false,
+        },
+        institution:{
+            type: DataTypes.STRING,
+            allowNull: true,
+        },    
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -59,7 +61,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'course',
+        tableName: 'employee_research',
         timestamps: true,
         paranoid: true
     }

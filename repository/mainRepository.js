@@ -60,21 +60,6 @@ export async function getAllAffiliatedUniversity(universityId) {
     }
 };
 
-export async function getAllCourseLevel(universityId) {
-    try {
-        const result = await model.courseLevelModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
-        });
-        return result;
-    } catch (error) {
-        console.error("Error in get all Course Level details:", error);
-        throw error;
-    }
-};
-
 export async function getAllCourse(universityId) {
     try {
         const result = await model.courseModel.findAll({
@@ -152,16 +137,6 @@ export async function addAffiliatedUniversity(data) {
     }
 };
 
-export async function addCourseLevel(data) {
-    try {
-        const result = await model.courseLevelModel.create(data);
-        return result;
-    } catch (error) {
-        console.error("Error in add Course Level:", error);
-        throw error;
-    }
-};
-
 export async function addCourse(data) {
     try {
         const result = await model.courseModel.create(data);
@@ -191,3 +166,144 @@ export async function addSubject(data) {
         throw error;
     }
 };
+
+export async function addClass(data) {
+    try {
+        const result = await model.classSectionModel.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add class/section creation :", error);
+        throw error;
+    }
+};
+
+export async function getClassDetails(classSectionId) {
+    try {
+        const queryOptions = {
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "courseSectionAdd",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
+                },
+                {
+                    model: model.specializationModel,
+                    as: "specializationSectionAdd",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
+                },
+                // {
+                //     model: model.employeeCodeMasterType,
+                //     as: "acedmicPeriod",
+                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt",,"employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
+                //     include :[
+                //         {
+                //             model: model.employeeCodeMaster,
+                //             as: "codes",
+                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //         },
+                //     ]
+                // }
+            ]
+        };
+
+        if (classSectionId !== 0) {
+            queryOptions.where = {
+                class_sections_id: classSectionId
+            };
+        }
+
+        const result = await model.classSectionModel.findAll(queryOptions);
+        return result;
+    } catch (error) {
+        console.error("Error in getting class Details:", error);
+        throw error;
+    }
+}
+
+export async function addClassSubjectMapper(data) {
+    try {
+        const result = await model.classSubjectMapperModel.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add class subject mapper :", error);
+        throw error;
+    }
+};
+
+export async function getClassSubjectMapper(classSectionId) {
+    try {
+        const queryOptions = {
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include: [
+                {
+                    model: model.classSubjectMapperModel,
+                    as: "classSection",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","classSectionsId","specializationId","acedmicPeriodId"] },
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: "courseSection",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
+                            include :[
+                                {
+                                    model: model.affiliatedIniversityModel,
+                                    as: "affiliated",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                        include:[
+                                            {
+                                                model: model.instituteModel,
+                                                as: "institut",
+                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                include:[
+                                                    {
+                                                        model: model.campusModel,
+                                                        as :"campues",
+                                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                    }
+                                                ]
+                                            },
+                                        ]
+                                },
+                            ]
+                        },
+                        {
+                            model: model.specializationModel,
+                            as: "specializationSection",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
+                        },
+                    ]
+                },
+                // {
+                //     model: model.employeeCodeMasterType,
+                //     as: "semester",
+                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
+                //     include :[
+                //         {
+                //             model: model.employeeCodeMaster,
+                //             as: "codes",
+                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //         },
+                //     ]
+                // },
+                {
+                    model: model.subjectModel,
+                    as: "subjects",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+                },
+            ]
+        };
+
+        if (classSectionId !== 0) {
+            queryOptions.where = {
+                class_sections_id: classSectionId,
+            };
+        }
+
+        const result = await model.classSectionModel.findAll(queryOptions);
+        return result;
+    } catch (error) {
+        console.error("Error in getting class subject mapper Details:", error);
+        throw error;
+    }
+}
