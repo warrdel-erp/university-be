@@ -3,7 +3,6 @@ import universityModel from './universityModel.js';
 import campusModel from './campusModel.js';
 import instituteModel from './instituteModel.js';
 import affiliatedIniversityModel from './affiliatedUniversityModel.js';
-// import courseLevelModel from './courseLevelModel.js';
 import courseModel from './courseModel.js';
 import studentModel from './studentModel.js';
 import specializationModel from './specializationModel.js';
@@ -16,7 +15,23 @@ import employeeCodeMasterType from './employeeCodeMasterTypeModel.js';
 import classSectionModel from './classSectionModel.js';
 import classSubjectMapperModel from './classSubjectMapperModel.js';
 import classStudentMapperModel from './classSectionStudentMapperModel.js';
-import studentElectiveSubjectModel from './studentElectiveSubjectModel.js'
+import studentElectiveSubjectModel from './studentElectiveSubjectModel.js';
+import studentMetaData from './studentMetaData.js';
+import userModel from './userModel.js';
+import employeeModel from './employeeModel.js';
+import employeeAddressModel from './employeeAddressModel.js';
+import employeeOfficeModel from './employeeOfficeModel.js';
+import emplopeeRoleModel from './employeeRoleModel.js';
+import employeeSkillModel from './employeeSkill.js';
+import employeeDocumentsModel from './employeeDocumentsModel.js';
+import employeeQualificationModel from './employeeQualificationModel.js';
+import employeeExperianceModel from './employeeExperianceModel.js';
+import employeeAchievementModel from './employeeAchievement.js';
+import employeeWardModel from './employeeWardModel.js';
+import employeeActivityModel from './employeeActivityModel.js';
+import employeeReferenceModel from './employeeReferenceModel.js';
+import employeeResearchModel from './employeeResearchModel.js';
+import employeeLongLeaveModel from './employeeLongLeaveModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -35,6 +50,9 @@ specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as:
 
 studentModel.belongsTo(employeeCodeMasterType, { foreignKey: 'course_level_id', as: 'courseLevel' });
 employeeCodeMasterType.hasMany(studentModel, { foreignKey: 'course_level_id', as: 'courseLevel' });
+
+studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'typs' });
+employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs' });
 
 // class section join 
 classSubjectMapperModel.belongsTo(courseModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
@@ -82,13 +100,23 @@ studentModel.hasMany(studentsEntranceDetail, { foreignKey: 'student_id', as: 'en
 
 studentsAddress.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentAddress' });
 studentModel.hasMany(studentsAddress, { foreignKey: 'student_id', as: 'studentAddress' });
-// ---
+
+studentMetaData.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentMetaData' });
+studentModel.hasMany(studentMetaData, { foreignKey: 'student_id', as: 'studentMetaData' });
 
 // code type join to code master
 employeeCodeMasterType.belongsTo(employeeCodeMaster, { foreignKey: 'employee_code_master_id', as: 'codes' });
 employeeCodeMaster.hasMany(employeeCodeMasterType, { foreignKey: 'employee_code_master_id', as: 'codes' });
 
+//employee join to there related table 
+employeeAddressModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'address' });
+employeeModel.hasMany(employeeAddressModel, { foreignKey: 'employee_id', as: 'address' });
 
+employeeOfficeModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'office' });
+employeeModel.hasMany(employeeOfficeModel, { foreignKey: 'employee_id', as: 'office' });
+
+emplopeeRoleModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'role' });
+employeeModel.hasMany(emplopeeRoleModel, { foreignKey: 'employee_id', as: 'role' });
 export {
     settingModel,
 	universityModel,
@@ -108,4 +136,20 @@ export {
     classStudentMapperModel,
     subjectMapperModel,
     studentElectiveSubjectModel,
+    studentMetaData,
+    userModel,
+    employeeModel,
+    employeeAddressModel,
+    employeeOfficeModel,
+    emplopeeRoleModel,
+    employeeSkillModel,
+    employeeDocumentsModel,
+    employeeQualificationModel,
+    employeeExperianceModel,
+    employeeAchievementModel,
+    employeeWardModel,
+    employeeActivityModel,
+    employeeReferenceModel,
+    employeeResearchModel,
+    employeeLongLeaveModel,
   };

@@ -3,13 +3,13 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js"
 
 export default sequelize.define(
-    'employee_long_leave',
+    'employee_rolls',
     {
-        employeeLongLeaveId: {
+        employeeRoleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'employee_long_leave_id'
+            field: 'employee_rolls_id'
         },
         employeeId: {
             type: DataTypes.INTEGER,
@@ -20,20 +20,10 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        DateOfLeaving: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_leaving'
-        },   
-        DateOfRejoining: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_rejoining'
-        },   
-        remark: {
+        roles:{
             type: DataTypes.STRING,
             allowNull: true,
-        },   
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -53,7 +43,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'employee_long_leave',
+        tableName: 'employee_rolls',
         timestamps: true,
         paranoid: true
     }

@@ -3,13 +3,13 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js"
 
 export default sequelize.define(
-    'employee_long_leave',
+    'employee_experiance',
     {
-        employeeLongLeaveId: {
+        employeeExperianceId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'employee_long_leave_id'
+            field: 'employee_experiance_id'
         },
         employeeId: {
             type: DataTypes.INTEGER,
@@ -20,20 +20,48 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        DateOfLeaving: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_leaving'
-        },   
-        DateOfRejoining: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_rejoining'
-        },   
-        remark: {
+        organization:{
             type: DataTypes.STRING,
             allowNull: true,
-        },   
+        },
+        desigation:{
+			type:DataTypes.STRING,
+			allowNull:true,
+		},
+        fromDate:{
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'from_date'
+        },
+        toDate:{
+			type:DataTypes.DATE,
+			allowNull:true,
+            field:'to_date'
+		},
+        totalExperianceYears:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+            field:'total_experince_years'
+		},
+        totalExperianceMonths:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+            field:'total_experince_months'
+		},
+        totalExperiancedays:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+            field:'total_experince_days'
+		},
+        lastSalary:{
+			type:DataTypes.FLOAT,
+			allowNull:true,
+            field:'last_salary'
+		},
+        remarks:{
+			type:DataTypes.STRING,
+			allowNull:true,
+		},
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -53,7 +81,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'employee_long_leave',
+        tableName: 'employee_experiance',
         timestamps: true,
         paranoid: true
     }

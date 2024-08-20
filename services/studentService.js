@@ -35,56 +35,73 @@ export async function addStudent(info, files) {
       info.documentStatus = 'Complete Documents';
     }
 
+    // Scholar number
     info.scholarNumber = await generateScholarNumber(info.courseId, info.instituteId);
     info.email = info.email.toLowerCase();
+
+    // Save student information
     const student = await studentRepository.addStudent(info, { transaction });
     const studentId = student.dataValues.studentId;
 
     //  entranceDetails
     let entranceDetails = [];
     if (info.entranceDetails) {
-      try {
-        // Parse entranceDetails if it JSON string
-        const entranceDetailsArray = typeof info.entranceDetails === 'string'
-          ? JSON.parse(info.entranceDetails)
-          : info.entranceDetails;
+      const entranceDetailsArray = typeof info.entranceDetails === 'string'
+        ? JSON.parse(info.entranceDetails)
+        : info.entranceDetails;
 
-        if (Array.isArray(entranceDetailsArray)) {
-          const entranceDetailsWithStudentId = entranceDetailsArray.map(detail => ({
-            ...detail,
-            studentId: studentId
-          }));
-          entranceDetails = await studentRepository.addStudentsEntranceDetail(entranceDetailsWithStudentId, { transaction });
-        }
-      } catch (error) {
-        console.error('Error parsing entranceDetails:', error);
-        throw error;
+      if (Array.isArray(entranceDetailsArray)) {
+        entranceDetails = entranceDetailsArray.map(detail => ({ ...detail, studentId }));
+        await studentRepository.addStudentsEntranceDetail(entranceDetails, { transaction });
+      } else {
+        throw new Error('Entrance details should be an array.');
       }
     }
 
     //  addressDetails
-    let addressDetails = null
+    let addressDetails = null;
     if (info.addressDetails) {
-      try {
-        // Parse addressDetails if it JSON string
-        const addressDetailsObject = typeof info.addressDetails === 'string'
-          ? JSON.parse(info.addressDetails)
-          : info.addressDetails;
+      const addressDetailsObject = typeof info.addressDetails === 'string'
+        ? JSON.parse(info.addressDetails)
+        : info.addressDetails;
 
-        if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
-          addressDetailsObject.studentId = studentId;
-          addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, { transaction });
-        } else {
-          throw new Error('Address details should be an object.');
-        }
-      } catch (error) {
-        console.error('Error parsing addressDetails:', error);
-        throw error;
+      if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
+        addressDetailsObject.studentId = studentId;
+        addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, { transaction });
+      } else {
+        throw new Error('Address details should be an object.');
       }
     }
-    const result = {student,entranceDetails,addressDetails} 
+
+    //  allDropDownData
+    let allDropDownData = null;
+    if (info.allDropDownData) {
+      const allDropDownDataObject = typeof info.allDropDownData === 'string'
+        ? JSON.parse(info.allDropDownData)
+        : info.allDropDownData;
+
+      if (typeof allDropDownDataObject === 'object' && Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+        const type = allDropDownDataObject.type;
+        const code = allDropDownDataObject.code;
+
+        if (type.length !== code.length) {
+          throw new Error('Types and codes arrays must be of the same length.');
+        }
+
+        const entries = type.map((types, index) => ({
+          studentId,
+          types,
+          codes: code[index]
+        }));
+
+        allDropDownData = await studentRepository.studentMetaData(entries, { transaction });
+      } else {
+        throw new Error('Invalid format for allDropDownData.');
+      }
+    }
+
     await transaction.commit();
-    return result;
+    return { student, entranceDetails, addressDetails, allDropDownData };
   } catch (error) {
     await transaction.rollback();
     console.error('Error adding student:', error);
@@ -153,6 +170,7 @@ export async function addAdmissionNoForBulkImport(data) {
 };
 
 export async function updateStudentDetails(StudentId, info, files) {
+  
   const transaction = await sequelize.transaction();
   const settingKey = 'studentDocument';
   const getstudentDocuments = await getSettingValue(settingKey);
@@ -213,8 +231,20 @@ export async function updateStudentDetails(StudentId, info, files) {
       }
     }
 
+    // update all dropDown
+    let allDropDownData = null;
+    if (info.allDropDownData) {
+      const data = JSON.parse(info.allDropDownData);
+      const { studentId, type, code } = data;
+      if (type.length !== code.length) {
+        throw new Error('Type and code arrays must be of the same length');
+      }
+        for (let i = 0; i < type.length; i++) {
+          allDropDownData =  await studentRepository.updateStudentMetaData(studentId, type[i], code[i], {transaction});
+      }
+    }
     await transaction.commit();
-    const result = { student, entranceDetails, addressDetails};
+    const result = { student, entranceDetails, addressDetails,allDropDownData};
     return result;
   } catch (error) {
     await transaction.rollback();

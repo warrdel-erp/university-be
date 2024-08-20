@@ -3,13 +3,13 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js"
 
 export default sequelize.define(
-    'employee_long_leave',
+    'employee_achievements',
     {
-        employeeLongLeaveId: {
+        employeeAchievementsId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'employee_long_leave_id'
+            field: 'employee_achievements_id'
         },
         employeeId: {
             type: DataTypes.INTEGER,
@@ -20,20 +20,33 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        DateOfLeaving: {
-            type: DataTypes.DATE,
+        title:{
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        description:{
+			type:DataTypes.STRING,
+			allowNull:true,
+		},
+        noOfTimes:{
+            type: DataTypes.FLOAT,
             allowNull: true,
-            field: 'date_of_leaving'
-        },   
-        DateOfRejoining: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_rejoining'
-        },   
-        remark: {
+            field: 'no_of_times'
+        },
+        discipline:{
             type: DataTypes.STRING,
             allowNull: true,
-        },   
+        },
+        nameOf:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'name_of'
+        },
+        date:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'date'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -53,7 +66,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'employee_long_leave',
+        tableName: 'employee_achievements',
         timestamps: true,
         paranoid: true
     }

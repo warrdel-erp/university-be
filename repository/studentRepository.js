@@ -31,6 +31,16 @@ export async function addStudentsAddress(data) {
     }
 };
 
+export async function studentMetaData(data) {
+    try {
+        const result = await model.studentMetaData.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in adding meta data student:", error);
+        throw error;
+    }
+};
+
 export async function getAllStudents(firstName) {
     let result;
     try {
@@ -54,11 +64,6 @@ export async function getAllStudents(firstName) {
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
                     },
                     {
-                        // model: model.courseLevelModel,
-                        // as: "courseLevel",
-                        // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "collegeId", "universityId","courseLevelId","affiliatedUniversityId","courseLevelCode"] },
-                    },
-                    {
                         model: model.courseModel,
                         as: "course",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
@@ -77,7 +82,38 @@ export async function getAllStudents(firstName) {
                         model: model.studentsAddress,
                         as: "studentAddress",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    }
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "courseLevel",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.studentMetaData,
+                        as: "studentMetaData",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMasterType,
+                                as: "typs",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                include :[
+                                    {
+                                        model: model.employeeCodeMaster,
+                                        as: "codes",
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    },
+                                ]
+                            },
+                        ]
+                    },
                     ],
                 where: {
                     first_name: {
@@ -112,6 +148,25 @@ export async function getAllStudents(firstName) {
                                 model: model.employeeCodeMaster,
                                 as: "codes",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.studentMetaData,
+                        as: "studentMetaData",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMasterType,
+                                as: "typs",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                include :[
+                                    {
+                                        model: model.employeeCodeMaster,
+                                        as: "codes",
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    },
+                                ]
                             },
                         ]
                     },
@@ -174,6 +229,25 @@ export async function getSingleStudentDetail(studentId) {
                         model: model.employeeCodeMaster,
                         as: "codes",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    },
+                ]
+            },
+            {
+                model: model.studentMetaData,
+                as: "studentMetaData",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include :[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "typs",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
                     },
                 ]
             },
@@ -267,6 +341,24 @@ export async function updateStudentAddressDetails(studentsAddressId, data) {
     } catch (error) {
         console.error(`Error updating student address details ${studentsAddressId} :`, error);
         throw error; 
+    }
+};
+
+export async function updateStudentMetaData(studentId, type, code) {    
+    try {
+        const result = await model.studentMetaData.update(
+            { codes: code }, 
+            {
+                where: { 
+                    studentId: studentId, 
+                    types: type 
+                },
+            }
+        );
+        return result;
+    } catch (error) {
+        console.error(`Error updating student metadata for studentId ${studentId} and type ${type}:`, error);
+        throw error;
     }
 };
 
