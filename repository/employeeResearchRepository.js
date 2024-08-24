@@ -9,3 +9,16 @@ export async function addEmployeeResearch(data) {
         throw error;
     }
 };
+
+export async function deleteEmployeeResearch (employeeId) {
+    try {
+        const result = await model.emplopeeRoleModel.destroy({
+            where: { employeeId },
+            individualHooks: true
+        });
+        return { message: 'employee research deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};

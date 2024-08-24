@@ -12,7 +12,8 @@ import student from './router/studentRoute.js';
 import download from './router/downloadRoute.js';
 import codeMaster from './router/codeMasterRoute.js';
 import user from './router/auth/userRoute.js';
-import employee from './router/employeeRoute.js'
+import employee from './router/employeeRoute.js';
+import teacher from './router/teacherMappingRoute.js'
 
 
 // middleware
@@ -29,6 +30,7 @@ app.use("/download", download);
 app.use("/codeMaster",codeMaster);
 app.use("/user",user);
 app.use("/employee",employee);
+app.use("/teacher",teacher);
 
 
 app.listen(PORT, () => {

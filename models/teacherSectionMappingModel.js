@@ -1,28 +1,27 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import subject from "./subjectModel.js";
-import classSection from "./classSectionModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import employee from "./employeeModel.js"
+import classSection from "./classSectionModel.js"
 
 export default sequelize.define(
-    'class_subject_mapper',
+    'teacher_section_mapping',
     {
-        classSubjectMapperId: {
+        teacherSectionMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_subject_mapper_id'
+            field: 'teacher_section_mapping_id'
         },
-        subjectId: {
+        employeeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'subject_id',
+            field: 'employee_id',
             references: {
-                model: subject,
-                key: 'subject_id'
+                model: employee,
+                key: 'employee_id'
             }
         },
-        classSectionId: {
+        classSectionsId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'class_sections_id',
@@ -31,15 +30,12 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
-        // semesterId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'semester_id',
-        //     references: {
-        //         model: employeeCodeMasterType,
-        //         key: 'employee_code_master_type_id'
-        //     }
-        // },
+        isCordinatory:{
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_cordinatory'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -59,7 +55,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'class_subject_mapper',
+        tableName: 'teacher_section_mapping',
         timestamps: true,
         paranoid: true
     }

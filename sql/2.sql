@@ -231,3 +231,40 @@ CREATE TABLE employee_long_leave (
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
+
+CREATE TABLE employee_meta_data (
+    employee_meta_data_id INT AUTO_INCREMENT PRIMARY KEY,
+    types INT NOT NULL,
+    codes INT NOT NULL,
+    employee_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (types) REFERENCES employee_code_master_type (employee_code_master_type_id),
+    FOREIGN KEY (codes) REFERENCES employee_code_master (employee_code_master_id),
+    FOREIGN KEY (employee_id) REFERENCES employee (employee_id),
+    UNIQUE KEY unique_employee_code (employee_id, types, codes)
+);
+
+CREATE TABLE teacher_subject_mapping (
+    teacher_subject_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    class_subject_mapper_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (class_subject_mapper_id) REFERENCES class_subject_mapper (class_subject_mapper_id)
+);
+
+CREATE TABLE teacher_section_mapping (
+    teacher_section_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    is_cordinatory BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections (class_sections_id)
+);

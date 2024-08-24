@@ -9,3 +9,16 @@ export async function addEmployeeAchievement(data) {
         throw error;
     }
 };
+
+export async function deleteEmployeeAchievement (employeeId) {
+    try {
+        const result = await model.employeeAchievementModel.destroy({
+            where: { employeeId },
+            individualHooks: true
+        });
+        return { message: 'employee achievement deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};

@@ -94,7 +94,7 @@ CREATE TABLE course (
     course_code VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-    deleted_at TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
     FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
@@ -110,6 +110,22 @@ CREATE TABLE specialization (
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (university_id) REFERENCES university(university_id)
+);
+
+CREATE TABLE semester (
+    semester_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    course_id INT NOT NULL,
+    specialization_id INT,
+    semester_duration INT NOT NULL,
+    course_duration INT NOT NULL,
+    total_semester INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
 );
 
 ALTER TABLE campus
@@ -255,7 +271,7 @@ CREATE TABLE class_subject_mapper (
     class_subject_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
     subject_id INT NOT NULL,
     class_sections_id INT NOT NULL,
-    semester_id INT NOT NULL,
+    -- semester_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
     deleted_at TIMESTAMP NULL,
@@ -263,6 +279,10 @@ CREATE TABLE class_subject_mapper (
     FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
     FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
 );
+
+ALTER TABLE class_subject_mapper DROP FOREIGN KEY class_subject_mapper_ibfk_3;
+
+ALTER TABLE class_subject_mapper DROP COLUMN semester_id;
 
 CREATE TABLE class_student_mapper (
     class_student_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -381,7 +401,7 @@ CREATE TABLE students_meta_data (
     FOREIGN KEY (student_id) REFERENCES students(student_id),
     FOREIGN KEY (types) REFERENCES employee_code_master_type(employee_code_master_type_id),
     FOREIGN KEY (codes) REFERENCES employee_code_master(employee_code_master_id),
-    UNIQUE (types, codes)
+    UNIQUE (student_id,types, codes)
 );
 
 INSERT INTO employee_code_master (code_master_type) VALUES

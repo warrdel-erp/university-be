@@ -6,6 +6,7 @@ import affiliatedIniversityModel from './affiliatedUniversityModel.js';
 import courseModel from './courseModel.js';
 import studentModel from './studentModel.js';
 import specializationModel from './specializationModel.js';
+import semesterModel from './semesterModel.js';
 import subjectModel from './subjectModel.js';
 import studentsEntranceDetail from './studentsEntranceDetailModel.js';
 import studentsAddress from './studentsAddressModel.js';
@@ -32,6 +33,9 @@ import employeeActivityModel from './employeeActivityModel.js';
 import employeeReferenceModel from './employeeReferenceModel.js';
 import employeeResearchModel from './employeeResearchModel.js';
 import employeeLongLeaveModel from './employeeLongLeaveModel.js';
+import employeeMetaDataModel from './employeeMetaDataModel.js';
+import teacherSubjectMappingModel from './teacherSubjectMappingModel.js';
+import teacherSectionMappingModel from './teacherSectionMappingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -55,8 +59,11 @@ studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'ty
 employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs' });
 
 // class section join 
-classSubjectMapperModel.belongsTo(courseModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
-courseModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
+// classSubjectMapperModel.belongsTo(courseModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
+// courseModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
+
+classSectionModel.belongsTo(courseModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
+courseModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'courseSection' });
 
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'course_id', as: 'affiliated' });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'course_id', as: 'affiliated' });
@@ -71,24 +78,35 @@ classSectionModel.belongsTo(courseModel, { foreignKey: 'class_sections_id', as: 
 courseModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'courseSectionAdd' });
 
 // class section  mapper join to specialization
-classSubjectMapperModel.belongsTo(specializationModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
-specializationModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
+// classSubjectMapperModel.belongsTo(specializationModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
+// specializationModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
+
+classSectionModel.belongsTo(specializationModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
+specializationModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'specializationSection' });
 
 // class section join to specialization
 classSectionModel.belongsTo(specializationModel, { foreignKey: 'class_sections_id', as: 'specializationSectionAdd' });
 specializationModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'specializationSectionAdd' });
 
 // class subject mapper join to class section
-classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
-classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
+classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_subject_mapper_id', as: 'classSection' });
+classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_subject_mapper_id', as: 'classSection' });
 
-// class subject mapper join to employee Code Master Type  
-classSubjectMapperModel.belongsTo(employeeCodeMasterType, { foreignKey: 'semester_id', as: 'semester' });
-employeeCodeMasterType.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'semester' });
+// class subject mapper join to employee Code Master Type 
+
+// classSubjectMapperModel.belongsTo(employeeCodeMasterType, { foreignKey: 'semester_id', as: 'semester' });
+// employeeCodeMasterType.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'semester' });
+
+classSectionModel.belongsTo(employeeCodeMasterType, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
+employeeCodeMasterType.hasMany(classSectionModel, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
 
 // class section join to subject  
-classSectionModel.belongsTo(subjectModel, { foreignKey: 'class_sections_id', as: 'subjects' });
-subjectModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'subjects' });
+
+// classSectionModel.belongsTo(subjectModel, { foreignKey: 'class_sections_id', as: 'subjects' });
+// subjectModel.hasMany(classSectionModel, { foreignKey: 'class_sections_id', as: 'subjects' });
+
+classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: 'class_sections_id', as: 'subjects' });
+subjectModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'subjects' });
 
 // class student mapper join to student  
 classStudentMapperModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentMapped' });
@@ -117,6 +135,59 @@ employeeModel.hasMany(employeeOfficeModel, { foreignKey: 'employee_id', as: 'off
 
 emplopeeRoleModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'role' });
 employeeModel.hasMany(emplopeeRoleModel, { foreignKey: 'employee_id', as: 'role' });
+
+employeeSkillModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'skill' });
+employeeModel.hasMany(employeeSkillModel, { foreignKey: 'employee_id', as: 'skill' });
+
+employeeDocumentsModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'qualification' });
+employeeModel.hasMany(employeeDocumentsModel, { foreignKey: 'employee_id', as: 'qualification' });
+
+employeeQualificationModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'documents' });
+employeeModel.hasMany(employeeQualificationModel, { foreignKey: 'employee_id', as: 'documents' });
+
+employeeExperianceModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'experiance' });
+employeeModel.hasMany(employeeExperianceModel, { foreignKey: 'employee_id', as: 'experiance' });
+
+employeeAchievementModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'achievements' });
+employeeModel.hasMany(employeeAchievementModel, { foreignKey: 'employee_id', as: 'achievements' });
+
+employeeWardModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'ward' });
+employeeModel.hasMany(employeeWardModel, { foreignKey: 'employee_id', as: 'ward' });
+
+employeeActivityModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'activty' });
+employeeModel.hasMany(employeeActivityModel, { foreignKey: 'employee_id', as: 'activty' });
+
+employeeReferenceModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'reference' });
+employeeModel.hasMany(employeeReferenceModel, { foreignKey: 'employee_id', as: 'reference' });
+
+employeeResearchModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'research' });
+employeeModel.hasMany(employeeResearchModel, { foreignKey: 'employee_id', as: 'research' });
+
+employeeLongLeaveModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'longLeave' });
+employeeModel.hasMany(employeeLongLeaveModel, { foreignKey: 'employee_id', as: 'longLeave' });
+
+employeeMetaDataModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeMetaData' });
+employeeModel.hasMany(employeeMetaDataModel, { foreignKey: 'employee_id', as: 'employeeMetaData' });
+
+employeeMetaDataModel.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'typess' });
+employeeCodeMasterType.hasMany(employeeMetaDataModel, { foreignKey: 'types', as: 'typess' });
+
+// teacher section mapping
+employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
+teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeData' });
+
+employeeModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
+campusModel.hasMany(employeeModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
+  
+employeeModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
+instituteModel.hasMany(employeeModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
+
+classSectionModel.hasMany(teacherSectionMappingModel, { foreignKey: 'class_sections_id', as: 'employeeSection' });
+teacherSectionMappingModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'employeeSection' });
+
+classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'employeeCourse' });
+courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'employeeCourse' });
+
 export {
     settingModel,
 	universityModel,
@@ -125,6 +196,7 @@ export {
     affiliatedIniversityModel,
     courseModel,
     specializationModel,
+    semesterModel,
 	studentModel,
     subjectModel,
     studentsEntranceDetail,
@@ -152,4 +224,7 @@ export {
     employeeReferenceModel,
     employeeResearchModel,
     employeeLongLeaveModel,
+    employeeMetaDataModel,
+    teacherSubjectMappingModel,
+    teacherSectionMappingModel,
   };

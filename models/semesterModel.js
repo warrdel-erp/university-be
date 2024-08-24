@@ -1,44 +1,59 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import student from "./studentModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
-import employeeCodeMaster from "./employeeCodeMasterModel.js";
+import course from "./courseModel.js";
+import university from "./universityModel.js";
+import specialization from "./specializationModel.js";
 
 export default sequelize.define(
-    'students_meta_data',
+    'semester',
     {
-        studentMetaDataId: {
+        semesterId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'student_meta_data_id'
+            field: 'semester_id'
         },
-        studentId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'student_id',
+            field: 'university_id',
             references: {
-                model: student,
-                key: 'student_id'
+                model: university,
+                key: 'university_id'
             }
         },
-        types: {
+        courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'types',
+            field: 'course_id',
             references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
+                model: course,
+                key: 'course_id'
             }
         },
-        codes: {
+        specializationId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'specialization_id',
+            references: {
+                model: specialization,
+                key: 'specialization_id'
+            }
+        },
+        semesterDuration: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'codes',
-            references: {
-                model: employeeCodeMaster,
-                key: 'employee_code_master_id'
-            }
+            field: 'semester_duration'
+        },
+        courseDuration: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_duration'
+        },
+        totalSemester: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'total_semester'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -59,14 +74,8 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'students_meta_data',
+        tableName: 'semester',
         timestamps: true,
-        paranoid: true,
-        indexes: [
-            {
-                unique: true,
-                fields: ['student_id','types', 'codes']
-            }
-        ]
+        paranoid: true
     }
 );

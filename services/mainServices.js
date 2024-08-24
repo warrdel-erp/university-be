@@ -148,20 +148,24 @@ export async function addSubject(data) {
 export async function addClass(data) {
     try {
         const { courseId, specializationId, acedmicPeriodId, section } = data;
+        const semesterData = await mainRepository.getSemester(courseId, specializationId);
+        const totalSemesters = semesterData.map(semester => semester.dataValues.totalSemester);
+
+        const totalSemester = totalSemesters.length > 0 ? Math.max(...totalSemesters) : 0;        
+
         const entries = [];
 
-        // Generate entries based on the section value
-        for (let i = 1; i <= section; i++) {
-            const section = `A${i}`;
-            entries.push({
-                courseId,
-                specializationId,
-                acedmicPeriodId,
-                section
-            });
+        for (let sem = 1; sem <= totalSemester; sem++) {
+            for (let sec = 1; sec <= section; sec++) {
+                const sectionName = `${sem}${String.fromCharCode(64 + sec)}`;
+                entries.push({
+                    courseId,
+                    specializationId,
+                    acedmicPeriodId,
+                    section: sectionName
+                });
+            }
         }
-
-        // Insert multiple entries into the database
         const result = await mainRepository.addClass(entries);
         return result;
     } catch (error) {
@@ -176,12 +180,11 @@ export async function getClassDetails(classSectionId){
 
 export async function addClassSubjectMapper(data) {
     try {
-        const { classSectionId, semesterId, subjectIds } = data;
+        const { classSectionId, subjectIds } = data;
 
         // Generate separate entries for each subjectId
         const entries = subjectIds.map(subjectId => ({
             classSectionId,
-            semesterId,
             subjectId
         }));
 
@@ -196,4 +199,18 @@ export async function addClassSubjectMapper(data) {
 
 export async function getClassSubjectMapper(classSectionId){
     return await mainRepository.getClassSubjectMapper(classSectionId)
+}
+
+export async function addSemester(data){
+    const { semesterDuration,courseDuration} = data
+    const totalSemester = courseDuration*12/semesterDuration
+    const semesterData = {
+        ...data,
+        totalSemester: totalSemester
+    };
+    return await mainRepository.addSemester(semesterData)
+}
+
+export async function getSemester(courseId,specializationId){
+    return await mainRepository.getSemester(courseId,specializationId)
 }

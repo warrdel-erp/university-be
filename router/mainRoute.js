@@ -1,6 +1,6 @@
 import {Router} from  'express';
 const router =  Router();
-import {getAllCollegesAndCourses,addCampus,addInstitute,addAffiliatedUniversity,addCourse,addSpecialization,addSubject,addClass,getClass,addClassSubjectMapper,getClassSubjectMapper} from '../controllers/mainController.js';
+import {getAllCollegesAndCourses,addCampus,addInstitute,addAffiliatedUniversity,addCourse,addSpecialization,addSubject,addClass,getClass,addClassSubjectMapper,getClassSubjectMapper,addSemester,getSemester} from '../controllers/mainController.js';
 
 router.get('/all', getAllCollegesAndCourses);
 
@@ -25,5 +25,10 @@ router.get('/class', getClass);
 router.post('/classSubjectMapper', addClassSubjectMapper);
 
 router.get('/classSubjectMapper', getClassSubjectMapper);
+
+router.post('/semester', addSemester);
+
+router.get('/semester', getSemester);
+
 
 export default router;

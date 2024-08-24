@@ -112,10 +112,10 @@ export const addSubject = async (req,res) => {
 
 export const addClass = async (req,res) => {
     try {
-        const {courseId,acedmicPeriodId} = req.body;
+        const {courseId,specializationId} = req.body;
         const data = req.body
-        if(!(courseId && acedmicPeriodId)){
-            res.status(400).send('acedmicPeriodId and course Id is required')
+        if(!(courseId || specializationId)){
+            res.status(400).send('specializationId Or course Id is required')
         } 
         const result = await mainServices.addClass(data);
         res.status(200).send(result);
@@ -139,10 +139,10 @@ export const getClass = async (req,res) => {
 
 export const addClassSubjectMapper = async (req,res) => {
     try {
-        const {classSectionId,semesterId} = req.body;
+        const {classSectionId} = req.body;
         const data = req.body
-        if(!(classSectionId && semesterId)){
-            res.status(400).send('classSectionId and semesterId is required')
+        if(!(classSectionId)){
+            res.status(400).send('classSectionId is required')
         } 
         const result = await mainServices.addClassSubjectMapper(data);
         res.status(200).send(result);
@@ -159,6 +159,33 @@ export const getClassSubjectMapper = async (req,res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const addSemester = async (req,res) => {
+    try {
+        const {universityId,courseId} = req.body;
+        const data = req.body
+        if(!(universityId && courseId)){
+            res.status(400).send('universityId and courseId is required')
+        } 
+        const result = await mainServices.addSemester(data);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add semester:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getSemester = async (req,res) => {
+    try {
+        const courseId = req.query.courseId  || 0;
+        const specializationId = req.query.specializationId;
+        const result = await mainServices.getSemester(courseId,specializationId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting semester:", error);
         res.status(500).send("Internal Server Error");
     }
 };
