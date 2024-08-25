@@ -87,13 +87,14 @@ export async function addAffiliatedUniversity(data) {
 export async function addCourse(data) {
     const results = [];
     try {
-        const { course_levelId, universityId, courses } = data;
+        const { course_levelId, universityId, courses,affiliatedUniversityId } = data;
 
         for (const course of courses) {
             const result = await mainRepository.addCourse({
                 ...course,
                 course_levelId,
-                universityId
+                universityId,
+                affiliatedUniversityId,
             });
             results.push(result);
         }

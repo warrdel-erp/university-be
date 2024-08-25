@@ -31,15 +31,6 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
-        // semesterId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'semester_id',
-        //     references: {
-        //         model: employeeCodeMasterType,
-        //         key: 'employee_code_master_type_id'
-        //     }
-        // },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

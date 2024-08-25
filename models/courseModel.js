@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import affiliatedUniversity from "./affiliatedUniversityModel.js";
 
 export default sequelize.define(
     'course',
@@ -28,6 +29,15 @@ export default sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
+            }
+        },
+        affiliatedUniversityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'affiliated_university_id',
+            references: {
+                model: affiliatedUniversity,
+                key: 'affiliated_university_id'
             }
         },
         courseName: {

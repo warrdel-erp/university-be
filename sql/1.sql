@@ -90,14 +90,17 @@ CREATE TABLE course (
     course_id INT AUTO_INCREMENT PRIMARY KEY,
     course_level_id INT NOT NULL,
     university_id INT NOT NULL,
+    affiliated_university_id INT NOT NULL,
     course_name VARCHAR(255) NOT NULL,
     course_code VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
-    FOREIGN KEY (university_id) REFERENCES university(university_id)
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university(affiliated_university_id)
 );
+
 
 CREATE TABLE specialization (
     specialization_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -271,18 +274,13 @@ CREATE TABLE class_subject_mapper (
     class_subject_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
     subject_id INT NOT NULL,
     class_sections_id INT NOT NULL,
-    -- semester_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
-    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
-    FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id)
 );
 
-ALTER TABLE class_subject_mapper DROP FOREIGN KEY class_subject_mapper_ibfk_3;
-
-ALTER TABLE class_subject_mapper DROP COLUMN semester_id;
 
 CREATE TABLE class_student_mapper (
     class_student_mapper_id INT AUTO_INCREMENT PRIMARY KEY,

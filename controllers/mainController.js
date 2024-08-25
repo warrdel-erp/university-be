@@ -67,10 +67,10 @@ export const addAffiliatedUniversity = async (req,res) => {
 
 export const addCourse = async (req,res) => {
     try {
-        const {universityId,course_levelId} = req.body;
+        const {universityId,course_levelId,affiliatedUniversityId} = req.body;
         const data = req.body
-        if(!(universityId && course_levelId)){
-            res.status(400).send('University Id and course_level Id is required')
+        if(!(universityId && course_levelId && affiliatedUniversityId)){
+            res.status(400).send('University Id,affiliatedUniversityId and course_level Id is required')
         } 
         const result = await mainServices.addCourse(data);
         res.status(200).send(result);
