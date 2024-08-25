@@ -86,6 +86,82 @@ CREATE TABLE affiliated_university (
   FOREIGN KEY (university_id) REFERENCES university(university_id)
 );
 
+CREATE TABLE employee_code_master (
+    employee_code_master_id INT AUTO_INCREMENT PRIMARY KEY,
+    code_master_type VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+INSERT INTO employee_code_master (code_master_type) VALUES 
+  ('employeeGroup'),
+  ('salutation'),
+  ('gender'),
+  ('religion'),
+  ('bloodGroup'),
+  ('Nationality'),
+  ('caste'),
+  ('appointmentType'),
+  ('experienceType'),
+  ('achievementCategory'),
+  ('document'),
+  ('nomineeRelation'),
+  ('iTCategory'),
+  ('degreeLevel'),
+  ('stream'),
+  ('qualification'),
+  ('longLeaveDetails');
+
+  INSERT INTO employee_code_master (code_master_type) VALUES ('CourseLevel');
+  INSERT INTO employee_code_master (code_master_type) VALUES ('semester');
+  INSERT INTO employee_code_master (code_master_type) VALUES ('acedmicPeriod');
+
+  CREATE TABLE employee_code_master_type (
+    employee_code_master_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_code_master_id INT NOT NULL,
+    code VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_code_master_id) REFERENCES employee_code_master(employee_code_master_id)
+);
+
+INSERT INTO employee_code_master (code_master_type) VALUES
+    ('formSession'),
+    ('formName'),
+    ('counselor'),
+    ('studentHouseId'),
+    ('consultant'),
+    ('courseMedium'),
+    ('specializationMinor'),
+    ('registerClass'),
+    ('courseopted'),
+    ('feeSession'),
+    ('feeCategory'),
+    ('feeplan'),
+    ('additionalCategory'),
+    ('co-curricularActivity'),
+    ('examCenterIst'),
+    ('examCenterIInd'),
+    ('region'),
+    ('admissionCategory'),
+    ('payOut'),
+    ('country'),
+    ('state'),
+    ('city'),
+    ('shift');
+
+INSERT INTO employee_code_master (code_master_type) VALUES
+('cCountry'),
+('cState'),
+('cCity'),
+('maritalStatus'),
+('jobStatus'),
+('leaveType'),
+('proficiencyLevel');
+
 CREATE TABLE course (
     course_id INT AUTO_INCREMENT PRIMARY KEY,
     course_level_id INT NOT NULL,
@@ -321,73 +397,6 @@ CREATE TABLE student_elective_subject (
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id)
 );
 
-CREATE TABLE employee_code_master (
-    employee_code_master_id INT AUTO_INCREMENT PRIMARY KEY,
-    code_master_type VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL
-);
-
-INSERT INTO employee_code_master (code_master_type) VALUES 
-  ('employeeGroup'),
-  ('salutation'),
-  ('gender'),
-  ('religion'),
-  ('bloodGroup'),
-  ('Nationality'),
-  ('caste'),
-  ('appointmentType'),
-  ('experienceType'),
-  ('achievementCategory'),
-  ('document'),
-  ('nomineeRelation'),
-  ('iTCategory'),
-  ('degreeLevel'),
-  ('stream'),
-  ('qualification'),
-  ('longLeaveDetails');
-
-  INSERT INTO employee_code_master (code_master_type) VALUES ('CourseLevel');
-  INSERT INTO employee_code_master (code_master_type) VALUES ('semester');
-  INSERT INTO employee_code_master (code_master_type) VALUES ('acedmicPeriod');
-
-  CREATE TABLE employee_code_master_type (
-    employee_code_master_type_id INT AUTO_INCREMENT PRIMARY KEY,
-    employee_code_master_id INT NOT NULL,
-    code VARCHAR(255) NOT NULL,
-    description VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (employee_code_master_id) REFERENCES employee_code_master(employee_code_master_id)
-);
-
-INSERT INTO employee_code_master (code_master_type) VALUES
-    ('formSession'),
-    ('formName'),
-    ('counselor'),
-    ('studentHouseId'),
-    ('consultant'),
-    ('courseMedium'),
-    ('specializationMinor'),
-    ('registerClass'),
-    ('courseopted'),
-    ('feeSession'),
-    ('feeCategory'),
-    ('feeplan'),
-    ('additionalCategory'),
-    ('co-curricularActivity'),
-    ('examCenterIst'),
-    ('examCenterIInd'),
-    ('region'),
-    ('admissionCategory'),
-    ('payOut'),
-    ('country'),
-    ('state'),
-    ('city'),
-    ('shift');
-
 CREATE TABLE students_meta_data (
     student_meta_data_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
@@ -401,15 +410,6 @@ CREATE TABLE students_meta_data (
     FOREIGN KEY (codes) REFERENCES employee_code_master(employee_code_master_id),
     UNIQUE (student_id,types, codes)
 );
-
-INSERT INTO employee_code_master (code_master_type) VALUES
-('cCountry'),
-('cState'),
-('cCity'),
-('maritalStatus'),
-('jobStatus'),
-('leaveType'),
-('proficiencyLevel');
 
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
