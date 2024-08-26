@@ -174,7 +174,7 @@ export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
   const settingKey = 'studentDocument';
   const getstudentDocuments = await getSettingValue(settingKey);
-  const studentRequiredDocuments = getstudentDocuments.dataValues.setting_value;
+  const studentRequiredDocuments = getstudentDocuments.setting_value;
   
   try {
     // Upload files if present
@@ -189,7 +189,7 @@ export async function updateStudentDetails(StudentId, info, files) {
     }
 
     // Update documents status
-    const allFilesUploaded = studentRequiredDocuments.every(key => info[key]);
+    const allFilesUploaded = studentRequiredDocuments?.every(key => info[key]);
     if (allFilesUploaded) {
       info.documentStatus = 'Complete Documents';
     }

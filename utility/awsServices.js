@@ -4,7 +4,7 @@ import moment from 'moment';
 export const uploadFile = async (file) => {
   const date = moment().format('YYYYMMDD_HHmmss');
   const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
+    Bucket: 'warrdel-erp',
     Key: 'university/' + 'dev/' + date + file.name,
     Body: file.data
     // ACL: 'public-read'
@@ -23,7 +23,7 @@ export const uploadFile = async (file) => {
 export const downloadFile = async (url) => {
   const params = {
     Bucket: 'warrdel-erp',
-    Key: new URL(url).pathname.substring(1)
+    Key: url.split('https://warrdel-erp.s3.amazonaws.com/')[1]
   };
   const result = await s3.getObject(params).promise();
   const data = { key: url.split('/').slice(-1)[0], body: result.Body };
