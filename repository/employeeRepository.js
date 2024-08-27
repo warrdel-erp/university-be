@@ -15,71 +15,11 @@ export async function getAllEmployee() {
         const result = await model.employeeModel.findAll({
             attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours"],
             include:[
-            //    {
-            //     model:model.employeeAddressModel,
-            //     as:'address',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
                {
                 model:model.employeeOfficeModel,
                 as:'office',
                 attributes: ["joiningDate"] ,
                },
-            //    {
-            //     model:model.emplopeeRoleModel,
-            //     as:'role',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeSkillModel,
-            //     as:'skill',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeDocumentsModel,
-            //     as:'qualification',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeQualificationModel,
-            //     as:'documents',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeExperianceModel,
-            //     as:'experiance',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeAchievementModel,
-            //     as:'achievements',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeWardModel,
-            //     as:'ward',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeActivityModel,
-            //     as:'activty',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeReferenceModel,
-            //     as:'reference',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeResearchModel,
-            //     as:'research',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
-            //    {
-            //     model:model.employeeLongLeaveModel,
-            //     as:'longLeave',
-            //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            //    },
                {
                 model: model.employeeMetaDataModel,
                 as: "employeeMetaData",

@@ -19,13 +19,6 @@ export async function getTeacherSubjectMapping(employeeId) {
         if (employeeId !== 0) {
             result = await model.teacherSubjectMappingModel.findAll({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                // include: [
-                //     {
-                //         model: model.employeeCodeMasterType,
-                //         as: "codes",
-                //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeId","employee_code_master_id"] },
-                //     },
-                //     ],
                 where: {
                     employeeId:employeeId
                 },
@@ -33,13 +26,6 @@ export async function getTeacherSubjectMapping(employeeId) {
         } else {
             result = await model.teacherSubjectMappingModel.findAll({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                // include: [
-                //     {
-                //         model: model.employeeCodeMasterType,
-                //         as: "codes",
-                //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeId","employee_code_master_id"] },
-                //     },
-                //     ],
             });
         };
         return result;

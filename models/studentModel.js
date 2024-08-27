@@ -63,15 +63,6 @@ export default sequelize.define(
                 key: 'employee_code_master_type_id'
             }
         },
-        // courseLevelId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'course_level_id',
-        //     references: {
-        //         model: courseLevel,
-        //         key: 'course_level_id'
-        //     }
-        // },
         courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -90,16 +81,6 @@ export default sequelize.define(
                 key: 'specialization_id'
             }
         },
-        // formSession:{
-        //     type: DataTypes.ENUM(...formSession),
-        //     allowNull: true,
-        //     field:'form_session',
-        // },
-        // formName:{
-        //     type: DataTypes.STRING,
-        //     allowNull: true,
-        //     field:'form_name'
-        // },
         formNumber:{
             type: DataTypes.STRING,
             allowNull: true,
@@ -151,15 +132,6 @@ export default sequelize.define(
             allowNull:true,
             field:'last_name'
         },
-        // bloodGroup:{
-        //     type:DataTypes.ENUM(...bloodGroup),
-        //     allowNull: true,
-        //     field:'blood_group'
-        // },
-        // gender:{
-        //     type: DataTypes.ENUM(...gender),
-        //     allowNull: false,
-        // },
         fatherName:{
             type: DataTypes.STRING,
             allowNull: false,
@@ -175,15 +147,6 @@ export default sequelize.define(
             allowNull : true,
             field:'mother_name'
         },
-        // consultant:{
-        //     type:DataTypes.ENUM(...consultant),
-        //     allowNull: true,
-        // },
-        // studentHouseId:{
-        //     type:DataTypes.ENUM(...studentHouseId),
-        //     allowNull: true,
-        //     field:'student_house_id'
-        // },
         previousInstitute:{
             type:DataTypes.STRING,
             allowNull: true,
@@ -194,35 +157,12 @@ export default sequelize.define(
             allowNull: true,
             field:'shifting_reason'
         },
-        // counselor:{
-        //     type:DataTypes.ENUM(...counselor),
-        //     allowNull: true,
-        // },
-        // courseMedium:{
-        //     type:DataTypes.ENUM(...courseMedium),
-        //     allowNull: true,
-        //     field:'course_medium'
-        // },
-        // specializationMinor:{
-        //     type:DataTypes.ENUM(...specializationMinor),
-        //     allowNull: true,
-        //     field:'specialization_minor'
-        // },
-        // registerClass:{
-        //     type:DataTypes.ENUM(...registerClass),
-        //     allowNull: false,
-        //     field:'register_class'
-        // },
+        
         specializationReason:{
             type:DataTypes.STRING,
             allowNull: true,
             field:'specialization_reason'
         },
-        // courseOpted:{
-        //     type:DataTypes.ENUM(...courseOpted),
-        //     allowNull: true,
-        //     field:'course_opted'
-        // },
         eligibityCriteria:{
             type:DataTypes.STRING,
             allowNull: true,
@@ -248,68 +188,16 @@ export default sequelize.define(
             allowNull: true,
             field:'remaining_seat_category'
         },
-        // feeSession:{
-        //     type:DataTypes.ENUM(...feeSession),
-        //     allowNull: false,
-        //     field:'fee_session'
-        // },
-        // feeCategory:{
-        //     type:DataTypes.ENUM(...feeCategory),
-        //     allowNull: true,
-        //     field:'fee_category'
-        // },
-        // feePlan:{
-        //     type:DataTypes.ENUM(...feePlan),
-        //     allowNull: false,
-        //     field:'fee_plan'
-        // },
         advanceReceived:{
             type:DataTypes.FLOAT,
             allowNull: true,
             field:'advance_received'
         },
-        // caste:{
-        //     type:DataTypes.ENUM(...caste),
-        //     allowNull: false,
-        // },
-        // religion:{
-        //     type:DataTypes.ENUM(...religion),
-        //     allowNull: false,
-        // },
-        // additionalCategory:{
-        //     type:DataTypes.ENUM(...additionalCategory),
-        //     allowNull: true,
-        //     field:'additional_category'
-        // },
-        // curricularActivity:{
-        //     type:DataTypes.ENUM(...curricularActivity),
-        //     allowNull: true,
-        //     field:'curricular_activity'
-        // },
-        // istExamCenter:{
-        //     type:DataTypes.ENUM(...istExam),
-        //     allowNull: true,
-        //     field:'ist_exam_center'
-        // },
-        // iindExamCenter:{
-        //     type:DataTypes.ENUM(...iindExam),
-        //     allowNull: true,
-        //     field:'iind_exam_center'
-        // },
-        // region:{
-        //     type:DataTypes.ENUM(...region),
-        //     allowNull: true,
-        // },
         birthDate:{
             type:DataTypes.DATE,
             allowNull: false,
             field:'birth_date'
         },
-        // admissionCategory:{
-        //     type:DataTypes.ENUM(...admissionCategory),
-        //     allowNull: false,
-        //     field:'admission_category'
-        // },
         admisssionDate:{
             type:DataTypes.DATE,
             allowNull: true,
@@ -393,10 +281,6 @@ export default sequelize.define(
             allowNull: true,
             field:'place_of_birth'
         },
-        // nationality:{
-        //     type:DataTypes.ENUM(...nationality),
-        //     allowNull: true,
-        // },
         multipleNumber:{
             type: DataTypes.STRING,
             allowNull: true,
@@ -407,10 +291,6 @@ export default sequelize.define(
 			allowNull:false,
             field:'register_file_number'
 		},
-        // shift:{
-        //     type: DataTypes.ENUM(...shift),
-        //     allowNull: true,
-        // },
         whatsappNumber:{
             type: DataTypes.STRING,
             allowNull: true,

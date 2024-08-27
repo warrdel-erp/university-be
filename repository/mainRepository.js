@@ -192,18 +192,6 @@ export async function getClassDetails(classSectionId) {
                     as: "specializationSectionAdd",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
                 },
-                // {
-                //     model: model.employeeCodeMasterType,
-                //     as: "acedmicPeriod",
-                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt",,"employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
-                //     include :[
-                //         {
-                //             model: model.employeeCodeMaster,
-                //             as: "codes",
-                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                //         },
-                //     ]
-                // }
             ]
         };
 

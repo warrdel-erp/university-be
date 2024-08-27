@@ -26,21 +26,6 @@ export default sequelize.define(
             allowNull: true,
             field:'p_address'
         },
-        // pCountry:{
-        //     type: DataTypes.ENUM(...country),
-        //     allowNull: true,
-        //     field:'p_country'
-        // },
-        // pState:{
-        //     type:DataTypes.ENUM(...state),
-        //     allowNull: true,
-        //     field:'p_state'
-        // },
-        // pcity:{
-        //     type: DataTypes.ENUM(...city),
-        //     allowNull: true,
-        //     field:'p_city'
-        // },
         pPincode:{
 			type:DataTypes.INTEGER,
 			allowNull:true,
@@ -51,21 +36,6 @@ export default sequelize.define(
             allowNull: true,
             field:'c_address'
         },
-        // cCountry:{
-        //     type: DataTypes.ENUM(...country),
-        //     allowNull: true,
-        //     field:'c_country'
-        // },
-        // cState:{
-        //     type:DataTypes.ENUM(...state),
-        //     allowNull: true,
-        //     field:'c_state'
-        // },
-        // ccity:{
-        //     type: DataTypes.ENUM(...city),
-        //     allowNull: true,
-        //     field:'c_city'
-        // },
         cPincode:{
 			type:DataTypes.INTEGER,
 			allowNull:true,
