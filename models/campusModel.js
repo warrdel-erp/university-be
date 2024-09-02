@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
+import users from "./userModel.js";
 
 export default sequelize.define(
     'campus',
@@ -50,6 +51,24 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        createdBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        // updatedBy: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'updated_by',
+        //     references: {
+        //         model: users,
+        //         key: 'user_id'
+        //     }
+        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

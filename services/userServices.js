@@ -10,7 +10,7 @@ export async function register(info) {
 
   const data = {
     userName,
-    universityId,
+    universityId:1,
     password,
     phone,
     email : email.toLowerCase(),

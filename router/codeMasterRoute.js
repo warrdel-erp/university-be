@@ -2,15 +2,16 @@ import {Router} from  'express';
 const router =  Router();
 
 import {getAllEmployeeType,addEmployeeCode,getEmployeeCodesTypes,updateCodeMasterType,deleteCodeMasterType} from '../controllers/codeMasterController.js';
+import userAuth  from '../middleware/authUser.js'
 
-router.get('/', getAllEmployeeType);
+router.get('/',userAuth, getAllEmployeeType);
 
-router.post('/addCode', addEmployeeCode);
+router.post('/addCode',userAuth, addEmployeeCode);
 
-router.get('/getCodesTypes', getEmployeeCodesTypes);
+router.get('/getCodesTypes',userAuth, getEmployeeCodesTypes);
 
-router.patch('/:employeeCodeMasterTypeId', updateCodeMasterType);
+router.patch('/:employeeCodeMasterTypeId',userAuth, updateCodeMasterType);
 
-router.delete('/:employeeCodeMasterTypeId', deleteCodeMasterType);
+router.delete('/:employeeCodeMasterTypeId',userAuth, deleteCodeMasterType);
 
 export default router;

@@ -2,7 +2,7 @@ import { teacherSubjectMapping ,getTeacherSubjectMapping} from "../repository/te
 import { teacherSectionMapping ,getTeacherSectionMapping} from "../repository/teacherSectionMappingRepository.js";
 
 
-export async function teacherSubjectMappingService(data) {
+export async function teacherSubjectMappingService(data,createdBy) {
   console.log(`>>>>>>>teacherSubjectMappingService>>>>>>>>>>>`,data);
   
     try {
@@ -11,7 +11,7 @@ export async function teacherSubjectMappingService(data) {
       const results = [];
   
       for (const id of classSubjectMapperId) {
-        const entryData = { employeeId, classSubjectMapperId :id };
+        const entryData = { employeeId, classSubjectMapperId :id,createdBy};
         const result = await teacherSubjectMapping(entryData);
         results.push(result);
       }
@@ -23,13 +23,13 @@ export async function teacherSubjectMappingService(data) {
     }
 }; 
 
-export async function teacherSectionMappingService(data) {
+export async function teacherSectionMappingService(data,createdBy) {
   try {
     const { employeeId, classSectionsId } = data;
     const results = [];
 
     for (const id of classSectionsId) {
-      const entryData = {employeeId, classSectionsId:id };
+      const entryData = {employeeId, classSectionsId:id ,createdBy};
       const result = await teacherSectionMapping(entryData);
       results.push(result);
     }
@@ -41,10 +41,10 @@ export async function teacherSectionMappingService(data) {
   }
 }; 
 
-export async function getTeacherSubjectMappingService(employeeId){
-  return await getTeacherSubjectMapping(employeeId)
+export async function getTeacherSubjectMappingService(employeeId,universityId){
+  return await getTeacherSubjectMapping(employeeId,universityId)
 };
 
-export async function getTeacherSectionMappingService(employeeId){
-  return await getTeacherSectionMapping(employeeId)
+export async function getTeacherSectionMappingService(employeeId,universityId){
+  return await getTeacherSectionMapping(employeeId,universityId)
 };

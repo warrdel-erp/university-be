@@ -4,6 +4,8 @@ const router =  Router();
 
 import { getAllSelectBoxData} from "../controllers/settingController.js"
 
-router.get(`/all`, getAllSelectBoxData)
+import userAuth from '../middleware/authUser.js';
+
+router.get(`/all`, userAuth ,getAllSelectBoxData)
 
 export default router;

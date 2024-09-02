@@ -4,11 +4,12 @@ export const addEmployee = async (req,res) => {
     try {
         const data = req.body
         const file = req.files;
+        const createdBy = req.user.userId;
         const {campusId,instituteId} = req.body;
         if(!(campusId && instituteId)){
           return res.status(400).send('campusId,instituteId is required')
         }
-        const result = await employee.addEmployee(data);
+        const result = await employee.addEmployee(data,createdBy);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding employee:", error);
@@ -17,8 +18,9 @@ export const addEmployee = async (req,res) => {
 };
 
 export const getAllEmployee = async (req,res) => {
+    const universityId = req.user.universityId;
     try {
-        const result = await employee.getAllEmployee();
+        const result = await employee.getAllEmployee(universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);
@@ -28,11 +30,12 @@ export const getAllEmployee = async (req,res) => {
 
 export const getSingleEmployeeDetails = async (req,res) => {
     const employeeId = req.params.id
+    const universityId = req.user.universityId;
     try {
         if(!employeeId){
             return res.status(400).send('employeeId is required')
         }
-        const result = await employee.getSingleEmployeeDetails(employeeId);
+        const result = await employee.getSingleEmployeeDetails(employeeId,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single employee details:", error);

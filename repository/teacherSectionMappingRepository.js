@@ -11,7 +11,7 @@ export async function teacherSectionMapping(data) {
     }
 };
 
-export async function getTeacherSectionMapping(employeeId) {
+export async function getTeacherSectionMapping(employeeId,universityId) {
     console.log(`>>>>>getTeacherSectionMapping>>>>>>`,employeeId);
     
     let result;
@@ -20,6 +20,14 @@ export async function getTeacherSectionMapping(employeeId) {
             result = await model.teacherSectionMappingModel.findAll({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 include: [
+                    {
+                        model: model.userModel,
+                        as: "userTeacherSectionMapping",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
                     {
                         model: model.employeeModel,
                         as: "employeeData",
@@ -58,6 +66,14 @@ export async function getTeacherSectionMapping(employeeId) {
             result = await model.teacherSectionMappingModel.findAll({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 include: [
+                    {
+                        model: model.userModel,
+                        as: "userTeacherSectionMapping",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
                     {
                         model: model.employeeModel,
                         as: "employeeData",

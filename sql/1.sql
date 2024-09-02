@@ -1,4 +1,3 @@
--- settings Table (Master)
 CREATE TABLE IF NOT EXISTS settings (
     setting_id INT AUTO_INCREMENT PRIMARY KEY,
     setting_key VARCHAR(255) NOT NULL UNIQUE,
@@ -7,8 +6,6 @@ CREATE TABLE IF NOT EXISTS settings (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
--- setting Table (Master Data Insert)
 
     INSERT INTO settings (setting_key, setting_value, setting_type) VALUES 
     ('region', '["Othan than Rajasthan","Rajasthan"]', 'generic'),
@@ -49,41 +46,64 @@ CREATE TABLE university (
 
 INSERT INTO university (university_name) VALUES ('aayojan school of architecture');
 
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    user_name VARCHAR(255) NOT NULL,
+    unique_id VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX email_index (email),
+    FOREIGN KEY (university_id) REFERENCES university(university_id)
+);
+
 CREATE TABLE campus (
-  campus_id INT AUTO_INCREMENT PRIMARY KEY,
-  university_id INT NOT NULL,
-  campus_name VARCHAR(255) NOT NULL,
-  campus_code VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP NULL,
-  FOREIGN KEY (university_id) REFERENCES university(university_id)
+    campus_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    campus_name VARCHAR(255) NOT NULL,
+    campus_code VARCHAR(255) NOT NULL,
+    latitude FLOAT,
+    longitude FLOAT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE institute (
-  institute_id INT AUTO_INCREMENT PRIMARY KEY,
-  campus_id INT NOT NULL,
-  university_id INT NOT NULL,
-  institute_name VARCHAR(255) NOT NULL,
-  institute_code VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP NULL,
-  FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
-  FOREIGN KEY (university_id) REFERENCES university(university_id)
+    institute_id INT AUTO_INCREMENT PRIMARY KEY,
+    campus_id INT NOT NULL,
+    university_id INT NULL,
+    institute_name VARCHAR(255) NOT NULL,
+    institute_code VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE affiliated_university (
-  affiliated_university_id INT AUTO_INCREMENT PRIMARY KEY,
-  institute_id INT NOT NULL,
-  university_id INT NOT NULL,
-  affiliated_university_name VARCHAR(255) NOT NULL,
-  affiliated_university_code VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP NULL,
-  FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
-  FOREIGN KEY (university_id) REFERENCES university(university_id)
+    affiliated_university_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    affiliated_university_name VARCHAR(255) NOT NULL,
+    affiliated_university_code VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_code_master (
@@ -111,56 +131,55 @@ INSERT INTO employee_code_master (code_master_type) VALUES
   ('degreeLevel'),
   ('stream'),
   ('qualification'),
-  ('longLeaveDetails');
+  ('longLeaveDetails'),
+  ('formSession'),
+  ('formName'),
+  ('counselor'),
+  ('studentHouseId'),
+  ('consultant'),
+  ('courseMedium'),
+  ('specializationMinor'),
+  ('registerClass'),
+  ('courseopted'),
+  ('feeSession'),
+  ('feeCategory'),
+  ('feeplan'),
+  ('additionalCategory'),
+  ('co-curricularActivity'),
+  ('examCenterIst'),
+  ('examCenterIInd'),
+  ('region'),
+  ('admissionCategory'),
+  ('payOut'),
+  ('country'),
+  ('state'),
+  ('city'),
+  ('shift'),
+  ('cCountry'),
+  ('cState'),
+  ('cCity'),
+  ('maritalStatus'),
+  ('jobStatus'),
+  ('leaveType'),
+  ('proficiencyLevel'),
+  ('CourseLevel'),
+  ('semester'),
+  ('acedmicPeriod');
 
-  INSERT INTO employee_code_master (code_master_type) VALUES ('CourseLevel');
-  INSERT INTO employee_code_master (code_master_type) VALUES ('semester');
-  INSERT INTO employee_code_master (code_master_type) VALUES ('acedmicPeriod');
-
-  CREATE TABLE employee_code_master_type (
+CREATE TABLE employee_code_master_type (
     employee_code_master_type_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_code_master_id INT NOT NULL,
-    code VARCHAR(255) NOT NULL,
+    code VARCHAR(255) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (employee_code_master_id) REFERENCES employee_code_master(employee_code_master_id)
+    FOREIGN KEY (employee_code_master_id) REFERENCES employee_code_master(employee_code_master_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
-INSERT INTO employee_code_master (code_master_type) VALUES
-    ('formSession'),
-    ('formName'),
-    ('counselor'),
-    ('studentHouseId'),
-    ('consultant'),
-    ('courseMedium'),
-    ('specializationMinor'),
-    ('registerClass'),
-    ('courseopted'),
-    ('feeSession'),
-    ('feeCategory'),
-    ('feeplan'),
-    ('additionalCategory'),
-    ('co-curricularActivity'),
-    ('examCenterIst'),
-    ('examCenterIInd'),
-    ('region'),
-    ('admissionCategory'),
-    ('payOut'),
-    ('country'),
-    ('state'),
-    ('city'),
-    ('shift');
-
-INSERT INTO employee_code_master (code_master_type) VALUES
-('cCountry'),
-('cState'),
-('cCity'),
-('maritalStatus'),
-('jobStatus'),
-('leaveType'),
-('proficiencyLevel');
+ALTER TABLE employee_code_master_type DROP INDEX code;
 
 CREATE TABLE course (
     course_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -171,12 +190,13 @@ CREATE TABLE course (
     course_code VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
     FOREIGN KEY (university_id) REFERENCES university(university_id),
-    FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university(affiliated_university_id)
+    FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university(affiliated_university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE specialization (
     specialization_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -184,32 +204,33 @@ CREATE TABLE specialization (
     university_id INT NOT NULL,
     specialization_name VARCHAR(255) NOT NULL,
     specialization_code VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_id) REFERENCES course(course_id),
-    FOREIGN KEY (university_id) REFERENCES university(university_id)
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE semester (
     semester_id INT AUTO_INCREMENT PRIMARY KEY,
     university_id INT NOT NULL,
     course_id INT NOT NULL,
-    specialization_id INT,
+    specialization_id INT NULL,
     semester_duration INT NOT NULL,
     course_duration INT NOT NULL,
     total_semester INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (university_id) REFERENCES university(university_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id),
-    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
-ALTER TABLE campus
-ADD COLUMN latitude FLOAT NULL,
-ADD COLUMN longitude FLOAT NULL;
 
 CREATE TABLE students (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -272,6 +293,7 @@ CREATE TABLE students (
     document_status ENUM('Pending Documents', 'Complete Documents') DEFAULT 'Pending Documents',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (university_id) REFERENCES university(university_id),
     FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
@@ -279,9 +301,9 @@ CREATE TABLE students (
     FOREIGN KEY (affiliated_university_id) REFERENCES affiliated_university(affiliated_university_id),
     FOREIGN KEY (course_level_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id),
-    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
-
 
 CREATE TABLE students_entrance_detail (
     students_entrance_detail_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -299,8 +321,10 @@ CREATE TABLE students_entrance_detail (
     remarks VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    FOREIGN KEY (student_id) REFERENCES students (student_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE students_address (
@@ -313,8 +337,10 @@ CREATE TABLE students_address (
     contact VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (student_id) REFERENCES students (student_id)
+    FOREIGN KEY (student_id) REFERENCES students (student_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE subject (
@@ -326,10 +352,12 @@ CREATE TABLE subject (
     subject_code VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (university_id) REFERENCES university(university_id),
-    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id)
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE class_sections (
@@ -340,10 +368,12 @@ CREATE TABLE class_sections (
     section VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
-    FOREIGN KEY (acedmic_period_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
+    FOREIGN KEY (acedmic_period_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE class_subject_mapper (
@@ -352,9 +382,11 @@ CREATE TABLE class_subject_mapper (
     class_sections_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
-    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id)
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 
@@ -364,9 +396,11 @@ CREATE TABLE class_student_mapper (
     class_sections_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id)
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE subject_mapper (
@@ -378,23 +412,14 @@ CREATE TABLE subject_mapper (
     semester_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP,
     FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
     FOREIGN KEY (student_id) REFERENCES students(student_id),
     FOREIGN KEY (course_id) REFERENCES course(course_id),
     FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
-    FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id)
-);
-
-CREATE TABLE student_elective_subject (
-    student_elective_subject_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id INT NOT NULL,
-    subject_id INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-    deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (subject_id) REFERENCES subject(subject_id)
+    FOREIGN KEY (semester_id) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE students_meta_data (
@@ -404,24 +429,24 @@ CREATE TABLE students_meta_data (
     codes INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (student_id) REFERENCES students(student_id),
     FOREIGN KEY (types) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (codes) REFERENCES employee_code_master(employee_code_master_id),
     UNIQUE (student_id,types, codes)
 );
 
-CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    university_id INT NOT NULL,
-    user_name VARCHAR(255) NOT NULL,
-    unique_id VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    phone VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL,
+CREATE TABLE student_elective_subject (
+    student_elective_subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    subject_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX email_index (email),
-    FOREIGN KEY (university_id) REFERENCES university(university_id)
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );

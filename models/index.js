@@ -63,8 +63,8 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSection' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSection' });
 
-courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'course_id', as: 'affiliated' });
-affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'course_id', as: 'affiliated' });
+courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
+affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
@@ -177,6 +177,34 @@ teacherSectionMappingModel.belongsTo(classSectionModel, { foreignKey: 'class_sec
 
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'employeeCourse' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'employeeCourse' });
+
+//user join 
+employeeCodeMasterType.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userEmployeeCodeType' });
+userModel.hasMany(employeeCodeMasterType, { foreignKey: 'createdBy', as: 'userEmployeeCodeType' });
+
+studentModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userStudent' });
+userModel.hasMany(studentModel, { foreignKey: 'createdBy', as: 'userStudent' });
+
+classStudentMapperModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userClassStudentMapper' });
+userModel.hasMany(classStudentMapperModel, { foreignKey: 'createdBy', as: 'userClassStudentMapper' });
+
+classSectionModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userClassSection' });
+userModel.hasMany(classSectionModel, { foreignKey: 'createdBy', as: 'userClassSection' });
+
+classSubjectMapperModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userClassSubjectMapper' });
+userModel.hasMany(classSubjectMapperModel, { foreignKey: 'createdBy', as: 'userClassSubjectMapper' });
+
+semesterModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userSemester' });
+userModel.hasMany(semesterModel, { foreignKey: 'createdBy', as: 'userSemester' });
+
+employeeModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userEmployee' });
+userModel.hasMany(employeeModel, { foreignKey: 'createdBy', as: 'userEmployee' });
+
+teacherSubjectMappingModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userTeacherSubjectMapping' });
+userModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'createdBy', as: 'userTeacherSubjectMapping' });
+
+teacherSectionMappingModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userTeacherSectionMapping' });
+userModel.hasMany(teacherSectionMappingModel, { foreignKey: 'createdBy', as: 'userTeacherSectionMapping' });
 
 export {
     settingModel,

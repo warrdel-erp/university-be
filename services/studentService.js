@@ -6,7 +6,7 @@ import { uploadFile } from '../utility/awsServices.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { getSettingValue } from '../repository/settingRepository.js';
 
-export async function addStudent(info, files) {
+export async function addStudent(info, files,createdBy) {
   const transaction = await sequelize.transaction();
   try {
     // Upload files and update info object
@@ -38,7 +38,8 @@ export async function addStudent(info, files) {
     // Scholar number
     info.scholarNumber = await generateScholarNumber(info.courseId, info.instituteId);
     info.email = info.email.toLowerCase();
-
+    info.createdBy = createdBy;
+    
     // Save student information
     const student = await studentRepository.addStudent(info, { transaction });
     const studentId = student.dataValues.studentId;
@@ -51,7 +52,7 @@ export async function addStudent(info, files) {
         : info.entranceDetails;
 
       if (Array.isArray(entranceDetailsArray)) {
-        entranceDetails = entranceDetailsArray.map(detail => ({ ...detail, studentId }));
+        entranceDetails = entranceDetailsArray.map(detail => ({ ...detail, studentId,createdBy }));
         await studentRepository.addStudentsEntranceDetail(entranceDetails, { transaction });
       } else {
         throw new Error('Entrance details should be an array.');
@@ -67,6 +68,7 @@ export async function addStudent(info, files) {
 
       if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
         addressDetailsObject.studentId = studentId;
+        addressDetailsObject.createdBy = createdBy;
         addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, { transaction });
       } else {
         throw new Error('Address details should be an object.');
@@ -90,6 +92,7 @@ export async function addStudent(info, files) {
 
         const entries = type.map((types, index) => ({
           studentId,
+          createdBy,
           types,
           codes: code[index]
         }));
@@ -129,12 +132,12 @@ async function generateScholarNumber(courseId,instituteId) {
   return scholarNumber;
 };
 
-export async function getAllStudents(search){
-    return await studentRepository.getAllStudents(search)
+export async function getAllStudents(search,universityId){
+    return await studentRepository.getAllStudents(search,universityId)
 };
 
-export async function getSingleStudentDetail(studentId){
-    return await studentRepository.getSingleStudentDetail(studentId)
+export async function getSingleStudentDetail(studentId,universityId){
+    return await studentRepository.getSingleStudentDetail(studentId,universityId)
 };
 
 export async function importStudentData(fileType,file){
@@ -284,21 +287,21 @@ export async function deleteStudentDetail(studentId) {
   }
 };
 
-export async function getEmptyEnrollNumber(){
-  return await studentRepository.getEmptyEnrollNumber()
+export async function getEmptyEnrollNumber(universityId){
+  return await studentRepository.getEmptyEnrollNumber(universityId)
 };
 
 export async function studentCourseMapping(data){
   return await studentRepository.studentCourseMapping(data)
 };
 
-export async function classStudentMapping(data) {
+export async function classStudentMapping(data, createdBy) {
   try {
-    const { studentId, classSectionId } = data;
+    const { studentId, classSectionId} = data;
     const results = [];
 
     for (const id of studentId) {
-      const entryData = { studentId: id, classSectionId };
+      const entryData = { studentId: id, classSectionId, createdBy };
       const result = await studentRepository.classStudentMapping(entryData);
       results.push(result);
     }
@@ -310,8 +313,8 @@ export async function classStudentMapping(data) {
   }
 }; 
 
-export async function getclassStudentMapping(classSectionId){
-  return await studentRepository.getclassStudentMapping(classSectionId)
+export async function getclassStudentMapping(classSectionId,universityId){
+  return await studentRepository.getclassStudentMapping(classSectionId,universityId)
 };
 
 export async function addElectiveSubject(data){

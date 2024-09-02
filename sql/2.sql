@@ -23,8 +23,10 @@ CREATE TABLE employee (
     pick_color VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (institute_id) REFERENCES institute(institute_id)
 );
 
@@ -42,7 +44,9 @@ CREATE TABLE employee_address (
     personal_email VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -77,7 +81,9 @@ CREATE TABLE employee_office (
     employee_rank VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -87,7 +93,9 @@ CREATE TABLE employee_rolls (
     roles VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -99,7 +107,9 @@ CREATE TABLE employee_skill (
     experience_in_month VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -118,7 +128,9 @@ CREATE TABLE employee_documents (
     pursuing BOOLEAN DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -131,7 +143,9 @@ CREATE TABLE employee_qualification (
     attachment JSON DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -149,7 +163,9 @@ CREATE TABLE employee_experiance (
     remarks VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -164,7 +180,9 @@ CREATE TABLE employee_achievements (
     date VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -177,7 +195,9 @@ CREATE TABLE employee_ward (
     date_of_birth DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -189,7 +209,9 @@ CREATE TABLE employee_activity (
     remarks VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -202,7 +224,9 @@ CREATE TABLE employee_reference (
     address VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -216,7 +240,9 @@ CREATE TABLE employee_research (
     institution VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -228,7 +254,9 @@ CREATE TABLE employee_long_leave (
     remark VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
 );
 
@@ -239,9 +267,11 @@ CREATE TABLE employee_meta_data (
     employee_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (types) REFERENCES employee_code_master_type (employee_code_master_type_id),
     FOREIGN KEY (codes) REFERENCES employee_code_master (employee_code_master_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee (employee_id),
     UNIQUE KEY unique_employee_code (employee_id, types, codes)
 );
@@ -252,7 +282,9 @@ CREATE TABLE teacher_subject_mapping (
     class_subject_mapper_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
     FOREIGN KEY (class_subject_mapper_id) REFERENCES class_subject_mapper (class_subject_mapper_id)
 );
@@ -264,7 +296,9 @@ CREATE TABLE teacher_section_mapping (
     is_cordinatory BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (class_sections_id) REFERENCES class_sections (class_sections_id)
 );

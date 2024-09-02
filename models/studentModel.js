@@ -8,6 +8,7 @@ import course from './courseModel.js';
 import specialization from "./specializationModel.js";
 import {additionalCategory, bloodGroup, caste, consultant, counselor, courseMedium, courseOpted, curricularActivity, documentStatus, feeCategory, feePlan, feeSession, gender, iindExam, istExam, nationality, region, registerClass, religion, shift, specializationMinor, studentHouseId, studentAdmissionStatus, country, state, city, studentStatus, formSession, admissionCategory} from '../constant.js'; 
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import users from "./userModel.js"
 
 export default sequelize.define(
     'students',
@@ -343,6 +344,24 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        createdBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        // updatedBy: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'updated_by',
+        //     references: {
+        //         model: users,
+        //         key: 'user_id'
+        //     }
+        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

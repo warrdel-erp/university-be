@@ -1,30 +1,30 @@
 import {addStudent ,getAllStudents ,getSingleStudentDetail,importStudentData,updateStudentDetails,deleteStudentDetail,getEmptyEnrollNumber,studentCourseMapping,classStudentMapping,addElectiveSubject,getclassStudentMapping} from "../controllers/studentController.js"
-
+import userAuth from "../middleware/authUser.js"
 // router
 import {Router} from  'express'
 const router =  Router();
 
-router.post('/', addStudent);
+router.post('/',userAuth , addStudent);
 
-router.get('/all', getAllStudents);
+router.get('/all',userAuth , getAllStudents);
 
-router.get('/', getSingleStudentDetail);
+router.get('/',userAuth , getSingleStudentDetail);
 
-router.post('/import', importStudentData);
+router.post('/import',userAuth , importStudentData);
 
-router.patch('/:studentId', updateStudentDetails);
+router.patch('/:studentId',userAuth , updateStudentDetails);
 
-router.delete('/:studentId', deleteStudentDetail);
+router.delete('/:studentId',userAuth , deleteStudentDetail);
 
-router.get('/emptyEnrollNumber', getEmptyEnrollNumber);
+router.get('/emptyEnrollNumber',userAuth , getEmptyEnrollNumber);
 
-router.post('/studentMapping', studentCourseMapping);
+router.post('/studentMapping',userAuth , studentCourseMapping);
 
-router.post('/classStudentMapping', classStudentMapping);
+router.post('/classStudentMapping',userAuth , classStudentMapping);
 
-router.get('/classStudentMapping', getclassStudentMapping);
+router.get('/classStudentMapping',userAuth , getclassStudentMapping);
 
-router.post('/electiveSubject', addElectiveSubject);
+router.post('/electiveSubject',userAuth , addElectiveSubject);
 
 // router.get('/electiveSubject', addElectiveSubject);
 

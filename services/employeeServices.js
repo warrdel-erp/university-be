@@ -15,7 +15,7 @@ import * as employeeResearchRepository from '../repository/employeeResearchRepos
 import * as employeeLongLeaveRepository from '../repository/employeeLongLeaveRepository.js';
 import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepository.js'
 
-export async function addEmployee(data) {
+export async function addEmployee(data,createdBy) {
     console.log(`>>>>>>data>>>>>>>>>.`,data);    
     
     const transaction = await sequelize.transaction();
@@ -36,18 +36,21 @@ export async function addEmployee(data) {
         const longLeaves = JSON.parse(data.longLeave);
 
         // Add employee 
+        data.createdBy = createdBy
         const employee = await employeeRepository.addEmployee(data, { transaction });
         const employeeId = employee.dataValues.employeeId;
 
         // Add employee address
         await employeeAddressRepository.addAddress({
             employeeId,
+            createdBy,
             ...address
         }, { transaction });
 
         // Add employee office details
         await employeeOfficeRepository.addOfficeDetails({
             employeeId,
+            createdBy,
             ...office
         }, { transaction });
 
@@ -55,6 +58,7 @@ export async function addEmployee(data) {
         for (const role of roles) {
             await employeeRoleRepository.addEmployeeRole({
                 employeeId,
+                createdBy,
                 role
             }, { transaction });
         }
@@ -63,6 +67,7 @@ export async function addEmployee(data) {
         for (const skill of skills) {
             await employeeSkillRepository.addEmployeeSkill({
                 employeeId,
+                createdBy,
                 ...skill
             }, { transaction });
         }
@@ -71,6 +76,7 @@ export async function addEmployee(data) {
         for (const document of documents) {
             await employeeDocumentRepository.addEmployeeDocuments({
                 employeeId,
+                createdBy,
                 ...document
             }, { transaction });
         }
@@ -79,6 +85,7 @@ export async function addEmployee(data) {
         for (const qualification of qualifications) {
             await employeeQualificationRepository.addEmployeeQualification({
                 employeeId,
+                createdBy,
                 ...qualification
             }, { transaction });
         }
@@ -87,6 +94,7 @@ export async function addEmployee(data) {
         for (const experience of experiences) {
             await employeeExperianceRepository.addEmployeeExperiance({
                 employeeId,
+                createdBy,
                 ...experience
             }, { transaction });
         }
@@ -95,6 +103,7 @@ export async function addEmployee(data) {
         for (const achievement of achievements) {
             await employeeAchivementRepository.addEmployeeAchievement({
                 employeeId,
+                createdBy,
                 ...achievement
             }, { transaction });
         }
@@ -103,6 +112,7 @@ export async function addEmployee(data) {
         for (const ward of wards) {
             await employeeWardRepository.addEmployeeWard({
                 employeeId,
+                createdBy,
                 ...ward
             }, { transaction });
         }
@@ -111,6 +121,7 @@ export async function addEmployee(data) {
         for (const activity of activities) {
             await employeeActivityRepository.addEmployeeActivity({
                 employeeId,
+                createdBy,
                 ...activity
             }, { transaction });
         }
@@ -119,6 +130,7 @@ export async function addEmployee(data) {
         for (const reference of references) {
             await employeeReferenceRepository.addEmployeeReference({
                 employeeId,
+                createdBy,
                 ...reference
             }, { transaction });
         }
@@ -127,6 +139,7 @@ export async function addEmployee(data) {
         for (const researchItem of research) {
             await employeeResearchRepository.addEmployeeResearch({
                 employeeId,
+                createdBy,
                 ...researchItem
             }, { transaction });
         }
@@ -135,6 +148,7 @@ export async function addEmployee(data) {
         for (const longLeave of longLeaves) {
             await employeeLongLeaveRepository.addEmployeeLongLeave({
                 employeeId,
+                createdBy,
                 ...longLeave
             }, { transaction });
         }
@@ -155,6 +169,7 @@ export async function addEmployee(data) {
 
         const entries = type.map((types, index) => ({
         employeeId,
+        createdBy,
           types,
           codes: code[index]
         }));
@@ -176,12 +191,12 @@ export async function addEmployee(data) {
     }
 };
 
-export async function getAllEmployee(){
-    return await employeeRepository.getAllEmployee()
+export async function getAllEmployee(universityId){
+    return await employeeRepository.getAllEmployee(universityId)
 };
 
-export async function getSingleEmployeeDetails(employeeId){
-    return await employeeRepository.getSingleEmployeeDetails(employeeId)
+export async function getSingleEmployeeDetails(employeeId,universityId){
+    return await employeeRepository.getSingleEmployeeDetails(employeeId,universityId)
 };
 
 export async function deleteEmployeeDetail(employeeId) {

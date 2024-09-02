@@ -2,13 +2,14 @@ import {Router} from  'express';
 const router =  Router();
 
 import {addEmployee,getAllEmployee,getSingleEmployeeDetails,deleteEmployeeDetail} from '../controllers/employeeController.js';
+import userAuth from "../middleware/authUser.js"
 
-router.post('/addEmp', addEmployee);
+router.post('/addEmp',userAuth , addEmployee);
 
-router.get('/', getAllEmployee);
+router.get('/',userAuth , getAllEmployee);
 
-router.get('/:id', getSingleEmployeeDetails);
+router.get('/:id',userAuth , getSingleEmployeeDetails);
 
-router.delete('/:id', deleteEmployeeDetail);
+router.delete('/:id',userAuth , deleteEmployeeDetail);
 
 export default router;

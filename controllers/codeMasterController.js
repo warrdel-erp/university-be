@@ -1,6 +1,7 @@
 import * as codeMasterServices  from '../services/codeMasterServices.js';
 
 export const getAllEmployeeType = async (req,res) => {
+    const universityId = req.user.universityId;
     try {
         const result = await codeMasterServices.getAllEmployeeType();
         res.status(200).send(result);
@@ -12,12 +13,13 @@ export const getAllEmployeeType = async (req,res) => {
 
 export const addEmployeeCode = async (req,res) => {
     try {
-        const data = req.body
+        const data = req.body;
+        const createdBy = req.user.userId;
         const {employeeCodeMasterId} = req.body;
         if(!employeeCodeMasterId){
           return res.status(400).send('University Id is required')
         }
-        const result = await codeMasterServices.addEmployeeCode(data);
+        const result = await codeMasterServices.addEmployeeCode(data,createdBy);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding employee code:", error);
@@ -26,10 +28,11 @@ export const addEmployeeCode = async (req,res) => {
 };
 
 export const getEmployeeCodesTypes = async (req,res) => {
+    const universityId = req.user.universityId;
     let {employeeCodeMasterId} = req.query
     employeeCodeMasterId = employeeCodeMasterId || 0 
     try {
-        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId);
+        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting employee code and types:", error);

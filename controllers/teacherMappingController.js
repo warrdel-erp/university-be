@@ -3,6 +3,7 @@ import * as teacherMapping from '../services/teacherMappingServices.js'
 export const teacherSubjectMapping = async (req, res) => {
     let { employeeId, classSubjectMapperId} = req.body;
     const data = req.body
+    const createdBy = req.user.userId;
     try {
         // required fields
         if (!( employeeId && classSubjectMapperId )) {
@@ -10,7 +11,7 @@ export const teacherSubjectMapping = async (req, res) => {
         }
 
         // Add the teacher subject mapping
-        const result = await teacherMapping.teacherSubjectMappingService(data);
+        const result = await teacherMapping.teacherSubjectMappingService(data,createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in teacher subject mapping:", error);
@@ -20,6 +21,7 @@ export const teacherSubjectMapping = async (req, res) => {
 
 export const teacherSectionMapping = async (req, res) => {
     let { employeeId, classSectionsId} = req.body;
+    const createdBy = req.user.userId;
     const data = req.body
     try {
         //  required fields
@@ -27,7 +29,7 @@ export const teacherSectionMapping = async (req, res) => {
             return res.status(400).send(" employeeId, classSectionsId is required");
         }
 
-        const result = await teacherMapping.teacherSectionMappingService(data);
+        const result = await teacherMapping.teacherSectionMappingService(data,createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in teacher Section Mapping:", error);
@@ -36,10 +38,11 @@ export const teacherSectionMapping = async (req, res) => {
 };
 
 export const getTeacherSubjectMapping = async (req,res) => {
+    const universityId = req.user.universityId;
     let {employeeId} = req.query
     employeeId = employeeId || 0 
     try {
-        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId);
+        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Subject Mapping:", error);
@@ -48,10 +51,11 @@ export const getTeacherSubjectMapping = async (req,res) => {
 };
 
 export const getTeacherSectionMapping = async (req,res) => {
+    const universityId = req.user.universityId;
     let {employeeId} = req.query
     employeeId = employeeId || 0 
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(employeeId);
+        const result = await teacherMapping.getTeacherSectionMappingService(employeeId,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Section Mapping:", error);

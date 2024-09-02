@@ -1,12 +1,13 @@
 import * as userService from "../services/userServices.js";
 import * as userRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 // register
 export const register = async (req, res) => {
+  const universityId = 1;
   try {
-    const { email, password, userName, phone ,universityId} = req.body;
+    const { email, password, userName, phone} = req.body;
     const existingEmail = await userRepository.findEmailByEmail(email);
 
     // Check if all required fields are provided
@@ -49,12 +50,14 @@ export const login = async (req, res) => {
       return res.status(400).send("Incorrect password");
     }
 
-//    const token = jwt.sign({ email: existingEmail.email }, secretKey,{ expiresIn: '600000' });
-//    res.cookie("token", token);
+  //  const token = jwt.sign({ email: existingEmail.email }, process.env.SECRET_KEY,{ expiresIn: process.env.TOKEN_TIME });
+  const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '1h'});
+
+   res.cookie("token", token);
    res.status(200).json({
     status: true,
     message: "User logged in successfully",
-    // token,
+    token,
   });
   } catch (error) {
     console.error("Error during login:", error);

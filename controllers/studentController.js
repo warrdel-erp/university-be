@@ -5,6 +5,7 @@ import * as studentService from '../services/studentService.js'
 
 export const addStudent = async (req, res) => {
     const file = req.files;
+    const createdBy = req.user.userId;
     let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber } = req.body;
 
     try {
@@ -37,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file);
+        const result = await studentService.addStudent(info, file,createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
@@ -47,10 +48,11 @@ export const addStudent = async (req, res) => {
 
 // 2. get all student
 export const getAllStudents = async (req,res) => {
+    const universityId = req.user.universityId;
     let {search} = req.query
      search = search || 'all' 
     try {
-        const result = await studentService.getAllStudents(search);
+        const result = await studentService.getAllStudents(search,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
@@ -60,12 +62,13 @@ export const getAllStudents = async (req,res) => {
 
 // 3. get single student details
 export const getSingleStudentDetail = async (req,res) => {
+    const universityId = req.user.universityId;
     const studentId = req.query.studentId;
     try {
         if (!studentId){
             res.status(400).send("studentId is required");
         }
-        const result = await studentService.getSingleStudentDetail(studentId);
+        const result = await studentService.getSingleStudentDetail(studentId,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting ${studentId} details , single student details:`, error);
@@ -121,9 +124,9 @@ export const deleteStudentDetail = async (req,res) => {
 };
 
 export const getEmptyEnrollNumber = async (req,res) => {
-    const studentId = req.query.studentId;
+    const universityId = req.user.universityId;
     try {
-        const result = await studentService.getEmptyEnrollNumber(studentId);
+        const result = await studentService.getEmptyEnrollNumber(universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -153,6 +156,7 @@ export const studentCourseMapping = async (req, res) => {
 export const classStudentMapping = async (req, res) => {
     let { studentId, classSectionId} = req.body;
     const data = req.body
+    const createdBy = req.user.userId;
     try {
         //  required fields
         if (!( studentId && classSectionId)) {
@@ -160,7 +164,7 @@ export const classStudentMapping = async (req, res) => {
         }
 
         const info = req.body;
-        const result = await studentService.classStudentMapping(data);
+        const result = await studentService.classStudentMapping(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in class Student Mapping:", error);
@@ -169,9 +173,10 @@ export const classStudentMapping = async (req, res) => {
 };
 
 export const getclassStudentMapping = async (req, res) => {
+    const universityId = req.user.universityId;
     const classSectionId = req.query.classSectionId || 0;    
     try {
-        const result = await studentService.getclassStudentMapping(classSectionId);
+        const result = await studentService.getclassStudentMapping(classSectionId,universityId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);

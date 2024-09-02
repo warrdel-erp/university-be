@@ -41,7 +41,7 @@ export async function studentMetaData(data) {
     }
 };
 
-export async function getAllStudents(firstName) {
+export async function getAllStudents(firstName,universityId) {
     let result;
     try {
         if (firstName !== 'all') {
@@ -49,29 +49,52 @@ export async function getAllStudents(firstName) {
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 include: [
                     {
+                        model: model.userModel,
+                        as: "userStudent",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
+                    {
                         model: model.campusModel,
                         as: "campus",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                        where: {
+                            universityId:universityId
+                        },  
                     },
                     {
                         model: model.instituteModel,
                         as: "institute",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                        where: {
+                            universityId:universityId
+                        },  
                     },
                     {
                         model: model.affiliatedIniversityModel,
                         as: "affiliatedUniversity",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                        where: {
+                            universityId:universityId
+                        },  
                     },
                     {
                         model: model.courseModel,
                         as: "course",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                        where: {
+                            universityId:universityId
+                        },  
                     },
                     {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                        where: {
+                            universityId:universityId
+                        },  
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -92,6 +115,16 @@ export async function getAllStudents(firstName) {
                                 model: model.employeeCodeMaster,
                                 as: "codes",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                // include:[
+                                //     {
+                                //         model:model.userModel,
+                                //         as:"userEmployeeCodeType",
+                                //         attributes:["universityId","userId"],
+                                //         where: {
+                                //             universityId:universityId
+                                //         },
+                                //     },
+                                // ],                           
                             },
                         ]
                     },
@@ -109,6 +142,16 @@ export async function getAllStudents(firstName) {
                                         model: model.employeeCodeMaster,
                                         as: "codes",
                                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                        // include:[
+                                        //     {
+                                        //         model:model.userModel,
+                                        //         as:"userEmployeeCodeType",
+                                        //         attributes:["universityId","userId"],
+                                        //         where: {
+                                        //             universityId:universityId
+                                        //         },
+                                        //     },
+                                        // ],    
                                     },
                                 ]
                             },
@@ -125,19 +168,36 @@ export async function getAllStudents(firstName) {
             result = await model.studentModel.findAll({
                 include: [
                     {
+                        model: model.userModel,
+                        as: "userStudent",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
+                    {
                         model: model.campusModel,
                         as: "campus",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                        where: {
+                            universityId:universityId
+                        }, 
                     },
                     {
                         model: model.instituteModel,
                         as: "institute",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                        where: {
+                            universityId:universityId
+                        },
                     },
                     {
                         model: model.affiliatedIniversityModel,
                         as: "affiliatedUniversity",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                        where: {
+                            universityId:universityId
+                        }, 
                     },
                     {
                         model: model.employeeCodeMasterType,
@@ -174,11 +234,17 @@ export async function getAllStudents(firstName) {
                         model: model.courseModel,
                         as: "course",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                        where: {
+                            universityId:universityId
+                        }, 
                     },
                     {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                        where: {
+                            universityId:universityId
+                        },
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -200,25 +266,42 @@ export async function getAllStudents(firstName) {
     };
 };
 
-export async function getSingleStudentDetail(studentId) {
+export async function getSingleStudentDetail(studentId,universityId) {
     try {
         const result = await model.studentModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
+                {
+                    model: model.userModel,
+                    as: "userStudent",
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },                    
+                },
             {
                 model: model.campusModel,
                 as: "campus",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                where: {
+                    universityId:universityId
+                },  
             },
             {
                 model: model.instituteModel,
                 as: "institute",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                where: {
+                    universityId:universityId
+                },  
             },
             {
                 model: model.affiliatedIniversityModel,
                 as: "affiliatedUniversity",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                where: {
+                    universityId:universityId
+                },  
             },
             {
                 model: model.employeeCodeMasterType,
@@ -241,13 +324,6 @@ export async function getSingleStudentDetail(studentId) {
                         model: model.employeeCodeMasterType,
                         as: "typs",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
                     },
                 ]
             },
@@ -255,11 +331,17 @@ export async function getSingleStudentDetail(studentId) {
                 model: model.courseModel,
                 as: "course",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                where: {
+                    universityId:universityId
+                }, 
             },
             {
                 model: model.specializationModel,
                 as: "specialization",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                where: {
+                    universityId:universityId
+                }, 
             },
             {
                 model: model.studentsEntranceDetail,
@@ -395,10 +477,20 @@ export async function checkEnroll(enrollNumber) {
     }
 };
 
-export async function getEmptyEnrollNumber() {
+export async function getEmptyEnrollNumber(universityId) {
     try {
         // const attributes = ["first_name","father_name"];
         const result = await model.studentModel.findAll({
+            include: [
+                {
+                    model: model.userModel,
+                    as: "userStudent",
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },                    
+                },
+            ],
             // attributes: attributes,
             where: {
                 enrollNumber: {
@@ -506,12 +598,20 @@ export async function classStudentMapping(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId) {
+export async function getclassStudentMapping(classSectionId,universityId) {
     
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
+                {
+                    model: model.userModel,
+                    as: "userClassStudentMapper",
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },
+                },
                 {
                     model: model.studentModel,
                     as: "studentMapped",
@@ -568,6 +668,7 @@ export async function getclassStudentMapping(classSectionId) {
                 },
             ],
         };
+        
         if (classSectionId !== 0) {
             queryOptions.where = { class_sections_id: classSectionId };
         }

@@ -11,13 +11,23 @@ export async function teacherSubjectMapping(data) {
     }
 };
 
-export async function getTeacherSubjectMapping(employeeId) {
+export async function getTeacherSubjectMapping(employeeId,universityId) {
     console.log(`>>>>>getTeacherSubjectMapping>>>>>>>>>>>>>>>`,employeeId);
     
     let result;
     try {
         if (employeeId !== 0) {
             result = await model.teacherSubjectMappingModel.findAll({
+                include: [
+                    {
+                        model: model.userModel,
+                        as: "userTeacherSubjectMapping",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
+                ],
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 where: {
                     employeeId:employeeId
@@ -25,6 +35,16 @@ export async function getTeacherSubjectMapping(employeeId) {
             });
         } else {
             result = await model.teacherSubjectMappingModel.findAll({
+                include: [
+                    {
+                        model: model.userModel,
+                        as: "userTeacherSubjectMapping",
+                        attributes:["universityId","userId"],
+                        where: {
+                            universityId:universityId
+                        },                    
+                    },
+                ],
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             });
         };

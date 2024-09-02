@@ -1,9 +1,9 @@
-import {downloadFile } from "../controllers/downloadController.js"
-
-// router
 import {Router} from  'express'
 const router =  Router();
 
-router.get('/', downloadFile);
+import {downloadFile } from "../controllers/downloadController.js";
+import userAuth from "../middleware/authUser.js"
+
+router.get('/',userAuth , downloadFile);
 
 export default router;

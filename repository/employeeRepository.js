@@ -10,11 +10,19 @@ export async function addEmployee(data) {
     }
 };
 
-export async function getAllEmployee() {
+export async function getAllEmployee(universityId) {
     try {
         const result = await model.employeeModel.findAll({
             attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours"],
             include:[
+                {
+                    model:model.userModel,
+                    as:'userEmployee',
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },  
+                },
                {
                 model:model.employeeOfficeModel,
                 as:'office',
@@ -48,11 +56,19 @@ export async function getAllEmployee() {
     };
 };
 
-export async function getSingleEmployeeDetails(employeeId) {
+export async function getSingleEmployeeDetails(employeeId,universityId) {
     try {
         const result = await model.employeeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include:[
+                {
+                    model:model.userModel,
+                    as:'userEmployee',
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },  
+                },
                {
                 model:model.employeeAddressModel,
                 as:'address',

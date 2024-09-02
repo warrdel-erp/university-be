@@ -22,7 +22,7 @@ export async function addEmployeeCode(data) {
     }
 };
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId) {
+export async function getEmployeeCodesTypes(employeeCodeMasterId,universityId) {
     let result;
     try {
         if (employeeCodeMasterId !== 0) {
@@ -33,8 +33,18 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId) {
                         model: model.employeeCodeMasterType,
                         as: "codes",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterId","employee_code_master_id"] },
+                        include:[
+                            {
+                                model:model.userModel,
+                                as:"userEmployeeCodeType",
+                                attributes:["universityId","userId"],
+                                where: {
+                                    universityId:universityId
+                                },
+                            },
+                        ],
                     },
-                    ],
+                ],
                 where: {
                     employeeCodeMasterId:employeeCodeMasterId
                 },
@@ -47,8 +57,18 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId) {
                         model: model.employeeCodeMasterType,
                         as: "codes",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterId","employee_code_master_id"] },
+                        include:[
+                            {
+                                model:model.userModel,
+                                as:"userEmployeeCodeType",
+                                attributes:["universityId","userId"],
+                                where: {
+                                    universityId:universityId
+                                },
+                            },
+                        ],
                     },
-                    ],
+                ],
             });
         };
         return result;

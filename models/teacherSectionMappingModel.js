@@ -1,7 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import employee from "./employeeModel.js"
-import classSection from "./classSectionModel.js"
+import employee from "./employeeModel.js";
+import classSection from "./classSectionModel.js";
+import users from "./userModel.js";
 
 export default sequelize.define(
     'teacher_section_mapping',
@@ -36,6 +37,24 @@ export default sequelize.define(
             defaultValue: false,
             field: 'is_cordinatory'
         },
+        createdBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        // updatedBy: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'updated_by',
+        //     references: {
+        //         model: users,
+        //         key: 'user_id'
+        //     }
+        // },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

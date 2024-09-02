@@ -1,34 +1,35 @@
 import {Router} from  'express';
 const router =  Router();
 import {getAllCollegesAndCourses,addCampus,addInstitute,addAffiliatedUniversity,addCourse,addSpecialization,addSubject,addClass,getClass,addClassSubjectMapper,getClassSubjectMapper,addSemester,getSemester} from '../controllers/mainController.js';
+import userAuth  from '../middleware/authUser.js'
 
-router.get('/all', getAllCollegesAndCourses);
+router.get('/all', userAuth , getAllCollegesAndCourses);
 
-router.post('/campus', addCampus);
+router.post('/campus',userAuth, addCampus);
 
-router.post('/institute', addInstitute);
+router.post('/institute',userAuth, addInstitute);
 
-router.post('/affiliatedUniversity', addAffiliatedUniversity);
+router.post('/affiliatedUniversity',userAuth, addAffiliatedUniversity);
 
-router.post('/affiliatedUniversity', addAffiliatedUniversity);
+router.post('/affiliatedUniversity', userAuth,addAffiliatedUniversity);
 
-router.post('/course', addCourse);
+router.post('/course',userAuth, addCourse);
 
-router.post('/specialization', addSpecialization);
+router.post('/specialization',userAuth, addSpecialization);
 
-router.post('/subject', addSubject);
+router.post('/subject',userAuth, addSubject);
 
-router.post('/class', addClass);
+router.post('/class',userAuth, addClass);
 
-router.get('/class', getClass);
+router.get('/class',userAuth, getClass);
 
-router.post('/classSubjectMapper', addClassSubjectMapper);
+router.post('/classSubjectMapper',userAuth, addClassSubjectMapper);
 
-router.get('/classSubjectMapper', getClassSubjectMapper);
+router.get('/classSubjectMapper',userAuth, getClassSubjectMapper);
 
-router.post('/semester', addSemester);
+router.post('/semester',userAuth, addSemester);
 
-router.get('/semester', getSemester);
+router.get('/semester',userAuth, getSemester);
 
 
 export default router;

@@ -4,12 +4,13 @@ export async function getAllEmployeeType(){
     return await codeMasterRepository.getAllEmployeeType()
 };
 
-export async function addEmployeeCode(data){
+export async function addEmployeeCode(data,createdBy){
+    data.createdBy = createdBy;
     return await codeMasterRepository.addEmployeeCode(data)
 };
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId){
-    return await codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId)
+export async function getEmployeeCodesTypes(employeeCodeMasterId,universityId){
+    return await codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId,universityId)
 };
 
 export async function updateCodeMasterType(employeeCodeMasterTypeId,info){

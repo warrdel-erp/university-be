@@ -177,11 +177,19 @@ export async function addClass(data) {
     }
 };
 
-export async function getClassDetails(classSectionId) {
+export async function getClassDetails(classSectionId,universityId) {
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
+                {
+                    model: model.userModel,
+                    as: "userClassSection",
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    },  
+                },
                 {
                     model: model.courseModel,
                     as: "courseSectionAdd",
@@ -220,11 +228,19 @@ export async function addClassSubjectMapper(data) {
 };
 
 
-export async function getClassSubjectMapper(classSectionId) {
+export async function getClassSubjectMapper(classSectionId,universityId) {
     try {
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
             include: [
+                {
+                    model:model.userModel,
+                    as:"userClassSubjectMapper",
+                    attributes:["universityId","userId"],
+                    where: {
+                        universityId:universityId
+                    }, 
+                },
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
@@ -308,7 +324,7 @@ export async function addSemester(data) {
     }
 };
 
-export async function getSemester(courseId, specializationId) {
+export async function getSemester(courseId, specializationId, universityId) {
     try {
         const queryConditions = {};
         
@@ -321,13 +337,23 @@ export async function getSemester(courseId, specializationId) {
         }
         
         const result = await model.semesterModel.findAll({
+            include: [
+                {
+                    model: model.userModel,
+                    as: "userSemester",
+                    attributes: ["universityId", "userId"],
+                    where: {
+                        universityId: universityId
+                    }
+                }
+            ],
             where: queryConditions,
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] }
         });
 
         return result;
     } catch (error) {
-        console.error(`Error in get semester details for ${courseId, specializationId}:`, error);
+        console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId}:`, error);
         throw error;
     }
 }
