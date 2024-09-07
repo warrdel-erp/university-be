@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployeeRole(data) {
+export async function addEmployeeRole(data,transaction) {
     try {
-        const result = await model.emplopeeRoleModel.create(data);
+        const result = await model.emplopeeRoleModel.create(data,transaction);
         return result;
     } catch (error) {
         console.error("Error in add employee role:", error);

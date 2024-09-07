@@ -31,16 +31,6 @@ export default sequelize.define(
 			allowNull:true,
             field:'p_pincode'
 		},
-        cAddress:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'c_address'
-        },
-        cPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'c_pincode'
-		},
         phoneNumber:{
             type:DataTypes.STRING,
             allowNull:true,

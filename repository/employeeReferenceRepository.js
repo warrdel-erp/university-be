@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployeeReference(data) {
+export async function addEmployeeReference(data,transaction) {
     try {
-        const result = await model.employeeReferenceModel.create(data);
+        const result = await model.employeeReferenceModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee reference:", error);

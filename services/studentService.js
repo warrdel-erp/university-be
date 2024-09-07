@@ -41,7 +41,7 @@ export async function addStudent(info, files,createdBy) {
     info.createdBy = createdBy;
     
     // Save student information
-    const student = await studentRepository.addStudent(info, { transaction });
+    const student = await studentRepository.addStudent(info,  transaction );
     const studentId = student.dataValues.studentId;
 
     //  entranceDetails
@@ -53,7 +53,7 @@ export async function addStudent(info, files,createdBy) {
 
       if (Array.isArray(entranceDetailsArray)) {
         entranceDetails = entranceDetailsArray.map(detail => ({ ...detail, studentId,createdBy }));
-        await studentRepository.addStudentsEntranceDetail(entranceDetails, { transaction });
+        await studentRepository.addStudentsEntranceDetail(entranceDetails,  transaction );
       } else {
         throw new Error('Entrance details should be an array.');
       }
@@ -69,12 +69,27 @@ export async function addStudent(info, files,createdBy) {
       if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
         addressDetailsObject.studentId = studentId;
         addressDetailsObject.createdBy = createdBy;
-        addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, { transaction });
+        addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject,  transaction );
       } else {
         throw new Error('Address details should be an object.');
       }
     }
 
+    // cors AddressDetails
+    let CorsAddressDetails = null;
+    if (info.corsAddress) {
+      const addressDetailsObject = typeof info.corsAddress === 'string'
+        ? JSON.parse(info.corsAddress)
+        : info.corsAddress;
+
+      if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
+        addressDetailsObject.studentId = studentId;
+        addressDetailsObject.createdBy = createdBy;
+        CorsAddressDetails = await studentRepository.addStudentsCorsAddress(addressDetailsObject, transaction);
+      } else {
+        throw new Error('Address details should be an object.');
+      }
+    }
     //  allDropDownData
     let allDropDownData = null;
     if (info.allDropDownData) {
@@ -97,14 +112,14 @@ export async function addStudent(info, files,createdBy) {
           codes: code[index]
         }));
 
-        allDropDownData = await studentRepository.studentMetaData(entries, { transaction });
+        allDropDownData = await studentRepository.studentMetaData(entries,  transaction );
       } else {
         throw new Error('Invalid format for allDropDownData.');
       }
     }
 
     await transaction.commit();
-    return { student, entranceDetails, addressDetails, allDropDownData };
+    return { student, entranceDetails, addressDetails,CorsAddressDetails, allDropDownData };
   } catch (error) {
     await transaction.rollback();
     console.error('Error adding student:', error);
@@ -157,6 +172,7 @@ export async function importStudentData(fileType,file){
 };
 
 export async function addAdmissionNoForBulkImport(data) {
+  
   try {
     const results = [];
     for (const bulk of data) {
@@ -173,7 +189,6 @@ export async function addAdmissionNoForBulkImport(data) {
 };
 
 export async function updateStudentDetails(StudentId, info, files) {
-  
   const transaction = await sequelize.transaction();
   const settingKey = 'studentDocument';
   const getstudentDocuments = await getSettingValue(settingKey);
@@ -198,7 +213,7 @@ export async function updateStudentDetails(StudentId, info, files) {
     }
 
     // Update student details
-    const student = await studentRepository.updateStudentDetails(StudentId, info, { transaction });
+    const student = await studentRepository.updateStudentDetails(StudentId, info,  transaction );
 
     // Update entranceDetails
     let entranceDetails = [];
@@ -211,7 +226,7 @@ export async function updateStudentDetails(StudentId, info, files) {
         for (const detail of entranceDetailsArray) {
           const { studentsEntranceDetailId, ...allDetails } = detail;
           if (studentsEntranceDetailId) {
-            entranceDetails =  await studentRepository.updateStudentEntranceDetails(studentsEntranceDetailId, allDetails, { transaction });
+            entranceDetails =  await studentRepository.updateStudentEntranceDetails(studentsEntranceDetailId, allDetails,  transaction );
           }
         }
       }
@@ -227,10 +242,27 @@ export async function updateStudentDetails(StudentId, info, files) {
       if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
         const { studentsAddressId, ...allDetails } = addressDetailsObject;
         if (studentsAddressId) {
-          addressDetails =  await studentRepository.updateStudentAddressDetails(studentsAddressId, allDetails, { transaction });
+          addressDetails =  await studentRepository.updateStudentAddressDetails(studentsAddressId, allDetails,  transaction );
         }
       } else {
         throw new Error('Address details should be an object.');
+      }
+    }
+
+    // Update Cors AddressDetails
+    let corsAddressDetails = null;
+    if (info.corsAddress) {
+      const addressDetailsObject = typeof info.corsAddress === 'string'
+        ? JSON.parse(info.corsAddress)
+        : info.corsAddress;
+
+      if (typeof addressDetailsObject === 'object' && !Array.isArray(addressDetailsObject)) {
+        const { studentCorAddressId, ...allDetails } = addressDetailsObject;
+        if (studentCorAddressId) {
+          corsAddressDetails =  await studentRepository.updateStudentCorsAddressDetails(studentCorAddressId, allDetails,  transaction );
+        }
+      } else {
+        throw new Error('cors Address details should be an object.');
       }
     }
 
@@ -243,11 +275,11 @@ export async function updateStudentDetails(StudentId, info, files) {
         throw new Error('Type and code arrays must be of the same length');
       }
         for (let i = 0; i < type.length; i++) {
-          allDropDownData =  await studentRepository.updateStudentMetaData(studentId, type[i], code[i], {transaction});
+          allDropDownData =  await studentRepository.updateStudentMetaData(studentId, type[i], code[i], transaction);
       }
     }
     await transaction.commit();
-    const result = { student, entranceDetails, addressDetails,allDropDownData};
+    const result = { student, entranceDetails, addressDetails,corsAddressDetails,allDropDownData};
     return result;
   } catch (error) {
     await transaction.rollback();

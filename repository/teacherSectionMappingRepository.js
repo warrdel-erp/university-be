@@ -112,3 +112,30 @@ export async function getTeacherSectionMapping(employeeId,universityId) {
         throw error;
     };
 };
+
+export async function updateTeachersSectionMapping(teacherSectionMappingId, info) {
+    try {
+        const result = await model.teacherSectionMappingModel.update(info, {
+            where: {
+                teacherSectionMappingId: teacherSectionMappingId
+            }
+        });
+     return result; 
+    } catch (error) {
+        console.error(`Error updating teacher subject mapping ${teacherSectionMappingId} :`, error);
+        throw error; 
+    }
+};
+
+export async function deleteTeachersSectionMapping (teacherSectionMappingId) {
+    try {
+        const result = await model.teacherSectionMappingModel.destroy({
+            where: { teacherSectionMappingId },
+            individualHooks: true
+        });
+        return { message: 'delete Teacher Section Mapping deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};

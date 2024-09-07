@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployee(data) {    
+export async function addEmployee(data,transaction) {    
     try {
-        const result = await model.employeeModel.create(data);
+        const result = await model.employeeModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee :", error);
@@ -75,6 +75,49 @@ export async function getSingleEmployeeDetails(employeeId,universityId) {
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                },
                {
+                model:model.employeeCorAddressModel,
+                as:'CorsAddress',
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterCountry",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterState",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterCity",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ]
+               },
+               {
                 model:model.employeeOfficeModel,
                 as:'office',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -88,26 +131,120 @@ export async function getSingleEmployeeDetails(employeeId,universityId) {
                 model:model.employeeSkillModel,
                 as:'skill',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterEmployeeSkill",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ]
                },
                {
                 model:model.employeeDocumentsModel,
                 as:'qualification',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterDocumentQualification",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterDocumentDegreeLevel",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterDocumentStream",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ]
                },
                {
                 model:model.employeeQualificationModel,
                 as:'documents',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterQualificationDocuments",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ]    
                },
                {
                 model:model.employeeExperianceModel,
                 as:'experiance',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterExperienceType",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ] 
                },
                {
                 model:model.employeeAchievementModel,
                 as:'achievements',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterAchievementCategory",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ] 
                },
                {
                 model:model.employeeWardModel,
@@ -130,9 +267,28 @@ export async function getSingleEmployeeDetails(employeeId,universityId) {
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                },
                {
+                model:model.employeeFilesModel,
+                as:'files',
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","employeeId"] },
+               },
+               {
                 model:model.employeeLongLeaveModel,
                 as:'longLeave',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterLeaveType",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ] 
                },
                {
                 model: model.employeeMetaDataModel,

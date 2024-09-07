@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'employee_skill',
@@ -34,6 +35,15 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
             field:'experience_in_month'
+        },
+        proficiencyLevel: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'proficiency_level',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,

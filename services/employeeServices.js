@@ -13,17 +13,22 @@ import * as employeeActivityRepository from '../repository/employeeActivityRepos
 import * as employeeReferenceRepository from '../repository/employeeReferenceRepository.js';
 import * as employeeResearchRepository from '../repository/employeeResearchRepository.js';
 import * as employeeLongLeaveRepository from '../repository/employeeLongLeaveRepository.js';
-import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepository.js'
+import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepository.js';
+import * as employeeFilesRepository from '../repository/employeeFilesRepository.js';
+import { uploadFile } from '../utility/awsServices.js';
 
-export async function addEmployee(data,createdBy) {
-    console.log(`>>>>>>data>>>>>>>>>.`,data);    
+const data = { campusId: '1', instituteId: '1', resumeNumber: '12', employeeCode: '44', employeeName: 'AMIT', shortName: 'AMIT', dateOfBirth: '2024-09-02', anniversaryDate: '2024-09-02', fatherName: 'Darryl Jordan', motherName: 'Cailin Perkins', bodySign: 'A BLACK MOLE ON FACE', workingHours: '78', aicteCode: '44', from: '2024-09-02', to: '2024-09-02', vehicleNumber: 'ABC0101', drivingLicense: 'ABCD010101', drivingLicenseExpireDate: '2024-09-02', address: '{"pAddress":"DELHI","pPincode":"111111","cAddress":"DELHI","cPincode":"111111","phoneNumber":"1234567890","mobileNumber":"1234567890","officialMobileNumber":"1234567890","officialEmailId":"ABC@GMAIL.COM","personalEmail":"ABCD@GMAIL.COM"}', office: '{"joiningDate":"2024-09-02","confirmationDate":"2024-09-02","relievingDate":"2024-09-02","retirementDate":"2024-09-02","transferDate":"2024-09-02","resignationDate":"2024-09-02","noticePeriod":"12","employeeFileNumber":"12","istActive":true,"bankName":"ABC","accountNumber":"1234567890","ifscCode":"ABC123","iindActive":true,"contractBased":true,"gpf":"QWERTYU","esiNumber":"QWERTYU","uanNumber":"QWERTYU","lectureBased":true,"pfNumber":"QWERTYU","panNumber":"QWERTY1234","voterId":"ABC123","aadharNumber":"1234567890","spouseName":"AMITAMIT","nomineeName":"AMITAMITAMIT","officeExtensionNumber":"1234567890","employeeRank":"MANAGER"}', roles: '["Hostel","Transport"]', skill: '[{"name":"Kuldeep","experienceInMonth":"12","experienceInYear":"1","proficiencyLevel":1}]', documents: '[{"qualifications":1,"degreeLevel":1,"stream":1,"fromYear":"2024-09-02","toYear":"2024-09-02","universityBoard":"12122","medicalCouncilName":"12","medicalRegistrationNumber":"12","medicalCouncilRegistrationDate":"2024-09-02","medicalRegistrationExpiryDate":"2024-09-02","percentage":"1212","remarks":"12","pursuing":true}]', qualification: '[{"document":1,"receivedDate":"2024-09-02","returnedDate":"2024-09-02","documentCopy":"{}"}]', experience: '[{"experienceType":1,"organization":"12","designation":"12","fromDate":"2024-09-02","toDate":"2024-09-02","totalExperienceMonths":"12","totalExperienceYears":"12","totalExperienceDays":"12","lastSalary":"12","remarks":"12"}]', achievements: '[{"achievementCategory":1,"title":"12","description":"21","noOfTimes":"12","discipline":"12","date":"2024-09-02","nameOf":"12121"}]', ward: '[{"wardName":"12","studyIn":"12","annualFees":"12","dateOfBirth":"2024-09-02"}]', activity: '[{"activity":"21","monthYear":"2024-09-02","remarks":"12"}]', reference: '[{"name":"12","designation":"12","mobaileNumber":"12","address":"12"}]', research: '[{"thesisName":"12","associate":"12","periodFrom":"2024-09-02","to":"2024-09-02","institution":"1212"}]', longLeave: '[{"leaveType":1,"dateOfLeaving":"2024-09-02","dateOfRejoining":"2024-09-02","remark":"12"}]', allDropDownData: '{"type":[],"code":[]}' }
+export async function addEmployee(data,files,createdBy) {  
     
     const transaction = await sequelize.transaction();
     try {
+        
+
         // Parse JSON fields
         const address = JSON.parse(data.address);
+        const corsAddress = JSON.parse(data.corsAddress);
         const office = JSON.parse(data.office);
-        const roles = JSON.parse(data.roles);
+        const role = JSON.parse(data.roles);
         const skills = JSON.parse(data.skill);
         const documents = JSON.parse(data.documents);
         const qualifications = JSON.parse(data.qualification);
@@ -37,30 +42,48 @@ export async function addEmployee(data,createdBy) {
 
         // Add employee 
         data.createdBy = createdBy
-        const employee = await employeeRepository.addEmployee(data, { transaction });
+        const employee = await employeeRepository.addEmployee(data,  transaction );
         const employeeId = employee.dataValues.employeeId;
+
+        // image upload
+        const uploadPromises = Object.keys(files).map(async key => {
+            const file = files[key];
+            const s3Response = await uploadFile(file);
+            const url = s3Response.Location;
+            const data = { key, url ,employeeId,createdBy};
+            await employeeFilesRepository.addEmployeeFiles(data,  transaction );
+        });
+      
+          await Promise.all(uploadPromises);
 
         // Add employee address
         await employeeAddressRepository.addAddress({
             employeeId,
             createdBy,
             ...address
-        }, { transaction });
+        }, transaction);
+
+        // Add employee cor-address
+        await employeeAddressRepository.addCorsAddress({
+            employeeId,
+            createdBy,
+            ...corsAddress
+        }, transaction);
 
         // Add employee office details
         await employeeOfficeRepository.addOfficeDetails({
             employeeId,
             createdBy,
             ...office
-        }, { transaction });
+        }, transaction);
 
         // Add employee roles
-        for (const role of roles) {
+        for (const roles of role) {
             await employeeRoleRepository.addEmployeeRole({
                 employeeId,
                 createdBy,
-                role
-            }, { transaction });
+                roles
+            }, transaction);
         }
 
         // Add employee skills
@@ -69,7 +92,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...skill
-            }, { transaction });
+            }, transaction);
         }
 
         // Add employee documents
@@ -78,7 +101,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...document
-            }, { transaction });
+            }, transaction);
         }
 
         // Add employee qualifications
@@ -87,7 +110,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...qualification
-            }, { transaction });
+            },  transaction );
         }
 
         // Add employee experiences
@@ -96,7 +119,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...experience
-            }, { transaction });
+            }, transaction );
         }
 
         // Add employee achievements
@@ -105,7 +128,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...achievement
-            }, { transaction });
+            },  transaction );
         }
 
         // Add employee wards
@@ -114,7 +137,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...ward
-            }, { transaction });
+            },  transaction );
         }
 
         // Add employee activities
@@ -123,7 +146,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...activity
-            }, { transaction });
+            }, transaction );
         }
 
         // Add employee references
@@ -132,7 +155,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...reference
-            }, { transaction });
+            },  transaction );
         }
 
         // Add employee research
@@ -141,7 +164,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...researchItem
-            }, { transaction });
+            },  transaction );
         }
 
         // Add employee long leaves
@@ -150,7 +173,7 @@ export async function addEmployee(data,createdBy) {
                 employeeId,
                 createdBy,
                 ...longLeave
-            }, { transaction });
+            },  transaction );
         }
 
         //  allDropDownData
@@ -174,7 +197,7 @@ export async function addEmployee(data,createdBy) {
           codes: code[index]
         }));
 
-        await employeeMetaDataRepository.employeeMetaData(entries, { transaction });
+        await employeeMetaDataRepository.employeeMetaData(entries,  transaction );
       } else {
         throw new Error('Invalid format for allDropDownData.');
       }
@@ -190,6 +213,7 @@ export async function addEmployee(data,createdBy) {
         throw new Error('Failed to add employee data');
     }
 };
+// addEmployee(data,1)
 
 export async function getAllEmployee(universityId){
     return await employeeRepository.getAllEmployee(universityId)

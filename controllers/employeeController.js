@@ -9,7 +9,7 @@ export const addEmployee = async (req,res) => {
         if(!(campusId && instituteId)){
           return res.status(400).send('campusId,instituteId is required')
         }
-        const result = await employee.addEmployee(data,createdBy);
+        const result = await employee.addEmployee(data,file,createdBy);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding employee:", error);

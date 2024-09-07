@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'employee_qualification',
@@ -21,10 +22,13 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        documentCopy:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'document_copy'
+        document: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
         },
         receivedDate:{
 			type:DataTypes.DATE,

@@ -1,50 +1,62 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import employee from "./employeeModel.js";
+import student from "./studentModel.js"
 import users from "./userModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
-    'employee_long_leave',
+    'student_cor_address',
     {
-        employeeLongLeaveId: {
+        studentCorAddressId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'employee_long_leave_id'
+            field: 'student_cor_address_id'
         },
-        employeeId: {
+        studentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'employee_id',
+            field: 'student_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: student,
+                key: 'student_id'
             }
         },
-        leaveType: {
+        cCountry: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field:'leave_type',
+            field: 'c_country',
             references: {
                 model: employeeCodeMasterType,
                 key: 'employee_code_master_type_id'
             }
         },
-        DateOfLeaving: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_leaving'
-        },   
-        DateOfRejoining: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_rejoining'
-        },   
-        remark: {
+        cState: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'c_state',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
+        },
+        cCity: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'c_city',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
+        },
+        address:{
             type: DataTypes.STRING,
             allowNull: true,
-        },   
+        },
+        pincode:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+		},
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -82,7 +94,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'employee_long_leave',
+        tableName: 'student_cor_address',
         timestamps: true,
         paranoid: true
     }

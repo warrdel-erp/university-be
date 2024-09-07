@@ -86,20 +86,20 @@ export default sequelize.define(
             allowNull: true,
             field:'iind_active'
         },
-        bankName:{
+        bankNameIInd:{
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'bank_name'
+            field: 'bank_name_IInd'
         },
-        accountNumber:{
+        accountNumberIInd:{
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'account_number'
+            field: 'account_number_IInd'
         },
-        ifscCode:{
+        ifscCodeIInd:{
             type: DataTypes.STRING,
             allowNull: true,
-            field: 'ifsc_code'
+            field: 'ifsc_code_IInd'
         },
         contractBased:{
             type: DataTypes.BOOLEAN,

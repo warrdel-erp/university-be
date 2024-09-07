@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployeeSkill(data) {
+export async function addEmployeeSkill(data,transaction) {
     try {
-        const result = await model.employeeSkillModel.create(data);
+        const result = await model.employeeSkillModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee skill:", error);

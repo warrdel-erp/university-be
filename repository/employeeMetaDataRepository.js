@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function employeeMetaData(data) {    
+export async function employeeMetaData(data,transaction) {    
     try {
-        const result = await model.employeeMetaDataModel.bulkCreate(data);
+        const result = await model.employeeMetaDataModel.bulkCreate(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in adding meta data employee:", error);

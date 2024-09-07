@@ -10,6 +10,7 @@ import semesterModel from './semesterModel.js';
 import subjectModel from './subjectModel.js';
 import studentsEntranceDetail from './studentsEntranceDetailModel.js';
 import studentsAddress from './studentsAddressModel.js';
+import studentCorsAddressModel from './studentCorsAddressModel.js';
 import subjectMapperModel from './subjectMapperModel.js';
 import employeeCodeMaster from './employeeCodeMasterModel.js';
 import employeeCodeMasterType from './employeeCodeMasterTypeModel.js';
@@ -21,6 +22,7 @@ import studentMetaData from './studentMetaData.js';
 import userModel from './userModel.js';
 import employeeModel from './employeeModel.js';
 import employeeAddressModel from './employeeAddressModel.js';
+import employeeCorAddressModel from './employeeCorAddressModel.js';
 import employeeOfficeModel from './employeeOfficeModel.js';
 import emplopeeRoleModel from './employeeRoleModel.js';
 import employeeSkillModel from './employeeSkill.js';
@@ -34,6 +36,7 @@ import employeeReferenceModel from './employeeReferenceModel.js';
 import employeeResearchModel from './employeeResearchModel.js';
 import employeeLongLeaveModel from './employeeLongLeaveModel.js';
 import employeeMetaDataModel from './employeeMetaDataModel.js';
+import employeeFilesModel from './employeeFilesModel.js';
 import teacherSubjectMappingModel from './teacherSubjectMappingModel.js';
 import teacherSectionMappingModel from './teacherSectionMappingModel.js';
 
@@ -112,6 +115,18 @@ studentModel.hasMany(studentsAddress, { foreignKey: 'student_id', as: 'studentAd
 studentMetaData.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentMetaData' });
 studentModel.hasMany(studentMetaData, { foreignKey: 'student_id', as: 'studentMetaData' });
 
+studentCorsAddressModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'CorsAddressStudent' });
+studentModel.hasMany(studentCorsAddressModel, { foreignKey: 'student_id', as: 'CorsAddressStudent' });
+
+studentCorsAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_country', as: 'codeMasterCountryStudent' });
+employeeCodeMasterType.hasMany(studentCorsAddressModel, { foreignKey: 'c_country', as: 'codeMasterCountryStudent' });
+
+studentCorsAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_state', as: 'codeMasterStateStudent' });
+employeeCodeMasterType.hasMany(studentCorsAddressModel, { foreignKey: 'c_state', as: 'codeMasterStateStudent' });
+
+studentCorsAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_city', as: 'codeMasterCityStudent' });
+employeeCodeMasterType.hasMany(studentCorsAddressModel, { foreignKey: 'c_city', as: 'codeMasterCityStudent' });
+
 // code type join to code master
 employeeCodeMasterType.belongsTo(employeeCodeMaster, { foreignKey: 'employee_code_master_id', as: 'codes' });
 employeeCodeMaster.hasMany(employeeCodeMasterType, { foreignKey: 'employee_code_master_id', as: 'codes' });
@@ -119,6 +134,9 @@ employeeCodeMaster.hasMany(employeeCodeMasterType, { foreignKey: 'employee_code_
 //employee join to there related table 
 employeeAddressModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'address' });
 employeeModel.hasMany(employeeAddressModel, { foreignKey: 'employee_id', as: 'address' });
+
+employeeCorAddressModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'CorsAddress' });
+employeeModel.hasMany(employeeCorAddressModel, { foreignKey: 'employee_id', as: 'CorsAddress' });
 
 employeeOfficeModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'office' });
 employeeModel.hasMany(employeeOfficeModel, { foreignKey: 'employee_id', as: 'office' });
@@ -161,6 +179,42 @@ employeeModel.hasMany(employeeMetaDataModel, { foreignKey: 'employee_id', as: 'e
 
 employeeMetaDataModel.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'typess' });
 employeeCodeMasterType.hasMany(employeeMetaDataModel, { foreignKey: 'types', as: 'typess' });
+
+employeeFilesModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'files' });
+employeeModel.hasMany(employeeFilesModel, { foreignKey: 'employee_id', as: 'files' });
+
+employeeSkillModel.belongsTo(employeeCodeMasterType, { foreignKey: 'proficiency_level', as: 'codeMasterEmployeeSkill' });
+employeeCodeMasterType.hasMany(employeeSkillModel, { foreignKey: 'proficiency_level', as: 'codeMasterEmployeeSkill' });
+
+employeeDocumentsModel.belongsTo(employeeCodeMasterType, { foreignKey: 'qualifications', as: 'codeMasterDocumentQualification' });
+employeeCodeMasterType.hasMany(employeeDocumentsModel, { foreignKey: 'qualifications', as: 'codeMasterDocumentQualification' });
+
+employeeDocumentsModel.belongsTo(employeeCodeMasterType, { foreignKey: 'degree_level', as: 'codeMasterDocumentDegreeLevel' });
+employeeCodeMasterType.hasMany(employeeDocumentsModel, { foreignKey: 'degree_level', as: 'codeMasterDocumentDegreeLevel' });
+
+employeeDocumentsModel.belongsTo(employeeCodeMasterType, { foreignKey: 'stream', as: 'codeMasterDocumentStream' });
+employeeCodeMasterType.hasMany(employeeDocumentsModel, { foreignKey: 'stream', as: 'codeMasterDocumentStream' });
+
+employeeQualificationModel.belongsTo(employeeCodeMasterType, { foreignKey: 'document', as: 'codeMasterQualificationDocuments' });
+employeeCodeMasterType.hasMany(employeeQualificationModel, { foreignKey: 'document', as: 'codeMasterQualificationDocuments' });
+
+employeeExperianceModel.belongsTo(employeeCodeMasterType, { foreignKey: 'experience_type', as: 'codeMasterExperienceType' });
+employeeCodeMasterType.hasMany(employeeExperianceModel, { foreignKey: 'experience_type', as: 'codeMasterExperienceType' });
+
+employeeAchievementModel.belongsTo(employeeCodeMasterType, { foreignKey: 'achievement_category', as: 'codeMasterAchievementCategory' });
+employeeCodeMasterType.hasMany(employeeAchievementModel, { foreignKey: 'achievement_category', as: 'codeMasterAchievementCategory' });
+
+employeeLongLeaveModel.belongsTo(employeeCodeMasterType, { foreignKey: 'leave_type', as: 'codeMasterLeaveType' });
+employeeCodeMasterType.hasMany(employeeLongLeaveModel, { foreignKey: 'leave_type', as: 'codeMasterLeaveType' });
+
+employeeCorAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_country', as: 'codeMasterCountry' });
+employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: 'c_country', as: 'codeMasterCountry' });
+
+employeeCorAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_state', as: 'codeMasterState' });
+employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: 'c_state', as: 'codeMasterState' });
+
+employeeCorAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_city', as: 'codeMasterCity' });
+employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: 'c_city', as: 'codeMasterCity' });
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
@@ -219,6 +273,7 @@ export {
     subjectModel,
     studentsEntranceDetail,
     studentsAddress,
+    studentCorsAddressModel,
     employeeCodeMaster,
     employeeCodeMasterType,
     classSectionModel,
@@ -230,6 +285,7 @@ export {
     userModel,
     employeeModel,
     employeeAddressModel,
+    employeeCorAddressModel,
     employeeOfficeModel,
     emplopeeRoleModel,
     employeeSkillModel,
@@ -243,6 +299,7 @@ export {
     employeeResearchModel,
     employeeLongLeaveModel,
     employeeMetaDataModel,
+    employeeFilesModel,
     teacherSubjectMappingModel,
     teacherSectionMappingModel,
   };

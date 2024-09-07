@@ -1,9 +1,9 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addStudent(data) {
+export async function addStudent(data,transaction) {
     try {
-        const result = await model.studentModel.create(data);
+        const result = await model.studentModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add Student:", error);
@@ -11,9 +11,9 @@ export async function addStudent(data) {
     }
 };
 
-export async function addStudentsEntranceDetail(data) {
+export async function addStudentsEntranceDetail(data,transaction) {
     try {
-        const result = await model.studentsEntranceDetail.bulkCreate(data);
+        const result = await model.studentsEntranceDetail.bulkCreate(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add students Entrance Detail:", error);
@@ -21,9 +21,9 @@ export async function addStudentsEntranceDetail(data) {
     }
 };
 
-export async function addStudentsAddress(data) {
+export async function addStudentsAddress(data,transaction) {
     try {
-        const result = await model.studentsAddress.create(data);
+        const result = await model.studentsAddress.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add students Address:", error);
@@ -31,9 +31,19 @@ export async function addStudentsAddress(data) {
     }
 };
 
-export async function studentMetaData(data) {
+export async function addStudentsCorsAddress(data,transaction) {
     try {
-        const result = await model.studentMetaData.bulkCreate(data);
+        const result = await model.studentCorsAddressModel.create(data,{transaction});
+        return result;
+    } catch (error) {
+        console.error("Error in add students Cors Address:", error);
+        throw error;
+    }
+};
+
+export async function studentMetaData(data,transaction) {
+    try {
+        const result = await model.studentMetaData.bulkCreate(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in adding meta data student:", error);
@@ -324,6 +334,13 @@ export async function getSingleStudentDetail(studentId,universityId) {
                         model: model.employeeCodeMasterType,
                         as: "typs",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
                     },
                 ]
             },
@@ -352,7 +369,50 @@ export async function getSingleStudentDetail(studentId,universityId) {
                 model: model.studentsAddress,
                 as: "studentAddress",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            }
+            },
+            {
+                model:model.studentCorsAddressModel,
+                as:'CorsAddressStudent',
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterCountryStudent",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterStateStudent",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codeMasterCityStudent",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                        include :[
+                            {
+                                model: model.employeeCodeMaster,
+                                as: "codes",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]
+                    },
+                ]
+               },
             ],
             where: {
                 student_id: studentId
@@ -384,12 +444,13 @@ export async function getPreviousScholarNumber(instituteCode) {
     }
 };
 
-export async function updateStudentDetails(studentId, data) {
+export async function updateStudentDetails(studentId, data,transaction) {
     try {
         const result = await model.studentModel.update(data, {
             where: {
                 studentId: studentId
-            }
+            },
+            transaction
         });
      return result; 
     } catch (error) {
@@ -398,12 +459,13 @@ export async function updateStudentDetails(studentId, data) {
     }
 };
 
-export async function updateStudentEntranceDetails(studentsEntranceDetailId, data) {
+export async function updateStudentEntranceDetails(studentsEntranceDetailId, data,transaction) {
     try {
         const result = await model.studentsEntranceDetail.update(data, {
             where: {
                 studentsEntranceDetailId: studentsEntranceDetailId
-            }
+            },
+            transaction
         });
      return result; 
     } catch (error) {
@@ -412,12 +474,13 @@ export async function updateStudentEntranceDetails(studentsEntranceDetailId, dat
     }
 };
 
-export async function updateStudentAddressDetails(studentsAddressId, data) {
+export async function updateStudentAddressDetails(studentsAddressId, data,transaction) {
     try {
         const result = await model.studentsAddress.update(data, {
             where: {
                 studentsAddressId: studentsAddressId
-            }
+            },
+            transaction
         });
      return result; 
     } catch (error) {
@@ -426,17 +489,37 @@ export async function updateStudentAddressDetails(studentsAddressId, data) {
     }
 };
 
-export async function updateStudentMetaData(studentId, type, code) {    
+export async function updateStudentCorsAddressDetails(studentCorAddressId, data,transaction) {
+    try {
+        const result = await model.studentCorsAddressModel.update(data, {
+            where: {
+                studentCorAddressId: studentCorAddressId
+            },
+            transaction
+        });
+     return result; 
+    } catch (error) {
+        console.error(`Error updating student cors address details ${studentCorAddressId} :`, error);
+        throw error; 
+    }
+};
+
+export async function updateStudentMetaData(studentId,type,code,transaction) {  
+   // code gender
+   // type male,female
     try {
         const result = await model.studentMetaData.update(
-            { codes: code }, 
+            { 
+                types: type
+            }, 
             {
                 where: { 
                     studentId: studentId, 
-                    types: type 
+                    codes: code 
                 },
+                transaction
             }
-        );
+        );        
         return result;
     } catch (error) {
         console.error(`Error updating student metadata for studentId ${studentId} and type ${type}:`, error);

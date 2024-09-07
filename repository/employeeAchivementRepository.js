@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployeeAchievement(data) {
+export async function addEmployeeAchievement(data,transaction) {
     try {
-        const result = await model.employeeAchievementModel.create(data);
+        const result = await model.employeeAchievementModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee achievement:", error);

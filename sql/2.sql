@@ -35,8 +35,6 @@ CREATE TABLE employee_address (
     employee_id INT NOT NULL,
     p_address VARCHAR(255),
     p_pincode INT,
-    c_address VARCHAR(255),
-    c_pincode INT,
     phone_number VARCHAR(255),
     mobile_number VARCHAR(255),
     offical_mobile_number VARCHAR(255),
@@ -66,6 +64,9 @@ CREATE TABLE employee_office (
     account_number VARCHAR(255) DEFAULT NULL,
     ifsc_code VARCHAR(255) DEFAULT NULL,
     iind_active BOOLEAN DEFAULT NULL,
+     bank_name_IInd VARCHAR(255) DEFAULT NULL,
+    account_number_IInd VARCHAR(255) DEFAULT NULL,
+    ifsc_code_IInd VARCHAR(255) DEFAULT NULL,
     contract_based BOOLEAN DEFAULT NULL,
     gpf VARCHAR(255) DEFAULT NULL,
     esi_number VARCHAR(255) DEFAULT NULL,
@@ -102,88 +103,101 @@ CREATE TABLE employee_rolls (
 CREATE TABLE employee_skill (
     employee_skill_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
-    name VARCHAR(255) DEFAULT NULL,
-    experience_in_year INT DEFAULT NULL,
-    experience_in_month VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    name VARCHAR(255),
+    experience_in_year INT,
+    experience_in_month VARCHAR(255),
+    proficiency_level INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP DEFAULT NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (proficiency_level) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_documents (
     employee_documents_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
-    from_year DATE DEFAULT NULL,
-    to_year DATE DEFAULT NULL,
-    university_board VARCHAR(255) DEFAULT NULL,
-    medical_council_name VARCHAR(255) DEFAULT NULL,
-    medical_registration_number VARCHAR(255) DEFAULT NULL,
-    medical_council_registration_date VARCHAR(255) DEFAULT NULL,
-    medical_registration_expiry_date VARCHAR(255) DEFAULT NULL,
-    percentage VARCHAR(255) DEFAULT NULL,
-    remarks VARCHAR(255) DEFAULT NULL,
-    pursuing BOOLEAN DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    qualifications INT NOT NULL,
+    degree_level INT NOT NULL,
+    stream INT NOT NULL,
+    from_year DATE,
+    to_year DATE,
+    university_board VARCHAR(255),
+    medical_council_name VARCHAR(255),
+    medical_registration_number VARCHAR(255),
+    medical_council_registration_date VARCHAR(255),
+    medical_registration_expiry_date VARCHAR(255),
+    percentage VARCHAR(255),
+    remarks VARCHAR(255),
+    pursuing BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP DEFAULT NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (qualifications) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (degree_level) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (stream) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_qualification (
     employee_qualification_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
-    document_copy VARCHAR(255) DEFAULT NULL,
+    document INT NOT NULL,
     received_date DATE NOT NULL,
-    returned_date DATE DEFAULT NULL,
-    attachment JSON DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    returned_date DATE,
+    attachment JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP DEFAULT NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (document) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_experiance (
     employee_experiance_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
-    organization VARCHAR(255) DEFAULT NULL,
-    desigation VARCHAR(255) DEFAULT NULL,
-    from_date DATE DEFAULT NULL,
-    to_date DATE DEFAULT NULL,
-    total_experince_years INT DEFAULT NULL,
-    total_experince_months INT DEFAULT NULL,
-    total_experince_days INT DEFAULT NULL,
-    last_salary FLOAT DEFAULT NULL,
-    remarks VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    experience_type INT NOT NULL,
+    organization VARCHAR(255),
+    desigation VARCHAR(255),
+    from_date DATE,
+    to_date DATE,
+    total_experince_years INT,
+    total_experince_months INT,
+    total_experince_days INT,
+    last_salary FLOAT,
+    remarks VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP DEFAULT NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (experience_type) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_achievements (
     employee_achievements_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
+    achievement_category INT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description VARCHAR(255) DEFAULT NULL,
-    no_of_times FLOAT DEFAULT NULL,
-    discipline VARCHAR(255) DEFAULT NULL,
-    name_of VARCHAR(255) DEFAULT NULL,
-    date VARCHAR(255) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    description VARCHAR(255),
+    no_of_times FLOAT,
+    discipline VARCHAR(255),
+    name_of VARCHAR(255),
+    date VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP DEFAULT NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (achievement_category) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_ward (
@@ -249,15 +263,17 @@ CREATE TABLE employee_research (
 CREATE TABLE employee_long_leave (
     employee_long_leave_id INT AUTO_INCREMENT PRIMARY KEY,
     employee_id INT NOT NULL,
-    date_of_leaving DATE NULL,
+    leave_type INT NOT NULL,
+    date_of_leaving DATE,
     date_of_rejoining DATE,
     remark VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
-    deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (employee_id) REFERENCES employee(employee_id)
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (leave_type) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
 
 CREATE TABLE employee_meta_data (
@@ -301,4 +317,55 @@ CREATE TABLE teacher_section_mapping (
     FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (class_sections_id) REFERENCES class_sections (class_sections_id)
+);
+
+CREATE TABLE employee_files (
+    employee_files_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    `key` JSON NULL,
+    url JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE employee_cor_address (
+    employee_cor_address_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    c_country INT NOT NULL,
+    c_state INT NOT NULL,
+    c_city INT NOT NULL,
+    address VARCHAR(255) NULL,
+    pincode INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (c_country) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (c_state) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (c_city) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE student_cor_address (
+    student_cor_address_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    c_country INT NOT NULL,
+    c_state INT NOT NULL,
+    c_city INT NOT NULL,
+    address VARCHAR(255),
+    pincode INT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    deleted_at DATETIME,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (c_country) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (c_state) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (c_city) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
 );

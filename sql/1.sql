@@ -332,8 +332,6 @@ CREATE TABLE students_address (
     student_id INT NOT NULL,
     p_address VARCHAR(255),
     p_pincode INT,
-    c_address VARCHAR(255),
-    c_pincode INT,
     contact VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,

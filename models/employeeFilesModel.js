@@ -2,16 +2,15 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
-    'employee_long_leave',
+    'employee_files',
     {
-        employeeLongLeaveId: {
+        employeeFilesId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'employee_long_leave_id'
+            field: 'employee_Files_id'
         },
         employeeId: {
             type: DataTypes.INTEGER,
@@ -22,29 +21,14 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        leaveType: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field:'leave_type',
-            references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
-            }
-        },
-        DateOfLeaving: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_leaving'
-        },   
-        DateOfRejoining: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'date_of_rejoining'
-        },   
-        remark: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },   
+        key:{
+			type:DataTypes.JSON,
+			allowNull:true,
+		},
+        url:{
+			type:DataTypes.JSON,
+			allowNull:true,
+		},
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -69,7 +53,7 @@ export default sequelize.define(
         // updatedBy: {
         //     type: DataTypes.INTEGER,
         //     allowNull: false,
-        //     field: 'updated_by',
+        //     field: 'updated_by',p
         //     references: {
         //         model: users,
         //         key: 'user_id'
@@ -82,7 +66,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'employee_long_leave',
+        tableName: 'employee_files',
         timestamps: true,
         paranoid: true
     }

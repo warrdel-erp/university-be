@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addEmployeeResearch(data) {
+export async function addEmployeeResearch(data,transaction) {
     try {
-        const result = await model.employeeResearchModel.create(data);
+        const result = await model.employeeResearchModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee research:", error);

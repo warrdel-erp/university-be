@@ -1,7 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'employee_documents',
@@ -19,6 +20,31 @@ export default sequelize.define(
             references: {
                 model: employee,
                 key: 'employee_id'
+            }
+        },
+        qualifications: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
+        },
+        degreeLevel: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field:'degree_level',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
+            }
+        },
+        stream: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
             }
         },
         fromYear:{

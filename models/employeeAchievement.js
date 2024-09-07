@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
+import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'employee_achievements',
@@ -19,6 +20,15 @@ export default sequelize.define(
             references: {
                 model: employee,
                 key: 'employee_id'
+            }
+        },
+        achievementCategory: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field:'achievement_category',
+            references: {
+                model: employeeCodeMasterType,
+                key: 'employee_code_master_type_id'
             }
         },
         title:{
