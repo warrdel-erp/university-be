@@ -15,7 +15,10 @@ import user from './router/auth/userRoute.js';
 import employee from './router/employeeRoute.js';
 import teacher from './router/teacherMappingRoute.js';
 import libraryCreation from './router/libraryCreationRoute.js';
-import libraryItem from './router/libraryAddItemRoutes.js'
+import libraryItem from './router/libraryAddItemRoutes.js';
+import timeTable from './router/timeTableRoute.js';
+import faculityLoad from './router/faculityLoadRoute.js';
+import timeTableCreate from './router/timeTableCreateRoute.js';
 
 
 // middleware
@@ -35,6 +38,9 @@ app.use("/employee",employee);
 app.use("/teacher",teacher);
 app.use("/libraryCreation",libraryCreation);
 app.use("/libraryItem",libraryItem);
+app.use("/timeTable",timeTable);
+app.use("/faculityLoad",faculityLoad);
+app.use('/timeTableCreate',timeTableCreate)
 
 
 app.listen(PORT, () => {

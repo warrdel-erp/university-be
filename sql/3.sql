@@ -62,6 +62,63 @@ CREATE TABLE library_add_item (
     FOREIGN KEY (updated_by) REFERENCES users (user_id)
 );
 
+CREATE TABLE time_table_creation (
+    time_table_creation_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    applicable_period INT NOT NULL,
+    maximum_period INT NOT NULL,
+    starting_time VARCHAR(255) NOT NULL,
+    start_time VARCHAR(255),
+    end_time VARCHAR(255),
+    period_length INT NOT NULL,
+    period_gap INT NOT NULL,
+    week_off JSON NOT NULL,
+    type VARCHAR(255),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (applicable_period) REFERENCES employee_code_master_type(employee_code_master_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE faculity_load (
+    faculity_load_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    defined_load INT,
+    current_load VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE time_table_create (
+    time_table_create_id INT AUTO_INCREMENT PRIMARY KEY,
+    time_table_creation_id INT NOT NULL,
+    teacher_subject_mapping_id INT NOT NULL,
+    teacher_section_mapping_id INT NOT NULL,
+    day VARCHAR(255),
+    period INT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id),
+    FOREIGN KEY (teacher_subject_mapping_id) REFERENCES teacher_subject_mapping(teacher_subject_mapping_id),
+    FOREIGN KEY (teacher_section_mapping_id) REFERENCES teacher_section_mapping(teacher_section_mapping_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
 -- CREATE TABLE library_author_details (
 --     library_author_details_id INT AUTO_INCREMENT PRIMARY KEY,
 --     library_add_item_id INT NOT NULL,

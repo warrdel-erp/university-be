@@ -141,3 +141,18 @@ export async function deleteTeachersSubjectMapping (teacherSubjectMappingId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId) {
+    try {
+        const result = await model.teacherSubjectMappingModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where:{
+                teacherSubjectMappingId:teacherSubjectMappingId,
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in getting teacher details by teacher subject mapper id:`, error);
+        throw error;
+    };
+};

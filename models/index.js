@@ -44,6 +44,9 @@ import libraryAuthorityModel from './libraryAuthorityModel.js';
 import libraryAddItemModel from './libraryAddItemModel.js';
 import libraryAuthorDetailsModel from './libraryAuthorDetailsModel.js';
 import libraryMultipleBookDetailsModel from './libraryMultipleBookDetailsModel.js';
+import timeTableCreationModel from './timeTableCreationModel.js';
+import faculityLoadModel from './faculityLoadModel.js';
+import timeTableCreateModel from './timeTableCreateModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -301,6 +304,21 @@ employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'aisle', as: '
 libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: 'shelf', as: 'shelfs' });
 employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'shelf', as: 'shelfs' });
 
+// time table create
+timeTableCreateModel.belongsTo(timeTableCreationModel, { foreignKey: 'time_table_creation_id', as: 'timeTable' });
+timeTableCreationModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_creation_id', as: 'timeTable' });
+
+timeTableCreationModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'timeTableCourse' });
+courseModel.hasMany(timeTableCreationModel, { foreignKey: 'course_id', as: 'timeTableCourse' });
+
+timeTableCreateModel.belongsTo(teacherSubjectMappingModel, { foreignKey: 'teacher_subject_mapping_id', as: 'timeTableTeacherSubjectMapping' });
+teacherSubjectMappingModel.hasMany(timeTableCreateModel, { foreignKey: 'teacher_subject_mapping_id', as: 'timeTableTeacherSubjectMapping' });
+
+timeTableCreationModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTableCreate' });
+timeTableCreateModel.belongsTo(timeTableCreationModel, { foreignKey: 'time_table_create_id', as: 'timeTableCreate' });
+
+timeTableCreateModel.belongsTo(teacherSectionMappingModel, { foreignKey: 'teacher_section_mapping_id', as: 'timeTableTeacherSectionMapping' });
+teacherSectionMappingModel.hasMany(timeTableCreateModel, { foreignKey: 'teacher_section_mapping_id', as: 'timeTableTeacherSectionMapping' });
 
 export {
     settingModel,
@@ -349,4 +367,7 @@ export {
     libraryAddItemModel,
     libraryAuthorDetailsModel,
     libraryMultipleBookDetailsModel,
+    timeTableCreationModel,
+    faculityLoadModel,
+    timeTableCreateModel,
   };
