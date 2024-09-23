@@ -27,6 +27,35 @@ export async function getTeacherSubjectMapping(employeeId,universityId) {
                             universityId:universityId
                         },                    
                     },
+                    {
+                        model: model.employeeModel,
+                        as: "teacherEmployeeData",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include: [
+                            {
+                                model: model.campusModel,
+                                as: "employeeCampus",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                            },
+                            {
+                                model: model.instituteModel,
+                                as: "employeeInstitute",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                            },
+                        ]    
+                    },
+                    {
+                        model: model.classSubjectMapperModel,
+                        as: "employeeSubject",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include:[
+                            {
+                                model:model.classSectionModel,
+                                as:"employeeClassSection",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            }
+                        ]
+                    }
                 ],
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 where: {
@@ -44,6 +73,35 @@ export async function getTeacherSubjectMapping(employeeId,universityId) {
                             universityId:universityId
                         },                    
                     },
+                    {
+                        model: model.employeeModel,
+                        as: "teacherEmployeeData",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include: [
+                            {
+                                model: model.campusModel,
+                                as: "employeeCampus",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                            },
+                            {
+                                model: model.instituteModel,
+                                as: "employeeInstitute",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                            },
+                        ]    
+                    },
+                    {
+                        model: model.classSubjectMapperModel,
+                        as: "employeeSubject",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        include:[
+                            {
+                                model:model.classSectionModel,
+                                as:"employeeClassSection",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            }
+                        ]
+                    }
                 ],
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             });

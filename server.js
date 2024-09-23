@@ -13,7 +13,9 @@ import download from './router/downloadRoute.js';
 import codeMaster from './router/codeMasterRoute.js';
 import user from './router/auth/userRoute.js';
 import employee from './router/employeeRoute.js';
-import teacher from './router/teacherMappingRoute.js'
+import teacher from './router/teacherMappingRoute.js';
+import libraryCreation from './router/libraryCreationRoute.js';
+import libraryItem from './router/libraryAddItemRoutes.js'
 
 
 // middleware
@@ -31,6 +33,8 @@ app.use("/codeMaster",codeMaster);
 app.use("/user",user);
 app.use("/employee",employee);
 app.use("/teacher",teacher);
+app.use("/libraryCreation",libraryCreation);
+app.use("/libraryItem",libraryItem);
 
 
 app.listen(PORT, () => {

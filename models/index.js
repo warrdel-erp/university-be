@@ -39,6 +39,11 @@ import employeeMetaDataModel from './employeeMetaDataModel.js';
 import employeeFilesModel from './employeeFilesModel.js';
 import teacherSubjectMappingModel from './teacherSubjectMappingModel.js';
 import teacherSectionMappingModel from './teacherSectionMappingModel.js';
+import libraryCreationModel from './libraryCreationModel.js';
+import libraryAuthorityModel from './libraryAuthorityModel.js';
+import libraryAddItemModel from './libraryAddItemModel.js';
+import libraryAuthorDetailsModel from './libraryAuthorDetailsModel.js';
+import libraryMultipleBookDetailsModel from './libraryMultipleBookDetailsModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -216,6 +221,16 @@ employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: 'c_state',
 employeeCorAddressModel.belongsTo(employeeCodeMasterType, { foreignKey: 'c_city', as: 'codeMasterCity' });
 employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: 'c_city', as: 'codeMasterCity' });
 
+// teacher subject mapping
+employeeModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'employee_id', as: 'teacherEmployeeData' });
+teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'teacherEmployeeData' });
+
+classSubjectMapperModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
+teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
+
+classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
+classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
+
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
 teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeData' });
@@ -260,6 +275,33 @@ userModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'createdBy', as: 'us
 teacherSectionMappingModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userTeacherSectionMapping' });
 userModel.hasMany(teacherSectionMappingModel, { foreignKey: 'createdBy', as: 'userTeacherSectionMapping' });
 
+// library creation join 
+libraryCreationModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryCreation' });
+userModel.hasMany(libraryCreationModel, { foreignKey: 'createdBy', as: 'userLibraryCreation' });
+
+libraryAuthorityModel.belongsTo(libraryCreationModel, { foreignKey: 'library_creation_id', as: 'libraryCreationAuthority' });
+libraryCreationModel.hasMany(libraryAuthorityModel, { foreignKey: 'library_creation_id', as: 'libraryCreationAuthority' });
+
+libraryAuthorityModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'libraryEmployee' });
+employeeModel.hasMany(libraryAuthorityModel, { foreignKey: 'employee_id', as: 'libraryEmployee' });
+
+libraryCreationModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'libraryCreationInstitute' });
+instituteModel.hasMany(libraryCreationModel, { foreignKey: 'institute_id', as: 'libraryCreationInstitute' });
+
+// library item 
+libraryAddItemModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryAddItem' });
+userModel.hasMany(libraryAddItemModel, { foreignKey: 'createdBy', as: 'userLibraryAddItem' });
+
+libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: 'genre', as: 'genres' });
+employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'genre', as: 'genres' });
+
+libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: 'aisle', as: 'aisles' });
+employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'aisle', as: 'aisles' });
+
+libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: 'shelf', as: 'shelfs' });
+employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'shelf', as: 'shelfs' });
+
+
 export {
     settingModel,
 	universityModel,
@@ -302,4 +344,9 @@ export {
     employeeFilesModel,
     teacherSubjectMappingModel,
     teacherSectionMappingModel,
+    libraryCreationModel,
+    libraryAuthorityModel,
+    libraryAddItemModel,
+    libraryAuthorDetailsModel,
+    libraryMultipleBookDetailsModel,
   };
