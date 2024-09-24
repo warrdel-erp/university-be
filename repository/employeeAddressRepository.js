@@ -2,7 +2,7 @@ import * as model from '../models/index.js'
 
 export async function addAddress(data,transaction) {
     try {
-        const result = await model.employeeAddressModel.create(data,transaction);
+        const result = await model.employeeAddressModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee address:", error);
@@ -13,7 +13,7 @@ export async function addAddress(data,transaction) {
 export async function addCorsAddress(data,transaction) {
     
     try {
-        const result = await model.employeeCorAddressModel.create(data,transaction);
+        const result = await model.employeeCorAddressModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in adding cors address:", error);

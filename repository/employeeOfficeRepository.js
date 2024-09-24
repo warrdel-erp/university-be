@@ -2,7 +2,7 @@ import * as model from '../models/index.js'
 
 export async function addOfficeDetails(data,transaction) {
     try {
-        const result = await model.employeeOfficeModel.create(data,transaction);
+        const result = await model.employeeOfficeModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee office:", error);

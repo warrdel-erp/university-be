@@ -2,7 +2,7 @@ import * as model from '../models/index.js'
 
 export async function addEmployeeQualification(data,transaction) {
     try {
-        const result = await model.employeeQualificationModel.create(data,transaction);
+        const result = await model.employeeQualificationModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee qualification:", error);

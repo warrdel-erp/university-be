@@ -2,7 +2,7 @@ import * as model from '../models/index.js'
 
 export async function addEmployeeLongLeave(data,transaction) {
     try {
-        const result = await model.employeeLongLeaveModel.create(data,transaction);
+        const result = await model.employeeLongLeaveModel.create(data,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add employee long leave:", error);
