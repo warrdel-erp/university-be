@@ -6,7 +6,7 @@ import institute from './instituteModel.js';
 import affiliatedUniversity from './affiliatedUniversityModel.js';
 import course from './courseModel.js';
 import specialization from "./specializationModel.js";
-import {additionalCategory, bloodGroup, caste, consultant, counselor, courseMedium, courseOpted, curricularActivity, documentStatus, feeCategory, feePlan, feeSession, gender, iindExam, istExam, nationality, region, registerClass, religion, shift, specializationMinor, studentHouseId, studentAdmissionStatus, country, state, city, studentStatus, formSession, admissionCategory} from '../constant.js'; 
+import { documentStatus, studentAdmissionStatus, studentStatus} from '../constant.js'; 
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js"
 
@@ -82,42 +82,42 @@ export default sequelize.define(
                 key: 'specialization_id'
             }
         },
-        formNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'form_number'
-        },
-        enquiryNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'enquiry_number'
-        },
-        telephoneNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'telephone_number'
-        },
+        // formNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'form_number'
+        // },
+        // enquiryNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'enquiry_number'
+        // },
+        // telephoneNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'telephone_number'
+        // },
         scholarNumber:{
             type: DataTypes.STRING,
             allowNull: false,
             field:'scholar_number'
         },
-        lastScholarNumber:{
-            type:DataTypes.STRING,
-            allowNull: true,
-            field:'last_scholar_number'
-        },
+        // lastScholarNumber:{
+        //     type:DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'last_scholar_number'
+        // },
         enrollNumber:{
             type: DataTypes.STRING,
             allowNull: true,
             field:'enroll_number',
             // unique:true
         },
-        onlineAdmissionNumber:{
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field:'online_admission_number'
-        },
+        // onlineAdmissionNumber:{
+        //     type: DataTypes.INTEGER,
+        //     allowNull: true,
+        //     field:'online_admission_number'
+        // },
         firstName:{
             type:DataTypes.STRING,
             allowNull: false,
@@ -148,22 +148,22 @@ export default sequelize.define(
             allowNull : true,
             field:'mother_name'
         },
-        previousInstitute:{
-            type:DataTypes.STRING,
-            allowNull: true,
-            field:'previous_institute'
-        },
-        shiftingReason:{
-            type:DataTypes.STRING,
-            allowNull: true,
-            field:'shifting_reason'
-        },
+        // previousInstitute:{
+        //     type:DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'previous_institute'
+        // },
+        // shiftingReason:{
+        //     type:DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'shifting_reason'
+        // },
         
-        specializationReason:{
-            type:DataTypes.STRING,
-            allowNull: true,
-            field:'specialization_reason'
-        },
+        // specializationReason:{
+        //     type:DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'specialization_reason'
+        // },
         eligibityCriteria:{
             type:DataTypes.STRING,
             allowNull: true,
@@ -179,21 +179,21 @@ export default sequelize.define(
             allowNull: true,
             field:'remaining_seat'
         },
-        totalSeatCategory:{
-            type:DataTypes.INTEGER,
-            allowNull: true,
-            field:'total_seat_category'
-        },
-        remainingSeatCategory:{
-            type:DataTypes.INTEGER,
-            allowNull: true,
-            field:'remaining_seat_category'
-        },
-        advanceReceived:{
-            type:DataTypes.FLOAT,
-            allowNull: true,
-            field:'advance_received'
-        },
+        // totalSeatCategory:{
+        //     type:DataTypes.INTEGER,
+        //     allowNull: true,
+        //     field:'total_seat_category'
+        // },
+        // remainingSeatCategory:{
+        //     type:DataTypes.INTEGER,
+        //     allowNull: true,
+        //     field:'remaining_seat_category'
+        // },
+        // advanceReceived:{
+        //     type:DataTypes.FLOAT,
+        //     allowNull: true,
+        //     field:'advance_received'
+        // },
         birthDate:{
             type:DataTypes.DATE,
             allowNull: false,
@@ -229,11 +229,11 @@ export default sequelize.define(
 			allowNull:true,
             field:'student_references'
 		},
-		payOut:{
-			type:DataTypes.STRING,
-			allowNull:true,
-            field:'pay_out'
-		},
+		// payOut:{
+		// 	type:DataTypes.STRING,
+		// 	allowNull:true,
+        //     field:'pay_out'
+		// },
 		studentPhoto:{
 			type:DataTypes.JSON,
 			allowNull:true,
@@ -257,11 +257,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        panNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'pan_number'
-        },
+        // panNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'pan_number'
+        // },
         parentEmail:{
             type: DataTypes.STRING,
             allowNull: true,

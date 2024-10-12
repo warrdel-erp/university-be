@@ -167,3 +167,113 @@ CREATE TABLE time_table_create (
 --     FOREIGN KEY (created_by) REFERENCES users (user_id),
 --     FOREIGN KEY (updated_by) REFERENCES users (user_id)
 -- );
+
+ALTER TABLE employee
+DROP COLUMN resume_number, 
+DROP COLUMN body_sign;
+
+ALTER TABLE students
+DROP COLUMN form_number,
+DROP COLUMN enquiry_number,
+DROP COLUMN telephone_number,
+DROP COLUMN last_scholar_number,
+DROP COLUMN online_admission_number,
+DROP COLUMN previous_institute,
+DROP COLUMN shifting_reason,
+DROP COLUMN specialization_reason,
+DROP COLUMN total_seat_category,
+DROP COLUMN remaining_seat_category,
+DROP COLUMN advance_received,
+DROP COLUMN pay_out,
+DROP COLUMN pan_number;
+
+DELETE FROM students_meta_data
+WHERE codes IN (
+    SELECT employee_code_master_id
+    FROM employee_code_master
+    WHERE code_master_type IN ('formName', 'examCenterIst', 'examCenterIInd', 'consultant', 'specializationMinor', 'payOut')
+);
+
+DELETE FROM employee_code_master_type
+WHERE employee_code_master_id IN (
+    SELECT employee_code_master_id
+    FROM employee_code_master
+    WHERE code_master_type IN ('formName', 'examCenterIst', 'examCenterIInd', 'consultant', 'specializationMinor', 'payOut')
+);
+
+DELETE FROM employee_code_master
+WHERE code_master_type IN ('formName', 'examCenterIst', 'examCenterIInd','consultant','specializationMinor','payOut');
+
+CREATE TABLE library_member (
+    library_member_id INT PRIMARY KEY AUTO_INCREMENT,
+    library_creation_id INT NOT NULL,
+    employee_id INT,
+    student_id INT,
+    member_type VARCHAR(255) NOT NULL,
+    member_id VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (library_creation_id) REFERENCES library_creation(library_creation_id),
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+INSERT INTO employee_code_master (code_master_type) VALUES
+('memberType');
+
+CREATE TABLE library_issue_book (
+    library_issue_book_id INT AUTO_INCREMENT PRIMARY KEY,
+    library_add_item_id INT NOT NULL,
+    library_member_id INT NOT NULL,
+    issue_date DATETIME DEFAULT NULL,
+    return_date DATETIME DEFAULT NULL,
+    status VARCHAR(50) DEFAULT 'Issue',
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (library_add_item_id) REFERENCES library_add_item(library_add_item_id),
+    FOREIGN KEY (library_member_id) REFERENCES library_member(library_member_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE attendance (
+    attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    time_table_create_id INT NOT NULL,
+    date TIMESTAMP NULL,
+    notes VARCHAR(255) NULL,
+    description VARCHAR(255) NULL,
+    attendance_status VARCHAR(255) NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
+    FOREIGN KEY (time_table_create_id) REFERENCES time_table_create(time_table_create_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE class_room_section (
+    class_room_section_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_number VARCHAR(255) NOT NULL,
+    capacity INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

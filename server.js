@@ -19,6 +19,9 @@ import libraryItem from './router/libraryAddItemRoutes.js';
 import timeTable from './router/timeTableRoute.js';
 import faculityLoad from './router/faculityLoadRoute.js';
 import timeTableCreate from './router/timeTableCreateRoute.js';
+import libraryMember from './router/libraryMemberRoute.js';
+import attendance from './router/attendanceRoute.js';
+import classRoom from './router/classRoomRoute.js'
 
 
 // middleware
@@ -40,7 +43,10 @@ app.use("/libraryCreation",libraryCreation);
 app.use("/libraryItem",libraryItem);
 app.use("/timeTable",timeTable);
 app.use("/faculityLoad",faculityLoad);
-app.use('/timeTableCreate',timeTableCreate)
+app.use('/timeTableCreate',timeTableCreate);
+app.use('/libraryMember',libraryMember);
+app.use('/attendance',attendance);
+app.use('/classRoom',classRoom);
 
 
 app.listen(PORT, () => {

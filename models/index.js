@@ -42,11 +42,15 @@ import teacherSectionMappingModel from './teacherSectionMappingModel.js';
 import libraryCreationModel from './libraryCreationModel.js';
 import libraryAuthorityModel from './libraryAuthorityModel.js';
 import libraryAddItemModel from './libraryAddItemModel.js';
+import libraryMemberModel from './libraryMemberModel.js';
+import libraryIssueBookModel from './libraryIssueBookModel.js';
 import libraryAuthorDetailsModel from './libraryAuthorDetailsModel.js';
 import libraryMultipleBookDetailsModel from './libraryMultipleBookDetailsModel.js';
 import timeTableCreationModel from './timeTableCreationModel.js';
 import faculityLoadModel from './faculityLoadModel.js';
 import timeTableCreateModel from './timeTableCreateModel.js';
+import attendanceModel from './attendanceModel.js';
+import classRoomModel from './classRoomModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -320,6 +324,42 @@ timeTableCreateModel.belongsTo(timeTableCreationModel, { foreignKey: 'time_table
 timeTableCreateModel.belongsTo(teacherSectionMappingModel, { foreignKey: 'teacher_section_mapping_id', as: 'timeTableTeacherSectionMapping' });
 teacherSectionMappingModel.hasMany(timeTableCreateModel, { foreignKey: 'teacher_section_mapping_id', as: 'timeTableTeacherSectionMapping' });
 
+// library member
+libraryMemberModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
+userModel.hasMany(libraryMemberModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
+
+libraryMemberModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'libraryMemberStudent' });
+studentModel.hasMany(libraryMemberModel, { foreignKey: 'student_id', as: 'libraryMemberStudent' });
+
+libraryMemberModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'libraryMemberEmployee' });
+employeeModel.hasMany(libraryMemberModel, { foreignKey: 'employee_id', as: 'libraryMemberEmployee' });
+
+libraryMemberModel.belongsTo(libraryCreationModel, { foreignKey: 'library_creation_id', as: 'libraryMemberCreation' });
+libraryCreationModel.hasMany(libraryMemberModel, { foreignKey: 'library_creation_id', as: 'libraryMemberCreation' });
+
+// library Book Issue
+libraryIssueBookModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userBookIssue' });
+userModel.hasMany(libraryIssueBookModel, { foreignKey: 'createdBy', as: 'userBookIssue' });
+
+libraryIssueBookModel.belongsTo(libraryAddItemModel, { foreignKey: 'libraryAddItemId', as: 'addItemBookIssue' });
+libraryAddItemModel.hasMany(libraryIssueBookModel, { foreignKey: 'libraryAddItemId', as: 'addItemBookIssue' });
+
+libraryIssueBookModel.belongsTo(libraryMemberModel, { foreignKey: 'library_member_id', as: 'memberBookIssue' });
+libraryMemberModel.hasMany(libraryIssueBookModel, { foreignKey: 'library_member_id', as: 'memberBookIssue' });
+
+// attendence
+attendanceModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAttendence' });
+userModel.hasMany(attendanceModel, { foreignKey: 'createdBy', as: 'userAttendence' });
+
+attendanceModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classAttendance' });
+classSectionModel.hasMany(attendanceModel, { foreignKey: 'class_sections_id', as: 'classAttendance' });
+
+attendanceModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentAttendance' });
+studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'studentAttendance' });
+
+attendanceModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
+timeTableCreateModel.hasMany(attendanceModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
+
 export {
     settingModel,
 	universityModel,
@@ -365,9 +405,13 @@ export {
     libraryCreationModel,
     libraryAuthorityModel,
     libraryAddItemModel,
+    libraryMemberModel,
+    libraryIssueBookModel,
     libraryAuthorDetailsModel,
     libraryMultipleBookDetailsModel,
     timeTableCreationModel,
     faculityLoadModel,
     timeTableCreateModel,
+    attendanceModel,
+    classRoomModel,
   };
