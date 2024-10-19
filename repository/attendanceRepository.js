@@ -3,7 +3,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { Op, fn } from 'sequelize';
 
 export async function addAttendance(attendanceRecords) {   
-    console.log(`>>>>>>>>>>attendanceRecords>>>>>`,attendanceRecords);
      
     try {
         const result = await model.attendanceModel.bulkCreate(attendanceRecords);
@@ -28,7 +27,7 @@ export async function getAttendanceDetails(universityId) {
                 {
                     model: model.classSectionModel,
                     as: "classAttendance",
-                    // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
                 },
                 {
                     model: model.studentModel,
@@ -49,57 +48,6 @@ export async function getAttendanceDetails(universityId) {
         throw error;
     }
 };
-
-// export async function getAttendanceDetails(universityId) {
-//     try {
-//         // Step 1: Fetch unique attendance dates
-//         const uniqueDates = await model.attendanceModel.findAll({
-//             attributes: [[sequelize.fn('DATE', 'date'), 'attendanceDate']],
-//             include: [{
-//                 model: model.userModel,
-//                 as: "userAttendence",
-//                 attributes: [],
-//                 where: { universityId }
-//             }],
-//             group: ['attendanceDate'],
-//             raw: true
-//         });
-
-//         const groupedAttendance = {};
-
-//         // Step 2: Fetch attendance records for each unique date
-//         for (const { attendanceDate } of uniqueDates) {
-//             const attendanceRecords = await model.attendanceModel.findAll({
-//                 attributes: [
-//                     'classSectionsId',
-//                     [model.sequelize.fn('COUNT', 'attendanceId'), 'attendanceCount'],
-//                 ],
-//                 where: {
-//                     date: {
-//                         [model.Sequelize.Op.eq]: attendanceDate
-//                     },
-//                     '$userAttendence.universityId$': universityId
-//                 },
-//                 include: [{
-//                     model: model.userModel,
-//                     as: "userAttendence",
-//                     attributes: []
-//                 }],
-//                 group: ['classSectionsId'],
-//                 raw: true
-//             });
-
-//             // Step 3: Store grouped records by date
-//             groupedAttendance[attendanceDate] = attendanceRecords;
-//         }
-
-//         return groupedAttendance;
-//     } catch (error) {
-//         console.error(`Error fetching attendance details for universityId ${universityId}:`, error);
-//         throw error;
-//     }
-// }
-
 
 export async function updateAttendance(attendanceId, record) {
     try {

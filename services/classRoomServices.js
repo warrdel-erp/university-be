@@ -22,27 +22,6 @@ export async function deleteClassRoom(classRoomSectionId) {
 
 export async function updateClassRoom(classRoomSectionId, ClassRoomData, updatedBy) {    
 
-    // try {
-    //     // Update ClassRoom data
-        ClassRoomData.updatedBy = updatedBy;
-        await ClassRoomCreationService.updateClassRoom(classRoomSectionId, ClassRoomData);
-
-    //     // Update authorities 
-    //     const authorityUpdates = ClassRoomData.authorities.map(auth => {
-    //         const { ClassRoomAuthorityId } = auth;
-    //         return ClassRoomCreationService.updateClassRoomAuthority(ClassRoomAuthorityId, {
-    //             updatedBy,
-    //             ...auth
-    //         }, transaction);
-    //     });
-
-    //     await Promise.all(authorityUpdates);
-
-    //     await transaction.commit();
-    //     console.log(`Successfully updated ClassRoom and authorities.`);
-    // } catch (error) {
-    //     await transaction.rollback();
-    //     console.error('Error updating ClassRoom and authorities:', error);
-    //     throw error; 
-    // }
+    ClassRoomData.updatedBy = updatedBy;
+    await ClassRoomCreationService.updateClassRoom(classRoomSectionId, ClassRoomData);
 }

@@ -1,7 +1,6 @@
-import sequelize from "../database/sequelizeConfig.js"
+import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js"
-
+import university from "./universityModel.js";
 
 export default sequelize.define(
   'users',
@@ -35,6 +34,16 @@ export default sequelize.define(
         type: DataTypes.STRING,
         allowNull: false
     },
+    dummyPassword: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        field:'dummy_password'
+    },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'active'
+    },
     phone: {
         type: DataTypes.STRING,
         allowNull: false
@@ -42,6 +51,10 @@ export default sequelize.define(
     email: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    role: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     createdAt: {
         type: DataTypes.DATE,
@@ -57,10 +70,9 @@ export default sequelize.define(
     },
     deletedAt: {
         type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-        field:'deleted_at'
-    },
+        allowNull: true,
+        field: 'deleted_at'
+    }
 },  
 {
     tableName: 'users',

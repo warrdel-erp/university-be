@@ -51,6 +51,11 @@ import faculityLoadModel from './faculityLoadModel.js';
 import timeTableCreateModel from './timeTableCreateModel.js';
 import attendanceModel from './attendanceModel.js';
 import classRoomModel from './classRoomModel.js';
+import feeGroupModel from './feeGroupModel.js';
+import feeTypeModel from './feeTypeModel.js';
+import feeInvoiceModel from './feeInvoiceModel.js';
+import feeInvoiceDetailModel from './feeInvoiceDetailModel.js';
+import userStudentEmployeeModel from './userStudentEmployeeModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -116,6 +121,10 @@ subjectModel.hasMany(classSubjectMapperModel, { foreignKey: 'subject_id', as: 's
 // class student mapper join to student  
 classStudentMapperModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentMapped' });
 studentModel.hasMany(classStudentMapperModel, { foreignKey: 'student_id', as: 'studentMapped' });
+
+// class student mapper join to class section  
+classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'studentSection' });
+classSectionModel.hasMany(classStudentMapperModel, { foreignKey: 'class_sections_id', as: 'studentSection' });
 
 //student join to there 2 more table 
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: 'student_id', as: 'entranceDetails' });
@@ -360,6 +369,45 @@ studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'studentAt
 attendanceModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
 timeTableCreateModel.hasMany(attendanceModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
 
+//fee (fee Group)
+feeGroupModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeGroup' });
+userModel.hasMany(feeGroupModel, { foreignKey: 'createdBy', as: 'userFeeGroup' });
+
+//fee (fee Type)
+feeTypeModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeType' });
+userModel.hasMany(feeTypeModel, { foreignKey: 'createdBy', as: 'userFeeType' });
+
+feeTypeModel.belongsTo(feeGroupModel, { foreignKey: 'fee_group_id', as: 'feeGroup' });
+feeGroupModel.hasMany(feeTypeModel, { foreignKey: 'fee_group_id', as: 'feeGroup' });
+
+//fee (fee Invoice)
+feeInvoiceModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
+userModel.hasMany(feeInvoiceModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
+
+feeInvoiceModel.belongsTo(feeGroupModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
+feeGroupModel.hasMany(feeInvoiceModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
+
+feeInvoiceModel.belongsTo(classStudentMapperModel, { foreignKey: 'class_student_mapper_id', as: 'feeStudentMapper' });
+classStudentMapperModel.hasMany(feeInvoiceModel, { foreignKey: 'class_student_mapper_id', as: 'feeStudentMapper' });
+
+//fee (fee Invoice Details)
+feeInvoiceDetailModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
+feeTypeModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
+
+feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoiceDetails' });
+feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoiceDetails' });
+
+// user and userStudentEmployee
+
+userStudentEmployeeModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'userDetails' });
+userModel.hasMany(userStudentEmployeeModel, { foreignKey: 'user_id', as: 'userDetails' });
+
+userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentDetails' });
+studentModel.hasMany(userStudentEmployeeModel, { foreignKey: 'student_id', as: 'studentDetails' });
+
+userStudentEmployeeModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeDetails' });
+employeeModel.hasMany(userStudentEmployeeModel, { foreignKey: 'employee_id', as: 'employeeDetails' });
+
 export {
     settingModel,
 	universityModel,
@@ -414,4 +462,9 @@ export {
     timeTableCreateModel,
     attendanceModel,
     classRoomModel,
+    feeGroupModel,
+    feeTypeModel,
+    feeInvoiceModel,
+    feeInvoiceDetailModel,
+    userStudentEmployeeModel,
   };

@@ -277,3 +277,95 @@ CREATE TABLE class_room_section (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE fee_group (
+    fee_group_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE fee_type (
+    fee_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    fee_group_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (fee_group_id) REFERENCES fee_group(fee_group_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE fee_invoice (
+    fee_invoice_id INT AUTO_INCREMENT PRIMARY KEY,
+    fee_group_id INT NOT NULL,
+    class_student_mapper_id INT NOT NULL,
+    created_date DATETIME NOT NULL,
+    due_date DATETIME NOT NULL,
+    payment_status VARCHAR(255),
+    payment_method VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (fee_group_id) REFERENCES fee_group(fee_group_id),
+    FOREIGN KEY (class_student_mapper_id) REFERENCES class_student_mapper(class_student_mapper_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE fee_invoice_details (
+    fee_invoice_details_id INT AUTO_INCREMENT PRIMARY KEY,
+    fee_invoice_id INT NOT NULL,
+    fee_type_id INT NOT NULL,
+    amount FLOAT,
+    waiver FLOAT,
+    sub_total FLOAT,
+    paid_amount FLOAT,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (fee_invoice_id) REFERENCES fee_invoice(fee_invoice_id),
+    FOREIGN KEY (fee_type_id) REFERENCES fee_type(fee_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+ALTER TABLE users
+ADD COLUMN role VARCHAR(255) NULL;
+
+CREATE TABLE user_student_employee (
+    user_student_employee_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT,
+    user_id INT NOT NULL,
+    student_id INT,
+    deleted_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+);
+
+ALTER TABLE users
+ADD COLUMN dummy_password VARCHAR(255) NULL,
+ADD COLUMN status VARCHAR(255) NOT NULL DEFAULT 'active';
+
+ALTER TABLE users
+DROP COLUMN deleted_at;
+
+ALTER TABLE users
+ADD COLUMN deleted_at DATETIME NULL;

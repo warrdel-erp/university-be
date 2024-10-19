@@ -1,25 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import feeGroup from "./feeGroupModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'fee_type',
     {
-        classRoomSectionId: {
+        feeTypeId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'fee_type_id'
         },
-        roomNumber: {
+        feeGroupId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'fee_group_id',
+            references: {
+                model: feeGroup,
+                key: 'fee_group_id'
+            }
+        },
+        name: {
             type: DataTypes.STRING,
-            field: 'room_number',
             allowNull: false,
         },
-        capacity: {
+        description: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull:false
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +66,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'fee_type',
         timestamps: true,
         paranoid: true
     }

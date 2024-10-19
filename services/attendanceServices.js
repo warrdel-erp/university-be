@@ -1,7 +1,6 @@
 import * as attendanceService  from "../repository/attendanceRepository.js";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
-    console.log(`>>>>>>>>>>attendanceData, createdBy, updatedBy>>>..`, attendanceData, createdBy, updatedBy);
     
     try {
         // Prepare an array to hold the attendance records to be saved

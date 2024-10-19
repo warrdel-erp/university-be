@@ -3,23 +3,21 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'fee_group',
     {
-        classRoomSectionId: {
+        feeGroupId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'fee_group_id'
         },
-        roomNumber: {
+        name: {
             type: DataTypes.STRING,
-            field: 'room_number',
             allowNull: false,
         },
-        capacity: {
+        description: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull:false
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +56,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'fee_group',
         timestamps: true,
         paranoid: true
     }

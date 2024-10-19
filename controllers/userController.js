@@ -34,6 +34,8 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    let result;
+    let userData;
     let { email, password } = req.body;
     const existingEmail = await userRepository.findEmailByEmail(email);
 
@@ -52,16 +54,82 @@ export const login = async (req, res) => {
 
   //  const token = jwt.sign({ email: existingEmail.email }, process.env.SECRET_KEY,{ expiresIn: process.env.TOKEN_TIME });
   const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '1h'});
-
+  if(existingEmail.dataValues.dummyPassword){
+    result = await userService.emptyPassword(req.body,existingEmail)
+    userData = await userRepository.findEmailByEmail(email);
+  }
    res.cookie("token", token);
    res.status(200).json({
     status: true,
     message: "User logged in successfully",
     token,
+    result,
+    userData,
   });
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).send("Internal server error");
   }
  
+};
+
+// admin register student and employee
+export const adminRegisterStudentAndEmployee = async (req, res) => {
+  try {
+    const { role,courseId,classSectionId,employeeId} = req.body;
+
+    if (!(role )) {
+      res.status(400).send("All input is required");
+    } else {
+      const result = await userService.adminRegisterStudentAndEmployee(req.body);
+      res.status(200).send(result);
+    }
+  } catch (error) {
+    console.error("Error during registration:", error);
+    res.status(500).send("Internal server error");
+  }
+};
+
+export async function getAdminRegisterStudentAndEmployee(req, res) {
+  // const universityId = req.user.universityId;
+  try {
+      const user = await userService.getAdminRegisterStudentAndEmployee();
+      res.status(200).json(user);
+  } catch (error) {
+      res.status(500).json({ error: error.message });
+  }
+}
+
+// change register password student and employee
+export const changePassword = async (req, res) => {
+  try {
+    const { email,oldPassword,password,confirmPassword} = req.body;
+    
+    const existingEmail = await userRepository.findEmailByEmail(email);
+    if (!(email && oldPassword && password)) {
+      res.status(400).send("All input is required");
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).send("new pasword and confirm password does not match");
+    }
+    if (!existingEmail) {
+      return res.status(400).send("Email does not exist");
+    }
+    const isPasswordCorrect = await bcrypt.compare(
+      oldPassword,
+      existingEmail.dataValues.dummyPassword,
+    );
+    
+
+    // if (!isPasswordCorrect) {
+    //   return res.status(400).send("Incorrect Old Password");
+    // }
+    //  else {
+      const result = await userService.changePassword(req.body);
+      res.status(200).send(result);
+    // }
+  } catch (error) {
+    console.error("Error during change password:", error);
+    res.status(500).send("Internal server error");
+  }
 };

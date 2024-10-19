@@ -244,7 +244,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    attributes: ['section', 'acedmicPeriodId'],
+                    attributes: ['section', 'acedmicPeriodId','classSectionsId'],
                     include: [
                         {
                             model: model.courseModel,
@@ -296,7 +296,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.subjectModel,
                     as: 'subjects',
-                    attributes: ['subjectName'],
+                    attributes: ['subjectName','subjectId'],
                 },
             ],
         };

@@ -1,7 +1,6 @@
 import * as faculityLoadRepository from '../repository/faculityLoadRepository.js';
 
 export async function addFaculityLoad(data, createdBy, updatedBy) {
-    console.log(`>>>>>>>>>.data`, data);
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
     return await faculityLoadRepository.addFaculityLoad(data);

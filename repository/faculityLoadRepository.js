@@ -1,7 +1,6 @@
 import * as model from '../models/index.js'
 
 export async function addFaculityLoad(data) {
-    console.log(`>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.faculityLoadModel.create(data);
         return result;

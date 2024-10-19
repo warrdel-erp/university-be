@@ -3,7 +3,6 @@ import { teacherSectionMapping ,getTeacherSectionMapping,updateTeachersSectionMa
 
 
 export async function teacherSubjectMappingService(data,createdBy) {
-  console.log(`>>>>>>>teacherSubjectMappingService>>>>>>>>>>>`,data);
   
     try {
       const { employeeId, classSubjectMapperId } = data;

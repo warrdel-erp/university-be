@@ -1,25 +1,55 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import feeGroup from "./feeGroupModel.js";
+import classStudentMapper from "./classSectionStudentMapperModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'fee_invoice',
     {
-        classRoomSectionId: {
+        feeInvoiceId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'fee_invoice_id'
         },
-        roomNumber: {
-            type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
-        },
-        capacity: {
+        feeGroupId: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull:false
+            allowNull: false,
+            field: 'fee_group_id',
+            references: {
+                model: feeGroup,
+                key: 'fee_group_id'
+            }
+        },
+        classStudentMapperId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_student_mapper_id',
+            references: {
+                model: classStudentMapper,
+                key: 'class_student_mapper_id'
+            }
+        },
+        createdDate: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            field: 'created_date',
+        },
+        dueDate: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            field: 'due_date',
+        },
+        paymentStatus: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'payment_status'
+        },
+        paymentMethod: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'payment_method'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +88,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'fee_invoice',
         timestamps: true,
         paranoid: true
     }

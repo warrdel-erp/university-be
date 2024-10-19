@@ -21,7 +21,11 @@ import faculityLoad from './router/faculityLoadRoute.js';
 import timeTableCreate from './router/timeTableCreateRoute.js';
 import libraryMember from './router/libraryMemberRoute.js';
 import attendance from './router/attendanceRoute.js';
-import classRoom from './router/classRoomRoute.js'
+import classRoom from './router/classRoomRoute.js';
+import feeGroup from './router/feeGroupRoute.js';
+import feeType from './router/feeTypeRoute.js';
+import feeInvoice from './router/feeInvoiceRoute.js';
+import feeInvoiceDetails from './router/feeInvoiceDetailRoute.js';
 
 
 // middleware
@@ -47,7 +51,10 @@ app.use('/timeTableCreate',timeTableCreate);
 app.use('/libraryMember',libraryMember);
 app.use('/attendance',attendance);
 app.use('/classRoom',classRoom);
-
+app.use("/feeGroup",feeGroup);
+app.use("/feeType",feeType);
+app.use("/feeInvoice",feeInvoice);
+app.use("/feeInvoiceDetails",feeInvoiceDetails);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

@@ -1,7 +1,6 @@
 import * as model from '../models/index.js'
 
 export async function addTimeTableCreate(data,transaction) {
-    console.log(`>>>>>>>>data>>>>>>`,data);
     try {
         const result = await model.timeTableCreateModel.create(data,{transaction});
         return result;

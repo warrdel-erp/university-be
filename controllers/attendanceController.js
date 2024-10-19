@@ -26,7 +26,6 @@ export async function getAttendanceDetails(req, res) {
 }
 
 export async function updateAttendance(req, res) {
-    console.log(`>>>>>>>req.body>>>>>>`, req.body);
 
     try {
         const attendanceRecords = req.body;

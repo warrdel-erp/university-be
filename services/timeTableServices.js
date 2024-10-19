@@ -1,7 +1,6 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
 
 export async function addTimeTable(data, createdBy, updatedBy) {
-    console.log(`>>>>>>>>>.data`, data);
 
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;

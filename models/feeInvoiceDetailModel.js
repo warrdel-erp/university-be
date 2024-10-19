@@ -1,25 +1,53 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import feeInvoice from "./feeInvoiceModel.js";
+import feeType from "./feeTypeModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'fee_invoice_details',
     {
-        classRoomSectionId: {
+        feeInvoiceDetailsId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'fee_invoice_details_id'
         },
-        roomNumber: {
-            type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
-        },
-        capacity: {
+        feeInvoiceId: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull:false
+            allowNull: false,
+            field: 'fee_invoice_id',
+            references: {
+                model: feeInvoice,
+                key: 'fee_invoice_id'
+            }
+        },
+        feeTypeId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'fee_type_id',
+            references: {
+                model: feeType,
+                key: 'fee_type_id'
+            }
+        },
+        amount: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+        },
+        waiver: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+        },
+        subTotal: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field:'sub_total'
+        },
+        paidAmount: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field:'paid_amount'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +86,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'fee_invoice_details',
         timestamps: true,
         paranoid: true
     }

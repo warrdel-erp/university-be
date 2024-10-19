@@ -12,7 +12,6 @@ export async function teacherSubjectMapping(data) {
 };
 
 export async function getTeacherSubjectMapping(employeeId,universityId) {
-    console.log(`>>>>>getTeacherSubjectMapping>>>>>>>>>>>>>>>`,employeeId);
     
     let result;
     try {

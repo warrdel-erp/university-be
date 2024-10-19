@@ -696,6 +696,11 @@ export async function getclassStudentMapping(classSectionId,universityId) {
                     },
                 },
                 {
+                    model: model.classSectionModel,
+                    as: "studentSection",
+                    attributes:["section","classSectionsId"],
+                },
+                {
                     model: model.studentModel,
                     as: "studentMapped",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
