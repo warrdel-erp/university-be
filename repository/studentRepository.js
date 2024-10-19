@@ -102,9 +102,6 @@ export async function getAllStudents(firstName,universityId) {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
-                        where: {
-                            universityId:universityId
-                        },  
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -252,9 +249,6 @@ export async function getAllStudents(firstName,universityId) {
                         model: model.specializationModel,
                         as: "specialization",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
-                        where: {
-                            universityId:universityId
-                        },
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -356,9 +350,6 @@ export async function getSingleStudentDetail(studentId,universityId) {
                 model: model.specializationModel,
                 as: "specialization",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
-                where: {
-                    universityId:universityId
-                }, 
             },
             {
                 model: model.studentsEntranceDetail,
