@@ -1,0 +1,211 @@
+import * as model from '../models/index.js'
+import { Op } from 'sequelize';
+
+export async function addUserRolePermission(UserRolePermissionData) { 
+    try {
+        const result = await model.userRolePermissionModel.create(UserRolePermissionData);
+        return result;
+    } catch (error) {
+        console.error("Error in add UserRolePermission :", error);
+        throw error;
+    }
+};
+
+export async function getUserRolePermissionDetails(universityId) {
+    try {
+        const UserRolePermission = await model.userRolePermissionModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
+            include:[
+                {
+                    model:model.userModel,
+                    as: 'user',
+                    attributes: ["userName", "email", "role","phone"] ,
+                },
+                {
+                    model:model.roleModel,
+                    as: 'userRole',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model:model.permissionModel,
+                    as: 'userPermission',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                }
+            ]
+        });
+
+        return UserRolePermission;
+    } catch (error) {
+        console.error('Error fetching UserRolePermission details:', error);
+        throw error;
+    }
+}
+
+
+export async function getSingleUserRolePermissionDetails(userRolePermissionId) {
+    try {
+        const UserRolePermission = await model.userRolePermissionModel.findOne({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
+            include:[
+                {
+                    model:model.userModel,
+                    as: 'user',
+                    attributes: ["userName", "email", "role","phone"] ,
+                },
+                {
+                    model:model.roleModel,
+                    as: 'userRole',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model:model.permissionModel,
+                    as: 'userPermission',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                }
+            ],            where: { userRolePermissionId },
+        });
+
+        return UserRolePermission;
+    } catch (error) {
+        console.error('Error fetching UserRolePermission details:', error);
+        throw error;
+    }
+}
+
+export async function deleteUserRolePermission(userRolePermissionId) {
+    const deleted = await model.userRolePermissionModel.destroy({ where: { userRolePermissionId: userRolePermissionId } });
+    return deleted > 0;
+}
+
+export async function updateUserRolePermission(userRolePermissionId, UserRolePermissionData) {    
+    try {
+        const result = await model.userRolePermissionModel.update(UserRolePermissionData, {
+            where: { userRolePermissionId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating UserRolePermission creation ${userRolePermissionId}:`, error);
+        throw error; 
+    }
+}
+
+export async function getUserRolePermissionByUserId(userId) {
+    try {
+        const UserRolePermission = await model.userModel.findAll({
+            attributes:  ["userId"],
+            include:[
+                {
+                    model:model.userRolePermissionModel,
+                    as: 'user',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
+                        include:[
+                            {
+                                model:model.roleModel,
+                                as: 'userRole',
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                            {
+                                model:model.permissionModel,
+                                as: 'userPermission',
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            },
+                        ]    
+                },
+                {
+                    model:model.userStudentEmployeeModel,
+                    as: 'userDetails',
+                    attributes: ["employeeId", "studentId"],
+                    include:[
+                        {
+                            model:model.studentModel,
+                            as:'studentDetails',
+                            attributes: ["campusId", "instituteId","affiliatedUniversityId","courseLevelId","courseId","specializationId"],
+                            include:[
+                                {
+                                    model:model.courseModel,
+                                    as:'course',
+                                    attributes:["courseName",'courseId','courseCode'],
+                                    include:[
+                                        {
+                                            model:model.timeTableCreationModel,
+                                            as:"timeTableCourse",
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","course_id"] },
+                                            include:[
+                                                {
+                                                    model:model.timeTableCreateModel,
+                                                    as: 'timeTable',
+                                                    attributes:["timeTableCreateId","timeTableCreationId","teacherSubjectMappingId","teacherSectionMappingId","day","period",]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    model:model.classStudentMapperModel,
+                                    as:'studentMapped',
+                                    attributes:["classStudentMapperId",'studentId','classSectionId'],
+                                        include:[
+                                            {
+                                                model:model.classSectionModel,
+                                                as:'studentSection',
+                                                attributes:["classSectionsId",'courseId','specializationId','acedmicPeriodId','section'],
+                                                include:[
+                                                    {
+                                                        model:model.teacherSectionMappingModel,
+                                                        as:"employeeSection",
+                                                        attributes:["employeeId",'classSectionsId','isCordinatory'],
+                                                    },
+                                                    {
+                                                        model:model.classSubjectMapperModel,
+                                                        as:'classSection',
+                                                        attributes:["classSubjectMapperId",'subjectId','classSectionId'],
+                                                        include:[
+                                                            {
+                                                                model:model.subjectModel,
+                                                                as:"subjects",
+                                                                attributes:["subjectName",'subjectId','courseId','specializationId'],
+                                                            },
+                                                            {
+                                                                model:model.teacherSubjectMappingModel,
+                                                                as:"employeeSubject",
+                                                                attributes:["teacherSubjectMappingId",'employeeId','classSubjectMapperId'],
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                model:model.feeInvoiceModel,
+                                                as:'feeStudentMapper',
+                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_group_id","class_student_mapper_id","class_sections_id"] },
+                                                include:[
+                                                    {
+                                                        model:model.feeInvoiceDetailModel,
+                                                        as:'feeInvoiceDetails',
+                                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_type_id","fee_invoice_id"] },
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                },
+                            {
+                                model:model.attendanceModel,
+                                as:'studentAttendance',
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","time_table_create_id","student_id","class_sections_id"] },
+                            }
+                            ]
+                        },
+                           
+                    ]
+                }
+                
+            ],           
+             where: { userId },
+        });
+
+        return UserRolePermission;
+    } catch (error) {
+        console.error('Error fetching UserRolePermission details:', error);
+        throw error;
+    }
+};

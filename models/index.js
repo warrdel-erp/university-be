@@ -56,6 +56,10 @@ import feeTypeModel from './feeTypeModel.js';
 import feeInvoiceModel from './feeInvoiceModel.js';
 import feeInvoiceDetailModel from './feeInvoiceDetailModel.js';
 import userStudentEmployeeModel from './userStudentEmployeeModel.js';
+import roleModel from './roleModel.js';
+import permissionModel from './permissionModel.js';
+import rolePermissionMappingModel from './rolePermissionMappingModel.js';
+import userRolePermissionModel from './userRolePermissionModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -74,6 +78,9 @@ specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as:
 
 studentModel.belongsTo(employeeCodeMasterType, { foreignKey: 'course_level_id', as: 'courseLevel' });
 employeeCodeMasterType.hasMany(studentModel, { foreignKey: 'course_level_id', as: 'courseLevel' });
+
+userStudentEmployeeModel.belongsTo(studentModel,{foreignKey:'student_id',as:"student"})
+studentModel.hasOne(userStudentEmployeeModel,{foreignKey:'student_id',as:"student"})
 
 studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'typs' });
 employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs' });
@@ -408,6 +415,25 @@ studentModel.hasMany(userStudentEmployeeModel, { foreignKey: 'student_id', as: '
 userStudentEmployeeModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeDetails' });
 employeeModel.hasMany(userStudentEmployeeModel, { foreignKey: 'employee_id', as: 'employeeDetails' });
 
+//role permession mapping
+
+rolePermissionMappingModel.belongsTo(roleModel, { foreignKey: 'role_id', as: 'userMapped' });
+roleModel.hasMany(rolePermissionMappingModel, { foreignKey: 'role_id', as: 'userMapped' });
+
+rolePermissionMappingModel.belongsTo(permissionModel, { foreignKey: 'permission_id', as: 'permissionMapped' });
+permissionModel.hasMany(rolePermissionMappingModel, { foreignKey: 'permission_id', as: 'permissionMapped' });
+
+
+//user role permission join to role and permission
+userRolePermissionModel.belongsTo(roleModel, { foreignKey: 'role_id', as: 'userRole' });
+roleModel.hasMany(userRolePermissionModel, { foreignKey: 'role_id', as: 'userRole' });
+
+userRolePermissionModel.belongsTo(permissionModel, { foreignKey: 'permission_id', as: 'userPermission' });
+permissionModel.hasMany(userRolePermissionModel, { foreignKey: 'permission_id', as: 'userPermission' });
+
+userRolePermissionModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
+userModel.hasMany(userRolePermissionModel, { foreignKey: 'user_id', as: 'user' });
+
 export {
     settingModel,
 	universityModel,
@@ -467,4 +493,8 @@ export {
     feeInvoiceModel,
     feeInvoiceDetailModel,
     userStudentEmployeeModel,
+    roleModel,
+    permissionModel,
+    rolePermissionMappingModel,
+    userRolePermissionModel,
   };

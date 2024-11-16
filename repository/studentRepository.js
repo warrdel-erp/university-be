@@ -1,9 +1,9 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addStudent(data,transaction) {
+export async function addStudent(data, transaction) {
     try {
-        const result = await model.studentModel.create(data,{transaction});
+        const result = await model.studentModel.create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add Student:", error);
@@ -11,9 +11,9 @@ export async function addStudent(data,transaction) {
     }
 };
 
-export async function addStudentsEntranceDetail(data,transaction) {
+export async function addStudentsEntranceDetail(data, transaction) {
     try {
-        const result = await model.studentsEntranceDetail.bulkCreate(data,{transaction});
+        const result = await model.studentsEntranceDetail.bulkCreate(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add students Entrance Detail:", error);
@@ -21,9 +21,9 @@ export async function addStudentsEntranceDetail(data,transaction) {
     }
 };
 
-export async function addStudentsAddress(data,transaction) {
+export async function addStudentsAddress(data, transaction) {
     try {
-        const result = await model.studentsAddress.create(data,{transaction});
+        const result = await model.studentsAddress.create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add students Address:", error);
@@ -31,9 +31,9 @@ export async function addStudentsAddress(data,transaction) {
     }
 };
 
-export async function addStudentsCorsAddress(data,transaction) {
+export async function addStudentsCorsAddress(data, transaction) {
     try {
-        const result = await model.studentCorsAddressModel.create(data,{transaction});
+        const result = await model.studentCorsAddressModel.create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add students Cors Address:", error);
@@ -41,9 +41,9 @@ export async function addStudentsCorsAddress(data,transaction) {
     }
 };
 
-export async function studentMetaData(data,transaction) {
+export async function studentMetaData(data, transaction) {
     try {
-        const result = await model.studentMetaData.bulkCreate(data,{transaction});
+        const result = await model.studentMetaData.bulkCreate(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in adding meta data student:", error);
@@ -51,7 +51,7 @@ export async function studentMetaData(data,transaction) {
     }
 };
 
-export async function getAllStudents(firstName,universityId) {
+export async function getAllStudents(firstName, universityId) {
     let result;
     try {
         if (firstName !== 'all') {
@@ -61,47 +61,47 @@ export async function getAllStudents(firstName,universityId) {
                     {
                         model: model.userModel,
                         as: "userStudent",
-                        attributes:["universityId","userId"],
+                        attributes: ["universityId", "userId"],
                         where: {
-                            universityId:universityId
-                        },                    
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.campusModel,
                         as: "campus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
                         where: {
-                            universityId:universityId
-                        },  
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.instituteModel,
                         as: "institute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
                         where: {
-                            universityId:universityId
-                        },  
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.affiliatedIniversityModel,
                         as: "affiliatedUniversity",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
                         where: {
-                            universityId:universityId
-                        },  
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.courseModel,
                         as: "course",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
                         where: {
-                            universityId:universityId
-                        },  
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.specializationModel,
                         as: "specialization",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -116,22 +116,13 @@ export async function getAllStudents(firstName,universityId) {
                     {
                         model: model.employeeCodeMasterType,
                         as: "courseLevel",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
-                        include :[
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+                        include: [
                             {
                                 model: model.employeeCodeMaster,
                                 as: "codes",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                // include:[
-                                //     {
-                                //         model:model.userModel,
-                                //         as:"userEmployeeCodeType",
-                                //         attributes:["universityId","userId"],
-                                //         where: {
-                                //             universityId:universityId
-                                //         },
-                                //     },
-                                // ],                           
+                                                          
                             },
                         ]
                     },
@@ -139,32 +130,21 @@ export async function getAllStudents(firstName,universityId) {
                         model: model.studentMetaData,
                         as: "studentMetaData",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include :[
+                        include: [
                             {
                                 model: model.employeeCodeMasterType,
                                 as: "typs",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                include :[
+                                include: [
                                     {
                                         model: model.employeeCodeMaster,
-                                        as: "codes",
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                        // include:[
-                                        //     {
-                                        //         model:model.userModel,
-                                        //         as:"userEmployeeCodeType",
-                                        //         attributes:["universityId","userId"],
-                                        //         where: {
-                                        //             universityId:universityId
-                                        //         },
-                                        //     },
-                                        // ],    
+                                        as: "codes", 
                                     },
                                 ]
                             },
                         ]
                     },
-                    ],
+                ],
                 where: {
                     first_name: {
                         [Op.like]: `%${firstName}%`
@@ -177,40 +157,40 @@ export async function getAllStudents(firstName,universityId) {
                     {
                         model: model.userModel,
                         as: "userStudent",
-                        attributes:["universityId","userId"],
+                        attributes: ["universityId", "userId"],
                         where: {
-                            universityId:universityId
-                        },                    
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.campusModel,
                         as: "campus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
                         where: {
-                            universityId:universityId
-                        }, 
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.instituteModel,
                         as: "institute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
                         where: {
-                            universityId:universityId
+                            universityId: universityId
                         },
                     },
                     {
                         model: model.affiliatedIniversityModel,
                         as: "affiliatedUniversity",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
                         where: {
-                            universityId:universityId
-                        }, 
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.employeeCodeMasterType,
                         as: "courseLevel",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
-                        include :[
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+                        include: [
                             {
                                 model: model.employeeCodeMaster,
                                 as: "codes",
@@ -222,12 +202,12 @@ export async function getAllStudents(firstName,universityId) {
                         model: model.studentMetaData,
                         as: "studentMetaData",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include :[
+                        include: [
                             {
                                 model: model.employeeCodeMasterType,
                                 as: "typs",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                include :[
+                                include: [
                                     {
                                         model: model.employeeCodeMaster,
                                         as: "codes",
@@ -240,15 +220,15 @@ export async function getAllStudents(firstName,universityId) {
                     {
                         model: model.courseModel,
                         as: "course",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
                         where: {
-                            universityId:universityId
-                        }, 
+                            universityId: universityId
+                        },
                     },
                     {
                         model: model.specializationModel,
                         as: "specialization",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
                     },
                     {
                         model: model.studentsEntranceDetail,
@@ -260,7 +240,7 @@ export async function getAllStudents(firstName,universityId) {
                         as: "studentAddress",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     }
-                    ],
+                ],
             });
         };
         return result;
@@ -270,7 +250,7 @@ export async function getAllStudents(firstName,universityId) {
     };
 };
 
-export async function getSingleStudentDetail(studentId,universityId) {
+export async function getSingleStudentDetail(studentId, universityId) {
     try {
         const result = await model.studentModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -278,132 +258,132 @@ export async function getSingleStudentDetail(studentId,universityId) {
                 {
                     model: model.userModel,
                     as: "userStudent",
-                    attributes:["universityId","userId"],
+                    attributes: ["universityId", "userId"],
                     where: {
-                        universityId:universityId
-                    },                    
+                        universityId: universityId
+                    },
                 },
-            {
-                model: model.campusModel,
-                as: "campus",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
-                where: {
-                    universityId:universityId
-                },  
-            },
-            {
-                model: model.instituteModel,
-                as: "institute",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
-                where: {
-                    universityId:universityId
-                },  
-            },
-            {
-                model: model.affiliatedIniversityModel,
-                as: "affiliatedUniversity",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
-                where: {
-                    universityId:universityId
-                },  
-            },
-            {
-                model: model.employeeCodeMasterType,
-                as: "courseLevel",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
-                include :[
-                    {
-                        model: model.employeeCodeMaster,
-                        as: "codes",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                {
+                    model: model.campusModel,
+                    as: "campus",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
+                    where: {
+                        universityId: universityId
                     },
-                ]
-            },
-            {
-                model: model.studentMetaData,
-                as: "studentMetaData",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                include :[
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "typs",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
+                },
+                {
+                    model: model.instituteModel,
+                    as: "institute",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                    where: {
+                        universityId: universityId
                     },
-                ]
-            },
-            {
-                model: model.courseModel,
-                as: "course",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
-                where: {
-                    universityId:universityId
-                }, 
-            },
-            {
-                model: model.specializationModel,
-                as: "specialization",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
-            },
-            {
-                model: model.studentsEntranceDetail,
-                as: "entranceDetails",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-            {
-                model: model.studentsAddress,
-                as: "studentAddress",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-            {
-                model:model.studentCorsAddressModel,
-                as:'CorsAddressStudent',
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                include:[
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterCountryStudent",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
+                },
+                {
+                    model: model.affiliatedIniversityModel,
+                    as: "affiliatedUniversity",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
+                    where: {
+                        universityId: universityId
                     },
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterStateStudent",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
+                },
+                {
+                    model: model.employeeCodeMasterType,
+                    as: "courseLevel",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+                    include: [
+                        {
+                            model: model.employeeCodeMaster,
+                            as: "codes",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        },
+                    ]
+                },
+                {
+                    model: model.studentMetaData,
+                    as: "studentMetaData",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                        {
+                            model: model.employeeCodeMasterType,
+                            as: "typs",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            include: [
+                                {
+                                    model: model.employeeCodeMaster,
+                                    as: "codes",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ]
+                        },
+                    ]
+                },
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
+                    where: {
+                        universityId: universityId
                     },
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterCityStudent",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
-                    },
-                ]
-               },
+                },
+                {
+                    model: model.specializationModel,
+                    as: "specialization",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+                },
+                {
+                    model: model.studentsEntranceDetail,
+                    as: "entranceDetails",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.studentsAddress,
+                    as: "studentAddress",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.studentCorsAddressModel,
+                    as: 'CorsAddressStudent',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                        {
+                            model: model.employeeCodeMasterType,
+                            as: "codeMasterCountryStudent",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id", "createdBy"] },
+                            include: [
+                                {
+                                    model: model.employeeCodeMaster,
+                                    as: "codes",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ]
+                        },
+                        {
+                            model: model.employeeCodeMasterType,
+                            as: "codeMasterStateStudent",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id", "createdBy"] },
+                            include: [
+                                {
+                                    model: model.employeeCodeMaster,
+                                    as: "codes",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ]
+                        },
+                        {
+                            model: model.employeeCodeMasterType,
+                            as: "codeMasterCityStudent",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id", "createdBy"] },
+                            include: [
+                                {
+                                    model: model.employeeCodeMaster,
+                                    as: "codes",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ]
+                        },
+                    ]
+                },
             ],
             where: {
                 student_id: studentId
@@ -435,7 +415,7 @@ export async function getPreviousScholarNumber(instituteCode) {
     }
 };
 
-export async function updateStudentDetails(studentId, data,transaction) {
+export async function updateStudentDetails(studentId, data, transaction) {
     try {
         const result = await model.studentModel.update(data, {
             where: {
@@ -443,14 +423,14 @@ export async function updateStudentDetails(studentId, data,transaction) {
             },
             transaction
         });
-     return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating student details ${studentId} :`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function updateStudentEntranceDetails(studentsEntranceDetailId, data,transaction) {
+export async function updateStudentEntranceDetails(studentsEntranceDetailId, data, transaction) {
     try {
         const result = await model.studentsEntranceDetail.update(data, {
             where: {
@@ -458,14 +438,14 @@ export async function updateStudentEntranceDetails(studentsEntranceDetailId, dat
             },
             transaction
         });
-     return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating student entrance details ${studentsEntranceDetailId} :`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function updateStudentAddressDetails(studentsAddressId, data,transaction) {
+export async function updateStudentAddressDetails(studentsAddressId, data, transaction) {
     try {
         const result = await model.studentsAddress.update(data, {
             where: {
@@ -473,14 +453,14 @@ export async function updateStudentAddressDetails(studentsAddressId, data,transa
             },
             transaction
         });
-     return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating student address details ${studentsAddressId} :`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function updateStudentCorsAddressDetails(studentCorAddressId, data,transaction) {
+export async function updateStudentCorsAddressDetails(studentCorAddressId, data, transaction) {
     try {
         const result = await model.studentCorsAddressModel.update(data, {
             where: {
@@ -488,29 +468,29 @@ export async function updateStudentCorsAddressDetails(studentCorAddressId, data,
             },
             transaction
         });
-     return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating student cors address details ${studentCorAddressId} :`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function updateStudentMetaData(studentId,type,code,transaction) {  
-   // code gender
-   // type male,female
+export async function updateStudentMetaData(studentId, type, code, transaction) {
+    // code gender
+    // type male,female
     try {
         const result = await model.studentMetaData.update(
-            { 
-                types: type
-            }, 
             {
-                where: { 
-                    studentId: studentId, 
-                    codes: code 
+                types: type
+            },
+            {
+                where: {
+                    studentId: studentId,
+                    codes: code
                 },
                 transaction
             }
-        );        
+        );
         return result;
     } catch (error) {
         console.error(`Error updating student metadata for studentId ${studentId} and type ${type}:`, error);
@@ -553,19 +533,17 @@ export async function checkEnroll(enrollNumber) {
 
 export async function getEmptyEnrollNumber(universityId) {
     try {
-        // const attributes = ["first_name","father_name"];
         const result = await model.studentModel.findAll({
             include: [
                 {
                     model: model.userModel,
                     as: "userStudent",
-                    attributes:["universityId","userId"],
+                    attributes: ["universityId", "userId"],
                     where: {
-                        universityId:universityId
-                    },                    
+                        universityId: universityId
+                    },
                 },
             ],
-            // attributes: attributes,
             where: {
                 enrollNumber: {
                     [Op.or]: [null, '']
@@ -579,7 +557,7 @@ export async function getEmptyEnrollNumber(universityId) {
     }
 };
 
-export async function deleteStudentDetail (studentId) {
+export async function deleteStudentDetail(studentId) {
     try {
         const result = await model.studentModel.destroy({
             where: { studentId },
@@ -592,7 +570,7 @@ export async function deleteStudentDetail (studentId) {
     }
 };
 
-export async function deleteStudentEntranceDetail (studentsEntranceDetailId) {
+export async function deleteStudentEntranceDetail(studentsEntranceDetailId) {
     try {
         const result = await model.studentsEntranceDetail.destroy({
             where: { studentsEntranceDetailId },
@@ -605,7 +583,7 @@ export async function deleteStudentEntranceDetail (studentsEntranceDetailId) {
     }
 };
 
-export async function deleteStudentAddressDetail (studentsAddressId) {
+export async function deleteStudentAddressDetail(studentsAddressId) {
     try {
         const result = await model.studentsAddress.destroy({
             where: { studentsAddressId },
@@ -672,8 +650,8 @@ export async function classStudentMapping(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId,universityId) {
-    
+export async function getclassStudentMapping(classSectionId, universityId) {
+
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -681,15 +659,15 @@ export async function getclassStudentMapping(classSectionId,universityId) {
                 {
                     model: model.userModel,
                     as: "userClassStudentMapper",
-                    attributes:["universityId","userId"],
+                    attributes: ["universityId", "userId"],
                     where: {
-                        universityId:universityId
+                        universityId: universityId
                     },
                 },
                 {
                     model: model.classSectionModel,
                     as: "studentSection",
-                    attributes:["section","classSectionsId"],
+                    attributes: ["section", "classSectionsId"],
                 },
                 {
                     model: model.studentModel,
@@ -699,23 +677,23 @@ export async function getclassStudentMapping(classSectionId,universityId) {
                         {
                             model: model.campusModel,
                             as: "campus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","campusId","campusCode"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
                         },
                         {
                             model: model.instituteModel,
                             as: "institute",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","instituteId","campusId","instituteCode"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
                         },
                         {
                             model: model.affiliatedIniversityModel,
                             as: "affiliatedUniversity",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","affiliatedUniversityId","instituteId","affiliatedUniversityCode"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
                         },
                         {
                             model: model.employeeCodeMasterType,
                             as: "courseLevel",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id"] },
-                            include :[
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+                            include: [
                                 {
                                     model: model.employeeCodeMaster,
                                     as: "codes",
@@ -726,12 +704,12 @@ export async function getclassStudentMapping(classSectionId,universityId) {
                         {
                             model: model.courseModel,
                             as: "course",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","courseId","course_levelId","courseCode"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
                         },
                         {
                             model: model.specializationModel,
                             as: "specialization",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId","specializationId","course_Id","specializationCode"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
                         },
                         {
                             model: model.studentsEntranceDetail,
@@ -743,11 +721,11 @@ export async function getclassStudentMapping(classSectionId,universityId) {
                             as: "studentAddress",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         }
-                        ],
+                    ],
                 },
             ],
         };
-        
+
         if (classSectionId !== 0) {
             queryOptions.where = { class_sections_id: classSectionId };
         }
@@ -766,6 +744,20 @@ export async function addElectiveSubject(data) {
         return result;
     } catch (error) {
         console.error("Error in student  Elective Subject Model:", error);
+        throw error;
+    }
+};
+
+export async function promoteStudent(studentId, data) {
+    try {
+        const result = await model.classStudentMapperModel.update(data, {
+            where: {
+                studentId: studentId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error updating student promote ${studentId} :`, error);
         throw error;
     }
 };

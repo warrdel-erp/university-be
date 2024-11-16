@@ -352,3 +352,9 @@ export async function getclassStudentMapping(classSectionId,universityId){
 export async function addElectiveSubject(data){
   return await studentRepository.addElectiveSubject(data)
 };
+
+export async function promoteStudent(data){  
+  const studentId = data.studentId
+  const classSectionId = data.classSectionId
+  return await studentRepository.promoteStudent(studentId,data)
+};

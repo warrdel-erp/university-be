@@ -26,6 +26,10 @@ import feeGroup from './router/feeGroupRoute.js';
 import feeType from './router/feeTypeRoute.js';
 import feeInvoice from './router/feeInvoiceRoute.js';
 import feeInvoiceDetails from './router/feeInvoiceDetailRoute.js';
+import role from './router/roleRoute.js';
+import permission from './router/permissionRoute.js';
+import rolePermissionMapping from './router/rolePermissionMappingRoute.js';
+import userRolePermission from './router/userRolePermissionRoute.js';
 
 
 // middleware
@@ -55,6 +59,11 @@ app.use("/feeGroup",feeGroup);
 app.use("/feeType",feeType);
 app.use("/feeInvoice",feeInvoice);
 app.use("/feeInvoiceDetails",feeInvoiceDetails);
+app.use("/role",role);
+app.use("/permission",permission);
+app.use("/rolePermissionMapping",rolePermissionMapping);
+app.use("/userRolePermission",userRolePermission)
+
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

@@ -2,6 +2,7 @@ import * as userService from "../services/userServices.js";
 import * as userRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { getUserRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 
 // register
 export const register = async (req, res) => {
@@ -57,12 +58,15 @@ export const login = async (req, res) => {
   if(existingEmail.dataValues.dummyPassword){
     result = await userService.emptyPassword(req.body,existingEmail)
     userData = await userRepository.findEmailByEmail(email);
-  }
+  }  
+  const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId)
+ 
    res.cookie("token", token);
    res.status(200).json({
     status: true,
     message: "User logged in successfully",
     token,
+    userPermission,
     result,
     userData,
   });

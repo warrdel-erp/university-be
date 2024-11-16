@@ -201,3 +201,28 @@ export const addElectiveSubject = async (req, res) => {
         return res.status(500).send("Internal Server Error");
     }
 };
+
+export const promoteStudent = async (req, res) => {
+    const data = req.body;    
+    try {
+
+        if (Array.isArray(data)) {
+            const results = [];
+            for (const student of data) {
+                if (!(student.studentId && student.classSectionId)) {
+                    return res.status(400).send("Both classSectionId and studentId are required for all students.");
+                }
+                const result = await studentService.promoteStudent(student);
+                results.push(result);
+            }
+            return res.status(200).json(results);
+        }
+
+        const result = await studentService.promoteStudent(data);
+        return res.status(200).json(result);
+
+    } catch (error) {
+        console.error("Error in promoteStudent:", error);
+        return res.status(500).send("Internal Server Error: " + error.message);
+    }
+};

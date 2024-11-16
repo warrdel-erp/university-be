@@ -31,11 +31,6 @@ export default sequelize.define(
                 key: 'institute_id',
             }
         }, 
-        // resumeNumber:{
-        //     type: DataTypes.STRING,
-        //     allowNull:true,
-        //     field: 'resume_number',
-        // },
         employeePhoto:{
 			type:DataTypes.JSON,
 			allowNull:true,
@@ -81,11 +76,6 @@ export default sequelize.define(
             allowNull:true,
             field:'mother_name',
         },
-        // bodySign:{
-        //     type:DataTypes.STRING,
-        //     allowNull:true,
-        //     field:'body_sign',
-        // },
         workingHours:{
             type:DataTypes.STRING,
             allowNull:true,
