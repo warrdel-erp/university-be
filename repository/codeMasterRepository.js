@@ -104,3 +104,23 @@ export async function deleteCodeMasterType (employeeCodeMasterTypeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function getEmployeeCodesTypesForStudentImport() {
+    let result;
+    try {
+            result = await model.employeeCodeMaster.findAll({
+                attributes: ["employeeCodeMasterId", "codeMasterType"],
+                include: [
+                    {
+                        model: model.employeeCodeMasterType,
+                        as: "codes",
+                        attributes:  ["employeeCodeMasterTypeId", "code"] ,
+                    },
+                ],
+            });
+        return result;
+    } catch (error) {
+        console.error(`Error in getting employee code and types in bul import :`, error);
+        throw error;
+    };
+};

@@ -18,14 +18,21 @@ export const readCSV = (file) => {
     });
 };
 
-export const readExcel = (file) => {
+export const readExcel = (file, daata) => {
   return new Promise((resolve, reject) => {
     try {
+      // Reading the Excel file
       const workbook = xlsx.read(file.student.data);
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const data = xlsx.utils.sheet_to_json(worksheet);
-      resolve(data);
+
+      // Add daata values directly to each record
+      const updatedData = data.map(item => ({
+        ...item,
+        ...daata 
+      }));
+      resolve(updatedData);
     } catch (error) {
       reject(error);
     }

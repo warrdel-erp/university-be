@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { Op } from 'sequelize';
 
 export async function getCourseByCourseId(courseId) {
     try {
@@ -14,6 +15,23 @@ export async function getCourseByCourseId(courseId) {
         throw error;
     }
 };
+
+export async function getCourseByName(courseName) {
+    try {
+        const result = await model.courseModel.findOne({
+            attributes: ["courseId"],
+            where: {
+                courseName: {
+                    [Op.like]: `%${courseName}%`
+                }
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting course details By Course Name:", error);
+        throw error;
+    }
+}
 
 export async function getStudentBySectionId(classSectionId) {
     

@@ -1,7 +1,7 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addStudent(data, transaction) {
+export async function addStudent(data, transaction) {    
     try {
         const result = await model.studentModel.create(data, { transaction });
         return result;

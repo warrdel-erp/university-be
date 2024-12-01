@@ -30,7 +30,9 @@ import role from './router/roleRoute.js';
 import permission from './router/permissionRoute.js';
 import rolePermissionMapping from './router/rolePermissionMappingRoute.js';
 import userRolePermission from './router/userRolePermissionRoute.js';
-
+import dormitoryRoomType from './router/roomTypeRoute.js';
+import dormitoryList from './router/dormitoryListRoute.js';
+import addDormitory from './router/addDormitoryRoute.js';
 
 // middleware
 app.use(fileUpload());
@@ -62,8 +64,10 @@ app.use("/feeInvoiceDetails",feeInvoiceDetails);
 app.use("/role",role);
 app.use("/permission",permission);
 app.use("/rolePermissionMapping",rolePermissionMapping);
-app.use("/userRolePermission",userRolePermission)
-
+app.use("/userRolePermission",userRolePermission);
+app.use("/dormitoryRoomType",dormitoryRoomType);
+app.use("/dormitoryList",dormitoryList);
+app.use("/addDormitory",addDormitory);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

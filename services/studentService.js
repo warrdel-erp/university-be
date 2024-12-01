@@ -5,6 +5,8 @@ import moment from 'moment';
 import { uploadFile } from '../utility/awsServices.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { getSettingValue } from '../repository/settingRepository.js';
+import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRepository.js'
+import { getCourseByName } from '../repository/courseRepository.js';
 
 export async function addStudent(info, files,createdBy) {
   const transaction = await sequelize.transaction();
@@ -155,34 +157,268 @@ export async function getSingleStudentDetail(studentId,universityId){
     return await studentRepository.getSingleStudentDetail(studentId,universityId)
 };
 
-export async function importStudentData(fileType,file){
+export async function importStudentData(fileType,file,daata,universityId,createdBy){
+  daata.universityId = universityId;
+  daata.createdBy = createdBy
+  daata.documentStatus = 'Pending Documents'
+  daata.registerFileNumber = 'BI'
     try {
         let data;
         if (fileType === 'csv') {
-          data = await fileHandler.readCSV(file);
+          data = await fileHandler.readCSV(file,daata);
         } else if (fileType === 'xlsx' || fileType === 'xls') {
-          data = await fileHandler.readExcel(file);
+          data = await fileHandler.readExcel(file,daata);
         } else {
           throw new Error('Unsupported file type');
         }
-         await addAdmissionNoForBulkImport(data)
+        await validateTheStudent(data)
+        //  await addAdmissionNoForBulkImport(data)
       } catch (error) {
         throw new Error('Error importing file data: ' + error.message);
       }
 };
 
-export async function addAdmissionNoForBulkImport(data) {
-  
+
+export async function validateTheStudent(data) {
+
+  const codeAndType = await getEmployeeCodesTypesForStudentImport();
+
+  const matchedPairs = [];
+  for (let dataItem of data) {
+
+    const course = await getCourseByName(dataItem.courseOpted);
+    dataItem['courseId'] = course.dataValues.courseId;
+    delete dataItem['courseOpted'];
+
+    for (let key in dataItem) {
+      const matchedCodeMaster = codeAndType.find(item => item.codeMasterType.toLowerCase() === key.toLowerCase());
+
+      if (matchedCodeMaster) {
+        const allMatchingCodes = matchedCodeMaster.codes.filter(codeObj => 
+          codeObj.code.toLowerCase() === dataItem[key].toLowerCase()
+        );
+
+        allMatchingCodes.forEach(matchedCode => {
+          matchedPairs.push({
+            dataId: matchedCodeMaster.employeeCodeMasterId, 
+            codeId: matchedCode.employeeCodeMasterTypeId  
+          });
+
+          if (key.toLowerCase() === 'courselevel') {
+            dataItem['courseLevelId'] = matchedCode.employeeCodeMasterTypeId;
+            delete dataItem['CourseLevel'];
+          }
+        });
+      }
+    }
+  }
+
+  if (matchedPairs.length > 0) {
+    console.log(`Matched IDs:`, matchedPairs);
+  } else {
+    console.log(`No matching IDs found.`);
+  }
+ await addAdmissionNoForBulkImport(data,matchedPairs)
+  return data;
+};
+
+
+// export async function validateTheStudent(data) {
+//   const codeAndType = await getEmployeeCodesTypesForStudentImport();
+// // console.log(`>>>>>>>>codeAndType>>>>>>>>.`,codeAndType);
+
+//   const matchedPairs = [];
+//   const unmatchedFields = []; // To track the unmatched fields for each student
+
+//   // Define the list of fields to check
+//   const fieldsToCheck = ['bloodGroup', 'gender', 'feeCategory', 'caste', 'religion'];
+
+//   for (let dataItem of data) {
+//     const course = await getCourseByName(dataItem.courseOpted);
+//     if (!course) {
+//       console.error(`Course not found for ${dataItem.courseOpted}`);
+//       continue; // Skip this record if course is not found
+//     }
+
+//     dataItem['courseId'] = course.dataValues.courseId;
+//     delete dataItem['courseOpted'];
+
+//     let unmatchedFieldsForStudent = []; // To collect unmatched fields for each student
+
+//     for (let key in dataItem) {
+//       // Only check for the specified fields
+//       if (fieldsToCheck.includes(key)) {
+//         const matchedCodeMaster = codeAndType.find(item => item.codeMasterType.toLowerCase() === key.toLowerCase());
+
+//         if (matchedCodeMaster) {
+//           const allMatchingCodes = matchedCodeMaster.codes.filter(codeObj => 
+//             codeObj.code.toLowerCase() === dataItem[key].toLowerCase()
+//           );
+
+//           if (allMatchingCodes.length === 0) {
+//             // If no matching codes found for the current key
+//             unmatchedFieldsForStudent.push(key); // Track this field for the student
+//             console.error(`No matching codes found for key: ${key} with value: ${dataItem[key]}`);
+//           } else {
+//             allMatchingCodes.forEach(matchedCode => {
+//               console.log(`>>>>>>>>>>>>>matchedCode`,matchedCode);
+              
+//               matchedPairs.push({
+//                 dataId: matchedCodeMaster.employeeCodeMasterId, 
+//                 codeId: matchedCode.employeeCodeMasterTypeId  
+//               });
+
+              
+//             });
+//           }
+//         } else {
+//           // If no matching codeMasterType is found for the key
+//           unmatchedFieldsForStudent.push(key); // Track this field for the student
+//           console.error(`No matching code master found for key: ${key}`);
+//         }
+//       }
+//     }
+
+//     // If this student has any unmatched fields, we add a custom error message
+//     // if (unmatchedFieldsForStudent.length > 0) {
+//     //   const unmatchedFieldList = unmatchedFieldsForStudent.join(' and ');
+//     //   unmatchedFields.push(`For student ${dataItem.firstName}, ${unmatchedFieldList} do not match. Please check the values for these fields.`);
+//     // }
+//   }
+
+//   // If there are any unmatched fields for any student, throw an error
+//   if (unmatchedFields.length > 0) {
+//     throw new Error(unmatchedFields.join(', '));
+//   }
+
+//   if (matchedPairs.length === 0) {
+//     console.error('No matching IDs found for any data items.');
+//     throw new Error('No matching IDs found for the provided student data.');
+//   }
+
+//   console.log('Matched IDs:', matchedPairs);
+
+//   // Proceed with further actions
+//   await addAdmissionNoForBulkImport(data, matchedPairs);
+//   return data;
+// };
+
+
+
+// export async function validateTheStudent(data) {
+//   const codeAndType = await getEmployeeCodesTypesForStudentImport();
+
+//   const matchedPairs = [];
+//   const unmatchedFields = []; // To track the unmatched fields for each student
+
+//   for (let dataItem of data) {
+//     const course = await getCourseByName(dataItem.courseOpted);
+//     if (!course) {
+//       console.error(`Course not found for ${dataItem.courseOpted}`);
+//       continue; // Skip this record if course is not found
+//     }
+
+//     dataItem['courseId'] = course.dataValues.courseId;
+//     delete dataItem['courseOpted'];
+
+//     let unmatchedFieldsForStudent = []; // To collect unmatched fields for each student
+
+//     for (let key in dataItem) {
+//       const matchedCodeMaster = codeAndType.find(item => item.codeMasterType.toLowerCase() === key.toLowerCase());
+
+//       if (matchedCodeMaster) {
+//         const allMatchingCodes = matchedCodeMaster.codes.filter(codeObj => 
+//           codeObj.code.toLowerCase() === dataItem[key].toLowerCase()
+//         );
+
+//         if (allMatchingCodes.length === 0) {
+//           // If no matching codes found for the current key
+//           unmatchedFieldsForStudent.push(key); // Track this field for the student
+//           console.error(`No matching codes found for key: ${key} with value: ${dataItem[key]}`);
+//         } else {
+//           allMatchingCodes.forEach(matchedCode => {
+//             matchedPairs.push({
+//               dataId: matchedCodeMaster.employeeCodeMasterId, 
+//               codeId: matchedCode.employeeCodeMasterTypeId  
+//             });
+
+//             if (key.toLowerCase() === 'courselevel') {
+//               dataItem['courseLevelId'] = matchedCode.employeeCodeMasterTypeId;
+//               delete dataItem['CourseLevel'];
+//             }
+//           });
+//         }
+//       } else {
+//         // If no matching codeMasterType is found for the key
+//         unmatchedFieldsForStudent.push(key); // Track this field for the student
+//         console.error(`No matching code master found for key: ${key}`);
+//       }
+//     }
+
+//     // If this student has any unmatched fields, we add a custom error message
+//     if (unmatchedFieldsForStudent.length > 0) {
+//       const unmatchedFieldList = unmatchedFieldsForStudent.join(' and ');
+//       unmatchedFields.push(`For student ${dataItem.firstName}, ${unmatchedFieldList} do not match. Please check the values for these fields.`);
+//     }
+//   }
+
+//   // If there are any unmatched fields for any student, throw an error
+//   if (unmatchedFields.length > 0) {
+//     throw new Error(unmatchedFields.join(', '));
+//   }
+
+//   if (matchedPairs.length === 0) {
+//     console.error('No matching IDs found for any data items.');
+//     throw new Error('No matching IDs found for the provided student data.');
+//   }
+
+//   console.log('Matched IDs:', matchedPairs);
+
+//   // Proceed with further actions
+//   await addAdmissionNoForBulkImport(data, matchedPairs);
+//   return data;
+// };
+
+
+export async function addAdmissionNoForBulkImport(data, matchedPairs) {
+  const transaction = await sequelize.transaction();
   try {
     const results = [];
+    const metaDataEntries = []; 
+    let createdBy = '';
+
     for (const bulk of data) {
-      const scholarNumber = await generateScholarNumber(bulk.courseId,bulk.instituteId);
-      const studentData = { ...bulk,scholarNumber};
-      const result = await studentRepository.addStudent(studentData);
-      results.push(result); 
+      const scholarNumber = await generateScholarNumber(bulk.courseId, bulk.instituteId);
+        createdBy = bulk.createdBy
+      const studentData = { ...bulk, scholarNumber };
+
+      const result = await studentRepository.addStudent(studentData, transaction);
+
+      for (const pair of matchedPairs) {
+        const entries = {
+          studentId: result.dataValues.studentId,  
+          codes: pair.dataId,                      
+          types: pair.codeId,
+          createdBy                       
+        };
+
+        metaDataEntries.push(entries);
+      }
+
+      results.push(result);
     }
-    return results; 
+
+    if (metaDataEntries.length > 0) {
+      await studentRepository.studentMetaData(metaDataEntries, transaction);
+    }
+
+    // Commit the transaction after all operations
+    await transaction.commit();
+    return results;
+    
   } catch (error) {
+    // If there's an error, roll back the transaction
+    await transaction.rollback();
     console.error("Error in Adding AdmissionNumber in bulk Import:", error.message);
     throw error;
   }

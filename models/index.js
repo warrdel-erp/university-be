@@ -60,6 +60,9 @@ import roleModel from './roleModel.js';
 import permissionModel from './permissionModel.js';
 import rolePermissionMappingModel from './rolePermissionMappingModel.js';
 import userRolePermissionModel from './userRolePermissionModel.js';
+import roomTypeModel from './roomTypeModel.js';
+import dormitoryListModel from './dormitoryListModel.js';
+import addDormitoryModel from './addDormitoryModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -434,6 +437,13 @@ permissionModel.hasMany(userRolePermissionModel, { foreignKey: 'permission_id', 
 userRolePermissionModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
 userModel.hasMany(userRolePermissionModel, { foreignKey: 'user_id', as: 'user' });
 
+// dormitory join 
+addDormitoryModel.belongsTo(dormitoryListModel, { foreignKey: 'add_dormitory_id', as: 'dormitoryList' });
+dormitoryListModel.hasMany(addDormitoryModel, { foreignKey: 'add_dormitory_id', as: 'dormitoryList' });
+
+addDormitoryModel.belongsTo(roomTypeModel, { foreignKey: 'add_dormitory_id', as: 'roomType' });
+roomTypeModel.hasMany(addDormitoryModel, { foreignKey: 'add_dormitory_id', as: 'roomType' });
+
 export {
     settingModel,
 	universityModel,
@@ -497,4 +507,7 @@ export {
     permissionModel,
     rolePermissionMappingModel,
     userRolePermissionModel,
+    roomTypeModel,
+    dormitoryListModel,
+    addDormitoryModel
   };

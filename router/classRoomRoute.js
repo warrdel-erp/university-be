@@ -2,11 +2,9 @@ import {Router} from  'express'
 const router =  Router();
 import {addClassRoom,getAllClassRoom,getSingleClassRoomDetails,updateClassRoom,deleteClassRoom} from "../controllers/classRoomController.js";
 import userAuth from "../middleware/authUser.js"
-// import {authorize}  from '../middleware/authUser.js';
 
 router.post('/', userAuth, addClassRoom);
 
-// router.get('/', userAuth, authorize(['Quality Assurance'], ['Edit','Comment']), getAllClassRoom);
 router.get('/', userAuth, getAllClassRoom);
 
 router.get('/single' ,userAuth, getSingleClassRoomDetails);

@@ -79,15 +79,18 @@ export const getSingleStudentDetail = async (req,res) => {
 // import student data
 
 export const importStudentData = async (req,res) => {
+    const universityId = req.user.universityId;    
+    const createdBy = req.user.userId;
+    const data = req.body
     const files = req.files.student.name;
    const file = req.files;
     const fileType = files.split('.').pop();
   try {
-    await studentService.importStudentData(fileType,file);
+    await studentService.importStudentData(fileType,file,data,universityId,createdBy);
     // await importService.importFile(fileType,file);
     res.status(200).send({ message: 'Data imported successfully' });
   } catch (error) {
-    res.status(500).send({ error: error.message });
+    res.status(400).send({ error: error.message });
   }
 };
 

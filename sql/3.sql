@@ -411,3 +411,51 @@ CREATE TABLE user_role_permission (
 );
 
 ALTER TABLE permission ADD COLUMN module_name VARCHAR(255) NOT NULL;
+
+CREATE TABLE room_type (
+    room_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_type_name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE dormitory_list (
+    dormitory_list_id INT AUTO_INCREMENT PRIMARY KEY,
+    dormitory_name VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    address VARCHAR(255) NOT NULL,
+    intake INT NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE add_dormitory (
+    add_dormitory_id INT AUTO_INCREMENT PRIMARY KEY,
+    dormitory INT NOT NULL,
+    room_number INT NOT NULL,
+    type INT NOT NULL,
+    number_of_bed INT NOT NULL,
+    cost_per_bed INT NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (dormitory) REFERENCES dormitory_list(dormitory_list_id),
+    FOREIGN KEY (type) REFERENCES room_type(room_type_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
