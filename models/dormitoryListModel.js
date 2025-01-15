@@ -12,26 +12,26 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'dormitory_list_id'
         },
-        dormitoryName:{
+        dormitoryName: {
             type: DataTypes.STRING,
             field: 'dormitory_name',
-            allowNull:false
+            allowNull: false
         },
-        type:{
+        type: {
             type: DataTypes.STRING,
-            allowNull:false
+            allowNull: false
         },
-        address:{
+        address: {
             type: DataTypes.STRING,
-            allowNull:false
+            allowNull: false
         },
-        intake:{
+        intake: {
             type: DataTypes.INTEGER,
-            allowNull:false
+            allowNull: false
         },
-        description:{
+        description: {
             type: DataTypes.STRING,
-            allowNull:true
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,

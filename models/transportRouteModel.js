@@ -2,23 +2,24 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 
+
 export default sequelize.define(
-    'class_room_section',
+    'transport_route',
     {
-        classRoomSectionId: {
+        transportRouteId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'transport_route_id'
         },
-        roomNumber: {
+        routeTitle: {
             type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
+            field: 'route_title',
+            allowNull: false
         },
-        capacity: {
-            type: DataTypes.INTEGER,
-            field: 'capacity',
+        fare: {
+            type: DataTypes.NUMBER,
+            field: 'fare',
             allowNull: false
         },
         createdBy: {
@@ -58,7 +59,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'transport_route',
         timestamps: true,
         paranoid: true
     }

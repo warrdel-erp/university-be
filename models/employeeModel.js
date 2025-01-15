@@ -30,17 +30,17 @@ export default sequelize.define(
                 model: institute,
                 key: 'institute_id',
             }
-        }, 
-        employeePhoto:{
-			type:DataTypes.JSON,
-			allowNull:true,
-            field:'employee_photo',
-		},
-        employeeSignature:{
-			type:DataTypes.JSON,
-			allowNull:true,
-            field:'employee_signature',
-		},
+        },
+        employeePhoto: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'employee_photo',
+        },
+        employeeSignature: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'employee_signature',
+        },
         employeeCode: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -56,63 +56,63 @@ export default sequelize.define(
             allowNull: true,
             field: 'short_name',
         },
-        dateOfBirth:{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field:'date_of_birth',
+        dateOfBirth: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'date_of_birth',
         },
-        anniversaryDate:{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field:'anniversary_date',
+        anniversaryDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'anniversary_date',
         },
-        fatherName:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'father_name',
+        fatherName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'father_name',
         },
-        motherName:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'mother_name',
+        motherName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'mother_name',
         },
-        workingHours:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'working_hours',
+        workingHours: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'working_hours',
         },
-        aicteCode:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'aicte_code',
+        aicteCode: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'aicte_code',
         },
-        from:{
-            type:DataTypes.DATE,
-            allowNull:true,
+        from: {
+            type: DataTypes.DATE,
+            allowNull: true,
         },
-        to:{
-            type:DataTypes.DATE,
-            allowNull:true,
+        to: {
+            type: DataTypes.DATE,
+            allowNull: true,
         },
-        vehicleNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'vehicle_number',
+        vehicleNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'vehicle_number',
         },
-        drivingLicense:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'driving_license',
+        drivingLicense: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'driving_license',
         },
-        drivingLicenseExpireDate:{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field:'driving_license_expire_date',
+        drivingLicenseExpireDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'driving_license_expire_date',
         },
-        pickColor:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'pick_color',
+        pickColor: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'pick_color',
         },
         createdAt: {
             type: DataTypes.DATE,

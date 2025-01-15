@@ -1,7 +1,7 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addDormitoryList(DormitoryListData) {    
+export async function addDormitoryList(DormitoryListData) {
     try {
         const result = await model.dormitoryListModel.create(DormitoryListData);
         return result;
@@ -14,7 +14,7 @@ export async function addDormitoryList(DormitoryListData) {
 export async function getDormitoryListDetails(universityId) {
     try {
         const DormitoryList = await model.dormitoryListModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         });
 
         return DormitoryList;
@@ -31,7 +31,6 @@ export async function getSingleDormitoryListDetails(dormitoryListId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { dormitoryListId },
         });
-
         return DormitoryList;
     } catch (error) {
         console.error('Error fetching DormitoryList details:', error);
@@ -49,9 +48,9 @@ export async function updateDormitoryList(dormitoryListId, DormitoryListData) {
         const result = await model.dormitoryListModel.update(DormitoryListData, {
             where: { dormitoryListId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating DormitoryList creation ${dormitoryListId}:`, error);
-        throw error; 
+        throw error;
     }
 }

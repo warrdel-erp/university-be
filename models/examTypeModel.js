@@ -2,24 +2,30 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 
+
 export default sequelize.define(
-    'class_room_section',
+    'exam_type',
     {
-        classRoomSectionId: {
+        examTypeId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'exam_type_id'
         },
-        roomNumber: {
+        examName: {
             type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
-        },
-        capacity: {
-            type: DataTypes.INTEGER,
-            field: 'capacity',
+            field: 'exam_name',
             allowNull: false
+        },
+        averagePassingMark: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'average_passing_mark'
+        },
+        isAveragePassingMark: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            field: 'is_average_passing_mark'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +64,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'exam_type',
         timestamps: true,
         paranoid: true
     }

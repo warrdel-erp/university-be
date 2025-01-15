@@ -63,10 +63,16 @@ import userRolePermissionModel from './userRolePermissionModel.js';
 import roomTypeModel from './roomTypeModel.js';
 import dormitoryListModel from './dormitoryListModel.js';
 import addDormitoryModel from './addDormitoryModel.js';
+import examTypeModel from './examTypeModel.js';
+import examSetupModel from './examSetupModel.js';
+import examAttendanceModel from './examAttendanceModel.js';
+import transportRouteModel from './transportRouteModel.js';
+import vehicleModel from './vehicleModel.js';
+import assignVehicleModel from './assignVehicleModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
-  
+
 studentModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
 instituteModel.hasMany(studentModel, { foreignKey: 'institute_id', as: 'institute' });
 
@@ -82,8 +88,8 @@ specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as:
 studentModel.belongsTo(employeeCodeMasterType, { foreignKey: 'course_level_id', as: 'courseLevel' });
 employeeCodeMasterType.hasMany(studentModel, { foreignKey: 'course_level_id', as: 'courseLevel' });
 
-userStudentEmployeeModel.belongsTo(studentModel,{foreignKey:'student_id',as:"student"})
-studentModel.hasOne(userStudentEmployeeModel,{foreignKey:'student_id',as:"student"})
+userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' })
+studentModel.hasOne(userStudentEmployeeModel, { foreignKey: 'student_id', as: 'student' })
 
 studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: 'types', as: 'typs' });
 employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs' });
@@ -263,7 +269,7 @@ teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 
 employeeModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
 campusModel.hasMany(employeeModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
-  
+
 employeeModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
 instituteModel.hasMany(employeeModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
 
@@ -444,16 +450,56 @@ dormitoryListModel.hasMany(addDormitoryModel, { foreignKey: 'add_dormitory_id', 
 addDormitoryModel.belongsTo(roomTypeModel, { foreignKey: 'add_dormitory_id', as: 'roomType' });
 roomTypeModel.hasMany(addDormitoryModel, { foreignKey: 'add_dormitory_id', as: 'roomType' });
 
+// Associations
+
+examTypeModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'examTypeUser' });
+userModel.hasMany(examTypeModel, { foreignKey: 'createdBy', as: 'examTypeUser' });
+
+examSetupModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'examSetUpUser' });
+userModel.hasMany(examSetupModel, { foreignKey: 'createdBy', as: 'examSetUpUser' });
+
+examAttendanceModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'examAttendanceUser' });
+userModel.hasMany(examAttendanceModel, { foreignKey: 'createdBy', as: 'examAttendanceUser' });
+
+transportRouteModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'transportUser' });
+userModel.hasMany(transportRouteModel, { foreignKey: 'createdBy', as: 'transportUser' });
+
+vehicleModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'vehicleUser' });
+userModel.hasMany(vehicleModel, { foreignKey: 'createdBy', as: 'vehicleUser' });
+
+examSetupModel.belongsTo(employeeModel, { foreignKey: 'teacherId', as: 'employee' });
+examSetupModel.belongsTo(classRoomModel, { foreignKey: 'roomId', as: 'room' });
+examSetupModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+examSetupModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
+examSetupModel.belongsTo(examTypeModel, { foreignKey: 'examTypeId', as: 'examType' });``
+examAttendanceModel.belongsTo(examSetupModel, { foreignKey: 'examSetupId', as: 'examSetup' });
+examAttendanceModel.belongsTo(studentModel, { foreignKey: 'studentId', as: 'students' });
+
+vehicleModel.belongsTo(employeeModel, { foreignKey: 'employeeId', as: 'employee' })
+employeeModel.hasMany(vehicleModel, { foreignKey: 'employeeId', as: 'employee' });
+
+//assignVehicles
+
+assignVehicleModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'assignVehicleUser' });
+userModel.hasMany(vehicleModel, { foreignKey: 'createdBy', as: 'assignVehicleUser' });
+
+assignVehicleModel.belongsTo(transportRouteModel, { foreignKey: 'transportRouteId', as: 'transportRoute' })
+transportRouteModel.hasMany(assignVehicleModel, { foreignKey: 'transportRouteId', as: 'transportRoute' });
+
+assignVehicleModel.belongsTo(vehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' })
+vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' });
+
+
 export {
     settingModel,
-	universityModel,
-	campusModel,
+    universityModel,
+    campusModel,
     instituteModel,
     affiliatedIniversityModel,
     courseModel,
     specializationModel,
     semesterModel,
-	studentModel,
+    studentModel,
     subjectModel,
     studentsEntranceDetail,
     studentsAddress,
@@ -509,5 +555,11 @@ export {
     userRolePermissionModel,
     roomTypeModel,
     dormitoryListModel,
-    addDormitoryModel
-  };
+    addDormitoryModel,
+    examTypeModel,
+    examSetupModel,
+    examAttendanceModel,
+    transportRouteModel,
+    vehicleModel,
+    assignVehicleModel
+};

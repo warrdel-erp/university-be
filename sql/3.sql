@@ -459,3 +459,91 @@ CREATE TABLE add_dormitory (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE exam_type (
+    exam_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_name VARCHAR(255) NOT NULL,
+    average_passing_mark INT DEFAULT NULL,
+    is_average_passing_mark BOOLEAN NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE exam_setup (
+    exam_setup_id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_system INT NOT NULL,
+    exam_type_id INT NOT NULL,
+    class_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    course_id INT,
+    total_marks INT NOT NULL,
+    mark_distribution JSON,
+    teacher_id INT,
+    exam_date DATE,
+    start_time TIME,
+    end_time TIME,
+    room_id VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (exam_type_id) REFERENCES exam_type(exam_type_id),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE `exam_setup` (
+    `exam_setup_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `exam_system` INT NOT NULL,
+    `exam_type_id` INT NOT NULL,
+    `class_id` INT NOT NULL,
+    `subject_id` INT NOT NULL,
+    `course_id` INT,
+    `total_marks` INT NOT NULL,
+    `mark_distribution` JSON,
+    `teacher_id` INT,
+    `exam_date` DATE,
+    `start_time` TIME,
+    `end_time` TIME,
+    `room_id` INT,
+    `created_by` INT NOT NULL,
+    `updated_by` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted_at` TIMESTAMP NULL,
+    FOREIGN KEY (`exam_type_id`) REFERENCES `exam_type`(`exam_type_id`),
+    FOREIGN KEY (`subject_id`) REFERENCES `subject`(`subject_id`),
+    FOREIGN KEY (`course_id`) REFERENCES `course`(`course_id`),
+    FOREIGN KEY (`teacher_id`) REFERENCES `employee`(`employee_id`),
+    FOREIGN KEY (`room_id`) REFERENCES `class_room_section`(`class_room_section_id`),
+    FOREIGN KEY (`created_by`) REFERENCES `users`(`user_id`),
+    FOREIGN KEY (`updated_by`) REFERENCES `users`(`user_id`)
+);
+
+CREATE TABLE exam_attendance (
+    exam_attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+    exam_setup_id INT NOT NULL,
+    student_id INT NOT NULL,
+    attendance_status ENUM('Present', 'Absent') NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (exam_setup_id) REFERENCES exam_setup(exam_setup_id),
+    FOREIGN KEY (student_id) REFERENCES students(student_id),
+    FOREIGN KEY (created_by) REFERENCES user(user_id),
+    FOREIGN KEY (updated_by) REFERENCES user(user_id)
+);
+
+
+
+

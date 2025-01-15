@@ -1,25 +1,46 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import employee from './employeeModel.js'
+
 
 export default sequelize.define(
-    'class_room_section',
+    'transport_vehicle',
     {
-        classRoomSectionId: {
+        vehicleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'vehicle_id'
         },
-        roomNumber: {
+        vehicleNumber: {
             type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
-        },
-        capacity: {
-            type: DataTypes.INTEGER,
-            field: 'capacity',
+            field: 'vehicle_number',
             allowNull: false
+        },
+        vehicleModel: {
+            type: DataTypes.STRING,
+            field: 'vehicle_model',
+            allowNull: false
+        },
+        madeYear: {
+            type: DataTypes.STRING,
+            field: 'made_year',
+            allowNull: false
+        },
+        employeeId: {
+            type: DataTypes.NUMBER,
+            field: 'employee_id',
+            allowNull: false,
+            references: {
+                model: employee,
+                key: 'employee_id'
+            }
+        },
+        note: {
+            type: DataTypes.STRING,
+            field: 'note',
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -58,7 +79,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'transport_vehicle',
         timestamps: true,
         paranoid: true
     }
