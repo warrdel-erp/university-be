@@ -69,6 +69,7 @@ export const login = async (req, res) => {
     userPermission,
     result,
     userData,
+    existingEmail
   });
   } catch (error) {
     console.error("Error during login:", error);

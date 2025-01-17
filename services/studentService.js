@@ -409,7 +409,7 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
     }
 
     if (metaDataEntries.length > 0) {
-      await studentRepository.studentMetaData(metaDataEntries, transaction);
+      // await studentRepository.studentMetaData(metaDataEntries, transaction);
     }
 
     // Commit the transaction after all operations

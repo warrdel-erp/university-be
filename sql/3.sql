@@ -540,8 +540,8 @@ CREATE TABLE exam_attendance (
     deleted_at TIMESTAMP NULL,
     FOREIGN KEY (exam_setup_id) REFERENCES exam_setup(exam_setup_id),
     FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (created_by) REFERENCES user(user_id),
-    FOREIGN KEY (updated_by) REFERENCES user(user_id)
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
 
 
