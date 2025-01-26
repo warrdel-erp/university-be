@@ -148,7 +148,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                             {
                                                 model:model.classSectionModel,
                                                 as:'studentSection',
-                                                attributes:["classSectionsId",'courseId','specializationId','acedmicPeriodId','section'],
+                                                attributes:["classSectionsId",'courseId','specializationId','acedmicYearId','section'],
                                                 include:[
                                                     {
                                                         model:model.teacherSectionMappingModel,

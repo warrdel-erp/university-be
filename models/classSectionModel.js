@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import course from "./courseModel.js";
 import specialization from "./specializationModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+// import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js"
 
 export default sequelize.define(
@@ -32,13 +33,15 @@ export default sequelize.define(
                 key: 'specialization_id'
             }
         },
-        acedmicPeriodId: {
+        acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'acedmic_period_id',
+            field: 'acedmic_year_id',
+
             references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
+                model: acedmicYearModel,
+                
+                key: 'acedmic_year_id'
             }
         },
         section: {

@@ -148,10 +148,15 @@ export async function addSubject(data,createdBy) {
 };
 
 export async function addClass(data,createdBy,universityId) {
+    console.log(`>>>>>>>>>>>>>data,createdBy,universityId`,data,createdBy,universityId);
+    
     try {
-        const { courseId, specializationId, acedmicPeriodId, section } = data;
+        const { courseId, specializationId, acedmicYearId, section } = data;
         const semesterData = await mainRepository.getSemester(courseId, specializationId,universityId);
+        console.log(`>>>>>>>>>>>semesterData`,semesterData);
+        
         const totalSemesters = semesterData.map(semester => semester.dataValues.totalSemester);
+console.log(`>>>>>>>totalSemesters>>>>>>>>`,totalSemesters);
 
         const totalSemester = totalSemesters.length > 0 ? Math.max(...totalSemesters) : 0;        
 
@@ -163,11 +168,13 @@ export async function addClass(data,createdBy,universityId) {
                 entries.push({
                     courseId,
                     specializationId,
-                    acedmicPeriodId,
+                    acedmicYearId,
                     section: sectionName,createdBy
                 });
             }
         }
+        console.log(`>>>>>>>>>entries`,entries);
+        
         const result = await mainRepository.addClass(entries);
         return result;
     } catch (error) {

@@ -103,6 +103,9 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSection' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSection' });
 
+classSectionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
+acedmicYearModel.hasMany(classSectionModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
+
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 

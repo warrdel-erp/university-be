@@ -180,12 +180,12 @@ export async function addClass(data) {
 export async function getClassDetails(classSectionId,universityId) {
     try {
         const queryOptions = {
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
                     model: model.userModel,
                     as: "userClassSection",
-                    attributes:["universityId","userId"],
+                    // attributes:["universityId","userId"],
                     where: {
                         universityId:universityId
                     },  
@@ -193,12 +193,12 @@ export async function getClassDetails(classSectionId,universityId) {
                 {
                     model: model.courseModel,
                     as: "courseSectionAdd",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
+                    // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
                 },
                 {
                     model: model.specializationModel,
                     as: "specializationSectionAdd",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
+                    // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
                 },
             ]
         };
@@ -208,6 +208,8 @@ export async function getClassDetails(classSectionId,universityId) {
                 class_sections_id: classSectionId
             };
         }
+        console.log(`>>>>>>>>>>>>queryOptions>>>>>>`,queryOptions);
+        
 
         const result = await model.classSectionModel.findAll(queryOptions);
         return result;
@@ -244,7 +246,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    attributes: ['section', 'acedmicPeriodId','classSectionsId'],
+                    attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
                         {
                             model: model.courseModel,
@@ -273,24 +275,29 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                             ],
                         },
                         {
+                            model: model.acedmicYearModel,
+                            as: 'acedmicYearSection',
+                            // attributes: ['specializationName'],
+                        },
+                        {
                             model: model.specializationModel,
                             as: 'specializationSection',
                             attributes: ['specializationName'],
                         },
-                        {
-                            model: model.employeeCodeMasterType,
-                            as: 'acedmicPeriods',
-                            attributes: {
-                                exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
-                            },
-                            include: [
-                                {
-                                    model: model.employeeCodeMaster,
-                                    as: 'codes',
-                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                                },
-                            ],
-                        },
+                        // {
+                        //     model: model.employeeCodeMasterType,
+                        //     as: 'acedmicPeriods',
+                        //     attributes: {
+                        //         exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
+                        //     },
+                        //     include: [
+                        //         {
+                        //             model: model.employeeCodeMaster,
+                        //             as: 'codes',
+                        //             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                        //         },
+                        //     ],
+                        // },
                     ],
                 },
                 {
