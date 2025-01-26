@@ -83,6 +83,14 @@ export async function getAllStudents(firstName, universityId) {
                         },
                     },
                     {
+                        model: model.acedmicYearModel,
+                        as: "acdemicYear",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        where: {
+                            universityId: universityId
+                        },
+                    },
+                    {
                         model: model.affiliatedIniversityModel,
                         as: "affiliatedUniversity",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
@@ -174,6 +182,14 @@ export async function getAllStudents(firstName, universityId) {
                         model: model.instituteModel,
                         as: "institute",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                        where: {
+                            universityId: universityId
+                        },
+                    },
+                    {
+                        model: model.acedmicYearModel,
+                        as: "acdemicYear",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         where: {
                             universityId: universityId
                         },
@@ -275,6 +291,14 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.instituteModel,
                     as: "institute",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                    where: {
+                        universityId: universityId
+                    },
+                },
+                {
+                    model: model.acedmicYearModel,
+                    as: "acdemicYear",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     where: {
                         universityId: universityId
                     },
@@ -683,6 +707,14 @@ export async function getclassStudentMapping(classSectionId, universityId) {
                             model: model.instituteModel,
                             as: "institute",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                        },
+                        {
+                            model: model.acedmicYearModel,
+                            as: "acdemicYear",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            where: {
+                                universityId: universityId
+                            },
                         },
                         {
                             model: model.affiliatedIniversityModel,

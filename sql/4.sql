@@ -63,3 +63,15 @@ CREATE TABLE acedmic_year (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+ALTER TABLE students
+ADD COLUMN acedmic_year_id INT NULL;
+
+UPDATE students
+SET acedmic_year_id = 1
+WHERE acedmic_year_id IS NULL;
+
+ALTER TABLE students
+ADD CONSTRAINT fk_acedmic_year
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
+ ON DELETE CASCADE;

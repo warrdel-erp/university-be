@@ -74,6 +74,9 @@ import acedmicYearModel from './acedmicYearModel.js';
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
 
+studentModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acdemicYear' });
+acedmicYearModel.hasMany(studentModel, { foreignKey: 'acedmic_year_id', as: 'acdemicyear' });
+
 studentModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
 instituteModel.hasMany(studentModel, { foreignKey: 'institute_id', as: 'institute' });
 
