@@ -46,3 +46,20 @@ CREATE TABLE `assign_vehicle` (
 
 ALTER TABLE course
 ADD COLUMN capacity VARCHAR(255) NULL;
+
+CREATE TABLE acedmic_year (
+    acedmic_year_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    year INT NOT NULL,
+    year_title VARCHAR(255) NOT NULL,
+    starting_date VARCHAR(255) NOT NULL,
+    ending_date VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

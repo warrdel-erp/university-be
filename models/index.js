@@ -69,6 +69,7 @@ import examAttendanceModel from './examAttendanceModel.js';
 import transportRouteModel from './transportRouteModel.js';
 import vehicleModel from './vehicleModel.js';
 import assignVehicleModel from './assignVehicleModel.js';
+import acedmicYearModel from './acedmicYearModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -489,6 +490,10 @@ transportRouteModel.hasMany(assignVehicleModel, { foreignKey: 'transportRouteId'
 assignVehicleModel.belongsTo(vehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' })
 vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' });
 
+// acedmic year
+acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+
 
 export {
     settingModel,
@@ -561,5 +566,6 @@ export {
     examAttendanceModel,
     transportRouteModel,
     vehicleModel,
-    assignVehicleModel
+    assignVehicleModel,
+    acedmicYearModel,
 };
