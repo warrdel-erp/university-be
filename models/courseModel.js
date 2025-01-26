@@ -51,6 +51,10 @@ export default sequelize.define(
             allowNull: false,
             field: 'course_code'
         },
+        capacity: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

@@ -42,3 +42,7 @@ CREATE TABLE `assign_vehicle` (
     FOREIGN KEY (`created_by`) REFERENCES `users`(`user_id`),
     FOREIGN KEY (`updated_by`) REFERENCES `users`(`user_id`)
 );
+
+
+ALTER TABLE course
+ADD COLUMN capacity VARCHAR(255) NULL;

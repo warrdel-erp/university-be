@@ -11,7 +11,6 @@ export async function addExamSetup(examDetail) {
 }
 
 export async function getExamSetup(universityId) {
-    console.log('>?????????', universityId);
     try {
         const result = await model.examSetupModel.findAll({
             attributes: {
@@ -21,7 +20,7 @@ export async function getExamSetup(universityId) {
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseName"],
+                    attributes: ["courseName","capacity"],
                     where: { universityId: universityId },
                 },
                 {

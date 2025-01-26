@@ -49,7 +49,7 @@ export async function getAdminRegisterStudent() {
                     include:[{
                         model:model.courseModel,
                         as:'course',
-                        attributes:["courseName",'courseId','courseCode'],
+                        attributes:["courseName",'courseId','courseCode',"capacity"],
                     },
                     {
                         model:model.classStudentMapperModel,

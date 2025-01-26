@@ -85,6 +85,7 @@ export async function addAffiliatedUniversity(data,createdBy) {
 }
 
 export async function addCourse(data,createdBy) {
+    
     const results = [];
     try {
         const { course_levelId, universityId, courses,affiliatedUniversityId } = data;
@@ -95,7 +96,7 @@ export async function addCourse(data,createdBy) {
                 course_levelId,
                 universityId,
                 affiliatedUniversityId,createdBy
-            });
+            });            
             results.push(result);
         }
         return results;

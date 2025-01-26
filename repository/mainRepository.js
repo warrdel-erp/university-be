@@ -249,7 +249,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                         {
                             model: model.courseModel,
                             as: 'courseSection',
-                            attributes: ['courseName'],
+                            attributes: ['courseName',"capacity"],
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,

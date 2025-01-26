@@ -124,7 +124,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                 {
                                     model:model.courseModel,
                                     as:'course',
-                                    attributes:["courseName",'courseId','courseCode'],
+                                    attributes:["courseName",'courseId','courseCode',"capacity"],
                                     include:[
                                         {
                                             model:model.timeTableCreationModel,
