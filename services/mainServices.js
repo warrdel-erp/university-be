@@ -148,16 +148,11 @@ export async function addSubject(data,createdBy) {
 };
 
 export async function addClass(data,createdBy,universityId) {
-    console.log(`>>>>>>>>>>>>>data,createdBy,universityId`,data,createdBy,universityId);
     
     try {
         const { courseId, specializationId, acedmicYearId, section } = data;
         const semesterData = await mainRepository.getSemester(courseId, specializationId,universityId);
-        console.log(`>>>>>>>>>>>semesterData`,semesterData);
-        
         const totalSemesters = semesterData.map(semester => semester.dataValues.totalSemester);
-console.log(`>>>>>>>totalSemesters>>>>>>>>`,totalSemesters);
-
         const totalSemester = totalSemesters.length > 0 ? Math.max(...totalSemesters) : 0;        
 
         const entries = [];
@@ -173,7 +168,6 @@ console.log(`>>>>>>>totalSemesters>>>>>>>>`,totalSemesters);
                 });
             }
         }
-        console.log(`>>>>>>>>>entries`,entries);
         
         const result = await mainRepository.addClass(entries);
         return result;
@@ -223,3 +217,26 @@ export async function addSemester(data,createdBy){
 export async function getSemester(courseId,specializationId,universityId){
     return await mainRepository.getSemester(courseId,specializationId,universityId)
 }
+
+export async function createClass(data, createdBy, universityId) {
+    const results = [];
+    try {
+        const { courseId, acedmicYearId, specializationId, section } = data;
+
+        for (const sectionValue of section) {
+            const result = await mainRepository.createClass({
+                courseId,
+                specializationId,
+                acedmicYearId,
+                universityId,
+                createdBy,
+                section: sectionValue 
+            });
+            results.push(result);
+        }
+        return results;
+    } catch (error) {
+        console.error('Error adding class directly:', error);
+        return { message: 'Error adding class directly', error };
+    }
+};

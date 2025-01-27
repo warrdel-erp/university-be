@@ -167,12 +167,22 @@ export async function addSubject(data) {
     }
 };
 
-export async function addClass(data) {
+export async function addClass(data) {    
     try {
         const result = await model.classSectionModel.bulkCreate(data);
         return result;
     } catch (error) {
         console.error("Error in add class/section creation :", error);
+        throw error;
+    }
+};
+
+export async function createClass(data) {    
+    try {
+        const result = await model.classSectionModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add class directly :", error);
         throw error;
     }
 };
@@ -322,6 +332,9 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
 }
 
 export async function addSemester(data) {
+    console.log(`>>>>>>>>>>data`,data);
+    return
+    
     try {
         const result = await model.semesterModel.create(data);
         return result;

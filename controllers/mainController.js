@@ -203,3 +203,20 @@ export const getSemester = async (req,res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const createClass = async (req,res) => {
+    try {
+        const {acedmicYearId,courseId} = req.body;
+        const createdBy = req.user.userId;
+        const universityId = req.user.universityId;
+        const data = req.body
+        if(!(acedmicYearId && courseId)){
+            res.status(400).send('acedmicYearId and courseId is required')
+        } 
+        const result = await mainServices.createClass(data,createdBy,universityId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add directly class:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
