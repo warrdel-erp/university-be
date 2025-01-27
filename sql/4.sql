@@ -97,12 +97,12 @@ DELETE FROM class_sections
 WHERE acedmic_year_id NOT IN (SELECT acedmic_year_id FROM acedmic_year);
 
 
- ALTER TABLE class_sections
- ADD CONSTRAINT fk_acedmic_year
-    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
-ON DELETE CASCADE;
-
--- ALTER TABLE class_sections
--- ADD CONSTRAINT fk_class_sections_acedmic_year
+--  ALTER TABLE class_sections
+--  ADD CONSTRAINT fk_acedmic_year
 --     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
 -- ON DELETE CASCADE;
+
+ALTER TABLE class_sections
+ADD CONSTRAINT fk_class_sections_acedmic_year
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
+ON DELETE CASCADE;

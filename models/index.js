@@ -131,13 +131,7 @@ specializationModel.hasMany(classSectionModel, { foreignKey: 'specialization_id'
 classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 
-// class subject mapper join to employee Code Master Type 
-
-classSectionModel.belongsTo(employeeCodeMasterType, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
-employeeCodeMasterType.hasMany(classSectionModel, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
-
 // class section join to subject  
-
 classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subjects' });
 subjectModel.hasMany(classSubjectMapperModel, { foreignKey: 'subject_id', as: 'subjects' });
 
