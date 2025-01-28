@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 export async function getCourseByCourseId(courseId) {
     try {
         const result = await model.courseModel.findOne({
-            attributes: ["universityId"] ,
+            attributes: ["universityId","courseDuration"] ,
             where: {
                 courseId: courseId
             },

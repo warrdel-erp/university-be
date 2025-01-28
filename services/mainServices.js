@@ -1,3 +1,4 @@
+import { getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 
 export async function getAllCollegesAndCourses(universityId) {
@@ -207,11 +208,14 @@ export async function getClassSubjectMapper(classSectionId,universityId){
 }
 
 export async function addSemester(data,createdBy){
-    const { semesterDuration,courseDuration} = data
-    const totalSemester = courseDuration*12/semesterDuration
-    const semesterData = {
+    const { semesterDuration,courseId} = data
+    const course = await getCourseByCourseId(courseId)
+    const courseDuration = course.dataValues.courseDuration    
+        const semesterData = {
         ...data,
-        totalSemester: totalSemester,createdBy
+        totalSemester: courseDuration/semesterDuration,
+        createdBy,
+        courseDuration:courseDuration
     };
     return await mainRepository.addSemester(semesterData)
 }
