@@ -177,6 +177,9 @@ export async function addClass(data) {
     }
 };
 
+// addClass and createClass function are same but addClass function add automatic according to semester
+//  but createClass function add section manually
+
 export async function createClass(data) {    
     try {
         const result = await model.classSectionModel.create(data);
@@ -190,12 +193,12 @@ export async function createClass(data) {
 export async function getClassDetails(classSectionId,universityId) {
     try {
         const queryOptions = {
-            // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
                     model: model.userModel,
                     as: "userClassSection",
-                    // attributes:["universityId","userId"],
+                    attributes:["universityId","userId"],
                     where: {
                         universityId:universityId
                     },  
@@ -203,12 +206,12 @@ export async function getClassDetails(classSectionId,universityId) {
                 {
                     model: model.courseModel,
                     as: "courseSectionAdd",
-                    // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
                 },
                 {
                     model: model.specializationModel,
                     as: "specializationSectionAdd",
-                    // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
                 },
             ]
         };
@@ -217,9 +220,7 @@ export async function getClassDetails(classSectionId,universityId) {
             queryOptions.where = {
                 class_sections_id: classSectionId
             };
-        }
-        console.log(`>>>>>>>>>>>>queryOptions>>>>>>`,queryOptions);
-        
+        }        
 
         const result = await model.classSectionModel.findAll(queryOptions);
         return result;
@@ -282,12 +283,17 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                                         },
                                     ],
                                 },
+                                {
+                                    model: model.acedmicYearModel,
+                                    as: 'courseacedmicYear',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                },
                             ],
                         },
                         {
                             model: model.acedmicYearModel,
                             as: 'acedmicYearSection',
-                            // attributes: ['specializationName'],
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                         },
                         {
                             model: model.specializationModel,
@@ -331,10 +337,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
     }
 }
 
-export async function addSemester(data) {
-    console.log(`>>>>>>>>>>data`,data);
-    return
-    
+export async function addSemester(data) {    
     try {
         const result = await model.semesterModel.create(data);
         return result;

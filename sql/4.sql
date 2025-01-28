@@ -64,6 +64,8 @@ CREATE TABLE acedmic_year (
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
 
+-- add relation student with acedmic_year
+
 ALTER TABLE students
 ADD COLUMN acedmic_year_id INT NULL;
 
@@ -76,12 +78,14 @@ ADD CONSTRAINT fk_acedmic_year
     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
  ON DELETE CASCADE;
 
+-- remove class_section with acedmic_period_id
 ALTER TABLE class_sections
 DROP FOREIGN KEY class_sections_ibfk_3;
 
 ALTER TABLE class_sections
 DROP COLUMN acedmic_period_id;
 
+-- add reltion class_sections with acedmic_year
 ALTER TABLE class_sections
 ADD COLUMN acedmic_year_id INT NOT NULL;
 
@@ -96,13 +100,26 @@ WHERE acedmic_year_id NOT IN (SELECT acedmic_year_id FROM acedmic_year);
 DELETE FROM class_sections
 WHERE acedmic_year_id NOT IN (SELECT acedmic_year_id FROM acedmic_year);
 
-
---  ALTER TABLE class_sections
---  ADD CONSTRAINT fk_acedmic_year
---     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
--- ON DELETE CASCADE;
-
 ALTER TABLE class_sections
 ADD CONSTRAINT fk_class_sections_acedmic_year
     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
+ON DELETE CASCADE;
+
+-- Add the courseDuration column
+ALTER TABLE course
+ADD COLUMN course_duration INT;
+
+-- Add the acedmicYearId column with the foreign key reference
+
+ALTER TABLE course
+ADD COLUMN acedmic_year_id INT NULL;
+
+UPDATE course
+SET acedmic_year_id = 1
+WHERE acedmic_year_id IS NULL;
+
+ALTER TABLE course
+ADD CONSTRAINT fk_course_acedmic_year_id
+    FOREIGN KEY (acedmic_year_id)
+    REFERENCES acedmic_year(acedmic_year_id)
 ON DELETE CASCADE;
