@@ -123,3 +123,18 @@ ADD CONSTRAINT fk_course_acedmic_year_id
     FOREIGN KEY (acedmic_year_id)
     REFERENCES acedmic_year(acedmic_year_id)
 ON DELETE CASCADE;
+
+
+CREATE TABLE section (
+    section_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    section_name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

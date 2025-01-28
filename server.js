@@ -40,6 +40,7 @@ import transportRoute from './router/transportRoute.js';
 import vehicleRoute from './router/vehicleRoute.js';
 import assignVehicleRoute from './router/assignVehicleRoute.js';
 import acedmicYear from './router/acedmicYearRoute.js';
+import section from './router/sectionRoute.js'
 
 // middleware
 app.use(fileUpload());
@@ -81,7 +82,8 @@ app.use("/examAttendance", examAttendance);
 app.use("/transportRoute", transportRoute);
 app.use("/vehicle", vehicleRoute );
 app.use("/assignVehicle", assignVehicleRoute);
-app.use("/acedmicYear",acedmicYear)
+app.use("/acedmicYear",acedmicYear);
+app.use("/section",section);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

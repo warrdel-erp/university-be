@@ -70,6 +70,7 @@ import transportRouteModel from './transportRouteModel.js';
 import vehicleModel from './vehicleModel.js';
 import assignVehicleModel from './assignVehicleModel.js';
 import acedmicYearModel from './acedmicYearModel.js';
+import sectionModel from './sectionModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -571,4 +572,5 @@ export {
     vehicleModel,
     assignVehicleModel,
     acedmicYearModel,
+    sectionModel,
 };
