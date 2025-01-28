@@ -168,6 +168,8 @@ export async function addSubject(data) {
 };
 
 export async function addClass(data) {    
+    console.log(`>>>>>>data>>>>`,data);
+    
     try {
         const result = await model.classSectionModel.bulkCreate(data);
         return result;

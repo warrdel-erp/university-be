@@ -151,29 +151,23 @@ export async function addSubject(data,createdBy) {
 };
 
 export async function addClass(data,createdBy,universityId) {
-    
+    const results = [];
     try {
-        const { courseId, specializationId, acedmicYearId, section } = data;
-        const semesterData = await mainRepository.getSemester(courseId, specializationId,universityId);
-        const totalSemesters = semesterData.map(semester => semester.dataValues.totalSemester);
-        const totalSemester = totalSemesters.length > 0 ? Math.max(...totalSemesters) : 0;        
-
-        const entries = [];
-
-        for (let sem = 1; sem <= totalSemester; sem++) {
-            for (let sec = 1; sec <= section; sec++) {
-                const sectionName = `${sem}${String.fromCharCode(64 + sec)}`;
-                entries.push({
-                    courseId,
-                    specializationId,
-                    acedmicYearId,
-                    section: sectionName,createdBy
-                });
-            }
-        }
+        const { courseId, specializationId, acedmicYearId, sections } = data; 
         
-        const result = await mainRepository.addClass(entries);
-        return result;
+        
+        for (const section of sections) {
+            const result = await mainRepository.createClass({
+                ...section,
+                courseId,
+                universityId,
+                specializationId,
+                createdBy,
+                acedmicYearId,
+            });            
+            results.push(result);
+        }
+        return results;
     } catch (error) {
         console.error('Error adding class:', error);
         return { message: 'Error adding class', error };

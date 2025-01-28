@@ -105,7 +105,7 @@ ADD CONSTRAINT fk_class_sections_acedmic_year
     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id)
 ON DELETE CASCADE;
 
--- Add the courseDuration column
+-- Add the courseDuration column in course
 ALTER TABLE course
 ADD COLUMN course_duration INT;
 
@@ -138,3 +138,23 @@ CREATE TABLE section (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+
+-- Add the class column in class_sections
+ALTER TABLE class_sections
+ADD COLUMN class VARCHAR(255);
+
+-- Add the section_id column with the foreign key reference
+
+ALTER TABLE class_sections
+ADD COLUMN section_id INT NULL;
+
+UPDATE class_sections
+SET section_id = 1
+WHERE section_id IS NULL;
+
+ALTER TABLE class_sections
+ADD CONSTRAINT fk_section_id
+    FOREIGN KEY (section_id)
+    REFERENCES section(section_id)
+ON DELETE CASCADE;

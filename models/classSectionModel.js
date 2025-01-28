@@ -2,9 +2,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import course from "./courseModel.js";
 import specialization from "./specializationModel.js";
-// import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import section from "./sectionModel.js";
 
 export default sequelize.define(
     'class_sections',
@@ -37,14 +37,25 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
-
             references: {
                 model: acedmicYearModel,
-                
                 key: 'acedmic_year_id'
             }
         },
+        sectionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'section_id',
+            references: {
+                model: section,
+                key: 'section_id'
+            }
+        },
         section: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        class: {
             type: DataTypes.STRING,
             allowNull: true,
         },
