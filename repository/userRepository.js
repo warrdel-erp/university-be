@@ -23,7 +23,7 @@ export async function findEmailByEmail(email) {
 };
 
 export async function adminRegisterStudentAndEmployee(data,transaction) {  
-	const result = await model.userModel.bulkCreate(data,{transaction})
+	const result = await model.userModel.create(data,{transaction})
 	return result
 }
 
@@ -158,3 +158,17 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
         throw error;
     }
 };
+
+export async function changeStatus(userId,data) {
+    console.log(`>>>>>>>>>userId,data>>>>>>`,userId,data);
+    
+    try {
+        const result = await model.userModel.update(data, {
+            where: { userId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating status ${userId}:`, error);
+        throw error; 
+    }
+}

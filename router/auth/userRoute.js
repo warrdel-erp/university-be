@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login ,register,adminRegisterStudentAndEmployee,getAdminRegisterStudentAndEmployee,changePassword} from "../../controllers/userController.js";
+import { login ,register,adminRegisterStudentAndEmployee,getAdminRegisterStudentAndEmployee,changePassword,changeStatus} from "../../controllers/userController.js";
 
 
 // for first time register
@@ -21,5 +21,7 @@ router.get("/adminSignUp", getAdminRegisterStudentAndEmployee);
 // student or employee change password
 
 router.post("/changePassword", changePassword);
+
+router.patch("/changeStatus", changeStatus);
 
 export default router;

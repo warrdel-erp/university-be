@@ -6,15 +6,15 @@ import { getUserRolePermissionByUserId } from "../repository/userRolePermissionR
 
 // register
 export const register = async (req, res) => {
-  const universityId = 1;
+  // const universityId = 1;
   try {
-    const { email, password, userName, phone} = req.body;
+    const { email, password, userName, phone,universityId} = req.body;
     const existingEmail = await userRepository.findEmailByEmail(email);
 
     // Check if all required fields are provided
 
     if (!(email && password && userName && phone && universityId)) {
-      res.status(400).send("All input is required");
+      res.status(400).send("All input is required :-");
 
       // Check if email already exists
     } else if (existingEmail) {
@@ -44,6 +44,10 @@ export const login = async (req, res) => {
       return res.status(400).send("Email does not exist");
     }
 
+    if (existingEmail.dataValues.status === 'InActive') {
+      return res.status(400).send("Please Contact To The Admin");
+    }
+
     const isPasswordCorrect = await bcrypt.compare(
       password,
       existingEmail.password
@@ -54,7 +58,7 @@ export const login = async (req, res) => {
     }
 
   //  const token = jwt.sign({ email: existingEmail.email }, process.env.SECRET_KEY,{ expiresIn: process.env.TOKEN_TIME });
-  const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '1h'});
+  const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '4h'});
   if(existingEmail.dataValues.dummyPassword){
     result = await userService.emptyPassword(req.body,existingEmail)
     userData = await userRepository.findEmailByEmail(email);
@@ -135,6 +139,22 @@ export const changePassword = async (req, res) => {
     // }
   } catch (error) {
     console.error("Error during change password:", error);
+    res.status(500).send("Internal server error");
+  }
+};
+
+export const changeStatus = async (req, res) => {
+  try {
+    const {userId} = req.query;
+    const status = 'InActive'
+    if (!(userId && status )) {
+      res.status(400).send("userId,status is required");
+    } else {
+      const result = await userService.changeStatus(userId,{status});
+      res.status(200).send(result);
+    }
+  } catch (error) {
+    console.error("Error during change status:", error);
     res.status(500).send("Internal server error");
   }
 };
