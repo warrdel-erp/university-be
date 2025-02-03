@@ -158,3 +158,19 @@ ADD CONSTRAINT fk_section_id
     FOREIGN KEY (section_id)
     REFERENCES section(section_id)
 ON DELETE CASCADE;
+
+
+-- Add the acedmic_year_id column with the foreign key reference in class_student_mapper
+
+ALTER TABLE class_student_mapper
+ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE class_student_mapper
+SET acedmic_year_id = 1
+WHERE acedmic_year_id IS NULL;
+
+ALTER TABLE class_student_mapper
+ADD CONSTRAINT fk_acedmic_year_id
+    FOREIGN KEY (acedmic_year_id)
+    REFERENCES acedmic_year(acedmic_year_id)
+ON DELETE CASCADE;

@@ -139,11 +139,11 @@ export async function dataSaveUerRolePermission(userId, roleId, permissionIds,tr
 }
 
 
-export async function getAdminRegisterStudentAndEmployee() {
+export async function getAdminRegisterStudentAndEmployee(universityId) {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(),
-      registerRepository.getAdminRegisterEmployee(),
+      registerRepository.getAdminRegisterStudent(universityId),
+      registerRepository.getAdminRegisterEmployee(universityId),
     ]);
 
     return { students, employees };
@@ -282,6 +282,18 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
   }
 };
 
-export async function changeStatus (userId,data){
- return await registerRepository.changeStatus (userId,data)    
-}
+export async function changeStatus(userId) {
+  try {
+    const userData = await registerRepository.findStatusByUserId(userId);
+    const status = userData.dataValues.status;
+    const newStatus = status === 'active' ? 'InActive' : 'active';
+
+    // Update the status
+    await registerRepository.changeStatus(userId, { status: newStatus });
+
+    console.log(`Status updated successfully: ${newStatus}`);
+  } catch (error) {
+    console.error(`Error changing status for user ${userId}:`, error);
+    throw error; 
+  }
+};

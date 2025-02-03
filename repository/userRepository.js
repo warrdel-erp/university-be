@@ -27,7 +27,7 @@ export async function adminRegisterStudentAndEmployee(data,transaction) {
 	return result
 }
 
-export async function getAdminRegisterStudent() {
+export async function getAdminRegisterStudent(universityId) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -40,7 +40,8 @@ export async function getAdminRegisterStudent() {
 				{
 					model:model.userModel,
 					as:'userDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+                    where :{universityId:universityId}
 				},
 				{
 					model:model.studentModel,
@@ -75,7 +76,7 @@ export async function getAdminRegisterStudent() {
     }
 }
 
-export async function getAdminRegisterEmployee() {
+export async function getAdminRegisterEmployee(universityId) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -88,7 +89,8 @@ export async function getAdminRegisterEmployee() {
 				{
 					model:model.userModel,
 					as:'userDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+                    where :{universityId:universityId}
 				},
 				{
 					model:model.employeeModel,
@@ -159,8 +161,16 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
     }
 };
 
-export async function changeStatus(userId,data) {
-    console.log(`>>>>>>>>>userId,data>>>>>>`,userId,data);
+export async function findStatusByUserId(userId) {
+	const result = await model.userModel.findOne({
+		where: {
+			userId: userId
+		}
+	})
+	return result;
+};
+
+export async function changeStatus(userId,data) {    
     
     try {
         const result = await model.userModel.update(data, {

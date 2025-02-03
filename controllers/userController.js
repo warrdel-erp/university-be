@@ -100,9 +100,9 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
 };
 
 export async function getAdminRegisterStudentAndEmployee(req, res) {
-  // const universityId = req.user.universityId;
+  const universityId = req.user.universityId;  
   try {
-      const user = await userService.getAdminRegisterStudentAndEmployee();
+      const user = await userService.getAdminRegisterStudentAndEmployee(universityId);
       res.status(200).json(user);
   } catch (error) {
       res.status(500).json({ error: error.message });
@@ -146,11 +146,10 @@ export const changePassword = async (req, res) => {
 export const changeStatus = async (req, res) => {
   try {
     const {userId} = req.query;
-    const status = 'InActive'
-    if (!(userId && status )) {
-      res.status(400).send("userId,status is required");
+    if (!(userId)) {
+      res.status(400).send("userId is required");
     } else {
-      const result = await userService.changeStatus(userId,{status});
+      const result = await userService.changeStatus(userId);
       res.status(200).send(result);
     }
   } catch (error) {

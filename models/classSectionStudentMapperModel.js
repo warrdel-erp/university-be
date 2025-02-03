@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 
 export default sequelize.define(
     'class_student_mapper',
@@ -29,6 +30,15 @@ export default sequelize.define(
             references: {
                 model: classSection,
                 key: 'class_sections_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
             }
         },
         createdAt: {
