@@ -6,7 +6,7 @@ export const addEmployee = async (req,res) => {
         const data = req.body
         const file = req.files;
         const createdBy = req.user.userId;
-        const {campusId,instituteId,roleId =21} = req.body;
+        const {campusId,instituteId,roleId} = req.body;
         if(!(campusId && instituteId && roleId)){
           return res.status(400).send('campusId,instituteId is required')
         }
