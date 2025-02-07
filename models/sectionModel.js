@@ -1,45 +1,30 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import student from "./studentModel.js";
-import classSection from "./classSectionModel.js";
+import university from "./universityModel.js";
 import users from "./userModel.js";
-import acedmicYear from "./acedmicYearModel.js";
 
 export default sequelize.define(
-    'class_student_mapper',
+    'section',
     {
-        classStudentMapperId: {
+        sectionId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_student_mapper_id'
+            field: 'section_id'
         },
-        studentId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'student_id',
+            field: 'university_id',
             references: {
-                model: student,
-                key: 'student_id'
+                model: university,
+                key: 'university_id'
             }
         },
-        classSectionId: {
-            type: DataTypes.INTEGER,
+        sectionName: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'class_sections_id',
-            references: {
-                model: classSection,
-                key: 'class_sections_id'
-            }
-        },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
+            field: 'section_name'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -62,15 +47,15 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
+        updatedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'updated_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -78,7 +63,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'class_student_mapper',
+        tableName: 'section',
         timestamps: true,
         paranoid: true
     }

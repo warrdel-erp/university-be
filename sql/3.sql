@@ -474,32 +474,6 @@ CREATE TABLE exam_type (
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
 
-CREATE TABLE exam_setup (
-    exam_setup_id INT AUTO_INCREMENT PRIMARY KEY,
-    exam_system INT NOT NULL,
-    exam_type_id INT NOT NULL,
-    class_id INT NOT NULL,
-    subject_id INT NOT NULL,
-    course_id INT,
-    total_marks INT NOT NULL,
-    mark_distribution JSON,
-    teacher_id INT,
-    exam_date DATE,
-    start_time TIME,
-    end_time TIME,
-    room_id VARCHAR(255),
-    created_by INT NOT NULL,
-    updated_by INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
-    deleted_at TIMESTAMP NULL,
-    FOREIGN KEY (exam_type_id) REFERENCES exam_type(exam_type_id),
-    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
-    FOREIGN KEY (course_id) REFERENCES course(course_id),
-    FOREIGN KEY (created_by) REFERENCES users(user_id),
-    FOREIGN KEY (updated_by) REFERENCES users(user_id)
-);
-
 CREATE TABLE `exam_setup` (
     `exam_setup_id` INT AUTO_INCREMENT PRIMARY KEY,
     `exam_system` INT NOT NULL,
@@ -543,7 +517,3 @@ CREATE TABLE exam_attendance (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
-
-
-
-

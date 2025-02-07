@@ -7,8 +7,9 @@ import sequelize from '../database/sequelizeConfig.js';
 import { getSettingValue } from '../repository/settingRepository.js';
 import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRepository.js'
 import { getCourseByName } from '../repository/courseRepository.js';
+import {studentRegister} from '../services/userServices.js'
 
-export async function addStudent(info, files,createdBy) {
+export async function addStudent(info, files,createdBy,universityId,roleId) {
   const transaction = await sequelize.transaction();
   try {
     // Upload files and update info object
@@ -45,6 +46,10 @@ export async function addStudent(info, files,createdBy) {
     // Save student information
     const student = await studentRepository.addStudent(info,  transaction );
     const studentId = student.dataValues.studentId;
+
+    const {  email, phoneNumber, mobileNumber, scholarNumber } = student.dataValues;
+    const role = 'Student';
+    const registerStudentData = { studentId, email, phoneNumber, mobileNumber, scholarNumber, role,universityId,roleId };
 
     //  entranceDetails
     let entranceDetails = [];
@@ -119,6 +124,7 @@ export async function addStudent(info, files,createdBy) {
         throw new Error('Invalid format for allDropDownData.');
       }
     }
+    await studentRegister (registerStudentData,transaction)
 
     await transaction.commit();
     return { student, entranceDetails, addressDetails,CorsAddressDetails, allDropDownData };

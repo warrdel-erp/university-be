@@ -1,15 +1,16 @@
 import * as employee  from '../services/employeeServices.js';
 
 export const addEmployee = async (req,res) => {
+    const universityId = req.user.universityId;
     try {
         const data = req.body
         const file = req.files;
         const createdBy = req.user.userId;
-        const {campusId,instituteId} = req.body;
-        if(!(campusId && instituteId)){
+        const {campusId,instituteId,roleId} = req.body;
+        if(!(campusId && instituteId && roleId)){
           return res.status(400).send('campusId,instituteId is required')
         }
-        const result = await employee.addEmployee(data,file,createdBy);
+        const result = await employee.addEmployee(data,file,createdBy,universityId,roleId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding employee:", error);

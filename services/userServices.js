@@ -14,7 +14,7 @@ export async function register(info) {
 
   const data = {
     userName,
-    universityId: 1,
+    universityId: universityId,
     password,
     phone,
     email: email.toLowerCase(),
@@ -116,10 +116,10 @@ export async function adminRegisterStudentAndEmployee(info) {
 };
 
 
-export async function dataSaveUerRolePermission(userIds, roleId, permissionIds,transaction) {
+export async function dataSaveUerRolePermission(userId, roleId, permissionIds,transaction) {
   const dataToSave = [];
 
-  userIds.forEach(userId => {
+  // userIds.forEach(userId => {
     permissionIds.forEach(permissionId => {
       dataToSave.push({
         userId,
@@ -127,7 +127,7 @@ export async function dataSaveUerRolePermission(userIds, roleId, permissionIds,t
         permissionId,
       });
     });
-  });
+  // });
 
   try {
     await registerRepository.saveToUserRolePermission(dataToSave,transaction);
@@ -139,11 +139,11 @@ export async function dataSaveUerRolePermission(userIds, roleId, permissionIds,t
 }
 
 
-export async function getAdminRegisterStudentAndEmployee() {
+export async function getAdminRegisterStudentAndEmployee(universityId) {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(),
-      registerRepository.getAdminRegisterEmployee(),
+      registerRepository.getAdminRegisterStudent(universityId),
+      registerRepository.getAdminRegisterEmployee(universityId),
     ]);
 
     return { students, employees };
@@ -198,4 +198,102 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
 
   const result = Object.values(groupedData);  
     return result;
+};
+
+export const studentRegister = async (registerStudentData, transaction) => {
+  try {
+    const { studentId, email, phoneNumber, scholarNumber, role, universityId, roleId } = registerStudentData;
+    
+    const dummyPassword = uuidv4();
+    const password = bcrypt.hashSync(dummyPassword, salt);
+    
+    const data = {
+      userName: scholarNumber,
+      universityId: universityId,
+      password: password,
+      phone: phoneNumber || 'null',
+      email: email || 'null',
+      uniqueId: uuidv4(),
+      role,
+      studentId: studentId,
+      dummyPassword: dummyPassword,
+    };
+    
+    // Register the student and employee
+    const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
+    
+    const userId = results.dataValues.userId;
+    
+    // Associate user and student
+    await registerRepository.adminUser({ userId: userId, studentId: studentId }, transaction);
+    
+    // Get permissions by role
+    const roleAndPermission = await getPermissionByRole(roleId);
+    const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
+    
+    // Save user role and permissions
+    await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
+    
+  } catch (error) {
+    console.error('Error in student registration:', error);
+    throw new Error('Failed to register student'); 
+  }
+};
+
+
+export const employeeRegister = async (employeePersonalDetail,employeeRegisterData, transaction) => {
+  try {
+    const role = 'Employee'
+    const {personalEmail,mobileNumber} = employeePersonalDetail
+    const {universityId,roleId,employeeName,employeeId} = employeeRegisterData
+    const dummyPassword = uuidv4();
+    const password = bcrypt.hashSync(dummyPassword, salt);
+    
+    const data = {
+      userName: employeeName,
+      universityId: universityId,
+      password: password,
+      phone: mobileNumber || 'null',
+      email: personalEmail || 'null',
+      uniqueId: uuidv4(),
+      role,
+      employeeId: employeeId,
+      dummyPassword: dummyPassword,
+    };
+    
+    // Register the student and employee
+    const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
+    
+    const userId = results.dataValues.userId;
+    
+    // Associate user and student
+    await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+    
+    // Get permissions by role
+    const roleAndPermission = await getPermissionByRole(roleId);
+    const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
+    
+    // Save user role and permissions
+    await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
+    
+  } catch (error) {
+    console.error('Error in employee registration:', error);
+    throw new Error('Failed to register student'); 
+  }
+};
+
+export async function changeStatus(userId) {
+  try {
+    const userData = await registerRepository.findStatusByUserId(userId);
+    const status = userData.dataValues.status;
+    const newStatus = status === 'active' ? 'InActive' : 'active';
+
+    // Update the status
+    await registerRepository.changeStatus(userId, { status: newStatus });
+
+    console.log(`Status updated successfully: ${newStatus}`);
+  } catch (error) {
+    console.error(`Error changing status for user ${userId}:`, error);
+    throw error; 
+  }
 };

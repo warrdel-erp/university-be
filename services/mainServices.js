@@ -1,3 +1,4 @@
+import { getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 
 export async function getAllCollegesAndCourses(universityId) {
@@ -85,17 +86,20 @@ export async function addAffiliatedUniversity(data,createdBy) {
 }
 
 export async function addCourse(data,createdBy) {
+    
     const results = [];
     try {
-        const { course_levelId, universityId, courses,affiliatedUniversityId } = data;
+        const { course_levelId, universityId, courses,affiliatedUniversityId ,acedmicYearId} = data;
 
         for (const course of courses) {
             const result = await mainRepository.addCourse({
                 ...course,
                 course_levelId,
                 universityId,
-                affiliatedUniversityId,createdBy
-            });
+                affiliatedUniversityId,
+                createdBy,
+                acedmicYearId,
+            });            
             results.push(result);
         }
         return results;
@@ -147,28 +151,23 @@ export async function addSubject(data,createdBy) {
 };
 
 export async function addClass(data,createdBy,universityId) {
+    const results = [];
     try {
-        const { courseId, specializationId, acedmicPeriodId, section } = data;
-        const semesterData = await mainRepository.getSemester(courseId, specializationId,universityId);
-        const totalSemesters = semesterData.map(semester => semester.dataValues.totalSemester);
-
-        const totalSemester = totalSemesters.length > 0 ? Math.max(...totalSemesters) : 0;        
-
-        const entries = [];
-
-        for (let sem = 1; sem <= totalSemester; sem++) {
-            for (let sec = 1; sec <= section; sec++) {
-                const sectionName = `${sem}${String.fromCharCode(64 + sec)}`;
-                entries.push({
-                    courseId,
-                    specializationId,
-                    acedmicPeriodId,
-                    section: sectionName,createdBy
-                });
-            }
+        const { courseId, specializationId, acedmicYearId, sections } = data; 
+        
+        
+        for (const section of sections) {
+            const result = await mainRepository.createClass({
+                ...section,
+                courseId,
+                universityId,
+                specializationId,
+                createdBy,
+                acedmicYearId,
+            });            
+            results.push(result);
         }
-        const result = await mainRepository.addClass(entries);
-        return result;
+        return results;
     } catch (error) {
         console.error('Error adding class:', error);
         return { message: 'Error adding class', error };
@@ -203,11 +202,14 @@ export async function getClassSubjectMapper(classSectionId,universityId){
 }
 
 export async function addSemester(data,createdBy){
-    const { semesterDuration,courseDuration} = data
-    const totalSemester = courseDuration*12/semesterDuration
-    const semesterData = {
+    const { semesterDuration,courseId} = data
+    const course = await getCourseByCourseId(courseId)
+    const courseDuration = course.dataValues.courseDuration    
+        const semesterData = {
         ...data,
-        totalSemester: totalSemester,createdBy
+        totalSemester: courseDuration/semesterDuration,
+        createdBy,
+        courseDuration:courseDuration
     };
     return await mainRepository.addSemester(semesterData)
 }
@@ -215,3 +217,26 @@ export async function addSemester(data,createdBy){
 export async function getSemester(courseId,specializationId,universityId){
     return await mainRepository.getSemester(courseId,specializationId,universityId)
 }
+
+export async function createClass(data, createdBy, universityId) {
+    const results = [];
+    try {
+        const { courseId, acedmicYearId, specializationId, section } = data;
+
+        for (const sectionValue of section) {
+            const result = await mainRepository.createClass({
+                courseId,
+                specializationId,
+                acedmicYearId,
+                universityId,
+                createdBy,
+                section: sectionValue 
+            });
+            results.push(result);
+        }
+        return results;
+    } catch (error) {
+        console.error('Error adding class directly:', error);
+        return { message: 'Error adding class directly', error };
+    }
+};

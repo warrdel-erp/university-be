@@ -1,28 +1,16 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
-import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 
 export default sequelize.define(
-    'course',
+    'acedmic_year',
     {
-        courseId: {
+        acedmicYearId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'course_id'
-        },
-        course_levelId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_level_id',
-            references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
-            }
+            field: 'acedmic_year_id'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -33,42 +21,24 @@ export default sequelize.define(
                 key: 'university_id'
             }
         },
-        affiliatedUniversityId: {
+        year: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'affiliated_university_id',
-            references: {
-                model: affiliatedUniversity,
-                key: 'affiliated_university_id'
-            }
         },
-        acedmicYearId:{
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references:{
-                model:acedmicYearModel ,
-                key: 'acedmic_year_id'
-            }
-        },
-        courseDuration: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'course_duration'
-        },
-        courseName: {
+        yearTitle: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'course_name'
+            field: 'year_title'
         },
-        courseCode: {
+        startingDate: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'course_code'
+            field: 'starting_date'
         },
-        capacity: {
+        endingDate: {
             type: DataTypes.STRING,
-            allowNull: true,
+            allowNull: false,
+            field: 'ending_date'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -91,15 +61,15 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
+        updatedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'updated_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -107,7 +77,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'course',
+        tableName: 'acedmic_year',
         timestamps: true,
         paranoid: true
     }

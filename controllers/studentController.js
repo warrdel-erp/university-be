@@ -6,12 +6,12 @@ import * as studentService from '../services/studentService.js'
 export const addStudent = async (req, res) => {
     const file = req.files;
     const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber } = req.body;
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId} = req.body;
 
     try {
         // Check for required fields
-        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)) {
-            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, and courseId are required");
+        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId)) {
+            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId,roleId and courseId are required");
         }
 
         // Check if email already exists
@@ -38,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file,createdBy);
+        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
@@ -49,7 +49,7 @@ export const addStudent = async (req, res) => {
 // 2. get all student
 export const getAllStudents = async (req,res) => {
     const universityId = req.user.universityId;
-    let {search} = req.query
+    let {search} = req.query;
      search = search || 'all' 
     try {
         const result = await studentService.getAllStudents(search,universityId);
@@ -57,7 +57,7 @@ export const getAllStudents = async (req,res) => {
     } catch (error) {
         console.error("Error in getting all student details:", error);
         res.status(500).send("Internal Server Error");
-    }
+    };
 };
 
 // 3. get single student details

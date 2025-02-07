@@ -69,9 +69,14 @@ import examAttendanceModel from './examAttendanceModel.js';
 import transportRouteModel from './transportRouteModel.js';
 import vehicleModel from './vehicleModel.js';
 import assignVehicleModel from './assignVehicleModel.js';
+import acedmicYearModel from './acedmicYearModel.js';
+import sectionModel from './sectionModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
+
+studentModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acdemicYear' });
+acedmicYearModel.hasMany(studentModel, { foreignKey: 'acedmic_year_id', as: 'acdemicyear' });
 
 studentModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
 instituteModel.hasMany(studentModel, { foreignKey: 'institute_id', as: 'institute' });
@@ -99,8 +104,14 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSection' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSection' });
 
+classSectionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
+acedmicYearModel.hasMany(classSectionModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
+
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
+
+courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
+acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
@@ -124,13 +135,7 @@ specializationModel.hasMany(classSectionModel, { foreignKey: 'specialization_id'
 classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 
-// class subject mapper join to employee Code Master Type 
-
-classSectionModel.belongsTo(employeeCodeMasterType, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
-employeeCodeMasterType.hasMany(classSectionModel, { foreignKey: 'acedmic_period_id', as: 'acedmicPeriods' });
-
 // class section join to subject  
-
 classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subjects' });
 subjectModel.hasMany(classSubjectMapperModel, { foreignKey: 'subject_id', as: 'subjects' });
 
@@ -489,6 +494,10 @@ transportRouteModel.hasMany(assignVehicleModel, { foreignKey: 'transportRouteId'
 assignVehicleModel.belongsTo(vehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' })
 vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' });
 
+// acedmic year
+acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+
 
 export {
     settingModel,
@@ -561,5 +570,7 @@ export {
     examAttendanceModel,
     transportRouteModel,
     vehicleModel,
-    assignVehicleModel
+    assignVehicleModel,
+    acedmicYearModel,
+    sectionModel,
 };

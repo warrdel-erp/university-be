@@ -124,7 +124,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                 {
                                     model:model.courseModel,
                                     as:'course',
-                                    attributes:["courseName",'courseId','courseCode'],
+                                    attributes:["courseName",'courseId','courseCode',"capacity"],
                                     include:[
                                         {
                                             model:model.timeTableCreationModel,
@@ -148,7 +148,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                             {
                                                 model:model.classSectionModel,
                                                 as:'studentSection',
-                                                attributes:["classSectionsId",'courseId','specializationId','acedmicPeriodId','section'],
+                                                attributes:["classSectionsId",'courseId','specializationId','acedmicYearId','section'],
                                                 include:[
                                                     {
                                                         model:model.teacherSectionMappingModel,

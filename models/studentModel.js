@@ -8,7 +8,8 @@ import course from './courseModel.js';
 import specialization from "./specializationModel.js";
 import { documentStatus, studentAdmissionStatus, studentStatus} from '../constant.js'; 
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 export default sequelize.define(
     'students',
@@ -53,6 +54,15 @@ export default sequelize.define(
             references: {
                 model: affiliatedUniversity,
                 key: 'affiliated_university_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
         courseLevelId: {

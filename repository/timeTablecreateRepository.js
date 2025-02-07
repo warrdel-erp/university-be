@@ -23,7 +23,7 @@ export async function getTimeTableCreateDetails() {
                         {
                             model:model.courseModel,
                             as: 'timeTableCourse',
-                            attributes: ["courseId","courseName","courseCode"],
+                            attributes: ["courseId","courseName","courseCode","capacity"],
                         }
                     ]
                 } ,
@@ -80,7 +80,7 @@ export async function getSingleTimeTableCreateDetails(courseId,universityId) {
                 {
                     model:model.courseModel,
                     as: 'timeTableCourse',
-                    attributes: ["courseId","courseName","courseCode"],
+                    attributes: ["courseId","courseName","courseCode","capacity"],
                 },
                 {
                     model:model.timeTableCreateModel,

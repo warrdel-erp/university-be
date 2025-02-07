@@ -167,12 +167,27 @@ export async function addSubject(data) {
     }
 };
 
-export async function addClass(data) {
+export async function addClass(data) {    
+    console.log(`>>>>>>data>>>>`,data);
+    
     try {
         const result = await model.classSectionModel.bulkCreate(data);
         return result;
     } catch (error) {
         console.error("Error in add class/section creation :", error);
+        throw error;
+    }
+};
+
+// addClass and createClass function are same but addClass function add automatic according to semester
+//  but createClass function add section manually
+
+export async function createClass(data) {    
+    try {
+        const result = await model.classSectionModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add class directly :", error);
         throw error;
     }
 };
@@ -207,7 +222,7 @@ export async function getClassDetails(classSectionId,universityId) {
             queryOptions.where = {
                 class_sections_id: classSectionId
             };
-        }
+        }        
 
         const result = await model.classSectionModel.findAll(queryOptions);
         return result;
@@ -244,12 +259,12 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    attributes: ['section', 'acedmicPeriodId','classSectionsId'],
+                    attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
                         {
                             model: model.courseModel,
                             as: 'courseSection',
-                            attributes: ['courseName'],
+                            attributes: ['courseName',"capacity"],
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,
@@ -270,27 +285,37 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                                         },
                                     ],
                                 },
+                                {
+                                    model: model.acedmicYearModel,
+                                    as: 'courseacedmicYear',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                },
                             ],
+                        },
+                        {
+                            model: model.acedmicYearModel,
+                            as: 'acedmicYearSection',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                         },
                         {
                             model: model.specializationModel,
                             as: 'specializationSection',
                             attributes: ['specializationName'],
                         },
-                        {
-                            model: model.employeeCodeMasterType,
-                            as: 'acedmicPeriods',
-                            attributes: {
-                                exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
-                            },
-                            include: [
-                                {
-                                    model: model.employeeCodeMaster,
-                                    as: 'codes',
-                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                                },
-                            ],
-                        },
+                        // {
+                        //     model: model.employeeCodeMasterType,
+                        //     as: 'acedmicPeriods',
+                        //     attributes: {
+                        //         exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
+                        //     },
+                        //     include: [
+                        //         {
+                        //             model: model.employeeCodeMaster,
+                        //             as: 'codes',
+                        //             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                        //         },
+                        //     ],
+                        // },
                     ],
                 },
                 {
@@ -314,7 +339,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
     }
 }
 
-export async function addSemester(data) {
+export async function addSemester(data) {    
     try {
         const result = await model.semesterModel.create(data);
         return result;

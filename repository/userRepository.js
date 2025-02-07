@@ -23,11 +23,11 @@ export async function findEmailByEmail(email) {
 };
 
 export async function adminRegisterStudentAndEmployee(data,transaction) {  
-	const result = await model.userModel.bulkCreate(data,{transaction})
+	const result = await model.userModel.create(data,{transaction})
 	return result
 }
 
-export async function getAdminRegisterStudent() {
+export async function getAdminRegisterStudent(universityId) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -40,7 +40,8 @@ export async function getAdminRegisterStudent() {
 				{
 					model:model.userModel,
 					as:'userDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+                    where :{universityId:universityId}
 				},
 				{
 					model:model.studentModel,
@@ -49,7 +50,7 @@ export async function getAdminRegisterStudent() {
                     include:[{
                         model:model.courseModel,
                         as:'course',
-                        attributes:["courseName",'courseId','courseCode'],
+                        attributes:["courseName",'courseId','courseCode',"capacity"],
                     },
                     {
                         model:model.classStudentMapperModel,
@@ -75,7 +76,7 @@ export async function getAdminRegisterStudent() {
     }
 }
 
-export async function getAdminRegisterEmployee() {
+export async function getAdminRegisterEmployee(universityId) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -88,7 +89,8 @@ export async function getAdminRegisterEmployee() {
 				{
 					model:model.userModel,
 					as:'userDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+                    where :{universityId:universityId}
 				},
 				{
 					model:model.employeeModel,
@@ -158,3 +160,25 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
         throw error;
     }
 };
+
+export async function findStatusByUserId(userId) {
+	const result = await model.userModel.findOne({
+		where: {
+			userId: userId
+		}
+	})
+	return result;
+};
+
+export async function changeStatus(userId,data) {    
+    
+    try {
+        const result = await model.userModel.update(data, {
+            where: { userId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating status ${userId}:`, error);
+        throw error; 
+    }
+}
