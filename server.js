@@ -1,10 +1,10 @@
+import 'dotenv/config'
+
 import express, { json, urlencoded } from 'express';
 import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 8080;
 import fileUpload from 'express-fileupload';
-import dotenv from 'dotenv';
-dotenv.config();
 
 import main from './router/mainRoute.js';
 import setting from './router/settingRoute.js';
