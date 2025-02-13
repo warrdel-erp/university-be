@@ -1,4 +1,4 @@
-import * as RoleCreationService  from "../repository/RoleRepository.js";
+import * as RoleCreationService  from "../repository/roleRepository.js";
 
 export async function addRole(RoleData, createdBy, updatedBy) {
 
