@@ -66,6 +66,11 @@ const examAttendanceModel = sequelize.define(
             defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
             field: "updated_at",
         },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deleted_at'
+        },
     },
     {
         tableName: "exam_attendance",

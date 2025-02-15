@@ -10,7 +10,7 @@ export async function addTimeTableCreate(data,transaction) {
     }
 }
 
-export async function getTimeTableCreateDetails() {
+export async function getTimeTableCreateDetails(universityId) {
     try {
         const result = await model.timeTableCreateModel.findAll({
             attributes: ["timeTableCreateId", "timeTableCreationId", "teacherSubjectMappingId","day","period"],

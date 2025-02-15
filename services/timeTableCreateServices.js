@@ -43,8 +43,8 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 }
 
 
-export async function gettimeTableCreateDetails(){
-    return await timeTableCreateRepository.getTimeTableCreateDetails()
+export async function gettimeTableCreateDetails(universityId){
+    return await timeTableCreateRepository.getTimeTableCreateDetails(universityId)
 };
 
 export async function getSingletimeTableCreateDetails(courseId,universityId){
