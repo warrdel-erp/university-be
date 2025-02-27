@@ -240,3 +240,25 @@ export async function createClass(data, createdBy, universityId) {
         return { message: 'Error adding class directly', error };
     }
 };
+
+export async function subjectExcel(excelData, courseId, specializationId, createdBy, universityId) {
+    try {
+        const subjectCreationPromises = excelData.map(async (row) => {
+            const subjectData = {
+                courseId,
+                specializationId,
+                subjectName: row.subjectName,
+                subjectCode: row.subjectCode,
+                createdBy,
+                universityId,
+            };
+
+            return await mainRepository.addSubject(subjectData);
+        });
+
+        return await Promise.all(subjectCreationPromises);
+    } catch (error) {
+        console.error("Error in creating classes:", error);
+        throw new Error("Failed to create classes");
+    }
+}
