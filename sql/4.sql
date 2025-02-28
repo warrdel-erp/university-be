@@ -174,3 +174,38 @@ ADD CONSTRAINT fk_acedmic_year_id
     FOREIGN KEY (acedmic_year_id)
     REFERENCES acedmic_year(acedmic_year_id)
 ON DELETE CASCADE;
+
+INSERT INTO employee_code_master (code_master_type)
+VALUES
+    ('Salutation'),
+    ('Gender'),
+    ('Religion'),
+    ('Blood Group'),
+    ('Caste'),
+    ('Shift'),
+    ('Marital Status'),
+    ('Course Level');
+
+INSERT INTO employee_code_master_type (employee_code_master_id, code, description, created_by)
+VALUES
+    (1, 'Miss', 'Miss1', 1),
+    (1, 'Master', 'Master', 1),
+    (1, 'Mr.', 'Mr.', 1),
+    (1, 'Mrs.', 'Mrs.', 1),
+    (2, 'Male', 'Male', 1),
+    (2, 'Female', 'Female', 1),
+    (2,'Others','Others',1),
+    (4, 'A+', 'A+', 1),
+    (4, 'A-', 'A-', 1),
+    (4, 'B+', 'B-', 1),
+    (4, 'AB+', 'AB+', 1),
+    (4, 'AB-', 'AB-', 1),
+    (4, 'o+', 'o+', 1),
+    (4, 'o-', '0-', 1),
+    (3, 'Hindu', 'Hindu', 1),
+    (3, 'Islam', 'Islam', 1),
+    (3, 'Christian', 'Christian', 1),
+    (3, 'Sikh', 'Sikh', 1),
+    (3, 'Buddh', 'Buddh', 1),
+    (3, 'Jain ', 'Jain ', 1),
+    (3, 'others', 'others', 1);
