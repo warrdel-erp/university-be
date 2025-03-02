@@ -13,14 +13,16 @@ export async function addStudent(info, files,createdBy,universityId,roleId) {
   const transaction = await sequelize.transaction();
   try {
     // Upload files and update info object
-    const uploadPromises = Object.keys(files).map(async key => {
-      const file = files[key];
-      const s3Response = await uploadFile(file);
-      info[key] = s3Response.Location;
-    });
+    if (files && Object.keys(files).length > 0) {
+      const uploadPromises = Object.keys(files).map(async key => {
+        const file = files[key];
+        const s3Response = await uploadFile(file);
+        info[key] = s3Response.Location;
+      });
 
-    await Promise.all(uploadPromises);
-
+      await Promise.all(uploadPromises);
+    }
+    
     // Documents status 
     const settingKey = 'studentDocument';
     const getstudentDocuments = await getSettingValue(settingKey);
