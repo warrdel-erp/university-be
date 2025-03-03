@@ -38,3 +38,15 @@ export const readExcel = (file, daata) => {
     }
   });
 };
+
+
+export const readExcelFile  = (fileBuffer) => {
+  const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+
+  const sheetName = workbook.SheetNames[0]; // Get the first sheet
+  const sheet = workbook.Sheets[sheetName];
+
+  const data = xlsx.utils.sheet_to_json(sheet);
+
+  return data;
+}

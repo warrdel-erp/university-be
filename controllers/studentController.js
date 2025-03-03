@@ -1,6 +1,6 @@
 import { checkEmail, checkEnroll } from '../repository/studentRepository.js';
 import * as studentService from '../services/studentService.js'
-
+import * as fileHandler from '../utility/fileHandler.js';
 // 1. create student
 
 export const addStudent = async (req, res) => {
@@ -78,22 +78,39 @@ export const getSingleStudentDetail = async (req,res) => {
 
 // import student data
 
-export const importStudentData = async (req,res) => {
-    const universityId = req.user.universityId;    
-    const createdBy = req.user.userId;
-    const data = req.body
-    const files = req.files.student.name;
-   const file = req.files;
-    const fileType = files.split('.').pop();
-  try {
-    await studentService.importStudentData(fileType,file,data,universityId,createdBy);
-    // await importService.importFile(fileType,file);
-    res.status(200).send({ message: 'Data imported successfully' });
-  } catch (error) {
-    res.status(400).send({ error: error.message });
-  }
+export const importStudentData = async (req, res) => {
+    try {
+      const { campusId, instituteId, affiliatedUniversityId, acedmicYearId } = req.body;
+      const universityId = req.user.universityId;    
+      const createdBy = req.user.userId;
+      const data = { ...req.body, universityId, createdBy }; 
+  
+      if (!(campusId && instituteId && affiliatedUniversityId && acedmicYearId)) {
+        return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and acedmicYearId are required');
+      }
+  
+      const excelFile = req.files?.student;
+      if (!excelFile) {
+        return res.status(400).send('Excel file is required');
+      }
+  
+      const excelData = fileHandler.readExcelFile(excelFile.data);
+      if (!excelData) {
+        return res.status(400).send('Error reading the Excel file');
+      }
+  
+      const result = await studentService.importStudentData(excelData, data);
+      if (!result) {
+        return res.status(400).send('Error processing the Excel data');
+      }
+  
+      res.status(200).send({ message: 'Data imported successfully' });
+    } catch (error) {
+      console.error(error); 
+      res.status(500).send({ error: error.message || 'An unexpected error occurred' });
+    }
 };
-
+  
 // update student 
 export const updateStudentDetails = async (req,res) => {
     const {studentId,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId,courseId} = req.body;

@@ -16,7 +16,7 @@ export default sequelize.define(
             allowNull: false,
         },
         description: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.STRING,
             allowNull:true
         },
         createdBy: {

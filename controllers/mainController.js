@@ -1,4 +1,5 @@
 import * as mainServices  from '../services/mainServices.js';
+import * as fileHandler from '../utility/fileHandler.js';
 
 export const getAllCollegesAndCourses = async (req,res) => {
     const universityId = req.user.universityId;
@@ -217,6 +218,30 @@ export const createClass = async (req,res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add directly class:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+export const subjectExcel = async (req,res) => {
+    try {
+        const {courseId,specializationId} = req.body;
+        const createdBy = req.user.userId;
+        const universityId = req.user.universityId;
+        const data = req.body
+        if(!(courseId)){
+            res.status(400).send('courseId is required')
+        } 
+        const excelFile = req.files?.subject;
+        if (!excelFile) {
+            return res.status(400).send('Excel file is required');
+        }
+
+        const excelData = fileHandler.readExcelFile(excelFile.data);
+        const result = await mainServices.subjectExcel(excelData,courseId,specializationId,createdBy,universityId);
+
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  Add Subject Excel:", error);
         res.status(500).send("Internal Server Error");
     }
 };

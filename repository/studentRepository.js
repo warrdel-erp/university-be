@@ -11,6 +11,16 @@ export async function addStudent(data, transaction) {
     }
 };
 
+export async function addStudentExcel(data, transaction) {        
+    try {
+        const result = await model.studentModel.create(data);        
+        return result;
+    } catch (error) {
+        console.error("Error in add Student thow error:", error);
+        throw error;
+    }
+};
+
 export async function addStudentsEntranceDetail(data, transaction) {
     try {
         const result = await model.studentsEntranceDetail.bulkCreate(data, { transaction });
@@ -670,6 +680,16 @@ export async function classStudentMapping(data) {
         return result;
     } catch (error) {
         console.error("Error in student mapping course:", error);
+        throw error;
+    }
+};
+
+export async function classStudentMappingExcel(data) {    
+    try {
+        const result = await model.classStudentMapperModel.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in student mapping course excel:", error);
         throw error;
     }
 };
