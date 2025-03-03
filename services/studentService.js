@@ -9,7 +9,7 @@ import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRep
 import { getCourseByName,getClassByName } from '../repository/courseRepository.js';
 import {studentRegister} from '../services/userServices.js'
 
-export async function addStudent(info, files,createdBy,universityId,roleId) {
+export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId) {
   const transaction = await sequelize.transaction();
   try {
     // Upload files and update info object
@@ -53,6 +53,10 @@ export async function addStudent(info, files,createdBy,universityId,roleId) {
     const role = 'Student';
     const registerStudentData = { studentId, email, phoneNumber, mobileNumber, scholarNumber, role,universityId,roleId };
 
+    const data = {studentId,acedmicYearId,classSectionId}
+    console.log(`>>>>>data>>>>>>`,data)
+    const result = await studentRepository.classStudentMapping(data, transaction);
+    console.log(`>>>>>result>>>>>>`,result)
     //  entranceDetails
     let entranceDetails = [];
     if (info.entranceDetails) {

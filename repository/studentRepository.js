@@ -674,9 +674,9 @@ export async function studentCourseMapping(data) {
     }
 };
 
-export async function classStudentMapping(data) {
+export async function classStudentMapping(data,transaction) {
     try {
-        const result = await model.classStudentMapperModel.create(data);
+        const result = await model.classStudentMapperModel.create(data,{ transaction });
         return result;
     } catch (error) {
         console.error("Error in student mapping course:", error);
