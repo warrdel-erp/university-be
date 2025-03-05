@@ -53,7 +53,7 @@ export async function addStudent(info, files,createdBy,universityId,roleId,acedm
     const role = 'Student';
     const registerStudentData = { studentId, email, phoneNumber, mobileNumber, scholarNumber, role,universityId,roleId };
 
-    const data = {studentId,acedmicYearId,classSectionId}
+    const data = {studentId,acedmicYearId,classSectionId,createdBy}
     console.log(`>>>>>data>>>>>>`,data)
     const result = await studentRepository.classStudentMapping(data, transaction);
     console.log(`>>>>>result>>>>>>`,result)
