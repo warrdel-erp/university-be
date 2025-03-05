@@ -209,3 +209,22 @@ VALUES
     (3, 'Buddh', 'Buddh', 1),
     (3, 'Jain ', 'Jain ', 1),
     (3, 'others', 'others', 1);
+
+ALTER TABLE students
+DROP COLUMN multiple_number,
+DROP COLUMN register_file_number,
+DROP COLUMN whatsapp_number,
+DROP COLUMN student_name_alias,
+DROP COLUMN employee_references,
+DROP COLUMN student_references,
+DROP COLUMN eligibity_criteria,
+DROP COLUMN total_seat,
+DROP COLUMN remaining_seat;
+
+
+ALTER TABLE students
+ADD COLUMN pan_number VARCHAR(255) NULL,
+ADD COLUMN additional_notes VARCHAR(255) NULL,
+ADD COLUMN bank_name VARCHAR(255) NULL,
+ADD COLUMN account_number VARCHAR(255) NULL,
+ADD COLUMN ifsc_code VARCHAR(255) NULL;
