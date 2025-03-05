@@ -1,31 +1,30 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import feeGroup from "./feeGroupModel.js";
+
 
 export default sequelize.define(
-    'fee_type',
+    'holiday',
     {
-        feeTypeId: {
+        holidayId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_type_id'
+            field: 'holiday_id'
         },
-        feeGroupId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'fee_group_id',
-            references: {
-                model: feeGroup,
-                key: 'fee_group_id'
-            }
+        date: {
+            type: DataTypes.DATE,
+            allowNull:false
+        },
+        event: {
+            type: DataTypes.STRING,
+            allowNull:true
         },
         name: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull:true
         },
-        description: {
+        remark: {
             type: DataTypes.STRING,
             allowNull:true
         },
@@ -66,7 +65,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_type',
+        tableName: 'holiday',
         timestamps: true,
         paranoid: true
     }

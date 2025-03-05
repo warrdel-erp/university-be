@@ -228,3 +228,21 @@ ADD COLUMN additional_notes VARCHAR(255) NULL,
 ADD COLUMN bank_name VARCHAR(255) NULL,
 ADD COLUMN account_number VARCHAR(255) NULL,
 ADD COLUMN ifsc_code VARCHAR(255) NULL;
+
+ALTER TABLE fee_type
+MODIFY COLUMN description VARCHAR(255) NULL;
+
+CREATE TABLE holiday (
+    holiday_id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    event VARCHAR(255) NULL,
+    name VARCHAR(255) NULL,
+    remark VARCHAR(255) NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
