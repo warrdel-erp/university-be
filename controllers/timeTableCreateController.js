@@ -38,9 +38,7 @@ export const getSingletimeTableCreateDetails = async (req,res) => {
 
 export const addtimeTableMapping = async (req,res) => {
     try {
-        const data = req.body;
-        console.log(`>>>>>data>>>>>>`,data);
-        
+        const data = req.body;        
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
         const result = await timeTableCreateServices.addtimeTableMapping(data,createdBy,updatedBy);

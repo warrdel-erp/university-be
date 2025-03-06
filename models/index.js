@@ -360,6 +360,13 @@ classSectionModel.hasMany(timeTableCreateModel, { foreignKey: 'class_sections_id
 timeTableCreateModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearTimeTable' });
 acedmicYearModel.hasMany(timeTableCreateModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearTimeTable' });
 
+timeTableMappingModel.belongsTo(teacherSubjectMappingModel, { foreignKey: 'teacher_subject_mapping_id', as: 'timeTableTeacherSubject' });
+teacherSubjectMappingModel.hasMany(timeTableMappingModel, { foreignKey: 'teacher_subject_mapping_id', as: 'timeTableTeacherSubject' });
+
+timeTableMappingModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
+timeTableCreateModel.hasMany(timeTableMappingModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
+
+
 // library member
 libraryMemberModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
 userModel.hasMany(libraryMemberModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });

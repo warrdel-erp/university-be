@@ -88,7 +88,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
 
 export async function gettimeTableMappingDetail(universityId){
-    return await timeTableCreateRepository.gettimeTableMappingDetail(universityId)
+    return await timeTableCreateRepository.getTimeTableMappingDetail(universityId)
 };
 
 export async function getSingletimeTableMappingDetail(courseId,universityId){
