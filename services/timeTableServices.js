@@ -27,7 +27,8 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             const endPeriod = new Date(currentTime.getTime() + periodLengthMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
             timeSlots.push({
-                courseId: data.courseId,
+                // courseId: data.courseId,
+                name:data.name,
                 ApplicablePeriod: data.ApplicablePeriod,
                 maximumPeriod: data.maximumPeriod,
                 startingTime: data.startingTime,
@@ -47,7 +48,7 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         for (let i = 0; i < maxPeriods; i++) {
             const endPeriod = new Date(startingTime.getTime() + data.periodLength * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
             timeSlots.push({
-                courseId: data.courseId,
+                name:data.name,
                 ApplicablePeriod: data.ApplicablePeriod,
                 maximumPeriod: data.maximumPeriod,
                 startingTime: data.startingTime,

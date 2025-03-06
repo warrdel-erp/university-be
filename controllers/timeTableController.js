@@ -5,10 +5,10 @@ export const addTimeTable = async (req,res) => {
         const data = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const {courseId} = req.body;
-        if(!courseId){
-          return res.status(400).send('courseId is required')
-        }
+        // const {courseId} = req.body;
+        // if(!courseId){
+        //   return res.status(400).send('courseId is required')
+        // }
         const result = await timeTableServices.addTimeTable(data,createdBy,updatedBy);
         res.status(200).send(result);
     } catch (error) {
