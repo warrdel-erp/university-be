@@ -13,56 +13,33 @@ export async function addTimeTableCreate(data,transaction) {
 export async function getTimeTableCreateDetails(universityId) {
     try {
         const result = await model.timeTableCreateModel.findAll({
-            attributes: ["timeTableCreateId", "timeTableCreationId", "teacherSubjectMappingId","day","period"],
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             include:[
                 {
                     model:model.timeTableCreationModel,
                     as: 'timeTable',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include:[
-                        {
-                            model:model.courseModel,
-                            as: 'timeTableCourse',
-                            attributes: ["courseId","courseName","courseCode","capacity"],
-                        }
-                    ]
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                 } ,
                 {
-                    model:model.teacherSubjectMappingModel,
-                    as: 'timeTableTeacherSubjectMapping',
-                    attributes: ["employeeId","classSubjectMapperId"],
-                    include:[
-                        {
-                            model:model.employeeModel,
-                            as: 'teacherEmployeeData',
-                            attributes: ["employeeId","employeeCode","employeeName","shortName","pickColor"],
-                        },
-                        {
-                            model:model.classSubjectMapperModel,
-                            as: 'employeeSubject',
-                            attributes: ["subjectId"],
-                            include:[
-                                {
-                                    model:model.subjectModel,
-                                    as:'subjects',
-                                    attributes:["subjectName","subjectCode"]
-                                }
-                            ]
-                        },
-                    ]
+                    model:model.courseModel,
+                    as: 'timeTableCourse',
+                    attributes: ["courseName"],
                 },
                 {
-                    model:model.teacherSectionMappingModel,
-                    as: 'timeTableTeacherSectionMapping',
-                    attributes: ["employeeId","classSectionsId","teacherSectionMappingId"],
-                    include:[
-                        {
-                            model:model.classSectionModel,
-                            as: 'employeeSection',
-                            attributes: ["section"],
-                        }
-                    ]
-                }
+                    model:model.campusModel,
+                    as: 'timeTableCampus',
+                    attributes: ["campusName"],
+                },
+                {
+                    model:model.classSectionModel,
+                    as: 'timeTableClassSection',
+                    attributes: ["section","class","section_id"],
+                },
+                {
+                    model:model.acedmicYearModel,
+                    as: 'acedmicYearTimeTable',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                },
             ]
         });
         return result;

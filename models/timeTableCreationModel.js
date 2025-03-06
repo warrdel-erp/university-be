@@ -1,9 +1,9 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
-// import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
-import courseModel from "./courseModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
+// import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
+// import courseModel from "./courseModel.js";
+// import acedmicYearModel from "./acedmicYearModel.js";
 
 export default sequelize.define(
   'time_table_creation',

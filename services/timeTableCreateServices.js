@@ -5,28 +5,31 @@ import { getSingleFaculityLoadDetails, updateFaculityLoad,updateFaculityLoadByEm
 import sequelize from '../database/sequelizeConfig.js'; 
 
 export async function addtimeTableCreate(data, createdBy, updatedBy) {
+    console.log(`>>>>>>>>>>data`,data);
+    
     const transaction = await sequelize.transaction();
 
     try {
-        const { timeTableCreationId, teacherSubjectMappingId } = data;
+        
+        // const { timeTableCreationId, teacherSubjectMappingId } = data;
 
-        // Fetch time table data
-        const timeTableData = await getSingleTimeTableById(timeTableCreationId);
-        const periodLength = timeTableData[0].dataValues.periodLength;
+        // // Fetch time table data
+        // const timeTableData = await getSingleTimeTableById(timeTableCreationId);
+        // const periodLength = timeTableData[0].dataValues.periodLength;
 
-        // Fetch teacher subject data
-        const teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
-        const employeeId = teacherSubjectData[0].dataValues.employeeId;
+        // // Fetch teacher subject data
+        // const teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+        // const employeeId = teacherSubjectData[0].dataValues.employeeId;
 
-        // Fetch faculty load details
-        const faculityLoad = await getSingleFaculityLoadDetails(employeeId);
-        const faculityCurrentLoad = faculityLoad[0].dataValues.currentLoad || 0;
-        const currentLoad = parseInt(faculityCurrentLoad) + periodLength;
+        // // Fetch faculty load details
+        // const faculityLoad = await getSingleFaculityLoadDetails(employeeId);
+        // const faculityCurrentLoad = faculityLoad[0].dataValues.currentLoad || 0;
+        // const currentLoad = parseInt(faculityCurrentLoad) + periodLength;
 
-        // Update faculty load
-        await updateFaculityLoadByEmployeeId(employeeId, {currentLoad:currentLoad}, transaction );
+        // // Update faculty load
+        // await updateFaculityLoadByEmployeeId(employeeId, {currentLoad:currentLoad}, transaction );
 
-        // extra data 
+        // // extra data 
         data.createdBy = createdBy;
         data.updatedBy = updatedBy;
 
