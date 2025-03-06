@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import subject from "./subjectModel.js";
+import users from "./userModel.js";
 
 export default sequelize.define(
     'student_elective_subject',
