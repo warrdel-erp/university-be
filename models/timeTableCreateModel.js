@@ -1,13 +1,11 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import timeTableCreation from "./timeTableCreationModel.js";
-// import teacherSubjectMapping from "./teacherSubjectMappingModel.js";
-// import teacherSectionMapping from "./teacherSectionMappingModel.js";
 import campusModel from "./campusModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import classSectionModel from "./classSectionModel.js";
 import users from "./userModel.js";
+import timeTableNameModel from "./timeTableNameModel.js";
 
 export default sequelize.define(
     'time_table_create',
@@ -18,13 +16,13 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'time_table_create_id'
         },
-        timeTableCreationId: {
+        timeTableNameId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_creation_id',
+            field: 'time_table_name_id',
             references: {
-                model: timeTableCreation,
-                key: 'time_table_creation_id'
+                model: timeTableNameModel,
+                key: 'time_table_name_id'
             }
         },
         courseId: {

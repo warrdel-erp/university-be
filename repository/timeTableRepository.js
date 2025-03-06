@@ -1,9 +1,19 @@
 import * as model from '../models/index.js'
 
-export async function addTimeTable(data) {
-    const timeSlot = data.timeSlots.map(slot => ({...slot,weekOff: slot.weekOff }));
+export async function addTimeTableName(data,transaction) {    
     try {
-        const result = await model.timeTableCreationModel.bulkCreate(timeSlot);
+        const result = await model.timeTableNameModel.create(data,{transaction});
+        return result;
+    } catch (error) {
+        console.error("Error in create time table name:", error);
+        throw error;
+    }
+}
+
+export async function addTimeTable(data,transaction) {
+    const timeSlot = data.timeSlots.map(slot => ({...slot,weekOff: slot.weekOff }));    
+    try {
+        const result = await model.timeTableCreationModel.bulkCreate(timeSlot,{transaction});
         return result;
     } catch (error) {
         console.error("Error in create time table:", error);
@@ -14,7 +24,14 @@ export async function addTimeTable(data) {
 export async function getTimeTableDetails() {
     try {
         const result = await model.timeTableCreationModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            include:[
+                {
+                    model:model.timeTableNameModel,
+                    as:'timeTableName',
+                    attributes: ["name"],
+                }
+            ]
         });
         return result;
     } catch (error) {

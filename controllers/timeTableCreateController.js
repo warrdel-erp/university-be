@@ -5,10 +5,6 @@ export const addtimeTableCreate = async (req,res) => {
         const data = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const {timeTableCreationId,teacherSubjectMappingId} = req.body;
-        if(!timeTableCreationId && teacherSubjectMappingId){
-          return res.status(400).send('timeTableCreationId and teacherSubjectMappingId is required')
-        }
         const result = await timeTableCreateServices.addtimeTableCreate(data,createdBy,updatedBy);
         res.status(200).send(result);
     } catch (error) {

@@ -247,6 +247,34 @@ CREATE TABLE holiday (
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
 
+CREATE TABLE time_table_name (
+    time_table_name_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+INSERT INTO time_table_name (name, created_by, updated_by)
+VALUES ('Time Table', 1, 1);
+
+ALTER TABLE time_table_creation
+ADD COLUMN time_table_name_id INT NULL;
+
+UPDATE time_table_creation
+SET time_table_name_id = 1
+WHERE time_table_name_id IS NULL;
+
+ALTER TABLE time_table_creation
+ADD CONSTRAINT fk_time_table_name_id
+    FOREIGN KEY (time_table_name_id)
+    REFERENCES time_table_name(time_table_name_id)
+ON DELETE CASCADE;
+
 ALTER TABLE time_table_creation
 DROP FOREIGN KEY time_table_creation_ibfk_2;
 
@@ -259,8 +287,6 @@ DROP FOREIGN KEY time_table_creation_ibfk_1;
 ALTER TABLE time_table_creation
 DROP COLUMN course_id;
 
-ALTER TABLE time_table_creation
-ADD COLUMN name VARCHAR(255) NOT NULL;
 
 ALTER TABLE attendance DROP FOREIGN KEY attendance_ibfk_3;
 
@@ -268,7 +294,7 @@ DROP TABLE time_table_create;
 
 CREATE TABLE time_table_create (
     time_table_create_id INT AUTO_INCREMENT PRIMARY KEY,
-    time_table_creation_id INT NOT NULL,
+    time_table_name_id INT NOT NULL,
     course_id INT NOT NULL,
     acedmic_year_id INT NOT NULL,
     class_sections_id INT NOT NULL,
@@ -280,7 +306,7 @@ CREATE TABLE time_table_create (
     created_by INT NOT NULL,
     updated_by INT NOT NULL,
     deleted_at DATETIME DEFAULT NULL,
-    FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id) ON DELETE CASCADE,
+    FOREIGN KEY (time_table_name_id) REFERENCES time_table_name(time_table_name_id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE,
     FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE,
     FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id) ON DELETE CASCADE,

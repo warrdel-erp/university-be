@@ -46,6 +46,7 @@ import libraryMemberModel from './libraryMemberModel.js';
 import libraryIssueBookModel from './libraryIssueBookModel.js';
 import libraryAuthorDetailsModel from './libraryAuthorDetailsModel.js';
 import libraryMultipleBookDetailsModel from './libraryMultipleBookDetailsModel.js';
+import timeTableNameModel from './timeTableNameModel.js';
 import timeTableCreationModel from './timeTableCreationModel.js';
 import faculityLoadModel from './faculityLoadModel.js';
 import timeTableCreateModel from './timeTableCreateModel.js';
@@ -71,7 +72,7 @@ import vehicleModel from './vehicleModel.js';
 import assignVehicleModel from './assignVehicleModel.js';
 import acedmicYearModel from './acedmicYearModel.js';
 import sectionModel from './sectionModel.js';
-import holidayModel from './holidayModel.js'
+import holidayModel from './holidayModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -340,8 +341,11 @@ libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: 'shelf', as:
 employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'shelf', as: 'shelfs' });
 
 // time table create
-timeTableCreateModel.belongsTo(timeTableCreationModel, { foreignKey: 'time_table_creation_id', as: 'timeTable' });
-timeTableCreationModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_creation_id', as: 'timeTable' });
+timeTableCreationModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
+timeTableNameModel.hasMany(timeTableCreationModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
+
+timeTableCreateModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });
+timeTableNameModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });
 
 timeTableCreateModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'timeTableCourse' });
 courseModel.hasMany(timeTableCreateModel, { foreignKey: 'course_id', as: 'timeTableCourse' });
@@ -549,6 +553,7 @@ export {
     libraryIssueBookModel,
     libraryAuthorDetailsModel,
     libraryMultipleBookDetailsModel,
+    timeTableNameModel,
     timeTableCreationModel,
     faculityLoadModel,
     timeTableCreateModel,

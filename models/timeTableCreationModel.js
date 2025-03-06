@@ -1,9 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-// import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
-// import courseModel from "./courseModel.js";
-// import acedmicYearModel from "./acedmicYearModel.js";
+import timeTableNameModel from "./timeTableNameModel.js";
 
 export default sequelize.define(
   'time_table_creation',
@@ -14,15 +12,24 @@ export default sequelize.define(
         autoIncrement: true,
         field: 'time_table_creation_id'
     },
+    timeTableNameId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'time_table_name_id',
+            references: {
+                model: timeTableNameModel,
+                key: 'time_table_name_id'
+            }
+    },
     maximumPeriod :{
         type: DataTypes.INTEGER,
         allowNull: false,
         field:'maximum_period'
     },
-    name :{
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
+    // name :{
+    //     type: DataTypes.STRING,
+    //     allowNull: false,
+    // },
     startingTime:{
         type: DataTypes.STRING,
         allowNull: false,
