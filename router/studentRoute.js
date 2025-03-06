@@ -28,6 +28,6 @@ router.post('/electiveSubject',userAuth , addElectiveSubject);
 
 router.post('/promoteStudent',userAuth , promoteStudent);
 
-router.get('/electiveSubject',userAuth, addElectiveSubject);
+// router.get('/electiveSubject',userAuth, addElectiveSubject);
 
 export default router;

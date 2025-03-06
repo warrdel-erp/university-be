@@ -1,8 +1,12 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import timeTableCreation from "./timeTableCreationModel.js";
-import teacherSubjectMapping from "./teacherSubjectMappingModel.js";
-import teacherSectionMapping from "./teacherSectionMappingModel.js";
+// import teacherSubjectMapping from "./teacherSubjectMappingModel.js";
+// import teacherSectionMapping from "./teacherSectionMappingModel.js";
+import campusModel from "./campusModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
+import courseModel from "./courseModel.js";
+import classSectionModel from "./classSectionModel.js";
 import users from "./userModel.js";
 
 export default sequelize.define(
@@ -23,31 +27,78 @@ export default sequelize.define(
                 key: 'time_table_creation_id'
             }
         },
-        teacherSubjectMappingId: {
+        courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'teacher_subject_mapping_id',
+            field: 'course_id',
             references: {
-                model: teacherSubjectMapping,
-                key: 'teacher_subject_mapping_id'
+                model: courseModel,
+                key: 'course_id'
             }
         },
-        teacherSectionMappingId: {
+        acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'teacher_section_mapping_id',
+            field: 'acedmic_year_id',
             references: {
-                model: teacherSectionMapping,
-                key: 'teacher_section_mapping_id'
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
-        day:{
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
-        period:{
+        classSectionsId: {
             type: DataTypes.INTEGER,
             allowNull: false,
+            field: 'class_sections_id',
+            references: {
+                model: classSectionModel,
+                key: 'class_sections_id'
+            }
+        },
+        // teacherSubjectMappingId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'teacher_subject_mapping_id',
+        //     references: {
+        //         model: teacherSubjectMapping,
+        //         key: 'teacher_subject_mapping_id'
+        //     }
+        // },
+        // teacherSectionMappingId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'teacher_section_mapping_id',
+        //     references: {
+        //         model: teacherSectionMapping,
+        //         key: 'teacher_section_mapping_id'
+        //     }
+        // },
+        // day:{
+        //     type: DataTypes.STRING,
+        //     allowNull: false,
+        // },
+        // period:{
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        // },
+        campusId: 
+        {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'campus_id',
+            references: {
+                 model: campusModel,
+                 key: 'campus_id'
+            }
+        },
+        startingDate: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            field: 'starting_date'
+        },
+        endingDate: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            field: 'ending_date'
         },
         createdAt: {
             type: DataTypes.DATE,
