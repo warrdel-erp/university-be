@@ -50,6 +50,7 @@ import timeTableNameModel from './timeTableNameModel.js';
 import timeTableCreationModel from './timeTableCreationModel.js';
 import faculityLoadModel from './faculityLoadModel.js';
 import timeTableCreateModel from './timeTableCreateModel.js';
+import timeTableMappingModel from './timeTableMappingModel.js'
 import attendanceModel from './attendanceModel.js';
 import classRoomModel from './classRoomModel.js';
 import feeGroupModel from './feeGroupModel.js';
@@ -557,6 +558,7 @@ export {
     timeTableCreationModel,
     faculityLoadModel,
     timeTableCreateModel,
+    timeTableMappingModel,
     attendanceModel,
     classRoomModel,
     feeGroupModel,

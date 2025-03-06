@@ -314,3 +314,29 @@ CREATE TABLE time_table_create (
     FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (updated_by) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+CREATE TABLE time_table_mapping (
+  time_table_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+  time_table_name_id INT NOT NULL,
+  time_table_create_id INT NOT NULL,
+  time_table_creation_id INT NOT NULL,
+  employee_id INT DEFAULT NULL,
+  teacher_subject_mapping_id INT NOT NULL,
+  room_type_id INT NOT NULL,
+  is_same_teacher BOOLEAN DEFAULT TRUE,
+  day VARCHAR(255) NOT NULL,
+  period INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by INT NOT NULL,
+  updated_by INT NOT NULL,
+  deleted_at DATETIME DEFAULT NULL,
+  FOREIGN KEY (time_table_name_id) REFERENCES time_table_name(time_table_name_id),
+  FOREIGN KEY (time_table_create_id) REFERENCES time_table_create(time_table_create_id),
+  FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id),
+  FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+  FOREIGN KEY (teacher_subject_mapping_id) REFERENCES teacher_subject_mapping(teacher_subject_mapping_id),
+  FOREIGN KEY (room_type_id) REFERENCES room_type(room_type_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id),
+  FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

@@ -1,20 +1,21 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import campusModel from "./campusModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
-import courseModel from "./courseModel.js";
-import classSectionModel from "./classSectionModel.js";
 import users from "./userModel.js";
 import timeTableNameModel from "./timeTableNameModel.js";
+import timeTableCreateModel from "./timeTableCreateModel.js";
+import timeTableCreationModel from "./timeTableCreationModel.js";
+import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
+import employeeModel from "./employeeModel.js";
+import roomTypeModel from "./roomTypeModel.js";
 
 export default sequelize.define(
-    'time_table_create',
+    'time_table_mapping',
     {
-        timeTableCreateId: {
+        timeTableMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'time_table_create_id'
+            field: 'time_table_mapping_id'
         },
         timeTableNameId: {
             type: DataTypes.INTEGER,
@@ -25,53 +26,66 @@ export default sequelize.define(
                 key: 'time_table_name_id'
             }
         },
-        courseId: {
+        timeTableCreateId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'time_table_create_id',
             references: {
-                model: courseModel,
-                key: 'course_id'
+                model: timeTableCreateModel,
+                key: 'time_table_create_id'
             }
         },
-        acedmicYearId: {
+        timeTableCreationId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'acedmic_year_id',
+            field: 'time_table_creation_id',
             references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
+                model: timeTableCreationModel,
+                key: 'time_table_creation_id'
             }
         },
-        classSectionsId: {
+        employeeId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'employee_id',
+            references: {
+                model: employeeModel,
+                key: 'employee_id'
+            }
+        },
+        teacherSubjectMappingId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_sections_id',
+            field: 'teacher_subject_mapping_id',
             references: {
-                model: classSectionModel,
-                key: 'class_sections_id'
+                model: teacherSubjectMappingModel,
+                key: 'teacher_subject_mapping_id'
             }
         },
-        campusId: 
-        {
+        roomTypeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'campus_id',
+            field: 'room_type_id',
             references: {
-                 model: campusModel,
-                 key: 'campus_id'
+                model: roomTypeModel,
+                key: 'room_type_id'
             }
         },
-        startingDate: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            field: 'starting_date'
+        isSameTeacher:{
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: true,
+            field: 'is_same_teacher'
         },
-        endingDate: {
-            type: DataTypes.DATE,
+        day:{
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'ending_date'
         },
+        period:{
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -109,7 +123,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'time_table_create',
+        tableName: 'time_table_mapping',
         timestamps: true,
         paranoid: true
     }

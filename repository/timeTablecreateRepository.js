@@ -5,7 +5,7 @@ export async function addTimeTableCreate(data,transaction) {
         const result = await model.timeTableCreateModel.create(data,{transaction});
         return result;
     } catch (error) {
-        console.error("Error in create faculity load:", error);
+        console.error("Error in create create time table:", error);
         throw error;
     }
 }
@@ -129,5 +129,15 @@ export async function deleteTimeTableCreate (faculityLoadId) {
     } catch (error) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
+    }
+};
+
+export async function addtimeTableMapping(data,transaction) {
+    try {
+        const result = await model.timeTableMappingModel.create(data,{transaction});
+        return result;
+    } catch (error) {
+        console.error("Error in create mapping of time table:", error);
+        throw error;
     }
 };
