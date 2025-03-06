@@ -30,6 +30,15 @@ export default sequelize.define(
                 key: 'subject_id'
             }
         },
+        createdBy: {
+             type: DataTypes.INTEGER,
+             allowNull: false,
+             field: 'created_by',
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

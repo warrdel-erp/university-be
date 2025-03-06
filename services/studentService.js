@@ -467,7 +467,8 @@ export async function getclassStudentMapping(classSectionId,universityId){
   return await studentRepository.getclassStudentMapping(classSectionId,universityId)
 };
 
-export async function addElectiveSubject(data){
+export async function addElectiveSubject(data,createdBy){
+  data.createdBy = createdBy;
   return await studentRepository.addElectiveSubject(data)
 };
 

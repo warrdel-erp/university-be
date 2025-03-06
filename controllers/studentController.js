@@ -207,6 +207,7 @@ export const getclassStudentMapping = async (req, res) => {
 export const addElectiveSubject = async (req, res) => {
     let { studentId, subjectId} = req.body;
     const data = req.body
+    const createdBy = req.user.userId;
     try {
         //  required fields
         if (!( studentId && subjectId)) {
@@ -214,7 +215,7 @@ export const addElectiveSubject = async (req, res) => {
         }
 
         const info = req.body;
-        const result = await studentService.addElectiveSubject(data);
+        const result = await studentService.addElectiveSubject(data,createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in student add Elective Subject:", error);
