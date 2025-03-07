@@ -366,6 +366,8 @@ teacherSubjectMappingModel.hasMany(timeTableMappingModel, { foreignKey: 'teacher
 timeTableMappingModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
 timeTableCreateModel.hasMany(timeTableMappingModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
 
+timeTableMappingModel.belongsTo(classRoomModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
+classRoomModel.hasMany(timeTableMappingModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
 
 // library member
 libraryMemberModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });

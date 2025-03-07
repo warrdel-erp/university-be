@@ -322,7 +322,7 @@ CREATE TABLE time_table_mapping (
   time_table_creation_id INT NOT NULL,
   employee_id INT DEFAULT NULL,
   teacher_subject_mapping_id INT NOT NULL,
-  room_type_id INT NOT NULL,
+  class_room_section_id INT NOT NULL,
   is_same_teacher BOOLEAN DEFAULT TRUE,
   day VARCHAR(255) NOT NULL,
   period INT NOT NULL,
@@ -336,7 +336,7 @@ CREATE TABLE time_table_mapping (
   FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id),
   FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
   FOREIGN KEY (teacher_subject_mapping_id) REFERENCES teacher_subject_mapping(teacher_subject_mapping_id),
-  FOREIGN KEY (room_type_id) REFERENCES room_type(room_type_id),
+  FOREIGN KEY (class_room_section_id) REFERENCES class_room_section(class_room_section_id),
   FOREIGN KEY (created_by) REFERENCES users(user_id),
   FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );

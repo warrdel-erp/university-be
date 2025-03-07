@@ -6,7 +6,7 @@ import timeTableCreateModel from "./timeTableCreateModel.js";
 import timeTableCreationModel from "./timeTableCreationModel.js";
 import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
 import employeeModel from "./employeeModel.js";
-import roomTypeModel from "./roomTypeModel.js";
+import classRoomModel from "./classRoomModel.js";
 
 export default sequelize.define(
     'time_table_mapping',
@@ -62,13 +62,13 @@ export default sequelize.define(
                 key: 'teacher_subject_mapping_id'
             }
         },
-        roomTypeId: {
+        classRoomSectionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'room_type_id',
+            field: 'class_room_section_id',
             references: {
-                model: roomTypeModel,
-                key: 'room_type_id'
+                model: classRoomModel,
+                key: 'class_room_section_id'
             }
         },
         isSameTeacher:{
@@ -85,7 +85,6 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false,
         },
-        
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

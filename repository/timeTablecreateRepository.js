@@ -209,6 +209,11 @@ export async function getTimeTableMappingDetail(universityId) {
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         },
                     ],
+                },
+                {
+                    model:model.classRoomModel,
+                    as: 'classRoom',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
                 }
             ]
         });

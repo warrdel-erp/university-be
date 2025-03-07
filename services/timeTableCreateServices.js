@@ -52,7 +52,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     try {
         
-        const { timeTableNameId,timeTableCreateId,timeTableCreationId,employeeId,teacherSubjectMappingId,roomTypeId,isSameTeacher,day, period} = data
+        const { timeTableNameId,timeTableCreateId,timeTableCreationId,employeeId,teacherSubjectMappingId,isSameTeacher,day, period} = data
 
         // Fetch time table data
         const timeTableData = await getSingleTimeTableById(timeTableCreationId);
