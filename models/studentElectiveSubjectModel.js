@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import subject from "./subjectModel.js";
+import users from "./userModel.js";
 
 export default sequelize.define(
     'student_elective_subject',
@@ -29,6 +30,15 @@ export default sequelize.define(
                 model: subject,
                 key: 'subject_id'
             }
+        },
+        createdBy: {
+             type: DataTypes.INTEGER,
+             allowNull: false,
+             field: 'created_by',
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
         },
         createdAt: {
             type: DataTypes.DATE,

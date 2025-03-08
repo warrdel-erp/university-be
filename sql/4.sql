@@ -209,3 +209,137 @@ VALUES
     (3, 'Buddh', 'Buddh', 1),
     (3, 'Jain ', 'Jain ', 1),
     (3, 'others', 'others', 1);
+
+ALTER TABLE students
+DROP COLUMN multiple_number,
+DROP COLUMN register_file_number,
+DROP COLUMN whatsapp_number,
+DROP COLUMN student_name_alias,
+DROP COLUMN employee_references,
+DROP COLUMN student_references,
+DROP COLUMN eligibity_criteria,
+DROP COLUMN total_seat,
+DROP COLUMN remaining_seat;
+
+
+ALTER TABLE students
+ADD COLUMN pan_number VARCHAR(255) NULL,
+ADD COLUMN additional_notes VARCHAR(255) NULL,
+ADD COLUMN bank_name VARCHAR(255) NULL,
+ADD COLUMN account_number VARCHAR(255) NULL,
+ADD COLUMN ifsc_code VARCHAR(255) NULL;
+
+ALTER TABLE fee_type
+MODIFY COLUMN description VARCHAR(255) NULL;
+
+ALTER TABLE fee_group
+MODIFY COLUMN description VARCHAR(255) NULL;
+
+CREATE TABLE holiday (
+    holiday_id INT AUTO_INCREMENT PRIMARY KEY,
+    date DATETIME NOT NULL,
+    event VARCHAR(255) NULL,
+    name VARCHAR(255) NULL,
+    remark VARCHAR(255) NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE time_table_name (
+    time_table_name_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+INSERT INTO time_table_name (name, created_by, updated_by)
+VALUES ('Time Table', 1, 1);
+
+ALTER TABLE time_table_creation
+ADD COLUMN time_table_name_id INT NULL;
+
+UPDATE time_table_creation
+SET time_table_name_id = 1
+WHERE time_table_name_id IS NULL;
+
+ALTER TABLE time_table_creation
+ADD CONSTRAINT fk_time_table_name_id
+    FOREIGN KEY (time_table_name_id)
+    REFERENCES time_table_name(time_table_name_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_creation
+DROP FOREIGN KEY time_table_creation_ibfk_2;
+
+ALTER TABLE time_table_creation
+DROP COLUMN applicable_period;
+
+ALTER TABLE time_table_creation
+DROP FOREIGN KEY time_table_creation_ibfk_1;
+
+ALTER TABLE time_table_creation
+DROP COLUMN course_id;
+
+
+ALTER TABLE attendance DROP FOREIGN KEY attendance_ibfk_3;
+
+DROP TABLE time_table_create;
+
+CREATE TABLE time_table_create (
+    time_table_create_id INT AUTO_INCREMENT PRIMARY KEY,
+    time_table_name_id INT NOT NULL,
+    course_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    campus_id INT NOT NULL,
+    starting_date DATE NOT NULL,
+    ending_date DATE NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (time_table_name_id) REFERENCES time_table_name(time_table_name_id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE,
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE,
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id) ON DELETE CASCADE,
+    FOREIGN KEY (campus_id) REFERENCES campus(campus_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (updated_by) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE time_table_mapping (
+  time_table_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+  time_table_name_id INT NOT NULL,
+  time_table_create_id INT NOT NULL,
+  time_table_creation_id INT NOT NULL,
+  employee_id INT DEFAULT NULL,
+  teacher_subject_mapping_id INT NOT NULL,
+  class_room_section_id INT NOT NULL,
+  is_same_teacher BOOLEAN DEFAULT TRUE,
+  day VARCHAR(255) NOT NULL,
+  period INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by INT NOT NULL,
+  updated_by INT NOT NULL,
+  deleted_at DATETIME DEFAULT NULL,
+  FOREIGN KEY (time_table_name_id) REFERENCES time_table_name(time_table_name_id),
+  FOREIGN KEY (time_table_create_id) REFERENCES time_table_create(time_table_create_id),
+  FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id),
+  FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+  FOREIGN KEY (teacher_subject_mapping_id) REFERENCES teacher_subject_mapping(teacher_subject_mapping_id),
+  FOREIGN KEY (class_room_section_id) REFERENCES class_room_section(class_room_section_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id),
+  FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

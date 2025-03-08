@@ -133,21 +133,21 @@ export default sequelize.define(
             allowNull : true,
             field:'mother_name'
         },
-        eligibityCriteria:{
-            type:DataTypes.STRING,
-            allowNull: true,
-            field:'eligibity_criteria'
-        },
-        totalSeat:{
-            type:DataTypes.INTEGER,
-            allowNull: true,
-            field:'total_seat'
-        },
-        remainingSeat:{
-            type:DataTypes.INTEGER,
-            allowNull: true,
-            field:'remaining_seat'
-        },
+        // eligibityCriteria:{
+        //     type:DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'eligibity_criteria'
+        // },
+        // totalSeat:{
+        //     type:DataTypes.INTEGER,
+        //     allowNull: true,
+        //     field:'total_seat'
+        // },
+        // remainingSeat:{
+        //     type:DataTypes.INTEGER,
+        //     allowNull: true,
+        //     field:'remaining_seat'
+        // },
         birthDate:{
             type:DataTypes.DATE,
             allowNull: false,
@@ -173,16 +173,16 @@ export default sequelize.define(
 			allowNull:true,
             field:'current_class'
 		},
-		employeeReferences:{
-			type:DataTypes.STRING,
-			allowNull:true,
-            field:'employee_references'
-		},
-		studentReferences:{
-			type:DataTypes.STRING,
-			allowNull:true,
-            field:'student_references'
-		},
+		// employeeReferences:{
+		// 	type:DataTypes.STRING,
+		// 	allowNull:true,
+        //     field:'employee_references'
+		// },
+		// studentReferences:{
+		// 	type:DataTypes.STRING,
+		// 	allowNull:true,
+        //     field:'student_references'
+		// },
 		studentPhoto:{
 			type:DataTypes.JSON,
 			allowNull:true,
@@ -221,31 +221,56 @@ export default sequelize.define(
             allowNull: true,
             field:'aadhar_number'
         },
+        panNumber:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'pan_number'
+        },
+        AdditionalNotes:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'additional_notes'
+        },
+        bankName:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'bank_name'
+        },
+        accountNumber:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'account_number'
+        },
+        ifscCode:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'ifsc_code'
+        },
         placeOfBirth:{
             type: DataTypes.STRING,
             allowNull: true,
             field:'place_of_birth'
         },
-        multipleNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'multiple_number'
-        },
-        registerFileNumber:{
-			type:DataTypes.STRING,
-			allowNull:false,
-            field:'register_file_number'
-		},
-        whatsappNumber:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'whatsapp_number'
-        },
-        studentNameAlias:{
-            type: DataTypes.STRING,
-            allowNull: true,
-            field:'student_name_alias'
-        },
+        // multipleNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'multiple_number'
+        // },
+        // registerFileNumber:{
+		// 	type:DataTypes.STRING,
+		// 	allowNull:false,
+        //     field:'register_file_number'
+		// },
+        // whatsappNumber:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'whatsapp_number'
+        // },
+        // studentNameAlias:{
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field:'student_name_alias'
+        // },
         studentStatus:{
             type:DataTypes.ENUM(...studentStatus),
             allowNull:true,

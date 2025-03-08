@@ -5,7 +5,7 @@ export async function addTimeTableCreate(data,transaction) {
         const result = await model.timeTableCreateModel.create(data,{transaction});
         return result;
     } catch (error) {
-        console.error("Error in create faculity load:", error);
+        console.error("Error in create create time table:", error);
         throw error;
     }
 }
@@ -13,56 +13,40 @@ export async function addTimeTableCreate(data,transaction) {
 export async function getTimeTableCreateDetails(universityId) {
     try {
         const result = await model.timeTableCreateModel.findAll({
-            attributes: ["timeTableCreateId", "timeTableCreationId", "teacherSubjectMappingId","day","period"],
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             include:[
                 {
-                    model:model.timeTableCreationModel,
-                    as: 'timeTable',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    model:model.timeTableNameModel,
+                    as:"timeTableCreateName",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]},
                     include:[
                         {
-                            model:model.courseModel,
-                            as: 'timeTableCourse',
-                            attributes: ["courseId","courseName","courseCode","capacity"],
+                            model:model.timeTableCreationModel,
+                            as:"timeTableName",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]}
                         }
-                    ]
-                } ,
-                {
-                    model:model.teacherSubjectMappingModel,
-                    as: 'timeTableTeacherSubjectMapping',
-                    attributes: ["employeeId","classSubjectMapperId"],
-                    include:[
-                        {
-                            model:model.employeeModel,
-                            as: 'teacherEmployeeData',
-                            attributes: ["employeeId","employeeCode","employeeName","shortName","pickColor"],
-                        },
-                        {
-                            model:model.classSubjectMapperModel,
-                            as: 'employeeSubject',
-                            attributes: ["subjectId"],
-                            include:[
-                                {
-                                    model:model.subjectModel,
-                                    as:'subjects',
-                                    attributes:["subjectName","subjectCode"]
-                                }
-                            ]
-                        },
                     ]
                 },
                 {
-                    model:model.teacherSectionMappingModel,
-                    as: 'timeTableTeacherSectionMapping',
-                    attributes: ["employeeId","classSectionsId","teacherSectionMappingId"],
-                    include:[
-                        {
-                            model:model.classSectionModel,
-                            as: 'employeeSection',
-                            attributes: ["section"],
-                        }
-                    ]
-                }
+                    model:model.courseModel,
+                    as: 'timeTableCourse',
+                    attributes: ["courseName"],
+                },
+                {
+                    model:model.campusModel,
+                    as: 'timeTableCampus',
+                    attributes: ["campusName"],
+                },
+                {
+                    model:model.classSectionModel,
+                    as: 'timeTableClassSection',
+                    attributes: ["section","class","section_id","class_sections_id"],
+                },
+                {
+                    model:model.acedmicYearModel,
+                    as: 'acedmicYearTimeTable',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                },
             ]
         });
         return result;
@@ -74,59 +58,41 @@ export async function getTimeTableCreateDetails(universityId) {
 
 export async function getSingleTimeTableCreateDetails(courseId,universityId) {    
     try {
-        const result = await model.timeTableCreationModel.findAll({
+        const result = await model.timeTableCreateModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include:[
                 {
-                    model:model.courseModel,
-                    as: 'timeTableCourse',
-                    attributes: ["courseId","courseName","courseCode","capacity"],
-                },
-                {
-                    model:model.timeTableCreateModel,
-                    as: 'timeTableCreate',
-                    attributes: ["timeTableCreateId","teacherSubjectMappingId", "createdBy","day","period"],
+                    model:model.timeTableNameModel,
+                    as:"timeTableCreateName",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]},
                     include:[
                         {
-                            model:model.teacherSubjectMappingModel,
-                            as: 'timeTableTeacherSubjectMapping',
-                            attributes: ["employeeId","classSubjectMapperId"],
-                            include:[
-                                {
-                                    model:model.employeeModel,
-                                    as: 'teacherEmployeeData',
-                                    attributes: ["employeeId","employeeCode","employeeName","shortName","pickColor"],
-                                },
-                                {
-                                    model:model.classSubjectMapperModel,
-                                    as: 'employeeSubject',
-                                    attributes: ["subjectId"],
-                                    include:[
-                                        {
-                                            model:model.subjectModel,
-                                            as:'subjects',
-                                            attributes:["subjectName","subjectCode"]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            model:model.teacherSectionMappingModel,
-                            as: 'timeTableTeacherSectionMapping',
-                            attributes: ["employeeId","classSectionsId","teacherSectionMappingId"],
-                            include:[
-                                {
-                                    model:model.classSectionModel,
-                                    as: 'employeeSection',
-                                    attributes: ["section"],
-                                }
-                            ]
+                            model:model.timeTableCreationModel,
+                            as:"timeTableName",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]}
                         }
                     ]
                 },
-                
-
+                {
+                    model:model.courseModel,
+                    as: 'timeTableCourse',
+                    attributes: ["courseName"],
+                },
+                {
+                    model:model.campusModel,
+                    as: 'timeTableCampus',
+                    attributes: ["campusName"],
+                },
+                {
+                    model:model.classSectionModel,
+                    as: 'timeTableClassSection',
+                    attributes: ["section","class","section_id","class_sections_id"],
+                },
+                {
+                    model:model.acedmicYearModel,
+                    as: 'acedmicYearTimeTable',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                },
             ],
             where:{
                 courseId:courseId,
@@ -164,4 +130,96 @@ export async function deleteTimeTableCreate (faculityLoadId) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
     }
+};
+
+export async function addtimeTableMapping(data,transaction) {
+    try {
+        const result = await model.timeTableMappingModel.create(data,{transaction});
+        return result;
+    } catch (error) {
+        console.error("Error in create mapping of time table:", error);
+        throw error;
+    }
+};
+
+export async function getTimeTableMappingDetail(universityId) {
+    try {
+        const result = await model.timeTableMappingModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            include:[
+                {
+                    model:model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated","employee_id","class_subject_mapper_id"]},
+                    include:[
+                        {
+                            model:model.employeeModel,
+                            as: 'teacherEmployeeData',
+                            attributes: ["employeeName"]
+                        },
+                        {
+                            model:model.classSubjectMapperModel,
+                            as: 'employeeSubject',
+                            attributes: ["classSubjectMapperId"],
+                            include:[
+                                {
+                                    model:model.subjectModel,
+                                    as: 'subjects',
+                                    attributes: ["subjectName"],
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model:model.timeTableCreateModel,
+                    as: 'timeTablecreate',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
+                    include:[
+                        {
+                            model:model.timeTableNameModel,
+                            as:"timeTableCreateName",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
+                            include:[
+                                {
+                                    model:model.timeTableCreationModel,
+                                    as:"timeTableName",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                                }
+                            ]
+                        },
+                        {
+                            model:model.courseModel,
+                            as: 'timeTableCourse',
+                            attributes: ["courseName"],
+                        },
+                        {
+                            model:model.campusModel,
+                            as: 'timeTableCampus',
+                            attributes: ["campusName"],
+                        },
+                        {
+                            model:model.classSectionModel,
+                            as: 'timeTableClassSection',
+                            attributes: ["section","class","section_id","class_sections_id"],
+                        },
+                        {
+                            model:model.acedmicYearModel,
+                            as: 'acedmicYearTimeTable',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                    ],
+                },
+                {
+                    model:model.classRoomModel,
+                    as: 'classRoom',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                }
+            ]
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in getting time table create:`, error);
+        throw error;
+    };
 };

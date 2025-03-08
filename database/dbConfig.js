@@ -1,7 +1,7 @@
 export const dbConfig = {
     HOST: process.env.HOST || 'localhost',
     USER: process.env.MYSQL_USERNAME || 'root',
-    PASSWORD: process.env.MYSQL_PASSWORD|| '12345678',
+    PASSWORD: process.env.MYSQL_PASSWORD|| 'kuldeep1',
     DB: process.env.MYSQL_DATABASE_NAME || 'university',
     dialect: 'mysql',
 

@@ -6,12 +6,12 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const addStudent = async (req, res) => {
     const file = req.files;
     const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId} = req.body;
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionId,acedmicYearId} = req.body;
 
     try {
         // Check for required fields
-        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId)) {
-            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId,roleId and courseId are required");
+        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId && classSectionId && acedmicYearId)) {
+            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, roleId, courseId,acedmicYearId and classSectionId are required");
         }
 
         // Check if email already exists
@@ -38,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId);
+        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
@@ -207,6 +207,7 @@ export const getclassStudentMapping = async (req, res) => {
 export const addElectiveSubject = async (req, res) => {
     let { studentId, subjectId} = req.body;
     const data = req.body
+    const createdBy = req.user.userId;
     try {
         //  required fields
         if (!( studentId && subjectId)) {
@@ -214,7 +215,7 @@ export const addElectiveSubject = async (req, res) => {
         }
 
         const info = req.body;
-        const result = await studentService.addElectiveSubject(data);
+        const result = await studentService.addElectiveSubject(data,createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in student add Elective Subject:", error);

@@ -1,78 +1,176 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
+import sequelize from '../database/sequelizeConfig.js'; 
+
+// export async function addTimeTable(data, createdBy, updatedBy) {
+
+//     const transaction = await sequelize.transaction();
+//     const name = data.name
+    
+//     const item = {name,createdBy,updatedBy}
+//     const result = await timeTableRepository.addTimeTableName(item,transaction)
+//     const timeTableNameId = result.dataValues.timeTableNameId;
+//     // return
+//     data.createdBy = createdBy;
+//     data.updatedBy = updatedBy;
+
+//     const timeSlots = [];
+//     const maxPeriods = data.maximumPeriod; // Maximum number of periods
+
+//     const parseTime = (timeString) => {
+//         const [time, modifier] = timeString.split(' ');
+//         const [hour, minute] = time.split(':').map(Number);
+//         const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
+//         return new Date(1970, 0, 1, adjustedHour, minute);
+//     };
+
+//     let startingTime = parseTime(data.startingTime);
+
+//     if (data.type === 'Automatic') {
+//         let currentTime = startingTime;
+//         const periodLengthMs = data.periodLength * 60000;
+//         const periodGapMs = data.periodGap * 60000;
+
+//         for (let i = 0; i < maxPeriods; i++) {
+//             const startPeriod = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+//             const endPeriod = new Date(currentTime.getTime() + periodLengthMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+//             timeSlots.push({
+//                 // courseId: data.courseId,
+//                 timeTableNameId:timeTableNameId,
+//                 ApplicablePeriod: data.ApplicablePeriod,
+//                 maximumPeriod: data.maximumPeriod,
+//                 startingTime: data.startingTime,
+//                 periodLength: data.periodLength,
+//                 periodGap: data.periodGap,
+//                 weekOff: data.weekOff,
+//                 type: data.type,
+//                 createdBy: data.createdBy,
+//                 updatedBy: data.updatedBy,
+//                 startTime: startPeriod,
+//                 endTime: endPeriod
+//             });
+
+//             currentTime = new Date(currentTime.getTime() + periodLengthMs + periodGapMs);
+//         }
+//     } else if (data.type === 'Manual') {
+//         for (let i = 0; i < maxPeriods; i++) {
+//             const endPeriod = new Date(startingTime.getTime() + data.periodLength * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+//             timeSlots.push({
+//                 timeTableNameId:timeTableNameId,
+//                 ApplicablePeriod: data.ApplicablePeriod,
+//                 maximumPeriod: data.maximumPeriod,
+//                 startingTime: data.startingTime,
+//                 periodLength: data.periodLength,
+//                 periodGap: data.periodGap,
+//                 weekOff: data.weekOff,
+//                 type: data.type,
+//                 createdBy: data.createdBy,
+//                 updatedBy: data.updatedBy,
+//                 startTime: '',
+//                 endTime: '',
+//             });
+//             // Move the starting time for the next slot
+//             startingTime = new Date(startingTime.getTime() + data.periodLength * 60000);
+//         }
+
+//         // Reset the other fields for manual entry
+//         data.startingTime = '';
+//         data.periodGap = '';
+//     }
+
+//     data.timeSlots = timeSlots;
+
+//     return await timeTableRepository.addTimeTable(data,transaction);
+// }            
 
 export async function addTimeTable(data, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+    try {
+        const name = data.name;
+        const item = { name, createdBy, updatedBy };
+        const result = await timeTableRepository.addTimeTableName(item, transaction);
+        const timeTableNameId = result.dataValues.timeTableNameId;
 
-    data.createdBy = createdBy;
-    data.updatedBy = updatedBy;
+        // Return after adding timetable name
+        data.createdBy = createdBy;
+        data.updatedBy = updatedBy;
 
-    const timeSlots = [];
-    const maxPeriods = data.maximumPeriod; // Maximum number of periods
+        const timeSlots = [];
+        const maxPeriods = data.maximumPeriod; // Maximum number of periods
 
-    const parseTime = (timeString) => {
-        const [time, modifier] = timeString.split(' ');
-        const [hour, minute] = time.split(':').map(Number);
-        const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
-        return new Date(1970, 0, 1, adjustedHour, minute);
-    };
+        const parseTime = (timeString) => {
+            const [time, modifier] = timeString.split(' ');
+            const [hour, minute] = time.split(':').map(Number);
+            const adjustedHour = hour % 12 + (modifier === 'PM' ? 12 : 0);
+            return new Date(1970, 0, 1, adjustedHour, minute);
+        };
 
-    let startingTime = parseTime(data.startingTime);
+        let startingTime = parseTime(data.startingTime);
 
-    if (data.type === 'Automatic') {
-        let currentTime = startingTime;
-        const periodLengthMs = data.periodLength * 60000;
-        const periodGapMs = data.periodGap * 60000;
+        if (data.type === 'Automatic') {
+            let currentTime = startingTime;
+            const periodLengthMs = data.periodLength * 60000;
+            const periodGapMs = data.periodGap * 60000;
 
-        for (let i = 0; i < maxPeriods; i++) {
-            const startPeriod = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            const endPeriod = new Date(currentTime.getTime() + periodLengthMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            for (let i = 0; i < maxPeriods; i++) {
+                const startPeriod = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                const endPeriod = new Date(currentTime.getTime() + periodLengthMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            timeSlots.push({
-                courseId: data.courseId,
-                ApplicablePeriod: data.ApplicablePeriod,
-                maximumPeriod: data.maximumPeriod,
-                startingTime: data.startingTime,
-                periodLength: data.periodLength,
-                periodGap: data.periodGap,
-                weekOff: data.weekOff,
-                type: data.type,
-                createdBy: data.createdBy,
-                updatedBy: data.updatedBy,
-                startTime: startPeriod,
-                endTime: endPeriod
-            });
+                timeSlots.push({
+                    // courseId: data.courseId,
+                    timeTableNameId: timeTableNameId,
+                    ApplicablePeriod: data.ApplicablePeriod,
+                    maximumPeriod: data.maximumPeriod,
+                    startingTime: data.startingTime,
+                    periodLength: data.periodLength,
+                    periodGap: data.periodGap,
+                    weekOff: data.weekOff,
+                    type: data.type,
+                    createdBy: data.createdBy,
+                    updatedBy: data.updatedBy,
+                    startTime: startPeriod,
+                    endTime: endPeriod
+                });
 
-            currentTime = new Date(currentTime.getTime() + periodLengthMs + periodGapMs);
+                currentTime = new Date(currentTime.getTime() + periodLengthMs + periodGapMs);
+            }
+        } else if (data.type === 'Manual') {
+            for (let i = 0; i < maxPeriods; i++) {
+                const endPeriod = new Date(startingTime.getTime() + data.periodLength * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                timeSlots.push({
+                    timeTableNameId: timeTableNameId,
+                    ApplicablePeriod: data.ApplicablePeriod,
+                    maximumPeriod: data.maximumPeriod,
+                    startingTime: data.startingTime,
+                    periodLength: data.periodLength,
+                    periodGap: data.periodGap,
+                    weekOff: data.weekOff,
+                    type: data.type,
+                    createdBy: data.createdBy,
+                    updatedBy: data.updatedBy,
+                    startTime: '',
+                    endTime: '',
+                });
+                // Move the starting time for the next slot
+                startingTime = new Date(startingTime.getTime() + data.periodLength * 60000);
+            }
+
+            // Reset the other fields for manual entry
+            data.startingTime = '';
+            data.periodGap = '';
         }
-    } else if (data.type === 'Manual') {
-        for (let i = 0; i < maxPeriods; i++) {
-            const endPeriod = new Date(startingTime.getTime() + data.periodLength * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            timeSlots.push({
-                courseId: data.courseId,
-                ApplicablePeriod: data.ApplicablePeriod,
-                maximumPeriod: data.maximumPeriod,
-                startingTime: data.startingTime,
-                periodLength: data.periodLength,
-                periodGap: data.periodGap,
-                weekOff: data.weekOff,
-                type: data.type,
-                createdBy: data.createdBy,
-                updatedBy: data.updatedBy,
-                startTime: '',
-                endTime: '',
-            });
-            // Move the starting time for the next slot
-            startingTime = new Date(startingTime.getTime() + data.periodLength * 60000);
-        }
 
-        // Reset the other fields for manual entry
-        data.startingTime = '';
-        data.periodGap = '';
+        data.timeSlots = timeSlots;
+
+        const timeTableEntry = await timeTableRepository.addTimeTable(data, transaction);
+
+        await transaction.commit();
+        return timeTableEntry
+    } catch (error) {
+        await transaction.rollback();
+        throw error; 
     }
-
-    data.timeSlots = timeSlots;
-
-    return await timeTableRepository.addTimeTable(data);
-}
+};
 
 export async function getTimeTableDetails(){
     return await timeTableRepository.getTimeTableDetails()

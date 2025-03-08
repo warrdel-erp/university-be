@@ -3,7 +3,7 @@ import 'dotenv/config'
 import express, { json, urlencoded } from 'express';
 import cors from 'cors';
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = 8080;
 import fileUpload from 'express-fileupload';
 
 import main from './router/mainRoute.js';
@@ -40,7 +40,8 @@ import transportRoute from './router/transportRoute.js';
 import vehicleRoute from './router/vehicleRoute.js';
 import assignVehicleRoute from './router/assignVehicleRoute.js';
 import acedmicYear from './router/acedmicYearRoute.js';
-import section from './router/sectionRoute.js'
+import section from './router/sectionRoute.js';
+import holiday from './router/holidayRoute.js';
 
 // middleware
 app.use(fileUpload());
@@ -84,6 +85,7 @@ app.use("/vehicle", vehicleRoute );
 app.use("/assignVehicle", assignVehicleRoute);
 app.use("/acedmicYear",acedmicYear);
 app.use("/section",section);
+app.use("/holiday",holiday);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

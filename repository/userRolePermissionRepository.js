@@ -125,20 +125,20 @@ export async function getUserRolePermissionByUserId(userId) {
                                     model:model.courseModel,
                                     as:'course',
                                     attributes:["courseName",'courseId','courseCode',"capacity"],
-                                    include:[
-                                        {
-                                            model:model.timeTableCreationModel,
-                                            as:"timeTableCourse",
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","course_id"] },
-                                            include:[
-                                                {
-                                                    model:model.timeTableCreateModel,
-                                                    as: 'timeTable',
-                                                    attributes:["timeTableCreateId","timeTableCreationId","teacherSubjectMappingId","teacherSectionMappingId","day","period",]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                                    // include:[
+                                    //     {
+                                    //         model:model.timeTableCreationModel,
+                                    //         as:"timeTableCourse",
+                                    //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","course_id"] },
+                                    //         // include:[
+                                    //         //     {
+                                    //         //         model:model.timeTableCreateModel,
+                                    //         //         as: 'timeTable',
+                                    //         //         attributes:["timeTableCreateId","timeTableCreationId","teacherSubjectMappingId","teacherSectionMappingId","day","period",]
+                                    //         //     }
+                                    //         // ]
+                                    //     }
+                                    // ]
                                 },
                                 {
                                     model:model.classStudentMapperModel,
