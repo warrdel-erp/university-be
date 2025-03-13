@@ -34,17 +34,17 @@ export async function getAttendanceDetails(universityId) {
                     as: "studentAttendance",
                     // attributes :["name","author","publisher"]
                 },
-                {
-                    model: model.timeTableCreateModel,
-                    as: "timeTableAttendance",
-                    // attributes :["name","author","publisher"]
-                }
+                // {
+                //     model: model.timeTableCreateModel,
+                //     as: "timeTableAttendance",
+                //     // attributes :["name","author","publisher"]
+                // }
             ]
         });
 
         return bookDetails;
     } catch (error) {
-        console.error('Error fetching member details:', error);
+        console.error('Error fetching attendance details:', error);
         throw error;
     }
 };
