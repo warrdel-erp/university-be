@@ -48,7 +48,7 @@ export async function getAllIssueBooks(universityId) {
 
         return bookDetails;
     } catch (error) {
-        console.error('Error fetching member details:', error);
+        console.error('Error fetching all issue book details:', error);
         throw error;
     }
 };
@@ -92,7 +92,7 @@ export async function getBookByMemberId(libraryMemberId,universityId) {
 
         return bookDetails;
     } catch (error) {
-        console.error(`Error fetching member details: ${libraryCreationId}`, error);
+        console.error(`Error fetching book member details: ${libraryCreationId}`, error);
         throw error;
     }
 };

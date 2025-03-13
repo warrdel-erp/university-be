@@ -7,7 +7,7 @@ export async function createExamAttendance(data) {
 export async function getAllExamAttendance(universityId) {
     return await model.examAttendanceModel.findAll({
         attributes: {
-            exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"]
         },
         include: [
             {
@@ -35,7 +35,7 @@ export async function getAllExamAttendance(universityId) {
 export async function getSingleExamAttendance(examAttendanceId, universityId) {
     return await model.examAttendanceModel.findOne({
         attributes: {
-            exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy",]
         },
         include: [
             {

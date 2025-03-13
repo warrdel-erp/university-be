@@ -95,7 +95,7 @@ export async function getSingleMemberDetails(libraryCreationId,universityId) {
 
         return member;
     } catch (error) {
-        console.error(`Error fetching member details: ${libraryCreationId}`, error);
+        console.error(`Error fetching single member details: ${libraryCreationId}`, error);
         throw error;
     }
 }
