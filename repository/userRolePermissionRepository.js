@@ -191,7 +191,7 @@ export async function getUserRolePermissionByUserId(userId) {
                             {
                                 model:model.attendanceModel,
                                 as:'studentAttendance',
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","time_table_create_id","student_id","class_sections_id"] },
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","student_id","class_sections_id"] },
                             }
                             ]
                         },
