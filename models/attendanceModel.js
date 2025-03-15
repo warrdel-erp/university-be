@@ -32,15 +32,6 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
-        timeTableCreateId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'time_table_create_id',
-            references: {
-                model: timeTableCreate,
-                key: 'time_table_create_id'
-            }
-        },
         date: {
             type: DataTypes.DATE,
             allowNull: true,
