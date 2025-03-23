@@ -74,6 +74,7 @@ import assignVehicleModel from './assignVehicleModel.js';
 import acedmicYearModel from './acedmicYearModel.js';
 import sectionModel from './sectionModel.js';
 import holidayModel from './holidayModel.js';
+import electiveSubjectModel from './electiveSubjectModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -591,4 +592,5 @@ export {
     acedmicYearModel,
     sectionModel,
     holidayModel,
+    electiveSubjectModel,
 };

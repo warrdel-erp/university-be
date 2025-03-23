@@ -343,3 +343,22 @@ CREATE TABLE time_table_mapping (
   FOREIGN KEY (created_by) REFERENCES users(user_id),
   FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE elective_subject (
+    elective_subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    course_id INT DEFAULT NULL,
+    specialization_id INT DEFAULT NULL,
+    elective_subject_name VARCHAR(255) NOT NULL,
+    elective_subject_code VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
