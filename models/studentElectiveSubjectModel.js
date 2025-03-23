@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
-import subject from "./subjectModel.js";
+import electiveSubjectModel from "./electiveSubjectModel.js";
 import users from "./userModel.js";
 
 export default sequelize.define(
@@ -22,13 +22,13 @@ export default sequelize.define(
                 key: 'student_id'
             }
         },
-        subjectId: {
+        electiveSubjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'subject_id',
+            field: 'elective_subject_id',
             references: {
-                model: subject,
-                key: 'subject_id'
+                model: electiveSubjectModel,
+                key: 'elective_subject_id'
             }
         },
         createdBy: {

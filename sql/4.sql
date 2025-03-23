@@ -362,3 +362,44 @@ CREATE TABLE elective_subject (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+ALTER TABLE student_elective_subject
+DROP FOREIGN KEY student_elective_subject_ibfk_2;
+
+ALTER TABLE student_elective_subject
+DROP COLUMN subject_id;
+
+-- Add the elective_subject_id column with the foreign key reference
+
+ALTER TABLE student_elective_subject
+ADD COLUMN elective_subject_id INT NULL;
+
+UPDATE student_elective_subject
+SET elective_subject_id = 1
+WHERE elective_subject_id IS NULL;
+
+ALTER TABLE student_elective_subject
+ADD CONSTRAINT fk_elective_subject_id
+    FOREIGN KEY (elective_subject_id)
+    REFERENCES elective_subject(elective_subject_id)
+ON DELETE CASCADE;
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_creation
+ADD COLUMN course_id INT NULL;
+
+UPDATE time_table_creation
+SET course_id = 2
+WHERE course_id IS NULL;
+
+ALTER TABLE time_table_creation
+ADD CONSTRAINT fk_course_id
+    FOREIGN KEY (course_id)
+    REFERENCES course(course_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_creation
+ADD COLUMN period_name VARCHAR(255) NOT NULL,
+ADD COLUMN is_course BOOLEAN DEFAULT FALSE,
+ADD COLUMN is_break BOOLEAN DEFAULT FALSE;

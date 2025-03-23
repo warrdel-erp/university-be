@@ -45,10 +45,10 @@ export const updateTimeTable = async (req,res) => {
     const info = req.body;    
     try {
         for (const item of info) {
-            const { timeTableCreationId, courseId } = item;
+            const { timeTableCreationId } = item;
 
-            if (!(timeTableCreationId && courseId)) {
-                return res.status(400).send("Both timeTableCreationId and courseId are required for each object.");
+            if (!(timeTableCreationId )) {
+                return res.status(400).send(" timeTableCreationId is required for each object.");
             }
         }
         const result = await timeTableServices.updateTimeTable(req.body);
