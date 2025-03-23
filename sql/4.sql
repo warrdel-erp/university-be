@@ -403,3 +403,18 @@ ALTER TABLE time_table_creation
 ADD COLUMN period_name VARCHAR(255) NOT NULL,
 ADD COLUMN is_course BOOLEAN DEFAULT FALSE,
 ADD COLUMN is_break BOOLEAN DEFAULT FALSE;
+
+CREATE TABLE building (
+    building_id INT AUTO_INCREMENT PRIMARY KEY,
+    campus_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

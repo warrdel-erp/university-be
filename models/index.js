@@ -75,6 +75,7 @@ import acedmicYearModel from './acedmicYearModel.js';
 import sectionModel from './sectionModel.js';
 import holidayModel from './holidayModel.js';
 import electiveSubjectModel from './electiveSubjectModel.js';
+import buildingModel from './buildingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -514,6 +515,8 @@ vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle
 acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
 userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
 
+buildingModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
+campusModel.hasMany(buildingModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
 
 export {
     settingModel,
@@ -593,4 +596,5 @@ export {
     sectionModel,
     holidayModel,
     electiveSubjectModel,
+    buildingModel,
 };
