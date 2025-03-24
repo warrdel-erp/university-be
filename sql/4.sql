@@ -418,3 +418,33 @@ CREATE TABLE building (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+ALTER TABLE time_table_create
+MODIFY class_sections_id INT NULL;
+
+ALTER TABLE time_table_create
+MODIFY starting_date DATE NULL;
+
+ALTER TABLE time_table_create
+MODIFY ending_date DATE NULL;
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_create
+ADD COLUMN institute_id INT NULL;
+
+UPDATE time_table_create
+SET institute_id = 2
+WHERE institute_id IS NULL;
+
+ALTER TABLE time_table_create
+ADD CONSTRAINT fk_institute_id
+    FOREIGN KEY (institute_id)
+    REFERENCES institute(institute_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_create
+ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
+
+ALTER TABLE time_table_mapping
+ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';

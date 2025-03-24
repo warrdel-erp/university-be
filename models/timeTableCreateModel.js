@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import campusModel from "./campusModel.js";
+import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import classSectionModel from "./classSectionModel.js";
@@ -45,15 +46,14 @@ export default sequelize.define(
         },
         classSectionsId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'class_sections_id',
             references: {
                 model: classSectionModel,
                 key: 'class_sections_id'
             }
         },
-        campusId: 
-        {
+        campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'campus_id',
@@ -62,14 +62,29 @@ export default sequelize.define(
                  key: 'campus_id'
             }
         },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        timeTableType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue :'normal',
+            field:'time_table_type'
+        },
         startingDate: {
             type: DataTypes.DATE,
-            allowNull: false,
+            allowNull: true,
             field: 'starting_date'
         },
         endingDate: {
             type: DataTypes.DATE,
-            allowNull: false,
+            allowNull: true,
             field: 'ending_date'
         },
         createdAt: {

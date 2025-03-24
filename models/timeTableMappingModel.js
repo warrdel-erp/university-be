@@ -55,7 +55,7 @@ export default sequelize.define(
         },
         teacherSubjectMappingId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'teacher_subject_mapping_id',
             references: {
                 model: teacherSubjectMappingModel,
@@ -64,7 +64,7 @@ export default sequelize.define(
         },
         classRoomSectionId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'class_room_section_id',
             references: {
                 model: classRoomModel,
@@ -84,6 +84,12 @@ export default sequelize.define(
         period:{
             type: DataTypes.INTEGER,
             allowNull: false,
+        },
+        timeTableType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue :'normal',
+            field:'time_table_type'
         },
         createdAt: {
             type: DataTypes.DATE,
