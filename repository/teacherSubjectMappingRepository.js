@@ -151,7 +151,7 @@ export async function getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingI
         });
         return result;
     } catch (error) {
-        console.error(`Error in getting teacher details by teacher subject mapper id:`, error);
+        console.error(`Error in getting teacher details by teacher subject mapper id ${teacherSubjectMappingId}:`, error);
         throw error;
     };
 };

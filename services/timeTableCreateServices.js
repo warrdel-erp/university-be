@@ -46,10 +46,9 @@ export async function deleteTimeTableCreate(TimeTableCreateId){
 };
 
 export async function addtimeTableMapping(data, createdBy, updatedBy) {
-    console.log(`>>>>>>>>>>data`,data);
     
     const transaction = await sequelize.transaction();
-
+    let teacherSubjectData = ''
     try {
         
         const { timeTableNameId,timeTableCreateId,timeTableCreationId,employeeId,teacherSubjectMappingId,isSameTeacher,day, period} = data
@@ -59,10 +58,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         const periodLength = timeTableData[0].dataValues.periodLength;
 
         // Fetch teacher subject data
-        const teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
-        const employeeIdData = teacherSubjectData[0].dataValues.employeeId;
+        if(teacherSubjectMappingId){
+         teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+    }
+    const employeeIdData =  teacherSubjectData ? teacherSubjectData[0].dataValues.employeeId : employeeId;
 
-        // Fetch faculty load details
+        // Fetch faculty load details        
         const faculityLoad = await getSingleFaculityLoadDetails(employeeIdData);
         const faculityCurrentLoad = faculityLoad[0].dataValues.currentLoad || 0;
         const currentLoad = parseInt(faculityCurrentLoad) + periodLength;
@@ -85,6 +86,52 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         throw error; 
     }
 }
+
+// export async function addtimeTableMapping(data, createdBy, updatedBy) {
+//     const transaction = await sequelize.transaction();
+
+//     try {
+//         const { timeTableCreationId, teacherSubjectMappingId, employeeId, day, period } = data;
+
+//         // Fetch time table data
+//         const timeTableData = await getSingleTimeTableById(timeTableCreationId);
+//         const periodLength = timeTableData[0].dataValues.periodLength;
+
+//         // Fetch teacher subject data if teacherSubjectMappingId exists
+//         let employeeIdData = employeeId;  // Default to employeeId from data
+
+//         if (teacherSubjectMappingId) {
+//             const teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+//             if (teacherSubjectData && teacherSubjectData.length > 0) {
+//                 employeeIdData = teacherSubjectData[0].dataValues.employeeId;
+//             }
+//         }
+
+//         // Fetch faculty load details
+//         const facultyLoad = await getSingleFaculityLoadDetails(employeeIdData);
+//         const facultyCurrentLoad = facultyLoad[0].dataValues.currentLoad || 0;
+//         const currentLoad = parseInt(facultyCurrentLoad) + periodLength;
+
+//         // Update faculty load
+//         await updateFaculityLoadByEmployeeId(employeeIdData, { currentLoad }, transaction);
+
+//         // Prepare the data to be inserted with metadata
+//         data.createdBy = createdBy;
+//         data.updatedBy = updatedBy;
+
+//         // Create a new entry in the time table mapping table
+//         const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
+
+//         // Commit the transaction
+//         await transaction.commit();
+
+//         return result;
+//     } catch (error) {
+//         // Rollback the transaction if an error occurs
+//         await transaction.rollback();
+//         throw error;
+//     }
+// };
 
 
 export async function gettimeTableMappingDetail(universityId){
