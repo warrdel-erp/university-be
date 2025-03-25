@@ -127,6 +127,7 @@ export default sequelize.define(
             field: 'deleted_at'
         },
     },
+
     {
         tableName: 'time_table_mapping',
         timestamps: true,

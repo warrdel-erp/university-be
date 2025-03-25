@@ -428,6 +428,9 @@ MODIFY starting_date DATE NULL;
 ALTER TABLE time_table_create
 MODIFY ending_date DATE NULL;
 
+ALTER TABLE time_table_create
+ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
+
 -- Add the course_id column with the foreign key reference
 
 ALTER TABLE time_table_create
@@ -442,9 +445,6 @@ ADD CONSTRAINT fk_institute_id
     FOREIGN KEY (institute_id)
     REFERENCES institute(institute_id)
 ON DELETE CASCADE;
-
-ALTER TABLE time_table_create
-ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
 
 ALTER TABLE time_table_mapping
 ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
