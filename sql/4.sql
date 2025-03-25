@@ -448,3 +448,18 @@ ON DELETE CASCADE;
 
 ALTER TABLE time_table_mapping
 ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_mapping
+ADD COLUMN elective_subject_id INT NULL;
+
+UPDATE time_table_mapping
+SET elective_subject_id = 2
+WHERE elective_subject_id IS NULL;
+
+ALTER TABLE time_table_mapping
+ADD CONSTRAINT fk_elective_subject_id_new
+    FOREIGN KEY (elective_subject_id)
+    REFERENCES elective_subject(elective_subject_id)
+ON DELETE CASCADE;

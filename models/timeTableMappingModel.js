@@ -7,6 +7,7 @@ import timeTableCreationModel from "./timeTableCreationModel.js";
 import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
 import employeeModel from "./employeeModel.js";
 import classRoomModel from "./classRoomModel.js";
+import electiveSubjectModel from "./electiveSubjectModel.js";
 
 export default sequelize.define(
     'time_table_mapping',
@@ -51,6 +52,15 @@ export default sequelize.define(
             references: {
                 model: employeeModel,
                 key: 'employee_id'
+            }
+        },
+        electiveSubjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'elective_subject_id',
+            references: {
+                model: electiveSubjectModel,
+                key: 'elective_subject_id'
             }
         },
         teacherSubjectMappingId: {
