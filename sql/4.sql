@@ -464,5 +464,17 @@ ADD CONSTRAINT fk_elective_subject_id_new
     REFERENCES elective_subject(elective_subject_id)
 ON DELETE CASCADE;
 
-
 ALTER TABLE time_table_mapping MODIFY COLUMN teacher_subject_mapping_id INT NULL;
+
+ALTER TABLE time_table_mapping
+ADD COLUMN subject_id INT NULL;
+
+UPDATE time_table_mapping
+SET subject_id = 2
+WHERE subject_id IS NULL;
+
+ALTER TABLE time_table_mapping
+ADD CONSTRAINT fk_subject_id
+    FOREIGN KEY (subject_id)
+    REFERENCES subject(subject_id)
+ON DELETE CASCADE;
