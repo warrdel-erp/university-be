@@ -1,44 +1,51 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import student from "./studentModel.js";
-import electiveSubjectModel from "./electiveSubjectModel.js";
 import users from "./userModel.js";
+import campus from "./campusModel.js";
 
 export default sequelize.define(
-    'student_elective_subject',
+    'building',
     {
-        studentElectiveSubjectId: {
+        buildingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'student_elective_subject_id'
+            field: 'building_id'
         },
-        studentId: {
+        campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'student_id',
+            field: 'campus_id',
             references: {
-                model: student,
-                key: 'student_id'
+                model: campus,
+                key: 'campus_id'
             }
         },
-        electiveSubjectId: {
-            type: DataTypes.INTEGER,
+        name: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'elective_subject_id',
-            references: {
-                model: electiveSubjectModel,
-                key: 'elective_subject_id'
-            }
+        },
+        description: {
+            type: DataTypes.STRING,
+            allowNull:true
         },
         createdBy: {
-             type: DataTypes.INTEGER,
-             allowNull: false,
-             field: 'created_by',
-                references: {
-                    model: users,
-                    key: 'user_id'
-                }
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        updatedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'updated_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -56,10 +63,10 @@ export default sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
             field: 'deleted_at'
-        },
+        }
     },
     {
-        tableName: 'student_elective_subject',
+        tableName: 'building',
         timestamps: true,
         paranoid: true
     }

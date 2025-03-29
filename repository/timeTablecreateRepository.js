@@ -155,7 +155,7 @@ export async function getTimeTableMappingDetail(universityId) {
                         {
                             model:model.employeeModel,
                             as: 'teacherEmployeeData',
-                            attributes: ["employeeName"]
+                            attributes: ["employeeName","employeeCode","pickColor"]
                         },
                         {
                             model:model.classSubjectMapperModel,
@@ -165,7 +165,7 @@ export async function getTimeTableMappingDetail(universityId) {
                                 {
                                     model:model.subjectModel,
                                     as: 'subjects',
-                                    attributes: ["subjectName"],
+                                    attributes: ["subjectName","subjectCode"],
                                 }
                             ]
                         }
@@ -213,6 +213,11 @@ export async function getTimeTableMappingDetail(universityId) {
                 {
                     model:model.classRoomModel,
                     as: 'classRoom',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                },
+                {
+                    model:model.electiveSubjectModel,
+                    as: 'timeTableElective',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
                 }
             ]

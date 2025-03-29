@@ -343,3 +343,138 @@ CREATE TABLE time_table_mapping (
   FOREIGN KEY (created_by) REFERENCES users(user_id),
   FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE elective_subject (
+    elective_subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    course_id INT DEFAULT NULL,
+    specialization_id INT DEFAULT NULL,
+    elective_subject_name VARCHAR(255) NOT NULL,
+    elective_subject_code VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (specialization_id) REFERENCES specialization(specialization_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+ALTER TABLE student_elective_subject
+DROP FOREIGN KEY student_elective_subject_ibfk_2;
+
+ALTER TABLE student_elective_subject
+DROP COLUMN subject_id;
+
+-- Add the elective_subject_id column with the foreign key reference
+
+ALTER TABLE student_elective_subject
+ADD COLUMN elective_subject_id INT NULL;
+
+UPDATE student_elective_subject
+SET elective_subject_id = 1
+WHERE elective_subject_id IS NULL;
+
+ALTER TABLE student_elective_subject
+ADD CONSTRAINT fk_elective_subject_id
+    FOREIGN KEY (elective_subject_id)
+    REFERENCES elective_subject(elective_subject_id)
+ON DELETE CASCADE;
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_creation
+ADD COLUMN course_id INT NULL;
+
+UPDATE time_table_creation
+SET course_id = 2
+WHERE course_id IS NULL;
+
+ALTER TABLE time_table_creation
+ADD CONSTRAINT fk_course_id
+    FOREIGN KEY (course_id)
+    REFERENCES course(course_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_creation
+ADD COLUMN period_name VARCHAR(255) NOT NULL,
+ADD COLUMN is_course BOOLEAN DEFAULT FALSE,
+ADD COLUMN is_break BOOLEAN DEFAULT FALSE;
+
+CREATE TABLE building (
+    building_id INT AUTO_INCREMENT PRIMARY KEY,
+    campus_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (campus_id) REFERENCES campus(campus_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+ALTER TABLE time_table_create
+MODIFY class_sections_id INT NULL;
+
+ALTER TABLE time_table_create
+MODIFY starting_date DATE NULL;
+
+ALTER TABLE time_table_create
+MODIFY ending_date DATE NULL;
+
+ALTER TABLE time_table_create
+ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_create
+ADD COLUMN institute_id INT NULL;
+
+UPDATE time_table_create
+SET institute_id = 2
+WHERE institute_id IS NULL;
+
+ALTER TABLE time_table_create
+ADD CONSTRAINT fk_institute_id
+    FOREIGN KEY (institute_id)
+    REFERENCES institute(institute_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_mapping
+ADD COLUMN time_table_type VARCHAR(255) NULL DEFAULT 'normal';
+
+-- Add the course_id column with the foreign key reference
+
+ALTER TABLE time_table_mapping
+ADD COLUMN elective_subject_id INT NULL;
+
+UPDATE time_table_mapping
+SET elective_subject_id = 2
+WHERE elective_subject_id IS NULL;
+
+ALTER TABLE time_table_mapping
+ADD CONSTRAINT fk_elective_subject_id_new
+    FOREIGN KEY (elective_subject_id)
+    REFERENCES elective_subject(elective_subject_id)
+ON DELETE CASCADE;
+
+ALTER TABLE time_table_mapping MODIFY COLUMN teacher_subject_mapping_id INT NULL;
+
+ALTER TABLE time_table_mapping
+ADD COLUMN subject_id INT NULL;
+
+UPDATE time_table_mapping
+SET subject_id = 2
+WHERE subject_id IS NULL;
+
+ALTER TABLE time_table_mapping
+ADD CONSTRAINT fk_subject_id
+    FOREIGN KEY (subject_id)
+    REFERENCES subject(subject_id)
+ON DELETE CASCADE;

@@ -115,9 +115,10 @@ export async function addTimeTable(data, createdBy, updatedBy) {
             for (let i = 0; i < maxPeriods; i++) {
                 const startPeriod = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
                 const endPeriod = new Date(currentTime.getTime() + periodLengthMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                const periodName = `Period${i + 1}`;
 
                 timeSlots.push({
-                    // courseId: data.courseId,
+                    courseId: data.courseId,
                     timeTableNameId: timeTableNameId,
                     ApplicablePeriod: data.ApplicablePeriod,
                     maximumPeriod: data.maximumPeriod,
@@ -129,7 +130,9 @@ export async function addTimeTable(data, createdBy, updatedBy) {
                     createdBy: data.createdBy,
                     updatedBy: data.updatedBy,
                     startTime: startPeriod,
-                    endTime: endPeriod
+                    endTime: endPeriod,
+                    periodName: periodName,
+                    isCourse : data.isCourse
                 });
 
                 currentTime = new Date(currentTime.getTime() + periodLengthMs + periodGapMs);
@@ -137,7 +140,9 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         } else if (data.type === 'Manual') {
             for (let i = 0; i < maxPeriods; i++) {
                 const endPeriod = new Date(startingTime.getTime() + data.periodLength * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                const periodName = `Period${i + 1}`;
                 timeSlots.push({
+                    courseId: data.courseId,
                     timeTableNameId: timeTableNameId,
                     ApplicablePeriod: data.ApplicablePeriod,
                     maximumPeriod: data.maximumPeriod,
@@ -150,6 +155,8 @@ export async function addTimeTable(data, createdBy, updatedBy) {
                     updatedBy: data.updatedBy,
                     startTime: '',
                     endTime: '',
+                    periodName: periodName,
+                    isCourse : data.isCourse
                 });
                 // Move the starting time for the next slot
                 startingTime = new Date(startingTime.getTime() + data.periodLength * 60000);

@@ -74,6 +74,8 @@ import assignVehicleModel from './assignVehicleModel.js';
 import acedmicYearModel from './acedmicYearModel.js';
 import sectionModel from './sectionModel.js';
 import holidayModel from './holidayModel.js';
+import electiveSubjectModel from './electiveSubjectModel.js';
+import buildingModel from './buildingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -369,6 +371,9 @@ timeTableCreateModel.hasMany(timeTableMappingModel, { foreignKey: 'time_table_cr
 timeTableMappingModel.belongsTo(classRoomModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
 classRoomModel.hasMany(timeTableMappingModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
 
+timeTableMappingModel.belongsTo(electiveSubjectModel, { foreignKey: 'elective_subject_id', as: 'timeTableElective' });
+electiveSubjectModel.hasMany(timeTableMappingModel, { foreignKey: 'elective_subject_id', as: 'timeTableElective' });
+
 // library member
 libraryMemberModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
 userModel.hasMany(libraryMemberModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
@@ -513,6 +518,8 @@ vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle
 acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
 userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
 
+buildingModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
+campusModel.hasMany(buildingModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
 
 export {
     settingModel,
@@ -591,4 +598,6 @@ export {
     acedmicYearModel,
     sectionModel,
     holidayModel,
+    electiveSubjectModel,
+    buildingModel,
 };

@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import timeTableNameModel from "./timeTableNameModel.js";
+import courseModel from "./courseModel.js";
 
 export default sequelize.define(
   'time_table_creation',
@@ -26,10 +27,32 @@ export default sequelize.define(
         allowNull: false,
         field:'maximum_period'
     },
-    // name :{
-    //     type: DataTypes.STRING,
-    //     allowNull: false,
-    // },
+    courseId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
+    },
+    periodName :{
+        type: DataTypes.STRING,
+        allowNull: false,
+        field:'period_name'
+    },
+    isCourse :{
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+        field:'is_course'
+    },
+    isBreak :{
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+        field:'is_break'
+    },
     startingTime:{
         type: DataTypes.STRING,
         allowNull: false,

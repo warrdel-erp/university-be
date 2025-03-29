@@ -7,6 +7,8 @@ import timeTableCreationModel from "./timeTableCreationModel.js";
 import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
 import employeeModel from "./employeeModel.js";
 import classRoomModel from "./classRoomModel.js";
+import electiveSubjectModel from "./electiveSubjectModel.js";
+import subjectModel from "./subjectModel.js";
 
 export default sequelize.define(
     'time_table_mapping',
@@ -53,9 +55,27 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
+        electiveSubjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'elective_subject_id',
+            references: {
+                model: electiveSubjectModel,
+                key: 'elective_subject_id'
+            }
+        },
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_id',
+            references: {
+                model: subjectModel,
+                key: 'subject_id'
+            }
+        },
         teacherSubjectMappingId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'teacher_subject_mapping_id',
             references: {
                 model: teacherSubjectMappingModel,
@@ -64,7 +84,7 @@ export default sequelize.define(
         },
         classRoomSectionId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'class_room_section_id',
             references: {
                 model: classRoomModel,
@@ -84,6 +104,12 @@ export default sequelize.define(
         period:{
             type: DataTypes.INTEGER,
             allowNull: false,
+        },
+        timeTableType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue :'normal',
+            field:'time_table_type'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -121,6 +147,7 @@ export default sequelize.define(
             field: 'deleted_at'
         },
     },
+
     {
         tableName: 'time_table_mapping',
         timestamps: true,

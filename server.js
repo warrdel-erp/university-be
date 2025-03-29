@@ -42,6 +42,8 @@ import assignVehicleRoute from './router/assignVehicleRoute.js';
 import acedmicYear from './router/acedmicYearRoute.js';
 import section from './router/sectionRoute.js';
 import holiday from './router/holidayRoute.js';
+import electiveSubject from './router/electiveSubjectRoute.js';
+import building from './router/buildingRoute.js'
 
 // middleware
 app.use(fileUpload());
@@ -86,6 +88,8 @@ app.use("/assignVehicle", assignVehicleRoute);
 app.use("/acedmicYear",acedmicYear);
 app.use("/section",section);
 app.use("/holiday",holiday);
+app.use("/electiveSubject",electiveSubject);
+app.use("/building",building)
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)
