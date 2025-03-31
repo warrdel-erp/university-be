@@ -478,3 +478,18 @@ ADD CONSTRAINT fk_subject_id
     FOREIGN KEY (subject_id)
     REFERENCES subject(subject_id)
 ON DELETE CASCADE;
+
+CREATE TABLE floor (
+    floor_id INT AUTO_INCREMENT PRIMARY KEY,
+    building_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME,
+    FOREIGN KEY (building_id) REFERENCES building(building_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
