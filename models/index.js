@@ -525,6 +525,9 @@ campusModel.hasMany(buildingModel, { foreignKey: 'campus_id', as: 'campusbuildin
 floorModel.belongsTo(buildingModel, { foreignKey: 'building_id', as: 'floorBuilding' });
 buildingModel.hasMany(floorModel, { foreignKey: 'building_id', as: 'floorBuilding' });
 
+classRoomModel.belongsTo(floorModel, { foreignKey: 'floor_id', as: 'roomFloor' });
+floorModel.hasMany(classRoomModel, { foreignKey: 'floor_id', as: 'roomFloor' });
+
 export {
     settingModel,
     universityModel,

@@ -1,12 +1,12 @@
 import * as buildingCreation  from  "../services/buildingServices.js";
 
 export async function addbuilding(req, res) {
-    const {name} = req.body
+    const {name,campusId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(name)){
-           return res.status(400).send('Fee Group Name is required')
+        if(!(name && campusId)){
+           return res.status(400).send('building Name and campusId is required')
         }
         const building = await buildingCreation.addbuilding(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", building });

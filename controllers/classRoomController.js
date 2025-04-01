@@ -1,12 +1,12 @@
 import * as ClassRoomCreation  from  "../services/classRoomServices.js";
 
 export async function addClassRoom(req, res) {
-    const {roomNumber,capacity} = req.body
+    const {roomNumber,capacity,floorId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(roomNumber && capacity)){
-           return res.status(400).send('room Number and capacity is required')
+        if(!(roomNumber && capacity  && floorId)){
+           return res.status(400).send('room Number,floorId and capacity is required')
         }
         const classRoom = await ClassRoomCreation.addClassRoom(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", classRoom });

@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import floor from "./floorModel.js";
 
 export default sequelize.define(
     'class_room_section',
@@ -10,6 +11,15 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'class_room_section_id'
+        },
+        floorId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'floor_id',
+            references: {
+                model: floor,
+                key: 'floor_id'
+            }
         },
         roomNumber: {
             type: DataTypes.STRING,

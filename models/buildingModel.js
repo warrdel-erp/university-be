@@ -29,6 +29,16 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull:true
         },
+        openingTime:{
+            type: DataTypes.TIME,
+            allowNull:true,
+            field:'opening_time'
+        },
+        closingTime:{
+            type: DataTypes.TIME,
+            allowNull:true,
+            field:'closing_time'
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
