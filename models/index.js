@@ -77,6 +77,10 @@ import holidayModel from './holidayModel.js';
 import electiveSubjectModel from './electiveSubjectModel.js';
 import buildingModel from './buildingModel.js';
 import floorModel from './floorModel.js';
+import headModel from './headModel.js';
+import accountModel from './accountModel.js';
+import subAccountModel from './subAccountModel.js';
+import departmentModel from './departmentModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -528,6 +532,18 @@ buildingModel.hasMany(floorModel, { foreignKey: 'building_id', as: 'floorBuildin
 classRoomModel.belongsTo(floorModel, { foreignKey: 'floor_id', as: 'roomFloor' });
 floorModel.hasMany(classRoomModel, { foreignKey: 'floor_id', as: 'roomFloor' });
 
+headModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'headCampus' });
+campusModel.hasMany(headModel, { foreignKey: 'campus_id', as: 'headCampus' });
+
+headModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'headInstitute' });
+instituteModel.hasMany(headModel, { foreignKey: 'institute_id', as: 'headInstitute' });
+
+subAccountModel.belongsTo(accountModel, { foreignKey: 'account_id', as: 'accountDetail' });
+accountModel.hasMany(subAccountModel, { foreignKey: 'account_id', as: 'accountDetail' });
+
+departmentModel.belongsTo(subAccountModel, { foreignKey: 'sub_account_id', as: 'subAccountDetail' });
+subAccountModel.hasMany(departmentModel, { foreignKey: 'sub_account_id', as: 'subAccountDetail' });
+
 export {
     settingModel,
     universityModel,
@@ -608,4 +624,8 @@ export {
     electiveSubjectModel,
     buildingModel,
     floorModel,
+    headModel,
+    accountModel,
+    subAccountModel,
+    departmentModel,
 };

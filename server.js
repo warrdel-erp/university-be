@@ -45,6 +45,9 @@ import holiday from './router/holidayRoute.js';
 import electiveSubject from './router/electiveSubjectRoute.js';
 import building from './router/buildingRoute.js';
 import floor from './router/floorRoute.js';
+import head from './router/headRoute.js';
+import subAccount from './router/subAccountRoute.js';
+import department from './router/departmentRoute.js'
 
 // middleware
 app.use(fileUpload());
@@ -92,6 +95,9 @@ app.use("/holiday",holiday);
 app.use("/electiveSubject",electiveSubject);
 app.use("/building",building);
 app.use("/floor",floor);
+app.use("/head",head);
+app.use("/subAccount",subAccount);
+app.use("/department",department);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)
