@@ -47,7 +47,8 @@ import building from './router/buildingRoute.js';
 import floor from './router/floorRoute.js';
 import head from './router/headRoute.js';
 import subAccount from './router/subAccountRoute.js';
-import department from './router/departmentRoute.js'
+import department from './router/departmentRoute.js';
+import staff from './router/staffRoute.js';
 
 // middleware
 app.use(fileUpload());
@@ -98,6 +99,7 @@ app.use("/floor",floor);
 app.use("/head",head);
 app.use("/subAccount",subAccount);
 app.use("/department",department);
+app.use("/staff",staff)
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

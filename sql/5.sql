@@ -74,3 +74,20 @@ CREATE TABLE department (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE staff (
+    staff_id INT AUTO_INCREMENT PRIMARY KEY,
+    department_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    university_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    FOREIGN KEY (department_id) REFERENCES department(department_id),
+    FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

@@ -81,6 +81,7 @@ import headModel from './headModel.js';
 import accountModel from './accountModel.js';
 import subAccountModel from './subAccountModel.js';
 import departmentModel from './departmentModel.js';
+import staffModel from './staffModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -544,6 +545,13 @@ accountModel.hasMany(subAccountModel, { foreignKey: 'account_id', as: 'accountDe
 departmentModel.belongsTo(subAccountModel, { foreignKey: 'sub_account_id', as: 'subAccountDetail' });
 subAccountModel.hasMany(departmentModel, { foreignKey: 'sub_account_id', as: 'subAccountDetail' });
 
+staffModel.belongsTo(departmentModel, { foreignKey: 'department_id', as: 'staffDepartment' });
+departmentModel.hasMany(staffModel, { foreignKey: 'department_id', as: 'staffDepartment' });
+
+staffModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
+employeeModel.hasMany(staffModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
+
+
 export {
     settingModel,
     universityModel,
@@ -628,4 +636,5 @@ export {
     accountModel,
     subAccountModel,
     departmentModel,
+    staffModel,
 };
