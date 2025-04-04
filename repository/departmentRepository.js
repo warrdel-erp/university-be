@@ -1,9 +1,6 @@
 import * as model from '../models/index.js'
 
 export async function addDepartment(departmentData) {
-    console.log(`>>>>>>departmentData>>>>>>.`,departmentData);
-    
-    return
     try {
         const result = await model.departmentModel.create(departmentData);
         return result;
