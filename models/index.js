@@ -81,7 +81,8 @@ import headModel from './headModel.js';
 import accountModel from './accountModel.js';
 import subAccountModel from './subAccountModel.js';
 import departmentModel from './departmentModel.js';
-import staffModel from './staffModel.js'
+import staffModel from './staffModel.js';
+import departmentStructureModel from './departmentStructureModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -551,6 +552,29 @@ departmentModel.hasMany(staffModel, { foreignKey: 'department_id', as: 'staffDep
 staffModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
 employeeModel.hasMany(staffModel, { foreignKey: 'employee_id', as: 'staffEmployee' });
 
+departmentStructureModel.belongsTo(accountModel, { foreignKey: 'account_id', as: 'mainAccount' });
+accountModel.hasMany(departmentStructureModel, { foreignKey: 'account_id', as: 'mainAccount' });
+
+departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
+subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
+
+// subAccountModel.belongsTo(departmentStructureModel, { foreignKey: 'parentAccountId', sourceKey: 'sub_account_id' });
+// departmentStructureModel.hasMany(subAccountModel, { foreignKey: 'parentAccountId', targetKey: 'sub_account_id', as: "parentAccount" });
+
+// departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'parent_account_id', sourceKey: 'sub_account_id' ,as: "parentAccount" });
+// subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'parent_account_id', targetKey: 'sub_account_id'});
+
+departmentStructureModel.belongsTo(subAccountModel, { 
+    foreignKey: 'parentAccountId', 
+    sourceKey: 'sub_account_id', // Use sub_account_id for the target key
+    as: 'departmentStructures' 
+  });
+  
+  subAccountModel.hasMany(departmentStructureModel, { 
+    foreignKey: 'parentAccountId', 
+    targetKey: 'sub_account_id',
+    as: 'parentAccounts' // Naming the relationship as 'subAccountStructures' for clarity
+  });
 
 export {
     settingModel,
@@ -637,4 +661,5 @@ export {
     subAccountModel,
     departmentModel,
     staffModel,
+    departmentStructureModel,
 };

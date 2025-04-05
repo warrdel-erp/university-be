@@ -91,3 +91,36 @@ CREATE TABLE staff (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+INSERT INTO sub_account (
+    account_id,
+    university_id,
+    department_name,
+    alternate_name,
+    department_code,
+    description,
+    created_by,
+    updated_by
+) 
+VALUES
+    (1, 1, 'Admin', 'Admin', '1', 'Admin for manage department', 1, 1),
+    (2, 1, 'Academics', 'Academics', '2', 'Academics for manage department', 2, 2);
+
+CREATE TABLE department_structure (
+    department_structure_id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT NOT NULL,
+    sub_account_id INT NOT NULL,
+    parent_account_id INT NOT NULL,
+    university_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES account(account_id),
+    FOREIGN KEY (sub_account_id) REFERENCES sub_account(sub_account_id),
+    FOREIGN KEY (parent_account_id) REFERENCES sub_account(sub_account_id),
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
