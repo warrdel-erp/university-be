@@ -1,61 +1,72 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import campus from "./campusModel.js";
+import account from "./accountModel.js";
+import university from "./universityModel.js";
 
 export default sequelize.define(
-    'building',
+    'sub_account',
     {
-        buildingId: {
+        subAccountId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'building_id'
+            field: 'sub_account_id'
         },
-        campusId: {
+        accountId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'campus_id',
-            references: {
-                model: campus,
-                key: 'campus_id'
-            }
+            field: 'account_id',
+                references: {
+                    model: account,
+                    key: 'account_id'
+                }
         },
-        name: {
-            type: DataTypes.STRING,
+        universityId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
+            field: 'university_id',
+                references: {
+                    model: university,
+                    key: 'university_id'
+                }
+        },
+        departmentName: {
+            type: DataTypes.STRING,
+            field: 'department_name',
+            allowNull: false,
+        },
+        alternateName: {
+            type: DataTypes.STRING,
+            field: 'alternate_name',
+            allowNull: true,
+        },
+        departmentCode: {
+            type: DataTypes.STRING,
+            field: 'department_code',
+            allowNull: true,
         },
         description: {
             type: DataTypes.STRING,
-            allowNull:true
-        },
-        openingTime:{
-            type: DataTypes.TIME,
-            allowNull:true,
-            field:'opening_time'
-        },
-        closingTime:{
-            type: DataTypes.TIME,
-            allowNull:true,
-            field:'closing_time'
+            allowNull: true,
         },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'created_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
         },
         updatedBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'updated_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -76,7 +87,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'building',
+        tableName: 'sub_account',
         timestamps: true,
         paranoid: true
     }

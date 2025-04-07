@@ -1,53 +1,63 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import floor from "./floorModel.js";
+import department from "./departmentModel.js";
+import university from "./universityModel.js";
+import employee from "./employeeModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'staff',
     {
-        classRoomSectionId: {
+        staffId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'staff_id'
         },
-        floorId: {
+        departmentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'floor_id',
-            references: {
-                model: floor,
-                key: 'floor_id'
-            }
+            field: 'department_id',
+                references: {
+                    model: department,
+                    key: 'department_id'
+                }
         },
-        roomNumber: {
-            type: DataTypes.STRING,
-            field: 'room_number',
-            allowNull: false,
-        },
-        capacity: {
+        employeeId: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull: false
+            allowNull: false,
+            field: 'employee_id',
+                references: {
+                    model: employee,
+                    key: 'employee_id'
+                }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+                references: {
+                    model: university,
+                    key: 'university_id'
+                }
         },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'created_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
         },
         updatedBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'updated_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
+                references: {
+                    model: users,
+                    key: 'user_id'
+                }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -68,7 +78,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'staff',
         timestamps: true,
         paranoid: true
     }

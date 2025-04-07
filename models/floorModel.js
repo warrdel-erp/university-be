@@ -1,35 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import floor from "./floorModel.js";
+import building from "./buildingModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'floor',
     {
-        classRoomSectionId: {
+        floorId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'floor_id'
         },
-        floorId: {
+        buildingId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'floor_id',
+            field: 'building_id',
             references: {
-                model: floor,
-                key: 'floor_id'
+                model: building,
+                key: 'building_id'
             }
         },
-        roomNumber: {
+        name: {
             type: DataTypes.STRING,
-            field: 'room_number',
             allowNull: false,
         },
-        capacity: {
-            type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull: false
+        description: {
+            type: DataTypes.STRING,
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -68,7 +66,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'floor',
         timestamps: true,
         paranoid: true
     }

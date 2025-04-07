@@ -43,7 +43,13 @@ import acedmicYear from './router/acedmicYearRoute.js';
 import section from './router/sectionRoute.js';
 import holiday from './router/holidayRoute.js';
 import electiveSubject from './router/electiveSubjectRoute.js';
-import building from './router/buildingRoute.js'
+import building from './router/buildingRoute.js';
+import floor from './router/floorRoute.js';
+import head from './router/headRoute.js';
+import subAccount from './router/subAccountRoute.js';
+import department from './router/departmentRoute.js';
+import staff from './router/staffRoute.js';
+import departmentStructure from './router/departmentStructureRoute.js';
 
 // middleware
 app.use(fileUpload());
@@ -89,7 +95,13 @@ app.use("/acedmicYear",acedmicYear);
 app.use("/section",section);
 app.use("/holiday",holiday);
 app.use("/electiveSubject",electiveSubject);
-app.use("/building",building)
+app.use("/building",building);
+app.use("/floor",floor);
+app.use("/head",head);
+app.use("/subAccount",subAccount);
+app.use("/department",department);
+app.use("/staff",staff);
+app.use ("/departmentStructure",departmentStructure);
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)
