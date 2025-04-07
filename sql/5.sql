@@ -124,3 +124,11 @@ CREATE TABLE department_structure (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+INSERT INTO department_structure (
+    account_id, sub_account_id, parent_account_id, university_id, 
+    created_by, updated_by, created_at, updated_at, deleted_at
+) 
+VALUES 
+    (1, 1, 1, 1, 1, 1, NOW(), NOW(), NULL),
+    (2, 2, 2, 1, 1, 1, NOW(), NOW(), NULL);
