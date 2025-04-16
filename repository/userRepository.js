@@ -95,10 +95,18 @@ export async function getAdminRegisterEmployee(universityId) {
 				{
 					model:model.employeeModel,
 					as:'employeeDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+                    include:[
+                        {
+                            model:model.roleModel,
+                            as:'employeeRole',
+                            attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+                        }
+                    ]
 				}
 			]
         });
+// console.log(`>>>>>>>>>>>>>user`,JSON.stringify(user));
 
         return user;
     } catch (error) {
@@ -106,6 +114,7 @@ export async function getAdminRegisterEmployee(universityId) {
         throw error;
     }
 };
+// getAdminRegisterEmployee(1)
 
 export async function changePassword(email,data) {
     try {

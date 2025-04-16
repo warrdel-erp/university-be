@@ -147,6 +147,7 @@ export async function getAdminRegisterStudentAndEmployee(universityId) {
     ]);
 
     return { students, employees };
+    
   } catch (error) {
     console.error('Error fetching students and employees:', error);
     throw new Error('Failed to fetch students and employees');

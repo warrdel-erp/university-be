@@ -287,6 +287,9 @@ teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 employeeModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
 campusModel.hasMany(employeeModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
 
+employeeModel.belongsTo(roleModel, { foreignKey: 'role_id', as: 'employeeRole' });
+roleModel.hasMany(employeeModel, { foreignKey: 'role_id', as: 'employeeRole' });
+
 employeeModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
 instituteModel.hasMany(employeeModel, { foreignKey: 'institute_id', as: 'employeeInstitute' });
 
