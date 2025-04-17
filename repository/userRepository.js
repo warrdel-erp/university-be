@@ -76,45 +76,103 @@ export async function getAdminRegisterStudent(universityId) {
     }
 }
 
-export async function getAdminRegisterEmployee(universityId) {
-    try {
-        const user = await model.userStudentEmployeeModel.findAll({
-			where:{
-				employee_id: {
-                    [Op.ne]: null
-                }
-			},
-            attributes: ["userStudentEmployeeId", "employeeId", "userId"] ,
-			include: [
-				{
-					model:model.userModel,
-					as:'userDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
-                    where :{universityId:universityId}
-				},
-				{
-					model:model.employeeModel,
-					as:'employeeDetails',
-					attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
-                    include:[
-                        {
-                            model:model.roleModel,
-                            as:'employeeRole',
-                            attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
-                        }
-                    ]
-				}
-			]
-        });
+// export async function getAdminRegisterEmployee(universityId) {
+//     try {
+//         const user = await model.userStudentEmployeeModel.findAll({
+// 			where:{
+// 				employee_id: {
+//                     [Op.ne]: null
+//                 }
+// 			},
+//             attributes: ["userStudentEmployeeId", "employeeId", "userId"] ,
+// 			include: [
+// 				{
+// 					model:model.userModel,
+// 					as:'userDetails',
+// 					// attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+//                     attributes:  ["userId"],
+//                     where :{universityId:universityId}
+// 				},
+// 				{
+// 					model:model.employeeModel,
+// 					as:'employeeDetails',
+// 					// attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
+//                     attributes :['employee_id'],
+//                     include:[
+//                         {
+//                             model:model.roleModel,
+//                             as:'employeeRole',
+//                             attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+//                         },
+//                         // {
+//                         //     model:model.permissionModel,
+//                         //     as: 'userPermission',
+//                         //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         // },
+//                     ]
+// 				}
+// 			]
+//         });
 // console.log(`>>>>>>>>>>>>>user`,JSON.stringify(user));
 
-        return user;
+//         return user;
+//     } catch (error) {
+//         console.error('Error fetching adimn Register employee details:', error);
+//         throw error;
+//     }
+// };
+// getAdminRegisterEmployee(1)
+
+export async function getAdminRegisterEmployee(universityId) {
+    try {
+        const users = await model.userStudentEmployeeModel.findAll({
+            where: {
+                employee_id: {
+                    [Op.ne]: null
+                }
+            },
+            attributes: ["userStudentEmployeeId", "employeeId", "userId"],
+            include: [
+                {
+                    model: model.userModel,
+                    as: 'userDetails',
+                    attributes: ["userId"],
+                    where: { universityId }
+                },
+                {
+                    model: model.employeeModel,
+                    as: 'employeeDetails',
+                    attributes: ['employee_id'],
+                    include: [
+                        {
+                            model: model.roleModel,
+                            as: 'employeeRole',
+                            attributes: ['roleId', 'role']
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const simplified = users.map(user => ({
+            userStudentEmployeeId: user.userStudentEmployeeId,
+            userId: user.userId,
+            employeeId: user.employeeId,
+            roleId: user?.employeeDetails?.employeeRole?.roleId,
+            role: user?.employeeDetails?.employeeRole?.role
+        }));
+
+        console.log(`>>>> simplified response >>>>`, simplified);
+
+        return simplified;
     } catch (error) {
-        console.error('Error fetching adimn Register employee details:', error);
+        console.error('Error fetching admin register employee details:', error);
         throw error;
     }
-};
+}
+
 // getAdminRegisterEmployee(1)
+
 
 export async function changePassword(email,data) {
     try {
