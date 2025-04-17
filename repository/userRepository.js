@@ -46,6 +46,7 @@ export async function getAdminRegisterStudent(universityId) {
 				{
 					model:model.studentModel,
 					as:'studentDetails',
+                    required: true,
 					attributes:["studentId",'scholarNumber','enrollNumber','firstName'],
                     include:[{
                         model:model.courseModel,
@@ -136,12 +137,14 @@ export async function getAdminRegisterEmployee(universityId) {
                 {
                     model: model.userModel,
                     as: 'userDetails',
-                    attributes: ["userId"],
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    // attributes: ["userId"],
                     where: { universityId }
                 },
                 {
                     model: model.employeeModel,
                     as: 'employeeDetails',
+                    required: true,
                     attributes: ['employee_id'],
                     include: [
                         {
@@ -157,12 +160,18 @@ export async function getAdminRegisterEmployee(universityId) {
         const simplified = users.map(user => ({
             userStudentEmployeeId: user.userStudentEmployeeId,
             userId: user.userId,
+            // userName :user.userName,
+            // password : user.password,
+            // dummyPassword:user.dummyPassword,
+            // email:user.email,
+            // role:user.role,
+            userData : user,
             employeeId: user.employeeId,
             roleId: user?.employeeDetails?.employeeRole?.roleId,
             role: user?.employeeDetails?.employeeRole?.role
         }));
 
-        console.log(`>>>> simplified response >>>>`, simplified);
+        console.log(`>>>> simplified response >>>>`, JSON.stringify(simplified));
 
         return simplified;
     } catch (error) {
