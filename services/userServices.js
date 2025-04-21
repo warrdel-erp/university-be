@@ -5,6 +5,7 @@ import { getStudentBySectionId, getCourseByCourseId,getEmployeeByemployeeId } fr
 var salt = bcrypt.genSaltSync(10);
 import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
+import { getSingleRoleDetails } from "../repository/roleRepository.js";
 
 //register
 
@@ -85,7 +86,7 @@ export async function adminRegisterStudentAndEmployee(info) {
       const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
       const data = { userIds, roleId, permissionId };
       await dataSaveUerRolePermission(userIds,roleId,permissionId,transaction)
-    } else if (role === 'Employee') {
+    } else if (role != 'Student') {
       results = await registerRepository.adminRegisterStudentAndEmployee(employeeData, transaction);
       const userIds = results.map(user => user.dataValues.userId);
 
@@ -244,12 +245,13 @@ export const studentRegister = async (registerStudentData, transaction) => {
 
 export const employeeRegister = async (employeePersonalDetail,employeeRegisterData, transaction) => {
   try {
-    const role = 'Employee'
+
     const {personalEmail,mobileNumber} = employeePersonalDetail
     const {universityId,roleId,employeeName,employeeId} = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    
+    const roleName = await getSingleRoleDetails (roleId);
+    const role = roleName?.dataValues?.role
     const data = {
       userName: employeeName,
       universityId: universityId,

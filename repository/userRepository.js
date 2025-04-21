@@ -138,14 +138,18 @@ export async function getAdminRegisterEmployee(universityId) {
                     model: model.userModel,
                     as: 'userDetails',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    // attributes: ["userId"],
-                    where: { universityId }
+                    where: {
+                        universityId,
+                        role: {
+                          [Op.ne]: 'Student'                        
+                        }
+                      }                    
                 },
                 {
                     model: model.employeeModel,
                     as: 'employeeDetails',
                     required: true,
-                    attributes: ['employee_id'],
+                    attributes: ['employee_id','employeeName'],
                     include: [
                         {
                             model: model.roleModel,
