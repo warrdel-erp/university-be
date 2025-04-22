@@ -74,6 +74,7 @@ export default async function useAuth(req, res, next) {
 
         // Fetch user roles and permissions
         const userRoleAndPermissions = await getUserRoleAndPermissionsByUserId(req.user.userId);
+console.log(`>>>>>>>>>>>>>>userRoleAndPermissions`,userRoleAndPermissions);
 
         let role = "";
         let userPermissions = "";

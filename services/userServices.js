@@ -179,6 +179,8 @@ export async function changePassword(info) {
 };
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
+  console.log(`>>>>>>>>>>>>>userId`,userId);
+  
   const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
     const groupedData = data.reduce((acc, item) => {
     const userId = item.user_id;
@@ -191,6 +193,8 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
       };
     }
     const existingPermissions = acc[userId].permissions;
+    console.log(`>>>>>>existingPermissions`,existingPermissions);
+    
     if (!existingPermissions.find(p => p.permissionId === item.permission_id)) {
       existingPermissions.push(item.userPermission);
     }
