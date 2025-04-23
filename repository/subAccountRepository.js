@@ -15,14 +15,14 @@ export async function getSubAccountDetails(universityId) {
         const SubAccount = await model.subAccountModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { universityId },
-            include:
-                [
-                    {
-                        model: model.accountModel,
-                        as: "accountDetail",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
+            // include:
+            //     [
+            //         {
+            //             model: model.accountModel,
+            //             as: "accountDetail",
+            //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            //         },
+            // ]
         });
 
         return SubAccount;
