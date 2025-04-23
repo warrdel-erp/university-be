@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
 import users from "./userModel.js"
+import role from "./roleModel.js";
 
 export default sequelize.define(
     'employee',
@@ -29,6 +30,15 @@ export default sequelize.define(
             references: {
                 model: institute,
                 key: 'institute_id',
+            }
+        },
+        roleId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'role_id',
+            references: {
+                model: role,
+                key: 'role_id',
             }
         },
         employeePhoto: {

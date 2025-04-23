@@ -5,6 +5,7 @@ import { getStudentBySectionId, getCourseByCourseId,getEmployeeByemployeeId } fr
 var salt = bcrypt.genSaltSync(10);
 import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
+import { getSingleRoleDetails } from "../repository/roleRepository.js";
 
 //register
 
@@ -85,7 +86,7 @@ export async function adminRegisterStudentAndEmployee(info) {
       const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
       const data = { userIds, roleId, permissionId };
       await dataSaveUerRolePermission(userIds,roleId,permissionId,transaction)
-    } else if (role === 'Employee') {
+    } else if (role != 'Student') {
       results = await registerRepository.adminRegisterStudentAndEmployee(employeeData, transaction);
       const userIds = results.map(user => user.dataValues.userId);
 
@@ -147,6 +148,7 @@ export async function getAdminRegisterStudentAndEmployee(universityId) {
     ]);
 
     return { students, employees };
+    
   } catch (error) {
     console.error('Error fetching students and employees:', error);
     throw new Error('Failed to fetch students and employees');
@@ -176,28 +178,73 @@ export async function changePassword(info) {
   return await registerRepository.changePassword(email,data);
 };
 
+// export async function getUserRoleAndPermissionsByUserId(userId) {
+//   console.log(`>>>>>>>>>>>>>userId`,userId);
+  
+//   const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
+//     const groupedData = data.reduce((acc, item) => {
+//     const userId = item.user_id;
+//     const roleId = item.role_id;
+//     if (!acc[userId]) {
+//       acc[userId] = {
+//         user: item.user,
+//         userRole: item.userRole,
+//         permissions: []
+//       };
+//     }
+//     const existingPermissions = acc[userId].permissions;
+//     console.log(`>>>>>>existingPermissions`,existingPermissions);
+    
+//     if (!existingPermissions.find(p => p.permissionId === item.permission_id)) {
+//       existingPermissions.push(item.userPermission);
+//     }
+
+//     return acc;
+//   }, {});
+
+//   const result = Object.values(groupedData);  
+//     return result;
+// };
+
 export async function getUserRoleAndPermissionsByUserId(userId) {
+  console.log(`Fetching roles and permissions for userId: ${userId}`);
+
   const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
-    const groupedData = data.reduce((acc, item) => {
-    const userId = item.user_id;
-    const roleId = item.role_id;
-    if (!acc[userId]) {
-      acc[userId] = {
+  console.log(`Raw data received:`, JSON.stringify(data, null, 2));
+
+  const groupedData = data.reduce((acc, item) => {
+    const uid = item.user_id;
+
+    if (!uid) {
+      console.warn(`Skipping item with missing user_id:`, item);
+      return acc;
+    }
+
+    if (!acc[uid]) {
+      acc[uid] = {
         user: item.user,
         userRole: item.userRole,
-        permissions: []
+        permissions: [],
       };
     }
-    const existingPermissions = acc[userId].permissions;
-    if (!existingPermissions.find(p => p.permissionId === item.permission_id)) {
-      existingPermissions.push(item.userPermission);
+
+    const permissions = acc[uid].permissions;
+    console.log(`Current permissions for user ${uid}:`, permissions);
+
+    if (!permissions.some(p => p.permissionId === item.permission_id)) {
+      if (item.userPermission) {
+        permissions.push(item.userPermission);
+      } else {
+        console.warn(`Missing userPermission for item:`, item);
+      }
     }
 
     return acc;
   }, {});
 
-  const result = Object.values(groupedData);  
-    return result;
+  const result = Object.values(groupedData);
+  console.log(`Final grouped result:`, JSON.stringify(result, null, 2));
+  return result;
 };
 
 export const studentRegister = async (registerStudentData, transaction) => {
@@ -243,12 +290,13 @@ export const studentRegister = async (registerStudentData, transaction) => {
 
 export const employeeRegister = async (employeePersonalDetail,employeeRegisterData, transaction) => {
   try {
-    const role = 'Employee'
+
     const {personalEmail,mobileNumber} = employeePersonalDetail
     const {universityId,roleId,employeeName,employeeId} = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    
+    const roleName = await getSingleRoleDetails (roleId);
+    const role = roleName?.dataValues?.role
     const data = {
       userName: employeeName,
       universityId: universityId,

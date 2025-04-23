@@ -132,3 +132,16 @@ INSERT INTO department_structure (
 VALUES 
     (1, 1, 1, 1, 1, 1, NOW(), NOW(), NULL),
     (2, 2, 2, 1, 1, 1, NOW(), NOW(), NULL);
+
+ALTER TABLE employee
+ADD COLUMN role_id INT NULL;
+
+UPDATE employee
+SET role_id = 1
+WHERE role_id IS NULL;
+
+ALTER TABLE employee
+ADD CONSTRAINT fk_role_id
+    FOREIGN KEY (role_id)
+    REFERENCES role(role_id)
+ON DELETE CASCADE;

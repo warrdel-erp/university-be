@@ -209,3 +209,56 @@ export async function getUserRolePermissionByUserId(userId) {
         throw error;
     }
 };
+
+export async function getEmployeeRolePermissionByUserId(userId) {    
+    try {
+        const UserRolePermission = await model.userStudentEmployeeModel.findAll({
+            attributes:  ["userId"],
+            include:[
+                {
+                    model:model.employeeModel,
+                    as: 'employeeDetails',
+                    required: true,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include:[
+                        {
+                            model:model.roleModel,
+                            as:'employeeRole',
+                            attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+                        }
+                    ]
+                },
+                {
+                    model:model.userModel,
+                    as:'userDetails',
+                    attributes:  ["userId"],
+                    include:[
+                        {
+                            model:model.userRolePermissionModel,
+                            as: 'user',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
+                                include:[
+                                    {
+                                        model:model.roleModel,
+                                        as: 'userRole',
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    },
+                                    {
+                                        model:model.permissionModel,
+                                        as: 'userPermission',
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    },
+                                ]    
+                        },
+                    ]
+                }
+            ],           
+             where: { userId },
+        });
+
+        return UserRolePermission;
+    } catch (error) {
+        console.error('Error fetching Employee Role Permission details:', error);
+        throw error;
+    }
+};

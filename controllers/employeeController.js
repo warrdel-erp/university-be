@@ -13,7 +13,7 @@ export const addEmployee = async (req,res) => {
         const result = await employee.addEmployee(data,file,createdBy,universityId,roleId);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in adding employee:", error);
+        console.error("Error in adding employee:", error); 
         res.status(500).send("Internal Server Error");
     }
 };
