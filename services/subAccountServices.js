@@ -10,7 +10,10 @@ export async function addSubAccount(SubAccountData, createdBy, updatedBy,univers
 };
 
 export async function getSubAccountDetails(universityId) {
-    return await SubAccountCreationService.getSubAccountDetails(universityId);
+        console.log("universityId--------------", universityId);
+    const data = await SubAccountCreationService.getSubAccountDetails(universityId);
+        console.log("data--------------", data);
+        return data;
 }
 
 export async function getSingleSubAccountDetails(subAccountId,universityId) {
