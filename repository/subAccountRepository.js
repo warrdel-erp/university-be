@@ -11,10 +11,11 @@ export async function addSubAccount(SubAccountData) {
 };
 
 export async function getSubAccountDetails(universityId) {
+    console.log("universityId-universityId-universityId", universityId)
     try {
         const SubAccount = await model.subAccountModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
+            // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            // where: { universityId :universityId },
             // include:
             //     [
             //         {
@@ -24,7 +25,7 @@ export async function getSubAccountDetails(universityId) {
             //         },
             // ]
         });
-
+console.log("this is data------------------ subaccount", SubAccount)
         return SubAccount;
     } catch (error) {
         console.error('Error fetching SubAccount details:', error);
