@@ -145,3 +145,9 @@ ADD CONSTRAINT fk_role_id
     FOREIGN KEY (role_id)
     REFERENCES role(role_id)
 ON DELETE CASCADE;
+
+ALTER TABLE subject
+ADD COLUMN subject_type VARCHAR(255) NOT NULL;
+ 
+ALTER TABLE elective_subject
+ADD COLUMN elective_subject_type VARCHAR(255) NOT NULL;

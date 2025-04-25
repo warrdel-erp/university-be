@@ -93,7 +93,7 @@ const examSetupModel = sequelize.define(
             field: "room_id",
             references: {
                 model: classRoomModel,
-                key: "room_id",
+                key: "class_room_section_id",
             },
         },
         createdBy: {

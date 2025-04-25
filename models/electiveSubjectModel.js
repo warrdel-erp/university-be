@@ -51,6 +51,11 @@ export default sequelize.define(
             allowNull: false,
             field: 'elective_subject_code'
         },
+        electiveSubjectType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'elective_subject_type'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

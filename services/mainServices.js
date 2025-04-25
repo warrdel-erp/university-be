@@ -132,14 +132,14 @@ export async function addSpecialization(data,createdBy) {
 export async function addSubject(data,createdBy) {
     const results = [];
     try {
-        const { courseId, subjects,specializationId,universityId } = data;
+        const { courseId, subjects,specializationId,universityId,subjectType } = data;
 
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({
                 ...subject,
                 courseId,
                 specializationId,
-                universityId,createdBy
+                universityId,createdBy,subjectType
             });
             results.push(result);
         }
@@ -249,6 +249,7 @@ export async function subjectExcel(excelData, courseId, specializationId, create
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
+                subjectType :row.subjectType,
                 createdBy,
                 universityId,
             };

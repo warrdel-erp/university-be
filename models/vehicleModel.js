@@ -29,7 +29,7 @@ export default sequelize.define(
             allowNull: false
         },
         employeeId: {
-            type: DataTypes.NUMBER,
+            type: DataTypes.INTEGER,
             field: 'employee_id',
             allowNull: false,
             references: {
