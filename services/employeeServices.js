@@ -51,15 +51,17 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         const employeeRegisterData = {universityId,roleId,employeeName,employeeId}
 
         // image upload
-        const uploadPromises = Object.keys(files).map(async key => {
-            const file = files[key];
-            const s3Response = await uploadFile(file);
-            const url = s3Response.Location;
-            const data = { key, url ,employeeId,createdBy};
-            await employeeFilesRepository.addEmployeeFiles(data,  transaction );
-        });
-      
-          await Promise.all(uploadPromises);
+        if(files){
+            const uploadPromises = Object.keys(files).map(async key => {
+                const file = files[key];
+                const s3Response = await uploadFile(file);
+                const url = s3Response.Location;
+                const data = { key, url ,employeeId,createdBy};
+                await employeeFilesRepository.addEmployeeFiles(data,  transaction );
+            });
+          
+              await Promise.all(uploadPromises);
+        }
 
         // Add employee address
         const addressDetail = await employeeAddressRepository.addAddress({
@@ -85,13 +87,13 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         }, transaction);
 
         // Add employee roles
-        for (const roles of role) {
-            await employeeRoleRepository.addEmployeeRole({
-                employeeId,
-                createdBy,
-                roles
-            }, transaction);
-        }
+        // for (const roles of role) {
+        //     await employeeRoleRepository.addEmployeeRole({
+        //         employeeId,
+        //         createdBy,
+        //         roles
+        //     }, transaction);
+        // }
 
         // Add employee skills
         for (const skill of skills) {
