@@ -83,6 +83,8 @@ import subAccountModel from './subAccountModel.js';
 import departmentModel from './departmentModel.js';
 import staffModel from './staffModel.js';
 import departmentStructureModel from './departmentStructureModel.js';
+import syllabusDetailsModel from './syllabusDetailsModel.js';
+import syllabusModel from './syllabusModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -665,4 +667,6 @@ export {
     departmentModel,
     staffModel,
     departmentStructureModel,
+    syllabusDetailsModel,
+    syllabusModel
 };

@@ -151,3 +151,42 @@ ADD COLUMN subject_type VARCHAR(255) NOT NULL;
  
 ALTER TABLE elective_subject
 ADD COLUMN elective_subject_type VARCHAR(255) NOT NULL;
+
+CREATE TABLE syllabus (
+    syllabus_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    class_sections_id INT NOT NULL,
+    course_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE syllabus_details (
+    syllabus_details_id INT AUTO_INCREMENT PRIMARY KEY,
+    syllabus_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    subject_type VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    mid_term VARCHAR(255) NOT NULL,
+    end_term VARCHAR(255) NOT NULL,
+    total VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (syllabus_id) REFERENCES syllabus(syllabus_id),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
