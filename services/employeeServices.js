@@ -26,20 +26,36 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         
 
         // Parse JSON fields
-        const address = JSON.parse(data.address);
-        const corsAddress = JSON.parse(data.corsAddress);
-        const office = JSON.parse(data.office);
-        const role = JSON.parse(data.roles);
-        const skills = JSON.parse(data.skill);
-        const documents = JSON.parse(data.documents);
-        const qualifications = JSON.parse(data.qualification);
-        const experiences = JSON.parse(data.experience);
-        const achievements = JSON.parse(data.achievements);
-        const wards = JSON.parse(data.ward);
-        const activities = JSON.parse(data.activity);
-        const references = JSON.parse(data.reference);
-        const research = JSON.parse(data.research);
-        const longLeaves = JSON.parse(data.longLeave);
+        // const address = JSON.parse(data.address);
+        // const corsAddress = JSON.parse(data.corsAddress);
+        // const office = JSON.parse(data.office);
+        // const role = JSON.parse(data.roles);
+        // const skills = JSON.parse(data.skill);
+        // const documents = JSON.parse(data.documents);
+        // const qualifications = JSON.parse(data.qualification);
+        // const experiences = JSON.parse(data.experience);
+        // const achievements = JSON.parse(data.achievements);
+        // const wards = JSON.parse(data.ward);
+        // const activities = JSON.parse(data.activity);
+        // const references = JSON.parse(data.reference);
+        // const research = JSON.parse(data.research);
+        // const longLeaves = JSON.parse(data.longLeave);
+
+        const address = data.address ? JSON.parse(data.address) : null;
+        const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
+        const office = data.office ? JSON.parse(data.office) : null;
+        const role = data.roles ? JSON.parse(data.roles) : null;
+        const skills = data.skill ? JSON.parse(data.skill) : [];
+        const documents = data.documents ? JSON.parse(data.documents) : [];
+        const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
+        const experiences = data.experience ? JSON.parse(data.experience) : [];
+        const achievements = data.achievements ? JSON.parse(data.achievements) : [];
+        const wards = data.ward ? JSON.parse(data.ward) : [];
+        const activities = data.activity ? JSON.parse(data.activity) : [];
+        const references = data.reference ? JSON.parse(data.reference) : [];
+        const research = data.research ? JSON.parse(data.research) : [];
+        const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
+
 
         // Add employee 
         data.createdBy = createdBy
