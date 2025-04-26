@@ -1,4 +1,4 @@
-import * as SyllabusCreation  from  "../services/syllabusServices.js";
+import * as syllabusCreation  from  "../services/syllabusServices.js";
 
 export async function addSyllabus(req, res) {
     const {courseId,acedmicYearId,instituteId} = req.body
@@ -8,7 +8,7 @@ export async function addSyllabus(req, res) {
         if(!(courseId && acedmicYearId && instituteId)){
            return res.status(400).send('courseId,acedmicYearId and instituteId is required')
         }
-        const Syllabus = await SyllabusCreation.addSyllabus(req.body,createdBy,updatedBy);
+        const Syllabus = await syllabusCreation.addSyllabus(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", Syllabus });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -18,8 +18,8 @@ export async function addSyllabus(req, res) {
 export async function getAllSyllabus(req, res) {
     const universityId = req.user.universityId;
     try {
-        const libraries = await SyllabusCreation.getSyllabusDetails(universityId);
-        res.status(200).json(libraries);
+        const syllabus = await syllabusCreation.getSyllabusDetails(universityId);
+        res.status(200).json(syllabus);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -29,7 +29,7 @@ export async function getSingleSyllabusDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const { SyllabusId } = req.query;
-        const Syllabus = await SyllabusCreation.getSingleSyllabusDetails(SyllabusId,universityId);
+        const Syllabus = await syllabusCreation.getSingleSyllabusDetails(SyllabusId,universityId);
         if (Syllabus) {
             res.status(200).json(Syllabus);
         } else {
@@ -47,7 +47,7 @@ export async function updateSyllabus(req, res) {
             return res.status(400).send('SyllabusId is required')
          }
          const updatedBy = req.user.userId;
-        const updatedSyllabus = await SyllabusCreation.updateSyllabus(SyllabusId, req.body,updatedBy);
+        const updatedSyllabus = await syllabusCreation.updateSyllabus(SyllabusId, req.body,updatedBy);
             res.status(200).json({message: "Syllabus update succesfully",updateSyllabus });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -60,7 +60,7 @@ export async function deleteSyllabus(req, res) {
         if (!SyllabusId) {
             return res.status(400).json({ message: "SyllabusId is required" });
         }
-        const deleted = await SyllabusCreation.deleteSyllabus(SyllabusId);
+        const deleted = await syllabusCreation.deleteSyllabus(SyllabusId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for Syllabus ID ${SyllabusId}` });
         } else {

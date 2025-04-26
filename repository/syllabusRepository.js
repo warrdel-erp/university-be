@@ -2,9 +2,8 @@ import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
 export async function addSyllabus(syllabusData) {   
-    console.log(`>>>>>>>>>>>>>>syllabusData`,syllabusData);
     try {
-        const result = await model.syllabusDetailsModel.create(syllabusData);
+        const result = await model.syllabusModel.create(syllabusData);
         return result;
     } catch (error) {
         console.error("Error in add Syllabus :", error);
@@ -13,7 +12,6 @@ export async function addSyllabus(syllabusData) {
 };
 
 export async function addSyllabusDetails(syllabusData) {   
-    console.log(`>>>>>>>>>>>>>>syllabusData`,syllabusData);
     try {
         const result = await model.syllabusDetailsModel.bulkCreate(syllabusData);
         return result;
@@ -25,21 +23,31 @@ export async function addSyllabusDetails(syllabusData) {
 
 export async function getSyllabusDetails(universityId) {
     try {
-        const Syllabus = await model.SyllabusModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+        const Syllabus = await model.syllabusModel.findAll({
+            attributes: { 
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+            },
+            include: [
+                {
+                    model: model.syllabusDetailsModel,
+                    as: 'syllabusDetails',  
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    }
+                }
+            ]
         });
-
         return Syllabus;
     } catch (error) {
-        console.error('Error fetching Syllabus details:', error);
+        console.error('Error fetching Syllabus with details:', error);
         throw error;
     }
-}
+};
 
 
 export async function getSingleSyllabusDetails(SyllabusId) {
     try {
-        const Syllabus = await model.SyllabusModel.findOne({
+        const Syllabus = await model.syllabusDetailsModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { SyllabusId },
         });

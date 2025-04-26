@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as SyllabusCreationRepository  from "../repository/syllabusRepository.js";
 
 export async function addSyllabus(syllabusData, createdBy, updatedBy) {
-    console.log(`>>>>>>syllabusData, createdBy, updatedBy>>>>>.`, JSON.stringify(syllabusData), createdBy, updatedBy);
 
     const transaction = await sequelize.transaction();
     try {
@@ -17,6 +16,7 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
 
         const syllabusDetailsData = [];
         for (const subjectGroup of syllabusData.subjects) {
+            
             const { subjectType, type, mid_term, end_term, total, data } = subjectGroup;
 
             for (const subj of data) {
