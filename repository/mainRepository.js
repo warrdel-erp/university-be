@@ -240,7 +240,6 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
-
 export async function getClassSubjectMapper(classSectionId,universityId) {
     try {
         const queryOptions = {
@@ -262,7 +261,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                         {
                             model: model.courseModel,
                             as: 'courseSection',
-                            attributes: ['courseName',"capacity"],
+                            attributes: ['courseName',"capacity",'courseId'],
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,
@@ -272,12 +271,12 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                                         {
                                             model: model.instituteModel,
                                             as: 'institut',
-                                            attributes: ['instituteName'],
+                                            attributes: ['instituteName','instituteId'],
                                             include: [
                                                 {
                                                     model: model.campusModel,
                                                     as: 'campues',
-                                                    attributes: ['campusName'],
+                                                    attributes: ['campusName','campusId'],
                                                 },
                                             ],
                                         },
@@ -305,7 +304,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.subjectModel,
                     as: 'subjects',
-                    attributes: ['subjectName','subjectId','subjectType', 'subjectCode'],
+                    attributes: ['subjectName', 'subjectId', 'subjectType', 'subjectCode'],
                 },
             ],
         };
