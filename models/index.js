@@ -563,28 +563,23 @@ accountModel.hasMany(departmentStructureModel, { foreignKey: 'account_id', as: '
 departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
 subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
 
-departmentStructureModel.belongsTo(subAccountModel, { 
-    foreignKey: 'parentAccountId', 
-    sourceKey: 'sub_account_id', 
-    as: 'departmentStructures' 
-  });
-  
-  subAccountModel.hasMany(departmentStructureModel, { 
-    foreignKey: 'parentAccountId', 
-    targetKey: 'sub_account_id',
-    as: 'parentAccounts' 
-  });
+departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'parentAccountId', sourceKey: 'sub_account_id', as: 'departmentStructures' });
+subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'parentAccountId', targetKey: 'sub_account_id',as: 'parentAccounts' });
 
-syllabusModel.hasMany(syllabusDetailsModel, { 
-  foreignKey: 'syllabus_id', 
-  as: 'syllabusDetails'
-});
+syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: 'syllabus_id', as: 'syllabusDetails' });
+syllabusDetailsModel.belongsTo(syllabusModel, { foreignKey: 'syllabus_id', as: 'syllabus' });
 
-syllabusDetailsModel.belongsTo(syllabusModel, { 
-  foreignKey: 'syllabus_id', 
-  as: 'syllabus' 
-});
+syllabusModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
+instituteModel.hasMany(syllabusModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
 
+syllabusModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'syllabusAcedmicYear' });
+acedmicYearModel.hasMany(syllabusModel, { foreignKey: 'acedmic_year_id', as: 'syllabusAcedmicYear' });
+
+syllabusModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
+courseModel.hasMany(syllabusModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
+
+syllabusModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
+classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
 
 export {
     settingModel,

@@ -29,12 +29,45 @@ export async function getSyllabusDetails(universityId) {
             },
             include: [
                 {
+                    model: model.instituteModel,
+                    as: 'syllabusInstitute',  
+                    attributes: ["instituteName", "instituteCode"] ,
+                    include:[
+                        {
+                            model:model.campusModel,
+                            as:'campues',
+                            attributes: ["campusName", "campusCode"] ,
+                        }
+                    ]
+                    
+                },
+                {
+                    model: model.acedmicYearModel,
+                    as: 'syllabusAcedmicYear',  
+                    attributes:  ["year", "yearTitle", "startingDate", "endingDate"] 
+                },
+                {
+                    model:model.courseModel,
+                    as:'syllabusCourse',
+                    attributes:["courseName","courseCode"]
+                },
+                {
+                    model:model.courseModel,
+                    as:'syllabusCourse',
+                    attributes:["courseName","courseCode"]
+                },
+                {
+                    model:model.classSectionModel,
+                    as:'syllabusClassSection',
+                    attributes:["section","class"]
+                },
+                {
                     model: model.syllabusDetailsModel,
                     as: 'syllabusDetails',  
                     attributes: { 
                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
                     }
-                }
+                },
             ]
         });
         return Syllabus;

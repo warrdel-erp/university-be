@@ -300,26 +300,12 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                             as: 'specializationSection',
                             attributes: ['specializationName'],
                         },
-                        // {
-                        //     model: model.employeeCodeMasterType,
-                        //     as: 'acedmicPeriods',
-                        //     attributes: {
-                        //         exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
-                        //     },
-                        //     include: [
-                        //         {
-                        //             model: model.employeeCodeMaster,
-                        //             as: 'codes',
-                        //             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                        //         },
-                        //     ],
-                        // },
                     ],
                 },
                 {
                     model: model.subjectModel,
                     as: 'subjects',
-                    attributes: ['subjectName','subjectId'],
+                    attributes: ['subjectName','subjectId','subjectType', 'subjectCode'],
                 },
             ],
         };
