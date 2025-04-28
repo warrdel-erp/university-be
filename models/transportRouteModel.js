@@ -18,7 +18,7 @@ export default sequelize.define(
             allowNull: false
         },
         fare: {
-            type: DataTypes.NUMBER,
+            type: DataTypes.DECIMAL,
             field: 'fare',
             allowNull: false
         },

@@ -178,34 +178,6 @@ export async function changePassword(info) {
   return await registerRepository.changePassword(email,data);
 };
 
-// export async function getUserRoleAndPermissionsByUserId(userId) {
-//   console.log(`>>>>>>>>>>>>>userId`,userId);
-  
-//   const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
-//     const groupedData = data.reduce((acc, item) => {
-//     const userId = item.user_id;
-//     const roleId = item.role_id;
-//     if (!acc[userId]) {
-//       acc[userId] = {
-//         user: item.user,
-//         userRole: item.userRole,
-//         permissions: []
-//       };
-//     }
-//     const existingPermissions = acc[userId].permissions;
-//     console.log(`>>>>>>existingPermissions`,existingPermissions);
-    
-//     if (!existingPermissions.find(p => p.permissionId === item.permission_id)) {
-//       existingPermissions.push(item.userPermission);
-//     }
-
-//     return acc;
-//   }, {});
-
-//   const result = Object.values(groupedData);  
-//     return result;
-// };
-
 export async function getUserRoleAndPermissionsByUserId(userId) {
   console.log(`Fetching roles and permissions for userId: ${userId}`);
 

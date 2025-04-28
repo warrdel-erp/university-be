@@ -240,7 +240,6 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
-
 export async function getClassSubjectMapper(classSectionId,universityId) {
     try {
         const queryOptions = {
@@ -262,7 +261,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                         {
                             model: model.courseModel,
                             as: 'courseSection',
-                            attributes: ['courseName',"capacity"],
+                            attributes: ['courseName',"capacity",'courseId'],
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,
@@ -272,12 +271,12 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                                         {
                                             model: model.instituteModel,
                                             as: 'institut',
-                                            attributes: ['instituteName'],
+                                            attributes: ['instituteName','instituteId'],
                                             include: [
                                                 {
                                                     model: model.campusModel,
                                                     as: 'campues',
-                                                    attributes: ['campusName'],
+                                                    attributes: ['campusName','campusId'],
                                                 },
                                             ],
                                         },
@@ -300,26 +299,12 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                             as: 'specializationSection',
                             attributes: ['specializationName'],
                         },
-                        // {
-                        //     model: model.employeeCodeMasterType,
-                        //     as: 'acedmicPeriods',
-                        //     attributes: {
-                        //         exclude: ['createdAt', 'updatedAt', 'deletedAt', 'employeeCodeMasterTypeId', 'employeeCodeMasterId', 'employee_code_master_id'],
-                        //     },
-                        //     include: [
-                        //         {
-                        //             model: model.employeeCodeMaster,
-                        //             as: 'codes',
-                        //             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                        //         },
-                        //     ],
-                        // },
                     ],
                 },
                 {
                     model: model.subjectModel,
                     as: 'subjects',
-                    attributes: ['subjectName','subjectId'],
+                    attributes: ['subjectName', 'subjectId', 'subjectType', 'subjectCode'],
                 },
             ],
         };

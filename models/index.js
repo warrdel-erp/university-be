@@ -83,6 +83,8 @@ import subAccountModel from './subAccountModel.js';
 import departmentModel from './departmentModel.js';
 import staffModel from './staffModel.js';
 import departmentStructureModel from './departmentStructureModel.js';
+import syllabusDetailsModel from './syllabusDetailsModel.js';
+import syllabusModel from './syllabusModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -561,23 +563,23 @@ accountModel.hasMany(departmentStructureModel, { foreignKey: 'account_id', as: '
 departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
 subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'sub_account_id', as: 'subAccountDetails' });
 
-// subAccountModel.belongsTo(departmentStructureModel, { foreignKey: 'parentAccountId', sourceKey: 'sub_account_id' });
-// departmentStructureModel.hasMany(subAccountModel, { foreignKey: 'parentAccountId', targetKey: 'sub_account_id', as: "parentAccount" });
+departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'parentAccountId', sourceKey: 'sub_account_id', as: 'departmentStructures' });
+subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'parentAccountId', targetKey: 'sub_account_id',as: 'parentAccounts' });
 
-// departmentStructureModel.belongsTo(subAccountModel, { foreignKey: 'parent_account_id', sourceKey: 'sub_account_id' ,as: "parentAccount" });
-// subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'parent_account_id', targetKey: 'sub_account_id'});
+syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: 'syllabus_id', as: 'syllabusDetails' });
+syllabusDetailsModel.belongsTo(syllabusModel, { foreignKey: 'syllabus_id', as: 'syllabus' });
 
-departmentStructureModel.belongsTo(subAccountModel, { 
-    foreignKey: 'parentAccountId', 
-    sourceKey: 'sub_account_id', // Use sub_account_id for the target key
-    as: 'departmentStructures' 
-  });
-  
-  subAccountModel.hasMany(departmentStructureModel, { 
-    foreignKey: 'parentAccountId', 
-    targetKey: 'sub_account_id',
-    as: 'parentAccounts' // Naming the relationship as 'subAccountStructures' for clarity
-  });
+syllabusModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
+instituteModel.hasMany(syllabusModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
+
+syllabusModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'syllabusAcedmicYear' });
+acedmicYearModel.hasMany(syllabusModel, { foreignKey: 'acedmic_year_id', as: 'syllabusAcedmicYear' });
+
+syllabusModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
+courseModel.hasMany(syllabusModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
+
+syllabusModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
+classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
 
 export {
     settingModel,
@@ -665,4 +667,6 @@ export {
     departmentModel,
     staffModel,
     departmentStructureModel,
+    syllabusDetailsModel,
+    syllabusModel
 };

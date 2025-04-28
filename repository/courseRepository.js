@@ -34,7 +34,6 @@ export async function getCourseByName(courseName) {
 }
 
 export async function getClassByName(className,Section) {
-    console.log(`>>>>>className,Section>>>>`,className,Section)
     try {
         const results = await model.classSectionModel.findAll({
             where: {
@@ -42,9 +41,7 @@ export async function getClassByName(className,Section) {
                     [Op.like]: `%${className}%`
                 }
             },
-        });
-        console.log(`>>>>>>>results`,results);
-        
+        });        
 
         if (results.length === 0) {
             throw new Error('No class sections found for the given class name');

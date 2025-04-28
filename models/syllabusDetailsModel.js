@@ -1,46 +1,58 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import users from "./userModel.js";
-import employee from './employeeModel.js'
-
+import syllabus from './syllabusModel.js';
+import users from './userModel.js';
+import subject from './subjectModel.js'
 
 export default sequelize.define(
-    'transport_vehicle',
+    'syllabus_details',
     {
-        vehicleId: {
+        syllabusDetailsId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'vehicle_id'
+            field: 'syllabus_details_id'
         },
-        vehicleNumber: {
-            type: DataTypes.STRING,
-            field: 'vehicle_number',
-            allowNull: false
-        },
-        vehicleModel: {
-            type: DataTypes.STRING,
-            field: 'vehicle_model',
-            allowNull: false
-        },
-        madeYear: {
-            type: DataTypes.STRING,
-            field: 'made_year',
-            allowNull: false
-        },
-        employeeId: {
+        syllabusId: {
             type: DataTypes.INTEGER,
-            field: 'employee_id',
             allowNull: false,
+            field: 'syllabus_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: syllabus,
+                key: 'syllabus_id'
             }
         },
-        note: {
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'subject_id',
+            references: {
+                model: subject,
+                key: 'subject_id'
+            }
+        },
+        subjectType: {
             type: DataTypes.STRING,
-            field: 'note',
-            allowNull: true
+            allowNull: false,
+            field: 'subject_type'
+        },
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        midTerm: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'mid_term'
+        },
+        endTerm: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field:'end_term'
+        },
+        total: {
+            type: DataTypes.STRING,
+            allowNull: false,
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -79,7 +91,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'transport_vehicle',
+        tableName: 'syllabus_details',
         timestamps: true,
         paranoid: true
     }

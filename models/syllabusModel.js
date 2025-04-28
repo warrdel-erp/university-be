@@ -1,46 +1,55 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import users from "./userModel.js";
-import employee from './employeeModel.js'
-
+import institute from './instituteModel.js';
+import acedmicYear from './acedmicYearModel.js';
+import classSection from './classSectionModel.js';
+import course from './courseModel.js';
+import users from './userModel.js';
 
 export default sequelize.define(
-    'transport_vehicle',
+    'syllabus',
     {
-        vehicleId: {
+        syllabusId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'vehicle_id'
+            field: 'syllabus_id'
         },
-        vehicleNumber: {
-            type: DataTypes.STRING,
-            field: 'vehicle_number',
-            allowNull: false
-        },
-        vehicleModel: {
-            type: DataTypes.STRING,
-            field: 'vehicle_model',
-            allowNull: false
-        },
-        madeYear: {
-            type: DataTypes.STRING,
-            field: 'made_year',
-            allowNull: false
-        },
-        employeeId: {
+        instituteId: {
             type: DataTypes.INTEGER,
-            field: 'employee_id',
             allowNull: false,
+            field: 'institute_id',
             references: {
-                model: employee,
-                key: 'employee_id'
+                model: institute,
+                key: 'institute_id'
             }
         },
-        note: {
-            type: DataTypes.STRING,
-            field: 'note',
-            allowNull: true
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
+        },
+        classSectionsId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_sections_id',
+            references: {
+                model: classSection,
+                key: 'class_sections_id'
+            }
+        },
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: course,
+                key: 'course_id'
+            }
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -79,7 +88,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'transport_vehicle',
+        tableName: 'syllabus',
         timestamps: true,
         paranoid: true
     }

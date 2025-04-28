@@ -26,20 +26,36 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         
 
         // Parse JSON fields
-        const address = JSON.parse(data.address);
-        const corsAddress = JSON.parse(data.corsAddress);
-        const office = JSON.parse(data.office);
-        const role = JSON.parse(data.roles);
-        const skills = JSON.parse(data.skill);
-        const documents = JSON.parse(data.documents);
-        const qualifications = JSON.parse(data.qualification);
-        const experiences = JSON.parse(data.experience);
-        const achievements = JSON.parse(data.achievements);
-        const wards = JSON.parse(data.ward);
-        const activities = JSON.parse(data.activity);
-        const references = JSON.parse(data.reference);
-        const research = JSON.parse(data.research);
-        const longLeaves = JSON.parse(data.longLeave);
+        // const address = JSON.parse(data.address);
+        // const corsAddress = JSON.parse(data.corsAddress);
+        // const office = JSON.parse(data.office);
+        // const role = JSON.parse(data.roles);
+        // const skills = JSON.parse(data.skill);
+        // const documents = JSON.parse(data.documents);
+        // const qualifications = JSON.parse(data.qualification);
+        // const experiences = JSON.parse(data.experience);
+        // const achievements = JSON.parse(data.achievements);
+        // const wards = JSON.parse(data.ward);
+        // const activities = JSON.parse(data.activity);
+        // const references = JSON.parse(data.reference);
+        // const research = JSON.parse(data.research);
+        // const longLeaves = JSON.parse(data.longLeave);
+
+        const address = data.address ? JSON.parse(data.address) : null;
+        const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
+        const office = data.office ? JSON.parse(data.office) : null;
+        const role = data.roles ? JSON.parse(data.roles) : null;
+        const skills = data.skill ? JSON.parse(data.skill) : [];
+        const documents = data.documents ? JSON.parse(data.documents) : [];
+        const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
+        const experiences = data.experience ? JSON.parse(data.experience) : [];
+        const achievements = data.achievements ? JSON.parse(data.achievements) : [];
+        const wards = data.ward ? JSON.parse(data.ward) : [];
+        const activities = data.activity ? JSON.parse(data.activity) : [];
+        const references = data.reference ? JSON.parse(data.reference) : [];
+        const research = data.research ? JSON.parse(data.research) : [];
+        const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
+
 
         // Add employee 
         data.createdBy = createdBy
@@ -51,15 +67,17 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         const employeeRegisterData = {universityId,roleId,employeeName,employeeId}
 
         // image upload
-        const uploadPromises = Object.keys(files).map(async key => {
-            const file = files[key];
-            const s3Response = await uploadFile(file);
-            const url = s3Response.Location;
-            const data = { key, url ,employeeId,createdBy};
-            await employeeFilesRepository.addEmployeeFiles(data,  transaction );
-        });
-      
-          await Promise.all(uploadPromises);
+        if(files){
+            const uploadPromises = Object.keys(files).map(async key => {
+                const file = files[key];
+                const s3Response = await uploadFile(file);
+                const url = s3Response.Location;
+                const data = { key, url ,employeeId,createdBy};
+                await employeeFilesRepository.addEmployeeFiles(data,  transaction );
+            });
+          
+              await Promise.all(uploadPromises);
+        }
 
         // Add employee address
         const addressDetail = await employeeAddressRepository.addAddress({
@@ -85,13 +103,13 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         }, transaction);
 
         // Add employee roles
-        for (const roles of role) {
-            await employeeRoleRepository.addEmployeeRole({
-                employeeId,
-                createdBy,
-                roles
-            }, transaction);
-        }
+        // for (const roles of role) {
+        //     await employeeRoleRepository.addEmployeeRole({
+        //         employeeId,
+        //         createdBy,
+        //         roles
+        //     }, transaction);
+        // }
 
         // Add employee skills
         for (const skill of skills) {

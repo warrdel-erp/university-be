@@ -72,9 +72,7 @@ export async function updateDepartment(departmentId, DepartmentData) {
     }
 }
 
-export async function getlatestEntry(subAccountId) {
-    console.log(`>>>>>>>>>>subAccountId`,subAccountId);
-    
+export async function getlatestEntry(subAccountId) {    
     try {
         const department = await model.departmentModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },

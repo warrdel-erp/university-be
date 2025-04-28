@@ -249,6 +249,7 @@ export async function subjectExcel(excelData, courseId, specializationId, create
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
+                subjectType :row.subjectType,
                 createdBy,
                 universityId,
             };
