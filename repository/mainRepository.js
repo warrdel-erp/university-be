@@ -190,6 +190,16 @@ export async function createClass(data) {
     }
 };
 
+export async function seprateAddClass(data) {        
+    try {
+        const result = await model.classModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add class seprate :", error);
+        throw error;
+    }
+};
+
 export async function getClassDetails(classSectionId,universityId) {
     try {
         const queryOptions = {
@@ -258,6 +268,11 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                     as: 'classSection',
                     attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
+                        {
+                            model :model.classModel,
+                            as :'classGroup',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
                         {
                             model: model.courseModel,
                             as: 'courseSection',

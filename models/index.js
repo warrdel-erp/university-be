@@ -73,6 +73,7 @@ import vehicleModel from './vehicleModel.js';
 import assignVehicleModel from './assignVehicleModel.js';
 import acedmicYearModel from './acedmicYearModel.js';
 import sectionModel from './sectionModel.js';
+import classModel from './classModel.js';
 import holidayModel from './holidayModel.js';
 import electiveSubjectModel from './electiveSubjectModel.js';
 import buildingModel from './buildingModel.js';
@@ -117,6 +118,9 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs
 
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSection' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSection' });
+
+classSectionModel.belongsTo(classModel, { foreignKey: 'class_id', as: 'classGroup' });
+classModel.hasMany(classSectionModel, { foreignKey: 'class_id', as: 'classGroup' });
 
 classSectionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
 acedmicYearModel.hasMany(classSectionModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYearSection' });
@@ -668,5 +672,6 @@ export {
     staffModel,
     departmentStructureModel,
     syllabusDetailsModel,
-    syllabusModel
+    syllabusModel,
+    classModel,
 };
