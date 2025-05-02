@@ -1,15 +1,19 @@
 import * as syllabusCreation  from  "../services/syllabusServices.js";
 
 export async function addSyllabus(req, res) {
-    const {courseId,acedmicYearId,instituteId} = req.body
+    const {courseId,acedmicYearId,instituteId,classId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(courseId && acedmicYearId && instituteId)){
+        if(!(courseId && acedmicYearId && instituteId && classId)){
            return res.status(400).send('courseId,acedmicYearId and instituteId is required')
         }
         const Syllabus = await syllabusCreation.addSyllabus(req.body,createdBy,updatedBy);
-        res.status(201).json({ message: "Data added successfully", Syllabus });
+        if(Syllabus){
+            res.status(201).json({ message: "Data added successfully", Syllabus });
+        }else{
+            res.status(404).json({ message: "something went wrong" });
+        }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

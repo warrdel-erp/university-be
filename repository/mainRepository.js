@@ -379,4 +379,18 @@ export async function getSemester(courseId, specializationId, universityId) {
         console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId}:`, error);
         throw error;
     }
-}
+};
+
+export async function getSectionByClassId(classId) {
+    try {
+        const result = await model.classSectionModel.findAll({
+            where: {
+                classId: classId
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting class section by class Id:", error);
+        throw error;
+    }
+};

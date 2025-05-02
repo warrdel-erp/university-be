@@ -150,11 +150,11 @@ export const getClass = async (req,res) => {
 
 export const addClassSubjectMapper = async (req,res) => {
     try {
-        const {classSectionId} = req.body;
+        const {classId} = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if(!(classSectionId)){
-            res.status(400).send('classSectionId is required')
+        if(!(classId)){
+            return res.status(400).send('classId is required')
         } 
         const result = await mainServices.addClassSubjectMapper(data,createdBy);
         res.status(200).send(result);

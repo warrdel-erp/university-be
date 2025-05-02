@@ -176,34 +176,43 @@ export async function addClass(data,createdBy,universityId) {
         console.error('Error adding class:', error);
         return { message: 'Error adding class', error };
     }
-}
+};
 
 export async function getClassDetails(classSectionId,universityId){
     return await mainRepository.getClassDetails(classSectionId,universityId)
-}
+};
 
-export async function addClassSubjectMapper(data,createdBy) {
+export async function addClassSubjectMapper(data, createdBy) {    
     try {
-        const { classSectionId, subjectIds } = data;
+        const { classId, subjectIds } = data;
 
-        // Generate separate entries for each subjectId
-        const entries = subjectIds.map(subjectId => ({
-            classSectionId,
-            subjectId,createdBy
-        }));
+        const classSection = await mainRepository.getSectionByClassId(classId);
+        const classSectionIds = classSection.map(section => section.classSectionsId);
 
-        // Insert multiple entries into the database
+        const entries = [];
+
+        for (const sectionId of classSectionIds) {
+            for (const subjectId of subjectIds) {
+                entries.push({
+                    classSectionId: sectionId,
+                    subjectId,
+                    createdBy
+                });
+            }
+        }
+
         const result = await mainRepository.addClassSubjectMapper(entries);
         return result;
     } catch (error) {
         console.error('Error adding class subject mappings:', error);
         return { message: 'Error adding class subject mappings', error };
     }
-}
+};
+
 
 export async function getClassSubjectMapper(classSectionId,universityId){
     return await mainRepository.getClassSubjectMapper(classSectionId,universityId)
-}
+};
 
 export async function addSemester(data,createdBy){
     const { semesterDuration,courseId} = data
@@ -216,11 +225,11 @@ export async function addSemester(data,createdBy){
         courseDuration:courseDuration
     };
     return await mainRepository.addSemester(semesterData)
-}
+};
 
 export async function getSemester(courseId,specializationId,universityId){
     return await mainRepository.getSemester(courseId,specializationId,universityId)
-}
+};
 
 export async function createClass(data, createdBy, universityId) {
     const results = [];
@@ -266,4 +275,4 @@ export async function subjectExcel(excelData, courseId, specializationId, create
         console.error("Error in creating classes:", error);
         throw new Error("Failed to create classes");
     }
-}
+};
