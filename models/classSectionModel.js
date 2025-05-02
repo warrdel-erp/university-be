@@ -5,6 +5,7 @@ import specialization from "./specializationModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import section from "./sectionModel.js";
+import classModel from "./classModel.js";
 
 export default sequelize.define(
     'class_sections',
@@ -49,6 +50,15 @@ export default sequelize.define(
             references: {
                 model: section,
                 key: 'section_id'
+            }
+        },
+        classId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_id',
+            references: {
+                model: classModel,
+                key: 'class_id'
             }
         },
         section: {

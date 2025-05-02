@@ -190,3 +190,35 @@ CREATE TABLE syllabus_details (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE class (
+    class_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    course_id INT NOT NULL,
+    class_name VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+INSERT INTO class ( university_id, course_id, class_name, created_by, updated_by) 
+VALUES (1,1,'Dummy insert',1,1);
+
+ALTER TABLE class_sections
+ADD COLUMN class_id INT NULL;
+
+UPDATE class_sections
+SET class_id = 1
+WHERE class_id IS NULL;
+
+ALTER TABLE class_sections
+ADD CONSTRAINT fk_class_id
+    FOREIGN KEY (class_id)
+    REFERENCES class(class_id)
+ON DELETE CASCADE;

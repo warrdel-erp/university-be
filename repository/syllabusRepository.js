@@ -59,7 +59,9 @@ export async function getSyllabusDetails(universityId) {
                 {
                     model:model.classSectionModel,
                     as:'syllabusClassSection',
-                    attributes:["section","class"]
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    }                
                 },
                 {
                     model: model.syllabusDetailsModel,
