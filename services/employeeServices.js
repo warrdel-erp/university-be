@@ -240,8 +240,8 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(universityId){
-    return await employeeRepository.getAllEmployee(universityId)
+export async function getAllEmployee(universityId,campusId,instituteId,acedmicYearId){
+    return await employeeRepository.getAllEmployee(universityId,campusId,instituteId,acedmicYearId)
 };
 
 export async function getSingleEmployeeDetails(employeeId,universityId){

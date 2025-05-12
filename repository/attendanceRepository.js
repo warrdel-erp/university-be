@@ -13,7 +13,10 @@ export async function addAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceDetails(universityId) {
+export async function getAttendanceDetails(universityId,acedmicYearId) {
+    const whereClause = {
+        ...(acedmicYearId && {acedmicYearId})
+    }
     try {
         const bookDetails = await model.attendanceModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -28,10 +31,12 @@ export async function getAttendanceDetails(universityId) {
                     model: model.classSectionModel,
                     as: "classAttendance",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                    where :whereClause,
                 },
                 {
                     model: model.studentModel,
                     as: "studentAttendance",
+                    where :whereClause,
                     // attributes :["name","author","publisher"]
                 },
                 // {

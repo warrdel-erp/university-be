@@ -291,3 +291,23 @@ UPDATE fee_group SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
 UPDATE fee_group SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
 
 ALTER TABLE fee_group ADD CONSTRAINT fk_fee_group_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in transport_route
+
+ALTER TABLE transport_route ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE transport_route SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE transport_route SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE transport_route ADD CONSTRAINT fk_transport_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in employee
+
+ALTER TABLE employee ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE employee SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE employee SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE employee ADD CONSTRAINT fk_employee_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;

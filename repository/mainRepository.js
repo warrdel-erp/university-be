@@ -363,18 +363,10 @@ export async function addSemester(data) {
 export async function getSemester(courseId, specializationId, universityId,acedmicYearId) {
 
     try {
-        const queryConditions = {};
-
-        if (acedmicYearId) {
-            queryConditions.acedmic_year_id = acedmicYearId;
-        }
-
-        if (courseId) {
-            queryConditions.courseId = courseId;
-        }
-        
-        if (specializationId) {
-            queryConditions.specializationId = specializationId;
+        const queryConditions = {
+            ...(acedmicYearId && {acedmicYearId}),
+            ...(courseId && {courseId}),
+            ...(specializationId && {specializationId})
         }
         const result = await model.semesterModel.findAll({
             include: [

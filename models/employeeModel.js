@@ -2,8 +2,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
-import users from "./userModel.js"
+import users from "./userModel.js";
 import role from "./roleModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 
 export default sequelize.define(
     'employee',
@@ -39,6 +40,15 @@ export default sequelize.define(
             references: {
                 model: role,
                 key: 'role_id',
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
             }
         },
         employeePhoto: {

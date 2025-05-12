@@ -4,31 +4,42 @@ export const addAssignVehicle = async (assignVehicleData) => {
     return await model.assignVehicleModel.create(assignVehicleData);
 };
 
-export const getAssignVehicle = async (universityId) => {
-    return await model.assignVehicleModel.findAll({
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-        include: [
-            {
-                model: model.transportRouteModel,
-                as: 'transportRoute',
-                attributes: ["routeTitle", "fare"],
-                
+export const getAssignVehicle = async (universityId, acedmicYearId) => {
+    try {
+        const result = await model.assignVehicleModel.findAll({
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
             },
-            {
-                model: model.vehicleModel,
-                as: 'vehicle',
-                attributes: ["vehicleNumber", "vehicleModel"],
-            },
-            {
-                model: model.userModel,
-                as: 'assignVehicleUser',
-                attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
+            include: [
+                {
+                    model: model.transportRouteModel,
+                    as: 'transportRoute',
+                    attributes: ["routeTitle", "fare"],
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    }
+                },
+                {
+                    model: model.vehicleModel,
+                    as: 'vehicle',
+                    attributes: ["vehicleNumber", "vehicleModel"],
+                },
+                {
+                    model: model.userModel,
+                    as: 'assignVehicleUser',
+                    attributes: ["universityId", "userId"],
+                    where: {
+                        universityId: universityId
+                    }
                 }
-            }
-        ]
-    });
+            ]
+        });
+
+        return result;
+    } catch (error) {
+        console.error(`Error in getAssignVehicle:`, error);
+        throw error;
+    }
 };
 
 export const getSingleAssignVehicle = async (assignVehicleId, universityId) => {

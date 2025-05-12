@@ -4,25 +4,37 @@ const createVehicle = async (vehicleData) => {
     return await model.vehicleModel.create(vehicleData);
 };
 
-const getAllVehicles = async (universityId) => {
-    return await model.vehicleModel.findAll({
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-        include: [
-            {
-                model: model.employeeModel,
-                as: "employee",
-                attributes: ["employee_name"],
+const getAllVehicles = async (universityId, acedmicYearId) => {
+    try {
+        const result = await model.vehicleModel.findAll({
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
             },
-            {
-                model: model.userModel,
-                as: 'vehicleUser',
-                attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
+            include: [
+                {
+                    model: model.employeeModel,
+                    as: "employee",
+                    attributes: ["employee_name"],
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
+                },
+                {
+                    model: model.userModel,
+                    as: 'vehicleUser',
+                    attributes: ["universityId", "userId"],
+                    where: {
+                        universityId: universityId
+                    }
                 }
-            }
-        ]
-    });
+            ]
+        });
+
+        return result;
+    } catch (error) {
+        console.error(`Error fetching vehicles:`, error);
+        throw error;
+    }
 };
 
 const getVehicleById = async (vehicleId, universityId) => {

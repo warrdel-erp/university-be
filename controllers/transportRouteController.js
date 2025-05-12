@@ -8,11 +8,15 @@ import {
 
 export const addTransportRoute = async (req, res) => {
     try {
-        const { routeTitle, fare } = req.body;
+        const { routeTitle, fare ,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
         if (!routeTitle || !fare) {
             return res.status(400).json({ message: "routeTitle and fare are required" });
+        };
+
+        if (!acedmicYearId) {
+            return res.status(400).json({ message: "acedmicYearId is required" });
         }
 
         const transportRouteData = { ...req.body, createdBy, updatedBy };
@@ -27,8 +31,9 @@ export const addTransportRoute = async (req, res) => {
 
 export const getAllTransportRoute = async (req, res) => {
     const universityId = req.user.universityId;
+    const { acedmicYearId } = req.query;
     try {
-        const result = await getAllTransportRouteService(universityId);
+        const result = await getAllTransportRouteService(universityId,acedmicYearId);
         res.status(200).json(result);
     } catch (error) {
         console.error("Error in getAllTransportRoute:", error);
