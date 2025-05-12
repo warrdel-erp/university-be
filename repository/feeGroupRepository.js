@@ -11,10 +11,14 @@ export async function addFeeGroup(feeGroupData) {
     }
 };
 
-export async function getFeeGroupDetails(universityId) {
+export async function getFeeGroupDetails(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const FeeGroup = await model.feeGroupModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where :whereClause,
             include:[
                 {
                     model: model.userModel,

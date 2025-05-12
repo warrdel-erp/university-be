@@ -11,8 +11,11 @@ export async function addFeeType(FeeTypeData) {
     }
 };
 
-export async function getFeeTypeDetails(universityId) {
+export async function getFeeTypeDetails(universityId,acedmicYearId) {
     try {
+        const whereClase ={
+            ...(acedmicYearId && { acedmicYearId })
+        };
         const FeeType = await model.feeTypeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             include:[
@@ -26,6 +29,7 @@ export async function getFeeTypeDetails(universityId) {
                     model: model.feeGroupModel,
                     as: "feeGroup",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    where : whereClase
                 },
             ]
         });

@@ -222,3 +222,72 @@ ADD CONSTRAINT fk_class_id
     FOREIGN KEY (class_id)
     REFERENCES class(class_id)
 ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in semester
+
+ALTER TABLE semester
+ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE semester
+SET acedmic_year_id = 1
+WHERE acedmic_year_id IS NULL;
+
+UPDATE semester
+SET acedmic_year_id = 1
+WHERE acedmic_year_id = 0;
+
+ALTER TABLE semester
+ADD CONSTRAINT fk_semester_acedmic_year_id
+    FOREIGN KEY (acedmic_year_id)
+    REFERENCES acedmic_year(acedmic_year_id)
+ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in subject
+
+ALTER TABLE subject ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE subject SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE subject SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE subject ADD CONSTRAINT fk_subject_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in specialization
+
+ALTER TABLE specialization ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE specialization SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE specialization SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE specialization ADD CONSTRAINT fk_specialization_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in section
+
+ALTER TABLE section ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE section SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE section SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE section ADD CONSTRAINT fk_section_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in elective_subject
+
+ALTER TABLE elective_subject ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE elective_subject SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE elective_subject SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE elective_subject ADD CONSTRAINT fk_elective_subject_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in fee_group
+
+ALTER TABLE fee_group ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE fee_group SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE fee_group SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE fee_group ADD CONSTRAINT fk_fee_group_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;

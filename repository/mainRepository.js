@@ -15,13 +15,16 @@ export async function getAllUniversity(universityId) {
     }
 };
 
-export async function getAllCampus(universityId) {
+export async function getAllCampus(universityId,campusId) {
     try {
+
+        const whereClause = {
+            university_id: universityId,
+            ...(campusId && { campusId })  
+        };
         const result = await model.campusModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -30,13 +33,15 @@ export async function getAllCampus(universityId) {
     }
 };
 
-export async function getAllInstitute(universityId) {
+export async function getAllInstitute(universityId,instituteId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(instituteId && { instituteId })  
+        };
         const result = await model.instituteModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -45,13 +50,15 @@ export async function getAllInstitute(universityId) {
     }
 };
 
-export async function getAllAffiliatedUniversity(universityId) {
+export async function getAllAffiliatedUniversity(universityId,instituteId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(instituteId && { instituteId })  
+        };
         const result = await model.affiliatedIniversityModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -60,13 +67,15 @@ export async function getAllAffiliatedUniversity(universityId) {
     }
 };
 
-export async function getAllCourse(universityId) {
+export async function getAllCourse(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -75,13 +84,15 @@ export async function getAllCourse(universityId) {
     }
 };
 
-export async function getAllSpecialization(universityId) {
+export async function getAllSpecialization(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.specializationModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -90,13 +101,15 @@ export async function getAllSpecialization(universityId) {
     }
 };
 
-export async function getAllSubject(universityId) {
+export async function getAllSubject(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.subjectModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -347,10 +360,15 @@ export async function addSemester(data) {
     }
 };
 
-export async function getSemester(courseId, specializationId, universityId) {
+export async function getSemester(courseId, specializationId, universityId,acedmicYearId) {
+
     try {
         const queryConditions = {};
-        
+
+        if (acedmicYearId) {
+            queryConditions.acedmic_year_id = acedmicYearId;
+        }
+
         if (courseId) {
             queryConditions.courseId = courseId;
         }
@@ -358,7 +376,6 @@ export async function getSemester(courseId, specializationId, universityId) {
         if (specializationId) {
             queryConditions.specializationId = specializationId;
         }
-        
         const result = await model.semesterModel.findAll({
             include: [
                 {
@@ -376,7 +393,7 @@ export async function getSemester(courseId, specializationId, universityId) {
 
         return result;
     } catch (error) {
-        console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId}:`, error);
+        console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId} and acedmicYearId :${acedmicYearId}:`, error);
         throw error;
     }
 };

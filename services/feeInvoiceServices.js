@@ -25,13 +25,13 @@ export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
     }
 };
 
-export async function getFeeInvoiceDetails(universityId) {
-    return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId);
-}
+export async function getFeeInvoiceDetails(universityId,acedmicYearId) {
+    return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId,acedmicYearId);
+};
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
     return await feeInvoiceCreationService.getSingleFeeInvoiceDetails(feeInvoiceId,universityId);
-}
+};
 
 export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, updatedBy) {
     const transaction = await sequelize.transaction();
@@ -57,8 +57,8 @@ export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, updatedBy) 
         await transaction.rollback();
         throw error;
     }
-}
+};
 
 export async function deleteFeeInvoice(feeInvoiceId) {
     return await feeInvoiceCreationService.deleteFeeInvoice(feeInvoiceId);
-}
+};

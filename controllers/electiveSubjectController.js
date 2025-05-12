@@ -1,13 +1,13 @@
 import * as electiveSubject  from  "../services/electiveSubjectService.js";
 
 export async function addElectiveSubject(req, res) {
-    const {electiveSubjectName} = req.body
+    const {electiveSubjectName,acedmicYearId,electiveSubjectType} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     try {
-        if(!(electiveSubjectName )){
-           return res.status(400).send('Elective Subject Name is required')
+        if(!(electiveSubjectName && acedmicYearId && electiveSubjectType )){
+           return res.status(400).send('Elective Subject Name,acedmicYearId and electiveSubjectType is required')
         }
         const electiveSubjects = await electiveSubject.addElectiveSubject(req.body,createdBy,updatedBy,universityId);
         res.status(201).json({ message: "Data added successfully", electiveSubjects });
@@ -18,8 +18,9 @@ export async function addElectiveSubject(req, res) {
 
 export async function getAllElectiveSubject(req, res) {
     const universityId = req.user.universityId;
+    const { acedmicYearId } = req.query;
     try {
-        const electiveSubjects = await electiveSubject.getElectiveSubjectDetails(universityId);
+        const electiveSubjects = await electiveSubject.getElectiveSubjectDetails(universityId,acedmicYearId);
         res.status(200).json(electiveSubjects);
     } catch (error) {
         res.status(500).json({ error: error.message });

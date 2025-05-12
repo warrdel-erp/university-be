@@ -11,18 +11,23 @@ export async function addSection(SectionData) {
     }
 };
 
-export async function getSectionDetails(universityId) {    
+
+export async function getSectionDetails(universityId,acedmicYearId) {    
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const Section = await model.sectionModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","universityId"] },
-            where: { universityId },
+            where: whereClause,
         });
         return Section;
     } catch (error) {
         console.error('Error fetching Section details:', error);
         throw error;
     }
-}
+};
 
 
 export async function getSingleSectionDetails(sectionId) {

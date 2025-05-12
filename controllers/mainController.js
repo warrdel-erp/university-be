@@ -4,11 +4,13 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const getAllCollegesAndCourses = async (req,res) => {
     const universityId = req.user.universityId;
     try {
-        // const universityId = req.query.universityId;
+        const campusId = req.query.campusId;
+        const instituteId = req.query.instituteId;
+        const acedmicYearId = req.query.acedmicYearId;
         if(!universityId){
             res.status(400).send('University Id is required')
         }
-        const result = await mainServices.getAllCollegesAndCourses(universityId);
+        const result = await mainServices.getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all course:", error);
@@ -88,27 +90,27 @@ export const addCourse = async (req,res) => {
 
 export const addSpecialization = async (req,res) => {
     try {
-        const {universityId,course_Id} = req.body;
+        const {universityId,course_Id,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if(!(universityId && course_Id)){
-            res.status(400).send('University Id and course Id is required')
+        if(!(universityId && course_Id && acedmicYearId)){
+            res.status(400).send('University Id, course Id and acedmicYearId is required')
         } 
         const result = await mainServices.addSpecialization(data,createdBy);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in  Add Course:", error);
+        console.error("Error in  Add Specialization:", error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 export const addSubject = async (req,res) => {
     try {
-        const {courseId,universityId} = req.body;
+        const {courseId,universityId,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if(!(courseId && universityId)){
-            res.status(400).send('universityId and course Id is required')
+        if(!(courseId && universityId && acedmicYearId)){
+            res.status(400).send('universityId , course Id and acedmicYearId is required')
         } 
         const result = await mainServices.addSubject(data,createdBy);
         res.status(200).send(result);
@@ -178,13 +180,14 @@ export const getClassSubjectMapper = async (req,res) => {
 
 export const addSemester = async (req,res) => {
     try {
-        const {universityId,courseId} = req.body;
+        const {courseId,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
+        const universityId = req.user.universityId;
         const data = req.body
-        if(!(universityId && courseId)){
+        if(!(universityId && courseId && acedmicYearId)){
             res.status(400).send('universityId and courseId is required')
         } 
-        const result = await mainServices.addSemester(data,createdBy);
+        const result = await mainServices.addSemester(data,createdBy,universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add semester:", error);
@@ -195,9 +198,10 @@ export const addSemester = async (req,res) => {
 export const getSemester = async (req,res) => {
     try {
         const courseId = req.query.courseId  || 0;
+        const acedmicYearId = req.query.acedmicYearId
         const specializationId = req.query.specializationId;
         const universityId = req.user.universityId;
-        const result = await mainServices.getSemester(courseId,specializationId,universityId);
+        const result = await mainServices.getSemester(courseId,specializationId,universityId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting semester:", error);

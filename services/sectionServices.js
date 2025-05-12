@@ -9,8 +9,8 @@ export async function addSection(SectionData, createdBy, updatedBy,universityId)
         return Section;
 };
 
-export async function getSectionDetails(universityId) {
-    return await SectionCreationService.getSectionDetails(universityId);
+export async function getSectionDetails(universityId,acedmicYearId) {
+    return await SectionCreationService.getSectionDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleSectionDetails(sectionId,universityId) {

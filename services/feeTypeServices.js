@@ -8,8 +8,8 @@ export async function addFeeType(FeeTypeData, createdBy, updatedBy) {
         return FeeType;
 };
 
-export async function getFeeTypeDetails(universityId) {
-    return await feeTypeCreationService.getFeeTypeDetails(universityId);
+export async function getFeeTypeDetails(universityId,acedmicYearId) {
+    return await feeTypeCreationService.getFeeTypeDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleFeeTypeDetails(feeTypeId,universityId) {
