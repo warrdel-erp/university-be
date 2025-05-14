@@ -4,7 +4,7 @@ export async function createExamAttendance(data) {
     return await model.examAttendanceModel.create(data);
 }
 
-export async function getAllExamAttendance(universityId) {
+export async function getAllExamAttendance(universityId,acedmicYearId) {
     return await model.examAttendanceModel.findAll({
         attributes: {
             exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"]
@@ -14,6 +14,9 @@ export async function getAllExamAttendance(universityId) {
                 model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
+                where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
             },
             {
                 model: model.examSetupModel,

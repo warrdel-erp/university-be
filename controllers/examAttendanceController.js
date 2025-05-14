@@ -36,9 +36,9 @@ export async function addExamAttendance(req, res) {
 
 export async function getAllExamAttendance(req, res) {
     const universityId = req.user.universityId;
-
+    const {acedmicYearId} = req.query
     try {
-        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(universityId);
+        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(universityId,acedmicYearId);
         res.status(200).json(attendanceRecords);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -17,9 +17,9 @@ export async function addExamAttendance(data, createdBy, updatedBy) {
 }
 
 
-export async function getAllExamAttendance(universityId) {
+export async function getAllExamAttendance(universityId,acedmicYearId) {
     try {
-        return await examAttendanceRepository.getAllExamAttendance(universityId);
+        return await examAttendanceRepository.getAllExamAttendance(universityId,acedmicYearId);
     } catch (error) {
         throw new Error(`Error fetching exam attendance records: ${error.message}`);
     }

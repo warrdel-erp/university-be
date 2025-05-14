@@ -311,3 +311,13 @@ UPDATE employee SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
 UPDATE employee SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
 
 ALTER TABLE employee ADD CONSTRAINT fk_employee_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in exam_type
+
+ALTER TABLE exam_type ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE exam_type SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE exam_type SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE exam_type ADD CONSTRAINT fk_exam_type_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
