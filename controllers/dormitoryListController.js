@@ -1,12 +1,12 @@
 import * as DormitoryListCreation from "../services/dormitoryListServices.js";
 
 export async function addDormitoryList(req, res) {
-    const { dormitoryName, type, address, intake } = req.body
+    const { dormitoryName, type, address, intake,acedmicYearId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(dormitoryName && type && address && intake)) {
-            return res.status(400).send('dormitoryName,type,address and intake is required')
+        if (!(dormitoryName && type && address && intake && acedmicYearId)) {
+            return res.status(400).send('dormitoryName,type,address,intake and acedmicYearId is required')
         }
         const DormitoryList = await DormitoryListCreation.addDormitoryList(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", DormitoryList });
@@ -17,8 +17,9 @@ export async function addDormitoryList(req, res) {
 
 export async function getAllDormitoryList(req, res) {
     const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
     try {
-        const libraries = await DormitoryListCreation.getDormitoryListDetails(universityId);
+        const libraries = await DormitoryListCreation.getDormitoryListDetails(universityId,acedmicYearId);
         res.status(200).json(libraries);
     } catch (error) {
         res.status(500).json({ error: error.message });

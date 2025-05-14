@@ -11,10 +11,14 @@ export async function addRoomType(RoomTypeData) {
     }
 };
 
-export async function getRoomTypeDetails(universityId) {
+export async function getRoomTypeDetails(universityId,acedmicYearId) {
     try {
         const RoomType = await model.roomTypeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where: 
+                {
+                    ...(acedmicYearId && { acedmicYearId })
+                },
         });
 
         return RoomType;

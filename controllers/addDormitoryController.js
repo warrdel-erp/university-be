@@ -17,9 +17,10 @@ export async function addDormitoryRoom(req, res) {
 
 export async function getAllDormitoryRoom(req, res) {
     const universityId = req.user.universityId;
+     const { acedmicYearId } = req.query;
     try {
-        const libraries = await DormitoryRoomCreation.getDormitoryRoomDetails(universityId);
-        res.status(200).json(libraries);
+        const result = await DormitoryRoomCreation.getDormitoryRoomDetails(universityId,acedmicYearId);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

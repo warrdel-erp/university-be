@@ -1,12 +1,12 @@
 import * as RoomTypeCreation  from  "../services/roomTypeServices.js";
 
 export async function addRoomType(req, res) {
-    const {roomTypeName} = req.body
+    const {roomTypeName,acedmicYearId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(roomTypeName)){
-           return res.status(400).send('roomTypeName is required')
+        if(!(roomTypeName && acedmicYearId)){
+           return res.status(400).send('roomTypeName and acedmicYearId is required')
         }
         const RoomType = await RoomTypeCreation.addRoomType(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", RoomType });
@@ -17,9 +17,10 @@ export async function addRoomType(req, res) {
 
 export async function getAllRoomType(req, res) {
     const universityId = req.user.universityId;
+    const { acedmicYearId } = req.query;
     try {
-        const libraries = await RoomTypeCreation.getRoomTypeDetails(universityId);
-        res.status(200).json(libraries);
+        const roomType = await RoomTypeCreation.getRoomTypeDetails(universityId,acedmicYearId);
+        res.status(200).json(roomType);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

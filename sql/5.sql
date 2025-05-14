@@ -321,3 +321,23 @@ UPDATE exam_type SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
 UPDATE exam_type SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
 
 ALTER TABLE exam_type ADD CONSTRAINT fk_exam_type_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in room_type
+
+ALTER TABLE room_type ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE room_type SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE room_type SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE room_type ADD CONSTRAINT fk_room_type_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;
+
+-- Add the acedmic_year_id column with the foreign key reference in dormitory_list
+
+ALTER TABLE dormitory_list ADD COLUMN acedmic_year_id INT NOT NULL;
+
+UPDATE dormitory_list SET acedmic_year_id = 1 WHERE acedmic_year_id IS NULL;
+
+UPDATE dormitory_list SET acedmic_year_id = 1 WHERE acedmic_year_id = 0;
+
+ALTER TABLE dormitory_list ADD CONSTRAINT fk_dormitory_list_acedmic_year_id FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id) ON DELETE CASCADE;

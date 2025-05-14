@@ -7,8 +7,8 @@ export async function addDormitoryList(DormitoryListData, createdBy, updatedBy) 
     return DormitoryList;
 }
 
-export async function getDormitoryListDetails(universityId) {
-    return await DormitoryListCreationService.getDormitoryListDetails(universityId);
+export async function getDormitoryListDetails(universityId,acedmicYearId) {
+    return await DormitoryListCreationService.getDormitoryListDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleDormitoryListDetails(dormitoryListId, universityId) {
