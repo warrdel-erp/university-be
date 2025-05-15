@@ -178,8 +178,8 @@ export async function addClass(data,createdBy,universityId) {
     }
 };
 
-export async function getClassDetails(classSectionId,universityId){
-    return await mainRepository.getClassDetails(classSectionId,universityId)
+export async function getClassDetails(classSectionId,universityId,acedmicYearId){
+    return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId)
 };
 
 export async function addClassSubjectMapper(data, createdBy) {    
@@ -210,8 +210,8 @@ export async function addClassSubjectMapper(data, createdBy) {
 };
 
 
-export async function getClassSubjectMapper(classSectionId,universityId){
-    return await mainRepository.getClassSubjectMapper(classSectionId,universityId)
+export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId){
+    return await mainRepository.getClassSubjectMapper(classSectionId,universityId,acedmicYearId)
 };
 
 export async function addSemester(data,createdBy,universityId){

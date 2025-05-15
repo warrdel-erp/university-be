@@ -21,9 +21,12 @@ export async function addSyllabusDetails(syllabusData) {
     }
 };
 
-export async function getSyllabusDetails(universityId) {
+export async function getSyllabusDetails(universityId,acedmicYearId) {
     try {
         const Syllabus = await model.syllabusModel.findAll({
+            where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
             attributes: { 
                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
             },

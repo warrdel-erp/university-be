@@ -6,8 +6,8 @@ export async function addFaculityLoad(data, createdBy, updatedBy) {
     return await faculityLoadRepository.addFaculityLoad(data);
 }
 
-export async function getFaculityLoadDetails(){
-    return await faculityLoadRepository.getFaculityLoadDetails()
+export async function getFaculityLoadDetails(universityId,acedmicYearId){
+    return await faculityLoadRepository.getFaculityLoadDetails(universityId,acedmicYearId)
 };
 
 export async function getSingleFaculityLoadDetails(employeeId,universityId){

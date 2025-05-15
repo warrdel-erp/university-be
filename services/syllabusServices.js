@@ -58,8 +58,8 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
     }
 };
 
-export async function getSyllabusDetails(universityId) {
-    return await SyllabusCreationRepository.getSyllabusDetails(universityId);
+export async function getSyllabusDetails(universityId,acedmicYearId) {
+    return await SyllabusCreationRepository.getSyllabusDetails(universityId,acedmicYearId);
 };
 
 export async function getSingleSyllabusDetails(SyllabusId,universityId) {

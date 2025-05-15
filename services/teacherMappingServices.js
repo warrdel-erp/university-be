@@ -40,12 +40,12 @@ export async function teacherSectionMappingService(data,createdBy) {
   }
 }; 
 
-export async function getTeacherSubjectMappingService(employeeId,universityId){
-  return await getTeacherSubjectMapping(employeeId,universityId)
+export async function getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId){
+  return await getTeacherSubjectMapping(employeeId,universityId,acedmicYearId)
 };
 
-export async function getTeacherSectionMappingService(employeeId,universityId){
-  return await getTeacherSectionMapping(employeeId,universityId)
+export async function getTeacherSectionMappingService(employeeId,universityId,acedmicYearId){
+  return await getTeacherSectionMapping(employeeId,universityId,acedmicYearId)
 };
 
 export async function updateTeacherSubjectMapping(data, teacherSubjectMappingId) {  

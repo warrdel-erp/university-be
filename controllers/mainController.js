@@ -140,9 +140,10 @@ export const addClass = async (req,res) => {
 export const getClass = async (req,res) => {
     try {
         const classSectionIds = req.query.classSectionId;
+        const acedmicYearId = req.query.acedmicYearId
         const classSectionId = classSectionIds || 0;
         const universityId = req.user.universityId;
-        const result = await mainServices.getClassDetails(classSectionId,universityId);
+        const result = await mainServices.getClassDetails(classSectionId,universityId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
@@ -169,8 +170,9 @@ export const addClassSubjectMapper = async (req,res) => {
 export const getClassSubjectMapper = async (req,res) => {
     try {
         const classSectionId = req.query.classSectionId  || 0;
+        const acedmicYearId = req.query.acedmicYearId 
         const universityId = req.user.universityId;
-        const result = await mainServices.getClassSubjectMapper(classSectionId,universityId);
+        const result = await mainServices.getClassSubjectMapper(classSectionId,universityId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);

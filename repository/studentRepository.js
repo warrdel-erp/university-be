@@ -1,3 +1,4 @@
+import { Literal } from 'sequelize/lib/utils';
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
@@ -61,161 +62,302 @@ export async function studentMetaData(data, transaction) {
     }
 };
 
-export async function getAllStudents(firstName, universityId) {
-    let result;
+// export async function getAllStudents(firstName, universityId,acedmicYearId) {
+//     let result;
+//     try {
+//         if (firstName !== 'all') {
+//             result = await model.studentModel.findAll({
+//                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                 where :{
+//                     ...(acedmicYearId && {acedmicYearId}) 
+//                 },
+//                 include: [
+//                     {
+//                         model: model.userModel,
+//                         as: "userStudent",
+//                         attributes: ["universityId", "userId"],
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.campusModel,
+//                         as: "campus",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.instituteModel,
+//                         as: "institute",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.acedmicYearModel,
+//                         as: "acdemicYear",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.affiliatedIniversityModel,
+//                         as: "affiliatedUniversity",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.courseModel,
+//                         as: "course",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.specializationModel,
+//                         as: "specialization",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+//                     },
+//                     {
+//                         model: model.studentsEntranceDetail,
+//                         as: "entranceDetails",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     },
+//                     {
+//                         model: model.studentsAddress,
+//                         as: "studentAddress",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     },
+//                     {
+//                         model: model.employeeCodeMasterType,
+//                         as: "courseLevel",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+//                         include: [
+//                             {
+//                                 model: model.employeeCodeMaster,
+//                                 as: "codes",
+//                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                          
+//                             },
+//                         ]
+//                     },
+//                     {
+//                         model: model.studentMetaData,
+//                         as: "studentMetaData",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         include: [
+//                             {
+//                                 model: model.employeeCodeMasterType,
+//                                 as: "typs",
+//                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                                 include: [
+//                                     {
+//                                         model: model.employeeCodeMaster,
+//                                         as: "codes", 
+//                                     },
+//                                 ]
+//                             },
+//                         ]
+//                     },
+//                 ],
+//                 where: {
+//                     first_name: {
+//                         [Op.like]: `%${firstName}%`
+//                     },
+//                 },
+//             });
+//         } else {
+//             result = await model.studentModel.findAll({
+//                 where :{
+//                     ...(acedmicYearId && {acedmicYearId}) 
+//                 },
+//                 include: [
+//                     {
+//                         model: model.userModel,
+//                         as: "userStudent",
+//                         attributes: ["universityId", "userId"],
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.campusModel,
+//                         as: "campus",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.instituteModel,
+//                         as: "institute",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.acedmicYearModel,
+//                         as: "acdemicYear",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.affiliatedIniversityModel,
+//                         as: "affiliatedUniversity",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.employeeCodeMasterType,
+//                         as: "courseLevel",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+//                         include: [
+//                             {
+//                                 model: model.employeeCodeMaster,
+//                                 as: "codes",
+//                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                             },
+//                         ]
+//                     },
+//                     {
+//                         model: model.studentMetaData,
+//                         as: "studentMetaData",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         include: [
+//                             {
+//                                 model: model.employeeCodeMasterType,
+//                                 as: "typs",
+//                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                                 include: [
+//                                     {
+//                                         model: model.employeeCodeMaster,
+//                                         as: "codes",
+//                                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                                     },
+//                                 ]
+//                             },
+//                         ]
+//                     },
+//                     {
+//                         model: model.courseModel,
+//                         as: "course",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
+//                         where: {
+//                             universityId: universityId
+//                         },
+//                     },
+//                     {
+//                         model: model.specializationModel,
+//                         as: "specialization",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+//                     },
+//                     {
+//                         model: model.studentsEntranceDetail,
+//                         as: "entranceDetails",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     },
+//                     {
+//                         model: model.studentsAddress,
+//                         as: "studentAddress",
+//                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     }
+//                 ],
+//             });
+//         };
+//         return result;
+//     } catch (error) {
+//         console.error(`Error in getting student name${firstName}:`, error);
+//         throw error;
+//     };
+// };
+
+export async function getAllStudents(firstName, universityId, acedmicYearId, page, limit) {
     try {
-        if (firstName !== 'all') {
-            result = await model.studentModel.findAll({
+        const baseInclude = [
+            {
+                model: model.userModel,
+                as: "userStudent",
+                attributes: ["universityId", "userId"],
+                where: { universityId },
+            },
+            {
+                model: model.campusModel,
+                as: "campus",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
+                where: { universityId },
+            },
+            {
+                model: model.instituteModel,
+                as: "institute",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
+                where: { universityId },
+            },
+            {
+                model: model.acedmicYearModel,
+                as: "acdemicYear",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                where: { universityId },
+            },
+            {
+                model: model.affiliatedIniversityModel,
+                as: "affiliatedUniversity",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
+                where: { universityId },
+            },
+            {
+                model: model.courseModel,
+                as: "course",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
+                where: { universityId },
+            },
+            {
+                model: model.specializationModel,
+                as: "specialization",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+            },
+            {
+                model: model.studentsEntranceDetail,
+                as: "entranceDetails",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+                model: model.studentsAddress,
+                as: "studentAddress",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+                model: model.employeeCodeMasterType,
+                as: "courseLevel",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
+                include: [
+                    {
+                        model: model.employeeCodeMaster,
+                        as: "codes",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    },
+                ]
+            },
+            {
+                model: model.studentMetaData,
+                as: "studentMetaData",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 include: [
                     {
-                        model: model.userModel,
-                        as: "userStudent",
-                        attributes: ["universityId", "userId"],
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.campusModel,
-                        as: "campus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.instituteModel,
-                        as: "institute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.acedmicYearModel,
-                        as: "acdemicYear",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.affiliatedIniversityModel,
-                        as: "affiliatedUniversity",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.courseModel,
-                        as: "course",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.specializationModel,
-                        as: "specialization",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
-                    },
-                    {
-                        model: model.studentsEntranceDetail,
-                        as: "entranceDetails",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    },
-                    {
-                        model: model.studentsAddress,
-                        as: "studentAddress",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    },
-                    {
                         model: model.employeeCodeMasterType,
-                        as: "courseLevel",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
-                        include: [
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                                          
-                            },
-                        ]
-                    },
-                    {
-                        model: model.studentMetaData,
-                        as: "studentMetaData",
+                        as: "typs",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include: [
-                            {
-                                model: model.employeeCodeMasterType,
-                                as: "typs",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                include: [
-                                    {
-                                        model: model.employeeCodeMaster,
-                                        as: "codes", 
-                                    },
-                                ]
-                            },
-                        ]
-                    },
-                ],
-                where: {
-                    first_name: {
-                        [Op.like]: `%${firstName}%`
-                    },
-                },
-            });
-        } else {
-            result = await model.studentModel.findAll({
-                include: [
-                    {
-                        model: model.userModel,
-                        as: "userStudent",
-                        attributes: ["universityId", "userId"],
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.campusModel,
-                        as: "campus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.instituteModel,
-                        as: "institute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.acedmicYearModel,
-                        as: "acdemicYear",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.affiliatedIniversityModel,
-                        as: "affiliatedUniversity",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "courseLevel",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterTypeId", "employeeCodeMasterId", "employee_code_master_id"] },
                         include: [
                             {
                                 model: model.employeeCodeMaster,
@@ -224,56 +366,35 @@ export async function getAllStudents(firstName, universityId) {
                             },
                         ]
                     },
-                    {
-                        model: model.studentMetaData,
-                        as: "studentMetaData",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        include: [
-                            {
-                                model: model.employeeCodeMasterType,
-                                as: "typs",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                include: [
-                                    {
-                                        model: model.employeeCodeMaster,
-                                        as: "codes",
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                    },
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        model: model.courseModel,
-                        as: "course",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
-                        where: {
-                            universityId: universityId
-                        },
-                    },
-                    {
-                        model: model.specializationModel,
-                        as: "specialization",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
-                    },
-                    {
-                        model: model.studentsEntranceDetail,
-                        as: "entranceDetails",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    },
-                    {
-                        model: model.studentsAddress,
-                        as: "studentAddress",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    }
-                ],
-            });
+                ]
+            }
+        ];
+
+        const whereCondition = {
+            ...(firstName !== 'all' && {
+                first_name: {
+                    [Op.like]: `%${firstName}%`
+                }
+            }),
+            ...(acedmicYearId && { acedmicYearId })
         };
+
+        const offset = (page - 1) * limit;
+
+        const result = await model.studentModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: whereCondition,
+            include: baseInclude,
+            offset,
+            limit
+        });
+
         return result;
+
     } catch (error) {
-        console.error(`Error in getting student name${firstName}:`, error);
+        console.error(`Error in getting student name "${firstName}":`, error);
         throw error;
-    };
+    }
 };
 
 export async function getSingleStudentDetail(studentId, universityId) {
@@ -565,9 +686,15 @@ export async function checkEnroll(enrollNumber) {
     }
 };
 
-export async function getEmptyEnrollNumber(universityId) {
+export async function getEmptyEnrollNumber(universityId, acedmicYearId) {
     try {
         const result = await model.studentModel.findAll({
+            where: {
+                ...(acedmicYearId && { acedmicYearId }),
+                enrollNumber: {
+                    [Op.or]: [null, '']
+                }
+            },
             include: [
                 {
                     model: model.userModel,
@@ -575,15 +702,11 @@ export async function getEmptyEnrollNumber(universityId) {
                     attributes: ["universityId", "userId"],
                     where: {
                         universityId: universityId
-                    },
-                },
-            ],
-            where: {
-                enrollNumber: {
-                    [Op.or]: [null, '']
+                    }
                 }
-            }
+            ]
         });
+
         return result;
     } catch (error) {
         console.error('Error in checkEnroll Empty:', error);
@@ -694,7 +817,7 @@ export async function classStudentMappingExcel(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId, universityId) {
+export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId) {
 
     try {
         const queryOptions = {
@@ -717,6 +840,7 @@ export async function getclassStudentMapping(classSectionId, universityId) {
                     model: model.studentModel,
                     as: "studentMapped",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    where: acedmicYearId ? { acedmicYearId } : undefined,
                     include: [
                         {
                             model: model.campusModel,
@@ -780,6 +904,9 @@ export async function getclassStudentMapping(classSectionId, universityId) {
 
         if (classSectionId !== 0) {
             queryOptions.where = { class_sections_id: classSectionId };
+        };
+        if (acedmicYearId) {
+            queryOptions.where= {acedmicYearId : acedmicYearId};
         }
         const result = await model.classStudentMapperModel.findAll(queryOptions);
         return result;
