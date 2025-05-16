@@ -10,7 +10,7 @@ export async function addExamSetup(examDetail) {
     }
 }
 
-export async function getExamSetup(universityId) {
+export async function getExamSetup(universityId,acedmicYearId) {
     try {
         const result = await model.examSetupModel.findAll({
             attributes: {
@@ -33,11 +33,17 @@ export async function getExamSetup(universityId) {
                     model: model.examTypeModel,
                     as: "examType",
                     attributes: ["examTypeId", "examName"],
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
                 },
                 {
                     model: model.employeeModel,
                     as: "employee",
                     attributes: ["employee_id", "employee_name"],
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
                 },
                 {
                     model: model.classRoomModel,

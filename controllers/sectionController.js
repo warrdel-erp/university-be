@@ -1,13 +1,13 @@
 import * as SectionCreation  from  "../services/sectionServices.js";
 
 export async function addSection(req, res) {
-    const {sectionName} = req.body
+    const {sectionName,acedmicYearId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     try {
-        if(!(sectionName)){
-           return res.status(400).send('sectionName is required')
+        if(!(sectionName && acedmicYearId)){
+           return res.status(400).send('sectionName and acedmicYearId is required')
         }
         const Section = await SectionCreation.addSection(req.body,createdBy,updatedBy,universityId);
         res.status(201).json({ message: "Data added successfully", Section });
@@ -18,8 +18,9 @@ export async function addSection(req, res) {
 
 export async function getAllSection(req, res) {
     const universityId = req.user.universityId;
+    const { acedmicYearId } = req.query;
     try {
-        const section = await SectionCreation.getSectionDetails(universityId);
+        const section = await SectionCreation.getSectionDetails(universityId,acedmicYearId);
         res.status(200).json(section);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -8,8 +8,8 @@ export async function addExamType(examDetail, createdBy, updatedBy) {
     return DormitoryList;
 };
 
-export async function getExamType(universityId) {
-    return await examTypeRepository.getExamType(universityId);
+export async function getExamType(universityId,acedmicYearId) {
+    return await examTypeRepository.getExamType(universityId,acedmicYearId);
 }
 
 export async function getSingleExamType(examTypeId, universityId) {

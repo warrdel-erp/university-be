@@ -159,8 +159,13 @@ async function generateScholarNumber(courseId,instituteId) {
   return scholarNumber;
 };
 
-export async function getAllStudents(search,universityId){
-    return await studentRepository.getAllStudents(search,universityId)
+export async function getAllStudents(search, universityId, acedmicYearId, page, limit) {
+    try {
+        return await studentRepository.getAllStudents(search, universityId, acedmicYearId, page, limit);
+    } catch (error) {
+        console.error("Error in studentService.getAllStudents:", error);
+        throw error;
+    }
 };
 
 export async function getSingleStudentDetail(studentId,universityId){
@@ -435,8 +440,8 @@ export async function deleteStudentDetail(studentId) {
   }
 };
 
-export async function getEmptyEnrollNumber(universityId){
-  return await studentRepository.getEmptyEnrollNumber(universityId)
+export async function getEmptyEnrollNumber(universityId,acedmicYearId){
+  return await studentRepository.getEmptyEnrollNumber(universityId,acedmicYearId)
 };
 
 export async function studentCourseMapping(data){
@@ -461,8 +466,8 @@ export async function classStudentMapping(data, createdBy) {
   }
 }; 
 
-export async function getclassStudentMapping(classSectionId,universityId){
-  return await studentRepository.getclassStudentMapping(classSectionId,universityId)
+export async function getclassStudentMapping(classSectionId,universityId,acedmicYearId){
+  return await studentRepository.getclassStudentMapping(classSectionId,universityId,acedmicYearId)
 };
 
 export async function addElectiveSubject(data,createdBy){

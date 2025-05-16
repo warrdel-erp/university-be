@@ -15,13 +15,16 @@ export async function getAllUniversity(universityId) {
     }
 };
 
-export async function getAllCampus(universityId) {
+export async function getAllCampus(universityId,campusId) {
     try {
+
+        const whereClause = {
+            university_id: universityId,
+            ...(campusId && { campusId })  
+        };
         const result = await model.campusModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -30,13 +33,15 @@ export async function getAllCampus(universityId) {
     }
 };
 
-export async function getAllInstitute(universityId) {
+export async function getAllInstitute(universityId,instituteId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(instituteId && { instituteId })  
+        };
         const result = await model.instituteModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -45,13 +50,15 @@ export async function getAllInstitute(universityId) {
     }
 };
 
-export async function getAllAffiliatedUniversity(universityId) {
+export async function getAllAffiliatedUniversity(universityId,instituteId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(instituteId && { instituteId })  
+        };
         const result = await model.affiliatedIniversityModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -60,13 +67,15 @@ export async function getAllAffiliatedUniversity(universityId) {
     }
 };
 
-export async function getAllCourse(universityId) {
+export async function getAllCourse(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -75,13 +84,15 @@ export async function getAllCourse(universityId) {
     }
 };
 
-export async function getAllSpecialization(universityId) {
+export async function getAllSpecialization(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.specializationModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -90,13 +101,15 @@ export async function getAllSpecialization(universityId) {
     }
 };
 
-export async function getAllSubject(universityId) {
+export async function getAllSubject(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const result = await model.subjectModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
-            where: {
-                university_id: universityId
-            },
+            where: whereClause,
         });
         return result;
     } catch (error) {
@@ -200,7 +213,9 @@ export async function seprateAddClass(data) {
     }
 };
 
-export async function getClassDetails(classSectionId,universityId) {
+export async function getClassDetails(classSectionsId, universityId, acedmicYearId) {
+    console.log(`>>>>>>>>>classSectionsId`,classSectionsId);
+        console.log(`>>>>>>>>>acedmicYearId`,acedmicYearId);
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -208,29 +223,35 @@ export async function getClassDetails(classSectionId,universityId) {
                 {
                     model: model.userModel,
                     as: "userClassSection",
-                    attributes:["universityId","userId"],
+                    attributes: ["universityId", "userId"],
                     where: {
-                        universityId:universityId
-                    },  
+                        universityId: universityId
+                    }
                 },
                 {
                     model: model.courseModel,
                     as: "courseSectionAdd",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","course_levelId","universityId"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "course_levelId", "universityId"] },
+                    // where :{
+                    //     ...(acedmicYearId && {acedmicYearId})
+                    // }
                 },
                 {
                     model: model.specializationModel,
                     as: "specializationSectionAdd",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId","course_Id","specializationId"] },
-                },
-            ]
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "course_Id", "specializationId"] }
+                }
+            ],
+            where: {}
         };
 
-        if (classSectionId !== 0) {
-            queryOptions.where = {
-                class_sections_id: classSectionId
-            };
-        }        
+        if (classSectionsId !== 0) {
+            queryOptions.where.classSectionsId = classSectionsId;
+        }
+
+        if (acedmicYearId) {
+            queryOptions.where.acedmicYearId = acedmicYearId;
+        }
 
         const result = await model.classSectionModel.findAll(queryOptions);
         return result;
@@ -238,7 +259,7 @@ export async function getClassDetails(classSectionId,universityId) {
         console.error("Error in getting class Details:", error);
         throw error;
     }
-}
+};
 
 export async function addClassSubjectMapper(data) {
     try {
@@ -250,7 +271,7 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
-export async function getClassSubjectMapper(classSectionId,universityId) {
+export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId) {
     try {
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
@@ -266,7 +287,10 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    // attributes: ['section', 'acedmicYearId','classSectionsId'],
+
+                    attributes: ['section', 'acedmicYearId','classSectionsId'],
+                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                       attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
                         {
                             model :model.classModel,
@@ -301,6 +325,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                                     model: model.acedmicYearModel,
                                     as: 'courseacedmicYear',
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                    where: acedmicYearId ? { acedmicYearId } : undefined
                                 },
                             ],
                         },
@@ -320,13 +345,15 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
                     model: model.subjectModel,
                     as: 'subjects',
                     attributes: ['subjectName', 'subjectId', 'subjectType', 'subjectCode'],
+                    where: acedmicYearId ? { acedmicYearId } : undefined
+
                 },
             ],
         };
 
         if (classSectionId) {
             queryOptions.where = { class_sections_id: classSectionId };
-        }
+        };
         const result = await model.classSubjectMapperModel.findAll(queryOptions);
 
         return result;
@@ -335,7 +362,7 @@ export async function getClassSubjectMapper(classSectionId,universityId) {
         console.error('Error fetching class subject mapper details:', error.message);
         throw error;
     }
-}
+};
 
 export async function addSemester(data) {    
     try {
@@ -347,18 +374,14 @@ export async function addSemester(data) {
     }
 };
 
-export async function getSemester(courseId, specializationId, universityId) {
+export async function getSemester(courseId, specializationId, universityId,acedmicYearId) {
+
     try {
-        const queryConditions = {};
-        
-        if (courseId) {
-            queryConditions.courseId = courseId;
+        const queryConditions = {
+            ...(acedmicYearId && {acedmicYearId}),
+            ...(courseId && {courseId}),
+            ...(specializationId && {specializationId})
         }
-        
-        if (specializationId) {
-            queryConditions.specializationId = specializationId;
-        }
-        
         const result = await model.semesterModel.findAll({
             include: [
                 {
@@ -376,7 +399,7 @@ export async function getSemester(courseId, specializationId, universityId) {
 
         return result;
     } catch (error) {
-        console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId}:`, error);
+        console.error(`Error in getSemester details for courseId: ${courseId}, specializationId: ${specializationId} and acedmicYearId :${acedmicYearId}:`, error);
         throw error;
     }
 };

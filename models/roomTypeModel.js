@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 
 
 export default sequelize.define(
@@ -11,6 +12,15 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'room_type_id'
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
         },
         roomTypeName: {
             type: DataTypes.STRING,

@@ -9,8 +9,8 @@ export async function addElectiveSubject(electiveSubjectData, createdBy, updated
         return ElectiveSubject;
 };
 
-export async function getElectiveSubjectDetails(universityId) {
-    return await electiveSubjectServices.getElectiveSubjectDetails(universityId);
+export async function getElectiveSubjectDetails(universityId,acedmicYearId) {
+    return await electiveSubjectServices.getElectiveSubjectDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleElectiveSubjectDetails(electiveSubjectId,universityId) {

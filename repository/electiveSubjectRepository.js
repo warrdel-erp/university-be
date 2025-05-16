@@ -11,10 +11,15 @@ export async function addElectiveSubject(electiveSubjectData) {
     }
 };
 
-export async function getElectiveSubjectDetails(universityId) {
+export async function getElectiveSubjectDetails(universityId,acedmicYearId) {
     try {
+        const whereClause = {
+            university_id: universityId,
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         const electiveSubject = await model.electiveSubjectModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where: whereClause,
         });
 
         return electiveSubject;

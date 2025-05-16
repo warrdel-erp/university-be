@@ -8,8 +8,8 @@ export async function addRoomType(RoomTypeData, createdBy, updatedBy) {
         return RoomType;
 };
 
-export async function getRoomTypeDetails(universityId) {
-    return await RoomTypeCreationService.getRoomTypeDetails(universityId);
+export async function getRoomTypeDetails(universityId,acedmicYearId) {
+    return await RoomTypeCreationService.getRoomTypeDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleRoomTypeDetails(roomTypeId,universityId) {

@@ -8,8 +8,8 @@ export async function addFeeGroup(FeeGroupData, createdBy, updatedBy) {
         return FeeGroup;
 };
 
-export async function getFeeGroupDetails(universityId) {
-    return await feeGroupCreationService.getFeeGroupDetails(universityId);
+export async function getFeeGroupDetails(universityId,acedmicYearId) {
+    return await feeGroupCreationService.getFeeGroupDetails(universityId,acedmicYearId);
 }
 
 export async function getSingleFeeGroupDetails(feeGroupId,universityId) {

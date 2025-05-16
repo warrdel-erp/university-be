@@ -10,10 +10,16 @@ export async function addEmployee(data,transaction) {
     }
 };
 
-export async function getAllEmployee(universityId) {
+export async function getAllEmployee(universityId,campusId,instituteId,acedmicYearId) {
     try {
+        const whereClause = {
+            ...(campusId && { campusId }),
+            ...(instituteId && { instituteId }),
+            ...(acedmicYearId && { acedmicYearId }),
+        };
         const result = await model.employeeModel.findAll({
-            attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours"],
+            attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours","campusId","instituteId","acedmicYearId"],
+            where : whereClause,
             include:[
                 {
                     model:model.userModel,

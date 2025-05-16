@@ -9,10 +9,14 @@ export const createTransportRoute = async (data) => {
     }
 };
 
-export const findAllTransportRoutes = async (universityId) => {
+export const findAllTransportRoutes = async (universityId,acedmicYearId) => {
     try {
+        const whereClause = {
+            ...(acedmicYearId && { acedmicYearId })  
+        };
         return await model.transportRouteModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where : whereClause,
              include: [{
                 model: model.userModel,
                  as: 'transportUser',

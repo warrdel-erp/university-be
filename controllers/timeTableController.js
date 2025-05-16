@@ -19,6 +19,7 @@ export const addTimeTable = async (req,res) => {
 
 export const getTimeTableDetails = async (req,res) => {
     const universityId = req.user.universityId;
+    // const{}
     try {
         const result = await timeTableServices.getTimeTableDetails(universityId);
         res.status(200).send(result);

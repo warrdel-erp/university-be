@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
 import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 
 export default sequelize.define(
     'section',
@@ -19,6 +20,15 @@ export default sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
             }
         },
         sectionName: {

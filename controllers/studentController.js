@@ -47,18 +47,23 @@ export const addStudent = async (req, res) => {
 };
 
 // 2. get all student
-export const getAllStudents = async (req,res) => {
+export const getAllStudents = async (req, res) => {
     const universityId = req.user.universityId;
-    let {search} = req.query;
-     search = search || 'all' 
+    let { search, acedmicYearId, page, limit } = req.query;
+    
+    search = search || 'all';
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+
     try {
-        const result = await studentService.getAllStudents(search,universityId);
+        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
         res.status(500).send("Internal Server Error");
-    };
+    }
 };
+
 
 // 3. get single student details
 export const getSingleStudentDetail = async (req,res) => {
@@ -145,8 +150,9 @@ export const deleteStudentDetail = async (req,res) => {
 
 export const getEmptyEnrollNumber = async (req,res) => {
     const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
     try {
-        const result = await studentService.getEmptyEnrollNumber(universityId);
+        const result = await studentService.getEmptyEnrollNumber(universityId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -194,9 +200,10 @@ export const classStudentMapping = async (req, res) => {
 
 export const getclassStudentMapping = async (req, res) => {
     const universityId = req.user.universityId;
-    const classSectionId = req.query.classSectionId || 0;    
+    const classSectionId = req.query.classSectionId || 0;   
+    const acedmicYearId = req.query.acedmicYearId 
     try {
-        const result = await studentService.getclassStudentMapping(classSectionId,universityId);
+        const result = await studentService.getclassStudentMapping(classSectionId,universityId,acedmicYearId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);

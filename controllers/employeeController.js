@@ -20,8 +20,9 @@ export const addEmployee = async (req,res) => {
 
 export const getAllEmployee = async (req,res) => {
     const universityId = req.user.universityId;
+    const {campusId,instituteId,acedmicYearId} = req.query
     try {
-        const result = await employee.getAllEmployee(universityId);
+        const result = await employee.getAllEmployee(universityId,campusId,instituteId,acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);

@@ -11,10 +11,13 @@ export async function addDormitoryList(DormitoryListData) {
     }
 };
 
-export async function getDormitoryListDetails(universityId) {
+export async function getDormitoryListDetails(universityId,acedmicYearId) {
     try {
         const DormitoryList = await model.dormitoryListModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where:{
+                ...(acedmicYearId && {acedmicYearId})
+            }
         });
 
         return DormitoryList;

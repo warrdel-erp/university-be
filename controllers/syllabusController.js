@@ -21,8 +21,9 @@ export async function addSyllabus(req, res) {
 
 export async function getAllSyllabus(req, res) {
     const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
     try {
-        const syllabus = await syllabusCreation.getSyllabusDetails(universityId);
+        const syllabus = await syllabusCreation.getSyllabusDetails(universityId,acedmicYearId);
         res.status(200).json(syllabus);
     } catch (error) {
         res.status(500).json({ error: error.message });

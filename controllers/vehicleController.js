@@ -18,8 +18,9 @@ export const addVehicle = async (req, res) => {
 
 export const getVehicle = async (req, res) => {
     const universityId = req.user.universityId;
+    const {acedmicYearId} =req.query
     try {
-        const vehicles = await transportVehicleService.getAllVehicles(universityId);
+        const vehicles = await transportVehicleService.getAllVehicles(universityId,acedmicYearId);
         res.status(200).json(vehicles);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

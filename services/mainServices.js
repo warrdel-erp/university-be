@@ -1,17 +1,17 @@
 import { getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 
-export async function getAllCollegesAndCourses(universityId) {
+export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId) {
     try {
         const [ allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse,allSpecialization,allSubject ]= 
         await Promise.all([
             mainRepository.getAllUniversity(universityId),
-            mainRepository.getAllCampus(universityId),
-            mainRepository.getAllInstitute(universityId),
-            mainRepository.getAllAffiliatedUniversity(universityId),
-            mainRepository.getAllCourse(universityId),
-            mainRepository.getAllSpecialization(universityId),
-            mainRepository.getAllSubject(universityId)
+            mainRepository.getAllCampus(universityId,campusId),
+            mainRepository.getAllInstitute(universityId,instituteId),
+            mainRepository.getAllAffiliatedUniversity(universityId,instituteId),
+            mainRepository.getAllCourse(universityId,acedmicYearId),
+            mainRepository.getAllSpecialization(universityId,acedmicYearId),
+            mainRepository.getAllSubject(universityId,acedmicYearId)
         ]);
 
     return {
@@ -112,13 +112,13 @@ export async function addCourse(data,createdBy) {
 export async function addSpecialization(data,createdBy) {
     const results = [];
     try {
-        const { course_Id, universityId, specializations } = data;
+        const { course_Id, universityId, specializations,acedmicYearId } = data;
 
         for (const specialization of specializations) {
             const result = await mainRepository.addSpecialization({
                 ...specialization,
                 course_Id,
-                universityId,createdBy
+                universityId,createdBy,acedmicYearId
             });
             results.push(result);
         }
@@ -132,14 +132,14 @@ export async function addSpecialization(data,createdBy) {
 export async function addSubject(data,createdBy) {
     const results = [];
     try {
-        const { courseId, subjects,specializationId,universityId } = data;
+        const { courseId, subjects,specializationId,universityId ,acedmicYearId} = data;
 
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({
                 ...subject,
                 courseId,
                 specializationId,
-                universityId,createdBy
+                universityId,createdBy,acedmicYearId
             });
             results.push(result);
         }
@@ -178,8 +178,8 @@ export async function addClass(data,createdBy,universityId) {
     }
 };
 
-export async function getClassDetails(classSectionId,universityId){
-    return await mainRepository.getClassDetails(classSectionId,universityId)
+export async function getClassDetails(classSectionId,universityId,acedmicYearId){
+    return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId)
 };
 
 export async function addClassSubjectMapper(data, createdBy) {    
@@ -210,25 +210,27 @@ export async function addClassSubjectMapper(data, createdBy) {
 };
 
 
-export async function getClassSubjectMapper(classSectionId,universityId){
-    return await mainRepository.getClassSubjectMapper(classSectionId,universityId)
+export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId){
+    return await mainRepository.getClassSubjectMapper(classSectionId,universityId,acedmicYearId)
 };
 
-export async function addSemester(data,createdBy){
-    const { semesterDuration,courseId} = data
+export async function addSemester(data,createdBy,universityId){
+    const { semesterDuration,courseId,acedmicYearId} = data
     const course = await getCourseByCourseId(courseId)
     const courseDuration = course.dataValues.courseDuration    
         const semesterData = {
         ...data,
         totalSemester: courseDuration/semesterDuration,
         createdBy,
-        courseDuration:courseDuration
+        courseDuration:courseDuration,
+        universityId,
+        acedmicYearId
     };
     return await mainRepository.addSemester(semesterData)
 };
 
-export async function getSemester(courseId,specializationId,universityId){
-    return await mainRepository.getSemester(courseId,specializationId,universityId)
+export async function getSemester(courseId,specializationId,universityId,acedmicYearId){
+    return await mainRepository.getSemester(courseId,specializationId,universityId,acedmicYearId)
 };
 
 export async function createClass(data, createdBy, universityId) {

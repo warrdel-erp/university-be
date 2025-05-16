@@ -11,7 +11,7 @@ export async function addDormitoryRoom(DormitoryRoomData) {
     }
 };
 
-export async function getDormitoryRoomDetails(universityId) {
+export async function getDormitoryRoomDetails(universityId,acedmicYearId) {
     try {
         const DormitoryRoom = await model.addDormitoryModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -24,7 +24,10 @@ export async function getDormitoryRoomDetails(universityId) {
                 {
                     model:model.roomTypeModel,
                     as: 'roomType',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId })
+                    },
                 }
             ]
         });

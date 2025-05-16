@@ -17,8 +17,9 @@ export async function addFeeInvoice(req, res) {
 
 export async function getAllFeeInvoice(req, res) {
     const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
     try {
-        const feeInvoice = await feeInvoiceCreation.getFeeInvoiceDetails(universityId);
+        const feeInvoice = await feeInvoiceCreation.getFeeInvoiceDetails(universityId,acedmicYearId);
         res.status(200).json(feeInvoice);
     } catch (error) {
         res.status(500).json({ error: error.message });

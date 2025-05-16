@@ -23,8 +23,8 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
 }
 
 
-export async function getAttendanceDetails(universityId) {
-    return await attendanceService.getAttendanceDetails(universityId);
+export async function getAttendanceDetails(universityId,acedmicYearId) {
+    return await attendanceService.getAttendanceDetails(universityId,acedmicYearId);
 }
 
 export async function updateAttendance(attendanceId, record, updatedBy) {    
