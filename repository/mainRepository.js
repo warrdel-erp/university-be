@@ -287,8 +287,10 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
+
                     attributes: ['section', 'acedmicYearId','classSectionsId'],
                     where: acedmicYearId ? { acedmicYearId } : undefined,
+                       attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
                         {
                             model :model.classModel,
