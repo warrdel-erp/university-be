@@ -60,7 +60,7 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         // Add employee 
         data.createdBy = createdBy
         data.roleId = roleId
-        const employee = await employeeRepository.addEmployee(data,  transaction );
+        const employee = await employeeRepository.addEmployee(data,  1 );
         const employeeId = employee.dataValues.employeeId;
         const {employeeName} = employee.dataValues
         
