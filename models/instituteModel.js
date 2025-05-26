@@ -18,7 +18,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'campus_id',
             references: {
-                model: campus,
+                model: 'campus',
                 key: 'campus_id'
             }
         },
@@ -58,7 +58,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'created_by',
             references: {
-                model: users,
+                model: 'users',
                 key: 'user_id'
             }
         },
