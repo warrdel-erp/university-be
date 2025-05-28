@@ -33,11 +33,12 @@ export async function getAllCampus(universityId,campusId) {
     }
 };
 
-export async function getAllInstitute(universityId,instituteId) {
+export async function getAllInstitute(universityId,instituteId,headInstituteId,role) {
     try {
         const whereClause = {
             university_id: universityId,
-            ...(instituteId && { instituteId })  
+            ...(instituteId && { institute_id:instituteId }),
+            ...(role === 'Head' && { institute_id: headInstituteId })
         };
         const result = await model.instituteModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -50,11 +51,12 @@ export async function getAllInstitute(universityId,instituteId) {
     }
 };
 
-export async function getAllAffiliatedUniversity(universityId,instituteId) {
+export async function getAllAffiliatedUniversity(universityId,instituteId,headInstituteId,role) {
     try {
         const whereClause = {
             university_id: universityId,
-            ...(instituteId && { instituteId })  
+            ...(instituteId && { institute_id: instituteId }),
+            ...(role === 'Head' && { institute_id: headInstituteId })
         };
         const result = await model.affiliatedIniversityModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -67,11 +69,12 @@ export async function getAllAffiliatedUniversity(universityId,instituteId) {
     }
 };
 
-export async function getAllCourse(universityId,acedmicYearId) {
+export async function getAllCourse(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClause = {
             university_id: universityId,
-            ...(acedmicYearId && { acedmicYearId })  
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { institute_id: instituteId })
         };
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -84,11 +87,12 @@ export async function getAllCourse(universityId,acedmicYearId) {
     }
 };
 
-export async function getAllSpecialization(universityId,acedmicYearId) {
+export async function getAllSpecialization(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClause = {
             university_id: universityId,
-            ...(acedmicYearId && { acedmicYearId })  
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { institute_id: instituteId })
         };
         const result = await model.specializationModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -101,11 +105,14 @@ export async function getAllSpecialization(universityId,acedmicYearId) {
     }
 };
 
-export async function getAllSubject(universityId,acedmicYearId) {
+export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {
+    console.log(`>>>>>>>>>>>>>universityId,acedmicYearId,instituteId`,universityId,acedmicYearId,instituteId);
+    
     try {
         const whereClause = {
             university_id: universityId,
-            ...(acedmicYearId && { acedmicYearId })  
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { institute_id: instituteId })
         };
         const result = await model.subjectModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -213,7 +220,7 @@ export async function seprateAddClass(data) {
     }
 };
 
-export async function getClassDetails(classSectionsId, universityId, acedmicYearId) {
+export async function getClassDetails(classSectionsId, universityId, acedmicYearId,instituteId,role) {
     console.log(`>>>>>>>>>classSectionsId`,classSectionsId);
         console.log(`>>>>>>>>>acedmicYearId`,acedmicYearId);
     try {
@@ -253,6 +260,10 @@ export async function getClassDetails(classSectionsId, universityId, acedmicYear
             queryOptions.where.acedmicYearId = acedmicYearId;
         }
 
+        if (role === 'Head') {
+            queryOptions.where.instituteId = instituteId;
+        }
+
         const result = await model.classSectionModel.findAll(queryOptions);
         return result;
     } catch (error) {
@@ -271,10 +282,14 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
-export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId) {
+export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role) {
     try {
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
+            where: {
+                ...(classSectionId && { class_sections_id: classSectionId }),
+                ...(role === 'Head' && { instituteId })
+            },
             include: [
                 {
                     model:model.userModel,
@@ -351,9 +366,9 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
             ],
         };
 
-        if (classSectionId) {
-            queryOptions.where = { class_sections_id: classSectionId };
-        };
+        // if (classSectionId) {
+        //     queryOptions.where = { class_sections_id: classSectionId };
+        // };
         const result = await model.classSubjectMapperModel.findAll(queryOptions);
 
         return result;
@@ -374,13 +389,14 @@ export async function addSemester(data) {
     }
 };
 
-export async function getSemester(courseId, specializationId, universityId,acedmicYearId) {
+export async function getSemester(courseId, specializationId, universityId,acedmicYearId,instituteId,role) {
 
     try {
         const queryConditions = {
             ...(acedmicYearId && {acedmicYearId}),
             ...(courseId && {courseId}),
-            ...(specializationId && {specializationId})
+            ...(specializationId && {specializationId}),
+            ...(role === 'Head' && { institute_id: instituteId })
         }
         const result = await model.semesterModel.findAll({
             include: [

@@ -5,6 +5,7 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
+import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
     'course',
@@ -40,6 +41,15 @@ export default sequelize.define(
             references: {
                 model: affiliatedUniversity,
                 key: 'affiliated_university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
             }
         },
         acedmicYearId:{

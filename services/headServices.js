@@ -8,7 +8,7 @@ export async function addHead(headData, createdBy, updatedBy, universityId) {
     const transaction = await sequelize.transaction();
 
     try {
-        const { headName, mobileNumber, registerEmail, alternateEmail } = headData;
+        const { headName, mobileNumber, registerEmail, alternateEmail,instituteId } = headData;
 
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(alternateEmail, salt);
@@ -26,7 +26,8 @@ export async function addHead(headData, createdBy, updatedBy, universityId) {
             phone: mobileNumber,
             email: registerEmail.toLowerCase(),
             uniqueId: uuidv4(),
-            role: 'Head'
+            role: 'Head',
+            instituteId
         };
 
         const user = await registerRepository.headRegister(userPayload,  transaction );

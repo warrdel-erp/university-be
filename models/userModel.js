@@ -25,10 +25,10 @@ export default sequelize.define(
         type: DataTypes.INTEGER,
         allowNull: true,
         field: 'institute_id',
-        references: {
-            model: institute,
-            key: 'institute_id'
-        }
+        // references: {
+        //     model: 'institute',
+        //     key: 'institute_id'
+        // }
     },
     userName: {
         type: DataTypes.STRING,

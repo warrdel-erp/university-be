@@ -1,16 +1,18 @@
 import * as SectionCreationService  from "../repository/sectionRepository.js";
 
-export async function addSection(SectionData, createdBy, updatedBy,universityId) {
+export async function addSection(SectionData, createdBy, updatedBy,universityId,instituteId,role) {
 
         SectionData.createdBy = createdBy;
         SectionData.updatedBy = updatedBy;
-        SectionData.universityId = universityId
+        SectionData.universityId = universityId,
+        SectionData.instituteId = instituteId,
+        SectionData.role = role
         const Section = await SectionCreationService.addSection(SectionData);
         return Section;
 };
 
-export async function getSectionDetails(universityId,acedmicYearId) {
-    return await SectionCreationService.getSectionDetails(universityId,acedmicYearId);
+export async function getSectionDetails(universityId,acedmicYearId,instituteId,role) {
+    return await SectionCreationService.getSectionDetails(universityId,acedmicYearId,instituteId,role);
 }
 
 export async function getSingleSectionDetails(sectionId,universityId) {

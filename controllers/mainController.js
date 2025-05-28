@@ -3,6 +3,9 @@ import * as fileHandler from '../utility/fileHandler.js';
 
 export const getAllCollegesAndCourses = async (req,res) => {
     const universityId = req.user.universityId;
+    const role = req.user.role;    
+    const headInstituteId = req.user.instituteId;
+    
     try {
         const campusId = req.query.campusId;
         const instituteId = req.query.instituteId;
@@ -10,7 +13,7 @@ export const getAllCollegesAndCourses = async (req,res) => {
         if(!universityId){
             res.status(400).send('University Id is required')
         }
-        const result = await mainServices.getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId);
+        const result = await mainServices.getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all course:", error);
@@ -76,11 +79,12 @@ export const addCourse = async (req,res) => {
     try {
         const {universityId,course_levelId,affiliatedUniversityId} = req.body;
         const createdBy = req.user.userId;
-        const data = req.body
-        if(!(universityId && course_levelId && affiliatedUniversityId)){
-            res.status(400).send('University Id,affiliatedUniversityId and course_level Id is required')
+        const data = req.body;
+        const instituteId = req.user.instituteId;
+        if(!(universityId && course_levelId && affiliatedUniversityId && instituteId)){
+            res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
         } 
-        const result = await mainServices.addCourse(data,createdBy);
+        const result = await mainServices.addCourse(data,createdBy,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Course:", error);
@@ -93,10 +97,11 @@ export const addSpecialization = async (req,res) => {
         const {universityId,course_Id,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if(!(universityId && course_Id && acedmicYearId)){
-            res.status(400).send('University Id, course Id and acedmicYearId is required')
+        const instituteId = req.user.instituteId;
+        if(!(universityId && course_Id && acedmicYearId && instituteId)){
+            res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
         } 
-        const result = await mainServices.addSpecialization(data,createdBy);
+        const result = await mainServices.addSpecialization(data,createdBy,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Specialization:", error);
@@ -109,10 +114,11 @@ export const addSubject = async (req,res) => {
         const {courseId,universityId,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if(!(courseId && universityId && acedmicYearId)){
-            res.status(400).send('universityId , course Id and acedmicYearId is required')
+        const instituteId = req.user.instituteId;
+        if(!(courseId && universityId && acedmicYearId && instituteId)){
+            res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
         } 
-        const result = await mainServices.addSubject(data,createdBy);
+        const result = await mainServices.addSubject(data,createdBy,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);
@@ -125,11 +131,12 @@ export const addClass = async (req,res) => {
         const {courseId,specializationId} = req.body;
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
+        const instituteId = req.user.instituteId;
         const data = req.body
         if(!(courseId || specializationId)){
             res.status(400).send('specializationId Or course Id is required')
         } 
-        const result = await mainServices.addClass(data,createdBy,universityId);
+        const result = await mainServices.addClass(data,createdBy,universityId,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Class:", error);
@@ -143,7 +150,9 @@ export const getClass = async (req,res) => {
         const acedmicYearId = req.query.acedmicYearId
         const classSectionId = classSectionIds || 0;
         const universityId = req.user.universityId;
-        const result = await mainServices.getClassDetails(classSectionId,universityId,acedmicYearId);
+        const role = req.user.role;    
+        const instituteId = req.user.instituteId;
+        const result = await mainServices.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
@@ -155,11 +164,12 @@ export const addClassSubjectMapper = async (req,res) => {
     try {
         const {classId} = req.body;
         const createdBy = req.user.userId;
-        const data = req.body
-        if(!(classId)){
-            return res.status(400).send('classId is required')
+        const data = req.body;
+        const instituteId = req.user.instituteId;
+        if(!(classId && instituteId)){
+            return res.status(400).send('classId and instituteId is required')
         } 
-        const result = await mainServices.addClassSubjectMapper(data,createdBy);
+        const result = await mainServices.addClassSubjectMapper(data,createdBy,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Class Subject Mapper:", error);
@@ -172,7 +182,9 @@ export const getClassSubjectMapper = async (req,res) => {
         const classSectionId = req.query.classSectionId  || 0;
         const acedmicYearId = req.query.acedmicYearId 
         const universityId = req.user.universityId;
-        const result = await mainServices.getClassSubjectMapper(classSectionId,universityId,acedmicYearId);
+        const role = req.user.role;    
+        const instituteId = req.user.instituteId;
+        const result = await mainServices.getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
@@ -186,10 +198,11 @@ export const addSemester = async (req,res) => {
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body
-        if(!(universityId && courseId && acedmicYearId)){
-            res.status(400).send('universityId and courseId is required')
+        const instituteId = req.user.instituteId;
+        if(!(universityId && courseId && acedmicYearId && instituteId)){
+            res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
         } 
-        const result = await mainServices.addSemester(data,createdBy,universityId);
+        const result = await mainServices.addSemester(data,createdBy,universityId,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add semester:", error);
@@ -203,7 +216,9 @@ export const getSemester = async (req,res) => {
         const acedmicYearId = req.query.acedmicYearId
         const specializationId = req.query.specializationId;
         const universityId = req.user.universityId;
-        const result = await mainServices.getSemester(courseId,specializationId,universityId,acedmicYearId);
+        const role = req.user.role;    
+        const instituteId = req.user.instituteId;
+        const result = await mainServices.getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting semester:", error);
@@ -217,10 +232,11 @@ export const createClass = async (req,res) => {
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body
-        if(!(acedmicYearId && courseId)){
-            res.status(400).send('acedmicYearId and courseId is required')
+        const instituteId = req.user.instituteId;
+        if(!(acedmicYearId && courseId && instituteId)){
+            res.status(400).send('acedmicYearId ,instituteId and courseId is required')
         } 
-        const result = await mainServices.createClass(data,createdBy,universityId);
+        const result = await mainServices.createClass(data,createdBy,universityId,instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add directly class:", error);
@@ -233,9 +249,10 @@ export const subjectExcel = async (req,res) => {
         const {courseId,specializationId} = req.body;
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
-        const data = req.body
-        if(!(courseId)){
-            res.status(400).send('courseId is required')
+        const data = req.body;
+        const instituteId = req.user.instituteId;
+        if(!(courseId && instituteId)){
+            res.status(400).send('courseId and instituteId is required')
         } 
         const excelFile = req.files?.subject;
         if (!excelFile) {
@@ -243,7 +260,7 @@ export const subjectExcel = async (req,res) => {
         }
 
         const excelData = fileHandler.readExcelFile(excelFile.data);
-        const result = await mainServices.subjectExcel(excelData,courseId,specializationId,createdBy,universityId);
+        const result = await mainServices.subjectExcel(excelData,courseId,specializationId,createdBy,universityId,instituteId);
 
         res.status(200).send(result);
     } catch (error) {

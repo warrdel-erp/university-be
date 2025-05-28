@@ -11,7 +11,7 @@ export async function teacherSectionMapping(data) {
     }
 };
 
-export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId) {    
+export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId,instituteId,role) {    
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -26,7 +26,11 @@ export async function getTeacherSectionMapping(employeeId, universityId, acedmic
                     model: model.employeeModel,
                     as: "employeeData",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    // where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(role === 'Head' && { instituteId })
+                    },
 
                     include: [
                         {
@@ -45,7 +49,11 @@ export async function getTeacherSectionMapping(employeeId, universityId, acedmic
                     model: model.classSectionModel,
                     as: "employeeSection",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    // where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: {
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(role === 'Head' && { instituteId })
+                    },
                     include: [
                         {
                             model: model.courseModel,

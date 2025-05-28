@@ -4,6 +4,7 @@ import course from "./courseModel.js";
 import university from "./universityModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
+import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
     'specialization',
@@ -39,6 +40,15 @@ export default sequelize.define(
             references: {
                 model: acedmicYear,
                 key: 'acedmic_year_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
             }
         },
         specializationName: {

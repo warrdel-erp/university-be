@@ -20,9 +20,11 @@ export const addEmployee = async (req,res) => {
 
 export const getAllEmployee = async (req,res) => {
     const universityId = req.user.universityId;
+    const headInstituteId = req.user.instituteId;
+    const role = req.user.role;
     const {campusId,instituteId,acedmicYearId} = req.query
     try {
-        const result = await employee.getAllEmployee(universityId,campusId,instituteId,acedmicYearId);
+        const result = await employee.getAllEmployee(universityId,campusId,instituteId,acedmicYearId,headInstituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);

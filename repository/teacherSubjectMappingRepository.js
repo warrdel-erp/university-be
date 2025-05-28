@@ -112,7 +112,7 @@ export async function teacherSubjectMapping(data) {
 //     };
 // };
 
-export async function getTeacherSubjectMapping(employeeId, universityId, acedmicYearId) {
+export async function getTeacherSubjectMapping(employeeId, universityId, acedmicYearId,instituteId,role) {
     try {
         const queryOptions = {
             include: [
@@ -128,7 +128,11 @@ export async function getTeacherSubjectMapping(employeeId, universityId, acedmic
                     model: model.employeeModel,
                     as: "teacherEmployeeData",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    // where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: {
+                                ...(acedmicYearId && { acedmicYearId }),
+                                ...(role === 'Head' && { instituteId })
+                            },
                     include: [
                         {
                             model: model.campusModel,
@@ -151,7 +155,11 @@ export async function getTeacherSubjectMapping(employeeId, universityId, acedmic
                             model: model.classSectionModel,
                             as: "employeeClassSection",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            where: acedmicYearId ? { acedmicYearId } : undefined
+                            // where: acedmicYearId ? { acedmicYearId } : undefined
+                            where: {
+                                ...(acedmicYearId && { acedmicYearId }),
+                                ...(role === 'Head' && { instituteId })
+                            },
                         }
                     ]
                 }

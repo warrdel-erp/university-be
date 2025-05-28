@@ -25,8 +25,8 @@ export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
     }
 };
 
-export async function getFeeInvoiceDetails(universityId,acedmicYearId) {
-    return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId,acedmicYearId);
+export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role) {
+    return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role);
 };
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {

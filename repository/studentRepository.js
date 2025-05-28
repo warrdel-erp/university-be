@@ -283,7 +283,7 @@ export async function studentMetaData(data, transaction) {
 //     };
 // };
 
-export async function getAllStudents(firstName, universityId, acedmicYearId, page, limit) {
+export async function getAllStudents(firstName, universityId, acedmicYearId, page, limit,instituteId,role) {
     try {
         const baseInclude = [
             {
@@ -376,7 +376,8 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                     [Op.like]: `%${firstName}%`
                 }
             }),
-            ...(acedmicYearId && { acedmicYearId })
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
         };
 
         const offset = (page - 1) * limit;
@@ -686,14 +687,15 @@ export async function checkEnroll(enrollNumber) {
     }
 };
 
-export async function getEmptyEnrollNumber(universityId, acedmicYearId) {
+export async function getEmptyEnrollNumber(universityId, acedmicYearId,instituteId,role) {    
     try {
         const result = await model.studentModel.findAll({
             where: {
                 ...(acedmicYearId && { acedmicYearId }),
                 enrollNumber: {
                     [Op.or]: [null, '']
-                }
+                },
+                ...(role === 'Head' && { instituteId })
             },
             include: [
                 {
@@ -817,9 +819,16 @@ export async function classStudentMappingExcel(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId) {
+export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId,instituteId,role) {
+    console.log(`>>>>>>>>>>>>instituteId,role`,instituteId,role);
+    
 
     try {
+        const studentWhere = {
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
+        };
+
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
@@ -840,7 +849,7 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
                     model: model.studentModel,
                     as: "studentMapped",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: studentWhere,
                     include: [
                         {
                             model: model.campusModel,

@@ -17,9 +17,11 @@ export async function addFeeType(req, res) {
 
 export async function getAllFeeType(req, res) {
     const universityId = req.user.universityId;
-    const { acedmicYearId  } = req.query;
+    const { acedmicYearId } = req.query;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
-        const FeeType = await feeTypeCreation.getFeeTypeDetails(universityId,acedmicYearId);
+        const FeeType = await feeTypeCreation.getFeeTypeDetails(universityId,acedmicYearId,instituteId,role);
         res.status(200).json(FeeType);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -588,6 +588,9 @@ classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 
 faculityLoadModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 
+// instituteModel.belongsTo(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
+// userModel.hasMany(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
+
 export {
     settingModel,
     universityModel,

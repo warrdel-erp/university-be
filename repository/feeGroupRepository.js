@@ -11,10 +11,11 @@ export async function addFeeGroup(feeGroupData) {
     }
 };
 
-export async function getFeeGroupDetails(universityId,acedmicYearId) {
+export async function getFeeGroupDetails(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClause = {
-            ...(acedmicYearId && { acedmicYearId })  
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
         };
         const FeeGroup = await model.feeGroupModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -34,7 +35,7 @@ export async function getFeeGroupDetails(universityId,acedmicYearId) {
         console.error('Error fetching FeeGroup details:', error);
         throw error;
     }
-}
+};
 
 export async function getSingleFeeGroupDetails(feeGroupId,universityId) {
     try {

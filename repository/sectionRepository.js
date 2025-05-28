@@ -12,11 +12,12 @@ export async function addSection(SectionData) {
 };
 
 
-export async function getSectionDetails(universityId,acedmicYearId) {    
+export async function getSectionDetails(universityId,acedmicYearId,instituteId,role) {    
     try {
         const whereClause = {
             university_id: universityId,
-            ...(acedmicYearId && { acedmicYearId })  
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { institute_id: instituteId })
         };
         const Section = await model.sectionModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","universityId"] },
