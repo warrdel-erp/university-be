@@ -4,7 +4,7 @@ export const addAssignVehicle = async (assignVehicleData) => {
     return await model.assignVehicleModel.create(assignVehicleData);
 };
 
-export const getAssignVehicle = async (universityId, acedmicYearId) => {
+export const getAssignVehicle = async (universityId, acedmicYearId,role,instituteId) => {
     try {
         const result = await model.assignVehicleModel.findAll({
             attributes: {
@@ -16,7 +16,8 @@ export const getAssignVehicle = async (universityId, acedmicYearId) => {
                     as: 'transportRoute',
                     attributes: ["routeTitle", "fare"],
                     where: {
-                        ...(acedmicYearId && { acedmicYearId })
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(role === 'Head' && { instituteId })
                     }
                 },
                 {

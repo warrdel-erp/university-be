@@ -15,9 +15,9 @@ export const addAssignVehicle = async (assignVehicleData) => {
     }
 };
  
-export const getAssignVehicle = async (universityId,acedmicYearId) => {
+export const getAssignVehicle = async (universityId,acedmicYearId,role,instituteId) => {
     try {
-        return await getAssignVehicleRepo(universityId,acedmicYearId);
+        return await getAssignVehicleRepo(universityId,acedmicYearId,role,instituteId);
     } catch (error) {
         throw new Error(`Failed to fetch vehicles: ${error.message}`);
     }

@@ -8,9 +8,9 @@ const createVehicle = async (vehicleData) => {
     }
 };
 
-const getAllVehicles = async (universityId,acedmicYearId) => {
+const getAllVehicles = async (universityId,acedmicYearId,role,instituteId) => {
     try {
-        return await transportVehicleRepository.getAllVehicles(universityId,acedmicYearId);
+        return await transportVehicleRepository.getAllVehicles(universityId,acedmicYearId,role,instituteId);
     } catch (error) {
         throw new Error(`Failed to fetch vehicles: ${error.message}`);
     }

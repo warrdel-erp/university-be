@@ -126,7 +126,7 @@ ALTER TABLE exam_attendance ADD COLUMN institute_id INT NOT NULL;
 
 UPDATE exam_attendance SET institute_id = 1 WHERE institute_id IS NULL;
 
-UPDATE exam_attendance SET institute_id = 1 WHERE institute_id = 0;exam_attendance
+UPDATE exam_attendance SET institute_id = 1 WHERE institute_id = 0;
 
 ALTER TABLE exam_attendance ADD CONSTRAINT fk_exam_attendance_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
 
@@ -169,3 +169,23 @@ UPDATE room_type SET university_id = 1 WHERE university_id IS NULL;
 UPDATE room_type SET university_id = 1 WHERE university_id = 0;
 
 ALTER TABLE room_type ADD CONSTRAINT fk_room_type_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in transport_route
+
+ALTER TABLE transport_route ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE transport_route SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE transport_route SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE transport_route ADD CONSTRAINT fk_transport_route_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the university_id column with the foreign key reference in transport_route
+
+ALTER TABLE transport_route ADD COLUMN university_id INT NOT NULL;
+
+UPDATE transport_route SET university_id = 1 WHERE university_id IS NULL;
+
+UPDATE transport_route SET university_id = 1 WHERE university_id = 0;
+
+ALTER TABLE transport_route ADD CONSTRAINT fk_transport_route_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;

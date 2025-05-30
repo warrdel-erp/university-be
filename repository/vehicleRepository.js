@@ -4,11 +4,14 @@ const createVehicle = async (vehicleData) => {
     return await model.vehicleModel.create(vehicleData);
 };
 
-const getAllVehicles = async (universityId, acedmicYearId) => {
+const getAllVehicles = async (universityId, acedmicYearId,role,instituteId) => {
     try {
         const result = await model.vehicleModel.findAll({
             attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+            },
+            where:{
+                ...(role === 'Head' && { instituteId })
             },
             include: [
                 {

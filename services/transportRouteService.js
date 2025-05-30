@@ -15,9 +15,9 @@ export const addTransportRouteService = async (data) => {
     }
 };
 
-export const getAllTransportRouteService = async (universityId,acedmicYearId) => {
+export const getAllTransportRouteService = async (universityId,acedmicYearId,instituteId,role) => {
     try {
-        return await findAllTransportRoutes(universityId,acedmicYearId);
+        return await findAllTransportRoutes(universityId,acedmicYearId,instituteId,role);
     } catch (error) {
         console.error("Error in getAllTransportRouteService:", error);
         throw error;
