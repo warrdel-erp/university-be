@@ -1,5 +1,6 @@
 import { getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
+import sequelize from "../database/sequelizeConfig.js";
 
 export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId) {
     try {
@@ -83,15 +84,18 @@ export async function addAffiliatedUniversity(data,createdBy) {
         console.error('Error adding affiliated universities:', error);
         return { message: 'Error adding affiliated universities', error };
     }
-}
+};
 
-export async function addCourse(data,createdBy,instituteId) {
-    
+export async function addCourse(data, createdBy, instituteId) {
     const results = [];
+
+    const transaction = await sequelize.transaction(); 
+
     try {
-        const { course_levelId, universityId, courses,affiliatedUniversityId ,acedmicYearId} = data;
+        const { course_levelId, universityId, courses, affiliatedUniversityId, acedmicYearId,term } = data;
 
         for (const course of courses) {
+            // Add course
             const result = await mainRepository.addCourse({
                 ...course,
                 course_levelId,
@@ -100,15 +104,68 @@ export async function addCourse(data,createdBy,instituteId) {
                 createdBy,
                 acedmicYearId,
                 instituteId,
-            });            
+            }, transaction); 
+
+            const courseId = result?.dataValues?.courseId;
             results.push(result);
+
+            // add terms
+            const { courseDuration } = course; 
+            
+            if (courseId && term && courseDuration) {
+                let monthsPerTerm = 6;
+                let termLabel = '';
+                switch (term.toLowerCase()) {
+                    case 'semester':
+                        monthsPerTerm = 6;
+                        termLabel = 'Sem';
+                        break;
+                    case 'trimester':
+                        monthsPerTerm = 4;
+                        termLabel = 'Tri';
+                        break;
+                    case 'quarterly':
+                        monthsPerTerm = 3;
+                        termLabel = 'Quar';
+                        break;
+                    case 'yearly':
+                        monthsPerTerm = 12;
+                        termLabel = 'Year';
+                        break;
+                    default:
+                        console.warn(`Unknown term type: ${term}`);
+                        continue;
+                }
+                const totalTerms = Math.floor(courseDuration / monthsPerTerm);
+
+                for (let i = 1; i <= totalTerms; i++) {
+
+                    await mainRepository.addSemester({
+                        universityId,
+                        courseId,
+                        acedmicYearId,
+                        instituteId,
+                        name: `${termLabel} ${i}`,
+                        semesterDuration: monthsPerTerm,
+                        courseDuration: courseDuration,
+                        totalSemester: totalTerms,
+                        createdBy,
+                    }, transaction); 
+                }
+            }
         }
+
+        await transaction.commit(); 
+
         return results;
+
     } catch (error) {
+        await transaction.rollback(); 
         console.error('Error adding courses:', error);
         return { message: 'Error adding courses', error };
     }
 };
+
 
 export async function addSpecialization(data,createdBy,instituteId) {
     const results = [];

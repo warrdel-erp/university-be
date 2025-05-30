@@ -60,7 +60,11 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
+        },
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
         semesterDuration: {
             type: DataTypes.INTEGER,
             allowNull: false,

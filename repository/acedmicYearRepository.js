@@ -15,14 +15,14 @@ export async function getacedmicYearDetails(universityId) {
     try {
         const acedmicYear = await model.acedmicYearModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
-                {
-                    model: model.userModel,
-                    as: "userAcedmicYear",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
-            ]
+            // include:[
+            //     {
+            //         model: model.userModel,
+            //         as: "userAcedmicYear",
+            //         attributes: ["universityId", "userId"],
+            //         where: { universityId }
+            //     },
+            // ]
         });
 
         return acedmicYear;
@@ -37,14 +37,14 @@ export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
         const acedmicYear = await model.acedmicYearModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { acedmicYearId },
-            include:[
-                {
-                    model: model.userModel,
-                    as: "userAcedmicYear",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
-            ]
+            // include:[
+            //     {
+            //         model: model.userModel,
+            //         as: "userAcedmicYear",
+            //         attributes: ["universityId", "userId"],
+            //         where: { universityId }
+            //     },
+            // ]
         });
 
         return acedmicYear;
