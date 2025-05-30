@@ -11,7 +11,7 @@ export async function addDormitoryRoom(DormitoryRoomData) {
     }
 };
 
-export async function getDormitoryRoomDetails(universityId,acedmicYearId) {
+export async function getDormitoryRoomDetails(universityId,acedmicYearId,role,instituteId) {
     try {
         const DormitoryRoom = await model.addDormitoryModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -19,7 +19,11 @@ export async function getDormitoryRoomDetails(universityId,acedmicYearId) {
                 {
                     model:model.dormitoryListModel,
                     as: 'dormitoryList',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
+                    where :{
+                        universityId : universityId,
+                        ...(role === 'Head' && { instituteId })
+                    }
                 },
                 {
                     model:model.roomTypeModel,
@@ -37,7 +41,7 @@ export async function getDormitoryRoomDetails(universityId,acedmicYearId) {
         console.error('Error fetching DormitoryRoom details:', error);
         throw error;
     }
-}
+};
 
 export async function getSingleDormitoryRoomDetails(dormitoryListId) {
     try {
@@ -63,12 +67,12 @@ export async function getSingleDormitoryRoomDetails(dormitoryListId) {
         console.error('Error fetching DormitoryRoom details:', error);
         throw error;
     }
-}
+};
 
 export async function deleteDormitoryRoom(dormitoryListId) {
     const deleted = await model.addDormitoryModel.destroy({ where: { dormitoryListId: dormitoryListId } });
     return deleted > 0;
-}
+};
 
 export async function updateDormitoryRoom(dormitoryListId, DormitoryRoomData) {
     try {
@@ -80,4 +84,4 @@ export async function updateDormitoryRoom(dormitoryListId, DormitoryRoomData) {
         console.error(`Error updating DormitoryRoom creation ${dormitoryListId}:`, error);
         throw error; 
     }
-}
+};

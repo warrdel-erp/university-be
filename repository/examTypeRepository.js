@@ -11,12 +11,14 @@ export async function addExamType(examDetail) {
     }
 };
 
-export async function getExamType(universityId,acedmicYearId) {
+export async function getExamType(universityId,acedmicYearId,role,instituteId) {
     try {
         const DormitoryList = await model.examTypeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: {
-                        ...(acedmicYearId && { acedmicYearId })
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(universityId && {universityId}),
+                        ...(role === 'Head' && { instituteId })
                     },
             include: [{
                 model: model.userModel,
@@ -33,8 +35,7 @@ export async function getExamType(universityId,acedmicYearId) {
         console.error('Error fetching Exam Type details:', error);
         throw error;
     }
-}
-
+};
 
 export async function getSingleExamType(examTypeId, universityId) {
     try {
@@ -56,12 +57,12 @@ export async function getSingleExamType(examTypeId, universityId) {
         console.error('Error fetching DormitoryList details:', error);
         throw error;
     }
-}
+};
 
 export async function deleteExamType(examTypeId) {
     const deleted = await model.examTypeModel.destroy({ where: { examTypeId: examTypeId } });
     return deleted > 0;
-}
+};
 
 export async function updateExamType(examTypeId, DormitoryListData) {
     try {
@@ -73,4 +74,4 @@ export async function updateExamType(examTypeId, DormitoryListData) {
         console.error(`Error updating DormitoryList creation ${examTypeId}:`, error);
         throw error;
     }
-}
+};

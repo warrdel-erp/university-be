@@ -99,3 +99,73 @@ UPDATE fee_group SET institute_id = 1 WHERE institute_id IS NULL;
 UPDATE fee_group SET institute_id = 1 WHERE institute_id = 0;
 
 ALTER TABLE fee_group ADD CONSTRAINT fk_fee_group_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in exam_type
+
+ALTER TABLE exam_type ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE exam_type SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE exam_type SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE exam_type ADD CONSTRAINT fk_exam_type_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the university_id column with the foreign key reference in exam_type
+
+ALTER TABLE exam_type ADD COLUMN university_id INT NOT NULL;
+
+UPDATE exam_type SET university_id = 1 WHERE university_id IS NULL;
+
+UPDATE exam_type SET university_id = 1 WHERE university_id = 0;
+
+ALTER TABLE exam_type ADD CONSTRAINT fk_exam_type_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in exam_attendance
+
+ALTER TABLE exam_attendance ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE exam_attendance SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE exam_attendance SET institute_id = 1 WHERE institute_id = 0;exam_attendance
+
+ALTER TABLE exam_attendance ADD CONSTRAINT fk_exam_attendance_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in dormitory_list
+
+ALTER TABLE dormitory_list ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE dormitory_list SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE dormitory_list SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE dormitory_list ADD CONSTRAINT fk_dormitory_list_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the university_id column with the foreign key reference in dormitory_list
+
+ALTER TABLE dormitory_list ADD COLUMN university_id INT NOT NULL;
+
+UPDATE dormitory_list SET university_id = 1 WHERE university_id IS NULL;
+
+UPDATE dormitory_list SET university_id = 1 WHERE university_id = 0;
+
+ALTER TABLE dormitory_list ADD CONSTRAINT fk_dormitory_list_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in room_type
+
+ALTER TABLE room_type ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE room_type SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE room_type SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE room_type ADD CONSTRAINT fk_room_type_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the university_id column with the foreign key reference in room_type
+
+ALTER TABLE room_type ADD COLUMN university_id INT NOT NULL;
+
+UPDATE room_type SET university_id = 1 WHERE university_id IS NULL;
+
+UPDATE room_type SET university_id = 1 WHERE university_id = 0;
+
+ALTER TABLE room_type ADD CONSTRAINT fk_room_type_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;

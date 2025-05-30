@@ -1,14 +1,15 @@
 import * as DormitoryListCreationService from "../repository/dormitoryListRepository.js";
 
-export async function addDormitoryList(DormitoryListData, createdBy, updatedBy) {
-    DormitoryListData.createdBy = createdBy;
-    DormitoryListData.updatedBy = updatedBy;
-    const DormitoryList = await DormitoryListCreationService.addDormitoryList(DormitoryListData);
+export async function addDormitoryList(dormitoryListData, createdBy, updatedBy,instituteId) {
+    dormitoryListData.createdBy = createdBy;
+    dormitoryListData.updatedBy = updatedBy;
+    dormitoryListData.instituteId=instituteId
+    const DormitoryList = await DormitoryListCreationService.addDormitoryList(dormitoryListData);
     return DormitoryList;
 }
 
-export async function getDormitoryListDetails(universityId,acedmicYearId) {
-    return await DormitoryListCreationService.getDormitoryListDetails(universityId,acedmicYearId);
+export async function getDormitoryListDetails(universityId,acedmicYearId,role,instituteId) {
+    return await DormitoryListCreationService.getDormitoryListDetails(universityId,acedmicYearId,role,instituteId);
 }
 
 export async function getSingleDormitoryListDetails(dormitoryListId, universityId) {
@@ -19,8 +20,8 @@ export async function deleteDormitoryList(dormitoryListId) {
     return await DormitoryListCreationService.deleteDormitoryList(dormitoryListId);
 }
 
-export async function updateDormitoryList(dormitoryListId, DormitoryListData, updatedBy) {
+export async function updateDormitoryList(dormitoryListId, dormitoryListData, updatedBy) {
 
-    DormitoryListData.updatedBy = updatedBy;
-    await DormitoryListCreationService.updateDormitoryList(dormitoryListId, DormitoryListData);
+    dormitoryListData.updatedBy = updatedBy;
+    await DormitoryListCreationService.updateDormitoryList(dormitoryListId, dormitoryListData);
 }

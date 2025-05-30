@@ -4,7 +4,8 @@ export async function addExamAttendance(req, res) {
     const { userId } = req.user;
     const createdBy = userId;
     const updatedBy = userId;
-    const attendanceRecords = req.body;  
+    const attendanceRecords = req.body;
+    const instituteId = req.user.instituteId;  
 
     if (!Array.isArray(attendanceRecords) || attendanceRecords.length === 0) {
         return res.status(400).send("Attendance records must be a non-empty array");
@@ -20,7 +21,7 @@ export async function addExamAttendance(req, res) {
             const createdAttendance = await examAttendanceServices.addExamAttendance(
                 { examSetupId, studentId, attendanceStatus },
                 createdBy,
-                updatedBy
+                updatedBy,instituteId
             );
             results.push(createdAttendance);
         }
@@ -31,19 +32,20 @@ export async function addExamAttendance(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
-
+};
 
 export async function getAllExamAttendance(req, res) {
+    const role = req.user.role;    
+    const instituteId = req.user.instituteId;
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
     try {
-        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(universityId,acedmicYearId);
+        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(attendanceRecords);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getSingleExamAttendance(req, res) {
     const universityId = req.user.universityId;

@@ -10,7 +10,7 @@ export async function addExamSetup(examDetail) {
     }
 }
 
-export async function getExamSetup(universityId,acedmicYearId) {
+export async function getExamSetup(universityId,acedmicYearId,role,instituteId) {
     try {
         const result = await model.examSetupModel.findAll({
             attributes: {
@@ -34,7 +34,9 @@ export async function getExamSetup(universityId,acedmicYearId) {
                     as: "examType",
                     attributes: ["examTypeId", "examName"],
                     where: {
-                        ...(acedmicYearId && { acedmicYearId })
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(role === 'Head' && { instituteId }),
+
                     },
                 },
                 {

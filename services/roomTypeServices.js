@@ -1,15 +1,17 @@
 import * as RoomTypeCreationService  from "../repository/roomTypeRepository.js";
 
-export async function addRoomType(RoomTypeData, createdBy, updatedBy) {
+export async function addRoomType(RoomTypeData, createdBy, updatedBy,universityId,instituteId) {
 
         RoomTypeData.createdBy = createdBy;
         RoomTypeData.updatedBy = updatedBy;
+        RoomTypeData.universityId =universityId;
+        RoomTypeData.instituteId = instituteId 
         const RoomType = await RoomTypeCreationService.addRoomType(RoomTypeData);
         return RoomType;
 };
 
-export async function getRoomTypeDetails(universityId,acedmicYearId) {
-    return await RoomTypeCreationService.getRoomTypeDetails(universityId,acedmicYearId);
+export async function getRoomTypeDetails(universityId,acedmicYearId,role,instituteId) {
+    return await RoomTypeCreationService.getRoomTypeDetails(universityId,acedmicYearId,role,instituteId);
 }
 
 export async function getSingleRoomTypeDetails(roomTypeId,universityId) {
