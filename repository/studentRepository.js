@@ -308,7 +308,7 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 model: model.acedmicYearModel,
                 as: "acdemicYear",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                where: { universityId },
+                // where: { universityId },
             },
             {
                 model: model.affiliatedIniversityModel,

@@ -531,8 +531,8 @@ assignVehicleModel.belongsTo(vehicleModel, { foreignKey: 'vehicleId', as: 'vehic
 vehicleModel.hasMany(assignVehicleModel, { foreignKey: 'vehicleId', as: 'vehicle' });
 
 // acedmic year
-acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
-userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+// acedmicYearModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
+// userModel.hasMany(acedmicYearModel, { foreignKey: 'createdBy', as: 'userAcedmicYear' });
 
 buildingModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
 campusModel.hasMany(buildingModel, { foreignKey: 'campus_id', as: 'campusbuilding' });
