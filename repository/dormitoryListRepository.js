@@ -11,12 +11,14 @@ export async function addDormitoryList(DormitoryListData) {
     }
 };
 
-export async function getDormitoryListDetails(universityId,acedmicYearId) {
+export async function getDormitoryListDetails(universityId,acedmicYearId,role,instituteId) {
     try {
         const DormitoryList = await model.dormitoryListModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where:{
-                ...(acedmicYearId && {acedmicYearId})
+                ...(acedmicYearId && {acedmicYearId}),
+                ...(universityId && {universityId}),
+                    ...(role === 'Head' && { instituteId })
             }
         });
 
@@ -25,8 +27,7 @@ export async function getDormitoryListDetails(universityId,acedmicYearId) {
         console.error('Error fetching DormitoryList details:', error);
         throw error;
     }
-}
-
+};
 
 export async function getSingleDormitoryListDetails(dormitoryListId) {
     try {
@@ -39,12 +40,12 @@ export async function getSingleDormitoryListDetails(dormitoryListId) {
         console.error('Error fetching DormitoryList details:', error);
         throw error;
     }
-}
+};
 
 export async function deleteDormitoryList(dormitoryListId) {
     const deleted = await model.dormitoryListModel.destroy({ where: { dormitoryListId: dormitoryListId } });
     return deleted > 0;
-}
+};
 
 export async function updateDormitoryList(dormitoryListId, DormitoryListData) {
     try {
@@ -56,4 +57,4 @@ export async function updateDormitoryList(dormitoryListId, DormitoryListData) {
         console.error(`Error updating DormitoryList creation ${dormitoryListId}:`, error);
         throw error;
     }
-}
+};

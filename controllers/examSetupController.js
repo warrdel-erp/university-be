@@ -19,8 +19,10 @@ export async function addExamSetup(req, res) {
 export async function getAllExamSetup(req, res) {
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
+    const role = req.user.role;    
+    const instituteId = req.user.instituteId;
     try {
-        const setups = await examSetupServices.getExamSetup(universityId,acedmicYearId);
+        const setups = await examSetupServices.getExamSetup(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(setups);
     } catch (error) {
         res.status(500).json({ error: error.message });

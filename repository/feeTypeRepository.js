@@ -11,10 +11,11 @@ export async function addFeeType(FeeTypeData) {
     }
 };
 
-export async function getFeeTypeDetails(universityId,acedmicYearId) {
+export async function getFeeTypeDetails(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClase ={
-            ...(acedmicYearId && { acedmicYearId })
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
         };
         const FeeType = await model.feeTypeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },

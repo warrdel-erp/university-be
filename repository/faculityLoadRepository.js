@@ -10,7 +10,7 @@ export async function addFaculityLoad(data) {
     }
 }
 
-export async function getFaculityLoadDetails(universityId,acedmicYearId) {
+export async function getFaculityLoadDetails(universityId,acedmicYearId,instituteId,role) {
     try {
         const result = await model.faculityLoadModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -20,7 +20,8 @@ export async function getFaculityLoadDetails(universityId,acedmicYearId) {
                     as:'employeeFaculity',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     where: {
-                        ...(acedmicYearId && { acedmicYearId })
+                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(role === 'Head' && { instituteId })
                     }
                 }
             ]

@@ -1,6 +1,7 @@
 import transportVehicleService from '../services/vehicleServices.js';
 
 export const addVehicle = async (req, res) => {
+    const instituteId = req.user.instituteId;
     try {
         const { vehicleNumber, vehicleModel, madeYear, employeeId } = req.body;
         if (!vehicleNumber || !vehicleModel || !madeYear || !employeeId) {
@@ -8,7 +9,7 @@ export const addVehicle = async (req, res) => {
         }
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const vehicleData = { ...req.body, createdBy, updatedBy };
+        const vehicleData = { ...req.body, createdBy, updatedBy ,instituteId};
         const vehicle = await transportVehicleService.createVehicle(vehicleData);
         res.status(201).json({ success: true, data: vehicle });
     } catch (error) {
@@ -18,9 +19,11 @@ export const addVehicle = async (req, res) => {
 
 export const getVehicle = async (req, res) => {
     const universityId = req.user.universityId;
+    const role = req.user.role;    
+    const instituteId = req.user.instituteId;
     const {acedmicYearId} =req.query
     try {
-        const vehicles = await transportVehicleService.getAllVehicles(universityId,acedmicYearId);
+        const vehicles = await transportVehicleService.getAllVehicles(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(vehicles);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

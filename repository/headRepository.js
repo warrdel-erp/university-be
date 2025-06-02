@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addHead(headData) {
+export async function addHead(headData,transaction) {
     try {
-        const result = await model.headModel.create(headData);
+        const result = await model.headModel.create(headData,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add head :", error);

@@ -1,15 +1,17 @@
 import * as examTypeRepository from "../repository/examTypeRepository.js";
 
-export async function addExamType(examDetail, createdBy, updatedBy) {
+export async function addExamType(examDetail, createdBy, updatedBy,universityId,instituteId) {
 
     examDetail.createdBy = createdBy;
     examDetail.updatedBy = updatedBy;
+    examDetail.universityId = universityId;
+    examDetail.instituteId = instituteId;
     const DormitoryList = await examTypeRepository.addExamType(examDetail);
     return DormitoryList;
 };
 
-export async function getExamType(universityId,acedmicYearId) {
-    return await examTypeRepository.getExamType(universityId,acedmicYearId);
+export async function getExamType(universityId,acedmicYearId,role,instituteId) {
+    return await examTypeRepository.getExamType(universityId,acedmicYearId,role,instituteId);
 }
 
 export async function getSingleExamType(examTypeId, universityId) {

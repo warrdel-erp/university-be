@@ -1,6 +1,6 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
 
-export async function addExamAttendance(data, createdBy, updatedBy) {
+export async function addExamAttendance(data, createdBy,instituteId) {
     const { examSetupId, studentId, attendanceStatus } = data;
     try {
         const newAttendance = {
@@ -9,21 +9,21 @@ export async function addExamAttendance(data, createdBy, updatedBy) {
             attendanceStatus,
             createdBy,
             updatedBy,
+            instituteId,
         };
         return await examAttendanceRepository.createExamAttendance(newAttendance);
     } catch (error) {
         throw new Error(`Error creating exam attendance: ${error.message}`);
     }
-}
+};
 
-
-export async function getAllExamAttendance(universityId,acedmicYearId) {
+export async function getAllExamAttendance(universityId,acedmicYearId,role,instituteId) {
     try {
-        return await examAttendanceRepository.getAllExamAttendance(universityId,acedmicYearId);
+        return await examAttendanceRepository.getAllExamAttendance(universityId,acedmicYearId,role,instituteId);
     } catch (error) {
         throw new Error(`Error fetching exam attendance records: ${error.message}`);
     }
-}
+};
 
 export async function getSingleExamAttendance(examAttendanceId, universityId) {
     try {
@@ -34,7 +34,7 @@ export async function getSingleExamAttendance(examAttendanceId, universityId) {
     } catch (error) {
         throw new Error(`Error fetching single exam attendance record: ${error.message}`);
     }
-}
+};
 
 export async function updateExamAttendances(attendances, updatedBy) {
     try {
@@ -49,8 +49,7 @@ export async function updateExamAttendances(attendances, updatedBy) {
     } catch (error) {
         throw new Error(`Error updating exam attendances: ${error.message}`);
     }
-}
-
+};
 
 export async function deleteExamAttendance(examAttendanceId) {
     try {
@@ -58,4 +57,4 @@ export async function deleteExamAttendance(examAttendanceId) {
     } catch (error) {
         throw new Error(`Error deleting exam attendance record: ${error.message}`);
     }
-}
+};

@@ -203,4 +203,14 @@ export async function changeStatus(userId,data) {
         console.error(`Error updating status ${userId}:`, error);
         throw error; 
     }
-}
+};
+
+export async function headRegister(data, transaction) {
+    try {
+        const result = await model.userModel.create(data, { transaction });
+        return result;
+    } catch (error) {
+        console.error('Error in userRepository.register:', error);
+        throw new Error('Failed to create user');
+    }
+};

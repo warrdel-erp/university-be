@@ -39,10 +39,12 @@ export const teacherSectionMapping = async (req, res) => {
 
 export const getTeacherSubjectMapping = async (req,res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     let {employeeId,acedmicYearId} = req.query
     employeeId = employeeId || 0 
     try {
-        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId);
+        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Subject Mapping:", error);
@@ -52,10 +54,12 @@ export const getTeacherSubjectMapping = async (req,res) => {
 
 export const getTeacherSectionMapping = async (req,res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     let {employeeId,acedmicYearId} = req.query
     employeeId = employeeId || 0 
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(employeeId,universityId,acedmicYearId);
+        const result = await teacherMapping.getTeacherSectionMappingService(employeeId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Section Mapping:", error);

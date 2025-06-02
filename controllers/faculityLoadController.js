@@ -19,9 +19,11 @@ export const addFaculityLoad = async (req,res) => {
 
 export const getFaculityLoadDetails = async (req,res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     const {acedmicYearId} = req.query
     try {
-        const result = await faculityLoadServices.getFaculityLoadDetails(universityId,acedmicYearId);
+        const result = await faculityLoadServices.getFaculityLoadDetails(universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting faculity load:", error);

@@ -5,11 +5,13 @@ export async function addSection(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
         if(!(sectionName && acedmicYearId)){
            return res.status(400).send('sectionName and acedmicYearId is required')
         }
-        const Section = await SectionCreation.addSection(req.body,createdBy,updatedBy,universityId);
+        const Section = await SectionCreation.addSection(req.body,createdBy,updatedBy,universityId,instituteId,role);
         res.status(201).json({ message: "Data added successfully", Section });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -18,9 +20,11 @@ export async function addSection(req, res) {
 
 export async function getAllSection(req, res) {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     const { acedmicYearId } = req.query;
     try {
-        const section = await SectionCreation.getSectionDetails(universityId,acedmicYearId);
+        const section = await SectionCreation.getSectionDetails(universityId,acedmicYearId,instituteId,role);
         res.status(200).json(section);
     } catch (error) {
         res.status(500).json({ error: error.message });

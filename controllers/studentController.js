@@ -49,6 +49,8 @@ export const addStudent = async (req, res) => {
 // 2. get all student
 export const getAllStudents = async (req, res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     let { search, acedmicYearId, page, limit } = req.query;
     
     search = search || 'all';
@@ -56,7 +58,7 @@ export const getAllStudents = async (req, res) => {
     limit = parseInt(limit) || 10;
 
     try {
-        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit);
+        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
@@ -151,8 +153,10 @@ export const deleteStudentDetail = async (req,res) => {
 export const getEmptyEnrollNumber = async (req,res) => {
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
-        const result = await studentService.getEmptyEnrollNumber(universityId,acedmicYearId);
+        const result = await studentService.getEmptyEnrollNumber(universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -202,8 +206,10 @@ export const getclassStudentMapping = async (req, res) => {
     const universityId = req.user.universityId;
     const classSectionId = req.query.classSectionId || 0;   
     const acedmicYearId = req.query.acedmicYearId 
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
-        const result = await studentService.getclassStudentMapping(classSectionId,universityId,acedmicYearId);
+        const result = await studentService.getclassStudentMapping(classSectionId,universityId,acedmicYearId,instituteId,role);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);

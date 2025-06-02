@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import subject from "./subjectModel.js";
 import classSection from "./classSectionModel.js";
-import users from "./userModel.js"
+import users from "./userModel.js";
+import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
     'class_subject_mapper',
@@ -31,6 +32,15 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        }, 
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

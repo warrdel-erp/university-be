@@ -1,15 +1,16 @@
 import * as feeGroupCreationService  from "../repository/feeGroupRepository.js";
 
-export async function addFeeGroup(FeeGroupData, createdBy, updatedBy) {
+export async function addFeeGroup(FeeGroupData, createdBy, updatedBy,instituteId) {
 
         FeeGroupData.createdBy = createdBy;
         FeeGroupData.updatedBy = updatedBy;
+        FeeGroupData.instituteId = instituteId
         const FeeGroup = await feeGroupCreationService.addFeeGroup(FeeGroupData);
         return FeeGroup;
 };
 
-export async function getFeeGroupDetails(universityId,acedmicYearId) {
-    return await feeGroupCreationService.getFeeGroupDetails(universityId,acedmicYearId);
+export async function getFeeGroupDetails(universityId,acedmicYearId,instituteId,role) {
+    return await feeGroupCreationService.getFeeGroupDetails(universityId,acedmicYearId,instituteId,role);
 }
 
 export async function getSingleFeeGroupDetails(feeGroupId,universityId) {

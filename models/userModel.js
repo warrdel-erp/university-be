@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 
 export default sequelize.define(
   'users',
@@ -19,6 +20,15 @@ export default sequelize.define(
             model: university,
             key: 'university_id'
         }
+    },
+    instituteId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        field: 'institute_id',
+        // references: {
+        //     model: 'institute',
+        //     key: 'institute_id'
+        // }
     },
     userName: {
         type: DataTypes.STRING,

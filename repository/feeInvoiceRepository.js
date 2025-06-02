@@ -12,10 +12,11 @@ export async function addFeeInvoice(feeInvoiceData,transaction) {
     }
 };
 
-export async function getFeeInvoiceDetails(universityId,acedmicYearId) {
+export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClase ={
-            ...(acedmicYearId && { acedmicYearId })
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
         };
         const feeInvoice = await model.feeInvoiceModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","class_student_mapper_id","fee_group_id"] },
@@ -36,7 +37,10 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId) {
                     model:model.classStudentMapperModel,
                     as:"feeStudentMapper",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","student_id","class_sections_id"] },
-                    where:whereClase,
+                    // where:whereClase,
+                    where:{
+                            ...(acedmicYearId && { acedmicYearId }),
+                    },
                     include:[
                         {  
                             model:model.studentModel,

@@ -13,9 +13,10 @@ export async function addAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceDetails(universityId,acedmicYearId) {
+export async function getAttendanceDetails(universityId,acedmicYearId,role,instituteId) {
     const whereClause = {
-        ...(acedmicYearId && {acedmicYearId})
+        ...(acedmicYearId && {acedmicYearId}),
+        ...(role === 'Head' && { instituteId })
     }
     try {
         const bookDetails = await model.attendanceModel.findAll({

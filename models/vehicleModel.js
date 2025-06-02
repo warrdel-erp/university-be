@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import employee from './employeeModel.js'
-
+import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
     'transport_vehicle',
@@ -35,6 +35,15 @@ export default sequelize.define(
             references: {
                 model: employee,
                 key: 'employee_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
             }
         },
         note: {

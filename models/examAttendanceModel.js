@@ -3,6 +3,7 @@ import { DataTypes } from "sequelize";
 import userModel from "./userModel.js";
 import examSetupModel from "./examSetupModel.js";
 import studentModel from "./studentModel.js";
+import instituteModel from "./instituteModel.js";
 
 const examAttendanceModel = sequelize.define(
     "exam_attendance",
@@ -30,6 +31,15 @@ const examAttendanceModel = sequelize.define(
                 key: "student_id",
             },
             field: "student_id",
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
         },
         attendanceStatus: {
             type: DataTypes.ENUM("Present", "Absent"),

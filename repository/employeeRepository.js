@@ -10,12 +10,13 @@ export async function addEmployee(data,transaction) {
     }
 };
 
-export async function getAllEmployee(universityId,campusId,instituteId,acedmicYearId) {
+export async function getAllEmployee(universityId,campusId,instituteId,acedmicYearId,headInstituteId,role) {
     try {
         const whereClause = {
             ...(campusId && { campusId }),
             ...(instituteId && { instituteId }),
             ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && headInstituteId && { instituteId: headInstituteId }),
         };
         const result = await model.employeeModel.findAll({
             attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours","campusId","instituteId","acedmicYearId"],

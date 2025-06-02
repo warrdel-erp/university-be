@@ -4,10 +4,13 @@ export async function createExamAttendance(data) {
     return await model.examAttendanceModel.create(data);
 }
 
-export async function getAllExamAttendance(universityId,acedmicYearId) {
+export async function getAllExamAttendance(universityId,acedmicYearId,role,instituteId) {
     return await model.examAttendanceModel.findAll({
         attributes: {
-            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"]
+            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"],
+        },
+        where: {
+            ...(role === 'Head' && instituteId && { instituteId })
         },
         include: [
             {
@@ -33,7 +36,7 @@ export async function getAllExamAttendance(universityId,acedmicYearId) {
             }
         ]
     });
-}
+};
 
 export async function getSingleExamAttendance(examAttendanceId, universityId) {
     return await model.examAttendanceModel.findOne({
@@ -62,7 +65,7 @@ export async function getSingleExamAttendance(examAttendanceId, universityId) {
         ],
         where: { examAttendanceId },
     });
-}
+};
 
 export async function updateExamAttendances(attendances) {
     const updatedRecords = [];
@@ -78,12 +81,11 @@ export async function updateExamAttendances(attendances) {
         }
     }
     return updatedRecords;
-}
-
+};
 
 export async function deleteExamAttendance(examAttendanceId) {
     const deletedRows = await model.examAttendanceModel.destroy({
         where: { examAttendanceId },
     });
     return deletedRows > 0;
-}
+};

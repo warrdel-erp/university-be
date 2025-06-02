@@ -8,8 +8,8 @@ export async function addDormitoryRoom(DormitoryRoomData, createdBy, updatedBy) 
         return DormitoryRoom;
 };
 
-export async function getDormitoryRoomDetails(universityId,acedmicYearId) {
-    return await DormitoryRoomCreationService.getDormitoryRoomDetails(universityId,acedmicYearId);
+export async function getDormitoryRoomDetails(universityId,acedmicYearId,role,instituteId) {
+    return await DormitoryRoomCreationService.getDormitoryRoomDetails(universityId,acedmicYearId,role,instituteId);
 }
 
 export async function getSingleDormitoryRoomDetails(dormitoryListId,universityId) {

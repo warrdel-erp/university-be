@@ -6,6 +6,8 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import section from "./sectionModel.js";
 import classModel from "./classModel.js";
+import instituteModel from "./instituteModel.js";
+
 
 export default sequelize.define(
     'class_sections',
@@ -61,6 +63,15 @@ export default sequelize.define(
                 key: 'class_id'
             }
         },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },        
         section: {
             type: DataTypes.STRING,
             allowNull: true,

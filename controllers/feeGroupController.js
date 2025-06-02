@@ -4,11 +4,12 @@ export async function addFeeGroup(req, res) {
     const {name,acedmicYearId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
+    const instituteId = req.user.instituteId;
     try {
         if(!(name && acedmicYearId)){
            return res.status(400).send('Fee Group Name and acedmicYearId is required')
         }
-        const feeGroup = await FeeGroupCreation.addFeeGroup(req.body,createdBy,updatedBy);
+        const feeGroup = await FeeGroupCreation.addFeeGroup(req.body,createdBy,updatedBy,instituteId);
         res.status(201).json({ message: "Data added successfully", feeGroup });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -18,8 +19,10 @@ export async function addFeeGroup(req, res) {
 export async function getAllFeeGroup(req, res) {
     const universityId = req.user.universityId;
     const { acedmicYearId } = req.query;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
-        const feeGroup = await FeeGroupCreation.getFeeGroupDetails(universityId,acedmicYearId);
+        const feeGroup = await FeeGroupCreation.getFeeGroupDetails(universityId,acedmicYearId,instituteId,role);
         res.status(200).json(feeGroup);
     } catch (error) {
         res.status(500).json({ error: error.message });

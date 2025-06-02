@@ -16,10 +16,12 @@ export async function addDormitoryRoom(req, res) {
 }
 
 export async function getAllDormitoryRoom(req, res) {
+    const role = req.user.role;    
+    const instituteId = req.user.instituteId;
     const universityId = req.user.universityId;
      const { acedmicYearId } = req.query;
     try {
-        const result = await DormitoryRoomCreation.getDormitoryRoomDetails(universityId,acedmicYearId);
+        const result = await DormitoryRoomCreation.getDormitoryRoomDetails(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -40,12 +40,12 @@ export async function teacherSectionMappingService(data,createdBy) {
   }
 }; 
 
-export async function getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId){
-  return await getTeacherSubjectMapping(employeeId,universityId,acedmicYearId)
+export async function getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId,instituteId,role){
+  return await getTeacherSubjectMapping(employeeId,universityId,acedmicYearId,instituteId,role)
 };
 
-export async function getTeacherSectionMappingService(employeeId,universityId,acedmicYearId){
-  return await getTeacherSectionMapping(employeeId,universityId,acedmicYearId)
+export async function getTeacherSectionMappingService(employeeId,universityId,acedmicYearId,instituteId,role){
+  return await getTeacherSectionMapping(employeeId,universityId,acedmicYearId,instituteId,role)
 };
 
 export async function updateTeacherSubjectMapping(data, teacherSubjectMappingId) {  
