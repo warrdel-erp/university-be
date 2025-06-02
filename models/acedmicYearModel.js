@@ -12,19 +12,6 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'acedmic_year_id'
         },
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
-        },
-        year: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-        },
         yearTitle: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -51,15 +38,6 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        createdBy: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'created_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
         },
         updatedBy: {
             type: DataTypes.INTEGER,

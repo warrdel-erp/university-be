@@ -38,13 +38,7 @@ export async function getAttendanceDetails(universityId,acedmicYearId,role,insti
                     model: model.studentModel,
                     as: "studentAttendance",
                     where :whereClause,
-                    // attributes :["name","author","publisher"]
                 },
-                // {
-                //     model: model.timeTableCreateModel,
-                //     as: "timeTableAttendance",
-                //     // attributes :["name","author","publisher"]
-                // }
             ]
         });
 

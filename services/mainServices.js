@@ -136,7 +136,7 @@ export async function addCourse(data, createdBy, instituteId) {
                         console.warn(`Unknown term type: ${term}`);
                         continue;
                 }
-                const totalTerms = Math.floor(courseDuration / monthsPerTerm);
+                const totalTerms = Math.floor(courseDuration * 12/ monthsPerTerm);
 
                 for (let i = 1; i <= totalTerms; i++) {
 

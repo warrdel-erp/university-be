@@ -157,18 +157,6 @@ export async function addAffiliatedUniversity(data) {
     }
 };
 
-// export async function addCourse(data) {    
-//     console.log(`>>>>>>>>>>>>data`,data);
-    
-//     try {
-//         const result = await model.courseModel.create(data);
-//         return result;
-//     } catch (error) {
-//         console.error("Error in add Course :", error);
-//         throw error;
-//     }
-// };
-
 export async function addCourse(data, transaction) {
     try {
         return await model.courseModel.create(data, { transaction });
@@ -389,18 +377,6 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
         throw error;
     }
 };
-
-// export async function addSemester(data) { 
-//     console.log(`>>>>>>addSemester>>>>>>data`,data);
-       
-//     try {
-//         const result = await model.semesterModel.create(data);
-//         return result;
-//     } catch (error) {
-//         console.error("Error in add semester:", error);
-//         throw error;
-//     }
-// };
 
 export async function addSemester(data, transaction) {
     try {

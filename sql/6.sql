@@ -2,13 +2,13 @@
 
 ALTER TABLE users ADD COLUMN institute_id INT NULL;
 
-UPDATE users SET institute_id = 1 WHERE institute_id IS NULL;
+-- UPDATE users SET institute_id = 1 WHERE institute_id IS NULL;
 
-UPDATE users SET institute_id = 1 WHERE institute_id = 0;
+-- UPDATE users SET institute_id = 1 WHERE institute_id = 0;
 
-ALTER TABLE users ADD CONSTRAINT fk_users_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+-- ALTER TABLE users ADD CONSTRAINT fk_users_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
 
-ALTER TABLE users DROP FOREIGN KEY users_ibfk_4;
+-- ALTER TABLE users DROP FOREIGN KEY users_ibfk_4;
 
 -- Add the institute_id column with the foreign key reference in course
 
@@ -206,7 +206,7 @@ ALTER TABLE acedmic_year DROP FOREIGN KEY acedmic_year_ibfk_2;
 ALTER TABLE acedmic_year DROP COLUMN university_id;
 ALTER TABLE acedmic_year DROP COLUMN created_by;
 
-DELETE FROM acedmic_year;
+-- DELETE FROM acedmic_year;
 
 INSERT INTO acedmic_year (year_title, starting_date, ending_date, created_at, updated_at, updated_by)
 VALUES

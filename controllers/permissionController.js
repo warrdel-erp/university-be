@@ -2,8 +2,6 @@ import * as PermissionCreation  from  "../services/permissionService.js";
 
 export async function addPermission(req, res) {
     const {permission,moduleName} = req.body
-    // const createdBy = req.user.userId;
-    // const updatedBy = req.user.userId;
     try {
         if(!(permission && moduleName)){
            return res.status(400).send('Permission & moduleName is required')

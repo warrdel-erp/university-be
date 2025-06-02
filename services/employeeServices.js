@@ -23,23 +23,6 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
     
     const transaction = await sequelize.transaction();
     try {
-        
-
-        // Parse JSON fields
-        // const address = JSON.parse(data.address);
-        // const corsAddress = JSON.parse(data.corsAddress);
-        // const office = JSON.parse(data.office);
-        // const role = JSON.parse(data.roles);
-        // const skills = JSON.parse(data.skill);
-        // const documents = JSON.parse(data.documents);
-        // const qualifications = JSON.parse(data.qualification);
-        // const experiences = JSON.parse(data.experience);
-        // const achievements = JSON.parse(data.achievements);
-        // const wards = JSON.parse(data.ward);
-        // const activities = JSON.parse(data.activity);
-        // const references = JSON.parse(data.reference);
-        // const research = JSON.parse(data.research);
-        // const longLeaves = JSON.parse(data.longLeave);
 
         const address = data.address ? JSON.parse(data.address) : null;
         const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
