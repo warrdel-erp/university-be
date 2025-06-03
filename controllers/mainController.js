@@ -29,9 +29,6 @@ export const addCampus = async (req,res) => {
         if(!universityId){
             res.status(400).send('University Id is required')
         }
-        // else if(req){
-        //     res.status(400).send('For Add Campus Contact TO Warrdel Team')
-        // }
         const result = await mainServices.addCampus(data,createdBy);
         res.status(200).send(result);
     } catch (error) {
@@ -48,9 +45,6 @@ export const addInstitute = async (req,res) => {
         if(!(universityId && campusId)){
             res.status(400).send('University Id and Campus Id is required')
         }
-        // else if(req){
-        //     res.status(400).send('For Add Institute Contact TO Warrdel Team')
-        // } 
         const result = await mainServices.addInstitute(data,createdBy);
         res.status(200).send(result);
     } catch (error) {
