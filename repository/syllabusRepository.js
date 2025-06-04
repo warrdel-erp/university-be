@@ -48,7 +48,7 @@ export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,
                 {
                     model: model.acedmicYearModel,
                     as: 'syllabusAcedmicYear',  
-                    attributes:  ["year", "yearTitle", "startingDate", "endingDate"] 
+                    attributes:  ["yearTitle", "startingDate", "endingDate"] 
                 },
                 {
                     model:model.courseModel,
@@ -99,13 +99,13 @@ export async function getSingleSyllabusDetails(SyllabusId) {
 }
 
 export async function deleteSyllabus(SyllabusId) {
-    const deleted = await model.SyllabusModel.destroy({ where: { SyllabusId: SyllabusId } });
+    const deleted = await model.syllabusModel.destroy({ where: { SyllabusId: SyllabusId } });
     return deleted > 0;
 }
 
 export async function updateSyllabus(SyllabusId, syllabusData) {
     try {
-        const result = await model.SyllabusModel.update(syllabusData, {
+        const result = await model.syllabusModel.update(syllabusData, {
             where: { SyllabusId }
         });
         return result; 

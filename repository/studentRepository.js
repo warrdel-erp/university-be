@@ -599,9 +599,6 @@ export async function classStudentMappingExcel(data) {
 };
 
 export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId,instituteId,role) {
-    console.log(`>>>>>>>>>>>>instituteId,role`,instituteId,role);
-    
-
     try {
         const studentWhere = {
             ...(acedmicYearId && { acedmicYearId }),
@@ -644,9 +641,9 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
                             model: model.acedmicYearModel,
                             as: "acdemicYear",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            where: {
-                                universityId: universityId
-                            },
+                            // where: {
+                            //     universityId: universityId
+                            // },
                         },
                         {
                             model: model.affiliatedIniversityModel,
