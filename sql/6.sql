@@ -285,3 +285,23 @@ CREATE TABLE session_course_mapping (
   FOREIGN KEY (updated_by) REFERENCES users(user_id),
   FOREIGN KEY (created_by) REFERENCES users(user_id)
 );
+
+-- Add the semester_id column with the foreign key reference in students
+
+ALTER TABLE students ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE students SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE students SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE students ADD CONSTRAINT fk_students_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+-- Add the session_id column with the foreign key reference in students
+
+ALTER TABLE students ADD COLUMN session_id INT NOT NULL;
+
+UPDATE students SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE students SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE students ADD CONSTRAINT fk_students_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;

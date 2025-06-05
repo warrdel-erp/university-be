@@ -1,4 +1,3 @@
-import { Literal } from 'sequelize/lib/utils';
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
@@ -100,6 +99,16 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 as: "course",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
                 where: { universityId },
+            },
+            {
+                model: model.semesterModel,
+                as: "studentSemester",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+                model: model.sessionModel,
+                as: "studentSession",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
             {
                 model: model.specializationModel,
@@ -265,6 +274,16 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.specializationModel,
                     as: "specialization",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+                },
+                {
+                    model: model.semesterModel,
+                    as: "studentSemester",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.sessionModel,
+                    as: "studentSession",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
                     model: model.studentsEntranceDetail,

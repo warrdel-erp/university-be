@@ -10,6 +10,8 @@ import { documentStatus, studentAdmissionStatus, studentStatus} from '../constan
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
+import sessionModel from "./sessionModel.js";
+import semesterModel from "./semesterModel.js";
 
 export default sequelize.define(
     'students',
@@ -90,6 +92,24 @@ export default sequelize.define(
             references: {
                 model: specialization,
                 key: 'specialization_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
+        },
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'semester_id',
+            references: {
+                model: semesterModel,
+                key: 'semester_id'
             }
         },
         scholarNumber:{
