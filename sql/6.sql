@@ -231,3 +231,17 @@ VALUES
 ('2033-2034', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL),
 ('2034-2035', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL),
 ('2035-2036', NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL);
+
+ALTER TABLE class_subject_mapper DROP FOREIGN KEY class_subject_mapper_ibfk_2;
+
+ALTER TABLE class_subject_mapper DROP COLUMN class_sections_id;
+
+-- Add the semester_id column with the foreign key reference in class_subject_mapper
+
+ALTER TABLE class_subject_mapper ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class_subject_mapper SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class_subject_mapper SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class_subject_mapper ADD CONSTRAINT fk_class_subject_mapper_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;

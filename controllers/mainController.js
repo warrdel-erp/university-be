@@ -156,29 +156,30 @@ export const getClass = async (req,res) => {
 
 export const addClassSubjectMapper = async (req,res) => {
     try {
-        const {classId} = req.body;
+        // const {classId} = req.body;
+        const {semesterId} = req.body
         const createdBy = req.user.userId;
         const data = req.body;
         const instituteId = req.user.instituteId;
-        if(!(classId && instituteId)){
-            return res.status(400).send('classId and instituteId is required')
+        if(!(semesterId && instituteId)){
+            return res.status(400).send('semesterId and instituteId is required')
         } 
         const result = await mainServices.addClassSubjectMapper(data,createdBy,instituteId);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in  Add Class Subject Mapper:", error);
+        console.error("Error in  Add semester Subject Mapper:", error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 export const getClassSubjectMapper = async (req,res) => {
     try {
-        const classSectionId = req.query.classSectionId  || 0;
+        const semesterId = req.query.semesterId  || 0;
         const acedmicYearId = req.query.acedmicYearId 
         const universityId = req.user.universityId;
         const role = req.user.role;    
         const instituteId = req.user.instituteId;
-        const result = await mainServices.getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role);
+        const result = await mainServices.getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);

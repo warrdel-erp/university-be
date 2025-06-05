@@ -240,25 +240,27 @@ export async function getClassDetails(classSectionId,universityId,acedmicYearId,
     return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role)
 };
 
-export async function addClassSubjectMapper(data, createdBy,instituteId) {    
+export async function addClassSubjectMapper(data, createdBy,instituteId) {  
+    console.log(`>>>>>>>>>data`,data);
     try {
-        const { classId, subjectIds } = data;
+        const { semesterId, subjectIds } = data;
 
-        const classSection = await mainRepository.getSectionByClassId(classId);
-        const classSectionIds = classSection.map(section => section.classSectionsId);
+        // const classSection = await mainRepository.getSectionByClassId(classId);
+        // const classSectionIds = classSection.map(section => section.classSectionsId);
 
         const entries = [];
 
-        for (const sectionId of classSectionIds) {
+        // for (const sectionId of classSectionIds) {
             for (const subjectId of subjectIds) {
                 entries.push({
-                    classSectionId: sectionId,
+                    semesterId,
+                    // classSectionId: sectionId,
                     subjectId,
                     createdBy,
                     instituteId
                 });
             }
-        }
+        // }
 
         const result = await mainRepository.addClassSubjectMapper(entries);
         return result;
@@ -269,8 +271,8 @@ export async function addClassSubjectMapper(data, createdBy,instituteId) {
 };
 
 
-export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role){
-    return await mainRepository.getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role)
+export async function getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role){
+    return await mainRepository.getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role)
 };
 
 export async function addSemester(data,createdBy,universityId,instituteId){
