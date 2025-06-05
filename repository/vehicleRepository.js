@@ -22,14 +22,14 @@ const getAllVehicles = async (universityId, acedmicYearId,role,instituteId) => {
                         ...(acedmicYearId && { acedmicYearId })
                     },
                 },
-                {
-                    model: model.userModel,
-                    as: 'vehicleUser',
-                    attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
+                // {
+                //     model: model.userModel,
+                //     as: 'vehicleUser',
+                //     attributes: ["universityId", "userId"],
+                //     where: {
+                //         universityId: universityId
+                //     }
+                // }
             ]
         });
 
