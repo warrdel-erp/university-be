@@ -155,23 +155,24 @@ export async function getUserRolePermissionByUserId(userId) {
                                                         as:"employeeSection",
                                                         attributes:["employeeId",'classSectionsId','isCordinatory'],
                                                     },
-                                                    {
-                                                        model:model.classSubjectMapperModel,
-                                                        as:'classSection',
-                                                        attributes:["classSubjectMapperId",'subjectId','classSectionId'],
-                                                        include:[
-                                                            {
-                                                                model:model.subjectModel,
-                                                                as:"subjects",
-                                                                attributes:["subjectName",'subjectId','courseId','specializationId'],
-                                                            },
-                                                            {
-                                                                model:model.teacherSubjectMappingModel,
-                                                                as:"employeeSubject",
-                                                                attributes:["teacherSubjectMappingId",'employeeId','classSubjectMapperId'],
-                                                            }
-                                                        ]
-                                                    }
+                                                    // {
+                                                    //     model:model.classSubjectMapperModel,
+                                                    //     as:'classSection',
+                                                    //     // attributes:["classSubjectMapperId",'subjectId','classSectionId'],
+                                                    //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                                    //     include:[
+                                                    //         {
+                                                    //             model:model.subjectModel,
+                                                    //             as:"subjects",
+                                                    //             attributes:["subjectName",'subjectId','courseId','specializationId'],
+                                                    //         },
+                                                    //         {
+                                                    //             model:model.teacherSubjectMappingModel,
+                                                    //             as:"employeeSubject",
+                                                    //             attributes:["teacherSubjectMappingId",'employeeId','classSubjectMapperId'],
+                                                    //         }
+                                                    //     ]
+                                                    // }
                                                 ]
                                             },
                                             {

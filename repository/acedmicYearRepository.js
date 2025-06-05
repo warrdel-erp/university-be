@@ -62,3 +62,20 @@ export async function deleteacedmicYear(acedmicYearId) {
     const deleted = await model.acedmicYearModel.destroy({ where: { acedmicYearId: acedmicYearId } });
     return deleted > 0;
 }
+
+export async function getAllActiveAcedmicYear(universityId) {
+    try {
+        const acedmicYear = await model.acedmicYearModel.findAll({
+             where: {
+                startingDate: { [Op.ne]: null },
+                endingDate: { [Op.ne]: null }
+            },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+        });
+
+        return acedmicYear;
+    } catch (error) {
+        console.error('Error fetching acedmicYear details:', error);
+        throw error;
+    }
+}

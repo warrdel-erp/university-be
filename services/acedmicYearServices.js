@@ -25,3 +25,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedB
 export async function deleteacedmicYear(acedmicYearId) {
     return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
 }
+
+export async function getAllActiveAcedmicYear(universityId) {
+    return await acedmicYearCreationService.getAllActiveAcedmicYear(universityId);
+}

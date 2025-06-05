@@ -86,6 +86,8 @@ import staffModel from './staffModel.js';
 import departmentStructureModel from './departmentStructureModel.js';
 import syllabusDetailsModel from './syllabusDetailsModel.js';
 import syllabusModel from './syllabusModel.js';
+import sessionModel from './sessionModel.js';
+import sessionCouseMappingModel from './sessionCouseMappingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -591,8 +593,11 @@ classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 
 faculityLoadModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 
-// instituteModel.belongsTo(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
-// userModel.hasMany(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
+sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
+acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
+
+classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
+classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 
 export {
     settingModel,
@@ -683,4 +688,6 @@ export {
     syllabusDetailsModel,
     syllabusModel,
     classModel,
+    sessionModel,
+    sessionCouseMappingModel,
 };

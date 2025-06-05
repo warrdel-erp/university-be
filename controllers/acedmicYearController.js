@@ -70,4 +70,14 @@ export async function deleteacedmicYear(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
+
+export async function getAllActiveAcedmicYear(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear(universityId);
+        res.status(200).json(acedmicYear);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

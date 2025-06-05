@@ -245,3 +245,43 @@ UPDATE class_subject_mapper SET semester_id = 1 WHERE semester_id IS NULL;
 UPDATE class_subject_mapper SET semester_id = 1 WHERE semester_id = 0;
 
 ALTER TABLE class_subject_mapper ADD CONSTRAINT fk_class_subject_mapper_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+CREATE TABLE session (
+  session_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  university_id INT NOT NULL,
+  acedmic_year_id INT NOT NULL,
+  institute_id INT NOT NULL,
+  session_name VARCHAR(255) NOT NULL,
+  starting_date VARCHAR(255) NOT NULL,
+  ending_date VARCHAR(255) NOT NULL,
+  class_til_date VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by INT NOT NULL,
+  created_by INT NOT NULL,
+  deleted_at TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (university_id) REFERENCES university(university_id),
+  FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+  FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+  FOREIGN KEY (updated_by) REFERENCES users(user_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE session_course_mapping (
+  session_course_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+  university_id INT NOT NULL,
+  institute_id INT NOT NULL,
+  course_id INT NOT NULL,
+  session_id INT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by INT NOT NULL,
+  created_by INT NOT NULL,
+  deleted_at TIMESTAMP NULL DEFAULT NULL,
+  FOREIGN KEY (university_id) REFERENCES university(university_id),
+  FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+  FOREIGN KEY (course_id) REFERENCES course(course_id),
+  FOREIGN KEY (session_id) REFERENCES session(session_id),
+  FOREIGN KEY (updated_by) REFERENCES users(user_id),
+  FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
