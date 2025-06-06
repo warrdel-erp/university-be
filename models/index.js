@@ -291,8 +291,8 @@ teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 classSubjectMapperModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 
-// classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
-// classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
+semesterModel.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
+classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
