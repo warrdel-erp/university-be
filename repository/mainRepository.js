@@ -79,6 +79,13 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role) 
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
             where: whereClause,
+            include:[
+                {
+                    model: model.semesterModel,
+                    as:'semesterCourse',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+                }
+            ]
         });
         return result;
     } catch (error) {
@@ -105,9 +112,7 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
     }
 };
 
-export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {
-    console.log(`>>>>>>>>>>>>>universityId,acedmicYearId,instituteId`,universityId,acedmicYearId,instituteId);
-    
+export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
     try {
         const whereClause = {
             university_id: universityId,

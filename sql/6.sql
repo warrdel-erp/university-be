@@ -305,3 +305,9 @@ UPDATE students SET session_id = 1 WHERE session_id IS NULL;
 UPDATE students SET session_id = 1 WHERE session_id = 0;
 
 ALTER TABLE students ADD CONSTRAINT fk_students_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
+
+ALTER TABLE class_student_mapper DROP FOREIGN KEY class_student_mapper_ibfk_2;
+
+ALTER TABLE class_student_mapper DROP COLUMN class_sections_id;
+
+ALTER TABLE class_student_mapper ADD COLUMN is_passed BOOLEAN NOT NULL DEFAULT FALSE;

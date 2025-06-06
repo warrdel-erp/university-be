@@ -1,9 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
-import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
+import semesterModel from "./semesterModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
     'class_student_mapper',
@@ -23,13 +24,22 @@ export default sequelize.define(
                 key: 'student_id'
             }
         },
-        classSectionId: {
+        semesterId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_sections_id',
+            field: 'semester_id',
             references: {
-                model: classSection,
-                key: 'class_sections_id'
+                model: semesterModel,
+                key: 'semester_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         acedmicYearId: {
@@ -40,6 +50,12 @@ export default sequelize.define(
                 model: acedmicYear,
                 key: 'acedmic_year_id'
             }
+        },
+        isPassed :{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            field:'is_passed',
+            defaultValue : false
         },
         createdAt: {
             type: DataTypes.DATE,

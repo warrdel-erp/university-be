@@ -732,6 +732,9 @@ export async function addElectiveSubject(data) {
 };
 
 export async function promoteStudent(studentId, data) {
+    console.log(`>>>>>>>>>>>>>>studentId, data`,studentId, data);
+    
+    return 
     try {
         const result = await model.classStudentMapperModel.update(data, {
             where: {
@@ -741,6 +744,33 @@ export async function promoteStudent(studentId, data) {
         return result;
     } catch (error) {
         console.error(`Error updating student promote ${studentId} :`, error);
+        throw error;
+    }
+};
+
+export async function getStudentForPromate(studentId) {
+    try {
+        const result = await model.studentModel.findOne({
+            where: {
+                studentId: studentId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error get student for promote ${studentId} :`, error);
+        throw error;
+    }
+};
+
+export async function getSemesterByCourseId(courseId) {
+    try {
+        return await model.semesterModel.findAll({
+  where: { courseId },
+  order: [['semesterId', 'ASC']],
+  raw: true
+});
+    } catch (error) {
+        console.error(`Error get semester By course Id ${courseId} :`, error);
         throw error;
     }
 };

@@ -6,7 +6,7 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const addStudent = async (req, res) => {
     const file = req.files;
     const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionId,acedmicYearId} = req.body;
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionId,acedmicYearId,semesterId,sessionId} = req.body;
 
     try {
         // Check for required fields
@@ -38,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionId);
+        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
@@ -242,8 +242,8 @@ export const promoteStudent = async (req, res) => {
         if (Array.isArray(data)) {
             const results = [];
             for (const student of data) {
-                if (!(student.studentId && student.classSectionId)) {
-                    return res.status(400).send("Both classSectionId and studentId are required for all students.");
+                if (!(student.studentId && student.semesterId)) {
+                    return res.status(400).send("Both semesterId and studentId are required for all students.");
                 }
                 const result = await studentService.promoteStudent(student);
                 results.push(result);
