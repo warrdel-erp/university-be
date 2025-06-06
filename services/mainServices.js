@@ -145,6 +145,7 @@ export async function addCourse(data, createdBy, instituteId) {
                         courseId,
                         acedmicYearId,
                         instituteId,
+                        termType:termLabel,
                         name: `${termLabel} ${i}`,
                         semesterDuration: monthsPerTerm,
                         courseDuration: courseDuration,

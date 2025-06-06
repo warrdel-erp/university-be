@@ -311,3 +311,5 @@ ALTER TABLE class_student_mapper DROP FOREIGN KEY class_student_mapper_ibfk_2;
 ALTER TABLE class_student_mapper DROP COLUMN class_sections_id;
 
 ALTER TABLE class_student_mapper ADD COLUMN is_passed BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE semester ADD COLUMN term_type VARCHAR(255) NOT NULL;

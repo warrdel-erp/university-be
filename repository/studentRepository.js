@@ -617,7 +617,7 @@ export async function classStudentMappingExcel(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId,instituteId,role) {
+export async function getclassStudentMapping(semesterId, universityId,acedmicYearId,instituteId,role) {
     try {
         const studentWhere = {
             ...(acedmicYearId && { acedmicYearId }),
@@ -636,9 +636,9 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
                     },
                 },
                 {
-                    model: model.classSectionModel,
+                    model: model.semesterModel,
                     as: "studentSection",
-                    attributes: ["section", "classSectionsId"],
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
                     model: model.studentModel,
@@ -706,8 +706,8 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
             ],
         };
 
-        if (classSectionId !== 0) {
-            queryOptions.where = { class_sections_id: classSectionId };
+        if (semesterId !== 0) {
+            queryOptions.where = {semesterId };
         };
         if (acedmicYearId) {
             queryOptions.where= {acedmicYearId : acedmicYearId};
@@ -715,7 +715,7 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
         const result = await model.classStudentMapperModel.findAll(queryOptions);
         return result;
     } catch (error) {
-        console.error(`Error in getting mapped student ${classSectionId}:`, error);
+        console.error(`Error in getting mapped student ${semesterId}:`, error);
         throw error;
     }
 }

@@ -61,6 +61,11 @@ export default sequelize.define(
                 key: 'institute_id'
             }
         },
+        termType: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field:'term_type'
+        },
         name: {
             type: DataTypes.STRING,
             allowNull: false,

@@ -204,12 +204,12 @@ export const classStudentMapping = async (req, res) => {
 
 export const getclassStudentMapping = async (req, res) => {
     const universityId = req.user.universityId;
-    const classSectionId = req.query.classSectionId || 0;   
+    const semesterId = req.query.semesterId || 0;   
     const acedmicYearId = req.query.acedmicYearId 
     const instituteId = req.user.instituteId;
     const role = req.user.role;
     try {
-        const result = await studentService.getclassStudentMapping(classSectionId,universityId,acedmicYearId,instituteId,role);
+        const result = await studentService.getclassStudentMapping(semesterId,universityId,acedmicYearId,instituteId,role);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);
