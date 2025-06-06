@@ -86,6 +86,8 @@ import staffModel from './staffModel.js';
 import departmentStructureModel from './departmentStructureModel.js';
 import syllabusDetailsModel from './syllabusDetailsModel.js';
 import syllabusModel from './syllabusModel.js';
+import sessionModel from './sessionModel.js';
+import sessionCouseMappingModel from './sessionCouseMappingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -101,6 +103,12 @@ affiliatedIniversityModel.hasMany(studentModel, { foreignKey: 'affiliated_univer
 
 studentModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
 courseModel.hasMany(studentModel, { foreignKey: 'course_id', as: 'course' });
+
+studentModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'studentSemester' });
+semesterModel.hasMany(studentModel, { foreignKey: 'semester_id', as: 'studentSemester' });
+
+studentModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'studentSession' });
+sessionModel.hasMany(studentModel, { foreignKey: 'session_id', as: 'studentSession' });
 
 studentModel.belongsTo(specializationModel, { foreignKey: 'specialization_id', as: 'specialization' });
 specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as: 'specialization' });
@@ -142,16 +150,16 @@ courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSec
 
 // class section  mapper join to specialization
 
-classSectionModel.belongsTo(specializationModel, { foreignKey: 'specialization_id', as: 'specializationSection' });
-specializationModel.hasMany(classSectionModel, { foreignKey: 'specialization_id', as: 'specializationSection' });
+semesterModel.belongsTo(specializationModel, { foreignKey: 'specialization_id', as: 'specializationSemester' });
+specializationModel.hasMany(semesterModel, { foreignKey: 'specialization_id', as: 'specializationSemester' });
 
 // class section join to specialization
 classSectionModel.belongsTo(specializationModel, { foreignKey: 'specialization_id', as: 'specializationSectionAdd' });
 specializationModel.hasMany(classSectionModel, { foreignKey: 'specialization_id', as: 'specializationSectionAdd' });
 
 // class subject mapper join to class section
-classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
-classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
+classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'semestermapping' });
+semesterModel.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'semestermapping' });
 
 // class section join to subject  
 classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subjects' });
@@ -162,8 +170,8 @@ classStudentMapperModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 
 studentModel.hasMany(classStudentMapperModel, { foreignKey: 'student_id', as: 'studentMapped' });
 
 // class student mapper join to class section  
-classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'studentSection' });
-classSectionModel.hasMany(classStudentMapperModel, { foreignKey: 'class_sections_id', as: 'studentSection' });
+classStudentMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'studentSection' });
+semesterModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSection' });
 
 //student join to there 2 more table 
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: 'student_id', as: 'entranceDetails' });
@@ -283,8 +291,8 @@ teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 classSubjectMapperModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 
-classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
-classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'employeeClassSection' });
+semesterModel.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
+classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
@@ -323,6 +331,9 @@ userModel.hasMany(classSubjectMapperModel, { foreignKey: 'createdBy', as: 'userC
 
 semesterModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userSemester' });
 userModel.hasMany(semesterModel, { foreignKey: 'createdBy', as: 'userSemester' });
+
+semesterModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'semesterCourse' });
+courseModel.hasMany(semesterModel, { foreignKey: 'course_id', as: 'semesterCourse' });
 
 employeeModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userEmployee' });
 userModel.hasMany(employeeModel, { foreignKey: 'createdBy', as: 'userEmployee' });
@@ -588,8 +599,11 @@ classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 
 faculityLoadModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 
-// instituteModel.belongsTo(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
-// userModel.hasMany(instituteModel, { foreignKey: 'user_id', as: 'userInstitute' });
+sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
+acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
+
+classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
+classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 
 export {
     settingModel,
@@ -680,4 +694,6 @@ export {
     syllabusDetailsModel,
     syllabusModel,
     classModel,
+    sessionModel,
+    sessionCouseMappingModel,
 };

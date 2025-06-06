@@ -79,6 +79,13 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role) 
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
             where: whereClause,
+            include:[
+                {
+                    model: model.semesterModel,
+                    as:'semesterCourse',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+                }
+            ]
         });
         return result;
     } catch (error) {
@@ -105,9 +112,7 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
     }
 };
 
-export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {
-    console.log(`>>>>>>>>>>>>>universityId,acedmicYearId,instituteId`,universityId,acedmicYearId,instituteId);
-    
+export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
     try {
         const whereClause = {
             university_id: universityId,
@@ -273,7 +278,7 @@ export async function getClassDetails(classSectionsId, universityId, acedmicYear
 
 export async function addClassSubjectMapper(data) {
     try {
-        const result = await model.classSubjectMapperModel.bulkCreate(data);
+        const result = await model.classSubjectMapperModel.bulkCreate(data);        
         return result;
     } catch (error) {
         console.error("Error in add class subject mapper :", error);
@@ -281,12 +286,12 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
-export async function getClassSubjectMapper(classSectionId,universityId,acedmicYearId,instituteId,role) {
+export async function getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role) {
     try {
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
             where: {
-                ...(classSectionId && { class_sections_id: classSectionId }),
+                ...(semesterId && { semesterId: semesterId }),
                 ...(role === 'Head' && { instituteId })
             },
             include: [
@@ -299,21 +304,18 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
                     }, 
                 },
                 {
-                    model: model.classSectionModel,
-                    as: 'classSection',
-
-                    attributes: ['section', 'acedmicYearId','classSectionsId'],
+                    model: model.semesterModel,
+                    as: 'semestermapping',
                     where: acedmicYearId ? { acedmicYearId } : undefined,
-                       attributes: ['section', 'acedmicYearId','classSectionsId'],
                     include: [
-                        {
-                            model :model.classModel,
-                            as :'classGroup',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        },
+                        // {
+                        //     model :model.classModel,
+                        //     as :'classGroup',
+                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        // },
                         {
                             model: model.courseModel,
-                            as: 'courseSection',
+                            as: 'semesterCourse',
                             attributes: ['courseName',"capacity",'courseId'],
                             include: [
                                 {
@@ -343,14 +345,14 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
                                 },
                             ],
                         },
-                        {
-                            model: model.acedmicYearModel,
-                            as: 'acedmicYearSection',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        },
+                        // {
+                        //     model: model.acedmicYearModel,
+                        //     as: 'acedmicYearSection',
+                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        // },
                         {
                             model: model.specializationModel,
-                            as: 'specializationSection',
+                            as: 'specializationSemester',
                             attributes: ['specializationName'],
                         },
                     ],
@@ -364,10 +366,6 @@ export async function getClassSubjectMapper(classSectionId,universityId,acedmicY
                 },
             ],
         };
-
-        // if (classSectionId) {
-        //     queryOptions.where = { class_sections_id: classSectionId };
-        // };
         const result = await model.classSubjectMapperModel.findAll(queryOptions);
 
         return result;

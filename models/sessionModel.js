@@ -1,20 +1,18 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import course from "./courseModel.js";
 import university from "./universityModel.js";
-import specialization from "./specializationModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
-    'semester',
+    'session',
     {
-        semesterId: {
+        sessionId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'semester_id'
+            field: 'session_id'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -23,24 +21,6 @@ export default sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
-            }
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
-        },
-        specializationId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'specialization_id',
-            references: {
-                model: specialization,
-                key: 'specialization_id'
             }
         },
         acedmicYearId: {
@@ -61,29 +41,25 @@ export default sequelize.define(
                 key: 'institute_id'
             }
         },
-        termType: {
+        sessionName: {
             type: DataTypes.STRING,
             allowNull: false,
-            field:'term_type'
+            field: 'session_name'
         },
-        name: {
+        startingDate: {
             type: DataTypes.STRING,
             allowNull: false,
+            field: 'starting_date'
         },
-        semesterDuration: {
-            type: DataTypes.INTEGER,
+        endingDate: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'semester_duration'
+            field: 'ending_date'
         },
-        courseDuration: {
-            type: DataTypes.INTEGER,
+        classTillDate: {
+            type: DataTypes.STRING,
             allowNull: false,
-            field: 'course_duration'
-        },
-        totalSemester: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'total_semester'
+            field: 'class_til_date'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -97,6 +73,15 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        updatedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'updated_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -106,15 +91,6 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -122,7 +98,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'semester',
+        tableName: 'session',
         timestamps: true,
         paranoid: true
     }

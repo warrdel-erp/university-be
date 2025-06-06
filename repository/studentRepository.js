@@ -1,4 +1,3 @@
-import { Literal } from 'sequelize/lib/utils';
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
@@ -100,6 +99,16 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 as: "course",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
                 where: { universityId },
+            },
+            {
+                model: model.semesterModel,
+                as: "studentSemester",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+                model: model.sessionModel,
+                as: "studentSession",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
             {
                 model: model.specializationModel,
@@ -265,6 +274,16 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.specializationModel,
                     as: "specialization",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "specializationId", "course_Id", "specializationCode"] },
+                },
+                {
+                    model: model.semesterModel,
+                    as: "studentSemester",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.sessionModel,
+                    as: "studentSession",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
                     model: model.studentsEntranceDetail,
@@ -598,7 +617,7 @@ export async function classStudentMappingExcel(data) {
     }
 };
 
-export async function getclassStudentMapping(classSectionId, universityId,acedmicYearId,instituteId,role) {
+export async function getclassStudentMapping(semesterId, universityId,acedmicYearId,instituteId,role) {
     try {
         const studentWhere = {
             ...(acedmicYearId && { acedmicYearId }),
@@ -617,9 +636,9 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
                     },
                 },
                 {
-                    model: model.classSectionModel,
+                    model: model.semesterModel,
                     as: "studentSection",
-                    attributes: ["section", "classSectionsId"],
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
                     model: model.studentModel,
@@ -687,8 +706,8 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
             ],
         };
 
-        if (classSectionId !== 0) {
-            queryOptions.where = { class_sections_id: classSectionId };
+        if (semesterId !== 0) {
+            queryOptions.where = {semesterId };
         };
         if (acedmicYearId) {
             queryOptions.where= {acedmicYearId : acedmicYearId};
@@ -696,7 +715,7 @@ export async function getclassStudentMapping(classSectionId, universityId,acedmi
         const result = await model.classStudentMapperModel.findAll(queryOptions);
         return result;
     } catch (error) {
-        console.error(`Error in getting mapped student ${classSectionId}:`, error);
+        console.error(`Error in getting mapped student ${semesterId}:`, error);
         throw error;
     }
 }
@@ -713,6 +732,9 @@ export async function addElectiveSubject(data) {
 };
 
 export async function promoteStudent(studentId, data) {
+    console.log(`>>>>>>>>>>>>>>studentId, data`,studentId, data);
+    
+    return 
     try {
         const result = await model.classStudentMapperModel.update(data, {
             where: {
@@ -722,6 +744,33 @@ export async function promoteStudent(studentId, data) {
         return result;
     } catch (error) {
         console.error(`Error updating student promote ${studentId} :`, error);
+        throw error;
+    }
+};
+
+export async function getStudentForPromate(studentId) {
+    try {
+        const result = await model.studentModel.findOne({
+            where: {
+                studentId: studentId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error get student for promote ${studentId} :`, error);
+        throw error;
+    }
+};
+
+export async function getSemesterByCourseId(courseId) {
+    try {
+        return await model.semesterModel.findAll({
+  where: { courseId },
+  order: [['semesterId', 'ASC']],
+  raw: true
+});
+    } catch (error) {
+        console.error(`Error get semester By course Id ${courseId} :`, error);
         throw error;
     }
 };

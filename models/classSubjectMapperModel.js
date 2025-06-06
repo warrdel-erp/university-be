@@ -1,9 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import subject from "./subjectModel.js";
-import classSection from "./classSectionModel.js";
+// import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
+import semester from "./semesterModel.js";
 
 export default sequelize.define(
     'class_subject_mapper',
@@ -23,13 +24,13 @@ export default sequelize.define(
                 key: 'subject_id'
             }
         },
-        classSectionId: {
+        semesterId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_sections_id',
+            field: 'semester_id',
             references: {
-                model: classSection,
-                key: 'class_sections_id'
+                model: semester,
+                key: 'semester_id'
             }
         },
         instituteId: {

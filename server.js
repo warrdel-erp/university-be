@@ -50,7 +50,8 @@ import subAccount from './router/subAccountRoute.js';
 import department from './router/departmentRoute.js';
 import staff from './router/staffRoute.js';
 import departmentStructure from './router/departmentStructureRoute.js';
-import syllabus from './router/syllabusRoute.js'
+import syllabus from './router/syllabusRoute.js';
+import session from './router/sessionRoute.js'
 
 // middleware
 app.use(fileUpload());
@@ -103,7 +104,8 @@ app.use("/subAccount",subAccount);
 app.use("/department",department);
 app.use("/staff",staff);
 app.use ("/departmentStructure",departmentStructure);
-app.use ("/syllabus",syllabus)
+app.use ("/syllabus",syllabus);
+app.use("/session",session)
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

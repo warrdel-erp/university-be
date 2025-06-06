@@ -45,23 +45,23 @@ export async function getTeacherSubjectMapping(employeeId, universityId, acedmic
                         }
                     ]
                 },
-                {
-                    model: model.classSubjectMapperModel,
-                    as: "employeeSubject",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include: [
-                        {
-                            model: model.classSectionModel,
-                            as: "employeeClassSection",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            // where: acedmicYearId ? { acedmicYearId } : undefined
-                            where: {
-                                ...(acedmicYearId && { acedmicYearId }),
-                                ...(role === 'Head' && { instituteId })
-                            },
-                        }
-                    ]
-                }
+                // {
+                //     model: model.classSubjectMapperModel,
+                //     as: "employeeSubject",
+                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //     include: [
+                //         {
+                //             model: model.semesterModel,
+                //             as: "employeeClassSection",
+                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //             // where: acedmicYearId ? { acedmicYearId } : undefined
+                //             where: {
+                //                 ...(acedmicYearId && { acedmicYearId }),
+                //                 ...(role === 'Head' && { instituteId })
+                //             },
+                //         }
+                //     ]
+                // }
             ],
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: employeeId ? { employeeId } : undefined

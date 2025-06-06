@@ -63,7 +63,7 @@ export const login = async (req, res) => {
     result = await userService.emptyPassword(req.body,existingEmail)
     userData = await userRepository.findEmailByEmail(email);
   }  
-  const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId)
+  // const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId)
   const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
  
    res.cookie("token", token);
@@ -71,7 +71,7 @@ export const login = async (req, res) => {
     status: true,
     message: "User logged in successfully",
     token,
-    userPermission,
+    // userPermission,
     employeePermission,
     result,
     userData,
