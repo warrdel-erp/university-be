@@ -62,7 +62,7 @@ export async function adminRegisterStudentAndEmployee(info) {
       password,
       phone: item.address.phoneNumber || item.address.mobileNumber || 'null',
       email: item.address.personal_email || item.address.officalEmailId || 'null',
-      uniqueId: uuidv4(),
+      uniqueId: dummyPassword,
       role,
       dummyPassword,
     };
@@ -275,7 +275,7 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
       password: password,
       phone: mobileNumber || 'null',
       email: personalEmail || 'null',
-      uniqueId: uuidv4(),
+      uniqueId: dummyPassword,
       role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
