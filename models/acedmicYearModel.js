@@ -27,6 +27,12 @@ export default sequelize.define(
             allowNull: false,
             field: 'ending_date'
         },
+        isActive :{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            field:'is_active',
+            defaultValue : false
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

@@ -27,7 +27,7 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         const address = data.address ? JSON.parse(data.address) : null;
         const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
         const office = data.office ? JSON.parse(data.office) : null;
-        const role = data.roles ? JSON.parse(data.roles) : null;
+        // const role = data.roles ? JSON.parse(data.roles) : null;
         const skills = data.skill ? JSON.parse(data.skill) : [];
         const documents = data.documents ? JSON.parse(data.documents) : [];
         const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
@@ -43,7 +43,7 @@ export async function addEmployee(data,files,createdBy,universityId,roleId) {
         // Add employee 
         data.createdBy = createdBy
         data.roleId = roleId
-        const employee = await employeeRepository.addEmployee(data,  1 );
+        const employee = await employeeRepository.addEmployee(data,transaction );
         const employeeId = employee.dataValues.employeeId;
         const {employeeName} = employee.dataValues
         

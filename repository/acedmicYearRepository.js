@@ -47,7 +47,8 @@ export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
 }
 
 export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
-    try {
+    console.log(`>>>>>>>>>>>>>acedmicYearId, acedmicYearData`,acedmicYearId, acedmicYearData);
+        try {
         const result = await model.acedmicYearModel.update(acedmicYearData, {
             where: { acedmicYearId }
         });
@@ -67,8 +68,7 @@ export async function getAllActiveAcedmicYear(universityId) {
     try {
         const acedmicYear = await model.acedmicYearModel.findAll({
              where: {
-                startingDate: { [Op.ne]: null },
-                endingDate: { [Op.ne]: null }
+                isActive:true
             },
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
         });

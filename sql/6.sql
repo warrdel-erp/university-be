@@ -313,3 +313,5 @@ ALTER TABLE class_student_mapper DROP COLUMN class_sections_id;
 ALTER TABLE class_student_mapper ADD COLUMN is_passed BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE semester ADD COLUMN term_type VARCHAR(255) NOT NULL;
+
+ALTER TABLE acedmic_year ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT FALSE;
