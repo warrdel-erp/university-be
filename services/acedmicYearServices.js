@@ -25,7 +25,7 @@ export async function updateacedmicYear(acedmicYearData, updatedBy) {
     const { acedmicYearId, yearTitle } = record.dataValues;
 
     if (!yearTitle || !yearTitle.includes('-')) {
-      console.warn(`Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
+      console.warn(`>>>>>>>Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
       continue;
     }
 
@@ -40,16 +40,11 @@ export async function updateacedmicYear(acedmicYearData, updatedBy) {
       updatedBy
     };
 
-    console.log(`Updating ID ${acedmicYearId} =>`, updatePayload);
+    console.log(`>>>>>>>>>>>>>Updating ID ${acedmicYearId} =>`, updatePayload);
 
     return await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
   }
 };
-
-// export async function activateAcedmicYear(acedmicYearId,updatedBy) {
-//       const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-//     await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
-// }
 
 export async function activateAcedmicYear(acedmicYearId, updatedBy) {    
   try {
