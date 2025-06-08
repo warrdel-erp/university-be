@@ -42,7 +42,7 @@ export async function updateacedmicYear(acedmicYearData, updatedBy) {
 
     console.log(`>>>>>>>>>>>>>Updating ID ${acedmicYearId} =>`, updatePayload);
 
-    return await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
+     await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
   }
 };
 
