@@ -476,33 +476,9 @@ export async function addElectiveSubject(data,createdBy){
   return await studentRepository.addElectiveSubject(data)
 };
 
-// export async function promoteStudent(data){
-//   console.log(`>>>>>>>>>>data`,data);
-//   const studentDetail = await studentRepository.getStudentForPromate(data.studentId)
-//   console.log(`>>>>>>>>>>>studentDetail`,studentDetail);
-  
-//   const courseId = studentDetail.dataValues.course_id
-//   console.log(`>>>>>>>>>>.courseId`,courseId);
-  
-//   const acedmicYearId = studentDetail.dataValues.acedmic_year_id
-//     console.log(`>>>>>>>>>>.acedmicYearId`,acedmicYearId);
-
-//   const semeterDetail = await studentRepository.getSemesterByCourseId(courseId);
-//       console.log(`>>>>>>>>>>.semeterDetail`,semeterDetail);
-
-//   const allAcedmicYear =  await acedmicYearCreationService.getacedmicYearDetails();
-//         console.log(`>>>>>>>>>>.allAcedmicYear`,allAcedmicYear);
-
-  
-    
-//   return
-//   const studentId = data.studentId
-//   const classSectionId = data.classSectionId
-//   return await studentRepository.promoteStudent(studentId,data)
-// };
 export async function promoteStudent(data) {
   if(data){
-        return { message: 'next acedmic year is active fro promate the student' };
+        return { message: 'next acedmic year is active for promate the student and semester is required' };
   }
   console.log(`➡️ Incoming data:`, data);
 
@@ -524,13 +500,14 @@ export async function promoteStudent(data) {
   // 👉 Ensure semesters are in array format
   const allSemesters = Array.isArray(allSemestersRaw)
     ? allSemestersRaw
-    : [allSemestersRaw];
+    : [allSemestersRaw];    
 
-  console.log(`✅ Converted Semesters Array:`, allSemesters.map(s => s.dataValues));
+  console.log(`✅ Converted Semesters Array:`, allSemesters.map(s => s.name));
 
   // 👉 Sort semesters by ID (or name if needed)
   const sortedSemesters = allSemesters.sort((a, b) => a.semesterId - b.semesterId);
-  console.log(`📊 Sorted Semesters:`, sortedSemesters.map(s => s.dataValues.name));
+  
+  console.log(`📊 Sorted Semesters:`, sortedSemesters.map(s => s.name));
 
   // 👉 Find current semester index
   const currentSemesterIndex = sortedSemesters.findIndex(
