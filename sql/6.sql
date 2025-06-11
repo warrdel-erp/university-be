@@ -341,3 +341,24 @@ update semester set acedmic_year_id =1 where acedmic_year_id =0;
 alter table syllabus_details rename column mid_term to internal;
 
 alter table syllabus_details rename column end_term to external;
+
+CREATE TABLE po (
+    po_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    course_id INT NOT NULL,
+    name VARCHAR(255),
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

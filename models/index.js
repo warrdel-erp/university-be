@@ -88,6 +88,7 @@ import syllabusDetailsModel from './syllabusDetailsModel.js';
 import syllabusModel from './syllabusModel.js';
 import sessionModel from './sessionModel.js';
 import sessionCouseMappingModel from './sessionCouseMappingModel.js';
+import poModel from './poModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -605,6 +606,13 @@ employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'emplo
 sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
 acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
 
+poModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseDetail' });
+courseModel.hasMany(poModel, { foreignKey: 'course_id', as: 'courseDetail' });
+
+subjectModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courseInfo' });
+courseModel.hasMany(subjectModel, {foreignKey: 'courseId',as: 'subjectInfo'});
+
+
 export {
     settingModel,
     universityModel,
@@ -696,4 +704,5 @@ export {
     classModel,
     sessionModel,
     sessionCouseMappingModel,
+    poModel,
 };
