@@ -315,3 +315,23 @@ ALTER TABLE class_student_mapper ADD COLUMN is_passed BOOLEAN NOT NULL DEFAULT F
 ALTER TABLE semester ADD COLUMN term_type VARCHAR(255) NOT NULL;
 
 ALTER TABLE acedmic_year ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Add the semester_id column with the foreign key reference in class_student_mapper
+
+ALTER TABLE class_student_mapper ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class_student_mapper SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class_student_mapper SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class_student_mapper ADD CONSTRAINT fk_class_student_mapper_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+-- Add the session_id column with the foreign key reference in class_student_mapper
+
+ALTER TABLE class_student_mapper ADD COLUMN session_id INT NOT NULL;
+
+UPDATE class_student_mapper SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE class_student_mapper SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE class_student_mapper ADD CONSTRAINT fk_class_student_mapper_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
