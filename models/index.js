@@ -291,8 +291,8 @@ teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 classSubjectMapperModel.hasMany(teacherSubjectMappingModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, { foreignKey: 'class_subject_mapper_id', as: 'employeeSubject' });
 
-semesterModel.hasMany(classSubjectMapperModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
-classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'employeeClassSection' });
+semesterModel.hasMany(classSubjectMapperModel, { foreignKey: 'semesterId', as: 'employeeClassSection' });
+classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: 'semesterId', as: 'employeeClassSection' });
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: 'employee_id', as: 'employeeData' });
@@ -300,6 +300,9 @@ teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: 'employee_id',
 
 employeeModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
 campusModel.hasMany(employeeModel, { foreignKey: 'campus_id', as: 'employeeCampus' });
+
+employeeModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYear' });
+acedmicYearModel.hasMany(employeeModel, { foreignKey: 'acedmic_year_id', as: 'acedmicYear' });
 
 employeeModel.belongsTo(roleModel, { foreignKey: 'role_id', as: 'employeeRole' });
 roleModel.hasMany(employeeModel, { foreignKey: 'role_id', as: 'employeeRole' });
@@ -601,9 +604,6 @@ employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'emplo
 
 sessionModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
 acedmicYearModel.hasMany(sessionModel, { foreignKey: 'acedmic_year_id', as: 'sessionAcedmic' });
-
-classSubjectMapperModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'classSection' });
-classSectionModel.hasMany(classSubjectMapperModel, { foreignKey: 'class_sections_id', as: 'classSection' });
 
 export {
     settingModel,

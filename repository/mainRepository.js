@@ -115,12 +115,13 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
 export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
     try {
         const whereClause = {
-            university_id: universityId,
+            // university_id: universityId,
+            ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
         const result = await model.subjectModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: whereClause,
         });
         return result;
@@ -187,6 +188,16 @@ export async function addSubject(data) {
         return result;
     } catch (error) {
         console.error("Error in add subject :", error);
+        throw error;
+    }
+};
+
+export async function subjectBulkCreate(data) {
+    try {
+        const result = await model.subjectModel.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in subject bulk create:", error);
         throw error;
     }
 };

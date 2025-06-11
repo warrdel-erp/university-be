@@ -11,27 +11,90 @@ export async function teacherSubjectMapping(data) {
     }
 };
 
-export async function getTeacherSubjectMapping(employeeId, universityId, acedmicYearId,instituteId,role) {
+// export async function getTeacherSubjectMapping(employeeId, universityId, acedmicYearId,instituteId,role) {    
+//     try {
+//         const queryOptions = {
+//             include: [
+//                 {
+//                     model: model.userModel,
+//                     as: "userTeacherSubjectMapping",
+//                     attributes: ["universityId", "userId"],
+//                     where: {
+//                         universityId: universityId
+//                     }
+//                 },
+//                 {
+//                     model: model.employeeModel,
+//                     as: "teacherEmployeeData",
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     where: {
+//                                 ...(acedmicYearId && { acedmicYearId }),
+//                                 ...(role === 'Head' && { instituteId })
+//                             },
+//                     include: [
+//                         {
+//                             model: model.campusModel,
+//                             as: "employeeCampus",
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] }
+//                         },
+//                         {
+//                             model: model.instituteModel,
+//                             as: "employeeInstitute",
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] }
+//                         }
+//                     ]
+//                 },
+//                 {
+//                     model: model.classSubjectMapperModel,
+//                     as: "employeeSubject",
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                     include: [
+//                         {
+//                             model: model.semesterModel,
+//                             as: "employeeClassSection",
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                             where: {
+//                                 ...(acedmicYearId && { acedmicYearId }),
+//                                 ...(role === 'Head' && { instituteId })
+//                             },
+//                         }
+//                     ]
+//                 }
+//             ],
+//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//             where: employeeId ? { employeeId } : undefined
+//         };
+
+//         const result = await model.teacherSubjectMappingModel.findAll(queryOptions);
+//         return result;
+//     } catch (error) {
+//         console.error(`Error in getting employee code and types${employeeId}:`, error);
+//         throw error;
+//     }
+// };
+
+export async function getTeacherSubjectMapping(employeeId, universityId, acedmicYearId, instituteId, role) {
     try {
+        const academicInstituteFilter = {
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
+        };
+
         const queryOptions = {
+            where: employeeId ? { employeeId } : undefined,
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
                     model: model.userModel,
                     as: "userTeacherSubjectMapping",
                     attributes: ["universityId", "userId"],
-                    where: {
-                        // universityId: universityId
-                    }
+                    where: { universityId }
                 },
                 {
                     model: model.employeeModel,
                     as: "teacherEmployeeData",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    // where: acedmicYearId ? { acedmicYearId } : undefined,
-                    where: {
-                                ...(acedmicYearId && { acedmicYearId }),
-                                ...(role === 'Head' && { instituteId })
-                            },
+                    where: academicInstituteFilter,
                     include: [
                         {
                             model: model.campusModel,
@@ -42,36 +105,35 @@ export async function getTeacherSubjectMapping(employeeId, universityId, acedmic
                             model: model.instituteModel,
                             as: "employeeInstitute",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] }
+                        },
+                        {
+                            model :model.acedmicYearModel,
+                            as :"acedmicYear",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
                         }
                     ]
                 },
-                // {
-                //     model: model.classSubjectMapperModel,
-                //     as: "employeeSubject",
-                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                //     include: [
-                //         {
-                //             model: model.semesterModel,
-                //             as: "employeeClassSection",
-                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                //             // where: acedmicYearId ? { acedmicYearId } : undefined
-                //             where: {
-                //                 ...(acedmicYearId && { acedmicYearId }),
-                //                 ...(role === 'Head' && { instituteId })
-                //             },
-                //         }
-                //     ]
-                // }
-            ],
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: employeeId ? { employeeId } : undefined
+                {
+                    model: model.classSubjectMapperModel,
+                    as: "employeeSubject",
+                    required: false,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                        {
+                            model: model.semesterModel,
+                            as: "employeeClassSection",
+                            required: false,
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            where: academicInstituteFilter
+                        }
+                    ]
+                }
+            ]
         };
 
-        const result = await model.teacherSubjectMappingModel.findAll(queryOptions);
-        return result;
+        return await model.teacherSubjectMappingModel.findAll(queryOptions);
     } catch (error) {
-        console.error(`Error in getting employee code and types${employeeId}:`, error);
-        throw error;
+        throw new Error(`Failed to fetch teacher subject mapping: ${error.message}`);
     }
 };
 

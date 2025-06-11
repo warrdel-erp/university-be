@@ -335,3 +335,9 @@ UPDATE class_student_mapper SET session_id = 1 WHERE session_id IS NULL;
 UPDATE class_student_mapper SET session_id = 1 WHERE session_id = 0;
 
 ALTER TABLE class_student_mapper ADD CONSTRAINT fk_class_student_mapper_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
+
+update semester set acedmic_year_id =1 where acedmic_year_id =0;
+
+alter table syllabus_details rename column mid_term to internal;
+
+alter table syllabus_details rename column end_term to external;

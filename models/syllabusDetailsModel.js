@@ -40,15 +40,13 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        midTerm: {
+        internal: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'mid_term'
         },
-        endTerm: {
+        external: {
             type: DataTypes.STRING,
             allowNull: false,
-            field:'end_term'
         },
         total: {
             type: DataTypes.STRING,
