@@ -43,11 +43,11 @@ export async function getPoDetails(universityId,instituteId,role,acedmicYearId) 
     }
 }
 
-export async function getSinglePoDetails(PoId,universityId) {
+export async function getSinglePoDetails(poId,universityId) {
     try {
         const Po = await model.poModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { PoId },
+            where: { poId },
             include:[
                 {
                     model: model.buildingModel,
@@ -64,19 +64,19 @@ export async function getSinglePoDetails(PoId,universityId) {
     }
 }
 
-export async function updatePo(PoId, poData) {
+export async function updatePo(poId, poData) {
     try {
         const result = await model.poModel.update(poData, {
-            where: { PoId }
+            where: { poId }
         });
         return result; 
     } catch (error) {
-        console.error(`Error updating Po creation ${PoId}:`, error);
+        console.error(`Error updating Po creation ${poId}:`, error);
         throw error; 
     }
 }
 
-export async function deletePo(PoId) {
-    const deleted = await model.poModel.destroy({ where: { PoId: PoId } });
+export async function deletePo(poId) {
+    const deleted = await model.poModel.destroy({ where: { poId: poId } });
     return deleted > 0;
 }

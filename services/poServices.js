@@ -14,15 +14,15 @@ export async function getPoDetails(universityId,instituteId,role,acedmicYearId) 
     return await poCreationService.getPoDetails(universityId,instituteId,role,acedmicYearId);
 }
 
-export async function getSinglePoDetails(PoId,universityId) {
-    return await poCreationService.getSinglePoDetails(PoId,universityId);
+export async function getSinglePoDetails(poId,universityId) {
+    return await poCreationService.getSinglePoDetails(poId,universityId);
 }
 
-export async function updatePo(PoId, poData, updatedBy) {    
+export async function updatePo(poId, poData, updatedBy) {    
         poData.updatedBy = updatedBy;
-       return await poCreationService.updatePo(PoId, poData);
+       return await poCreationService.updatePo(poId, poData);
 }
 
-export async function deletePo(PoId) {
-    return await poCreationService.deletePo(PoId);
+export async function deletePo(poId) {
+    return await poCreationService.deletePo(poId);
 }

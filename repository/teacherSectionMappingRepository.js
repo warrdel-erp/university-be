@@ -1,5 +1,4 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 
 export async function teacherSectionMapping(data) {    
     try {
@@ -49,7 +48,6 @@ export async function getTeacherSectionMapping(employeeId, universityId, acedmic
                     model: model.classSectionModel,
                     as: "employeeSection",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    // where: acedmicYearId ? { acedmicYearId } : undefined,
                     where: {
                         ...(acedmicYearId && { acedmicYearId }),
                         ...(role === 'Head' && { instituteId })

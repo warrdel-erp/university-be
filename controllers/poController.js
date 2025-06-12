@@ -35,8 +35,8 @@ export async function getAllPo(req, res) {
 export async function getSinglePoDetails(req, res) {
     const universityId = req.user.universityId;
     try {
-        const { PoId } = req.query;
-        const Po = await poCreation.getSinglePoDetails(PoId,universityId);
+        const { poId } = req.query;
+        const Po = await poCreation.getSinglePoDetails(poId,universityId);
         if (Po) {
             res.status(200).json(Po);
         } else {
@@ -49,12 +49,12 @@ export async function getSinglePoDetails(req, res) {
 
 export async function updatePo(req, res) {
     try {
-        const {PoId} = req.body
-        if(!(PoId)){
-            return res.status(400).send('PoId is required')
+        const {poId} = req.body
+        if(!(poId)){
+            return res.status(400).send('poId is required')
          }
          const updatedBy = req.user.userId;
-        const updatedPo = await poCreation.updatePo(PoId, req.body,updatedBy);
+        const updatedPo = await poCreation.updatePo(poId, req.body,updatedBy);
             res.status(200).json({message: "Po update succesfully" ,updatedPo});
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -63,13 +63,13 @@ export async function updatePo(req, res) {
 
 export async function deletePo(req, res) {
     try {
-        const { PoId } = req.query;
-        if (!PoId) {
-            return res.status(400).json({ message: "PoId is required" });
+        const { poId } = req.query;
+        if (!poId) {
+            return res.status(400).json({ message: "poId is required" });
         }
-        const deleted = await poCreation.deletePo(PoId);
+        const deleted = await poCreation.deletePo(poId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for Po ID ${PoId}` });
+            res.status(200).json({ message: `Delete successful for Po ID ${poId}` });
         } else {
             res.status(404).json({ message: "Po not found" });
         }

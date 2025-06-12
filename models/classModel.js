@@ -4,6 +4,7 @@ import university from "./universityModel.js";
 import users from "./userModel.js";
 import course from "./courseModel.js";
 import instituteModel from "./instituteModel.js";
+import semesterModel from "./semesterModel.js";
 
 export default sequelize.define(
     'class',
@@ -40,7 +41,16 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        },        
+        }, 
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'semester_id',
+            references: {
+                model: semesterModel,
+                key: 'semester_id'
+            }
+        },       
         className: {
             type: DataTypes.STRING,
             allowNull: false,

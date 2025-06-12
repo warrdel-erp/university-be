@@ -212,8 +212,8 @@ export async function addSubject(data,createdBy,instituteId) {
 export async function addClass(data,createdBy,universityId,instituteId) {
     const results = [];
     try {
-        const { courseId, specializationId, acedmicYearId,className, sections } = data; 
-        const classObject = {courseId,className,universityId,updatedBy:createdBy,createdBy,instituteId}
+        const { courseId, specializationId, acedmicYearId,className, sections,semesterId } = data; 
+        const classObject = {courseId,className,universityId,updatedBy:createdBy,createdBy,instituteId,semesterId}
         
         const classData = await mainRepository.seprateAddClass(classObject)
         const classId = classData.dataValues.classId
@@ -226,7 +226,7 @@ export async function addClass(data,createdBy,universityId,instituteId) {
                 specializationId,
                 createdBy,
                 acedmicYearId,
-                classId,instituteId
+                classId,instituteId,semesterId
             });            
             results.push(result);
         }

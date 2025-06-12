@@ -128,6 +128,9 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: 'types', as: 'typs
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSection' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSection' });
 
+classSectionModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'semesterDetail' });
+semesterModel.hasMany(classSectionModel, { foreignKey: 'semester_id', as: 'semesterDetail' });
+
 classSectionModel.belongsTo(classModel, { foreignKey: 'class_id', as: 'classGroup' });
 classModel.hasMany(classSectionModel, { foreignKey: 'class_id', as: 'classGroup' });
 
@@ -612,6 +615,8 @@ courseModel.hasMany(poModel, { foreignKey: 'course_id', as: 'courseDetail' });
 subjectModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courseInfo' });
 courseModel.hasMany(subjectModel, {foreignKey: 'courseId',as: 'subjectInfo'});
 
+semesterModel.hasMany(classSectionModel, { foreignKey: 'semesterId',as: 'classSections'});
+classSectionModel.belongsTo(semesterModel, { foreignKey: 'semesterId',as: 'semester'});
 
 export {
     settingModel,

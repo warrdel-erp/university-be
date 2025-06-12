@@ -104,6 +104,13 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 model: model.semesterModel,
                 as: "studentSemester",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model :model.classSectionModel,
+                        as :'classSections',
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    },
+                ]
             },
             {
                 model: model.sessionModel,
@@ -279,6 +286,13 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.semesterModel,
                     as: "studentSemester",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include:[
+                        {
+                            model :model.classSectionModel,
+                            as :'classSections',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                    ]
                 },
                 {
                     model: model.sessionModel,
@@ -642,6 +656,13 @@ export async function getclassStudentMapping(semesterId, universityId, acedmicYe
                     model: model.semesterModel,
                     as: "studentSection",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include:[
+                        {
+                            model :model.classSectionModel,
+                            as :'classSections',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                    ]
                 },
                 {
                     model: model.studentModel,

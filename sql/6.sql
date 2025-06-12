@@ -362,3 +362,23 @@ CREATE TABLE po (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+-- Add the semester_id column with the foreign key reference in class_sections
+
+ALTER TABLE class_sections ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class_sections SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class_sections SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class_sections ADD CONSTRAINT fk_class_sections_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+-- Add the semester_id column with the foreign key reference in class
+
+ALTER TABLE class ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class ADD CONSTRAINT fk_class_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
