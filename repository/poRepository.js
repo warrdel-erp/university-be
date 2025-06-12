@@ -43,16 +43,23 @@ export async function getPoDetails(universityId,instituteId,role,acedmicYearId) 
     }
 }
 
-export async function getSinglePoDetails(poId,universityId) {
+export async function getSinglePoDetails(poId) {
     try {
         const Po = await model.poModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { poId },
             include:[
                 {
-                    model: model.buildingModel,
-                    as: "PoBuilding",
+                    model: model.courseModel,
+                    as: "courseDetail",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    include:[
+                        {
+                            model:model.subjectModel,
+                            as:'subjectInfo',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        }
+                    ]
                 },
             ]
         });

@@ -75,3 +75,7 @@ export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
     syllabusData.updatedBy = updatedBy;
     await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
 };
+
+export async function courseAllSubject(courseId) {
+    return await SyllabusCreationRepository.courseAllSubject(courseId);
+};

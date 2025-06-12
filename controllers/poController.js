@@ -1,8 +1,6 @@
 import * as poCreation  from  "../services/poServices.js";
 
-export async function addPo(req, res) {
-    console.log(`>>>>>>>req.body`,req.body);
-    
+export async function addPo(req, res) {    
     const {courseId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
@@ -36,9 +34,9 @@ export async function getSinglePoDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const { poId } = req.query;
-        const Po = await poCreation.getSinglePoDetails(poId,universityId);
-        if (Po) {
-            res.status(200).json(Po);
+        const po = await poCreation.getSinglePoDetails(poId,universityId);
+        if (po) {
+            res.status(200).json(po);
         } else {
             res.status(404).json({ message: "Po not found" });
         }

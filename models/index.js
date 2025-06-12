@@ -89,6 +89,8 @@ import syllabusModel from './syllabusModel.js';
 import sessionModel from './sessionModel.js';
 import sessionCouseMappingModel from './sessionCouseMappingModel.js';
 import poModel from './poModel.js';
+import coModel from './coModel.js';
+import coWeightageModel from './coWeightageModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -591,6 +593,9 @@ subAccountModel.hasMany(departmentStructureModel, { foreignKey: 'parentAccountId
 syllabusModel.hasMany(syllabusDetailsModel, { foreignKey: 'syllabus_id', as: 'syllabusDetails' });
 syllabusDetailsModel.belongsTo(syllabusModel, { foreignKey: 'syllabus_id', as: 'syllabus' });
 
+syllabusDetailsModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'syllabusSubject' });
+subjectModel.hasMany(syllabusDetailsModel, { foreignKey: 'subject_id', as: 'syllabusSubject' });
+
 syllabusModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
 instituteModel.hasMany(syllabusModel, { foreignKey: 'institute_id', as: 'syllabusInstitute' });
 
@@ -617,6 +622,12 @@ courseModel.hasMany(subjectModel, {foreignKey: 'courseId',as: 'subjectInfo'});
 
 semesterModel.hasMany(classSectionModel, { foreignKey: 'semesterId',as: 'classSections'});
 classSectionModel.belongsTo(semesterModel, { foreignKey: 'semesterId',as: 'semester'});
+
+coModel.belongsTo(syllabusDetailsModel, { foreignKey: 'syllabus_details_id', as: 'cosyllabus' });
+syllabusDetailsModel.hasMany(coModel, { foreignKey: 'syllabus_details_id', as: 'cosyllabus' });
+
+coWeightageModel.belongsTo(coModel, { foreignKey: 'co_id', as: 'codetail' });
+coModel.hasMany(coWeightageModel, { foreignKey: 'co_id', as: 'codetail' });
 
 export {
     settingModel,
@@ -710,4 +721,6 @@ export {
     sessionModel,
     sessionCouseMappingModel,
     poModel,
+    coModel,
+    coWeightageModel
 };

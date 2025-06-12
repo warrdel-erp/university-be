@@ -77,3 +77,21 @@ export async function deleteSyllabus(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+
+export async function courseAllSubject(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const { courseId } = req.query;
+        if(!courseId){
+           return res.status(400).send('courseId is required')
+        }
+        const Syllabus = await syllabusCreation.courseAllSubject(courseId);
+        if (Syllabus) {
+            res.status(200).json(Syllabus);
+        } else {
+            res.status(404).json({ message: "Syllabus not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
