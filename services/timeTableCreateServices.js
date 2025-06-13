@@ -52,21 +52,29 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     try {
         
         const { timeTableNameId,timeTableCreateId,timeTableCreationId,employeeId,teacherSubjectMappingId,isSameTeacher,day, period} = data
+console.log(`>>>>>>>timeTableCreationId`,timeTableCreationId);
 
         // Fetch time table data
         const timeTableData = await getSingleTimeTableById(timeTableCreationId);
-        const periodLength = timeTableData[0].dataValues.periodLength;
+        console.log(`>>>>timeTableData>>>>`,timeTableData);
+        
+        const periodLength = timeTableData[0]?.dataValues?.periodLength || 0;
+console.log(`>>>>>>periodLength`,periodLength);
 
         // Fetch teacher subject data
         if(teacherSubjectMappingId){
          teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
     }
     const employeeIdData =  teacherSubjectData ? teacherSubjectData[0].dataValues.employeeId : employeeId;
+console.log(`>>>>>>employeeIdData`,employeeIdData);
 
         // Fetch faculty load details        
         const faculityLoad = await getSingleFaculityLoadDetails(employeeIdData);
         const faculityCurrentLoad = faculityLoad[0].dataValues.currentLoad || 0;
+        console.log(`>>>>>>faculityCurrentLoad`,faculityCurrentLoad);
+
         const currentLoad = parseInt(faculityCurrentLoad) + periodLength;
+        console.log(`>>>>>>currentLoad`,currentLoad);
 
         // Update faculty load
         await updateFaculityLoadByEmployeeId(employeeIdData, {currentLoad:currentLoad}, transaction );
