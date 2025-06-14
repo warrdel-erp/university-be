@@ -27,7 +27,7 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
             const syllabusDetailsData = [];
 
             for (const subjectGroup of syllabusData.subjects) {
-                const { subjectType, type, mid_term, end_term, total, data } = subjectGroup;
+                const { subjectType, type, internal, external, total, data } = subjectGroup;
 
                 for (const subj of data) {
                     syllabusDetailsData.push({
@@ -35,8 +35,8 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
                         subjectId: subj.subjectId,
                         subjectType,
                         type,
-                        midTerm: mid_term,
-                        endTerm: end_term,
+                        internal,
+                        external,
                         total,
                         createdBy,
                         updatedBy
@@ -74,4 +74,8 @@ export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
 
     syllabusData.updatedBy = updatedBy;
     await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
+};
+
+export async function courseAllSubject(courseId) {
+    return await SyllabusCreationRepository.courseAllSubject(courseId);
 };

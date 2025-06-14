@@ -43,10 +43,6 @@ export async function getSingleacedmicYearDetails(req, res) {
 
 export async function updateacedmicYear(req, res) {
     try {
-        // const {acedmicYearId} = req.body
-        // if(!(acedmicYearId)){
-        //     return res.status(400).send('acedmicYearId is required')
-        //  }
          const updatedBy = req.user.userId;
         const updatedacedmicYear = await acedmicYearCreation.updateacedmicYear(req.body,updatedBy);
             res.status(200).json({message: "acedmicYear update succesfully" ,updatedacedmicYear});
@@ -92,6 +88,23 @@ export async function activateAcedmicYear(req, res) {
         
         const acedmicYear = await acedmicYearCreation.activateAcedmicYear(acedmicYearId,updatedBy);
         res.status(201).json({ message: "Data added successfully", acedmicYear });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function newActivateAndCopyData(req, res) {
+       try {
+   const {acedmicYearId} = req.body
+        if(!(acedmicYearId)){
+            return res.status(400).send('acedmicYearId is required')
+         }
+        const updatedBy = req.user.userId; 
+        const createdBy = req.user.userId;
+        const universityId = req.user.universityId;
+        const instituteId = req.user.instituteId;
+        const acedmicYear = await acedmicYearCreation.newActivateAndCopyData(req.body,universityId,instituteId,createdBy,updatedBy);
+        res.status(201).json({ message: "copy data added successfully", acedmicYear });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

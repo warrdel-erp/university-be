@@ -113,4 +113,41 @@ export async function updateSyllabus(SyllabusId, syllabusData) {
         console.error(`Error updating Syllabus creation ${SyllabusId}:`, error);
         throw error; 
     }
+};
+
+export async function courseAllSubject(courseId) {
+    try {
+        const Syllabus = await model.syllabusModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: { courseId },
+            include:[
+                {
+                    model:model.courseModel,
+                    as:'syllabusCourse',
+                    attributes:["courseName","courseCode"]
+                },
+                {
+                    model: model.syllabusDetailsModel,
+                    as: 'syllabusDetails',  
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    },
+                    include:[
+                        {
+                            model:model.subjectModel,
+                            as:'syllabusSubject',
+                            attributes: { 
+                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                            },
+                        }
+                    ]
+                },
+            ]
+        });
+
+        return Syllabus;
+    } catch (error) {
+        console.error('Error fetching Syllabus details:', error);
+        throw error;
+    }
 }

@@ -1,6 +1,6 @@
 import {Router} from  'express'
 const router =  Router();
-import {addSyllabus,getAllSyllabus,getSingleSyllabusDetails,updateSyllabus,deleteSyllabus} from "../controllers/syllabusController.js";
+import {addSyllabus,getAllSyllabus,getSingleSyllabusDetails,updateSyllabus,deleteSyllabus,courseAllSubject} from "../controllers/syllabusController.js";
 import userAuth from "../middleware/authUser.js"
 
 router.post('/', userAuth, addSyllabus);
@@ -12,5 +12,7 @@ router.get('/single' ,userAuth, getSingleSyllabusDetails);
 router.patch('/' ,userAuth, updateSyllabus);
 
 router.delete('/' ,userAuth, deleteSyllabus);
+
+router.get('/courseSubject', userAuth, courseAllSubject);
 
 export default router;

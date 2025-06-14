@@ -1,19 +1,19 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
+import university from './universityModel.js';
+import institute from './instituteModel.js';
 import users from "./userModel.js";
-import course from "./courseModel.js";
-import instituteModel from "./instituteModel.js";
-import semesterModel from "./semesterModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
+import coModel from "./coModel.js";
 
 export default sequelize.define(
-    'class',
+    'co_weightage',
     {
-        classId: {
+        coWeightageId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_id'
+            field: 'co_weightage_id'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -24,37 +24,48 @@ export default sequelize.define(
                 key: 'university_id'
             }
         },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
-        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'institute_id',
             references: {
-                model: instituteModel,
+                model: institute,
                 key: 'institute_id'
             }
-        }, 
-        semesterId: {
+        },
+        acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'semester_id',
+            field: 'acedmic_year_id',
             references: {
-                model: semesterModel,
-                key: 'semester_id'
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
-        },       
-        className: {
-            type: DataTypes.STRING,
+        },
+        coId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_name'
+            field: 'co_id',
+            references: {
+                model: coModel,
+                key: 'co_id'
+            }
+        },
+        term:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        total :{
+            type:DataTypes.INTEGER,
+            allowNull:true,
+        },
+        name:{
+            type:DataTypes.STRING,
+            allowNull:true
+        },
+        mark:{
+            type:DataTypes.INTEGER,
+            allowNull:true
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -93,7 +104,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'class',
+        tableName: 'co_weightage',
         timestamps: true,
         paranoid: true
     }

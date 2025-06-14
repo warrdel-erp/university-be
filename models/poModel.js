@@ -1,19 +1,19 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
+import university from './universityModel.js';
+import institute from './instituteModel.js';
+import course from './courseModel.js';
 import users from "./userModel.js";
-import course from "./courseModel.js";
-import instituteModel from "./instituteModel.js";
-import semesterModel from "./semesterModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
 
 export default sequelize.define(
-    'class',
+    'po',
     {
-        classId: {
+        poId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_id'
+            field: 'po_id'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -22,6 +22,24 @@ export default sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
             }
         },
         courseId: {
@@ -33,28 +51,13 @@ export default sequelize.define(
                 key: 'course_id'
             }
         },
-        instituteId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'institute_id',
-            references: {
-                model: instituteModel,
-                key: 'institute_id'
-            }
-        }, 
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
-        },       
-        className: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'class_name'
+        name:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        description:{
+            type:DataTypes.STRING,
+            allowNull:true,
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -93,7 +96,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'class',
+        tableName: 'po',
         timestamps: true,
         paranoid: true
     }

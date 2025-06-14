@@ -315,3 +315,115 @@ ALTER TABLE class_student_mapper ADD COLUMN is_passed BOOLEAN NOT NULL DEFAULT F
 ALTER TABLE semester ADD COLUMN term_type VARCHAR(255) NOT NULL;
 
 ALTER TABLE acedmic_year ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Add the semester_id column with the foreign key reference in class_student_mapper
+
+ALTER TABLE class_student_mapper ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class_student_mapper SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class_student_mapper SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class_student_mapper ADD CONSTRAINT fk_class_student_mapper_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+-- Add the session_id column with the foreign key reference in class_student_mapper
+
+ALTER TABLE class_student_mapper ADD COLUMN session_id INT NOT NULL;
+
+UPDATE class_student_mapper SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE class_student_mapper SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE class_student_mapper ADD CONSTRAINT fk_class_student_mapper_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
+
+update semester set acedmic_year_id =1 where acedmic_year_id =0;
+
+alter table syllabus_details rename column mid_term to internal;
+
+alter table syllabus_details rename column end_term to external;
+
+CREATE TABLE po (
+    po_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    course_id INT NOT NULL,
+    name VARCHAR(255),
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    FOREIGN KEY (course_id) REFERENCES course(course_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+-- Add the semester_id column with the foreign key reference in class_sections
+
+ALTER TABLE class_sections ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class_sections SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class_sections SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class_sections ADD CONSTRAINT fk_class_sections_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+-- Add the semester_id column with the foreign key reference in class
+
+ALTER TABLE class ADD COLUMN semester_id INT NOT NULL;
+
+UPDATE class SET semester_id = 1 WHERE semester_id IS NULL;
+
+UPDATE class SET semester_id = 1 WHERE semester_id = 0;
+
+ALTER TABLE class ADD CONSTRAINT fk_class_semester_id FOREIGN KEY (semester_id) REFERENCES semester(semester_id) ON DELETE CASCADE;
+
+CREATE TABLE co (
+    co_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    syllabus_details_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    cos_number VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    FOREIGN KEY (syllabus_details_id) REFERENCES syllabus_details(syllabus_details_id),
+    FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE co_weightage (
+    co_weightage_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    co_id INT NOT NULL,
+    term VARCHAR(255),
+    total INT,
+    name VARCHAR(255),
+    mark INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    deleted_at TIMESTAMP DEFAULT NULL,
+    FOREIGN KEY (university_id) REFERENCES university(university_id),
+    FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    FOREIGN KEY (co_id) REFERENCES co(co_id),
+    FOREIGN KEY (created_by) REFERENCES users(user_id),
+    FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

@@ -115,12 +115,13 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
 export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
     try {
         const whereClause = {
-            university_id: universityId,
+            // university_id: universityId,
+            ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
         const result = await model.subjectModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: whereClause,
         });
         return result;
@@ -191,6 +192,16 @@ export async function addSubject(data) {
     }
 };
 
+export async function subjectBulkCreate(data) {
+    try {
+        const result = await model.subjectModel.bulkCreate(data);
+        return result;
+    } catch (error) {
+        console.error("Error in subject bulk create:", error);
+        throw error;
+    }
+};
+
 export async function addClass(data) {    
     try {
         const result = await model.classSectionModel.bulkCreate(data);
@@ -225,8 +236,6 @@ export async function seprateAddClass(data) {
 };
 
 export async function getClassDetails(classSectionsId, universityId, acedmicYearId,instituteId,role) {
-    console.log(`>>>>>>>>>classSectionsId`,classSectionsId);
-        console.log(`>>>>>>>>>acedmicYearId`,acedmicYearId);
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -243,14 +252,23 @@ export async function getClassDetails(classSectionsId, universityId, acedmicYear
                     model: model.courseModel,
                     as: "courseSectionAdd",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "course_levelId", "universityId"] },
-                    // where :{
-                    //     ...(acedmicYearId && {acedmicYearId})
-                    // }
                 },
                 {
                     model: model.specializationModel,
                     as: "specializationSectionAdd",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "course_Id", "specializationId"] }
+                },
+                {
+                    model: model.semesterModel,
+                    as: "semesterDetail",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
+                    include:[
+                                {
+                                    model :model.classSectionModel,
+                                    as :'classSections',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                },
+                     ]
                 }
             ],
             where: {}
@@ -307,12 +325,13 @@ export async function getClassSubjectMapper(semesterId,universityId,acedmicYearI
                     model: model.semesterModel,
                     as: 'semestermapping',
                     where: acedmicYearId ? { acedmicYearId } : undefined,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
-                        // {
-                        //     model :model.classModel,
-                        //     as :'classGroup',
-                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        // },
+                        {
+                            model :model.classSectionModel,
+                            as :'classSections',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
                         {
                             model: model.courseModel,
                             as: 'semesterCourse',

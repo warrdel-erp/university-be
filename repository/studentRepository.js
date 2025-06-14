@@ -104,6 +104,13 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 model: model.semesterModel,
                 as: "studentSemester",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include:[
+                    {
+                        model :model.classSectionModel,
+                        as :'classSections',
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    },
+                ]
             },
             {
                 model: model.sessionModel,
@@ -279,6 +286,13 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.semesterModel,
                     as: "studentSemester",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include:[
+                        {
+                            model :model.classSectionModel,
+                            as :'classSections',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                    ]
                 },
                 {
                     model: model.sessionModel,
@@ -617,28 +631,38 @@ export async function classStudentMappingExcel(data) {
     }
 };
 
-export async function getclassStudentMapping(semesterId, universityId,acedmicYearId,instituteId,role) {
+export async function getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role) {
     try {
         const studentWhere = {
             ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { instituteId })
+            ...(role === 'Head' && { instituteId }),
         };
+
+        const whereConditions = {};
+        if (semesterId !== 0) whereConditions.semester_id = semesterId;
+        if (acedmicYearId) whereConditions.acedmicYearId = acedmicYearId;
 
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: whereConditions,
             include: [
                 {
                     model: model.userModel,
                     as: "userClassStudentMapper",
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    },
+                    where: { universityId },
                 },
                 {
                     model: model.semesterModel,
                     as: "studentSection",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include:[
+                        {
+                            model :model.classSectionModel,
+                            as :'classSections',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                    ]
                 },
                 {
                     model: model.studentModel,
@@ -660,9 +684,6 @@ export async function getclassStudentMapping(semesterId, universityId,acedmicYea
                             model: model.acedmicYearModel,
                             as: "acdemicYear",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            // where: {
-                            //     universityId: universityId
-                            // },
                         },
                         {
                             model: model.affiliatedIniversityModel,
@@ -679,7 +700,7 @@ export async function getclassStudentMapping(semesterId, universityId,acedmicYea
                                     as: "codes",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
-                            ]
+                            ],
                         },
                         {
                             model: model.courseModel,
@@ -700,26 +721,19 @@ export async function getclassStudentMapping(semesterId, universityId,acedmicYea
                             model: model.studentsAddress,
                             as: "studentAddress",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        }
+                        },
                     ],
                 },
             ],
         };
 
-        if (semesterId !== 0) {
-            queryOptions.where = {semesterId };
-        };
-        if (acedmicYearId) {
-            queryOptions.where= {acedmicYearId : acedmicYearId};
-        }
         const result = await model.classStudentMapperModel.findAll(queryOptions);
         return result;
     } catch (error) {
         console.error(`Error in getting mapped student ${semesterId}:`, error);
         throw error;
     }
-}
-
+};
 
 export async function addElectiveSubject(data) {
     try {
