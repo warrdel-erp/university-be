@@ -125,7 +125,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         const periodLength = timeTableData[0]?.dataValues?.periodLength || 0;
         console.log(`>>>>>> periodLength: ${periodLength}`);
 
-        // Fetch teacher subject data (if applicable)
         if (teacherSubjectMappingId) {
             teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
             if (!teacherSubjectData || !teacherSubjectData[0]) {
