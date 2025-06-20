@@ -179,6 +179,9 @@ studentModel.hasMany(classStudentMapperModel, { foreignKey: 'student_id', as: 's
 classStudentMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'studentSection' });
 semesterModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSection' });
 
+classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: 'semester_id', as: 'studentSections' });
+classSectionModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSection' });
+
 //student join to there 2 more table 
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: 'student_id', as: 'entranceDetails' });
 studentModel.hasMany(studentsEntranceDetail, { foreignKey: 'student_id', as: 'entranceDetails' });
