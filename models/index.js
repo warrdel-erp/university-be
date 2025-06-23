@@ -389,6 +389,9 @@ employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'shelf', as: '
 timeTableCreationModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
 timeTableNameModel.hasMany(timeTableCreationModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
 
+timeTableCreationModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'timeTable' });
+courseModel.hasMany(timeTableCreationModel, { foreignKey: 'course_id', as: 'timeTable' });
+
 timeTableCreateModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });
 timeTableNameModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });
 
