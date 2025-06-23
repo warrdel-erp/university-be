@@ -12,6 +12,7 @@ import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import semesterModel from "./semesterModel.js";
+import classSectionModel from "./classSectionModel.js";
 
 export default sequelize.define(
     'students',
@@ -112,6 +113,15 @@ export default sequelize.define(
                 key: 'semester_id'
             }
         },
+        classSectionsId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_sections_id',
+            references: {
+                model: classSectionModel,
+                key: 'class_sections_id'
+            }
+        },
         scholarNumber:{
             type: DataTypes.STRING,
             allowNull: false,
@@ -153,21 +163,6 @@ export default sequelize.define(
             allowNull : true,
             field:'mother_name'
         },
-        // eligibityCriteria:{
-        //     type:DataTypes.STRING,
-        //     allowNull: true,
-        //     field:'eligibity_criteria'
-        // },
-        // totalSeat:{
-        //     type:DataTypes.INTEGER,
-        //     allowNull: true,
-        //     field:'total_seat'
-        // },
-        // remainingSeat:{
-        //     type:DataTypes.INTEGER,
-        //     allowNull: true,
-        //     field:'remaining_seat'
-        // },
         birthDate:{
             type:DataTypes.DATE,
             allowNull: false,
@@ -193,16 +188,6 @@ export default sequelize.define(
 			allowNull:true,
             field:'current_class'
 		},
-		// employeeReferences:{
-		// 	type:DataTypes.STRING,
-		// 	allowNull:true,
-        //     field:'employee_references'
-		// },
-		// studentReferences:{
-		// 	type:DataTypes.STRING,
-		// 	allowNull:true,
-        //     field:'student_references'
-		// },
 		studentPhoto:{
 			type:DataTypes.JSON,
 			allowNull:true,
@@ -271,26 +256,6 @@ export default sequelize.define(
             allowNull: true,
             field:'place_of_birth'
         },
-        // multipleNumber:{
-        //     type: DataTypes.STRING,
-        //     allowNull: true,
-        //     field:'multiple_number'
-        // },
-        // registerFileNumber:{
-		// 	type:DataTypes.STRING,
-		// 	allowNull:false,
-        //     field:'register_file_number'
-		// },
-        // whatsappNumber:{
-        //     type: DataTypes.STRING,
-        //     allowNull: true,
-        //     field:'whatsapp_number'
-        // },
-        // studentNameAlias:{
-        //     type: DataTypes.STRING,
-        //     allowNull: true,
-        //     field:'student_name_alias'
-        // },
         studentStatus:{
             type:DataTypes.ENUM(...studentStatus),
             allowNull:true,

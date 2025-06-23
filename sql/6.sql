@@ -427,3 +427,13 @@ CREATE TABLE co_weightage (
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+-- Add the class_section column with the foreign key reference in students
+
+ALTER TABLE students ADD COLUMN class_sections_id INT NOT NULL;
+
+UPDATE students SET class_sections_id = 1 WHERE class_sections_id IS NULL;
+
+UPDATE students SET class_sections_id = 1 WHERE class_sections_id = 0;
+
+ALTER TABLE students ADD CONSTRAINT fk_students_class_sections_id FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id) ON DELETE CASCADE;

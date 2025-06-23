@@ -57,13 +57,16 @@ export async function getAdminRegisterStudent(universityId) {
                         model:model.classStudentMapperModel,
                         as:'studentMapped',
                         attributes:{exclude:["createdAt",'updatedAt','deletedAt','createdBy','student_id','class_sections_id']},
-                        include:[
-                            {
-                            model:model.classSectionModel,
-                            as:'studentSections',
-                            attributes:{exclude:["createdAt",'updatedAt','deletedAt','createdBy','student_id','class_sections_id']},
-                        }
-                        ]
+                    },
+                    {
+                        model:model.classSectionModel,
+                        as:'studentSections',
+                        attributes:{exclude:["createdAt",'updatedAt','deletedAt','createdBy','student_id','class_sections_id']},
+                    },
+                    {
+                        model : model.semesterModel,
+                        as:'studentSemester',
+                        attributes:{exclude:["createdAt",'updatedAt','deletedAt']},
                     }
                 ]
 				}
