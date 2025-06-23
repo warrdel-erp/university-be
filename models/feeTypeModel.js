@@ -14,7 +14,7 @@ export default sequelize.define(
         },
         feeGroupId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'fee_group_id',
             references: {
                 model: feeGroup,

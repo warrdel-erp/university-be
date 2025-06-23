@@ -437,3 +437,5 @@ UPDATE students SET class_sections_id = 1 WHERE class_sections_id IS NULL;
 UPDATE students SET class_sections_id = 1 WHERE class_sections_id = 0;
 
 ALTER TABLE students ADD CONSTRAINT fk_students_class_sections_id FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id) ON DELETE CASCADE;
+
+ALTER TABLE fee_type MODIFY COLUMN fee_group_id INT NULL;
