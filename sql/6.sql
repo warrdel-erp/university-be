@@ -439,3 +439,13 @@ UPDATE students SET class_sections_id = 1 WHERE class_sections_id = 0;
 ALTER TABLE students ADD CONSTRAINT fk_students_class_sections_id FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id) ON DELETE CASCADE;
 
 ALTER TABLE fee_type MODIFY COLUMN fee_group_id INT NULL;
+
+-- Add the class_section column with the foreign key reference in students
+
+ALTER TABLE transport_vehicle ADD COLUMN institute_id INT NOT NULL;
+
+UPDATE transport_vehicle SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE transport_vehicle SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE transport_vehicle ADD CONSTRAINT fk_students_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;

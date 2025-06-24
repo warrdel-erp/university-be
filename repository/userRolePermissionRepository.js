@@ -126,7 +126,7 @@ export async function getUserRolePermissionByUserId(userId) {
                         {
                             model: model.studentModel,
                             as: 'studentDetails',
-                            attributes: ["campusId", "instituteId", "affiliatedUniversityId","courseLevelId", "courseId", "specializationId"],
+                            attributes: ["firstName","middleName","lastName","campusId", "instituteId", "affiliatedUniversityId","courseLevelId", "courseId", "specializationId"],
                             include: [
                                 {
                                     model: model.courseModel,
