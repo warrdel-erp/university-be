@@ -97,23 +97,27 @@ export async function getUserRolePermissionByUserId(userId) {
         const excludeFeeInvoiceDetail = [...excludeTimestamps, "fee_type_id", "fee_invoice_id"];
         const excludeAttendance = [...excludeTimestamps, "student_id", "class_sections_id"];
 
-        const UserRolePermission = await model.userModel.findAll({
+        const UserRolePermission = await model.userModel.findOne({
+            distinct: true,
             attributes: ["userId"],
             where: { userId },
             include: [
                 {
                     model: model.userRolePermissionModel,
                     as: 'user',
+                    distinct: true,
                     attributes: { exclude: excludeUserRolePermission },
                     include: [
                         {
                             model: model.roleModel,
                             as: 'userRole',
+                            distinct: true,
                             attributes: { exclude: excludeTimestamps },
                         },
                         {
                             model: model.permissionModel,
                             as: 'userPermission',
+                            distinct: true,
                             attributes: { exclude: excludeTimestamps },
                         },
                     ]
@@ -121,26 +125,31 @@ export async function getUserRolePermissionByUserId(userId) {
                 {
                     model: model.userStudentEmployeeModel,
                     as: 'userDetails',
+                    distinct: true,
                     attributes: ["employeeId", "studentId"],
                     include: [
                         {
                             model: model.studentModel,
                             as: 'studentDetails',
+                            distinct: true,
                             attributes: ["firstName","middleName","lastName","campusId", "instituteId", "affiliatedUniversityId","courseLevelId", "courseId", "specializationId"],
                             include: [
                                 {
                                     model: model.courseModel,
                                     as: 'course',
+                                    distinct: true,
                                     attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
                                     include: [
                                         {
                                             model: model.timeTableCreateModel,
                                             as: "timeTableCourse",
+                                            distinct: true,
                                             attributes: { exclude: excludeTimestamps },
                                         },
                                         {
                                             model: model.timeTableCreationModel,
                                             as: 'timeTable',
+                                            distinct: true,
                                             attributes: { exclude: excludeTimestamps },
                                         }
                                     ]
@@ -148,21 +157,25 @@ export async function getUserRolePermissionByUserId(userId) {
                                 {
                                     model: model.classStudentMapperModel,
                                     as: 'studentMapped',
+                                    distinct: true,
                                     attributes: ["classStudentMapperId", 'studentId'],
                                     include: [
                                         {
                                             model: model.classSectionModel,
                                             as: 'studentSections',
+                                            distinct: true,
                                             attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
                                             include: [
                                                 {
                                                     model: model.teacherSectionMappingModel,
                                                     as: "employeeSection",
+                                                    distinct: true,
                                                     attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
                                                     include:[
                                                         {
                                                             model:model.employeeModel,
                                                             as:'employeeData',
+                                                            distinct: true,
                                                             attributes: { exclude: excludeTimestamps },
                                                         }
                                                     ]
@@ -170,21 +183,25 @@ export async function getUserRolePermissionByUserId(userId) {
                                                 {
                                                     model: model.semesterModel,
                                                     as: 'semester',
+                                                    distinct: true,
                                                     attributes: { exclude: excludeTimestamps },
                                                     include: [
                                                         {
                                                             model: model.classSubjectMapperModel,
                                                             as: 'semestermapping',
+                                                            distinct: true,
                                                             attributes: { exclude: excludeTimestamps },
                                                             include: [
                                                                 {
                                                                     model: model.subjectModel,
                                                                     as: "subjects",
+                                                                    distinct: true,
                                                                     attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
                                                                 },
                                                                 {
                                                                     model: model.teacherSubjectMappingModel,
                                                                     as: "employeeSubject",
+                                                                    distinct: true,
                                                                     attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
                                                                 }
                                                             ]
@@ -196,11 +213,13 @@ export async function getUserRolePermissionByUserId(userId) {
                                         {
                                             model: model.feeInvoiceModel,
                                             as: 'feeStudentMapper',
+                                            distinct: true,
                                             attributes: { exclude: excludeFeeInvoice },
                                             include: [
                                                 {
                                                     model: model.feeInvoiceDetailModel,
                                                     as: 'feeInvoiceDetails',
+                                                    distinct: true,
                                                     attributes: { exclude: excludeFeeInvoiceDetail },
                                                 }
                                             ]
@@ -210,6 +229,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                 {
                                     model: model.attendanceModel,
                                     as: 'studentAttendance',
+                                    distinct: true,
                                     attributes: { exclude: excludeAttendance },
                                 }
                             ]
