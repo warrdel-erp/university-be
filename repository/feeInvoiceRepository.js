@@ -37,7 +37,6 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
                     model:model.classStudentMapperModel,
                     as:"feeStudentMapper",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","student_id","class_sections_id"] },
-                    // where:whereClase,
                     where:{
                             ...(acedmicYearId && { acedmicYearId }),
                     },
@@ -49,7 +48,7 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
                         },
                         {  
                             model:model.classSectionModel,
-                            as:'studentSection',
+                            as:'studentSections',
                             attributes:["section"]
                         }
                     ]
@@ -132,6 +131,21 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
     }
 };
 
+export async function getStudentIdByClassStudentMapper(classStudentMapperId) {
+    try {
+        const student = await model.classStudentMapperModel.findOne({
+            attributes: ["studentId"],
+            where: { classStudentMapperId }
+        });
+
+        return student;
+    } catch (error) {
+        console.error('Error fetching Student Id By ClassStudentMapper details:', error);
+        throw error;
+    }
+}
+
+
 export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData,transaction) {
     try {
         const result = await model.feeInvoiceModel.update(feeInvoiceData, {
@@ -148,4 +162,23 @@ export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData,transaction)
 export async function deleteFeeInvoice(feeInvoiceId) {
     const deleted = await model.feeInvoiceModel.destroy({ where: { feeInvoiceId: feeInvoiceId } });
     return deleted > 0;
+};
+
+export async function latestInoviceNumber(instituteCode) {    
+    try {
+        const attribute = ["invoice_number"];
+        const result = await model.feeInvoiceModel.findOne({
+            attributes: attribute,
+            where: {
+                invoice_number: {
+                    [Op.regexp]: `^${instituteCode}(-|$)`
+                }
+            },
+            order: [['invoice_number', 'DESC']],
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in latest Inovice Number for institue Code ${instituteCode}:`, error);
+        throw error;
+    }
 };

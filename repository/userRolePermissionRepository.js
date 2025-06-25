@@ -159,6 +159,13 @@ export async function getUserRolePermissionByUserId(userId) {
                                                     model: model.teacherSectionMappingModel,
                                                     as: "employeeSection",
                                                     attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+                                                    include:[
+                                                        {
+                                                            model:model.employeeModel,
+                                                            as:'employeeData',
+                                                            attributes: { exclude: excludeTimestamps },
+                                                        }
+                                                    ]
                                                 },
                                                 {
                                                     model: model.semesterModel,

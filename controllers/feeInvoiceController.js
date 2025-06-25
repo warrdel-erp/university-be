@@ -13,7 +13,7 @@ export async function addFeeInvoice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getAllFeeInvoice(req, res) {
     const universityId = req.user.universityId;
@@ -26,7 +26,7 @@ export async function getAllFeeInvoice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getSingleFeeInvoiceDetails(req, res) {
     const universityId = req.user.universityId;
@@ -41,7 +41,7 @@ export async function getSingleFeeInvoiceDetails(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateFeeInvoice(req, res) {
     try {
@@ -55,7 +55,7 @@ export async function updateFeeInvoice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function deleteFeeInvoice(req, res) {
     try {
@@ -72,4 +72,17 @@ export async function deleteFeeInvoice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
+
+export async function getInvoiceNumber(req, res) {
+    // const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    // const role = req.user.role;
+    // const {acedmicYearId} = req.query
+    try {
+        const invoiceNumber = await feeInvoiceCreation.getInvoiceNumber(instituteId);
+        res.status(200).json(invoiceNumber);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

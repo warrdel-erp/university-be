@@ -1,13 +1,18 @@
 import * as feeInvoiceCreationService  from "../repository/feeInvoiceRepository.js";
 import * as FeeInvoiceDetailsCreationService  from "../repository/feeInvoiceDetailsRepository.js";
 import sequelize from '../database/sequelizeConfig.js'; 
+import { getInstituteCode } from "../repository/collegeRepository.js";
+import moment from 'moment';
 
 export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
     let feeInvoiceDetails = []
+    const classStudentMapperId = feeInvoiceData.classStudentMapperId
+    const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId)
+    const studentId = getStudent.dataValues.studentId;
     
     try {
-        const feeInvoicePayload = { ...feeInvoiceData, createdBy, updatedBy };
+        const feeInvoicePayload = { ...feeInvoiceData, createdBy, updatedBy,studentId };
         const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction );
         
         const feeInvoiceId = feeInvoice.dataValues.feeInvoiceId;
@@ -61,4 +66,29 @@ export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, updatedBy) 
 
 export async function deleteFeeInvoice(feeInvoiceId) {
     return await feeInvoiceCreationService.deleteFeeInvoice(feeInvoiceId);
+};
+
+export async function getInvoiceNumber(instituteId) {
+    const getInstitueCodeDetail = await getInstituteCode(instituteId);
+    const institueCode = getInstitueCodeDetail.get('institute_code');
+    const latestInvoiceNumber = await feeInvoiceCreationService.latestInoviceNumber(institueCode)
+    const previousInvoiceNumber = latestInvoiceNumber ? latestInvoiceNumber.get('invoice_number') : null;
+    let invoiceNumber;
+    if (previousInvoiceNumber) {
+        const invoiceNumberParts = previousInvoiceNumber.split('-');
+        if (invoiceNumberParts.length === 3) {
+            const year = invoiceNumberParts[1];
+            const suffixNumber = parseInt(invoiceNumberParts[2], 10) + 1;
+            const paddedSuffix = String(suffixNumber).padStart(2, '0');
+
+            invoiceNumber = `${institueCode}-${year}-${paddedSuffix}`;
+        } else {
+            throw new Error('Invalid invoice number format');
+        }
+    } else {
+        const yearLastTwoDigits = moment().format('YY');
+        invoiceNumber = `${institueCode}-${yearLastTwoDigits}-01`;
+
+    }
+    return invoiceNumber;
 };

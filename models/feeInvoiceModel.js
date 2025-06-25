@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import feeGroup from "./feeGroupModel.js";
 import classStudentMapper from "./classSectionStudentMapperModel.js";
+import studentModel from "./studentModel.js";
 
 export default sequelize.define(
     'fee_invoice',
@@ -12,6 +13,11 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'fee_invoice_id'
+        },
+        invoiceNumber:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'invoice_number'
         },
         feeGroupId: {
             type: DataTypes.INTEGER,
@@ -29,6 +35,15 @@ export default sequelize.define(
             references: {
                 model: classStudentMapper,
                 key: 'class_student_mapper_id'
+            }
+        },
+        studentId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'student_id',
+            references: {
+                model: studentModel,
+                key: 'student_id'
             }
         },
         createdDate: {

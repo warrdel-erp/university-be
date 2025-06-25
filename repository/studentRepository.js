@@ -375,7 +375,7 @@ export async function getPreviousScholarNumber(instituteCode) {
         });
         return result;
     } catch (error) {
-        console.error(`Error in getPreviousScholarNumber for institue Code ${institueCode}:`, error);
+        console.error(`Error in getPreviousScholarNumber for institue Code ${instituteCode}:`, error);
         throw error;
     }
 };

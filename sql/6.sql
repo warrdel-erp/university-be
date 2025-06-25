@@ -449,3 +449,15 @@ UPDATE transport_vehicle SET institute_id = 1 WHERE institute_id IS NULL;
 UPDATE transport_vehicle SET institute_id = 1 WHERE institute_id = 0;
 
 ALTER TABLE transport_vehicle ADD CONSTRAINT fk_students_institute_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+ALTER TABLE fee_invoice ADD COLUMN invoice_number VARCHAR(255);
+
+-- Add the semester_id column with the foreign key reference in fee_invoice
+
+ALTER TABLE fee_invoice ADD COLUMN student_id INT NOT NULL;
+
+UPDATE fee_invoice SET student_id = 1 WHERE student_id IS NULL;
+
+UPDATE fee_invoice SET student_id = 1 WHERE student_id = 0;
+
+ALTER TABLE fee_invoice ADD CONSTRAINT fk_class_student_id FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE;
