@@ -25,6 +25,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        feeValue: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field : 'fee_value'
+        },
         description: {
             type: DataTypes.STRING,
             allowNull:true
