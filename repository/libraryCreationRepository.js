@@ -20,6 +20,7 @@ export async function addLibraryAuthority(libraryData,transaction) {
         throw error;
     }
 };
+
 export async function getLibraryDetails(universityId) {
     try {
         const libraries = await model.libraryCreationModel.findAll({

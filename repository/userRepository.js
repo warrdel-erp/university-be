@@ -61,7 +61,7 @@ export async function getAdminRegisterStudent(universityId) {
                     {
                         model:model.classSectionModel,
                         as:'studentSections',
-                        attributes:{exclude:["createdAt",'updatedAt','deletedAt','createdBy','student_id','class_sections_id']},
+                        attributes:{exclude:["createdAt",'updatedAt','deletedAt','createdBy']},
                     },
                     {
                         model : model.semesterModel,

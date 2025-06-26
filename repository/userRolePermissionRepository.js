@@ -162,7 +162,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                     include: [
                                         {
                                             model: model.classSectionModel,
-                                            as: 'studentSections',
+                                            as: 'studentSectionDetail',
                                             distinct: true,
                                             attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
                                             include: [
