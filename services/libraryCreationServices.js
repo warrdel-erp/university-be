@@ -10,8 +10,11 @@ export async function addLibrary(libraryData, createdBy, updatedBy) {
         libraryData.updatedBy = updatedBy;
         const library = await libraryCreationService.addLibrary(libraryData, transaction);
 
-        const libraryCreationId = library.dataValues.libraryCreationId;
+        // const libraryCreationId = library.dataValues.libraryCreationId;
 
+        const libraryCreationId = library?.dataValues?.libraryCreationId;
+        if (!libraryCreationId) throw new Error('libraryCreationId not returned');
+        
         // Add authorities
         for (const auth of libraryData.authorities) {
             await libraryCreationService.addLibraryAuthority({

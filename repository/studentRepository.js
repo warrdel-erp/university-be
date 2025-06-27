@@ -226,9 +226,6 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     model: model.acedmicYearModel,
                     as: "acdemicYear",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.affiliatedIniversityModel,
@@ -378,7 +375,7 @@ export async function getPreviousScholarNumber(instituteCode) {
         });
         return result;
     } catch (error) {
-        console.error(`Error in getPreviousScholarNumber for institue Code ${institueCode}:`, error);
+        console.error(`Error in getPreviousScholarNumber for institue Code ${instituteCode}:`, error);
         throw error;
     }
 };

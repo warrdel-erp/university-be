@@ -1,6 +1,6 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
 
-export async function addExamAttendance(data, createdBy,instituteId) {
+export async function addExamAttendance(data, createdBy,updatedBy,instituteId) {
     const { examSetupId, studentId, attendanceStatus } = data;
     try {
         const newAttendance = {

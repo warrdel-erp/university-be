@@ -1,12 +1,12 @@
 import * as feeTypeCreation  from  "../services/feeTypeServices.js";
 
 export async function addFeeType(req, res) {
-    const {name,feeGroupId} = req.body
+    const {name} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(name && feeGroupId)){
-           return res.status(400).send('Fee type Name and feeGroupId is required')
+        if(!(name )){
+           return res.status(400).send('Fee type Name  is required')
         }
         const FeeType = await feeTypeCreation.addFeeType(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", FeeType });

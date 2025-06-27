@@ -4,7 +4,7 @@ const createVehicle = async (vehicleData) => {
     return await model.vehicleModel.create(vehicleData);
 };
 
-const getAllVehicles = async (universityId, acedmicYearId,role,instituteId) => {
+const getAllVehicles = async (universityId,acedmicYearId,role,instituteId) => {
     try {
         const result = await model.vehicleModel.findAll({
             attributes: {
@@ -17,7 +17,7 @@ const getAllVehicles = async (universityId, acedmicYearId,role,instituteId) => {
                 {
                     model: model.employeeModel,
                     as: "employee",
-                    attributes: ["employee_name"],
+                    attributes: {exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]},
                     where: {
                         ...(acedmicYearId && { acedmicYearId })
                     },

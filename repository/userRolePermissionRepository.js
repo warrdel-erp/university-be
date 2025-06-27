@@ -1,7 +1,7 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addUserRolePermission(UserRolePermissionData) { 
+export async function addUserRolePermission(UserRolePermissionData) {
     try {
         const result = await model.userRolePermissionModel.create(UserRolePermissionData);
         return result;
@@ -14,20 +14,20 @@ export async function addUserRolePermission(UserRolePermissionData) {
 export async function getUserRolePermissionDetails(universityId) {
     try {
         const UserRolePermission = await model.userRolePermissionModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
-            include:[
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+            include: [
                 {
-                    model:model.userModel,
+                    model: model.userModel,
                     as: 'user',
-                    attributes: ["userName", "email", "role","phone"] ,
+                    attributes: ["userName", "email", "role", "phone"],
                 },
                 {
-                    model:model.roleModel,
+                    model: model.roleModel,
                     as: 'userRole',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
-                    model:model.permissionModel,
+                    model: model.permissionModel,
                     as: 'userPermission',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 }
@@ -45,24 +45,24 @@ export async function getUserRolePermissionDetails(universityId) {
 export async function getSingleUserRolePermissionDetails(userRolePermissionId) {
     try {
         const UserRolePermission = await model.userRolePermissionModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
-            include:[
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+            include: [
                 {
-                    model:model.userModel,
+                    model: model.userModel,
                     as: 'user',
-                    attributes: ["userName", "email", "role","phone"] ,
+                    attributes: ["userName", "email", "role", "phone"],
                 },
                 {
-                    model:model.roleModel,
+                    model: model.roleModel,
                     as: 'userRole',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
-                    model:model.permissionModel,
+                    model: model.permissionModel,
                     as: 'userPermission',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 }
-            ],            where: { userRolePermissionId },
+            ], where: { userRolePermissionId },
         });
 
         return UserRolePermission;
@@ -77,131 +77,166 @@ export async function deleteUserRolePermission(userRolePermissionId) {
     return deleted > 0;
 }
 
-export async function updateUserRolePermission(userRolePermissionId, UserRolePermissionData) {    
+export async function updateUserRolePermission(userRolePermissionId, UserRolePermissionData) {
     try {
         const result = await model.userRolePermissionModel.update(UserRolePermissionData, {
             where: { userRolePermissionId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating UserRolePermission creation ${userRolePermissionId}:`, error);
-        throw error; 
+        throw error;
     }
 }
 
 export async function getUserRolePermissionByUserId(userId) {
     try {
-        const UserRolePermission = await model.userModel.findAll({
-            attributes:  ["userId"],
-            include:[
+        const excludeTimestamps = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
+        const excludeUserRolePermission = [...excludeTimestamps, "role_id", "permission_id", "user_id"];
+        const excludeFeeInvoice = [...excludeTimestamps, "fee_group_id", "class_student_mapper_id", "class_sections_id"];
+        const excludeFeeInvoiceDetail = [...excludeTimestamps, "fee_type_id", "fee_invoice_id"];
+        const excludeAttendance = [...excludeTimestamps, "student_id", "class_sections_id"];
+
+        const UserRolePermission = await model.userModel.findOne({
+            distinct: true,
+            attributes: ["userId"],
+            where: { userId },
+            include: [
                 {
-                    model:model.userRolePermissionModel,
+                    model: model.userRolePermissionModel,
                     as: 'user',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
-                        include:[
-                            {
-                                model:model.roleModel,
-                                as: 'userRole',
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                            {
-                                model:model.permissionModel,
-                                as: 'userPermission',
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]    
+                    distinct: true,
+                    attributes: { exclude: excludeUserRolePermission },
+                    include: [
+                        {
+                            model: model.roleModel,
+                            as: 'userRole',
+                            distinct: true,
+                            attributes: { exclude: excludeTimestamps },
+                        },
+                        {
+                            model: model.permissionModel,
+                            as: 'userPermission',
+                            distinct: true,
+                            attributes: { exclude: excludeTimestamps },
+                        },
+                    ]
                 },
                 {
-                    model:model.userStudentEmployeeModel,
+                    model: model.userStudentEmployeeModel,
                     as: 'userDetails',
+                    distinct: true,
                     attributes: ["employeeId", "studentId"],
-                    include:[
+                    include: [
                         {
-                            model:model.studentModel,
-                            as:'studentDetails',
-                            attributes: ["campusId", "instituteId","affiliatedUniversityId","courseLevelId","courseId","specializationId"],
-                            include:[
+                            model: model.studentModel,
+                            as: 'studentDetails',
+                            distinct: true,
+                            attributes: ["firstName","middleName","lastName","campusId", "instituteId", "affiliatedUniversityId","courseLevelId", "courseId", "specializationId"],
+                            include: [
                                 {
-                                    model:model.courseModel,
-                                    as:'course',
-                                    attributes:["courseName",'courseId','courseCode',"capacity"],
-                                    // include:[
-                                    //     {
-                                    //         model:model.timeTableCreationModel,
-                                    //         as:"timeTableCourse",
-                                    //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","course_id"] },
-                                    //         // include:[
-                                    //         //     {
-                                    //         //         model:model.timeTableCreateModel,
-                                    //         //         as: 'timeTable',
-                                    //         //         attributes:["timeTableCreateId","timeTableCreationId","teacherSubjectMappingId","teacherSectionMappingId","day","period",]
-                                    //         //     }
-                                    //         // ]
-                                    //     }
-                                    // ]
+                                    model: model.courseModel,
+                                    as: 'course',
+                                    distinct: true,
+                                    attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
+                                    include: [
+                                        {
+                                            model: model.timeTableCreateModel,
+                                            as: "timeTableCourse",
+                                            distinct: true,
+                                            attributes: { exclude: excludeTimestamps },
+                                        },
+                                        {
+                                            model: model.timeTableCreationModel,
+                                            as: 'timeTable',
+                                            distinct: true,
+                                            attributes: { exclude: excludeTimestamps },
+                                        }
+                                    ]
                                 },
                                 {
-                                    model:model.classStudentMapperModel,
-                                    as:'studentMapped',
-                                    attributes:["classStudentMapperId",'studentId','classSectionId'],
-                                        include:[
-                                            {
-                                                model:model.classSectionModel,
-                                                as:'studentSection',
-                                                attributes:["classSectionsId",'courseId','specializationId','acedmicYearId','section'],
-                                                include:[
-                                                    {
-                                                        model:model.teacherSectionMappingModel,
-                                                        as:"employeeSection",
-                                                        attributes:["employeeId",'classSectionsId','isCordinatory'],
-                                                    },
-                                                    // {
-                                                    //     model:model.classSubjectMapperModel,
-                                                    //     as:'classSection',
-                                                    //     // attributes:["classSubjectMapperId",'subjectId','classSectionId'],
-                                                    //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                                    //     include:[
-                                                    //         {
-                                                    //             model:model.subjectModel,
-                                                    //             as:"subjects",
-                                                    //             attributes:["subjectName",'subjectId','courseId','specializationId'],
-                                                    //         },
-                                                    //         {
-                                                    //             model:model.teacherSubjectMappingModel,
-                                                    //             as:"employeeSubject",
-                                                    //             attributes:["teacherSubjectMappingId",'employeeId','classSubjectMapperId'],
-                                                    //         }
-                                                    //     ]
-                                                    // }
-                                                ]
-                                            },
-                                            {
-                                                model:model.feeInvoiceModel,
-                                                as:'feeStudentMapper',
-                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_group_id","class_student_mapper_id","class_sections_id"] },
-                                                include:[
-                                                    {
-                                                        model:model.feeInvoiceDetailModel,
-                                                        as:'feeInvoiceDetails',
-                                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_type_id","fee_invoice_id"] },
-                                                    }
-                                                ]
-                                            }
-                                        ]
+                                    model: model.classStudentMapperModel,
+                                    as: 'studentMapped',
+                                    distinct: true,
+                                    attributes: ["classStudentMapperId", 'studentId'],
+                                    include: [
+                                        {
+                                            model: model.classSectionModel,
+                                            as: 'studentSectionDetail',
+                                            distinct: true,
+                                            attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
+                                            include: [
+                                                {
+                                                    model: model.teacherSectionMappingModel,
+                                                    as: "employeeSection",
+                                                    distinct: true,
+                                                    attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+                                                    include:[
+                                                        {
+                                                            model:model.employeeModel,
+                                                            as:'employeeData',
+                                                            distinct: true,
+                                                            attributes: { exclude: excludeTimestamps },
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    model: model.semesterModel,
+                                                    as: 'semester',
+                                                    distinct: true,
+                                                    attributes: { exclude: excludeTimestamps },
+                                                    include: [
+                                                        {
+                                                            model: model.classSubjectMapperModel,
+                                                            as: 'semestermapping',
+                                                            distinct: true,
+                                                            attributes: { exclude: excludeTimestamps },
+                                                            include: [
+                                                                {
+                                                                    model: model.subjectModel,
+                                                                    as: "subjects",
+                                                                    distinct: true,
+                                                                    attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
+                                                                },
+                                                                {
+                                                                    model: model.teacherSubjectMappingModel,
+                                                                    as: "employeeSubject",
+                                                                    distinct: true,
+                                                                    attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            model: model.feeInvoiceModel,
+                                            as: 'feeStudentMapper',
+                                            distinct: true,
+                                            attributes: { exclude: excludeFeeInvoice },
+                                            include: [
+                                                {
+                                                    model: model.feeInvoiceDetailModel,
+                                                    as: 'feeInvoiceDetails',
+                                                    distinct: true,
+                                                    attributes: { exclude: excludeFeeInvoiceDetail },
+                                                }
+                                            ]
+                                        }
+                                    ]
                                 },
-                            {
-                                model:model.attendanceModel,
-                                as:'studentAttendance',
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","student_id","class_sections_id"] },
-                            }
+                                {
+                                    model: model.attendanceModel,
+                                    as: 'studentAttendance',
+                                    distinct: true,
+                                    attributes: { exclude: excludeAttendance },
+                                }
                             ]
-                        },
-                           
+                        }
                     ]
                 }
-                
-            ],           
-             where: { userId },
+            ]
         });
 
         return UserRolePermission;
@@ -211,50 +246,176 @@ export async function getUserRolePermissionByUserId(userId) {
     }
 };
 
-export async function getEmployeeRolePermissionByUserId(userId) {    
+// export async function getUserRolePermissionByUserId(userId) {
+//     try {
+//         const UserRolePermission = await model.userModel.findAll({
+//             attributes: ["userId"],
+//             include: [
+//                 {
+//                     model: model.userRolePermissionModel,
+//                     as: 'user',
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+//                     include: [
+//                         {
+//                             model: model.roleModel,
+//                             as: 'userRole',
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         },
+//                         {
+//                             model: model.permissionModel,
+//                             as: 'userPermission',
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//                         },
+//                     ]
+//                 },
+//                 {
+//                     model: model.userStudentEmployeeModel,
+//                     as: 'userDetails',
+//                     attributes: ["employeeId", "studentId"],
+//                     include: [
+//                         {
+//                             model: model.studentModel,
+//                             as: 'studentDetails',
+//                             attributes: ["campusId", "instituteId", "affiliatedUniversityId", "courseLevelId", "courseId", "specializationId"],
+//                             include: [
+//                                 {
+//                                     model: model.courseModel,
+//                                     as: 'course',
+//                                     attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
+//                                     include: [
+//                                         {
+//                                             model: model.timeTableCreateModel,
+//                                             as: "timeTableCourse",
+//                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                                         },
+//                                         {
+//                                             model: model.timeTableCreationModel,
+//                                             as: 'timeTable',
+//                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                                         }
+//                                     ]
+//                                 },
+//                                 {
+//                                     model: model.classStudentMapperModel,
+//                                     as: 'studentMapped',
+//                                     attributes: ["classStudentMapperId", 'studentId'],
+//                                     include: [
+//                                         {
+//                                             model: model.classSectionModel,
+//                                             as: 'studentSections',
+//                                             attributes: ["classSectionsId", 'courseId', 'specializationId', 'acedmicYearId', 'section'],
+//                                             include: [
+//                                                 {
+//                                                     model: model.teacherSectionMappingModel,
+//                                                     as: "employeeSection",
+//                                                     attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+//                                                 },
+//                                                 {
+//                                                     model: model.semesterModel,
+//                                                     as: 'semester',
+//                                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                                                     include: [
+//                                                         {
+//                                                             model: model.classSubjectMapperModel,
+//                                                             as: 'semestermapping',
+//                                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                                                             include: [
+//                                                                 {
+//                                                                     model: model.subjectModel,
+//                                                                     as: "subjects",
+//                                                                     attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
+//                                                                 },
+//                                                                 {
+//                                                                     model: model.teacherSubjectMappingModel,
+//                                                                     as: "employeeSubject",
+//                                                                     attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
+//                                                                 }
+//                                                             ]
+//                                                         }
+//                                                     ]
+//                                                 }
+//                                             ]
+//                                         },
+//                                         {
+//                                             model: model.feeInvoiceModel,
+//                                             as: 'feeStudentMapper',
+//                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id", "class_student_mapper_id", "class_sections_id"] },
+//                                             include: [
+//                                                 {
+//                                                     model: model.feeInvoiceDetailModel,
+//                                                     as: 'feeInvoiceDetails',
+//                                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_type_id", "fee_invoice_id"] },
+//                                                 }
+//                                             ]
+//                                         }
+//                                     ]
+//                                 },
+//                                 {
+//                                     model: model.attendanceModel,
+//                                     as: 'studentAttendance',
+//                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "student_id", "class_sections_id"] },
+//                                 }
+//                             ]
+//                         },
+
+//                     ]
+//                 }
+
+//             ],
+//             where: { userId },
+//         });
+
+//         return UserRolePermission;
+//     } catch (error) {
+//         console.error('Error fetching UserRolePermission details:', error);
+//         throw error;
+//     }
+// };
+
+export async function getEmployeeRolePermissionByUserId(userId) {
     try {
         const UserRolePermission = await model.userStudentEmployeeModel.findAll({
-            attributes:  ["userId"],
-            include:[
+            attributes: ["userId"],
+            include: [
                 {
-                    model:model.employeeModel,
+                    model: model.employeeModel,
                     as: 'employeeDetails',
                     required: true,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include:[
+                    include: [
                         {
-                            model:model.roleModel,
-                            as:'employeeRole',
-                            attributes:{exclude:["createdAt",'updatedAt','deletedAt']}
+                            model: model.roleModel,
+                            as: 'employeeRole',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
                         }
                     ]
                 },
                 {
-                    model:model.userModel,
-                    as:'userDetails',
-                    attributes:  ["userId"],
-                    include:[
+                    model: model.userModel,
+                    as: 'userDetails',
+                    attributes: ["userId"],
+                    include: [
                         {
-                            model:model.userRolePermissionModel,
+                            model: model.userRolePermissionModel,
                             as: 'user',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","role_id","permission_id","user_id"] },
-                                include:[
-                                    {
-                                        model:model.roleModel,
-                                        as: 'userRole',
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                    },
-                                    {
-                                        model:model.permissionModel,
-                                        as: 'userPermission',
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                    },
-                                ]    
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+                            include: [
+                                {
+                                    model: model.roleModel,
+                                    as: 'userRole',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                                {
+                                    model: model.permissionModel,
+                                    as: 'userPermission',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ]
                         },
                     ]
                 }
-            ],           
-             where: { userId },
+            ],
+            where: { userId },
         });
 
         return UserRolePermission;

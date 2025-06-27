@@ -107,6 +107,9 @@ affiliatedIniversityModel.hasMany(studentModel, { foreignKey: 'affiliated_univer
 studentModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
 courseModel.hasMany(studentModel, { foreignKey: 'course_id', as: 'course' });
 
+studentModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'studentSections' });
+classSectionModel.hasMany(studentModel, { foreignKey: 'class_sections_id', as: 'studentSections' });
+
 studentModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'studentSemester' });
 semesterModel.hasMany(studentModel, { foreignKey: 'semester_id', as: 'studentSemester' });
 
@@ -179,8 +182,8 @@ studentModel.hasMany(classStudentMapperModel, { foreignKey: 'student_id', as: 's
 classStudentMapperModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'studentSection' });
 semesterModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSection' });
 
-classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: 'semester_id', as: 'studentSections' });
-classSectionModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSection' });
+classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: 'semester_id', as: 'studentSectionDetail' });
+classSectionModel.hasMany(classStudentMapperModel, { foreignKey: 'semester_id', as: 'studentSectionDetail' });
 
 //student join to there 2 more table 
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: 'student_id', as: 'entranceDetails' });
@@ -385,6 +388,9 @@ employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: 'shelf', as: '
 // time table create
 timeTableCreationModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
 timeTableNameModel.hasMany(timeTableCreationModel, { foreignKey: 'time_table_name_id', as: 'timeTableName' });
+
+timeTableCreationModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'timeTable' });
+courseModel.hasMany(timeTableCreationModel, { foreignKey: 'course_id', as: 'timeTable' });
 
 timeTableCreateModel.belongsTo(timeTableNameModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });
 timeTableNameModel.hasMany(timeTableCreateModel, { foreignKey: 'time_table_name_id', as: 'timeTableCreateName' });

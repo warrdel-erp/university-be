@@ -14,7 +14,7 @@ export default sequelize.define(
         },
         feeGroupId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'fee_group_id',
             references: {
                 model: feeGroup,
@@ -24,6 +24,11 @@ export default sequelize.define(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
+        },
+        feeValue: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field : 'fee_value'
         },
         description: {
             type: DataTypes.STRING,
