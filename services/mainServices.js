@@ -10,9 +10,9 @@ export async function getAllCollegesAndCourses(universityId,campusId,instituteId
             mainRepository.getAllCampus(universityId,campusId),
             mainRepository.getAllInstitute(universityId,instituteId,headInstituteId,role,campusId),
             mainRepository.getAllAffiliatedUniversity(universityId,instituteId,headInstituteId,role),
-            mainRepository.getAllCourse(universityId,acedmicYearId,headInstituteId,role),
+            mainRepository.getAllCourse(universityId,acedmicYearId,headInstituteId,role,instituteId),
             mainRepository.getAllSpecialization(universityId,acedmicYearId,headInstituteId,role),
-            mainRepository.getAllSubject(universityId,acedmicYearId,headInstituteId,role)
+            mainRepository.getAllSubject(universityId,acedmicYearId,headInstituteId,role,instituteId)
         ]);
 
     return {

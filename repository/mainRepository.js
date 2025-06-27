@@ -70,10 +70,11 @@ export async function getAllAffiliatedUniversity(universityId,instituteId,headIn
     }
 };
 
-export async function getAllCourse(universityId,acedmicYearId,instituteId,role) {
+export async function getAllCourse(universityId,acedmicYearId,instituteId,role,mainInstituteId) {
     try {
         const whereClause = {
             university_id: universityId,
+            ...(mainInstituteId && { institute_id:mainInstituteId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
@@ -118,10 +119,11 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
     }
 };
 
-export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
+export async function getAllSubject(universityId,acedmicYearId,instituteId,role,mainInstituteId) {    
     try {
         const whereClause = {
             // university_id: universityId,
+            ...(mainInstituteId && { institute_id:mainInstituteId }),
             ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
