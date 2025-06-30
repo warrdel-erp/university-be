@@ -49,7 +49,7 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
                         {  
                             model:model.classSectionModel,
                             as:'studentSectionDetail',
-                            attributes:["section"]
+                            attributes:["section","classSectionsId","class"]
                         }
                     ]
                 },
@@ -105,7 +105,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
                         {  
                             model:model.classSectionModel,
                             as:'studentSectionDetail',
-                            attributes:["section"]
+                            attributes:["section","classSectionsId","class"]
                         }
                     ]
                 },

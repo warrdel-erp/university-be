@@ -463,3 +463,13 @@ UPDATE fee_invoice SET student_id = 1 WHERE student_id = 0;
 ALTER TABLE fee_invoice ADD CONSTRAINT fk_class_student_id FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE;
 
 ALTER TABLE fee_type ADD COLUMN fee_value VARCHAR(255);
+
+-- Add the semester_id column with the foreign key reference in session
+
+ALTER TABLE session ADD COLUMN course_id INT NOT NULL;
+
+UPDATE session SET course_id = 1 WHERE course_id IS NULL;
+
+UPDATE session SET course_id = 1 WHERE course_id = 0;
+
+ALTER TABLE session ADD CONSTRAINT fk_courses_id FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE;

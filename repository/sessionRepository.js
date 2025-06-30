@@ -35,6 +35,11 @@ export async function getSessionDetails(universityId,instituteId,role,acedmicYea
                     model:model.acedmicYearModel,
                     as:'sessionAcedmic',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                },
+                {
+                    model:model.courseModel,
+                    as:'course',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                 }
             ]
         });

@@ -33,11 +33,12 @@ export async function getAllCampus(universityId,campusId) {
     }
 };
 
-export async function getAllInstitute(universityId,instituteId,headInstituteId,role) {
+export async function getAllInstitute(universityId,instituteId,headInstituteId,role,campusId) {
     try {
         const whereClause = {
             university_id: universityId,
             ...(instituteId && { institute_id:instituteId }),
+            ...(campusId && { campus_id: campusId }),
             ...(role === 'Head' && { institute_id: headInstituteId })
         };
         const result = await model.instituteModel.findAll({
@@ -69,10 +70,11 @@ export async function getAllAffiliatedUniversity(universityId,instituteId,headIn
     }
 };
 
-export async function getAllCourse(universityId,acedmicYearId,instituteId,role) {
+export async function getAllCourse(universityId,acedmicYearId,instituteId,role,mainInstituteId) {
     try {
         const whereClause = {
             university_id: universityId,
+            ...(mainInstituteId && { institute_id:mainInstituteId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
@@ -83,6 +85,11 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role) 
                 {
                     model: model.semesterModel,
                     as:'semesterCourse',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+                },
+                {
+                    model: model.sessionModel,
+                    as:'sessions',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
                 }
             ]
@@ -112,10 +119,11 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
     }
 };
 
-export async function getAllSubject(universityId,acedmicYearId,instituteId,role) {    
+export async function getAllSubject(universityId,acedmicYearId,instituteId,role,mainInstituteId) {    
     try {
         const whereClause = {
             // university_id: universityId,
+            ...(mainInstituteId && { institute_id:mainInstituteId }),
             ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })

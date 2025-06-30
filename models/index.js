@@ -638,6 +638,9 @@ syllabusDetailsModel.hasMany(coModel, { foreignKey: 'syllabus_details_id', as: '
 coWeightageModel.belongsTo(coModel, { foreignKey: 'co_id', as: 'codetail' });
 coModel.hasMany(coWeightageModel, { foreignKey: 'co_id', as: 'codetail' });
 
+sessionModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(sessionModel, { foreignKey: 'courseId', as: 'sessions'});
+
 export {
     settingModel,
     universityModel,
