@@ -8,6 +8,7 @@ import section from "./sectionModel.js";
 import classModel from "./classModel.js";
 import instituteModel from "./instituteModel.js";
 import semesterModel from "./semesterModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
     'class_sections',
@@ -34,6 +35,15 @@ export default sequelize.define(
             references: {
                 model: specialization,
                 key: 'specialization_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         acedmicYearId: {

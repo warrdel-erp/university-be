@@ -88,9 +88,16 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role,m
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
                 },
                 {
-                    model: model.sessionModel,
-                    as:'sessions',
+                    model: model.sessionCouseMappingModel,
+                    as:'sessionCourseMappings',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
+                    include:[
+                        {
+                            model:model.sessionModel,
+                            as:'session',
+                            attributes: ["sessionName","startingDate","endingDate","classTillDate"] ,
+                        }
+                    ]
                 }
             ]
         });

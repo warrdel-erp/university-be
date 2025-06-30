@@ -638,8 +638,14 @@ syllabusDetailsModel.hasMany(coModel, { foreignKey: 'syllabus_details_id', as: '
 coWeightageModel.belongsTo(coModel, { foreignKey: 'co_id', as: 'codetail' });
 coModel.hasMany(coWeightageModel, { foreignKey: 'co_id', as: 'codetail' });
 
-sessionModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
-courseModel.hasMany(sessionModel, { foreignKey: 'courseId', as: 'sessions'});
+classSectionModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'classSession' });
+sessionModel.hasMany(classSectionModel, { foreignKey: 'session_id', as: 'classSession' });
+
+sessionModel.hasMany(sessionCouseMappingModel, {foreignKey: 'sessionId',as: 'courseMappings' });
+sessionCouseMappingModel.belongsTo(sessionModel, {foreignKey: 'sessionId',as: 'session' });
+
+courseModel.hasMany(sessionCouseMappingModel, {foreignKey: 'courseId',as: 'sessionCourseMappings'});
+sessionCouseMappingModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courses'});
 
 export {
     settingModel,

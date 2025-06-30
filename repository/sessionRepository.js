@@ -1,9 +1,9 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addSession(sessionData) {    
+export async function addSession(sessionData,transaction) {    
     try {
-        const result = await model.sessionModel.create(sessionData);
+        const result = await model.sessionModel.create(sessionData,{transaction});
         return result;
     } catch (error) {
         console.error("Error in add Session :", error);
@@ -11,12 +11,12 @@ export async function addSession(sessionData) {
     }
 };
 
-export async function courseSectionMapping(sessionData) {    
+export async function courseSectionMapping(sessionData,transaction) {    
     try {
-        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData);
+        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData,{transaction});
         return result;
     } catch (error) {
-        console.error("Error in add Session :", error);
+        console.error("Error in course Session :", error);
         throw error;
     }
 };
@@ -37,9 +37,16 @@ export async function getSessionDetails(universityId,instituteId,role,acedmicYea
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                 },
                 {
-                    model:model.courseModel,
-                    as:'course',
+                    model:model.sessionCouseMappingModel,
+                    as:"courseMappings",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    include:[
+                        {
+                            model:model.courseModel,
+                            as:'courses',
+                            attributes: ["courseName","courseCode"],
+                        }
+                    ]
                 }
             ]
         });

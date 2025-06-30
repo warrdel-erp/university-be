@@ -41,6 +41,13 @@ export async function getTimeTableCreateDetails(universityId) {
                     model:model.classSectionModel,
                     as: 'timeTableClassSection',
                     attributes: ["section","class","section_id","class_sections_id"],
+                    include:[
+                        {
+                            model:model.sessionModel,
+                            as:'classSession',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        }
+                    ]
                 },
                 {
                     model:model.acedmicYearModel,

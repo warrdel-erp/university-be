@@ -5,6 +5,7 @@ import users from "./userModel.js";
 import course from "./courseModel.js";
 import instituteModel from "./instituteModel.js";
 import semesterModel from "./semesterModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
     'class',
@@ -31,6 +32,15 @@ export default sequelize.define(
             references: {
                 model: course,
                 key: 'course_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         instituteId: {
