@@ -10,7 +10,7 @@ export async function addSession(sessionData, createdBy, updatedBy, universityId
     sessionData.universityId = universityId;
     sessionData.instituteId = instituteId;
 
-    const session = await sessionCreationService.addSession(sessionData, { transaction});
+    const session = await sessionCreationService.addSession(sessionData, transaction);
 
     if (Array.isArray(sessionData.courseId) && sessionData.courseId.length > 0) {
       const mappingData = sessionData.courseId.map(courseId => ({
@@ -22,15 +22,15 @@ export async function addSession(sessionData, createdBy, updatedBy, universityId
         updatedBy
       }));
 
-      await sessionCreationService.courseSectionMapping(mappingData, { transaction});
+      await sessionCreationService.courseSectionMapping(mappingData, transaction);
     }
 
     await transaction.commit(); 
     return session;
 
   } catch (error) {
-    await t.rollback();
-    console.error("❌ Error creating session and mapping:", error);
+    await transaction.rollback();
+    console.error("Error creating session and mapping:", error);
     throw error;
   }
 }

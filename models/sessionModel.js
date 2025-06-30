@@ -33,15 +33,15 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
+        // courseId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'course_id',
+        //     references: {
+        //         model: courseModel,
+        //         key: 'course_id'
+        //     }
+        // },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,

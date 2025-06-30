@@ -473,3 +473,27 @@ UPDATE session SET course_id = 1 WHERE course_id IS NULL;
 UPDATE session SET course_id = 1 WHERE course_id = 0;
 
 ALTER TABLE session ADD CONSTRAINT fk_courses_id FOREIGN KEY (course_id) REFERENCES course(course_id) ON DELETE CASCADE;
+
+-- Add the session_id column with the foreign key reference in class
+
+ALTER TABLE class ADD COLUMN session_id INT NOT NULL;
+
+UPDATE class SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE class SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE class ADD CONSTRAINT fk_class_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
+
+-- Add the session_id column with the foreign key reference in class_sections
+
+ALTER TABLE class_sections ADD COLUMN session_id INT NOT NULL;
+
+UPDATE class_sections SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE class_sections SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE class_sections ADD CONSTRAINT fk_session_id FOREIGN KEY (session_id) REFERENCES session(session_id) ON DELETE CASCADE;
+
+ALTER TABLE session DROP FOREIGN KEY fk_courses_id;
+
+ALTER TABLE session DROP COLUMN course_id;
