@@ -91,6 +91,9 @@ import sessionCouseMappingModel from './sessionCouseMappingModel.js';
 import poModel from './poModel.js';
 import coModel from './coModel.js';
 import coWeightageModel from './coWeightageModel.js';
+import feePlanModel from './feePlanModel.js';
+import feePlanTypeModel from './feePlanTypeModel.js';
+import feePlanSemesterModel from './feePlanSemesterModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -647,6 +650,18 @@ sessionCouseMappingModel.belongsTo(sessionModel, {foreignKey: 'sessionId',as: 's
 courseModel.hasMany(sessionCouseMappingModel, {foreignKey: 'courseId',as: 'sessionCourseMappings'});
 sessionCouseMappingModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courses'});
 
+feePlanTypeModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feePlanType' });
+feePlanModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_plan_id', as: 'feePlanType' });
+
+feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+
+feePlanSemesterModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feePlanSemester' });
+feePlanModel.hasMany(feePlanSemesterModel, { foreignKey: 'fee_plan_id', as: 'feePlanSemester' });
+
+feePlanSemesterModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'Semester' });
+semesterModel.hasMany(feePlanSemesterModel, { foreignKey: 'semester_id', as: 'Semester' });
+
 export {
     settingModel,
     universityModel,
@@ -740,5 +755,8 @@ export {
     sessionCouseMappingModel,
     poModel,
     coModel,
-    coWeightageModel
+    coWeightageModel,
+    feePlanModel,
+    feePlanTypeModel,
+    feePlanSemesterModel,
 };

@@ -53,7 +53,8 @@ import departmentStructure from './router/departmentStructureRoute.js';
 import syllabus from './router/syllabusRoute.js';
 import session from './router/sessionRoute.js';
 import po from './router/poRoute.js';
-import co from './router/coRoute.js'
+import co from './router/coRoute.js';
+import feePlan from './router/feePlanRoute.js';
 
 // middleware
 app.use(fileUpload());
@@ -110,6 +111,7 @@ app.use ("/syllabus",syllabus);
 app.use("/session",session);
 app.use("/po",po);
 app.use("/co",co);
+app.use("/feePlan",feePlan)
 
 app.listen(PORT, () => {
     console.log(`server is running on port ${PORT}`)

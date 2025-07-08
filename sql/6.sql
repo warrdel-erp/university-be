@@ -497,3 +497,51 @@ ALTER TABLE class_sections ADD CONSTRAINT fk_session_id FOREIGN KEY (session_id)
 ALTER TABLE session DROP FOREIGN KEY fk_courses_id;
 
 ALTER TABLE session DROP COLUMN course_id;
+
+CREATE TABLE fee_plan (
+    fee_plan_id INT PRIMARY KEY AUTO_INCREMENT,
+    institute_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_feeplan_institute FOREIGN KEY (institute_id) REFERENCES institute (institute_id),
+    CONSTRAINT fk_feeplan_createdby FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_feeplan_updatedby FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);
+
+CREATE TABLE fee_plan_type (
+    fee_plan_type_id INT PRIMARY KEY AUTO_INCREMENT,
+    fee_plan_id INT NOT NULL,
+    fee_type_id INT,
+    due_date DATETIME,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_feeplantype_feeplan FOREIGN KEY (fee_plan_id) REFERENCES fee_plan (fee_plan_id),
+    CONSTRAINT fk_feeplantype_feetype FOREIGN KEY (fee_type_id) REFERENCES fee_type (fee_type_id),
+    CONSTRAINT fk_feeplantype_createdby FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_feeplantype_updatedby FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);
+
+CREATE TABLE fee_plan_semester (
+    fee_plan_semester_id INT PRIMARY KEY AUTO_INCREMENT,
+    fee_plan_id INT NOT NULL,
+    semester_id INT,
+    due_date DATETIME,
+    amount INT,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_feeplansemester_feeplan FOREIGN KEY (fee_plan_id) REFERENCES fee_plan (fee_plan_id),
+    CONSTRAINT fk_feeplansemester_semester FOREIGN KEY (semester_id) REFERENCES semester (semester_id),
+    CONSTRAINT fk_feeplansemester_createdby FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_feeplansemester_updatedby FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);
