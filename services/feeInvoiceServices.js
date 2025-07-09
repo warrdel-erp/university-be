@@ -4,26 +4,63 @@ import sequelize from '../database/sequelizeConfig.js';
 import { getInstituteCode } from "../repository/collegeRepository.js";
 import moment from 'moment';
 
+// export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
+//     const transaction = await sequelize.transaction();
+//     let feeInvoiceDetails = []
+//     const classStudentMapperId = feeInvoiceData.classStudentMapperId
+//     const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId)
+//     const studentId = getStudent.dataValues.studentId;
+    
+//     try {
+//         const feeInvoicePayload = { ...feeInvoiceData, createdBy, updatedBy,studentId };
+//         const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction );
+        
+//         const feeInvoiceId = feeInvoice.dataValues.feeInvoiceId;
+
+//         for (const slab of feeInvoiceData.slab) {
+//             const feeInvoiceDetailsData = { ...slab, createdBy, updatedBy, feeInvoiceId };
+//             feeInvoiceDetails = await FeeInvoiceDetailsCreationService.addFeeInvoiceDetails(feeInvoiceDetailsData, transaction);
+//         }
+
+//         await transaction.commit();
+//         return { feeInvoice,feeInvoiceDetails };
+//     } catch (error) {
+//         await transaction.rollback();
+//         throw error;
+//     }
+// };
+
 export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
-    let feeInvoiceDetails = []
-    const classStudentMapperId = feeInvoiceData.classStudentMapperId
-    const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId)
-    const studentId = getStudent.dataValues.studentId;
-    
+    let feeInvoiceDetails = [];
+    const classStudentMapperId = feeInvoiceData.classStudentMapperId;
+
     try {
-        const feeInvoicePayload = { ...feeInvoiceData, createdBy, updatedBy,studentId };
-        const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction );
-        
+        const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId);
+        const studentId = getStudent.dataValues.studentId;
+
+        const feeInvoicePayload = {
+            ...feeInvoiceData,
+            studentId,
+            createdBy,
+            updatedBy
+        };
+
+        const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction);
         const feeInvoiceId = feeInvoice.dataValues.feeInvoiceId;
 
         for (const slab of feeInvoiceData.slab) {
-            const feeInvoiceDetailsData = { ...slab, createdBy, updatedBy, feeInvoiceId };
+            const feeInvoiceDetailsData = {
+                ...slab,
+                createdBy,
+                updatedBy,
+                feeInvoiceId
+            };
             feeInvoiceDetails = await FeeInvoiceDetailsCreationService.addFeeInvoiceDetails(feeInvoiceDetailsData, transaction);
         }
 
         await transaction.commit();
-        return { feeInvoice,feeInvoiceDetails };
+        return { feeInvoice, feeInvoiceDetails };
     } catch (error) {
         await transaction.rollback();
         throw error;

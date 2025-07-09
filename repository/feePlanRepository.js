@@ -62,6 +62,13 @@ export async function getFeePlanDetails(universityId,instituteId,role,acedmicYea
                             model:model.semesterModel,
                             as:'Semester',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                            include:[
+                                {
+                                    model:model.courseModel,
+                                    as:'semesterCourse',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                }
+                            ]
                         }
                     ]
                 }
@@ -75,30 +82,51 @@ export async function getFeePlanDetails(universityId,instituteId,role,acedmicYea
     }
 }
 
-export async function getSingleFeePlanDetails(poId) {
-    try {
-        const FeePlan = await model.poModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { poId },
+export async function getSingleFeePlanDetails(feePlanId) {
+     try {
+        const FeePlan = await model.feePlanModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where:{
+                feePlanId
+            },
             include:[
                 {
-                    model: model.courseModel,
-                    as: "courseDetail",
+                    model: model.feePlanTypeModel,
+                    as: "feePlanType",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     include:[
                         {
-                            model:model.subjectModel,
-                            as:'subjectInfo',
+                            model:model.feeTypeModel,
+                            as:'feeType',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         }
                     ]
                 },
+                {
+                    model:model.feePlanSemesterModel,
+                    as:'feePlanSemester',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    include :[
+                        {
+                            model:model.semesterModel,
+                            as:'Semester',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                            include:[
+                                {
+                                    model:model.courseModel,
+                                    as:'semesterCourse',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                }
+                            ]
+                        }
+                    ]
+                }
             ]
         });
 
         return FeePlan;
     } catch (error) {
-        console.error('Error fetching FeePlan details:', error);
+        console.error('Error fetching Fee Plan details single:', error);
         throw error;
     }
 }

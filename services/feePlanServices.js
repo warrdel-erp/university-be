@@ -58,8 +58,8 @@ export async function getFeePlanDetails(universityId,instituteId,role) {
     return await feePlan.getFeePlanDetails(universityId,instituteId,role);
 }
 
-export async function getSingleFeePlanDetails(poId,universityId) {
-    return await feePlan.getSingleFeePlanDetails(poId,universityId);
+export async function getSingleFeePlanDetails(feePlanId,universityId) {
+    return await feePlan.getSingleFeePlanDetails(feePlanId,universityId);
 }
 
 export async function updateFeePlan(poId, data, updatedBy) {    

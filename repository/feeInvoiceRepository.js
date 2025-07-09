@@ -18,6 +18,10 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { instituteId })
         };
+        const whereClases ={
+            // ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId })
+        };
         const feeInvoice = await model.feeInvoiceModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","class_student_mapper_id","fee_group_id"] },
             include:[
@@ -28,10 +32,10 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
                     where: { universityId }
                 },
                 {
-                    model: model.feeGroupModel,
-                    as: "feeInvoiceGroup",
+                    model: model.feePlanModel,
+                    as: "feeInvoicePlan",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_group_id"] },
-                    where:whereClase
+                    where:whereClases
                 },
                 {
                     model:model.classStudentMapperModel,
@@ -56,12 +60,17 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
                 {
                     model:model.feeInvoiceDetailModel,
                     as:'feeInvoiceDetails',
-                    attributes :["feeInvoiceDetailsId","feeInvoiceId","feeTypeId","amount","waiver","subTotal","paidAmount"],
+                    attributes :["feeInvoiceDetailsId","feeInvoiceId","amount","waiver","subTotal","paidAmount"],
                     include:[
                         {
-                            model:model.feeTypeModel,
-                            as:'feeInvoiceType',
-                            attributes:["feeTypeId","feeGroupId","name","description"]
+                            model:model.feePlanTypeModel,
+                            as:'feeInvoiceTypePlan',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model:model.feePlanSemesterModel,
+                            as:'feeInvoiceTypeSemester',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         }
                     ]
                 }
@@ -88,8 +97,8 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
                     where: { universityId }
                 },
                 {
-                    model: model.feeGroupModel,
-                    as: "feeInvoiceGroup",
+                    model: model.feePlanModel,
+                    as: "feeInvoicePlan",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_group_id"] },
                 },
                 {
@@ -115,9 +124,14 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
                     attributes :["feeInvoiceDetailsId","feeInvoiceId","feeTypeId","amount","waiver","subTotal","paidAmount"],
                     include:[
                         {
-                            model:model.feeTypeModel,
-                            as:'feeInvoiceType',
-                            attributes:["feeTypeId","feeGroupId","name","description"]
+                            model:model.feePlanTypeModel,
+                            as:'feeInvoiceTypePlan',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model:model.feePlanSemesterModel,
+                            as:'feeInvoiceTypeSemester',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         }
                     ]
                 }

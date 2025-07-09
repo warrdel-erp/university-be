@@ -1,12 +1,12 @@
 import * as feeInvoiceCreation  from  "../services/feeInvoiceServices.js";
 
 export async function addFeeInvoice(req, res) {
-    const {classStudentMapperId,feeGroupId} = req.body
+    const {classStudentMapperId,feePlanId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(classStudentMapperId && feeGroupId)){
-           return res.status(400).send('classStudentMapperId and feeGroupId is required')
+        if(!(classStudentMapperId && feePlanId)){
+           return res.status(400).send('classStudentMapperId and feePlanId is required')
         }
         const feeInvoice = await feeInvoiceCreation.addFeeInvoice(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", feeInvoice });
@@ -75,10 +75,7 @@ export async function deleteFeeInvoice(req, res) {
 };
 
 export async function getInvoiceNumber(req, res) {
-    // const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
-    // const role = req.user.role;
-    // const {acedmicYearId} = req.query
     try {
         const invoiceNumber = await feeInvoiceCreation.getInvoiceNumber(instituteId);
         res.status(200).json(invoiceNumber);

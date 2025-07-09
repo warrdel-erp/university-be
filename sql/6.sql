@@ -545,3 +545,53 @@ CREATE TABLE fee_plan_semester (
     CONSTRAINT fk_feeplansemester_createdby FOREIGN KEY (created_by) REFERENCES users (user_id),
     CONSTRAINT fk_feeplansemester_updatedby FOREIGN KEY (updated_by) REFERENCES users (user_id)
 );
+
+-- Add the fee_plan_id column with the foreign key reference in students
+
+ALTER TABLE students ADD COLUMN fee_plan_id INT NOT NULL;
+
+UPDATE students SET fee_plan_id = 1 WHERE fee_plan_id IS NULL;
+
+UPDATE students SET fee_plan_id = 1 WHERE fee_plan_id = 0;
+
+ALTER TABLE students ADD CONSTRAINT fk_fee_plan_id FOREIGN KEY (fee_plan_id) REFERENCES fee_plan(fee_plan_id) ON DELETE CASCADE;
+
+ALTER TABLE fee_invoice DROP FOREIGN KEY fee_invoice_ibfk_1;
+
+ALTER TABLE fee_invoice DROP COLUMN fee_group_id;
+
+ALTER TABLE fee_invoice ADD COLUMN reference_number VARCHAR(255) NULL;
+
+ALTER TABLE fee_invoice_details DROP FOREIGN KEY fee_invoice_details_ibfk_2;
+
+ALTER TABLE fee_invoice_details DROP COLUMN fee_type_id;
+
+-- Add the fee_plan_id column with the foreign key reference in fee_invoice
+
+ALTER TABLE fee_invoice ADD COLUMN fee_plan_id INT NOT NULL;
+
+UPDATE fee_invoice SET fee_plan_id = 1 WHERE fee_plan_id IS NULL;
+
+UPDATE fee_invoice SET fee_plan_id = 1 WHERE fee_plan_id = 0;
+
+ALTER TABLE fee_invoice ADD CONSTRAINT fk_fees_plan_id FOREIGN KEY (fee_plan_id) REFERENCES fee_plan(fee_plan_id) ON DELETE CASCADE;
+
+-- Add the fee_plan_type_id column with the foreign key reference in fee_invoice_details
+
+ALTER TABLE fee_invoice_details ADD COLUMN fee_plan_type_id INT DEFAULT NULL;
+
+UPDATE fee_invoice_details SET fee_plan_type_id = 1 WHERE fee_plan_type_id IS NULL;
+
+UPDATE fee_invoice_details SET fee_plan_type_id = 1 WHERE fee_plan_type_id = 0;
+
+ALTER TABLE fee_invoice_details ADD CONSTRAINT fk_fee_invoice_plan_id FOREIGN KEY (fee_plan_type_id) REFERENCES fee_plan_type (fee_plan_type_id) ON DELETE CASCADE;
+
+-- Add the fee_plan_semester_id column with the foreign key reference in fee_invoice_details
+
+ALTER TABLE fee_invoice_details ADD COLUMN fee_plan_semester_id INT DEFAULT NULL;
+
+UPDATE fee_invoice_details SET fee_plan_semester_id = 1 WHERE fee_plan_semester_id IS NULL;
+
+UPDATE fee_invoice_details SET fee_plan_semester_id = 1 WHERE fee_plan_semester_id = 0;
+
+ALTER TABLE fee_invoice_details ADD CONSTRAINT fk_fee_plan_semester_id FOREIGN KEY (fee_plan_semester_id) REFERENCES fee_plan_semester(fee_plan_semester_id) ON DELETE CASCADE;

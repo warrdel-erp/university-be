@@ -35,12 +35,12 @@ export async function getAllFeePlan(req, res) {
 export async function getSingleFeePlanDetails(req, res) {
     const universityId = req.user.universityId;
     try {
-        const { poId } = req.query;
-        const po = await feePlan.getSingleFeePlanDetails(poId,universityId);
-        if (po) {
-            res.status(200).json(po);
+        const { feePlanId } = req.query;
+        const feeDetail = await feePlan.getSingleFeePlanDetails(feePlanId,universityId);
+        if (feeDetail) {
+            res.status(200).json(feeDetail);
         } else {
-            res.status(404).json({ message: "feePlan not found" });
+            res.status(404).json({ message: "fee Plan not found" });
         }
     } catch (error) {
         res.status(500).json({ error: error.message });

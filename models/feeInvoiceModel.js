@@ -4,6 +4,7 @@ import users from "./userModel.js";
 import feeGroup from "./feeGroupModel.js";
 import classStudentMapper from "./classSectionStudentMapperModel.js";
 import studentModel from "./studentModel.js";
+import feePlanModel from "./feePlanModel.js";
 
 export default sequelize.define(
     'fee_invoice',
@@ -19,13 +20,13 @@ export default sequelize.define(
             allowNull:true,
             field:'invoice_number'
         },
-        feeGroupId: {
+        feePlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_group_id',
+            field: 'fee_plan_id',
             references: {
-                model: feeGroup,
-                key: 'fee_group_id'
+                model: feePlanModel,
+                key: 'fee_plan_id'
             }
         },
         classStudentMapperId: {
@@ -65,6 +66,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull:true,
             field:'payment_method'
+        },
+        referenceNumber: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'reference_number'
         },
         createdBy: {
             type: DataTypes.INTEGER,
