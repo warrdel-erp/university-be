@@ -1,13 +1,13 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addFeeInvoice(feeInvoiceData,transaction) {   
+export async function addFeeInvoiceDetailRecord(feeInvoiceData) {   
      
     try {
-        const result = await model.feeInvoiceModel.create(feeInvoiceData,{transaction});
+        const result = await model.feeInvoiceDetailRecordModel.bulkCreate(feeInvoiceData);
         return result;
     } catch (error) {
-        console.error("Error in add Fee Invoice :", error);
+        console.error("Error in add Fee Invoice Record :", error);
         throw error;
     }
 };

@@ -595,3 +595,26 @@ UPDATE fee_invoice_details SET fee_plan_semester_id = 1 WHERE fee_plan_semester_
 UPDATE fee_invoice_details SET fee_plan_semester_id = 1 WHERE fee_plan_semester_id = 0;
 
 ALTER TABLE fee_invoice_details ADD CONSTRAINT fk_fee_plan_semester_id FOREIGN KEY (fee_plan_semester_id) REFERENCES fee_plan_semester(fee_plan_semester_id) ON DELETE CASCADE;
+
+ALTER TABLE fee_invoice_details ADD COLUMN invoice_detail_number VARCHAR(255);
+
+CREATE TABLE fee_invoice_detail_record (
+    fee_invoice_details_record_id INT AUTO_INCREMENT PRIMARY KEY,
+    fee_invoice_id INT NOT NULL,
+    fee_invoice_details_id INT NOT NULL,
+    paid_amount FLOAT,
+    is_applied BOOLEAN NOT NULL,
+    payment_status VARCHAR(255),
+    payment_method VARCHAR(255),
+    reference_number VARCHAR(255),
+    payment_made VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_fee_invoice FOREIGN KEY (fee_invoice_id) REFERENCES fee_invoice(fee_invoice_id),
+    CONSTRAINT fk_fee_invoice_details FOREIGN KEY (fee_invoice_details_id) REFERENCES fee_invoice_details(fee_invoice_details_id),
+    CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

@@ -1,53 +1,42 @@
-import * as feeInvoiceCreationService  from "../repository/feeInvoiceRepository.js";
+import * as feeInvoiceRecordRepository  from "../repository/feeInvoiceDetailRecordRepository.js";
 import * as FeeInvoiceDetailsCreationService  from "../repository/feeInvoiceDetailsRepository.js";
 import sequelize from '../database/sequelizeConfig.js'; 
 import { getInstituteCode } from "../repository/collegeRepository.js";
 import moment from 'moment';
 
-export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy,instituteId) {
-    const transaction = await sequelize.transaction();
-    let feeInvoiceDetails = [];
-    const classStudentMapperId = feeInvoiceData.classStudentMapperId;
+import * as repository from "../repository/feeInvoiceDetailRecordRepository.js";
 
+export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy, updatedBy, instituteId) {
+    const {
+        feeInvoiceId,
+        paymentStatus,
+        paymentMethod,
+        referenceNumber,
+        paymentMade,
+        slabs
+    } = feeInvoiceDataRecord;
 
-    try {
-        // const latestInvoiceDetailNumber = await getInvoiceDetailNumber(instituteId)
-        // let nextNumber = parseInt(latestInvoiceDetailNumber.split('-')[1]);
-        const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId);
-        const studentId = getStudent.dataValues.studentId;
-
-        const feeInvoicePayload = {
-            ...feeInvoiceData,
-            studentId,
-            createdBy,
-            updatedBy
-        };
-
-        const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction);
-        const feeInvoiceId = feeInvoice.dataValues.feeInvoiceId;
-
-        for (const slab of feeInvoiceData.slab) {
-            // nextNumber += 1;
-            // const invoiceDetailNumber = `INV-${nextNumber.toString().padStart(4, '0')}`;
-            const latestInvoiceDetailNumber = await getInvoiceDetailNumber(instituteId)
-
-            const feeInvoiceDetailsData = {
-                ...slab,
-                createdBy,
-                updatedBy,
-                feeInvoiceId,
-                invoiceDetailNumber:latestInvoiceDetailNumber
-            };
-            feeInvoiceDetails = await FeeInvoiceDetailsCreationService.addFeeInvoiceDetails(feeInvoiceDetailsData, transaction);
-        }
-
-        await transaction.commit();
-        return { feeInvoice, feeInvoiceDetails };
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
+    if (!Array.isArray(slabs) || slabs.length === 0) {
+        throw new Error("At least one slab entry is required.");
     }
-};
+
+    const recordsToCreate = slabs.map((slab) => ({
+        feeInvoiceId,
+        paymentStatus,
+        paymentMethod,
+        referenceNumber,
+        paymentMade,
+        feeInvoiceDetailsId : slab.feeInvoiceDetailsId,
+        paidAmount: slab.paidAmount,
+        isApplyed: slab.isApplied,
+        createdBy,
+        updatedBy
+    }));
+
+    const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(recordsToCreate);
+    return createdRecords;
+}
+
 
 export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role) {
     return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role);
