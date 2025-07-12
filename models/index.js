@@ -675,6 +675,9 @@ feeInvoiceModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_
 feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
 feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
 
+feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'feeInvoiceId',sourceKey: 'feeInvoiceId',as: 'invoiceDetails'});
+feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'feeInvoiceId', targetKey: 'feeInvoiceId', as: 'feeInvoices' });
+
 export {
     settingModel,
     universityModel,

@@ -31,6 +31,23 @@ export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, 
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
                         {
+                            model:model.feeInvoiceDetailModel,
+                            as:'invoiceDetails',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id"] },
+                            include: [
+                                {
+                                    model: model.feePlanTypeModel,
+                                    as: 'feeInvoiceTypePlan',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                },
+                                {
+                                    model: model.feePlanSemesterModel,
+                                    as: 'feeInvoiceTypeSemester',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                }
+                            ]
+                        },
+                        {
                             model: model.feePlanModel,
                             as: "feeInvoicePlan",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id"] },
@@ -58,23 +75,23 @@ export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, 
                         },
                     ]
                 },
-                {
-                    model: model.feeInvoiceDetailModel,
-                    as: "feeInvoiceDetail",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    include: [
-                        {
-                            model: model.feePlanTypeModel,
-                            as: 'feeInvoiceTypePlan',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        },
-                        {
-                            model: model.feePlanSemesterModel,
-                            as: 'feeInvoiceTypeSemester',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        }
-                    ]
-                },
+                // {
+                //     model: model.feeInvoiceDetailModel,
+                //     as: "feeInvoiceDetail",
+                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                //     include: [
+                //         {
+                //             model: model.feePlanTypeModel,
+                //             as: 'feeInvoiceTypePlan',
+                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                //         },
+                //         {
+                //             model: model.feePlanSemesterModel,
+                //             as: 'feeInvoiceTypeSemester',
+                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                //         }
+                //     ]
+                // },
 
             ]
         });
