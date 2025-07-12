@@ -46,6 +46,11 @@ export default sequelize.define(
             allowNull:true,
             field:'payment_status'
         },
+        paymentDate: {
+            type: DataTypes.DATE,
+            allowNull:true,
+            field:'payment_date'
+        },
         paymentMethod: {
             type: DataTypes.STRING,
             allowNull:true,

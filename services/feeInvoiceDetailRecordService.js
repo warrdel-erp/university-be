@@ -13,6 +13,7 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy,
         paymentMethod,
         referenceNumber,
         paymentMade,
+        paymentDate,
         slabs
     } = feeInvoiceDataRecord;
 
@@ -26,6 +27,7 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy,
         paymentMethod,
         referenceNumber,
         paymentMade,
+        paymentDate,
         feeInvoiceDetailsId : slab.feeInvoiceDetailsId,
         paidAmount: slab.paidAmount,
         isApplyed: slab.isApplied,

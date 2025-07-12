@@ -608,6 +608,7 @@ CREATE TABLE fee_invoice_detail_record (
     payment_method VARCHAR(255),
     reference_number VARCHAR(255),
     payment_made VARCHAR(255),
+    payment_date DATE NULL
     created_by INT NOT NULL,
     updated_by INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

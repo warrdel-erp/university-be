@@ -13,8 +13,6 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceData) {
 };
 
 export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, instituteId, role) {
-    console.log(`>>>>>>>>>>>>>>>>>>>>`);
-
     try {
         // const whereClase ={
         //     ...(acedmicYearId && { acedmicYearId }),
