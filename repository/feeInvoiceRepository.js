@@ -87,7 +87,7 @@ export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteI
 export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
     try {
         const feeInvoice = await model.feeInvoiceModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_type_id"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             where: { feeInvoiceId },
             include:[
                 {
@@ -99,7 +99,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
                 {
                     model: model.feePlanModel,
                     as: "feeInvoicePlan",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","fee_group_id"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                 },
                 {
                     model:model.classStudentMapperModel,
@@ -121,7 +121,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
                 {
                     model:model.feeInvoiceDetailModel,
                     as:'feeInvoiceDetails',
-                    attributes :["feeInvoiceDetailsId","feeInvoiceId","feeTypeId","amount","waiver","subTotal","paidAmount"],
+                    attributes :["feeInvoiceDetailsId","feeInvoiceId","amount","waiver","subTotal","paidAmount"],
                     include:[
                         {
                             model:model.feePlanTypeModel,
