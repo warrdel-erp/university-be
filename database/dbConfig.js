@@ -2,7 +2,7 @@ export const dbConfig = {
     HOST: process.env.HOST || 'localhost',
     USER: process.env.MYSQL_USERNAME || 'root',
     PASSWORD: process.env.MYSQL_PASSWORD|| 'kuldeep1',
-    DB: process.env.MYSQL_DATABASE_NAME || 'university',
+    DB: process.env.MYSQL_DATABASE_NAME || 'university2',
     dialect: 'mysql',
 
     pool: {
