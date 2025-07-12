@@ -38,8 +38,8 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy,
 }
 
 
-export async function getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role) {
-    return await feeInvoiceCreationService.getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role);
+export async function getAllFeeInvoiceDetailRecord(universityId,acedmicYearId,instituteId,role) {
+    return await feeInvoiceRecordRepository.getAllFeeInvoiceDetailRecord(universityId,acedmicYearId,instituteId,role);
 };
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {

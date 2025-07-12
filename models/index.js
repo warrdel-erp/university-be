@@ -477,9 +477,6 @@ feeGroupModel.hasMany(feeTypeModel, { foreignKey: 'fee_group_id', as: 'feeGroup'
 feeInvoiceModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
 userModel.hasMany(feeInvoiceModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
 
-feeInvoiceModel.belongsTo(feeGroupModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
-feeGroupModel.hasMany(feeInvoiceModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
-
 feeInvoiceModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feeInvoicePlan' });
 feePlanModel.hasMany(feeInvoiceModel, { foreignKey: 'fee_plan_id', as: 'feeInvoicePlan' });
 
@@ -487,9 +484,6 @@ feeInvoiceModel.belongsTo(classStudentMapperModel, { foreignKey: 'class_student_
 classStudentMapperModel.hasMany(feeInvoiceModel, { foreignKey: 'class_student_mapper_id', as: 'feeStudentMapper' });
 
 //fee (fee Invoice Details)
-feeInvoiceDetailModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
-feeTypeModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
-
 feeInvoiceDetailModel.belongsTo(feePlanTypeModel, { foreignKey: 'fee_plan_type_id', as: 'feeInvoiceTypePlan' });
 feePlanTypeModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_plan_type_id', as: 'feeInvoiceTypePlan' });
 
@@ -674,6 +668,12 @@ feePlanModel.hasMany(feePlanSemesterModel, { foreignKey: 'fee_plan_id', as: 'fee
 
 feePlanSemesterModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'Semester' });
 semesterModel.hasMany(feePlanSemesterModel, { foreignKey: 'semester_id', as: 'Semester' });
+
+feeInvoiceDetailRecordModel.belongsTo(feeInvoiceModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
+feeInvoiceModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
+
+feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
+feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
 
 export {
     settingModel,

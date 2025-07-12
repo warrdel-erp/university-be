@@ -22,7 +22,7 @@ export async function getAllFeeInvoiceDetailRecord(req, res) {
     const role = req.user.role;
     const {acedmicYearId} = req.query
     try {
-        const feeInvoice = await feeInvoiceCreation.getFeeInvoiceDetails(universityId,acedmicYearId,instituteId,role);
+        const feeInvoice = await feeInvoiceRecordService.getAllFeeInvoiceDetailRecord(universityId,acedmicYearId,instituteId,role);
         res.status(200).json(feeInvoice);
     } catch (error) {
         res.status(500).json({ error: error.message });
