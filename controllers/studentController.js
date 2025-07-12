@@ -6,12 +6,12 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const addStudent = async (req, res) => {
     const file = req.files;
     const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionId,acedmicYearId,semesterId,sessionId} = req.body;
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionsId,acedmicYearId,semesterId,sessionId} = req.body;
 
     try {
         // Check for required fields
-        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId && classSectionId && acedmicYearId)) {
-            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, roleId, courseId,acedmicYearId and classSectionId are required");
+        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId && classSectionsId && acedmicYearId)) {
+            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, roleId, courseId,acedmicYearId and classSectionsId are required");
         }
 
         // Check if email already exists
@@ -38,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId);
+        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionsId,semesterId,sessionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
