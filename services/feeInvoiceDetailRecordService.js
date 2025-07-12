@@ -40,12 +40,84 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy,
 }
 
 
-export async function getAllFeeInvoiceDetailRecord(universityId,acedmicYearId,instituteId,role) {
-    return await feeInvoiceRecordRepository.getAllFeeInvoiceDetailRecord(universityId,acedmicYearId,instituteId,role);
+export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, instituteId, role) {
+
+    const allDeposit = await feeInvoiceRecordRepository.getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, instituteId, role);
+    const invoiceMap = {};
+
+    for (const item of allDeposit || []) {
+        const feeInvoice = item?.feeInvoice;
+        if (!feeInvoice) continue;
+
+        const feeInvoiceId = feeInvoice?.feeInvoiceId;
+
+        if (!invoiceMap[feeInvoiceId]) {
+            invoiceMap[feeInvoiceId] = {
+                feeInvoiceId: feeInvoiceId,
+                invoiceNumber: feeInvoice.invoiceNumber,
+                student: {
+                    studentId: feeInvoice?.studentId,
+                    name: `${feeInvoice?.feeStudentMapper?.studentMapped?.firstName || ""} ${feeInvoice?.feeStudentMapper?.studentMapped?.lastName || ""}`,
+                    scholarNumber: feeInvoice?.feeStudentMapper?.studentMapped?.scholarNumber,
+                    section: feeInvoice?.feeStudentMapper?.studentSectionDetail?.section,
+                },
+                invoiceDetails: [],
+            };
+        }
+
+        const invoiceDetailsArray = feeInvoice.invoiceDetails || [];
+
+        for (const detail of invoiceDetailsArray) {
+            let matchingPayment = null;
+            if (item?.feeInvoiceDetailsId === detail?.feeInvoiceDetailsId) {
+                matchingPayment = {
+                    paidAmount: item?.paidAmount || 0,
+                    paymentDate: item?.paymentDate || null,
+                    paymentMethod: item?.paymentMethod || null,
+                    paymentStatus: item?.paymentStatus || null,
+                    referenceNumber: item?.referenceNumber || null,
+                    isApplied: item?.isApplyed || false,
+                    feeInvoiceDetailsRecordId: item?.feeInvoiceDetailsRecordId || null,
+                };
+            }
+            const exists = invoiceMap[feeInvoiceId].invoiceDetails.find(
+                d => d.feeInvoiceDetailsId === detail?.feeInvoiceDetailsId
+            );
+
+            if (!exists) {
+                invoiceMap[feeInvoiceId].invoiceDetails.push({
+                    feeInvoiceDetailsId: detail?.feeInvoiceDetailsId,
+                    amount: detail?.amount,
+                    subTotal: detail?.subTotal,
+                    waiver: detail?.waiver,
+                    feePlanTypeId: detail?.feePlanTypeId,
+                    feePlanSemesterId: detail?.feePlanSemesterId,
+                    invoiceDetailNumber: detail?.invoiceDetailNumber,
+                    ...(matchingPayment || {
+                        paidAmount: 0,
+                        paymentDate: null,
+                        paymentMethod: null,
+                        paymentStatus: null,
+                        referenceNumber: null,
+                        isApplied: false,
+                        feeInvoiceDetailsRecordId: null,
+                    })
+                });
+            } else {
+                // If detail exists and we have matching payment info, update it
+                if (matchingPayment) {
+                    Object.assign(exists, matchingPayment);
+                }
+            }
+        }
+    }
+
+    const cleanInvoices = Object.values(invoiceMap);
+    return cleanInvoices;
 };
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId,universityId) {
-    return await feeInvoiceCreationService.getSingleFeeInvoiceDetails(feeInvoiceId,universityId);
+    return await feeInvoiceRecordRepository.getSingleFeeInvoiceDetails(feeInvoiceId,universityId);
 };
 
 export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, updatedBy) {
