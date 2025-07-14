@@ -13,6 +13,7 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import semesterModel from "./semesterModel.js";
 import classSectionModel from "./classSectionModel.js";
+import feePlanModel from "./feePlanModel.js";
 
 export default sequelize.define(
     'students',
@@ -120,6 +121,15 @@ export default sequelize.define(
             references: {
                 model: classSectionModel,
                 key: 'class_sections_id'
+            }
+        },
+        feePlanId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'fee_plan_id',
+            references: {
+                model: feePlanModel,
+                key: 'fee_plan_id'
             }
         },
         scholarNumber:{

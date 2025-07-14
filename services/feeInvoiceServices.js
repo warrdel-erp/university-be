@@ -4,26 +4,45 @@ import sequelize from '../database/sequelizeConfig.js';
 import { getInstituteCode } from "../repository/collegeRepository.js";
 import moment from 'moment';
 
-export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy) {
+export async function addFeeInvoice(feeInvoiceData, createdBy, updatedBy,instituteId) {
     const transaction = await sequelize.transaction();
-    let feeInvoiceDetails = []
-    const classStudentMapperId = feeInvoiceData.classStudentMapperId
-    const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId)
-    const studentId = getStudent.dataValues.studentId;
-    
+    let feeInvoiceDetails = [];
+    const classStudentMapperId = feeInvoiceData.classStudentMapperId;
+
+
     try {
-        const feeInvoicePayload = { ...feeInvoiceData, createdBy, updatedBy,studentId };
-        const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction );
-        
+        // const latestInvoiceDetailNumber = await getInvoiceDetailNumber(instituteId)
+        // let nextNumber = parseInt(latestInvoiceDetailNumber.split('-')[1]);
+        const getStudent = await feeInvoiceCreationService.getStudentIdByClassStudentMapper(classStudentMapperId);
+        const studentId = getStudent.dataValues.studentId;
+
+        const feeInvoicePayload = {
+            ...feeInvoiceData,
+            studentId,
+            createdBy,
+            updatedBy
+        };
+
+        const feeInvoice = await feeInvoiceCreationService.addFeeInvoice(feeInvoicePayload, transaction);
         const feeInvoiceId = feeInvoice.dataValues.feeInvoiceId;
 
         for (const slab of feeInvoiceData.slab) {
-            const feeInvoiceDetailsData = { ...slab, createdBy, updatedBy, feeInvoiceId };
+            // nextNumber += 1;
+            // const invoiceDetailNumber = `INV-${nextNumber.toString().padStart(4, '0')}`;
+            const latestInvoiceDetailNumber = await getInvoiceDetailNumber(instituteId)
+
+            const feeInvoiceDetailsData = {
+                ...slab,
+                createdBy,
+                updatedBy,
+                feeInvoiceId,
+                invoiceDetailNumber:latestInvoiceDetailNumber
+            };
             feeInvoiceDetails = await FeeInvoiceDetailsCreationService.addFeeInvoiceDetails(feeInvoiceDetailsData, transaction);
         }
 
         await transaction.commit();
-        return { feeInvoice,feeInvoiceDetails };
+        return { feeInvoice, feeInvoiceDetails };
     } catch (error) {
         await transaction.rollback();
         throw error;
@@ -88,6 +107,31 @@ export async function getInvoiceNumber(instituteId) {
     } else {
         const yearLastTwoDigits = moment().format('YY');
         invoiceNumber = `${institueCode}-${yearLastTwoDigits}-01`;
+
+    }
+    return invoiceNumber;
+};
+
+export async function getInvoiceDetailNumber(instituteId) {
+    const getInstitueCodeDetail = await getInstituteCode(instituteId);
+    const institueCode = getInstitueCodeDetail.get('institute_code');
+    const latestInvoiceNumber = await feeInvoiceCreationService.latestInvoiceDetailNumber(institueCode)
+    const previousInvoiceNumber = latestInvoiceNumber ? latestInvoiceNumber.get('invoice_number') : null;
+    let invoiceNumber;
+    if (previousInvoiceNumber) {
+        const invoiceNumberParts = previousInvoiceNumber.split('-');
+        if (invoiceNumberParts.length === 3) {
+            const year = invoiceNumberParts[1];
+            const suffixNumber = parseInt(invoiceNumberParts[2], 10) + 1;
+            const paddedSuffix = String(suffixNumber).padStart(2, '0');
+
+            invoiceNumber = `${institueCode}-${paddedSuffix}`;
+        } else {
+            throw new Error('Invalid invoice detail number');
+        }
+    } else {
+        const yearLastTwoDigits = moment().format('YY');
+        invoiceNumber = `${institueCode}-10001`;
 
     }
     return invoiceNumber;

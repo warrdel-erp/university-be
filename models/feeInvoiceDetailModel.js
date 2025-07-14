@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import feeInvoice from "./feeInvoiceModel.js";
-import feeType from "./feeTypeModel.js";
+import feePlanTypeModel from "./feePlanTypeModel.js";
+import feePlanSemesterModel from "./feePlanSemesterModel.js";
 
 export default sequelize.define(
     'fee_invoice_details',
@@ -22,13 +23,24 @@ export default sequelize.define(
                 key: 'fee_invoice_id'
             }
         },
-        feeTypeId: {
+        feePlanTypeId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'fee_type_id',
+            allowNull: true,
+            field: 'fee_plan_type_id',
+            defaultValue:null,
             references: {
-                model: feeType,
-                key: 'fee_type_id'
+                model: feePlanTypeModel,
+                key: 'fee_plan_type_id'
+            }
+        },
+        feePlanSemesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'fee_plan_semester_id',
+            defaultValue:null,
+            references: {
+                model: feePlanSemesterModel,
+                key: 'fee_plan_semester_id'
             }
         },
         amount: {
@@ -48,6 +60,11 @@ export default sequelize.define(
             type: DataTypes.FLOAT,
             allowNull: true,
             field:'paid_amount'
+        },
+        invoiceDetailNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'invoice_detail_number'
         },
         createdBy: {
             type: DataTypes.INTEGER,

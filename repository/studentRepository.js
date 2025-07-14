@@ -349,6 +349,44 @@ export async function getSingleStudentDetail(studentId, universityId) {
                         },
                     ]
                 },
+                {
+                    model:model.feePlanModel,
+                    as :'studentFeePlan',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+                    include:[
+                                {
+                                    model: model.feePlanTypeModel,
+                                    as: "feePlanType",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                    include:[
+                                        {
+                                            model:model.feeTypeModel,
+                                            as:'feeType',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                        }
+                                    ]
+                                },
+                                {
+                                    model:model.feePlanSemesterModel,
+                                    as:'feePlanSemester',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                    include :[
+                                        {
+                                            model:model.semesterModel,
+                                            as:'Semester',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                            // include:[
+                                            //     {
+                                            //         model:model.courseModel,
+                                            //         as:'semesterCourse',
+                                            //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                            //     }
+                                            // ]
+                                        }
+                                    ]
+                                }
+                            ]
+                }
             ],
             where: {
                 student_id: studentId

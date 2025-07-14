@@ -1,66 +1,55 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import feeGroup from "./feeGroupModel.js";
-import classStudentMapper from "./classSectionStudentMapperModel.js";
-import studentModel from "./studentModel.js";
-import feePlanModel from "./feePlanModel.js";
+import feeInvoice from "./feeInvoiceModel.js";
+import feeInvoiceDetail from "./feeInvoiceDetailModel.js";
 
 export default sequelize.define(
-    'fee_invoice',
+    'fee_invoice_detail_record',
     {
-        feeInvoiceId: {
+        feeInvoiceDetailsRecordId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_invoice_id'
+            field: 'fee_invoice_details_record_id'
         },
-        invoiceNumber:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'invoice_number'
-        },
-        feePlanId: {
+        feeInvoiceId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_plan_id',
+            field: 'fee_invoice_id',
             references: {
-                model: feePlanModel,
-                key: 'fee_plan_id'
+                model: feeInvoice,
+                key: 'fee_invoice_id'
             }
         },
-        classStudentMapperId: {
+        feeInvoiceDetailsId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_student_mapper_id',
+            field: 'fee_invoice_details_id',
             references: {
-                model: classStudentMapper,
-                key: 'class_student_mapper_id'
+                model: feeInvoiceDetail,
+                key: 'fee_invoice_details_id'
             }
         },
-        studentId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'student_id',
-            references: {
-                model: studentModel,
-                key: 'student_id'
-            }
+        paidAmount: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field:'paid_amount'
         },
-        createdDate: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            field: 'created_date',
-        },
-        dueDate: {
-            type: DataTypes.DATE,
-            allowNull: false,
-            field: 'due_date',
+        isApplyed:{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            field:'is_applied'
         },
         paymentStatus: {
             type: DataTypes.STRING,
             allowNull:true,
             field:'payment_status'
+        },
+        paymentDate: {
+            type: DataTypes.DATE,
+            allowNull:true,
+            field:'payment_date'
         },
         paymentMethod: {
             type: DataTypes.STRING,
@@ -71,6 +60,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull:true,
             field:'reference_number'
+        },
+        paymentMade:{
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'payment_made'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -109,7 +103,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_invoice',
+        tableName: 'fee_invoice_detail_record',
         timestamps: true,
         paranoid: true
     }

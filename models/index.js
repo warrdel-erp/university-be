@@ -91,6 +91,10 @@ import sessionCouseMappingModel from './sessionCouseMappingModel.js';
 import poModel from './poModel.js';
 import coModel from './coModel.js';
 import coWeightageModel from './coWeightageModel.js';
+import feePlanModel from './feePlanModel.js';
+import feePlanTypeModel from './feePlanTypeModel.js';
+import feePlanSemesterModel from './feePlanSemesterModel.js';
+import feeInvoiceDetailRecordModel from './feeInvoiceDetailRecordModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -121,6 +125,9 @@ specializationModel.hasMany(studentModel, { foreignKey: 'specialization_id', as:
 
 studentModel.belongsTo(employeeCodeMasterType, { foreignKey: 'course_level_id', as: 'courseLevel' });
 employeeCodeMasterType.hasMany(studentModel, { foreignKey: 'course_level_id', as: 'courseLevel' });
+
+studentModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'studentFeePlan' });
+feePlanModel.hasMany(studentModel, { foreignKey: 'fee_plan_id', as: 'studentFeePlan' });
 
 userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' })
 studentModel.hasOne(userStudentEmployeeModel, { foreignKey: 'student_id', as: 'student' })
@@ -470,15 +477,18 @@ feeGroupModel.hasMany(feeTypeModel, { foreignKey: 'fee_group_id', as: 'feeGroup'
 feeInvoiceModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
 userModel.hasMany(feeInvoiceModel, { foreignKey: 'createdBy', as: 'userFeeInvoice' });
 
-feeInvoiceModel.belongsTo(feeGroupModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
-feeGroupModel.hasMany(feeInvoiceModel, { foreignKey: 'fee_group_id', as: 'feeInvoiceGroup' });
+feeInvoiceModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feeInvoicePlan' });
+feePlanModel.hasMany(feeInvoiceModel, { foreignKey: 'fee_plan_id', as: 'feeInvoicePlan' });
 
 feeInvoiceModel.belongsTo(classStudentMapperModel, { foreignKey: 'class_student_mapper_id', as: 'feeStudentMapper' });
 classStudentMapperModel.hasMany(feeInvoiceModel, { foreignKey: 'class_student_mapper_id', as: 'feeStudentMapper' });
 
 //fee (fee Invoice Details)
-feeInvoiceDetailModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
-feeTypeModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_type_id', as: 'feeInvoiceType' });
+feeInvoiceDetailModel.belongsTo(feePlanTypeModel, { foreignKey: 'fee_plan_type_id', as: 'feeInvoiceTypePlan' });
+feePlanTypeModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_plan_type_id', as: 'feeInvoiceTypePlan' });
+
+feeInvoiceDetailModel.belongsTo(feePlanSemesterModel, { foreignKey: 'fee_plan_semester_id', as: 'feeInvoiceTypeSemester' });
+feePlanSemesterModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_plan_semester_id', as: 'feeInvoiceTypeSemester' });
 
 feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoiceDetails' });
 feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoiceDetails' });
@@ -647,6 +657,27 @@ sessionCouseMappingModel.belongsTo(sessionModel, {foreignKey: 'sessionId',as: 's
 courseModel.hasMany(sessionCouseMappingModel, {foreignKey: 'courseId',as: 'sessionCourseMappings'});
 sessionCouseMappingModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courses'});
 
+feePlanTypeModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feePlanType' });
+feePlanModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_plan_id', as: 'feePlanType' });
+
+feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+
+feePlanSemesterModel.belongsTo(feePlanModel, { foreignKey: 'fee_plan_id', as: 'feePlanSemester' });
+feePlanModel.hasMany(feePlanSemesterModel, { foreignKey: 'fee_plan_id', as: 'feePlanSemester' });
+
+feePlanSemesterModel.belongsTo(semesterModel, { foreignKey: 'semester_id', as: 'Semester' });
+semesterModel.hasMany(feePlanSemesterModel, { foreignKey: 'semester_id', as: 'Semester' });
+
+feeInvoiceDetailRecordModel.belongsTo(feeInvoiceModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
+feeInvoiceModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
+
+feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
+feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
+
+feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'feeInvoiceId',sourceKey: 'feeInvoiceId',as: 'invoiceDetails'});
+feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'feeInvoiceId', targetKey: 'feeInvoiceId', as: 'feeInvoices' });
+
 export {
     settingModel,
     universityModel,
@@ -740,5 +771,9 @@ export {
     sessionCouseMappingModel,
     poModel,
     coModel,
-    coWeightageModel
+    coWeightageModel,
+    feePlanModel,
+    feePlanTypeModel,
+    feePlanSemesterModel,
+    feeInvoiceDetailRecordModel,
 };
