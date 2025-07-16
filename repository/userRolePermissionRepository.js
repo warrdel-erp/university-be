@@ -445,7 +445,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                         },
                         {
                             model:model.timeTableMappingModel,
-                            as:'timeTableMapping',
+                            as:'timeTableMappings',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                             include:[
                                 {

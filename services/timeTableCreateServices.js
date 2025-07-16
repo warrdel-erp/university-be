@@ -133,9 +133,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 };
 
-export async function gettimeTableMappingDetail(universityId){
-    return await timeTableCreateRepository.getTimeTableMappingDetail(universityId)
+export async function getTimeTableMappingDetail(universityId){
+    const result =  await timeTableCreateRepository.getTimeTableMappingDetail(universityId)
+    console.log(`>>>>>>>>>result`,JSON.stringify(result));
+    return result
 };
+// getTimeTableMappingDetail()
 
 export async function getSingletimeTableMappingDetail(courseId,universityId){
     return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId,universityId)
