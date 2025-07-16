@@ -3,7 +3,6 @@ import * as attendanceService  from "../repository/attendanceRepository.js";
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
     
     try {
-        // Prepare an array to hold the attendance records to be saved
         const attendanceRecords = attendanceData.attendance.map(attendance => ({
             ...attendance,
             classSectionsId: attendanceData.classSectionsId,
@@ -13,7 +12,6 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
             updatedBy,
         }));
 
-        // Call the service to add all attendance records
         const addedAttendance = await attendanceService.addAttendance(attendanceRecords);
         return addedAttendance;
     } catch (error) {

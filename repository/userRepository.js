@@ -27,7 +27,7 @@ export async function adminRegisterStudentAndEmployee(data,transaction) {
 	return result
 }
 
-export async function getAdminRegisterStudent(universityId) {
+export async function getAdminRegisterStudent(universityId,instituteId,role) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -80,7 +80,17 @@ export async function getAdminRegisterStudent(universityId) {
     }
 }
 
-export async function getAdminRegisterEmployee(universityId) {
+export async function getAdminRegisterEmployee(universityId,instituteId,role) {
+    const whereClause = {
+        ...(universityId && { universityId }),
+        ...(role === 'Head' && { institute_id: instituteId }),
+        role: {
+            [Op.ne]: 'Student'
+        }
+    };
+    const whereClauseEmployee = {
+        ...(role === 'Head' && { institute_id: instituteId }),
+    };
     try {
         const users = await model.userStudentEmployeeModel.findAll({
             where: {
@@ -94,18 +104,20 @@ export async function getAdminRegisterEmployee(universityId) {
                     model: model.userModel,
                     as: 'userDetails',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: {
-                        universityId,
-                        role: {
-                          [Op.ne]: 'Student'                        
-                        }
-                      }                    
+                    where :whereClause,
+                    // where: {
+                    //     // universityId,
+                    //     role: {
+                    //       [Op.ne]: 'Student'                        
+                    //     }
+                    //   }                    
                 },
                 {
                     model: model.employeeModel,
                     as: 'employeeDetails',
                     required: true,
                     attributes: ['employee_id','employeeName'],
+                    where:whereClauseEmployee,
                     include: [
                         {
                             model: model.roleModel,

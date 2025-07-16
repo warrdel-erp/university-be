@@ -19,7 +19,7 @@ export async function getAttendanceDetails(universityId,acedmicYearId,role,insti
         ...(role === 'Head' && { instituteId })
     }
     try {
-        const bookDetails = await model.attendanceModel.findAll({
+        const attendanceDetails = await model.attendanceModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             include: [
                 {
@@ -42,7 +42,7 @@ export async function getAttendanceDetails(universityId,acedmicYearId,role,insti
             ]
         });
 
-        return bookDetails;
+        return attendanceDetails;
     } catch (error) {
         console.error('Error fetching attendance details:', error);
         throw error;

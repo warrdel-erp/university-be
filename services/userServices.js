@@ -6,6 +6,7 @@ var salt = bcrypt.genSaltSync(10);
 import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
+import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 
 //register
 
@@ -25,6 +26,16 @@ export async function register(info) {
 
   return await registerRepository.register(data);
 }
+
+export async function getEmployeeRolePermissionUserId(userId) {
+    try {
+        const result = await getEmployeeRolePermissionByUserId(userId);
+        return result;
+    } catch (error) {
+        console.error('Error in getEmployeeRolePermissionUserId:', error);
+        throw error;
+    }
+};
 
 export async function adminRegisterStudentAndEmployee(info) {
   const transaction = await sequelize.transaction();
@@ -140,11 +151,11 @@ export async function dataSaveUerRolePermission(userId, roleId, permissionIds,tr
 }
 
 
-export async function getAdminRegisterStudentAndEmployee(universityId) {
+export async function getAdminRegisterStudentAndEmployee(universityId,instituteId,role) {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(universityId),
-      registerRepository.getAdminRegisterEmployee(universityId),
+      registerRepository.getAdminRegisterStudent(universityId,instituteId,role),
+      registerRepository.getAdminRegisterEmployee(universityId,instituteId,role),
     ]);
 
     return { students, employees };
