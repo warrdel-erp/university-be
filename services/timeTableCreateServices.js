@@ -3,6 +3,7 @@ import { getSingleTimeTableById } from '../repository/timeTableRepository.js';
 import { getTeacherDetailsByTeacherSubjectId } from '../repository/teacherSubjectMappingRepository.js';
 import { getSingleFaculityLoadDetails, updateFaculityLoad,updateFaculityLoadByEmployeeId } from '../repository/faculityLoadRepository.js';
 import sequelize from '../database/sequelizeConfig.js'; 
+import { getHolidayStartEndDate } from '../repository/holidayRepository.js';
 
 export async function addtimeTableCreate(data, createdBy, updatedBy) {    
     const transaction = await sequelize.transaction();
@@ -19,8 +20,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
         await transaction.rollback();
         throw error; 
     }
-}
-
+};
 
 export async function gettimeTableCreateDetails(universityId){
     return await timeTableCreateRepository.getTimeTableCreateDetails(universityId)
@@ -111,34 +111,119 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
             transaction
         );
 
-        // Set audit info
         data.createdBy = createdBy;
         data.updatedBy = updatedBy;
 
-        // Add new timetable entry
         const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
 
-        // Commit transaction
         await transaction.commit();
         return result;
 
     } catch (error) {
         await transaction.rollback();
 
-        // Log full error for debugging
         console.error(" Error in addtimeTableMapping:", error);
 
-        // Throw a custom or original error
         throw new Error(`Failed to add timetable mapping: ${error.message}`);
     }
 };
 
-export async function getTimeTableMappingDetail(universityId){
-    const result =  await timeTableCreateRepository.getTimeTableMappingDetail(universityId)
-    console.log(`>>>>>>>>>result`,JSON.stringify(result));
-    return result
+
+export async function getTimeTableMappingDetail(universityId) {
+  const result = await timeTableCreateRepository.getTimeTableMappingDetail(universityId);
+
+  if (!Array.isArray(result) || result.length === 0) {
+    return [];
+  }
+
+  // Parse "YYYY-MM-DD" string to Date object at midnight
+  function parseISODate(dateStr) {
+    if (typeof dateStr !== 'string') return null;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts.map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  // Get array of all dates between startDate and endDate inclusive
+  function getDatesBetween(startDate, endDate) {
+    const dates = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dates;
+  }
+
+  function getWeekdayName(date) {
+    return date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  }
+
+  for (const item of result) {
+    const timeTableCreate = item?.timeTablecreate;
+    const classSectionsId = timeTableCreate?.classSectionsId;
+    const startingDateStr = timeTableCreate?.startingDate;
+    const endingDateStr = timeTableCreate?.endingDate;
+
+    if (!classSectionsId || !startingDateStr || !endingDateStr) {
+      item.totalClasses = 0;
+      continue;
+    }
+
+    const startingDate = parseISODate(startingDateStr);
+    const endingDate = parseISODate(endingDateStr);
+
+    if (!startingDate || !endingDate || startingDate > endingDate) {
+      item.totalClasses = 0;
+      continue;
+    }
+
+    const allDates = getDatesBetween(startingDate, endingDate);
+
+    const weekOffDaysSet = new Set();
+    const timeTableNameList = timeTableCreate?.timeTableCreateName?.timeTableName || [];
+    timeTableNameList.forEach(entry => {
+      const weekOff = entry?.weekOff || [];
+      weekOff.forEach(day => {
+        if (typeof day === 'string') {
+          weekOffDaysSet.add(day.toLowerCase());
+        }
+      });
+    });
+
+    const workingDays = allDates.filter(date => !weekOffDaysSet.has(getWeekdayName(date)));
+
+    let holidays = [];
+    try {
+      holidays = await getHolidayStartEndDate(startingDateStr, endingDateStr);
+    } catch (e) {
+      console.error('Failed to get holidays:', e);
+      holidays = [];
+    }
+
+    const holidayDatesSet = new Set();
+    if (Array.isArray(holidays)) {
+      holidays.forEach(h => {
+
+        let holidayDate = null;
+        if (h?.date instanceof Date) {
+          holidayDate = new Date(h.date.getFullYear(), h.date.getMonth(), h.date.getDate());
+        } else if (typeof h?.date === 'string') {
+          holidayDate = parseISODate(h.date);
+        }
+        if (holidayDate) {
+          holidayDatesSet.add(holidayDate.getTime());
+        }
+      });
+    }
+    const finalClassDays = workingDays.filter(date => !holidayDatesSet.has(date.getTime()));
+    item.totalClasses = finalClassDays.length;
+  }
+console.log(`>>>result>>>>`,(result))
+  return result;
 };
-// getTimeTableMappingDetail()
 
 export async function getSingletimeTableMappingDetail(courseId,universityId){
     return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId,universityId)
