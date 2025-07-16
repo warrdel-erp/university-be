@@ -387,6 +387,21 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                             model: model.roleModel,
                             as: 'employeeRole',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
+                        },
+                        {
+                            model: model.instituteModel,
+                            as: 'employeeInstitute',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
+                        },
+                        {
+                            model:model.teacherSubjectMappingModel,
+                            as:'teacherEmployeeData',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
+                        },
+                        {
+                            model:model.teacherSectionMappingModel,
+                            as:'employeeData',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
                         }
                     ]
                 },
@@ -417,10 +432,12 @@ export async function getEmployeeRolePermissionByUserId(userId) {
             ],
             where: { userId },
         });
-
+        // console.log(`>>>>>>UserRolePermission`,JSON.stringify(UserRolePermission));
+        
         return UserRolePermission;
     } catch (error) {
         console.error('Error fetching Employee Role Permission details:', error);
         throw error;
     }
 };
+// getEmployeeRolePermissionByUserId(15)
