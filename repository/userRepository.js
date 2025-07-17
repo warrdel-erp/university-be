@@ -38,14 +38,12 @@ export async function findEmailByEmail(email) {
     result.dataValues.instituteName = institute?.dataValues?.instituteName || null;
 
     return result;
-}
-
-// findEmailByEmail('johndoe3@example.com')
+};
 
 export async function adminRegisterStudentAndEmployee(data,transaction) {  
 	const result = await model.userModel.create(data,{transaction})
 	return result
-}
+};
 
 export async function getAdminRegisterStudent(universityId,instituteId,role) {
     try {
@@ -98,7 +96,7 @@ export async function getAdminRegisterStudent(universityId,instituteId,role) {
         console.error('Error fetching adimn Register student details:', error);
         throw error;
     }
-}
+};
 
 export async function getAdminRegisterEmployee(universityId,instituteId,role) {
     const whereClause = {
@@ -174,14 +172,12 @@ export async function changePassword(email,data) {
         console.error(`Error updating self password or login ${email}:`, error);
         throw error; 
     }
-}
-
+};
 
 export async function saveToUserRolePermission(data,transaction) { 
 	const result = await model.userRolePermissionModel.bulkCreate(data,{transaction})
 	return result
-}
-
+};
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
     try {
