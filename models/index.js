@@ -465,8 +465,8 @@ classSectionModel.hasMany(attendanceModel, { foreignKey: 'class_sections_id', as
 attendanceModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentAttendance' });
 studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'studentAttendance' });
 
-// attendanceModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
-// timeTableCreateModel.hasMany(attendanceModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
+attendanceModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
+timeTableMappingModel.hasMany(attendanceModel, { foreignKey: 'timeTableMappingId', as: 'attendances' });
 
 //fee (fee Group)
 feeGroupModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeGroup' });
