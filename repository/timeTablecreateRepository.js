@@ -149,7 +149,14 @@ export async function addtimeTableMapping(data,transaction) {
     }
 };
 
-export async function getTimeTableMappingDetail(universityId) {
+export async function getTimeTableMappingDetail(universityId,instituteId,role) {
+        const whereClause = {
+            ...(universityId && { universityId }),
+            ...(role === 'Head' && { instituteId }),
+        };
+        const whereClauseData = {
+            ...(role === 'Head' && { instituteId }),
+        };
     try {
         const result = await model.timeTableMappingModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -162,17 +169,20 @@ export async function getTimeTableMappingDetail(universityId) {
                         {
                             model:model.employeeModel,
                             as: 'teacherEmployeeData',
-                            attributes: ["employeeName","employeeCode","pickColor"]
+                            attributes: ["employeeName","employeeCode","pickColor"],
+                            where:whereClauseData
                         },
                         {
                             model:model.classSubjectMapperModel,
                             as: 'employeeSubject',
                             attributes: ["classSubjectMapperId"],
+                            where:whereClauseData,
                             include:[
                                 {
                                     model:model.subjectModel,
                                     as: 'subjects',
                                     attributes: ["subjectName","subjectCode"],
+                                    where:whereClause
                                 }
                             ]
                         }
@@ -182,6 +192,7 @@ export async function getTimeTableMappingDetail(universityId) {
                     model:model.timeTableCreateModel,
                     as: 'timeTablecreate',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
+                    where:whereClauseData,
                     include:[
                         {
                             model:model.timeTableNameModel,
@@ -199,6 +210,7 @@ export async function getTimeTableMappingDetail(universityId) {
                             model:model.courseModel,
                             as: 'timeTableCourse',
                             attributes: ["courseName"],
+                            where:whereClause
                         },
                         {
                             model:model.campusModel,
@@ -209,6 +221,7 @@ export async function getTimeTableMappingDetail(universityId) {
                             model:model.classSectionModel,
                             as: 'timeTableClassSection',
                             attributes: ["section","class","section_id","class_sections_id"],
+                            where:whereClauseData
                         },
                         {
                             model:model.acedmicYearModel,

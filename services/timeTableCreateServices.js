@@ -128,15 +128,14 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 };
 
+export async function getTimeTableMappingDetail(universityId,instituteId,role) {
+  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId,instituteId,role);
 
-export async function getTimeTableMappingDetail(universityId) {
-  const result = await timeTableCreateRepository.getTimeTableMappingDetail(universityId);
-
-  if (!Array.isArray(result) || result.length === 0) {
+  if (!Array.isArray(rawResult) || rawResult.length === 0) {
     return [];
   }
 
-  // Parse "YYYY-MM-DD" string to Date object at midnight
+  // Helper: Parse "YYYY-MM-DD" to JS Date object
   function parseISODate(dateStr) {
     if (typeof dateStr !== 'string') return null;
     const parts = dateStr.split('-');
@@ -146,7 +145,7 @@ export async function getTimeTableMappingDetail(universityId) {
     return new Date(year, month - 1, day);
   }
 
-  // Get array of all dates between startDate and endDate inclusive
+  // Helper: Get array of all dates between two dates
   function getDatesBetween(startDate, endDate) {
     const dates = [];
     let currentDate = new Date(startDate);
@@ -157,18 +156,24 @@ export async function getTimeTableMappingDetail(universityId) {
     return dates;
   }
 
+  // Helper: Get weekday name from date
   function getWeekdayName(date) {
     return date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   }
 
-  for (const item of result) {
+  const result = [];
+
+  for (const rawItem of rawResult) {
+    const item = rawItem.toJSON ? rawItem.toJSON() : rawItem; // Convert to plain object
     const timeTableCreate = item?.timeTablecreate;
+
     const classSectionsId = timeTableCreate?.classSectionsId;
     const startingDateStr = timeTableCreate?.startingDate;
     const endingDateStr = timeTableCreate?.endingDate;
 
     if (!classSectionsId || !startingDateStr || !endingDateStr) {
       item.totalClasses = 0;
+      result.push(item);
       continue;
     }
 
@@ -177,11 +182,13 @@ export async function getTimeTableMappingDetail(universityId) {
 
     if (!startingDate || !endingDate || startingDate > endingDate) {
       item.totalClasses = 0;
+      result.push(item);
       continue;
     }
 
     const allDates = getDatesBetween(startingDate, endingDate);
 
+    // Week-off days from timetable
     const weekOffDaysSet = new Set();
     const timeTableNameList = timeTableCreate?.timeTableCreateName?.timeTableName || [];
     timeTableNameList.forEach(entry => {
@@ -195,6 +202,7 @@ export async function getTimeTableMappingDetail(universityId) {
 
     const workingDays = allDates.filter(date => !weekOffDaysSet.has(getWeekdayName(date)));
 
+    // Holidays
     let holidays = [];
     try {
       holidays = await getHolidayStartEndDate(startingDateStr, endingDateStr);
@@ -206,7 +214,6 @@ export async function getTimeTableMappingDetail(universityId) {
     const holidayDatesSet = new Set();
     if (Array.isArray(holidays)) {
       holidays.forEach(h => {
-
         let holidayDate = null;
         if (h?.date instanceof Date) {
           holidayDate = new Date(h.date.getFullYear(), h.date.getMonth(), h.date.getDate());
@@ -218,12 +225,112 @@ export async function getTimeTableMappingDetail(universityId) {
         }
       });
     }
+
     const finalClassDays = workingDays.filter(date => !holidayDatesSet.has(date.getTime()));
     item.totalClasses = finalClassDays.length;
+
+    result.push(item); 
   }
-console.log(`>>>result>>>>`,(result))
+
   return result;
 };
+
+
+// export async function getTimeTableMappingDetail(universityId) {
+//   const result = await timeTableCreateRepository.getTimeTableMappingDetail(universityId);
+
+//   if (!Array.isArray(result) || result.length === 0) {
+//     return [];
+//   }
+
+//   // Parse "YYYY-MM-DD" string to Date object at midnight
+//   function parseISODate(dateStr) {
+//     if (typeof dateStr !== 'string') return null;
+//     const parts = dateStr.split('-');
+//     if (parts.length !== 3) return null;
+//     const [year, month, day] = parts.map(Number);
+//     if (!year || !month || !day) return null;
+//     return new Date(year, month - 1, day);
+//   }
+
+//   // Get array of all dates between startDate and endDate inclusive
+//   function getDatesBetween(startDate, endDate) {
+//     const dates = [];
+//     let currentDate = new Date(startDate);
+//     while (currentDate <= endDate) {
+//       dates.push(new Date(currentDate));
+//       currentDate.setDate(currentDate.getDate() + 1);
+//     }
+//     return dates;
+//   }
+
+//   function getWeekdayName(date) {
+//     return date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+//   }
+
+//   for (const item of result) {
+//     const timeTableCreate = item?.timeTablecreate;
+//     const classSectionsId = timeTableCreate?.classSectionsId;
+//     const startingDateStr = timeTableCreate?.startingDate;
+//     const endingDateStr = timeTableCreate?.endingDate;
+
+//     if (!classSectionsId || !startingDateStr || !endingDateStr) {
+//       item.totalClasses = 0;
+//       continue;
+//     }
+
+//     const startingDate = parseISODate(startingDateStr);
+//     const endingDate = parseISODate(endingDateStr);
+
+//     if (!startingDate || !endingDate || startingDate > endingDate) {
+//       item.totalClasses = 0;
+//       continue;
+//     }
+
+//     const allDates = getDatesBetween(startingDate, endingDate);
+
+//     const weekOffDaysSet = new Set();
+//     const timeTableNameList = timeTableCreate?.timeTableCreateName?.timeTableName || [];
+//     timeTableNameList.forEach(entry => {
+//       const weekOff = entry?.weekOff || [];
+//       weekOff.forEach(day => {
+//         if (typeof day === 'string') {
+//           weekOffDaysSet.add(day.toLowerCase());
+//         }
+//       });
+//     });
+
+//     const workingDays = allDates.filter(date => !weekOffDaysSet.has(getWeekdayName(date)));
+
+//     let holidays = [];
+//     try {
+//       holidays = await getHolidayStartEndDate(startingDateStr, endingDateStr);
+//     } catch (e) {
+//       console.error('Failed to get holidays:', e);
+//       holidays = [];
+//     }
+
+//     const holidayDatesSet = new Set();
+//     if (Array.isArray(holidays)) {
+//       holidays.forEach(h => {
+
+//         let holidayDate = null;
+//         if (h?.date instanceof Date) {
+//           holidayDate = new Date(h.date.getFullYear(), h.date.getMonth(), h.date.getDate());
+//         } else if (typeof h?.date === 'string') {
+//           holidayDate = parseISODate(h.date);
+//         }
+//         if (holidayDate) {
+//           holidayDatesSet.add(holidayDate.getTime());
+//         }
+//       });
+//     }
+//     const finalClassDays = workingDays.filter(date => !holidayDatesSet.has(date.getTime()));
+//     item.totalClasses = finalClassDays.length;
+//   }
+// console.log(`>>>result>>>>`,JSON.stringify(result))
+//   return result;
+// };
 
 export async function getSingletimeTableMappingDetail(courseId,universityId){
     return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId,universityId)
