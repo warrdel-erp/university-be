@@ -9,18 +9,38 @@ export async function register(data) {
 export async function adminUser(data,transaction) { 
 	const result = await model.userStudentEmployeeModel.create(data,{transaction})
 	return result
-}
+};
 
 export async function findEmailByEmail(email) {
-	const result = await model.userModel.findOne({
-		where: {
-			email: {
-				[Op.eq]: email
-			}
-		}
-	})
-	return result;
-};
+    const result = await model.userModel.findOne({
+        where: {
+            email: {
+                [Op.eq]: email
+            }
+        }
+    });
+
+    if (!result) {
+        console.log('User not found');
+        return null;
+    }
+
+    const instituteId = result.dataValues.instituteId;
+
+    const institute = await model.instituteModel.findOne({
+        where: {
+            instituteId: {
+                [Op.eq]: instituteId
+            }
+        }
+    });
+
+    result.dataValues.instituteName = institute?.dataValues?.instituteName || null;
+
+    return result;
+}
+
+// findEmailByEmail('johndoe3@example.com')
 
 export async function adminRegisterStudentAndEmployee(data,transaction) {  
 	const result = await model.userModel.create(data,{transaction})
