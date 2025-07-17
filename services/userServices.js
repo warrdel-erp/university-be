@@ -275,7 +275,7 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
   try {
 
     const {personalEmail,mobileNumber} = employeePersonalDetail
-    const {universityId,roleId,employeeName,employeeId} = employeeRegisterData
+    const {universityId,roleId,employeeName,employeeId,instituteId} = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
     const roleName = await getSingleRoleDetails (roleId);
@@ -290,6 +290,7 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
       role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
+      instituteId:instituteId,
     };
     
     // Register the student and employee
