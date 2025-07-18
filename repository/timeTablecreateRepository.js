@@ -169,7 +169,7 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
                         {
                             model:model.employeeModel,
                             as: 'teacherEmployeeData',
-                            attributes: ["employeeName","employeeCode","pickColor"],
+                            attributes: ["employeeName","employeeCode","pickColor","employeeId"],
                             where:whereClauseData
                         },
                         {
@@ -239,6 +239,16 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
                     model:model.electiveSubjectModel,
                     as: 'timeTableElective',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                },
+                {
+                    model:model.subjectModel,
+                    as: 'timeTableSubject',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                },
+                {
+                    model:model.employeeModel,
+                    as: 'employeeDetails',
+                    attributes: { exclude: ["employeeName","employeeCode","pickColor","employeeId"]}
                 }
             ]
         });
