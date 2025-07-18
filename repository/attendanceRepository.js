@@ -68,7 +68,21 @@ export async function getAttendanceDetails(universityId,acedmicYearId,role,insti
                         {
                             model:model.teacherSubjectMappingModel,
                             as:'timeTableTeacherSubject',
-                            attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt","employee_id","class_subject_mapper_id"]}
+                            attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt","employee_id","class_subject_mapper_id"]},
+                            include:[
+                                {
+                                    model:model.classSubjectMapperModel,
+                                    as:'employeeSubject',
+                                    attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt","semester_id","subject_id"]},
+                                    include:[
+                                        {
+                                            model:model.subjectModel,
+                                            as:'subjects',
+                                            attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt"]}
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     ]
                 }
