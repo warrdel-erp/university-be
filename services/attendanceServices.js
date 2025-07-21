@@ -24,63 +24,62 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
 //     return await attendanceService.getAttendanceDetails(universityId,acedmicYearId,role,instituteId);
 // }
 
-export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
-  const result = await attendanceService.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
+// export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
+//   const result = await attendanceService.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
 
-  const groupedData = {};
+//   const groupedData = {};
 
-  for (const record of result) {
-    const {
-      timeTableMapping,
-      classAttendance,
-      studentAttendance,
-      studentId,
-      attendenceStatus,
-      date,
-      description,
-      notes
-    } = record;
+//   for (const record of result) {
+//     const {
+//       timeTableMapping,
+//       classAttendance,
+//       studentAttendance,
+//       studentId,
+//       attendenceStatus,
+//       date,
+//       description,
+//       notes
+//     } = record;
 
-    const subjectId = timeTableMapping.subjectId;
-    const employeeId = timeTableMapping?.timeTableTeacherSubject?.employeeId;
-    const subjectName = timeTableMapping?.timeTableSubject?.subjectName;
-    const subjectCode = timeTableMapping?.timeTableSubject?.subjectCode;
-    const classSectionsId = classAttendance.classSectionsId;
-    const sectionName = classAttendance.section;
+//     const subjectId = timeTableMapping.subjectId;
+//     const employeeId = timeTableMapping?.timeTableTeacherSubject?.employeeId;
+//     const subjectName = timeTableMapping?.timeTableSubject?.subjectName;
+//     const subjectCode = timeTableMapping?.timeTableSubject?.subjectCode;
+//     const classSectionsId = classAttendance.classSectionsId;
+//     const sectionName = classAttendance.section;
 
-    const groupKey = `${subjectId}_${employeeId}_${classSectionsId}`;
+//     const groupKey = `${subjectId}_${employeeId}_${classSectionsId}`;
 
-    if (!groupedData[groupKey]) {
-      groupedData[groupKey] = {
-        subjectId,
-        subjectName,
-        subjectCode,
-        employeeId,
-        classSectionId: classSectionsId,
-        sectionName,
-        students: []
-      };
-    }
+//     if (!groupedData[groupKey]) {
+//       groupedData[groupKey] = {
+//         subjectId,
+//         subjectName,
+//         subjectCode,
+//         employeeId,
+//         classSectionId: classSectionsId,
+//         sectionName,
+//         students: []
+//       };
+//     }
 
-    groupedData[groupKey].students.push({
-      studentId,
-      scholarNumber: studentAttendance.scholarNumber,
-      fullName: [studentAttendance.firstName, studentAttendance.middleName, studentAttendance.lastName]
-        .filter(Boolean)
-        .join(" "),
-      attendanceStatus: attendenceStatus,
-      date,
-      description,
-      notes
-    });
-  }
+//     groupedData[groupKey].students.push({
+//       studentId,
+//       scholarNumber: studentAttendance.scholarNumber,
+//       fullName: [studentAttendance.firstName, studentAttendance.middleName, studentAttendance.lastName]
+//         .filter(Boolean)
+//         .join(" "),
+//       attendanceStatus: attendenceStatus,
+//       date,
+//       description,
+//       notes
+//     });
+//   }
 
-  return {
-    original: result,
-    grouped: Object.values(groupedData)
-  };
-}
-
+//   return {
+//     original: result,
+//     grouped: Object.values(groupedData)
+//   };
+// }
 
 // export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
 //   const result = await attendanceService.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
@@ -135,6 +134,68 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
 
 //   return Object.values(groupedData);
 // };
+
+export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
+  const result = await attendanceService.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
+  const groupedData = {};
+  for (const record of result) {
+    const {
+      attendanceId,
+      timeTableMapping,
+      classAttendance,
+      studentAttendance,
+      studentId,
+      attentenceStatus,
+      date,
+      description,
+      notes
+    } = record;
+    const recordDate = new Date(date).toISOString().split('T')[0];
+    const subjectId = timeTableMapping?.isSameTeacher
+      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId
+      : timeTableMapping?.subjectId;
+    const subjectName = timeTableMapping?.isSameTeacher
+      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName
+      : timeTableMapping?.timeTableSubject?.subjectName;
+    const subjectCode = timeTableMapping?.isSameTeacher
+      ? timeTableMapping?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode
+      : timeTableMapping?.timeTableSubject?.subjectCode;
+    const employeeId = timeTableMapping?.isSameTeacher
+      ? timeTableMapping?.timeTableTeacherSubject?.employeeId
+      : timeTableMapping.employeeId;
+    const classSectionsId = classAttendance?.classSectionsId;
+    const sectionName = classAttendance?.section;
+    const groupKey = `${subjectId}_${employeeId}_${classSectionsId}_${recordDate}`;
+    if (!groupedData[groupKey]) {
+      groupedData[groupKey] = {
+        subjectId,
+        subjectName,
+        subjectCode,
+        employeeId,
+        classSectionId: classSectionsId,
+        sectionName,
+        date: recordDate,
+        students: []
+      };
+    }
+    groupedData[groupKey].students.push({
+      studentId,
+      attendanceId,
+      scholarNumber: studentAttendance?.scholarNumber,
+      fullName: [studentAttendance?.firstName, studentAttendance?.middleName, studentAttendance?.lastName]
+        .filter(Boolean)
+        .join(" "),
+      attentenceStatus,
+      date: recordDate,
+      description,
+      notes
+    });
+  }
+  return {
+    original: result,
+    grouped: Object.values(groupedData)
+  };
+}
 
 export async function updateAttendance(attendanceId, record, updatedBy) {    
     try {
