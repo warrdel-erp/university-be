@@ -70,11 +70,12 @@ export async function getAllAffiliatedUniversity(universityId,instituteId,headIn
     }
 };
 
-export async function getAllCourse(universityId,acedmicYearId,instituteId,role,mainInstituteId) {
+export async function getAllCourse(universityId,acedmicYearId,instituteId,role,mainInstituteId,campusId) {
+    console.log('universityId,acedmicYearId,instituteId,role,mainInstituteId,campusId',universityId,acedmicYearId,instituteId,role,mainInstituteId,campusId)
     try {
         const whereClause = {
             university_id: universityId,
-            ...(mainInstituteId && { institute_id:mainInstituteId }),
+            // ...(mainInstituteId && { institute_id:mainInstituteId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
@@ -96,6 +97,24 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role,m
                             model:model.sessionModel,
                             as:'session',
                             attributes: ["sessionName","startingDate","endingDate","classTillDate"] ,
+                        }
+                    ]
+                },
+                {
+                    model:model.instituteModel,
+                    as:'instituted',
+                    attributes:[],
+                    // where: {
+                    //     ...(instituteId && { institute_id: instituteId }),
+                    // },
+                    include:[
+                        {
+                            model:model.campusModel,
+                            as:'campues',
+                            attributes:[],
+                             where: {
+                                ...(campusId && { campusId }),
+                            }
                         }
                     ]
                 }
