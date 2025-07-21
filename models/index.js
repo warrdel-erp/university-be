@@ -152,6 +152,9 @@ acedmicYearModel.hasMany(classSectionModel, { foreignKey: 'acedmic_year_id', as:
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_university_id', as: 'affiliated' });
 
+courseModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'instituted' });
+instituteModel.hasMany(courseModel, { foreignKey: 'institute_id', as: 'instituted' });
+
 courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
 acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
 
