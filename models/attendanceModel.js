@@ -3,7 +3,9 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
-import timeTableCreate from "./timeTableCreateModel.js";
+import timeTableMapping from "./timeTableMappingModel.js";
+import institute from "./instituteModel.js";
+import university from "./universityModel.js";
 
 export default sequelize.define(
     'attendance',
@@ -14,6 +16,24 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'attendance_id'
         },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
         studentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -21,6 +41,15 @@ export default sequelize.define(
             references: {
                 model: student,
                 key: 'student_id'
+            }
+        },
+        timeTableMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'time_table_mapping_id',
+            references: {
+                model: timeTableMapping,
+                key: 'time_table_mapping_id'
             }
         },
         classSectionsId: {

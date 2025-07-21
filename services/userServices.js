@@ -6,6 +6,7 @@ var salt = bcrypt.genSaltSync(10);
 import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
+import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 
 //register
 
@@ -25,6 +26,106 @@ export async function register(info) {
 
   return await registerRepository.register(data);
 }
+
+// export async function getEmployeeRolePermissionUserId(userId) {
+//     try {
+//         const result = await getEmployeeRolePermissionByUserId(userId);
+//         return result;
+//     } catch (error) {
+//         console.error('Error in getEmployeeRolePermissionUserId:', error);
+//         throw error;
+//     }
+// };
+
+export async function getEmployeeRolePermissionUserId(userId) {
+  try {
+    const result = await getEmployeeRolePermissionByUserId(userId);
+    return formatEmployeeDetailsDeep(result?.[0]?.employeeDetails);
+  } catch (error) {
+    console.error('Error in getEmployeeRolePermissionUserId:', error);
+    throw error;
+  }
+};
+const formatEmployeeDetailsDeep = (employee) => {
+  if (!employee) return null;
+  // Basic Employee Info
+  const employeeInfo = {
+    employeeId: employee.employeeId,
+    employeeCode: employee.employeeCode,
+    employeeName: employee.employeeName,
+    role: employee?.employeeRole?.role,
+    campusId: employee.campusId,
+    instituteId: employee.instituteId,
+    academicYearId: employee.acedmicYearId,
+    instituteName: employee?.employeeInstitute?.instituteName,
+  };
+  // Subjects Taught
+  const subjects = employee?.teacherEmployeeData?.map(item => {
+    const subj = item?.employeeSubject?.subjects;
+    const semester = item?.employeeSubject?.semestermapping;
+    return {
+      subjectId: subj?.subjectId,
+      subjectName: subj?.subjectName,
+      subjectCode: subj?.subjectCode,
+      subjectType: subj?.subjectType,
+      semesterName: semester?.name,
+      courseName: subj?.courseInfo?.courseName,
+      courseId: subj?.courseId,
+    };
+  }) || [];
+  // Courses (distinct course names from subjects)
+  const courses = Array.from(
+    new Map(
+      subjects
+        .filter(s => s.courseId && s.courseName)
+        .map(s => [s.courseId, { courseId: s.courseId, courseName: s.courseName }])
+    ).values()
+  );
+  // Sections
+  const sections = employee?.employeeData?.map(item => {
+    const section = item?.employeeSection;
+    return {
+      sectionId: section?.classSectionsId,
+      sectionName: section?.section,
+      className: section?.class,
+      semesterId: section?.semesterId,
+      courseId: section?.courseId,
+      studentCount: section?.studentSections?.length || 0,
+    };
+  }) || [];
+  // Students
+  const students = employee?.employeeData?.flatMap(item => {
+    return item?.employeeSection?.studentSections?.map(student => ({
+      studentId: student?.studentId,
+      name: `${student?.firstName} ${student?.middleName || ''} ${student?.lastName || ''}`.trim(),
+      scholarNumber: student?.scholarNumber,
+      email: student?.email,
+      mobileNumber: student?.mobileNumber,
+      status: student?.studentStatus,
+      sectionId: student?.classSectionsId,
+      semesterId: student?.semesterId,
+    })) || [];
+  }) || [];
+  // Time Table (Elective)
+  const timeTable = employee?.timeTableMappings?.map(tt => ({
+    day: tt.day,
+    period: tt.period,
+    periodName: tt?.timeTablecreation?.periodName,
+    startTime: tt?.timeTablecreation?.startTime,
+    endTime: tt?.timeTablecreation?.endTime,
+    room: tt?.classRoom?.roomNumber,
+    electiveSubjectName: tt?.timeTableElective?.electiveSubjectName,
+    electiveSubjectCode: tt?.timeTableElective?.electiveSubjectCode,
+  })) || [];
+  return {
+    employeeInfo,
+    courses,
+    subjects,
+    sections,
+    timeTable,
+    students
+  };
+};
 
 export async function adminRegisterStudentAndEmployee(info) {
   const transaction = await sequelize.transaction();
@@ -140,11 +241,11 @@ export async function dataSaveUerRolePermission(userId, roleId, permissionIds,tr
 }
 
 
-export async function getAdminRegisterStudentAndEmployee(universityId) {
+export async function getAdminRegisterStudentAndEmployee(universityId,instituteId,role) {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(universityId),
-      registerRepository.getAdminRegisterEmployee(universityId),
+      registerRepository.getAdminRegisterStudent(universityId,instituteId,role),
+      registerRepository.getAdminRegisterEmployee(universityId,instituteId,role),
     ]);
 
     return { students, employees };
@@ -264,7 +365,7 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
   try {
 
     const {personalEmail,mobileNumber} = employeePersonalDetail
-    const {universityId,roleId,employeeName,employeeId} = employeeRegisterData
+    const {universityId,roleId,employeeName,employeeId,instituteId} = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
     const roleName = await getSingleRoleDetails (roleId);
@@ -279,6 +380,7 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
       role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
+      instituteId:instituteId,
     };
     
     // Register the student and employee

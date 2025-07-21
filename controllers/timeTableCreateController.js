@@ -49,10 +49,12 @@ export const addtimeTableMapping = async (req,res) => {
     }
 };
 
-export const gettimeTableMappingDetail = async (req,res) => {
+export const getTimeTableMappingDetail = async (req,res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
     try {
-        const result = await timeTableCreateServices.gettimeTableMappingDetail(universityId);
+        const result = await timeTableCreateServices.getTimeTableMappingDetail(universityId,instituteId,role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table create:", error);

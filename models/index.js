@@ -420,11 +420,17 @@ teacherSubjectMappingModel.hasMany(timeTableMappingModel, { foreignKey: 'teacher
 timeTableMappingModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
 timeTableCreateModel.hasMany(timeTableMappingModel, { foreignKey: 'time_table_create_id', as: 'timeTablecreate' });
 
+timeTableMappingModel.belongsTo(timeTableCreationModel, { foreignKey: 'time_table_creation_id', as: 'timeTablecreation' });
+timeTableCreationModel.hasMany(timeTableMappingModel, { foreignKey: 'time_table_creation_id', as: 'timeTablecreation' });
+
 timeTableMappingModel.belongsTo(classRoomModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
 classRoomModel.hasMany(timeTableMappingModel, { foreignKey: 'class_room_section_id', as: 'classRoom' });
 
 timeTableMappingModel.belongsTo(electiveSubjectModel, { foreignKey: 'elective_subject_id', as: 'timeTableElective' });
 electiveSubjectModel.hasMany(timeTableMappingModel, { foreignKey: 'elective_subject_id', as: 'timeTableElective' });
+
+timeTableMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'timeTableSubject' });
+subjectModel.hasMany(timeTableMappingModel, { foreignKey: 'subject_id', as: 'timeTableSubject' });
 
 // library member
 libraryMemberModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userLibraryMember' });
@@ -459,8 +465,8 @@ classSectionModel.hasMany(attendanceModel, { foreignKey: 'class_sections_id', as
 attendanceModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'studentAttendance' });
 studentModel.hasMany(attendanceModel, { foreignKey: 'student_id', as: 'studentAttendance' });
 
-// attendanceModel.belongsTo(timeTableCreateModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
-// timeTableCreateModel.hasMany(attendanceModel, { foreignKey: 'time_table_create_id', as: 'timeTableAttendance' });
+attendanceModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
+timeTableMappingModel.hasMany(attendanceModel, { foreignKey: 'timeTableMappingId', as: 'attendances' });
 
 //fee (fee Group)
 feeGroupModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'userFeeGroup' });
@@ -677,6 +683,9 @@ feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_in
 
 feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'feeInvoiceId',sourceKey: 'feeInvoiceId',as: 'invoiceDetails'});
 feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'feeInvoiceId', targetKey: 'feeInvoiceId', as: 'feeInvoices' });
+
+employeeModel.hasMany(timeTableMappingModel, { foreignKey: 'employeeId', as: 'timeTableMappings' });
+timeTableMappingModel.belongsTo(employeeModel, { foreignKey: 'employeeId', as: 'employeeDetails' });
 
 export {
     settingModel,

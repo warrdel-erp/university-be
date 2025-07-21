@@ -387,6 +387,98 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                             model: model.roleModel,
                             as: 'employeeRole',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
+                        },
+                        {
+                            model: model.instituteModel,
+                            as: 'employeeInstitute',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] }
+                        },
+                        {
+                            model: model.teacherSubjectMappingModel,
+                            as: 'teacherEmployeeData',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                            include: [
+                                {
+                                    model: model.classSubjectMapperModel,
+                                    as: 'employeeSubject',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                    include: [
+                                        {
+                                            model: model.semesterModel,
+                                            as: 'semestermapping',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        },
+                                        {
+                                            model: model.subjectModel,
+                                            as: 'subjects',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                            include:[
+                                                {
+                                                    model:model.courseModel,
+                                                    as:'courseInfo',
+                                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            model: model.teacherSectionMappingModel,
+                            as: 'employeeData',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                            include: [
+                                {
+                                    model: model.classSectionModel,
+                                    as: 'employeeSection',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                    include:[
+                                        {
+                                            model:model.studentModel,
+                                            as:'studentSections',
+                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            model:model.timeTableMappingModel,
+                            as:'timeTableMappings',
+                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
+                            include:[
+                                {
+                                    model:model.timeTableCreateModel,
+                                    as:'timeTablecreate',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                },
+                                {
+                                    model:model.classRoomModel,
+                                    as:'classRoom',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                },
+                                {
+                                    model:model.timeTableCreationModel,
+                                    as:'timeTablecreation',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                },
+                                {
+                                    model:model.electiveSubjectModel,
+                                    as:'timeTableElective',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                },
+                                {
+                                    model:model.electiveSubjectModel,
+                                    as:'timeTableElective',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                },
+                                {
+                                    model:model.subjectModel,
+                                    as:'timeTableSubject',
+                                    attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },  
+                                }
+                            ]
                         }
                     ]
                 },
@@ -417,6 +509,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
             ],
             where: { userId },
         });
+        console.log(`>>>>>>UserRolePermission`, JSON.stringify(UserRolePermission));
 
         return UserRolePermission;
     } catch (error) {
@@ -424,3 +517,4 @@ export async function getEmployeeRolePermissionByUserId(userId) {
         throw error;
     }
 };
+// getEmployeeRolePermissionByUserId(15)

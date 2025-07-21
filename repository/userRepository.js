@@ -9,25 +9,43 @@ export async function register(data) {
 export async function adminUser(data,transaction) { 
 	const result = await model.userStudentEmployeeModel.create(data,{transaction})
 	return result
-}
+};
 
 export async function findEmailByEmail(email) {
-	const result = await model.userModel.findOne({
-		where: {
-			email: {
-				[Op.eq]: email
-			}
-		}
-	})
-	return result;
+    const result = await model.userModel.findOne({
+        where: {
+            email: {
+                [Op.eq]: email
+            }
+        }
+    });
+
+    if (!result) {
+        console.log('User not found');
+        return null;
+    }
+
+    const instituteId = result.dataValues.instituteId;
+
+    const institute = await model.instituteModel.findOne({
+        where: {
+            instituteId: {
+                [Op.eq]: instituteId
+            }
+        }
+    });
+
+    result.dataValues.instituteName = institute?.dataValues?.instituteName || null;
+
+    return result;
 };
 
 export async function adminRegisterStudentAndEmployee(data,transaction) {  
 	const result = await model.userModel.create(data,{transaction})
 	return result
-}
+};
 
-export async function getAdminRegisterStudent(universityId) {
+export async function getAdminRegisterStudent(universityId,instituteId,role) {
     try {
         const user = await model.userStudentEmployeeModel.findAll({
 			where:{
@@ -78,9 +96,19 @@ export async function getAdminRegisterStudent(universityId) {
         console.error('Error fetching adimn Register student details:', error);
         throw error;
     }
-}
+};
 
-export async function getAdminRegisterEmployee(universityId) {
+export async function getAdminRegisterEmployee(universityId,instituteId,role) {
+    const whereClause = {
+        ...(universityId && { universityId }),
+        ...(role === 'Head' && { institute_id: instituteId }),
+        role: {
+            [Op.ne]: 'Student'
+        }
+    };
+    const whereClauseEmployee = {
+        ...(role === 'Head' && { institute_id: instituteId }),
+    };
     try {
         const users = await model.userStudentEmployeeModel.findAll({
             where: {
@@ -94,18 +122,20 @@ export async function getAdminRegisterEmployee(universityId) {
                     model: model.userModel,
                     as: 'userDetails',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: {
-                        universityId,
-                        role: {
-                          [Op.ne]: 'Student'                        
-                        }
-                      }                    
+                    where :whereClause,
+                    // where: {
+                    //     // universityId,
+                    //     role: {
+                    //       [Op.ne]: 'Student'                        
+                    //     }
+                    //   }                    
                 },
                 {
                     model: model.employeeModel,
                     as: 'employeeDetails',
                     required: true,
                     attributes: ['employee_id','employeeName'],
+                    where:whereClauseEmployee,
                     include: [
                         {
                             model: model.roleModel,
@@ -142,14 +172,12 @@ export async function changePassword(email,data) {
         console.error(`Error updating self password or login ${email}:`, error);
         throw error; 
     }
-}
-
+};
 
 export async function saveToUserRolePermission(data,transaction) { 
 	const result = await model.userRolePermissionModel.bulkCreate(data,{transaction})
 	return result
-}
-
+};
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
     try {

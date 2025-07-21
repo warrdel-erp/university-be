@@ -37,7 +37,25 @@ export async function getSingleHolidayDetails(holidayId) {
         console.error('Error fetching Holiday details:', error);
         throw error;
     }
-}
+};
+
+export async function getHolidayStartEndDate(startDate, endingDate) {
+    try {
+        const holidays = await model.holidayModel.findAll({
+            where: {
+                date: {
+                    [Op.between]: [startDate, endingDate]
+                }
+            },
+            attributes: ["holidayId", "date", "name", "event", "remark"]
+        });
+
+        return holidays;
+    } catch (error) {
+        console.error('Error fetching Holiday details:', error);
+        throw error;
+    }
+};
 
 export async function deleteHoliday(holidayId) {
     const deleted = await model.holidayModel.destroy({ where: { holidayId: holidayId } });

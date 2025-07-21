@@ -1,12 +1,12 @@
 import * as AttendanceCreation  from  "../services/attendanceServices.js";
 
 export async function addAttendance(req, res) {
-    const {classSectionsId,timeTableCreateId} = req.body
+    const {classSectionsId,timeTableMappingId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(timeTableCreateId && classSectionsId)){
-           return res.status(400).send('timeTableCreateId and classSectionsId is required')
+        if(!(timeTableMappingId && classSectionsId)){
+           return res.status(400).send('timeTableMappingId and classSectionsId is required')
         }
         const newAttendance = await AttendanceCreation.addAttendance(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Attendance Add Successfully" });
@@ -20,9 +20,9 @@ export async function getAttendanceDetails(req, res) {
     const instituteId = req.user.instituteId;
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
-    if(!acedmicYearId){
-        return res.status(400).send('acedmicYearId is required')
-    }
+    // if(!acedmicYearId){
+    //     return res.status(400).send('acedmicYearId is required')
+    // }
     try {
         const Attendance = await AttendanceCreation.getAttendanceDetails(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(Attendance);

@@ -64,7 +64,8 @@ export const login = async (req, res) => {
     userData = await userRepository.findEmailByEmail(email);
   }  
   const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId)
-  const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
+  const employeePermission = await userService.getEmployeeRolePermissionUserId(existingEmail.dataValues.userId)
+  // const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
  
    res.cookie("token", token);
    res.status(200).json({
@@ -103,8 +104,10 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
 
 export async function getAdminRegisterStudentAndEmployee(req, res) {
   const universityId = req.user.universityId;  
+  const instituteId = req.user.instituteId;
+    const role = req.user.role;
   try {
-      const user = await userService.getAdminRegisterStudentAndEmployee(universityId);
+      const user = await userService.getAdminRegisterStudentAndEmployee(universityId,instituteId,role);
       res.status(200).json(user);
   } catch (error) {
       res.status(500).json({ error: error.message });

@@ -619,3 +619,33 @@ CREATE TABLE fee_invoice_detail_record (
     CONSTRAINT fk_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+-- Add the time_table_mapping_id column with the foreign key reference in attendance
+
+ALTER TABLE attendance ADD COLUMN time_table_mapping_id INT DEFAULT NULL;
+
+UPDATE attendance SET time_table_mapping_id = 1 WHERE time_table_mapping_id IS NULL;
+
+UPDATE attendance SET time_table_mapping_id = 1 WHERE time_table_mapping_id = 0;
+
+ALTER TABLE attendance ADD CONSTRAINT fk_time_table_mapping_id FOREIGN KEY (time_table_mapping_id) REFERENCES time_table_mapping(time_table_mapping_id) ON DELETE CASCADE;
+
+-- Add the institute_id column with the foreign key reference in attendance
+
+ALTER TABLE attendance ADD COLUMN institute_id INT DEFAULT NULL;
+
+UPDATE attendance SET institute_id = 1 WHERE institute_id IS NULL;
+
+UPDATE attendance SET institute_id = 1 WHERE institute_id = 0;
+
+ALTER TABLE attendance ADD CONSTRAINT fk_institutes_id FOREIGN KEY (institute_id) REFERENCES institute(institute_id) ON DELETE CASCADE;
+
+-- Add the university_id column with the foreign key reference in attendance
+
+ALTER TABLE attendance ADD COLUMN university_id INT DEFAULT NULL;
+
+UPDATE attendance SET university_id = 1 WHERE university_id IS NULL;
+
+UPDATE attendance SET university_id = 1 WHERE university_id = 0;
+
+ALTER TABLE attendance ADD CONSTRAINT fk_university_id FOREIGN KEY (university_id) REFERENCES university(university_id) ON DELETE CASCADE;
