@@ -8,7 +8,7 @@ export async function addFeePlan(data, transaction) {
     console.error("Error in add Fee Plan :", error);
     throw error;
   }
-}
+};
 
 export async function addFeeNewInvoice(data, transaction) {
   try {
@@ -18,7 +18,7 @@ export async function addFeeNewInvoice(data, transaction) {
     console.error("Error in add Fee New Invoice :", error);
     throw error;
   }
-}
+};
 
 export async function addFeePlanSemester(data, transaction) {
   try {
@@ -28,8 +28,7 @@ export async function addFeePlanSemester(data, transaction) {
     console.error("Error in add Fee Plan Semester :", error);
     throw error;
   }
-}
-
+};
 
 export async function addFeePlanType(data, transaction) {
   try {
@@ -39,8 +38,7 @@ export async function addFeePlanType(data, transaction) {
     console.error("Error in add Fee Plan Type :", error);
     throw error;
   }
-}
-
+};
 
 export async function getFeePlanDetails(universityId,instituteId,role,acedmicYearId) {
     try {
@@ -53,36 +51,23 @@ export async function getFeePlanDetails(universityId,instituteId,role,acedmicYea
             where:whereClause,
             include:[
                 {
-                    model: model.feePlanTypeModel,
-                    as: "feePlanType",
+                    model: model.feeNewInvoiceModel,
+                    as: "invoices",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     include:[
                         {
-                            model:model.feeTypeModel,
-                            as:'feeType',
+                            model:model.feePlanSemesterModel,
+                            as:'semesters',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model:model.feePlanTypeModel,
+                            as:'additionalFees',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         }
                     ]
                 },
-                {
-                    model:model.feePlanSemesterModel,
-                    as:'feePlanSemester',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include :[
-                        {
-                            model:model.semesterModel,
-                            as:'Semester',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                            include:[
-                                {
-                                    model:model.courseModel,
-                                    as:'semesterCourse',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                }
-                            ]
-                        }
-                    ]
-                }
+                
             ]
         });
 
@@ -102,36 +87,23 @@ export async function getSingleFeePlanDetails(feePlanId) {
             },
             include:[
                 {
-                    model: model.feePlanTypeModel,
-                    as: "feePlanType",
+                    model: model.feeNewInvoiceModel,
+                    as: "invoices",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     include:[
                         {
-                            model:model.feeTypeModel,
-                            as:'feeType',
+                            model:model.feePlanSemesterModel,
+                            as:'semesters',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model:model.feePlanTypeModel,
+                            as:'additionalFees',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                         }
                     ]
                 },
-                {
-                    model:model.feePlanSemesterModel,
-                    as:'feePlanSemester',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include :[
-                        {
-                            model:model.semesterModel,
-                            as:'Semester',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                            include:[
-                                {
-                                    model:model.courseModel,
-                                    as:'semesterCourse',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                }
-                            ]
-                        }
-                    ]
-                }
+                
             ]
         });
 
