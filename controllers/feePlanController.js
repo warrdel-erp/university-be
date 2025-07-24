@@ -1,8 +1,6 @@
 import * as feePlan  from  "../services/feePlanServices.js";
 
-export async function addFeePlan(req, res) { 
-    console.log(`>>>>>>`,req.body);
-       
+export async function addFeePlan(req, res) {        
     const {name} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;

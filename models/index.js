@@ -95,6 +95,7 @@ import feePlanModel from './feePlanModel.js';
 import feePlanTypeModel from './feePlanTypeModel.js';
 import feePlanSemesterModel from './feePlanSemesterModel.js';
 import feeInvoiceDetailRecordModel from './feeInvoiceDetailRecordModel.js';
+import feeNewInvoiceModel from './feeNewInvoiceModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -788,4 +789,5 @@ export {
     feePlanTypeModel,
     feePlanSemesterModel,
     feeInvoiceDetailRecordModel,
+    feeNewInvoiceModel,
 };

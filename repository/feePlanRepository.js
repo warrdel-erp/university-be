@@ -1,34 +1,45 @@
 import * as model from '../models/index.js'
 
-export async function addFeePlan(data,transaction) {    
-    try {
-        const result = await model.feePlanModel.create(data, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add Fee Plan :", error);
-        throw error;
-    }
-};
+export async function addFeePlan(data, transaction) {
+  try {
+    const result = await model.feePlanModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Fee Plan :", error);
+    throw error;
+  }
+}
 
-export async function addFeePlanType(data,transaction) {    
-    try {
-        const result = await model.feePlanTypeModel.create(data, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add Fee Plan type :", error);
-        throw error;
-    }
-};
+export async function addFeeNewInvoice(data, transaction) {
+  try {
+    const result = await model.feeNewInvoiceModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Fee New Invoice :", error);
+    throw error;
+  }
+}
 
-export async function addFeePlanSemester(data,transaction) {    
-    try {
-        const result = await model.feePlanSemesterModel.create(data, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add Fee Plan semester:", error);
-        throw error;
-    }
-};
+export async function addFeePlanSemester(data, transaction) {
+  try {
+    const result = await model.feePlanSemesterModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Fee Plan Semester :", error);
+    throw error;
+  }
+}
+
+
+export async function addFeePlanType(data, transaction) {
+  try {
+    const result = await model.feePlanTypeModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Fee Plan Type :", error);
+    throw error;
+  }
+}
 
 
 export async function getFeePlanDetails(universityId,instituteId,role,acedmicYearId) {

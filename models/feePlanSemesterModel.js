@@ -1,8 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import feePlan from "./feePlanModel.js";
-import semester from "./semesterModel.js";
+import feeNewInvoice from "./feeNewInvoiceModel.js";
 
 export default sequelize.define(
     'fee_plan_semester',
@@ -13,32 +12,22 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'fee_plan_semester_id'
         },
-        feePlanId: {
+        feeNewInvoiceId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_plan_id',
+            field: 'fee_new_invoice_id',
             references: {
-                model: feePlan,
-                key: 'fee_plan_id'
+                model: feeNewInvoice,
+                key: 'fee_new_invoice_id'
             }
         },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'semester_id',
-            references: {
-                model: semester,
-                key: 'semester_id'
-            }
+        name :{
+            type:DataTypes.STRING,
+            allowNull:false,
         },
-        dueDate :{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field : 'due_date'
-        },
-        amount: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
+        fee:{
+            type:DataTypes.INTEGER,
+            allowNull:false,
         },
         createdBy: {
             type: DataTypes.INTEGER,

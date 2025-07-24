@@ -29,6 +29,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull:true
         },
+        PlanType: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'plan_type'
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
