@@ -46,6 +46,7 @@ export async function getEmployeeRolePermissionUserId(userId) {
     throw error;
   }
 };
+
 const formatEmployeeDetailsDeep = (employee) => {
   if (!employee) return null;
   // Basic Employee Info

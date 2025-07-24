@@ -296,6 +296,12 @@ export default sequelize.define(
             defaultValue: 'Pending Documents',
             field:'document_status',
         },
+        feeStatus:{
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field:'fee_status',
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

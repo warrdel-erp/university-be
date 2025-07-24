@@ -509,7 +509,6 @@ export async function getEmployeeRolePermissionByUserId(userId) {
             ],
             where: { userId },
         });
-        console.log(`>>>>>>UserRolePermission`, JSON.stringify(UserRolePermission));
 
         return UserRolePermission;
     } catch (error) {

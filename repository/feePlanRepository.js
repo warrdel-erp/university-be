@@ -80,7 +80,7 @@ export async function getFeePlanDetails(universityId,instituteId,role,acedmicYea
 
 export async function getSingleFeePlanDetails(feePlanId) {
      try {
-        const FeePlan = await model.feePlanModel.findAll({
+        const FeePlan = await model.feePlanModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             where:{
                 feePlanId
@@ -129,4 +129,22 @@ export async function updateFeePlan(poId, data) {
 export async function deleteFeePlan(poId) {
     const deleted = await model.poModel.destroy({ where: { poId: poId } });
     return deleted > 0;
-}
+};
+
+export async function findByPlanId(feePlanId) {
+  try {
+    const FeePlan = await model.feeNewInvoiceModel.findAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+      },
+      where: {
+        feePlanId
+      }
+    });
+
+    return FeePlan;
+  } catch (error) {
+    console.error("Error in findByPlanId:", error);
+    throw error;
+  }
+};

@@ -96,6 +96,7 @@ import feePlanTypeModel from './feePlanTypeModel.js';
 import feePlanSemesterModel from './feePlanSemesterModel.js';
 import feeInvoiceDetailRecordModel from './feeInvoiceDetailRecordModel.js';
 import feeNewInvoiceModel from './feeNewInvoiceModel.js';
+import studentInvoiceMapperModel from './studentInvoiceMapperModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -691,6 +692,12 @@ feePlanSemesterModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'fee_new_invoic
 feeNewInvoiceModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_new_invoice_id', as: 'additionalFees' }); 
 feePlanTypeModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'fee_new_invoice_id', as: 'additionalFeesinvoice' });
 
+studentInvoiceMapperModel.belongsTo(studentModel, { foreignKey: 'studentId', as: 'studentinvoice'  }); 
+studentModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'studentId',  as: 'invoicestudent'  });
+
+studentInvoiceMapperModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'feeNewInvoiceId',  as: 'feeInvoicedata' }); 
+feeNewInvoiceModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeNewInvoiceId', as: 'invoiceMappings' });
+
 export {
     settingModel,
     universityModel,
@@ -790,4 +797,5 @@ export {
     feePlanSemesterModel,
     feeInvoiceDetailRecordModel,
     feeNewInvoiceModel,
+    studentInvoiceMapperModel,
 };
