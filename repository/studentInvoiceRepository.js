@@ -86,6 +86,7 @@ export async function getAllActiveInvoice(universityId) {
                     model: model.feeNewInvoiceModel,
                     as: "feeInvoicedata",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    
                 },  
             ]
         });
