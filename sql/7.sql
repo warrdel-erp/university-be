@@ -15,7 +15,7 @@ CREATE TABLE fee_new_invoice (
     deleted_at TIMESTAMP NULL,
     CONSTRAINT fk_fee_plan FOREIGN KEY (fee_plan_id) REFERENCES fee_plan(fee_plan_id),
     CONSTRAINT fk_fee_new_invoice_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
-    CONSTRAINT fk_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+    CONSTRAINT fk_fee_new_invoice_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
 
 ALTER TABLE fee_invoice_details DROP FOREIGN KEY fk_fee_plan_semester_id;
