@@ -2,6 +2,10 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
+import courseModel from "./courseModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
+import sessionModel from "./sessionModel.js";
+import universityModel from "./universityModel.js";
 
 export default sequelize.define(
     'fee_plan',
@@ -21,6 +25,42 @@ export default sequelize.define(
                 key: 'institute_id'
             }
         }, 
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        }, 
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
+        }, 
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYearModel,
+                key: 'acedmic_year_id'
+            }
+        }, 
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
+        },
         name: {
             type: DataTypes.STRING,
             allowNull: false,

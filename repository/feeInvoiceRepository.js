@@ -181,7 +181,7 @@ export async function deleteFeeInvoice(feeInvoiceId) {
 export async function latestInoviceNumber(instituteCode) {    
     try {
         const attribute = ["invoice_number"];
-        const result = await model.feeInvoiceModel.findOne({
+        const result = await model.studentInvoiceMapperModel.findOne({
             attributes: attribute,
             where: {
                 invoice_number: {

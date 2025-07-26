@@ -671,11 +671,11 @@ sessionCouseMappingModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'cou
 feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
 feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
 
-feeInvoiceDetailRecordModel.belongsTo(feeInvoiceModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
-feeInvoiceModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_id', as: 'feeInvoice' });
+feeInvoiceDetailRecordModel.belongsTo(studentInvoiceMapperModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
+studentInvoiceMapperModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
 
-feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
-feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
+// feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
+// feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
 
 feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'feeInvoiceId',sourceKey: 'feeInvoiceId',as: 'invoiceDetails'});
 feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'feeInvoiceId', targetKey: 'feeInvoiceId', as: 'feeInvoices' });
@@ -697,6 +697,15 @@ studentModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'studentId',  as: 
 
 studentInvoiceMapperModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'feeNewInvoiceId',  as: 'feeInvoicedata' }); 
 feeNewInvoiceModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeNewInvoiceId', as: 'invoiceMappings' });
+
+feePlanModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'courseFee' }); 
+courseModel.hasMany(feePlanModel, { foreignKey: 'courseId', as: 'feePlanCourse' });
+
+feePlanModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmicYearId', as: 'acedmicYearFee' });
+acedmicYearModel.hasMany(feePlanModel, { foreignKey: 'acedmicYearId', as: 'feePlanAcedmic' });
+
+feePlanModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'sessionFee' });
+sessionModel.hasMany(feePlanModel, { foreignKey: 'sessionId', as: 'feePlanSession' });
 
 export {
     settingModel,

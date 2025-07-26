@@ -21,9 +21,10 @@ export async function getStudentCount(req, res) {
 
 export async function activeInvoice(req, res) {
     const universityId = req.user.universityId;  
+    const instituteId = req.user.instituteId;
     const data = req.body
     try {
-        const feePlans = await invoice.updateInvoices(universityId,data);
+        const feePlans = await invoice.updateInvoices(universityId,instituteId,data);
         res.status(200).json(feePlans);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -32,7 +33,6 @@ export async function activeInvoice(req, res) {
 
 export async function getAllActiveInvoice(req, res) {
     const universityId = req.user.universityId;
-    console.log(`>>>>universityId`,universityId)
     try {
         const getAllActive = await invoice.getAllActiveInvoice(universityId);
         if (getAllActive) {

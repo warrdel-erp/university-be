@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import feeInvoice from "./feeInvoiceModel.js";
 import feeInvoiceDetail from "./feeInvoiceDetailModel.js";
+import studentInvoiceMapperModel from "./studentInvoiceMapperModel.js";
 
 export default sequelize.define(
     'fee_invoice_detail_record',
@@ -13,22 +14,31 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'fee_invoice_details_record_id'
         },
-        feeInvoiceId: {
+        // feeInvoiceId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'fee_invoice_id',
+        //     references: {
+        //         model: feeInvoice,
+        //         key: 'fee_invoice_id'
+        //     }
+        // },
+        // feeInvoiceDetailsId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'fee_invoice_details_id',
+        //     references: {
+        //         model: feeInvoiceDetail,
+        //         key: 'fee_invoice_details_id'
+        //     }
+        // },
+        studentInvoiceMapperId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_invoice_id',
+            field: 'student_invoice_mapper_id',
             references: {
-                model: feeInvoice,
-                key: 'fee_invoice_id'
-            }
-        },
-        feeInvoiceDetailsId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'fee_invoice_details_id',
-            references: {
-                model: feeInvoiceDetail,
-                key: 'fee_invoice_details_id'
+                model: studentInvoiceMapperModel,
+                key: 'student_invoice_mapper_id'
             }
         },
         paidAmount: {

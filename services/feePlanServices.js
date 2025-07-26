@@ -8,15 +8,15 @@ export async function addFeePlan(data, createdBy, updatedBy, universityId, insti
         // 1. Insert into fee_plan
         const newFeePlan = await feePlan.addFeePlan({
             name: data.name,
-            PlanType: data.PlanType,  // note: case sensitive from your JSON
+            PlanType: data.PlanType,
+            courseId : data.courseId,
+            acedmicYearId:data.acedmicYearId,
+            sessionId:data.sessionId,
             createdBy: createdBy,
             updatedBy: updatedBy,
             universityId: universityId,
             instituteId: instituteId
         }, transaction );
-
-        console.log(`>>>>>>>>newFeePlan`,newFeePlan)
-        console.log(`>>>>>>>>>newFeePlan.dataValues.fee_plan_id`,newFeePlan.dataValues.feePlanId)
 
         // 2. For each invoice, calculate total and insert into fee_new_invoice
         for (const invoice of data.invoice) {
@@ -34,7 +34,6 @@ export async function addFeePlan(data, createdBy, updatedBy, universityId, insti
                 createdBy: createdBy,
                 updatedBy: updatedBy
             }, transaction);
-console.log(`>>>>>>>>>>>>>>newInvoice`,newInvoice)
             const feeNewInvoiceId = newInvoice.dataValues.feeNewInvoiceId;
 
             // 3. Insert products into fee_plan_semester

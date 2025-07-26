@@ -55,8 +55,27 @@ export async function getStudentCount(type, universityId, instituteId, role) {
                                     }
                                 ]
                             },
-                            
+                            {
+                              model:model.sessionModel,
+                              as:'sessionFee',
+                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","acedmic_year_id"] },
+                            },
+                            {
+                              model:model.courseModel,
+                              as:'courseFee',
+                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id","acedmic_year_id"] },
+                            },
+                            {
+                              model:model.acedmicYearModel,
+                              as:'acedmicYearFee',
+                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id"] },
+                            },
                         ]
+        },
+        {
+          model:model.classSectionModel,
+          as:'studentSections',
+          attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id", "course_id", "semester_id", "class_id", "acedmic_year_id", "specialization_id", "session_id" ] }
         }
       ]
     });
@@ -80,14 +99,20 @@ export async function getAllActiveInvoice(universityId) {
                 {
                     model: model.studentModel,
                     as: "studentinvoice",
-                    attributes: ["scholarNumber", "firstName", "middleName","lastName"] ,
+                    attributes: ["scholarNumber", "firstName", "middleName","lastName","admisssionDate","enrollDate"] ,
                 },
                 {
                     model: model.feeNewInvoiceModel,
                     as: "feeInvoicedata",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     
-                },  
+                },
+                {
+                    model: model.feeInvoiceDetailRecordModel,
+                    as: "studentMakePayment",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    
+                },    
             ]
         });
 

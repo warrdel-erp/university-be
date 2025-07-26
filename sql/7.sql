@@ -81,3 +81,39 @@ CREATE TABLE student_invoice_mapper (
   CONSTRAINT fk_simb_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
   CONSTRAINT fk_simb_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+ALTER TABLE fee_plan
+ADD COLUMN course_id INTEGER,
+ADD COLUMN acedmic_year_id INTEGER,
+ADD COLUMN session_id INTEGER,
+ADD COLUMN university_id INTEGER;
+
+UPDATE fee_plan SET course_id = 1, acedmic_year_id = 1,university_id= 1, session_id = 1 WHERE course_id IS NULL;
+
+ALTER TABLE fee_plan
+MODIFY COLUMN course_id INTEGER NOT NULL,
+MODIFY COLUMN acedmic_year_id INTEGER NOT NULL,
+MODIFY COLUMN session_id INTEGER NOT NULL,
+MODIFY COLUMN university_id INTEGER NOT NULL;
+
+ALTER TABLE fee_plan
+ADD CONSTRAINT fk_fee_plan_course FOREIGN KEY (course_id) REFERENCES course(course_id),
+ADD CONSTRAINT fk_fee_plan_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+ADD CONSTRAINT fk_fee_plan_session FOREIGN KEY (session_id) REFERENCES session(session_id),
+ADD CONSTRAINT fk_fee_plan_university FOREIGN KEY (university_id) REFERENCES university(university_id);
+
+ALTER TABLE fee_invoice_detail_record
+  DROP FOREIGN KEY fee_invoice_detail_record_ibfk_1,
+  DROP FOREIGN KEY fee_invoice_detail_record_ibfk_2;
+
+ALTER TABLE fee_invoice_detail_record
+  DROP COLUMN fee_invoice_id,
+  DROP COLUMN fee_invoice_details_id;
+
+ALTER TABLE fee_invoice_detail_record ADD COLUMN student_invoice_mapper_id INTEGER;
+
+UPDATE fee_invoice_detail_record SET student_invoice_mapper_id = 1 WHERE student_invoice_mapper_id IS NULL;
+
+ALTER TABLE feefee_invoice_detail_record_plan MODIFY COLUMN student_invoice_mapper_id INTEGER NOT NULL;
+
+ALTER TABLE fee_invoice_detail_record ADD CONSTRAINT fk_fee_plan_student_invoice_mapper FOREIGN KEY (student_invoice_mapper_id) REFERENCES student_invoice_mapper(student_invoice_mapper_id);

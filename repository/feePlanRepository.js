@@ -43,13 +43,29 @@ export async function addFeePlanType(data, transaction) {
 export async function getFeePlanDetails(universityId,instituteId,role,acedmicYearId) {
     try {
         const whereClause = {
-            // ...(universityId && { universityId }),
+            ...(universityId && { universityId }),
+            ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
         const FeePlan = await model.feePlanModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
             where:whereClause,
             include:[
+                {
+                  model:model.sessionModel,
+                  as:'sessionFee',
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","acedmic_year_id"] },
+                },
+                {
+                  model:model.courseModel,
+                  as:'courseFee',
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id","acedmic_year_id"] },
+                },
+                {
+                  model:model.acedmicYearModel,
+                  as:'acedmicYearFee',
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id"] },
+                },
                 {
                     model: model.feeNewInvoiceModel,
                     as: "invoices",
