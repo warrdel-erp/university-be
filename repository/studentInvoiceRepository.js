@@ -10,8 +10,8 @@ export async function getStudentCount(type, universityId, instituteId, role) {
 
     if (!type || type === 'total') {
       const [activeCount, inactiveCount] = await Promise.all([
-        model.studentModel.count({ where: { ...baseWhere, feeStatus: true } }),
-        model.studentModel.count({ where: { ...baseWhere, feeStatus: false } })
+        model.studentModel.count({ where: {baseWhere, feeStatus: true } }),
+        model.studentModel.count({ where: { baseWhere, feeStatus: false } })
       ]);
       return {
         active: activeCount,
@@ -29,7 +29,7 @@ export async function getStudentCount(type, universityId, instituteId, role) {
     }
 
     const studentList = await model.studentModel.findAll({
-      attributes:  ["firstName","middleName","lastName","scholarNumber"] ,
+      attributes:  ["firstName","middleName","lastName","scholarNumber","admisssionDate"] ,
       where: whereClause,
       include:[
         {
