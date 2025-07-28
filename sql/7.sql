@@ -200,7 +200,7 @@ CREATE TABLE lesson_mapping (
     deleted_at TIMESTAMP NULL,
     CONSTRAINT fk_lesson_mapping_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
     CONSTRAINT fk_lesson_mapping_topic FOREIGN KEY (topic_id) REFERENCES topic(topic_id),
-    CONSTRAINT fk_lesson_mapping_institute FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_lesson_mapping_university FOREIGN KEY (university_id) REFERENCES university(university_id),
     CONSTRAINT fk_lesson_mapping_timetable FOREIGN KEY (time_table_mapping_id) REFERENCES time_table_mapping(time_table_mapping_id),
     CONSTRAINT fk_lesson_mapping_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_lesson_mapping_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
