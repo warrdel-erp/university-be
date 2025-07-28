@@ -181,7 +181,7 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
                                 {
                                     model:model.subjectModel,
                                     as: 'subjects',
-                                    attributes: ["subjectName","subjectCode"],
+                                    attributes: ["subjectId","subjectName","subjectCode"],
                                     where:whereClause
                                 }
                             ]
