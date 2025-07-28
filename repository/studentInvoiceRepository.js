@@ -105,7 +105,18 @@ export async function getAllActiveInvoice(universityId) {
                     model: model.feeNewInvoiceModel,
                     as: "feeInvoicedata",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    
+                    include:[
+                      {
+                        model:model.feePlanSemesterModel,
+                        as:'semesters',
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                      },
+                      {
+                        model:model.feePlanTypeModel,
+                        as:'additionalFees',
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                      }
+                    ]
                 },
                 {
                     model: model.feeInvoiceDetailRecordModel,
