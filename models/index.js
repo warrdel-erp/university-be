@@ -97,6 +97,10 @@ import feePlanSemesterModel from './feePlanSemesterModel.js';
 import feeInvoiceDetailRecordModel from './feeInvoiceDetailRecordModel.js';
 import feeNewInvoiceModel from './feeNewInvoiceModel.js';
 import studentInvoiceMapperModel from './studentInvoiceMapperModel.js';
+import lessonModel from './lessonModel.js';
+import topicModel from './topicModel.js';
+import subTopicModel from './subTopicModel.js';
+import lessonMappingModel from './lessonMappingModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -674,9 +678,6 @@ feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType
 feeInvoiceDetailRecordModel.belongsTo(studentInvoiceMapperModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
 studentInvoiceMapperModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
 
-// feeInvoiceDetailRecordModel.belongsTo(feeInvoiceDetailModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
-// feeInvoiceDetailModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'fee_invoice_details_id', as: 'feeInvoiceDetail' });
-
 feeInvoiceModel.hasMany(feeInvoiceDetailModel, { foreignKey: 'feeInvoiceId',sourceKey: 'feeInvoiceId',as: 'invoiceDetails'});
 feeInvoiceDetailModel.belongsTo(feeInvoiceModel, { foreignKey: 'feeInvoiceId', targetKey: 'feeInvoiceId', as: 'feeInvoices' });
 
@@ -706,6 +707,27 @@ acedmicYearModel.hasMany(feePlanModel, { foreignKey: 'acedmicYearId', as: 'feePl
 
 feePlanModel.belongsTo(sessionModel, { foreignKey: 'sessionId', as: 'sessionFee' });
 sessionModel.hasMany(feePlanModel, { foreignKey: 'sessionId', as: 'feePlanSession' });
+
+lessonModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
+subjectModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
+
+lessonModel.belongsTo(semesterModel, { foreignKey: 'subjectId', as: 'lessionSemester' });
+semesterModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'semesterLession' });
+
+lessonModel.belongsTo(sessionModel, { foreignKey: 'subjectId', as: 'lessionSession' });
+sessionModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'sessionLession' });
+
+topicModel.belongsTo(lessonModel, { foreignKey: 'lessonId', as: 'lessonTopic' });
+lessonModel.hasMany(topicModel, { foreignKey: 'lessonId', as: 'topicSession' });
+
+lessonMappingModel.belongsTo(topicModel, { foreignKey: 'topicId', as: 'mappingTopic' });
+topicModel.hasMany(lessonMappingModel, { foreignKey: 'topicId', as: 'topicMapping' });
+
+subTopicModel.belongsTo(topicModel, { foreignKey: 'topicId', as: 'topic' });
+topicModel.hasMany(subTopicModel, { foreignKey: 'topicId', as: 'subTopic' });
+
+lessonMappingModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
+timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 
 export {
     settingModel,
@@ -807,4 +829,8 @@ export {
     feeInvoiceDetailRecordModel,
     feeNewInvoiceModel,
     studentInvoiceMapperModel,
+    lessonModel,
+    topicModel,
+    subTopicModel,
+    lessonMappingModel,
 };

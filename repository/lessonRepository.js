@@ -1,0 +1,210 @@
+import * as model from '../models/index.js'
+
+export async function addLesson(data) {
+  try {
+    const result = await model.lessonModel.create(data);
+    return result;
+  } catch (error) {
+    console.error("Error in add lesson :", error);
+    throw error;
+  }
+};
+
+export async function getLessonDetails(universityId, instituteId, role, acedmicYearId) {
+  try {
+    const whereClause = {
+      ...(universityId && { universityId }),
+      ...(acedmicYearId && { acedmicYearId }),
+      ...(role === 'Head' && { institute_id: instituteId })
+    };
+    const lesson = await model.lessonModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: whereClause,
+      include: [
+        {
+          model: model.subjectModel,
+          as: "lessonSubject",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          include: [
+            {
+              model: model.courseModel,
+              as: 'courseInfo',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id", "acedmic_year_id"] },
+            }
+          ]
+        },
+        {
+          model: model.semesterModel,
+          as: 'lessionSemester',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+        },
+        {
+          model: model.sessionModel,
+          as: 'lessionSession',
+          attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+        },
+        {
+          model: model.topicModel,
+          as: 'topicSession',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+        }
+      ]
+    });
+    return lesson;
+  } catch (error) {
+    console.error('Error fetching lesson details:', error);
+    throw error;
+  }
+};
+
+export async function getSingleLessonDetails(lessonId) {
+  try {
+    const lesson = await model.lessonModel.findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: {
+        lessonId
+      },
+      include: [
+        {
+          model: model.subjectModel,
+          as: "lessonSubject",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          include: [
+            {
+              model: model.courseModel,
+              as: 'courseInfo',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id", "acedmic_year_id"] },
+            }
+          ]
+        },
+        {
+          model: model.semesterModel,
+          as: 'lessionSemester',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+        },
+        {
+          model: model.sessionModel,
+          as: 'lessionSession',
+          attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+        },
+        {
+          model: model.topicModel,
+          as: 'topicSession',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+        }
+      ]
+    });
+
+    return lesson;
+  } catch (error) {
+    console.error('Error fetching Fee Plan details single:', error);
+    throw error;
+  }
+};
+
+export async function addTopic(data) {
+  try {
+    const result = await model.topicModel.create(data);
+    return result;
+  } catch (error) {
+    console.error("Error in add topic :", error);
+    throw error;
+  }
+};
+
+export async function addSubTopic(data, transaction) {
+  try {
+    const result = await model.subTopicModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add sub topic :", error);
+    throw error;
+  }
+};
+
+export async function addLessionMapping(data, transaction) {
+  try {
+    const result = await model.lessonMappingModel.create(data, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Lession Mapping:", error);
+    throw error;
+  }
+};
+
+export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+  try {
+    const whereClause = {
+      ...(universityId && { universityId }),
+      ...(acedmicYearId && { acedmicYearId }),
+      ...(role === 'Head' && { institute_id: instituteId })
+    };
+    const lesson = await model.lessonMappingModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: whereClause,
+      include: [
+        {
+          model: model.topicModel,
+          as: 'mappingTopic',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: whereClause,
+          include: [
+            {
+              model: model.lessonModel,
+              as: 'lessonTopic',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+              where: whereClause,
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: 'lessonSubject',
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                }
+              ]
+            },
+            {
+              model: model.subTopicModel,
+              as: 'subTopic',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+              where: whereClause,
+            }
+          ]
+        },
+        {
+          model: model.timeTableMappingModel,
+          as: 'timeTableMapping',
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_create_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
+          include: [
+            {
+              model: model.timeTableCreateModel,
+              as: 'timeTablecreate',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "time_table_name_id", "course_id", "campus_id", "class_sections_id", "acedmic_year_id"] },
+              include: [
+                {
+                  model: model.classSectionModel,
+                  as: 'timeTableClassSection',
+                  attributes: ["section", "class", "section_id", "class_sections_id"],
+                  // where: whereClause
+                },
+              ],
+            },
+            {
+              model: model.timeTableCreationModel,
+              as: "timeTablecreation",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
+            },
+            {
+              model: model.employeeModel,
+              as: 'employeeDetails',
+              attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"]
+            }
+          ]
+        }
+      ]
+    });
+    return lesson;
+  } catch (error) {
+    console.error('Error fetching lesson mapping details:', error);
+    throw error;
+  }
+};

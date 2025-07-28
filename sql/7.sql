@@ -117,3 +117,91 @@ UPDATE fee_invoice_detail_record SET student_invoice_mapper_id = 1 WHERE student
 ALTER TABLE feefee_invoice_detail_record_plan MODIFY COLUMN student_invoice_mapper_id INTEGER NOT NULL;
 
 ALTER TABLE fee_invoice_detail_record ADD CONSTRAINT fk_fee_plan_student_invoice_mapper FOREIGN KEY (student_invoice_mapper_id) REFERENCES student_invoice_mapper(student_invoice_mapper_id);
+
+CREATE TABLE lesson (
+    lesson_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    session_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_lesson_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_lesson_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_lesson_subject FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    CONSTRAINT fk_lesson_semester FOREIGN KEY (semester_id) REFERENCES semester(semester_id),
+    CONSTRAINT fk_lesson_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_lesson_session FOREIGN KEY (session_id) REFERENCES session(session_id),
+    CONSTRAINT fk_lesson_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_lesson_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE topic (
+    topic_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    lesson_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_topic_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_topic_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_topic_lesson FOREIGN KEY (lesson_id) REFERENCES lesson(lesson_id),
+    CONSTRAINT fk_topic_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_topic_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE sub_topic (
+    sub_topic_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    topic_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_subtopic_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_subtopic_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_subtopic_topic FOREIGN KEY (topic_id) REFERENCES topic(topic_id),
+    CONSTRAINT fk_subtopic_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_subtopic_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE lesson_mapping (
+    lesson_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    topic_id INT NOT NULL,
+    university_id INT NOT NULL,
+    time_table_mapping_id INT NOT NULL,
+    date DATETIME NOT NULL,
+    complete_date DATETIME,
+    note VARCHAR(255),
+    lecture_url VARCHAR(255),
+    file JSON,
+    status VARCHAR(50) NOT NULL DEFAULT 'inComplete',
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_lesson_mapping_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_lesson_mapping_topic FOREIGN KEY (topic_id) REFERENCES topic(topic_id),
+    CONSTRAINT fk_lesson_mapping_institute FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_lesson_mapping_timetable FOREIGN KEY (time_table_mapping_id) REFERENCES time_table_mapping(time_table_mapping_id),
+    CONSTRAINT fk_lesson_mapping_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_lesson_mapping_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
