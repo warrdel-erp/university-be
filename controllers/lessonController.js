@@ -91,3 +91,16 @@ export async function getMapping(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function updateMapping(req, res) {
+    const {completeDate,lessonMappingId} = req.body
+    if(!(completeDate && lessonMappingId)){
+           return res.status(400).send('completeDate and lessionMappingId is required')
+        }
+    try {
+        const Lessons = await lesson.updateMapping(completeDate,lessonMappingId);
+        res.status(200).json(Lessons);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

@@ -208,3 +208,20 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
     throw error;
   }
 };
+
+export async function updateMapping(lessonMappingId, data) {
+  try {
+    const [updatedRowsCount] = await model.lessonMappingModel.update(data, {
+      where: {lessonMappingId }
+    });
+
+    if (updatedRowsCount === 0) {
+      throw new Error('No lesson mapping found with the given ID.');
+    }
+
+    return { success: true, message: 'Mapping updated successfully.' };
+  } catch (error) {
+    console.error('Repository error during updateMapping:', error);
+    throw error;
+  }
+}

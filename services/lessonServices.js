@@ -152,3 +152,18 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
     throw error;
   }
 };
+
+export async function updateMapping(completeDate, lessonMappingId) {
+  try {
+    const data = {
+      completeDate,
+      status: 'complete'
+    };
+
+    const result = await lesson.updateMapping(lessonMappingId, data);
+    return result;
+  } catch (error) {
+    console.error('Error updating mapping:', error);
+    throw error;
+  }
+}
