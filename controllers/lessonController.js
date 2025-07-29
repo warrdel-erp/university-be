@@ -1,14 +1,14 @@
 import * as lesson  from  "../services/LessonServices.js";
 
 export async function addLesson(req, res) {        
-    const {name,subjectId,semesterId,acedmicYearId,sessionId} = req.body
+    const {name,subjectId,acedmicYearId,sessionId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
     try {
-        if(!(name && subjectId && semesterId && acedmicYearId && sessionId)){
-           return res.status(400).send('name,subjectId,semesterId,acedmicYearId and sessionId is required')
+        if(!(name && subjectId  && acedmicYearId && sessionId)){
+           return res.status(400).send('name,subjectId,acedmicYearId and sessionId is required')
         }
         const lessonData = await lesson.addLesson(req.body,createdBy,updatedBy,universityId,instituteId);
         res.status(201).json({ message: "Data added successfully", lessonData });
