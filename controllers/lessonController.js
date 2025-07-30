@@ -1,4 +1,4 @@
-import * as lesson  from  "../services/LessonServices.js";
+import * as lesson  from  "../services/lessonServices.js";
 
 export async function addLesson(req, res) {        
     const {name,subjectId,acedmicYearId,sessionId} = req.body
