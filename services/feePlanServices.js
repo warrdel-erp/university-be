@@ -2,51 +2,71 @@ import * as feePlan  from "../repository/feePlanRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 
 export async function addFeePlan(data, createdBy, updatedBy, universityId, instituteId) {
-    const transaction = await sequelize.transaction();
+  const transaction = await sequelize.transaction();
 
     try {
-        const { name, semesterDetails, feePlan: feePlanItems } = data;
+        // 1. Insert into fee_plan
+        const newFeePlan = await feePlan.addFeePlan({
+            name: data.name,
+            PlanType: data.PlanType,
+            courseId : data.courseId,
+            acedmicYearId:data.acedmicYearId,
+            sessionId:data.sessionId,
+            createdBy: createdBy,
+            updatedBy: updatedBy,
+            universityId: universityId,
+            instituteId: instituteId
+        }, transaction );
 
-        const feePlans = await feePlan.addFeePlan(
-            { name, createdBy, updatedBy, universityId, instituteId },
-            transaction
-        );
-        console.log(`>>>>>>feePlans`,feePlans)
+        // 2. For each invoice, calculate total and insert into fee_new_invoice
+        for (const invoice of data.invoice) {
+            // Calculate total fee
+            const productTotal = (invoice.product || []).reduce((sum, p) => sum + Number(p.fee || 0), 0);
+            const additionalTotal = (invoice.additionalFee || []).reduce((sum, f) => sum + Number(f.fee || 0), 0);
+            const total = productTotal + additionalTotal;
 
-        if (Array.isArray(feePlanItems)) {
-            for (const item of feePlanItems) {
-                await feePlan.addFeePlanType(
-                    {
-                        ...item,
-                        feePlanId: feePlans.dataValues.feePlanId,
-                        createdBy,
-                        updatedBy,
-                        universityId,
-                        instituteId
-                    },
-                    transaction
-                );
+            const newInvoice = await feePlan.addFeeNewInvoice({
+                feePlanId: newFeePlan.dataValues.feePlanId,
+                name: invoice.name,
+                startDate: invoice.startDate,
+                EndDate: invoice.EndDate,
+                total: total,
+                createdBy: createdBy,
+                updatedBy: updatedBy
+            }, transaction);
+            const feeNewInvoiceId = newInvoice.dataValues.feeNewInvoiceId;
+
+            // 3. Insert products into fee_plan_semester
+            if (invoice.product?.length > 0) {
+                for (const product of invoice.product) {
+                    await feePlan.addFeePlanSemester({
+                        feeNewInvoiceId: feeNewInvoiceId,
+                        name: product.name,
+                        fee: product.fee,
+                        createdBy: createdBy,
+                        updatedBy: updatedBy
+                    }, transaction);
+                }
             }
-        }
 
-        if (Array.isArray(semesterDetails)) {
-            for (const semester of semesterDetails) {
-                await feePlan.addFeePlanSemester(
-                    {
-                        ...semester,
-                        feePlanId: feePlans.dataValues.feePlanId,
-                        createdBy,
-                        updatedBy,
-                        universityId,
-                        instituteId
-                    },
-                    transaction
-                );
+            // 4. Insert additionalFee into fee_plan_type
+            if (invoice.additionalFee?.length > 0) {
+                for (const fee of invoice.additionalFee) {
+                    await feePlan.addFeePlanType({
+                        feeNewInvoiceId: feeNewInvoiceId,
+                        feeTypeId: fee.feeTypeId,
+                        name: fee.name,
+                        fee: fee.fee,
+                        createdBy: createdBy,
+                        updatedBy: updatedBy
+                    }, transaction);
+                }
             }
         }
 
         await transaction.commit();
-        return feePlans;
+        return { success: true };
+
     } catch (error) {
         await transaction.rollback();
         console.error("Transaction failed in add Fee Plan:", error);

@@ -1,44 +1,76 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import feeNewInvoice from "./feeNewInvoiceModel.js";
-import feeType from "./feeTypeModel.js";
+import studentModel from "./studentModel.js";
+import universityModel from "./universityModel.js";
+import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
+import feePlanModel from "./feePlanModel.js";
 
 export default sequelize.define(
-    'fee_plan_type',
+    'student_invoice_mapper',
     {
-        feePlanTypeId: {
+        studentInvoiceMapperId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_plan_type_id'
+            field: 'student_invoice_mapper_id'
         },
-        feeNewInvoiceId: {
+        studentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_new_invoice_id',
+            field: 'student_id',
             references: {
-                model: feeNewInvoice,
-                key: 'fee_new_invoice_id'
+                model: studentModel,
+                key: 'student_id'
             }
-        },
-        feeTypeId: {
+        }, 
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        }, 
+        feeNewInvoiceId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'fee_type_id',
+            field: 'fee_new_invoice_id',
             references: {
-                model: feeType,
-                key: 'fee_type_id'
+                model: feeNewInvoiceModel,
+                key: 'fee_new_invoice_id'
+            }
+        }, 
+        feePlanId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'fee_plan_id',
+            references: {
+                model: feePlanModel,
+                key: 'fee_plan_id'
             }
         },
-        name :{
-            type:DataTypes.STRING,
-            allowNull:false,
+        invoiceDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field:'invoice_date'
         },
-        fee:{
-            type:DataTypes.INTEGER,
-            allowNull:false,
+        invoiceNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'invoice_number'
         },
+        invoiceStatus: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            field:'invoice_status'
+        },
+        // status:{
+        //     type:DataTypes.BOOLEAN,
+        //     allowNull:false,
+        //     defaultValue:false
+        // },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -73,10 +105,10 @@ export default sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
             field: 'deleted_at'
-        }
+        },
     },
     {
-        tableName: 'fee_plan_type',
+        tableName: 'student_invoice_mapper',
         timestamps: true,
         paranoid: true
     }

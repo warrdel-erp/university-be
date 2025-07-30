@@ -9,6 +9,7 @@ import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRep
 import { getCourseByName,getClassByName } from '../repository/courseRepository.js';
 import {studentRegister} from '../services/userServices.js';
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
+import { findByPlanId } from '../repository/feePlanRepository.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -49,6 +50,7 @@ export async function addStudent(info, files,createdBy,universityId,roleId,acedm
     // Save student information
     const student = await studentRepository.addStudent(info,  transaction );
     const studentId = student.dataValues.studentId;
+    const feePlanId = student.dataValues.feePlanId
 
     const {  email, phoneNumber, mobileNumber, scholarNumber } = student.dataValues;
     const role = 'Student';
@@ -129,7 +131,24 @@ export async function addStudent(info, files,createdBy,universityId,roleId,acedm
         throw new Error('Invalid format for allDropDownData.');
       }
     }
+
+    //student register
     await studentRegister (registerStudentData,transaction)
+
+    // student Invoice mapping
+
+    const InvoiceData = {studentId,feePlanId,universityId,createdBy,updatedBy:createdBy}
+    const getInvoice = await findByPlanId(feePlanId)
+    const dataToInsert = getInvoice.map(invoice => ({
+      studentId,
+      universityId,
+      feePlanId,
+      feeNewInvoiceId: invoice.feeNewInvoiceId,
+      invoiceStatus: false,
+      createdBy,
+      updatedBy :createdBy
+    }));
+    await studentRepository.addStudentInvoiceMapper(dataToInsert,transaction)
 
     await transaction.commit();
     return { student, entranceDetails, addressDetails,CorsAddressDetails, allDropDownData };
@@ -139,6 +158,11 @@ export async function addStudent(info, files,createdBy,universityId,roleId,acedm
     throw error;
   };
 };
+
+async function abc(studentId,feePlanId,universityId,createdBy,updatedBy) {
+  
+}
+abc(1,12,2,2,2)
 
 async function generateScholarNumber(courseId,instituteId) {
   const getCourseCodeDetail = await getCourseCode(courseId);

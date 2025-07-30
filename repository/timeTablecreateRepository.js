@@ -181,7 +181,7 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
                                 {
                                     model:model.subjectModel,
                                     as: 'subjects',
-                                    attributes: ["subjectName","subjectCode"],
+                                    attributes: ["subjectId","subjectName","subjectCode"],
                                     where:whereClause
                                 }
                             ]
@@ -248,7 +248,7 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
                 {
                     model:model.employeeModel,
                     as: 'employeeDetails',
-                    attributes: { exclude: ["employeeName","employeeCode","pickColor","employeeId"]}
+                    attributes:  ["employeeName","employeeCode","pickColor","employeeId"]
                 }
             ]
         });

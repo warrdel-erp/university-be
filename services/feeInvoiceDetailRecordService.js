@@ -7,35 +7,10 @@ import moment from 'moment';
 import * as repository from "../repository/feeInvoiceDetailRecordRepository.js";
 
 export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy, updatedBy, instituteId) {
-    const {
-        feeInvoiceId,
-        paymentStatus,
-        paymentMethod,
-        referenceNumber,
-        paymentMade,
-        paymentDate,
-        slabs
-    } = feeInvoiceDataRecord;
+    feeInvoiceDataRecord.createdBy = createdBy;
+    feeInvoiceDataRecord.updatedBy = updatedBy;
 
-    if (!Array.isArray(slabs) || slabs.length === 0) {
-        throw new Error("At least one slab entry is required.");
-    }
-
-    const recordsToCreate = slabs.map((slab) => ({
-        feeInvoiceId,
-        paymentStatus,
-        paymentMethod,
-        referenceNumber,
-        paymentMade,
-        paymentDate,
-        feeInvoiceDetailsId : slab.feeInvoiceDetailsId,
-        paidAmount: slab.paidAmount,
-        isApplyed: slab.isApplied,
-        createdBy,
-        updatedBy
-    }));
-
-    const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(recordsToCreate);
+    const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(feeInvoiceDataRecord);
     return createdRecords;
 }
 

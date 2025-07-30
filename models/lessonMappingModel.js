@@ -2,19 +2,18 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
-import courseModel from "./courseModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
-import sessionModel from "./sessionModel.js";
+import topicModel from "./topicModel.js";
+import timeTableMappingModel from "./timeTableMappingModel.js";
 import universityModel from "./universityModel.js";
 
 export default sequelize.define(
-    'fee_plan',
+    'lesson_mapping',
     {
-        feePlanId: {
+        lessonMappingId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_plan_id'
+            field: 'lesson_mapping_id'
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -24,7 +23,7 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -33,46 +32,51 @@ export default sequelize.define(
                 model: universityModel,
                 key: 'university_id'
             }
-        }, 
-        courseId: {
+        },
+        topicId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'topic_id',
             references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        }, 
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
-            }
-        }, 
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
+                model: topicModel,
+                key: 'topic_id'
             }
         },
-        name: {
-            type: DataTypes.STRING,
+        timeTableMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'time_table_mapping_id',
+            references: {
+                model: timeTableMappingModel,
+                key: 'time_table_mapping_id'
+            }
+        },
+        date: {
+            type: DataTypes.DATE,
             allowNull: false,
         },
-        description: {
-            type: DataTypes.STRING,
+        completeDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field:'complete_date'
+        },
+        note :{
+            type:DataTypes.STRING,
             allowNull:true
         },
-        PlanType: {
-            type: DataTypes.STRING,
+        lectureUrl :{
+            type:DataTypes.STRING,
             allowNull:true,
-            field:'plan_type'
+            field:'lecture_url'
+        },
+        file:{
+            type:DataTypes.JSON,
+            allowNull:true
+        },
+        status:{
+            type:DataTypes.STRING,
+            allowNull:false,
+            defaultValue:'inComplete',
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -111,7 +115,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_plan',
+        tableName: 'lesson_mapping',
         timestamps: true,
         paranoid: true
     }

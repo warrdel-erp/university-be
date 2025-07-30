@@ -1,13 +1,13 @@
 import * as feeInvoiceRecordService  from  "../services/feeInvoiceDetailRecordService.js";
 
 export async function addFeeInvoiceDetailRecord(req, res) {
-    const {feeInvoiceId} = req.body
+    const {studentInvoiceMapperId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const instituteId = req.user.instituteId;
     try {
-        if(!(feeInvoiceId)){
-           return res.status(400).send('feeInvoiceId and feeInvoiceDetailsId is required')
+        if(!(studentInvoiceMapperId)){
+           return res.status(400).send('studentInvoiceMapperId is required')
         }
         const feeInvoice = await feeInvoiceRecordService.addFeeInvoiceDetailRecord(req.body,createdBy,updatedBy,instituteId);
         res.status(201).json({ message: "Data added successfully", feeInvoice });

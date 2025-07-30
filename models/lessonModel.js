@@ -2,19 +2,20 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
-import courseModel from "./courseModel.js";
+import subjectModel from "./subjectModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
+import semesterModel from "./semesterModel.js"
 
 export default sequelize.define(
-    'fee_plan',
+    'lesson',
     {
-        feePlanId: {
+        lessonId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_plan_id'
+            field: 'lesson_id'
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -34,15 +35,24 @@ export default sequelize.define(
                 key: 'university_id'
             }
         }, 
-        courseId: {
+        subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'subject_id',
             references: {
-                model: courseModel,
-                key: 'course_id'
+                model: subjectModel,
+                key: 'subject_id'
             }
-        }, 
+        },
+        // semesterId: {
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'semester_id',
+        //     references: {
+        //         model: semesterModel,
+        //         key: 'semester_id'
+        //     }
+        // },  
         acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -68,11 +78,6 @@ export default sequelize.define(
         description: {
             type: DataTypes.STRING,
             allowNull:true
-        },
-        PlanType: {
-            type: DataTypes.STRING,
-            allowNull:true,
-            field:'plan_type'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -111,7 +116,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_plan',
+        tableName: 'lesson',
         timestamps: true,
         paranoid: true
     }

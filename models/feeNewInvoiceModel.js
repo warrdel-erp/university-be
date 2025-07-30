@@ -1,44 +1,53 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import feeNewInvoice from "./feeNewInvoiceModel.js";
-import feeType from "./feeTypeModel.js";
+import feePlan from "./feePlanModel.js";
 
 export default sequelize.define(
-    'fee_plan_type',
+    'fee_new_invoice',
     {
-        feePlanTypeId: {
+        feeNewInvoiceId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'fee_plan_type_id'
+            field: 'fee_new_invoice_id'
         },
-        feeNewInvoiceId: {
+        feePlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'fee_new_invoice_id',
+            field: 'fee_plan_id',
             references: {
-                model: feeNewInvoice,
-                key: 'fee_new_invoice_id'
+                model: feePlan,
+                key: 'fee_plan_id'
             }
+        }, 
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
         },
-        feeTypeId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'fee_type_id',
-            references: {
-                model: feeType,
-                key: 'fee_type_id'
-            }
+        startDate: {
+            type: DataTypes.DATEONLY,
+            allowNull:true,
+            field:'start_date'
         },
-        name :{
-            type:DataTypes.STRING,
-            allowNull:false,
+        EndDate: {
+            type: DataTypes.DATEONLY,
+            allowNull:true,
+            field:'End_date'
         },
-        fee:{
+        total :{
             type:DataTypes.INTEGER,
-            allowNull:false,
+            allowNull:true
         },
+        InvoiceNumber :{
+            type:DataTypes.STRING,
+            allowNull:true
+        },
+        // status:{
+        //     type:DataTypes.BOOLEAN,
+        //     allowNull:false,
+        //     defaultValue:false
+        // },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -73,10 +82,10 @@ export default sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
             field: 'deleted_at'
-        }
+        },
     },
     {
-        tableName: 'fee_plan_type',
+        tableName: 'fee_new_invoice',
         timestamps: true,
         paranoid: true
     }

@@ -823,3 +823,27 @@ export async function getSemesterByCourseId(courseId) {
         throw error;
     }
 };
+
+export async function addStudentInvoiceMapper(dataList, transaction) {
+  try {
+    const result = await model.studentInvoiceMapperModel.bulkCreate(dataList, { transaction });
+    return result;
+  } catch (error) {
+    console.error("Error in add Student Invoice Mapper:", error);
+    throw error;
+  }
+};
+
+export async function updateStudentfeeStatus(studentId, data) {
+    try {
+        const result = await model.studentModel.update(data, {
+            where: {
+                studentId: studentId
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error updating student details ${studentId} :`, error);
+        throw error;
+    }
+};
