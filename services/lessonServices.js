@@ -1,4 +1,4 @@
-import * as lesson  from "../repository/LessonRepository.js";
+import * as lesson  from "../repository/lessonRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 
 export async function addLesson(data, createdBy, updatedBy, universityId, instituteId) {
