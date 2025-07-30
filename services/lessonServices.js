@@ -122,6 +122,12 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
       grouped[empId].timeTables.push({
         timeTableMappingId: ttMapping.timeTableMappingId,
         day: ttMapping.day,
+        date: item.date,
+        lectureUrl: item.lectureUrl,
+        note: item.note,
+        lessonMappingId: item.lessonMappingId,
+        status: item.status,
+        completeDate: item.completeDate,
         period: ttMapping.period,
         timeTableType: ttMapping.timeTableType,
         classSection,
