@@ -101,6 +101,7 @@ import lessonModel from './lessonModel.js';
 import topicModel from './topicModel.js';
 import subTopicModel from './subTopicModel.js';
 import lessonMappingModel from './lessonMappingModel.js';
+import noticeModel from './noticeModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -833,4 +834,5 @@ export {
     topicModel,
     subTopicModel,
     lessonMappingModel,
+    noticeModel,
 };
