@@ -15,8 +15,8 @@ export async function addNotice(data, createdBy, updatedBy,role, universityId, i
     }
 };
 
-export async function getAllStudentNotice(universityId,instituteId,role,acedmicYearId) {
-    return await notice.getAllStudentNotice(universityId,instituteId,role,acedmicYearId);
+export async function getAllStudentNotice(universityId,acedmicYearId,instituteId,role) {
+    return await notice.getAllStudentNotice(universityId,acedmicYearId,instituteId,role);
 }
 
 export async function getSinglenoticeDetails(noticeId,universityId) {

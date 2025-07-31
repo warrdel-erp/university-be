@@ -11,12 +11,11 @@ export async function addNotice(data, transaction) {
   }
 };
 
-export async function getAllStudentNotice(universityId, acedmicYearId) {
+export async function getAllStudentNotice(universityId,acedmicYearId,instituteId,role) {
     try {
         const whereClause = {
             ...(universityId && { university_id: universityId }),
-            // ...(instituteId && { institute_id: instituteId }),
-            ...(acedmicYearId && { acedmic_year_id: acedmicYearId }),
+            ...(acedmicYearId && { acedmicYearId: acedmicYearId }),
             [Op.and]: [
                 literal(`JSON_CONTAINS(message_to, '"students"')`)
             ]

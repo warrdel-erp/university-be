@@ -24,7 +24,7 @@ export async function getAllStudentNotice(req, res) {
     const role = req.user.role;    
     const {acedmicYearId} = req.query
     try {
-        const notices = await notice.getAllStudentNotice(universityId,instituteId,role,acedmicYearId);
+        const notices = await notice.getAllStudentNotice(universityId,acedmicYearId,instituteId,role);
         res.status(200).json(notices);
     } catch (error) {
         res.status(500).json({ error: error.message });
