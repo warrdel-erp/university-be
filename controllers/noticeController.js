@@ -29,22 +29,21 @@ export async function getAllStudentNotice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
-export async function getSinglenoticeDetails(req, res) {
+export async function getAllEmployeeNotice(req, res) {
     const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const createdBy = req.user.userId;
+    const role = req.user.role;    
+    const {acedmicYearId} = req.query
     try {
-        const { noticeId } = req.query;
-        const feeDetail = await notice.getSinglenoticeDetails(noticeId,universityId);
-        if (feeDetail) {
-            res.status(200).json(feeDetail);
-        } else {
-            res.status(404).json({ message: "fee Plan not found" });
-        }
+        const notices = await notice.getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy);
+        res.status(200).json(notices);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateNotice(req, res) {
     try {
@@ -58,7 +57,7 @@ export async function updateNotice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function deleteNotice(req, res) {
     try {
@@ -75,4 +74,4 @@ export async function deleteNotice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};

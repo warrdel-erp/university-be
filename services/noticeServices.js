@@ -17,17 +17,17 @@ export async function addNotice(data, createdBy, updatedBy,role, universityId, i
 
 export async function getAllStudentNotice(universityId,acedmicYearId,instituteId,role) {
     return await notice.getAllStudentNotice(universityId,acedmicYearId,instituteId,role);
-}
+};
 
-export async function getSinglenoticeDetails(noticeId,universityId) {
-    return await notice.getSinglenoticeDetails(noticeId,universityId);
-}
+export async function getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy) {
+    return await notice.getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy);
+};
 
 export async function updateNotice(noticeId, data,updatedBy) {    
         data.updatedBy = updatedBy;
        return await notice.updateNotice(noticeId, data);
-}
+};
 
 export async function deleteNotice(noticeId) {
     return await notice.deleteNotice(noticeId);
-}
+};

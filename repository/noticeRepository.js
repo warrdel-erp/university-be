@@ -23,7 +23,7 @@ export async function getAllStudentNotice(universityId,acedmicYearId,instituteId
 
         const notice = await model.noticeModel.findAll({
             attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+                exclude: ["createdAt", "updatedAt", "deletedAt"]
             },
             where: whereClause
         });
@@ -33,43 +33,43 @@ export async function getAllStudentNotice(universityId,acedmicYearId,instituteId
         console.error('Error fetching student notices:', error);
         throw error;
     }
-}
+};
 
-export async function getSingleNoticeDetails(NoticeId) {
-     try {
-        const Notice = await model.noticeModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:{
-                NoticeId
-            },
-            include:[
-                {
-                    model: model.feeNewInvoiceModel,
-                    as: "invoices",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include:[
-                        {
-                            model:model.NoticeSemesterModel,
-                            as:'semesters',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        },
-                        {
-                            model:model.NoticeTypeModel,
-                            as:'additionalFees',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        }
-                    ]
-                },
-                
-            ]
+export async function getAllEmployeeNotice(universityId, academicYearId, instituteId, role, createdBy) {
+    console.log(`>>>>>>>>>>>role`,role);
+    try {
+        // First query
+        const whereClauseCreated = {
+            ...(universityId && { university_id: universityId }),
+            ...(academicYearId && { acedmicYearId: academicYearId }),
+            ...(createdBy && { created_by: createdBy })
+        };
+
+        const noticeCreated = await model.noticeModel.findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: whereClauseCreated
         });
 
-        return Notice;
+        // Second query
+        const whereClauseAll = {
+            ...(universityId && { university_id: universityId }),
+            ...(academicYearId && { acedmicYearId: academicYearId }),
+            [Op.and]: [
+                literal(`JSON_CONTAINS(message_to, '["${role}"]')`)
+            ]
+        };
+
+        const noticeAll = await model.noticeModel.findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: whereClauseAll
+        });
+
+        return { noticeCreated, noticeAll };
     } catch (error) {
-        console.error('Error fetching Fee Plan details single:', error);
+        console.error('Error fetching employee notices:', error);
         throw error;
     }
-}
+};
 
 export async function updateNotice(noticeId, data) {
     try {
@@ -81,27 +81,9 @@ export async function updateNotice(noticeId, data) {
         console.error(`Error updating Notice creation ${noticeId}:`, error);
         throw error; 
     }
-}
+};
 
 export async function deleteNotice(noticeId) {
     const deleted = await model.noticeModel.destroy({ where: { noticeId: noticeId } });
     return deleted > 0;
-};
-
-export async function findByPlanId(NoticeId) {
-  try {
-    const Notice = await model.feeNewInvoiceModel.findAll({
-      attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-      },
-      where: {
-        NoticeId
-      }
-    });
-
-    return Notice;
-  } catch (error) {
-    console.error("Error in findByPlanId:", error);
-    throw error;
-  }
 };
