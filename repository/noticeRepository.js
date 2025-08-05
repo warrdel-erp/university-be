@@ -17,7 +17,7 @@ export async function getAllStudentNotice(universityId,acedmicYearId,instituteId
             ...(universityId && { university_id: universityId }),
             ...(acedmicYearId && { acedmicYearId: acedmicYearId }),
             [Op.and]: [
-                literal(`JSON_CONTAINS(message_to, '"students"')`)
+                literal(`JSON_CONTAINS(message_to, '"Student"')`)
             ]
         };
 

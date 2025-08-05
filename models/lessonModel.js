@@ -44,15 +44,6 @@ export default sequelize.define(
                 key: 'subject_id'
             }
         },
-        // semesterId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'semester_id',
-        //     references: {
-        //         model: semesterModel,
-        //         key: 'semester_id'
-        //     }
-        // },  
         acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,

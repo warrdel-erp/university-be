@@ -210,7 +210,7 @@ CREATE TABLE notice (
     university_id INT NOT NULL,
     acedmic_year_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    notice VARCHAR(255),
+    notice VARCHAR(1000),
     notice_date VARCHAR(50),
     publish_date VARCHAR(50),
     message_to JSON NOT NULL,
