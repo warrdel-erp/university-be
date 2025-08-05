@@ -184,7 +184,6 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
                   model: model.classSectionModel,
                   as: 'timeTableClassSection',
                   attributes: ["section", "class", "section_id", "class_sections_id"],
-                  // where: whereClause
                 },
               ],
             },

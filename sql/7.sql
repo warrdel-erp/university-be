@@ -203,3 +203,26 @@ CREATE TABLE lesson_mapping (
     CONSTRAINT fk_lesson_mapping_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_lesson_mapping_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE notice (
+    notice_id INT AUTO_INCREMENT PRIMARY KEY,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    notice VARCHAR(1000),
+    notice_date VARCHAR(50),
+    publish_date VARCHAR(50),
+    message_to JSON NOT NULL,
+    role VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_notice_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_notice_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_notice_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_notice_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_notice_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

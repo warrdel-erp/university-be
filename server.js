@@ -58,6 +58,7 @@ import feePlan from './router/feePlanRoute.js';
 import feeInvoiceRecord from './router/feeInvoiceDetailRecordRoute.js';
 import studentInvoice from './router/studentInvoiceRoute.js';
 import lesson from './router/lessonRoute.js';
+import notice from './router/noticeRoute.js'
 
 // middleware
 app.use(fileUpload());
@@ -118,6 +119,7 @@ app.use("/feePlan",feePlan);
 app.use("/feeInvoiceRecord",feeInvoiceRecord);
 app.use("/studentInvoice",studentInvoice);
 app.use("/lesson",lesson);
+app.use("/notice",notice)
 
 
 app.listen(PORT, () => {

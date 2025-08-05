@@ -2,20 +2,17 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
-import subjectModel from "./subjectModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
-import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
-import semesterModel from "./semesterModel.js"
 
 export default sequelize.define(
-    'lesson',
+    'notice',
     {
-        lessonId: {
+        noticeId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'lesson_id'
+            field: 'notice_id'
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -34,16 +31,7 @@ export default sequelize.define(
                 model: universityModel,
                 key: 'university_id'
             }
-        }, 
-        subjectId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'subject_id',
-            references: {
-                model: subjectModel,
-                key: 'subject_id'
-            }
-        },
+        },   
         acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -53,22 +41,32 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         }, 
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
-            }
-        },
-        name: {
+        title: {
             type: DataTypes.STRING,
             allowNull: false,
         },
-        description: {
+        notice: {
             type: DataTypes.STRING,
             allowNull:true
+        },
+        noticeDate: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'notice_date'
+        },
+        publishDate: {
+            type: DataTypes.STRING,
+            allowNull:true,
+            field:'publish_date'
+        },
+        messageTo:{
+            type:DataTypes.JSON,
+            allowNull:false,
+            field:'message_to'
+        },
+        role:{
+            type:DataTypes.STRING,
+            allowNull:'false',
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -107,7 +105,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'lesson',
+        tableName: 'notice',
         timestamps: true,
         paranoid: true
     }
