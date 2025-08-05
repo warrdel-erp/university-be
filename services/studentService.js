@@ -218,10 +218,10 @@ export async function importStudentData(excelData, data) {
       const convertedData = { ...student, ...data };
 
       // Fetch course and class data
-      const course = await getCourseByName(convertedData?.Course);
+      // const course = await getCourseByName(convertedData?.Course);
       const classDetail = await getClassByName(convertedData?.Class, convertedData?.Section);
-      convertedData['courseId'] = course?.dataValues?.courseId;
-      delete convertedData['Course'];
+      // convertedData['courseId'] = course?.dataValues?.courseId;
+      // delete convertedData['Course'];
 
       // Match and process each field
       for (let key in convertedData) {
@@ -288,7 +288,6 @@ export async function importStudentData(excelData, data) {
     throw error;
   }
 };
-
 
 export async function addAdmissionNoForBulkImport(data, matchedPairs) {
   const transaction = await sequelize.transaction();
