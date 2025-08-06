@@ -13,7 +13,7 @@ export async function addStudent(data, transaction) {
 
 export async function addStudentExcel(data, transaction) {        
     try {
-        const result = await model.studentModel.create(data);        
+        const result = await model.studentModel.create(data,{ transaction });        
         return result;
     } catch (error) {
         console.error("Error in add Student thow error:", error);
@@ -656,9 +656,9 @@ export async function classStudentMapping(data,transaction) {
     }
 };
 
-export async function classStudentMappingExcel(data) {    
+export async function classStudentMappingExcel(data,transaction) {    
     try {
-        const result = await model.classStudentMapperModel.bulkCreate(data);
+        const result = await model.classStudentMapperModel.bulkCreate(data,{ transaction });
         return result;
     } catch (error) {
         console.error("Error in student mapping course excel:", error);

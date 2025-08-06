@@ -159,10 +159,6 @@ export async function addStudent(info, files,createdBy,universityId,roleId,acedm
   };
 };
 
-async function abc(studentId,feePlanId,universityId,createdBy,updatedBy) {
-  
-}
-abc(1,12,2,2,2)
 
 async function generateScholarNumber(courseId,instituteId) {
   const getCourseCodeDetail = await getCourseCode(courseId);
@@ -197,41 +193,129 @@ export async function getSingleStudentDetail(studentId,universityId){
     return await studentRepository.getSingleStudentDetail(studentId,universityId)
 };
 
+// export async function importStudentData(excelData, data) {
+//   try {
+//     const transaction = await sequelize.transaction();
+
+//     const studentMapping = [];
+
+//     // Fetch all employee code master data
+//     const codeAndType = await getEmployeeCodesTypesForStudentImport();
+
+//     // Create a lookup map for faster access using lowercase type keys
+//     const codeMasterLookup = codeAndType.reduce((acc, item) => {
+//       acc[item.codeMasterType.toLowerCase()] = item;
+//       return acc;
+//     }, {});
+
+//     // Process each student entry
+//     const allData = await Promise.all(excelData.map(async (student) => {
+//       const convertedData = { ...student, ...data };
+
+//       // Track matched codes for current student
+//       const matchedPairs = [];
+//       const metaDataEntries = [];
+
+//       // Match each field in the student data with corresponding code master
+//       for (const key in convertedData) {
+//         const matchedCodeMaster = codeMasterLookup[key.toLowerCase()];
+//         if (matchedCodeMaster) {
+//           const matchingCodes = matchedCodeMaster.codes.filter(codeObj =>
+//             codeObj.code.toLowerCase() === convertedData[key].toLowerCase()
+//           );
+
+//           matchingCodes.forEach(matchedCode => {
+//             matchedPairs.push({
+//               dataId: matchedCodeMaster.employeeCodeMasterId,
+//               codeId: matchedCode.employeeCodeMasterTypeId
+//             });
+
+//             // Special handling for course level
+//             if (key.toLowerCase() === 'courselevel') {
+//               convertedData['courseLevelId'] = matchedCode.employeeCodeMasterTypeId;
+//               delete convertedData['CourseLevel'];
+//             }
+//           });
+//         }
+//       }
+
+//       // Set default income if not provided
+//       convertedData.annualIncome = 0;
+
+//       // Save student entry
+//       const result = await studentRepository.addStudentExcel(convertedData, transaction);
+
+//       // Prepare meta data entries
+//       matchedPairs.forEach(pair => {
+//         metaDataEntries.push({
+//           studentId: result.dataValues.studentId,
+//           codes: pair.dataId,
+//           types: pair.codeId,
+//           createdBy: result.dataValues.createdBy
+//         });
+//       });
+
+//       // Prepare student-class mapping
+//       studentMapping.push({
+//         studentId: result.dataValues.studentId,
+//         // Uncomment and populate if class detail is available
+//         // classSectionId: classDetail?.classSectionsId,
+//         createdBy: result.dataValues.createdBy,
+//         acedmicYearId: result.dataValues.acedmicYearId,
+//         semesterId: result.dataValues.semesterId,
+//         sessionId: result.dataValues.sessionId
+//       });
+
+//       // Save metadata if needed
+//       // if (metaDataEntries.length > 0) {
+//       //   await studentRepository.studentMetaData(metaDataEntries, transaction);
+//       // }
+
+//       return convertedData;
+//     }));
+
+//     // Insert all student-class mappings in bulk
+//     if (studentMapping.length > 0) {
+//       await studentRepository.classStudentMappingExcel(studentMapping, transaction);
+//     }
+
+//     return { allData };
+//   } catch (error) {
+//     console.error('Error in importing student data:', error);
+//     throw error;
+//   }
+// };
+
 export async function importStudentData(excelData, data) {
   try {
     const transaction = await sequelize.transaction();
-    const matchedPairs = [];
-    const metaDataEntries = [];
-    const studentMapping = [];
 
-    // Fetch employee codes and types
+    const studentMapping = [];
+    const results = [];
+
+    // Step 1: Fetch all employee code master data
     const codeAndType = await getEmployeeCodesTypesForStudentImport();
 
-    // Create a lookup map for quick access
+    // Step 2: Create a lookup map for quick access
     const codeMasterLookup = codeAndType.reduce((acc, item) => {
       acc[item.codeMasterType.toLowerCase()] = item;
       return acc;
     }, {});
 
-    // Process each student data
-    const allData = await Promise.all(excelData.map(async (student) => {
+    for (const student of excelData) {
+      // Step 3: Merge excel student row with additional payload
       const convertedData = { ...student, ...data };
+      const matchedPairs = [];
 
-      // Fetch course and class data
-      const course = await getCourseByName(convertedData?.Course);
-      const classDetail = await getClassByName(convertedData?.Class, convertedData?.Section);
-      convertedData['courseId'] = course?.dataValues?.courseId;
-      delete convertedData['Course'];
-
-      // Match and process each field
-      for (let key in convertedData) {
+      // Step 4: Match student data to code master entries
+      for (const key in convertedData) {
         const matchedCodeMaster = codeMasterLookup[key.toLowerCase()];
         if (matchedCodeMaster) {
           const matchingCodes = matchedCodeMaster.codes.filter(codeObj =>
             codeObj.code.toLowerCase() === convertedData[key].toLowerCase()
           );
 
-          matchingCodes.forEach(matchedCode => {
+          for (const matchedCode of matchingCodes) {
             matchedPairs.push({
               dataId: matchedCodeMaster.employeeCodeMasterId,
               codeId: matchedCode.employeeCodeMasterTypeId
@@ -241,54 +325,174 @@ export async function importStudentData(excelData, data) {
               convertedData['courseLevelId'] = matchedCode.employeeCodeMasterTypeId;
               delete convertedData['CourseLevel'];
             }
-          });
+          }
         }
       }
 
+      // Step 5: Add default annual income
       convertedData.annualIncome = 0;
 
-      // Save student data
-      const result = await studentRepository.addStudentExcel(convertedData, transaction);
+      // ✅ Step 6: Generate scholar number BEFORE inserting the student
+      const scholarNumber = await generateScholarNumber(
+        convertedData.courseId,
+        convertedData.instituteId
+      );
+      convertedData.scholarNumber = scholarNumber;
 
-      // Save matched code data
-      for (const pair of matchedPairs) {
-        metaDataEntries.push({
-          studentId: result.dataValues.studentId,
-          codes: pair.dataId,
-          types: pair.codeId,
-          createdBy: result.dataValues.createdBy
-        });
-      }
+      // ✅ Step 7: Insert student with scholar number
+      const result = await studentRepository.addStudent(convertedData, transaction);
 
-      // Save student mapping data after processing all students
-      for (const pair of classDetail) {
-        studentMapping.push({
-          studentId: result.dataValues.studentId,
-          classSectionId: pair.classSectionsId,
-          createdBy: result.dataValues.createdBy,
-          acedmicYearId: result.dataValues.acedmicYearId
-        });
-      }
+      // Step 8: Prepare student-class mapping
+      studentMapping.push({
+        studentId: result.dataValues.studentId,
+        createdBy: result.dataValues.createdBy,
+        acedmicYearId: result.dataValues.acedmicYearId,
+        semesterId: result.dataValues.semesterId,
+        sessionId: result.dataValues.sessionId
+      });
 
-      return convertedData;
-    }));
+      // Optional metadata (uncomment if needed)
+      // const metaDataEntries = matchedPairs.map(pair => ({
+      //   studentId: result.dataValues.studentId,
+      //   codes: pair.dataId,
+      //   types: pair.codeId,
+      //   createdBy: result.dataValues.createdBy
+      // }));
+      // if (metaDataEntries.length > 0) {
+      //   await studentRepository.studentMetaData(metaDataEntries, transaction);
+      // }
 
-    // Insert all student mappings at once after processing all students
+      // Step 9: Store result
+      results.push(result);
+    }
+
+    // Step 10: Bulk insert student-class mappings
     if (studentMapping.length > 0) {
       await studentRepository.classStudentMappingExcel(studentMapping, transaction);
     }
 
-    // if (metaDataEntries.length > 0) {
-    //   await studentRepository.studentMetaData(metaDataEntries, transaction);
-    // }
+    // Step 11: Commit transaction
+    await transaction.commit();
 
-    return { matchedPairs, allData };
+    return {
+      insertedCount: results.length,
+      students: results.map(student => ({
+        studentId: student.dataValues.studentId,
+        scholarNumber: student.dataValues.scholarNumber,
+        name: student.dataValues.firstName,
+        courseId: student.dataValues.courseId
+      }))
+    };
+
   } catch (error) {
     console.error('Error in importing student data:', error);
     throw error;
   }
 };
 
+// this correct final 
+// export async function importStudentData(excelData, data) {
+//   try {
+//     const transaction = await sequelize.transaction();
+
+//     const studentMapping = [];
+
+//     // Fetch all employee code master data
+//     const codeAndType = await getEmployeeCodesTypesForStudentImport();
+
+//     // Create a lookup map for quick access
+//     const codeMasterLookup = codeAndType.reduce((acc, item) => {
+//       acc[item.codeMasterType.toLowerCase()] = item;
+//       return acc;
+//     }, {});
+
+//     // Array to collect student data to be inserted
+//     const studentsToInsert = [];
+//     const allMatchedPairs = [];
+
+//     // Prepare student data and matched codes
+//     for (const student of excelData) {
+//       const convertedData = { ...student, ...data };
+//       const matchedPairs = [];
+
+//       // Match student data to code master entries
+//       for (const key in convertedData) {
+//         const matchedCodeMaster = codeMasterLookup[key.toLowerCase()];
+//         if (matchedCodeMaster) {
+//           const matchingCodes = matchedCodeMaster.codes.filter(codeObj =>
+//             codeObj.code.toLowerCase() === convertedData[key].toLowerCase()
+//           );
+
+//           for (const matchedCode of matchingCodes) {
+//             matchedPairs.push({
+//               dataId: matchedCodeMaster.employeeCodeMasterId,
+//               codeId: matchedCode.employeeCodeMasterTypeId
+//             });
+
+//             if (key.toLowerCase() === 'courselevel') {
+//               convertedData['courseLevelId'] = matchedCode.employeeCodeMasterTypeId;
+//               delete convertedData['CourseLevel'];
+//             }
+//           }
+//         }
+//       }
+
+//       // Default value
+//       convertedData.annualIncome = 0;
+
+//       // Generate scholar number
+//       let scholarNumber = await generateScholarNumber(convertedData.courseId, convertedData.instituteId);
+//       convertedData.scholarNumber = scholarNumber;
+
+//       studentsToInsert.push(convertedData);
+//       allMatchedPairs.push(matchedPairs);
+//     }
+
+//     const results = [];
+
+//     // Insert each student record and map metadata
+//     for (let i = 0; i < studentsToInsert.length; i++) {
+//       const studentData = studentsToInsert[i];
+//       const matchedPairs = allMatchedPairs[i];
+
+//       const result = await studentRepository.addStudent(studentData, transaction);
+
+//       // Student-Class mapping preparation
+//       studentMapping.push({
+//         studentId: result.dataValues.studentId,
+//         createdBy: result.dataValues.createdBy,
+//         acedmicYearId: result.dataValues.acedmicYearId,
+//         semesterId: result.dataValues.semesterId,
+//         sessionId: result.dataValues.sessionId
+//       });
+
+//       // Meta data (commented out but ready to be used)
+//       // const metaDataEntries = matchedPairs.map(pair => ({
+//       //   studentId: result.dataValues.studentId,
+//       //   codes: pair.dataId,
+//       //   types: pair.codeId,
+//       //   createdBy: result.dataValues.createdBy
+//       // }));
+//       // if (metaDataEntries.length > 0) {
+//       //   await studentRepository.studentMetaData(metaDataEntries, transaction);
+//       // }
+
+//       results.push(result);
+//     }
+
+//     // Bulk insert student-class mappings
+//     if (studentMapping.length > 0) {
+//       await studentRepository.classStudentMappingExcel(studentMapping, transaction);
+//     }
+
+//     await transaction.commit();
+//     return { insertedCount: results.length, students: results };
+
+//   } catch (error) {
+//     console.error('Error in importing student data:', error);
+//     throw error;
+//   }
+// };
 
 export async function addAdmissionNoForBulkImport(data, matchedPairs) {
   const transaction = await sequelize.transaction();
@@ -590,3 +794,13 @@ export async function promoteStudent(data) {
 
   return { message: 'Student promoted', result };
 };
+
+function incrementScholarNumber(scholarNumber) {
+  const parts = scholarNumber.split('/');
+  const lastPart = parts[parts.length - 1];
+
+  const incremented = String(parseInt(lastPart, 10) + 1).padStart(lastPart.length, '0');
+
+  parts[parts.length - 1] = incremented;
+  return parts.join('/');
+}
