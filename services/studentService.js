@@ -336,8 +336,11 @@ export async function importStudentData(excelData, data) {
       convertedData.annualIncome = 0;
 
       // Generate scholar number
-      const scholarNumber = await generateScholarNumber(convertedData.courseId, convertedData.instituteId);
+      let scholarNumber = await generateScholarNumber(convertedData.courseId, convertedData.instituteId);
+      scholarNumber = incrementScholarNumber(scholarNumber);
+      // convertedData.scholarNumber = scholarNumber;
       convertedData.scholarNumber = scholarNumber;
+console.log(`>>>>>>>>>>>>convertedData.scholarNumber`,convertedData.scholarNumber);
 
       studentsToInsert.push(convertedData);
       allMatchedPairs.push(matchedPairs);
@@ -783,3 +786,13 @@ export async function promoteStudent(data) {
 
   return { message: 'Student promoted', result };
 };
+
+function incrementScholarNumber(scholarNumber) {
+  const parts = scholarNumber.split('/');
+  const lastPart = parts[parts.length - 1];
+
+  const incremented = String(parseInt(lastPart, 10) + 1).padStart(lastPart.length, '0');
+
+  parts[parts.length - 1] = incremented;
+  return parts.join('/');
+}
