@@ -66,11 +66,6 @@ export default sequelize.define(
             allowNull: true,
             field:'invoice_status'
         },
-        // status:{
-        //     type:DataTypes.BOOLEAN,
-        //     allowNull:false,
-        //     defaultValue:false
-        // },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
