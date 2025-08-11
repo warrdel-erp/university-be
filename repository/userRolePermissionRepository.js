@@ -156,7 +156,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                 },
                                 {
                                     model:model.studentInvoiceMapperModel,
-                                    as:'studentinvoice',
+                                    as:'invoicestudent',
                                     attributes :{exclude:excludeTimestamps}
                                 },
                                 {
@@ -210,7 +210,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                                                 {
                                                                     model: model.teacherSubjectMappingModel,
                                                                     as: "employeeSubject",
-                                                                    distinct: true,
+                                                                    // distinct: true,
                                                                     // attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
                                                                     attributes: { exclude: excludeTimestamps },
                                                                 }
@@ -220,20 +220,7 @@ export async function getUserRolePermissionByUserId(userId) {
                                                 }
                                             ]
                                         },
-                                        // {
-                                        //     model: model.feeInvoiceModel,
-                                        //     as: 'feeStudentMapper',
-                                        //     distinct: true,
-                                        //     attributes: { exclude: excludeFeeInvoice },
-                                        //     include: [
-                                        //         {
-                                        //             model: model.feeInvoiceDetailModel,
-                                        //             as: 'feeInvoiceDetails',
-                                        //             distinct: true,
-                                        //             attributes: { exclude: excludeFeeInvoiceDetail },
-                                        //         }
-                                        //     ]
-                                        // }
+                                        
                                     ]
                                 },
                                 {
