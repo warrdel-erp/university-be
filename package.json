@@ -7,7 +7,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "server": "nodemon deplay--500ms server.js"
+    "server": "nodemon deplay--500ms server.js",
+    "docker:build": "docker build -t univ-be .",
+    "docker:run": "docker run --env-file .env -p 6002:6002 univ-be"
   },
   "author": "",
   "license": "ISC",
