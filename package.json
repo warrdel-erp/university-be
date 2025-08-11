@@ -14,7 +14,9 @@
     "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all --env development",
     "seed": "npx sequelize-cli db:seed:all --env development",
     "seed:undo": "npx sequelize-cli db:seed:undo:all --env development",
-    "server": "nodemon deplay--500ms server.js"
+    "server": "nodemon deplay--500ms server.js",
+    "docker:build": "docker build -t univ-be .",
+    "docker:run": "docker run --env-file .env -p 6002:6002 univ-be"
   },
   "author": "",
   "license": "ISC",
