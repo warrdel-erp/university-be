@@ -163,19 +163,22 @@ export async function getUserRolePermissionByUserId(userId) {
                                     model: model.classStudentMapperModel,
                                     as: 'studentMapped',
                                     distinct: true,
-                                    attributes: ["classStudentMapperId", 'studentId'],
+                                    // attributes: ["classStudentMapperId", 'studentId'],
+                                    attributes: { exclude: excludeTimestamps },
                                     include: [
                                         {
                                             model: model.classSectionModel,
                                             as: 'studentSectionDetail',
                                             distinct: true,
-                                            attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
+                                            // attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
+                                            attributes: { exclude: excludeTimestamps },
                                             include: [
                                                 {
                                                     model: model.teacherSectionMappingModel,
                                                     as: "employeeSection",
                                                     distinct: true,
-                                                    attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+                                                    // attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
+                                                    attributes: { exclude: excludeTimestamps },
                                                     include:[
                                                         {
                                                             model:model.employeeModel,
@@ -201,13 +204,15 @@ export async function getUserRolePermissionByUserId(userId) {
                                                                     model: model.subjectModel,
                                                                     as: "subjects",
                                                                     distinct: true,
-                                                                    attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
+                                                                    // attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
+                                                                    attributes: { exclude: excludeTimestamps },
                                                                 },
                                                                 {
                                                                     model: model.teacherSubjectMappingModel,
                                                                     as: "employeeSubject",
                                                                     distinct: true,
-                                                                    attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
+                                                                    // attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
+                                                                    attributes: { exclude: excludeTimestamps },
                                                                 }
                                                             ]
                                                         }
@@ -235,7 +240,8 @@ export async function getUserRolePermissionByUserId(userId) {
                                     model: model.attendanceModel,
                                     as: 'studentAttendance',
                                     distinct: true,
-                                    attributes: { exclude: excludeAttendance },
+                                    // attributes: { exclude: excludeAttendance },
+                                    attributes: { exclude: excludeTimestamps },
                                 }
                             ]
                         }
