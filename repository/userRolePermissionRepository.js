@@ -139,20 +139,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                     as: 'course',
                                     distinct: true,
                                     attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
-                                    // include: [
-                                    //     {
-                                    //         model: model.timeTableCreateModel,
-                                    //         as: "timeTableCourse",
-                                    //         distinct: true,
-                                    //         attributes: { exclude: excludeTimestamps },
-                                    //     },
-                                    //     {
-                                    //         model: model.timeTableCreationModel,
-                                    //         as: 'timeTable',
-                                    //         distinct: true,
-                                    //         attributes: { exclude: excludeTimestamps },
-                                    //     }
-                                    // ]
                                 },
                                 {
                                     model: model.studentInvoiceMapperModel,
