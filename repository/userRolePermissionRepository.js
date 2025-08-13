@@ -210,7 +210,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                     model: model.attendanceModel,
                                     as: 'studentAttendance',
                                     distinct: true,
-                                    // attributes: { exclude: excludeAttendance },
                                     attributes: { exclude: excludeTimestamps },
                                 }
                             ]
