@@ -16,7 +16,7 @@
     "seed:undo": "npx sequelize-cli db:seed:undo:all --env development",
     "server": "nodemon deplay--500ms server.js",
     "docker:build": "docker build -t univ-be .",
-    "docker:run": "docker run -td --name univ-be --env-file .env -p 6002:6002 univ-be "
+    "docker:run": "docker run -td --name univ-be --env-file .env -p 6002:6002 --restart on-failure:5 univ-be "
   },
   "author": "",
   "license": "ISC",
