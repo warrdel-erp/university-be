@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
-import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
 export default sequelize.define(
     'employee_cor_address',
@@ -26,28 +25,16 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'c_country',
-            references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
-            }
         },
         cState: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'c_state',
-            references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
-            }
         },
         cCity: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'c_city',
-            references: {
-                model: employeeCodeMasterType,
-                key: 'employee_code_master_type_id'
-            }
         },
         address:{
             type: DataTypes.STRING,

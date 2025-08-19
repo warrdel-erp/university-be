@@ -243,3 +243,17 @@ ALTER TABLE students
     ADD COLUMN c_state VARCHAR(255) DEFAULT NULL,
     ADD COLUMN c_city VARCHAR(255) DEFAULT NULL,
     ADD COLUMN contact VARCHAR(255) DEFAULT NULL;
+
+ALTER TABLE employee_cor_address DROP FOREIGN KEY employee_cor_address_ibfk_2;
+ALTER TABLE employee_cor_address DROP FOREIGN KEY employee_cor_address_ibfk_3;
+ALTER TABLE employee_cor_address DROP FOREIGN KEY employee_cor_address_ibfk_4;
+
+ALTER TABLE employee_cor_address 
+MODIFY c_country VARCHAR(255) NOT NULL,
+MODIFY c_state VARCHAR(255) NOT NULL,
+MODIFY c_city VARCHAR(255) NOT NULL;
+
+ALTER TABLE employee_address
+ADD COLUMN p_country VARCHAR(255) NULL,
+ADD COLUMN p_state VARCHAR(255) NULL,
+ADD COLUMN p_city VARCHAR(255) NULL;

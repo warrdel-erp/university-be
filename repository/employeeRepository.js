@@ -85,44 +85,44 @@ export async function getSingleEmployeeDetails(employeeId,universityId) {
                 model:model.employeeCorAddressModel,
                 as:'CorsAddress',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                include:[
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterCountry",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
-                    },
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterState",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
-                    },
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codeMasterCity",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
-                        include :[
-                            {
-                                model: model.employeeCodeMaster,
-                                as: "codes",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            },
-                        ]
-                    },
-                ]
+                // include:[
+                //     {
+                //         model: model.employeeCodeMasterType,
+                //         as: "codeMasterCountry",
+                //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                //         include :[
+                //             {
+                //                 model: model.employeeCodeMaster,
+                //                 as: "codes",
+                //                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //             },
+                //         ]
+                //     },
+                //     {
+                //         model: model.employeeCodeMasterType,
+                //         as: "codeMasterState",
+                //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                //         include :[
+                //             {
+                //                 model: model.employeeCodeMaster,
+                //                 as: "codes",
+                //                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //             },
+                //         ]
+                //     },
+                //     {
+                //         model: model.employeeCodeMasterType,
+                //         as: "codeMasterCity",
+                //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterTypeId","employeeCodeMasterId","employee_code_master_id","createdBy"] },
+                //         include :[
+                //             {
+                //                 model: model.employeeCodeMaster,
+                //                 as: "codes",
+                //                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                //             },
+                //         ]
+                //     },
+                // ]
                },
                {
                 model:model.employeeOfficeModel,
