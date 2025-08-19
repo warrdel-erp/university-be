@@ -16,7 +16,7 @@ export async function addStudentExcel(data, transaction) {
         const result = await model.studentModel.create(data,{ transaction });        
         return result;
     } catch (error) {
-        console.error("Error in add Student thow error:", error);
+        console.error("Error in add Student bluk  error:", error);
         throw error;
     }
 };
@@ -185,13 +185,23 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
             limit
         });
 
-        return result;
+        const totalCount = await model.studentModel.count({
+            where: whereCondition,
+            include: baseInclude,
+            distinct: true,
+            col: 'student_id'
+        });
+
+
+        return {
+            result,totalCount
+        };
 
     } catch (error) {
         console.error(`Error in getting student name "${firstName}":`, error);
         throw error;
     }
-};
+};      
 
 export async function getSingleStudentDetail(studentId, universityId) {
     try {

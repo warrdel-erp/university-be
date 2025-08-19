@@ -226,3 +226,20 @@ CREATE TABLE notice (
     CONSTRAINT fk_notice_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_notice_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+-- DROP TABLE IF EXISTS students_address;
+
+-- DROP TABLE IF EXISTS student_cor_address;
+
+ALTER TABLE students
+    ADD COLUMN p_address VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN p_pincode INT DEFAULT NULL,
+    ADD COLUMN p_country VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN p_state VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN p_city VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN c_address VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN c_pincode INT DEFAULT NULL,
+    ADD COLUMN c_country VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN c_state VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN c_city VARCHAR(255) DEFAULT NULL,
+    ADD COLUMN contact VARCHAR(255) DEFAULT NULL;
