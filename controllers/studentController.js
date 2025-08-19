@@ -59,7 +59,7 @@ export const getAllStudents = async (req, res) => {
 
     try {
         const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit,instituteId,role);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
         res.status(500).send("Internal Server Error");

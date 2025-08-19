@@ -16,7 +16,7 @@ export async function addStudentExcel(data, transaction) {
         const result = await model.studentModel.create(data,{ transaction });        
         return result;
     } catch (error) {
-        console.error("Error in add Student thow error:", error);
+        console.error("Error in add Student bluk  error:", error);
         throw error;
     }
 };
@@ -185,13 +185,23 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
             limit
         });
 
-        return result;
+        const totalCount = await model.studentModel.count({
+            where: whereCondition,
+            include: baseInclude,
+            distinct: true,
+            col: 'student_id'
+        });
+
+
+        return {
+            result,totalCount
+        };
 
     } catch (error) {
         console.error(`Error in getting student name "${firstName}":`, error);
         throw error;
     }
-};
+};      
 
 export async function getSingleStudentDetail(studentId, universityId) {
     try {
@@ -354,37 +364,37 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     as :'studentFeePlan',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
                     include:[
-                                {
-                                    model: model.feePlanTypeModel,
-                                    as: "feePlanType",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                    include:[
-                                        {
-                                            model:model.feeTypeModel,
-                                            as:'feeType',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                        }
-                                    ]
-                                },
-                                {
-                                    model:model.feePlanSemesterModel,
-                                    as:'feePlanSemester',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                    include :[
-                                        {
-                                            model:model.semesterModel,
-                                            as:'Semester',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                            // include:[
-                                            //     {
-                                            //         model:model.courseModel,
-                                            //         as:'semesterCourse',
-                                            //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                            //     }
-                                            // ]
-                                        }
-                                    ]
-                                }
+                                // {
+                                //     model: model.feePlanTypeModel,
+                                //     as: "feePlanType",
+                                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                //     include:[
+                                //         {
+                                //             model:model.feeTypeModel,
+                                //             as:'feeType',
+                                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                //         }
+                                //     ]
+                                // },
+                                // {
+                                //     model:model.feePlanSemesterModel,
+                                //     as:'feePlanSemester',
+                                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                //     include :[
+                                //         {
+                                //             model:model.semesterModel,
+                                //             as:'Semester',
+                                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                //             // include:[
+                                //             //     {
+                                //             //         model:model.courseModel,
+                                //             //         as:'semesterCourse',
+                                //             //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                                //             //     }
+                                //             // ]
+                                //         }
+                                //     ]
+                                // }
                             ]
                 }
             ],
