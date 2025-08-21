@@ -242,7 +242,6 @@ export async function getClassDetails(classSectionId,universityId,acedmicYearId,
 };
 
 export async function addClassSubjectMapper(data, createdBy,instituteId) {  
-    console.log(`>>>>>>>>>data`,data);
     try {
         const { semesterId, subjectIds } = data;
 
@@ -320,11 +319,12 @@ export async function createClass(data, createdBy, universityId,instituteId) {
     }
 };
 
-export async function subjectExcel(excelData, courseId, specializationId, createdBy, universityId,instituteId) {
+export async function subjectExcel(excelData,courseId,acedmicYearId,specializationId,createdBy,universityId,instituteId) {
     try {
         const subjectCreationPromises = excelData.map(async (row) => {
             const subjectData = {
                 courseId,
+                acedmicYearId,
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
@@ -339,7 +339,7 @@ export async function subjectExcel(excelData, courseId, specializationId, create
 
         return await Promise.all(subjectCreationPromises);
     } catch (error) {
-        console.error("Error in creating classes:", error);
-        throw new Error("Failed to create classes");
+        console.error("Error in creating subject bulk upload:", error);
+        throw new Error("Failed to create subject bulk upload");
     }
 };
