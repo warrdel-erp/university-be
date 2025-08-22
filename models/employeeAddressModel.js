@@ -31,6 +31,21 @@ export default sequelize.define(
 			allowNull:true,
             field:'p_pincode'
 		},
+        pCountry:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'p_country'
+        },
+        pState:{
+			type:DataTypes.STRING,
+			allowNull:true,
+            field:'p_state'
+		},
+        pCity:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'p_City'
+        },
         phoneNumber:{
             type:DataTypes.STRING,
             allowNull:true,

@@ -302,6 +302,60 @@ export default sequelize.define(
             defaultValue: false,
             field:'fee_status',
         },
+        pAddress:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'p_address'
+        },
+        pPincode:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+            field:'p_pincode'
+		},
+        pCountry: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'p_country',
+        },
+        pState: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'p_state',
+        },
+        pCity: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'p_city',
+        },
+        contact:{
+            type:DataTypes.STRING,
+            allowNull:true
+        },
+        cAddress:{
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'c_address'
+        },
+        cPincode:{
+			type:DataTypes.INTEGER,
+			allowNull:true,
+            field:'c_pincode'
+		},
+        cCountry: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'c_country',
+        },
+        cState: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'c_state',
+        },
+        cCity: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'c_city',
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

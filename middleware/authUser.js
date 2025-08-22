@@ -89,9 +89,9 @@ export default async function useAuth(req, res, next) {
         const accessRoute = req.originalUrl.split('?')[0].replace(/\/$/, ''); 
         const permissionType = req.method === 'GET' ? 'R/O' : 'R/W';
 
-        console.log(`>>>>>>>>>>>Access Route: ${accessRoute}`);
-        console.log(`>>>>>>>>>Role: ${role}`);
-        console.log(`>>>>>>>>>>User Permissions: ${userPermissions}`);
+        // console.log(`>>>>>>>>>>>Access Route: ${accessRoute}`);
+        // console.log(`>>>>>>>>>Role: ${role}`);
+        // console.log(`>>>>>>>>>>User Permissions: ${userPermissions}`);
 
         // Role-based access check
         const allowedRolesForRoute = `${accessRoute}-${permissionType}`;
@@ -120,4 +120,4 @@ export default async function useAuth(req, res, next) {
         console.error('Token verification failed:', error);
         return res.status(401).json({ message: "Invalid or expired token" });
     }
-}
+};

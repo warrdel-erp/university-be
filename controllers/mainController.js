@@ -11,13 +11,13 @@ export const getAllCollegesAndCourses = async (req,res) => {
         const instituteId = req.query.instituteId;
         const acedmicYearId = req.query.acedmicYearId;
         if(!universityId){
-            res.status(400).send('University Id is required')
+            return res.status(400).send('University Id is required')
         }
         const result = await mainServices.getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all course:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -27,13 +27,13 @@ export const addCampus = async (req,res) => {
         const createdBy = req.user.userId;
         const data = req.body
         if(!universityId){
-            res.status(400).send('University Id is required')
+           return res.status(400).send('University Id is required')
         }
         const result = await mainServices.addCampus(data,createdBy);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in Add Campus:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -43,13 +43,13 @@ export const addInstitute = async (req,res) => {
         const createdBy = req.user.userId;
         const data = req.body
         if(!(universityId && campusId)){
-            res.status(400).send('University Id and Campus Id is required')
+          return res.status(400).send('University Id and Campus Id is required')
         }
         const result = await mainServices.addInstitute(data,createdBy);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Institute:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -59,13 +59,13 @@ export const addAffiliatedUniversity = async (req,res) => {
         const createdBy = req.user.userId;
         const data =  req.body
         if(!(universityId && instituteId)){
-            res.status(400).send('University Id and institute Id is required')
+           return res.status(400).send('University Id and institute Id is required')
         }
         const result = await mainServices.addAffiliatedUniversity(data,createdBy);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Affiliated University:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -76,13 +76,13 @@ export const addCourse = async (req,res) => {
         const data = req.body;
         const instituteId = req.user.instituteId;
         if(!(universityId && course_levelId && affiliatedUniversityId && instituteId)){
-            res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
+            return res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
         } 
         const result = await mainServices.addCourse(data,createdBy,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Course:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -93,13 +93,13 @@ export const addSpecialization = async (req,res) => {
         const data = req.body
         const instituteId = req.user.instituteId;
         if(!(universityId && course_Id && acedmicYearId && instituteId)){
-            res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
+            return res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
         } 
         const result = await mainServices.addSpecialization(data,createdBy,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Specialization:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -110,13 +110,13 @@ export const addSubject = async (req,res) => {
         const data = req.body
         const instituteId = req.user.instituteId;
         if(!(courseId && universityId && acedmicYearId && instituteId)){
-            res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
+            return res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
         } 
         const result = await mainServices.addSubject(data,createdBy,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -128,13 +128,13 @@ export const addClass = async (req,res) => {
         const instituteId = req.user.instituteId;
         const data = req.body
         if(!(courseId || specializationId)){
-            res.status(400).send('specializationId Or course Id is required')
+            return res.status(400).send('specializationId Or course Id is required')
         } 
         const result = await mainServices.addClass(data,createdBy,universityId,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Class:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -147,10 +147,10 @@ export const getClass = async (req,res) => {
         const role = req.user.role;    
         const instituteId = req.user.instituteId;
         const result = await mainServices.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -165,10 +165,10 @@ export const addClassSubjectMapper = async (req,res) => {
             return res.status(400).send('semesterId and instituteId is required')
         } 
         const result = await mainServices.addClassSubjectMapper(data,createdBy,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add semester Subject Mapper:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -180,10 +180,10 @@ export const getClassSubjectMapper = async (req,res) => {
         const role = req.user.role;    
         const instituteId = req.user.instituteId;
         const result = await mainServices.getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -195,13 +195,13 @@ export const addSemester = async (req,res) => {
         const data = req.body
         const instituteId = req.user.instituteId;
         if(!(universityId && courseId && acedmicYearId && instituteId)){
-            res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
+            return res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
         } 
         const result = await mainServices.addSemester(data,createdBy,universityId,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add semester:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -214,10 +214,10 @@ export const getSemester = async (req,res) => {
         const role = req.user.role;    
         const instituteId = req.user.instituteId;
         const result = await mainServices.getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting semester:", error);
-        res.status(500).send("Internal Server Error");
+        return res.status(500).send("Internal Server Error");
     }
 };
 
@@ -229,10 +229,10 @@ export const createClass = async (req,res) => {
         const data = req.body
         const instituteId = req.user.instituteId;
         if(!(acedmicYearId && courseId && instituteId)){
-            res.status(400).send('acedmicYearId ,instituteId and courseId is required')
+            return res.status(400).send('acedmicYearId ,instituteId and courseId is required')
         } 
         const result = await mainServices.createClass(data,createdBy,universityId,instituteId);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add directly class:", error);
         res.status(500).send("Internal Server Error");
@@ -241,13 +241,13 @@ export const createClass = async (req,res) => {
 
 export const subjectExcel = async (req,res) => {
     try {
-        const {courseId,specializationId} = req.body;
+        const {courseId,specializationId,acedmicYearId} = req.body;
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body;
         const instituteId = req.user.instituteId;
-        if(!(courseId && instituteId)){
-            res.status(400).send('courseId and instituteId is required')
+        if(!(courseId && instituteId && acedmicYearId)){
+           return res.status(400).send('acedmicYearId, courseId and instituteId is required')
         } 
         const excelFile = req.files?.subject;
         if (!excelFile) {
@@ -255,7 +255,7 @@ export const subjectExcel = async (req,res) => {
         }
 
         const excelData = fileHandler.readExcelFile(excelFile.data);
-        const result = await mainServices.subjectExcel(excelData,courseId,specializationId,createdBy,universityId,instituteId);
+        const result = await mainServices.subjectExcel(excelData,courseId,acedmicYearId,specializationId,createdBy,universityId,instituteId);
 
         res.status(200).send(result);
     } catch (error) {
