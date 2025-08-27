@@ -257,3 +257,28 @@ ALTER TABLE employee_address
 ADD COLUMN p_country VARCHAR(255) NULL,
 ADD COLUMN p_state VARCHAR(255) NULL,
 ADD COLUMN p_city VARCHAR(255) NULL;
+
+CREATE TABLE exam_structure (
+    exam_structure_id INT PRIMARY KEY AUTO_INCREMENT,
+    acedmic_year_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    course_id INT NOT NULL,
+    exam_type VARCHAR(255),
+    `system` VARCHAR(255),
+    jury VARCHAR(255),
+    prepared_by VARCHAR(255),
+    evaluated_by VARCHAR(255),
+    weightage VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_exam_structure_acedmicYear FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_exam_structure_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_exam_structure_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_exam_structure_course FOREIGN KEY (course_id) REFERENCES course(course_id),
+    CONSTRAINT fk_exam_structure_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_exam_structure_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

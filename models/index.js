@@ -102,6 +102,7 @@ import topicModel from './topicModel.js';
 import subTopicModel from './subTopicModel.js';
 import lessonMappingModel from './lessonMappingModel.js';
 import noticeModel from './noticeModel.js';
+import examStructureModel from './examStructureModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -730,6 +731,9 @@ topicModel.hasMany(subTopicModel, { foreignKey: 'topicId', as: 'subTopic' });
 lessonMappingModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 
+examStructureModel.belongsTo(courseModel, { foreignKey: 'examStructureId', as: 'examStructureCourse' });
+courseModel.hasMany(examStructureModel, { foreignKey: 'examStructureId', as: 'examStructureCourse' });
+
 export {
     settingModel,
     universityModel,
@@ -835,4 +839,5 @@ export {
     subTopicModel,
     lessonMappingModel,
     noticeModel,
+    examStructureModel,
 };
