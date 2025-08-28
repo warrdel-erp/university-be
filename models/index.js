@@ -731,8 +731,8 @@ topicModel.hasMany(subTopicModel, { foreignKey: 'topicId', as: 'subTopic' });
 lessonMappingModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 
-examStructureModel.belongsTo(courseModel, { foreignKey: 'examStructureId', as: 'examStructureCourse' });
-courseModel.hasMany(examStructureModel, { foreignKey: 'examStructureId', as: 'examStructureCourse' });
+courseModel.hasMany(examStructureModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'examStructuresCourse' });
+examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: 'courseId', as: 'courseExam' });
 
 export {
     settingModel,

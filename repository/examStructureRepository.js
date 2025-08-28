@@ -25,11 +25,10 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
             include: [
                 {
                     model: model.courseModel,
-                    as: "examStructureCourse",
+                    as: "courseExam",
                     attributes: ["courseName","capacity"],
-                    where: { universityId: universityId },
-                },
-                
+                    // where: { universityId: universityId },
+                }, 
             ],
         });
         return result;
@@ -47,9 +46,9 @@ export async function getSingleExamStructure(examStructureId, universityId) {
             include: [
                 {
                     model: model.courseModel,
-                    as: "examStructureCourse",
+                    as: "courseExam",
                     attributes: ["courseName","capacity"],
-                    where: { universityId: universityId },
+                    // where: { universityId: universityId },
                 },
                 
             ],
