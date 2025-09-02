@@ -432,7 +432,7 @@ export const sendLink = async (email, req) => {
   const user = await registerRepository.findEmailByEmail(email);
   if (!user) throw new Error("User not found");
 
-  const token = jwt.sign({ id: user.id, email: user.email }, 'warrdelUniversityERPWarrdelUniversityERP', { expiresIn: "5m" });
+  const token = jwt.sign({email: user.email }, 'warrdelUniversityERPWarrdelUniversityERP', { expiresIn: "5m" });
 
   const baseUrl = `${req.protocol}://${req.headers.host}` || "http://localhost:3000";
 
