@@ -1,19 +1,39 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import users from "./userModel.js";
-import acedmicYear from "./acedmicYearModel.js";
-import instituteModel from "./instituteModel.js";
-import university from "./universityModel.js";
-import course from "./courseModel.js"
+import institute from './instituteModel.js';
+import acedmicYear from './acedmicYearModel.js';
+import semesterModel from './semesterModel.js';
+import subjectModel from './subjectModel.js';
+import users from './userModel.js';
+import universityModel from "./universityModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
-    'exam_structure',
+    'syllabus_unit',
     {
-        examStructureId: {
+        syllabusUnitId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_structure_id'
+            field: 'syllabus_unit_id'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
+            }
         },
         acedmicYearId: {
             type: DataTypes.INTEGER,
@@ -24,82 +44,50 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        instituteId: {
+        semesterId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'institute_id',
+            field: 'semester_id',
             references: {
-                model: instituteModel,
-                key: 'institute_id'
+                model: semesterModel,
+                key: 'semester_id'
             }
         },
-        universityId: {
+        sessionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'university_id',
+            field: 'session_id',
             references: {
-                model: university,
-                key: 'university_id'
+                model: sessionModel,
+                key: 'session_id'
             }
         },
-        courseId: {
+        subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'subject_id',
             references: {
-                model: course,
-                key: 'course_id'
+                model: subjectModel,
+                key: 'subject_id'
             }
         },
-        examType: {
-            type: DataTypes.STRING,
-            field: 'exam_type',
-            allowNull: true
-        },
-        maximumIteration:{
+        unitNumber:{
             type:DataTypes.INTEGER,
             allowNull:true,
-            field:'maximum_Iteration'
+            field:'unit_number'
         },
-        jury:{
+        name:{
             type:DataTypes.STRING,
             allowNull:true,
         },
-        internal:{
+        description:{
             type:DataTypes.STRING,
             allowNull:true,
         },
-        external:{
+        contactHours:{
             type:DataTypes.STRING,
             allowNull:true,
-        },
-        jurySetup:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'jury_setup'
-        },
-        permission:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        totalMarks:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'total_marks'
-        },
-        preparedBy:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'prepared_by'
-        },
-        evaluatedBy:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'evaluated_by'
-        },
-        weightage:{
-            type:DataTypes.STRING,
-            allowNull:true,
+            field:'contact_hours'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -138,7 +126,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'exam_structure',
+        tableName: 'syllabus_unit',
         timestamps: true,
         paranoid: true
     }
