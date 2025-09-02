@@ -426,8 +426,6 @@ export async function changeStatus(userId) {
   }
 };
 
-
-
 export const sendLink = async (email, req) => {
   const user = await registerRepository.findEmailByEmail(email);
   if (!user) throw new Error("User not found");

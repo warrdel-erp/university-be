@@ -131,17 +131,17 @@ export const changePassword = async (req, res) => {
     }
     const isPasswordCorrect = await bcrypt.compare(
       oldPassword,
-      existingEmail.dataValues.dummyPassword,
+      existingEmail.dataValues.password,
     );
     
 
-    // if (!isPasswordCorrect) {
-    //   return res.status(400).send("Incorrect Old Password");
-    // }
-    //  else {
+    if (!isPasswordCorrect) {
+      return res.status(400).send("Incorrect Old Password");
+    }
+     else {
       const result = await userService.changePassword(req.body);
       res.status(200).send(result);
-    // }
+    }
   } catch (error) {
     console.error("Error during change password:", error);
     res.status(500).send("Internal server error");
