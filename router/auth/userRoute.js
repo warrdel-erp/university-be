@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login ,register,adminRegisterStudentAndEmployee,getAdminRegisterStudentAndEmployee,changePassword,changeStatus} from "../../controllers/userController.js";
+import { login ,register,adminRegisterStudentAndEmployee,getAdminRegisterStudentAndEmployee,changePassword,changeStatus,sendLink} from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 
 // for first time register
@@ -23,5 +23,7 @@ router.get("/adminSignUp",useAuth, getAdminRegisterStudentAndEmployee);
 router.post("/changePassword", changePassword);
 
 router.patch("/changeStatus", changeStatus);
+
+router.patch("/sendLink", sendLink);
 
 export default router;

@@ -102,6 +102,8 @@ import topicModel from './topicModel.js';
 import subTopicModel from './subTopicModel.js';
 import lessonMappingModel from './lessonMappingModel.js';
 import noticeModel from './noticeModel.js';
+import examStructureModel from './examStructureModel.js';
+import syllabusUnitModel from './syllabusUnitModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -730,6 +732,24 @@ topicModel.hasMany(subTopicModel, { foreignKey: 'topicId', as: 'subTopic' });
 lessonMappingModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 
+courseModel.hasMany(examStructureModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'examStructuresCourse' });
+examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: 'courseId', as: 'courseExam' });
+
+syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
+acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
+
+syllabusUnitModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionUnit" });
+sessionModel.hasMany(syllabusUnitModel, { foreignKey: "sessionId", as: "syllabusUnitsSession" });
+
+syllabusUnitModel.belongsTo(semesterModel, { foreignKey: "semesterId",as: "semesterUnit" });
+semesterModel.hasMany(syllabusUnitModel, { foreignKey: "semesterId",  as: "syllabusUnitsSemester" });
+
+syllabusUnitModel.belongsTo(subjectModel, { foreignKey: "subjectId",  as: "subjectUnit" });
+subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabusUnitsSubject" });
+
+syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
+instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
+
 export {
     settingModel,
     universityModel,
@@ -835,4 +855,6 @@ export {
     subTopicModel,
     lessonMappingModel,
     noticeModel,
+    examStructureModel,
+    syllabusUnitModel,
 };
