@@ -162,3 +162,12 @@ export const changeStatus = async (req, res) => {
     res.status(500).send("Internal server error");
   }
 };
+
+export const sendLink = async (req, res) => {
+   try {
+    await userService.sendLink(req.body.email, req);
+    res.json({ message: "Password reset link sent to email" });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
