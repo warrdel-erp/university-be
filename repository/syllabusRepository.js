@@ -55,18 +55,18 @@ export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,
                     as:'syllabusCourse',
                     attributes:["courseName","courseCode"]
                 },
-                {
-                    model:model.courseModel,
-                    as:'syllabusCourse',
-                    attributes:["courseName","courseCode"]
-                },
-                {
-                    model:model.classSectionModel,
-                    as:'syllabusClassSection',
-                    attributes: { 
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
-                    }                
-                },
+                // {
+                //     model:model.courseModel,
+                //     as:'syllabusCourse',
+                //     attributes:["courseName","courseCode"]
+                // },
+                // {
+                //     model:model.classSectionModel,
+                //     as:'syllabusClassSection',
+                //     attributes: { 
+                //         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                //     }                
+                // },
                 {
                     model: model.syllabusDetailsModel,
                     as: 'syllabusDetails',  
