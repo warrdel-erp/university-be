@@ -314,3 +314,9 @@ CREATE TABLE syllabus_unit (
     CONSTRAINT fk_syllabus_unit_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_syllabus_unit_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+update employee_code_master set code_master_type = 'Designation' where code_master_type = 'Salutation';
+
+ALTER TABLE syllabus DROP FOREIGN KEY syllabus_ibfk_3;
+
+ALTER TABLE syllabus DROP COLUMN class_sections_id;
