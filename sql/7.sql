@@ -320,3 +320,13 @@ update employee_code_master set code_master_type = 'Designation' where code_mast
 ALTER TABLE syllabus DROP FOREIGN KEY syllabus_ibfk_3;
 
 ALTER TABLE syllabus DROP COLUMN class_sections_id;
+
+-- Add the session_id column with the foreign key reference in exam_structure
+
+ALTER TABLE exam_structure ADD COLUMN session_id INT DEFAULT NULL;
+
+UPDATE exam_structure SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE exam_structure SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE exam_structure ADD CONSTRAINT fk_session_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;

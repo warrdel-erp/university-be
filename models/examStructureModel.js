@@ -4,7 +4,8 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
-import course from "./courseModel.js"
+import course from "./courseModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
     'exam_structure',
@@ -22,6 +23,15 @@ export default sequelize.define(
             references: {
                 model: acedmicYear,
                 key: 'acedmic_year_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         instituteId: {
