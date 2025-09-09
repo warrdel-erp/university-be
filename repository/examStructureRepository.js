@@ -8,7 +8,7 @@ export async function addExamStructure(examDetail) {
         console.error("Error adding exam Structure:", error);
         throw error;
     }
-}
+};
 
 export async function getExamStructure(universityId,acedmicYearId,role,instituteId) {
     try {
@@ -36,32 +36,7 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
         console.error("Error fetching exam Structures:", error);
         throw error;
     }
-}
-
-// export async function getSingleExamStructure(courseId,sessionId, universityId) {
-//     try {
-//         const result = await model.examStructureModel.findOne({
-//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-//             where: { courseId,sessionId, universityId },
-//             include: [
-//                 {
-//                     model: model.courseModel,
-//                     as: "courseExam",
-//                     attributes: ["courseName","capacity"],
-//                 },
-//                 {
-//                     model:model.sessionModel,
-//                     as:'sessionExam',
-//                     attributes: ["sessionName"],
-//                 }
-//             ],
-//         });
-//         return result;
-//     } catch (error) {
-//         console.error("Error fetching exam Structure:", error);
-//         throw error;
-//     }
-// }
+};
 
 export async function getSingleExamStructure(courseId, sessionId, universityId) {
     try {
@@ -103,7 +78,7 @@ export async function deleteExamStructure(examStructureId) {
         console.error("Error deleting exam Structure:", error);
         throw error;
     }
-}
+};
 
 export async function updateExamStructure(examStructureId, examDetail) {
     try {
@@ -125,4 +100,4 @@ export async function addExamType(examDetail) {
         console.error("Error adding exam Structure setup type:", error);
         throw error;
     }
-}
+};
