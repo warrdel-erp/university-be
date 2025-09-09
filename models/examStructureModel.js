@@ -61,16 +61,6 @@ export default sequelize.define(
                 key: 'course_id'
             }
         },
-        // examType: {
-        //     type: DataTypes.STRING,
-        //     field: 'exam_type',
-        //     allowNull: true
-        // },
-        // maximumIteration:{
-        //     type:DataTypes.INTEGER,
-        //     allowNull:true,
-        //     field:'maximum_Iteration'
-        // },
         jury:{
             type:DataTypes.STRING,
             allowNull:true,
@@ -83,11 +73,6 @@ export default sequelize.define(
             type:DataTypes.STRING,
             allowNull:true,
         },
-        // jurySetup:{
-        //     type:DataTypes.STRING,
-        //     allowNull:true,
-        //     field:'jury_setup'
-        // },
         permission:{
             type:DataTypes.STRING,
             allowNull:true,
@@ -97,20 +82,6 @@ export default sequelize.define(
             allowNull:true,
             field:'total_marks'
         },
-        // preparedBy:{
-        //     type:DataTypes.STRING,
-        //     allowNull:true,
-        //     field:'prepared_by'
-        // },
-        // evaluatedBy:{
-        //     type:DataTypes.STRING,
-        //     allowNull:true,
-        //     field:'evaluated_by'
-        // },
-        // weightage:{
-        //     type:DataTypes.STRING,
-        //     allowNull:true,
-        // },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
