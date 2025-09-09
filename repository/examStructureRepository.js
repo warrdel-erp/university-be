@@ -38,30 +38,62 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
     }
 }
 
-export async function getSingleExamStructure(courseId,sessionId, universityId) {
+// export async function getSingleExamStructure(courseId,sessionId, universityId) {
+//     try {
+//         const result = await model.examStructureModel.findOne({
+//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//             where: { courseId,sessionId, universityId },
+//             include: [
+//                 {
+//                     model: model.courseModel,
+//                     as: "courseExam",
+//                     attributes: ["courseName","capacity"],
+//                 },
+//                 {
+//                     model:model.sessionModel,
+//                     as:'sessionExam',
+//                     attributes: ["sessionName"],
+//                 }
+//             ],
+//         });
+//         return result;
+//     } catch (error) {
+//         console.error("Error fetching exam Structure:", error);
+//         throw error;
+//     }
+// }
+
+export async function getSingleExamStructure(courseId, sessionId, universityId) {
     try {
         const result = await model.examStructureModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { courseId,sessionId, universityId },
+            where: { courseId, sessionId, universityId },
             include: [
                 {
                     model: model.courseModel,
                     as: "courseExam",
-                    attributes: ["courseName","capacity"],
+                    attributes: ["courseName", "capacity"],
                 },
                 {
-                    model:model.sessionModel,
-                    as:'sessionExam',
+                    model: model.sessionModel,
+                    as: "sessionExam",
                     attributes: ["sessionName"],
+                },
+                {
+                    model: model.examSetupTypeModel,
+                    as: "setupTypes", 
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
                 }
             ],
         });
+
         return result;
     } catch (error) {
         console.error("Error fetching exam Structure:", error);
         throw error;
     }
-}
+};
+
 
 export async function deleteExamStructure(examStructureId) {
     try {
@@ -81,6 +113,16 @@ export async function updateExamStructure(examStructureId, examDetail) {
         return result;
     } catch (error) {
         console.error("Error updating exam Structure:", error);
+        throw error;
+    }
+};
+
+export async function addExamType(examDetail) {
+    try {
+        const result = await model.examSetupTypeModel.create(examDetail);
+        return result;
+    } catch (error) {
+        console.error("Error adding exam Structure setup type:", error);
         throw error;
     }
 }

@@ -6,6 +6,7 @@ import {
     getSingleExamStructure,
     updateExamStructure,
     deleteExamStructure,
+    addExamType,
 } from "../controllers/examStructureController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -18,5 +19,7 @@ router.get("/single", userAuth, getSingleExamStructure);
 router.patch("/", userAuth, updateExamStructure);
 
 router.delete("/", userAuth, deleteExamStructure);
+
+router.post("/examType", userAuth, addExamType);
 
 export default router;

@@ -104,6 +104,7 @@ import lessonMappingModel from './lessonMappingModel.js';
 import noticeModel from './noticeModel.js';
 import examStructureModel from './examStructureModel.js';
 import syllabusUnitModel from './syllabusUnitModel.js';
+import examSetupTypeModel from './examSetupTypeModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -753,6 +754,9 @@ subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabus
 syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
 instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
 
+examStructureModel.hasMany(examSetupTypeModel, { foreignKey: "exam_structure_id", as: "setupTypes" });
+examSetupTypeModel.belongsTo(examStructureModel, { foreignKey: "exam_structure_id", as: "examStructure" });
+
 export {
     settingModel,
     universityModel,
@@ -860,4 +864,5 @@ export {
     noticeModel,
     examStructureModel,
     syllabusUnitModel,
+    examSetupTypeModel,
 };
