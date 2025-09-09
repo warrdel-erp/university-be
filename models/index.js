@@ -104,6 +104,7 @@ import lessonMappingModel from './lessonMappingModel.js';
 import noticeModel from './noticeModel.js';
 import examStructureModel from './examStructureModel.js';
 import syllabusUnitModel from './syllabusUnitModel.js';
+import examSetupTypeModel from './examSetupTypeModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -735,6 +736,9 @@ timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappin
 courseModel.hasMany(examStructureModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'examStructuresCourse' });
 examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: 'courseId', as: 'courseExam' });
 
+sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
+examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
+
 syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
 acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
 
@@ -749,6 +753,9 @@ subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabus
 
 syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
 instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
+
+examStructureModel.hasMany(examSetupTypeModel, { foreignKey: "exam_structure_id", as: "setupTypes" });
+examSetupTypeModel.belongsTo(examStructureModel, { foreignKey: "exam_structure_id", as: "examStructure" });
 
 export {
     settingModel,
@@ -857,4 +864,5 @@ export {
     noticeModel,
     examStructureModel,
     syllabusUnitModel,
+    examSetupTypeModel,
 };

@@ -2,95 +2,34 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as SyllabusCreationRepository  from "../repository/syllabusRepository.js";
 import * as mainRepository from '../repository/mainRepository.js';
 
-// export async function addSyllabus(syllabusData, createdBy, updatedBy) {
-//     const transaction = await sequelize.transaction();
-//     try {
-//         const classId = syllabusData.classId;
-//         const classSection = await mainRepository.getSectionByClassId(classId);
-//         const classSectionIds = [];
-//         for (let i = 0; i < classSection.length; i++) {
-//             classSectionIds.push(classSection[i].classSectionsId);
-//         }
-
-//         const allSyllabusResults = [];
-
-//         for (const sectionId of classSectionIds) {
-//             const syllabus = await SyllabusCreationRepository.addSyllabus({
-//                 instituteId: syllabusData.instituteId,
-//                 acedmicYearId: syllabusData.acedmicYearId,
-//                 courseId: syllabusData.courseId,
-//                 classSectionsId: sectionId,
-//                 createdBy,
-//                 updatedBy
-//             }, { transaction });
-
-//             const syllabusDetailsData = [];
-
-//             for (const subjectGroup of syllabusData.subjects) {
-//                 const { subjectType, type, internal, external, total, data } = subjectGroup;
-
-//                 for (const subj of data) {
-//                     syllabusDetailsData.push({
-//                         syllabusId: syllabus.syllabusId,
-//                         subjectId: subj.subjectId,
-//                         subjectType,
-//                         type,
-//                         internal,
-//                         external,
-//                         total,
-//                         createdBy,
-//                         updatedBy
-//                     });
-//                 }
-//             }
-
-//             await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
-//             allSyllabusResults.push(syllabus);
-//         }
-
-//         await transaction.commit();
-
-//         return allSyllabusResults;
-//     } catch (error) {
-//         await transaction.rollback();
-//         console.error('Error creating syllabus:', error);
-//         throw error;
-//     }
-// };
-
 export async function addSyllabus(syllabusData, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
     try {
         const allSyllabusResults = [];
 
+        // Save syllabus main data
         const syllabus = await SyllabusCreationRepository.addSyllabus({
+            campusId: syllabusData.campusId,
             instituteId: syllabusData.instituteId,
             acedmicYearId: syllabusData.acedmicYearId,
             courseId: syllabusData.courseId,
+            semesterId: syllabusData.semesterId,
             createdBy,
             updatedBy
         }, { transaction });
 
-        const syllabusDetailsData = [];
-
-        // Add subjects and details
-        for (const subjectGroup of syllabusData.subjects) {
-            const { subjectType, type, mid_term, end_term, total, data } = subjectGroup;
-
-            for (const subj of data) {
-                syllabusDetailsData.push({
-                    syllabusId: syllabus.syllabusId,
-                    subjectId: subj.subjectId,
-                    subjectType,
-                    type,
-                    internal: mid_term,  
-                    external: end_term,  
-                    total,
-                    createdBy,
-                    updatedBy
-                });
-            }
-        }
+        // Prepare syllabus details
+        const syllabusDetailsData = syllabusData.subjects.map(subj => ({
+            syllabusId: syllabus.syllabusId,
+            subjectId: subj.subjectId,
+            subjectType: subj.subjectType,
+            type:subj.subjectType,
+            internal: subj.internal,
+            external: subj.external,
+            total: subj.total,
+            createdBy,
+            updatedBy
+        }));
 
         await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
         allSyllabusResults.push(syllabus);
@@ -103,6 +42,52 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
         throw error;
     }
 };
+
+// export async function addSyllabus(syllabusData, createdBy, updatedBy) {
+//     const transaction = await sequelize.transaction();
+//     try {
+//         const allSyllabusResults = [];
+
+//         const syllabus = await SyllabusCreationRepository.addSyllabus({
+//             instituteId: syllabusData.instituteId,
+//             acedmicYearId: syllabusData.acedmicYearId,
+//             courseId: syllabusData.courseId,
+//             createdBy,
+//             updatedBy
+//         }, { transaction });
+
+//         const syllabusDetailsData = [];
+
+//         // Add subjects and details
+//         for (const subjectGroup of syllabusData.subjects) {
+//             const { subjectType, type, mid_term, end_term, total, data } = subjectGroup;
+
+//             for (const subj of data) {
+//                 syllabusDetailsData.push({
+//                     syllabusId: syllabus.syllabusId,
+//                     subjectId: subj.subjectId,
+//                     subjectType,
+//                     type,
+//                     internal: mid_term,  
+//                     external: end_term,  
+//                     total,
+//                     createdBy,
+//                     updatedBy
+//                 });
+//             }
+//         }
+
+//         await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
+//         allSyllabusResults.push(syllabus);
+
+//         await transaction.commit();
+//         return allSyllabusResults;
+//     } catch (error) {
+//         await transaction.rollback();
+//         console.error('Error creating syllabus:', error);
+//         throw error;
+//     }
+// };
 
 export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,role) {
     return await SyllabusCreationRepository.getSyllabusDetails(universityId,acedmicYearId,instituteId,role);

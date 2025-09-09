@@ -330,3 +330,30 @@ UPDATE exam_structure SET session_id = 1 WHERE session_id IS NULL;
 UPDATE exam_structure SET session_id = 1 WHERE session_id = 0;
 
 ALTER TABLE exam_structure ADD CONSTRAINT fk_session_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;
+
+ALTER TABLE exam_structure 
+DROP COLUMN exam_type,
+DROP COLUMN maximum_Iteration,
+DROP COLUMN jury_setup,
+DROP COLUMN prepared_by,
+DROP COLUMN evaluated_by,
+DROP COLUMN weightage;
+
+CREATE TABLE exam_setup_type (
+    exam_setup_type_id INT PRIMARY KEY AUTO_INCREMENT,
+    exam_structure_id INT NOT NULL,
+    exam_type VARCHAR(255),
+    maximum_iteration INT,
+    jury_setup VARCHAR(255),
+    prepared_by VARCHAR(255),
+    evaluated_by VARCHAR(255),
+    weightage VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_exam_setup_type_examStructure FOREIGN KEY (exam_structure_id) REFERENCES exam_structure(exam_structure_id) ON DELETE CASCADE,
+    CONSTRAINT fk_exam_setup_type_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_exam_setup_type_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
