@@ -13,8 +13,8 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
     return await examStructureRepository.getExamStructure(universityId,acedmicYearId,role,instituteId);
 }
 
-export async function getSingleExamStructure(examStructureId, universityId) {
-    return await examStructureRepository.getSingleExamStructure(examStructureId, universityId);
+export async function getSingleExamStructure(courseId,sessionId, universityId) {
+    return await examStructureRepository.getSingleExamStructure(courseId,sessionId, universityId);
 }
 
 export async function deleteExamStructure(examStructureId) {

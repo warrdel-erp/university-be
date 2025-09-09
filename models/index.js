@@ -735,6 +735,9 @@ timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappin
 courseModel.hasMany(examStructureModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'examStructuresCourse' });
 examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: 'courseId', as: 'courseExam' });
 
+sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
+examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
+
 syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
 acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
 

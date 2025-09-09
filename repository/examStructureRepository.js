@@ -38,19 +38,22 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
     }
 }
 
-export async function getSingleExamStructure(examStructureId, universityId) {
+export async function getSingleExamStructure(courseId,sessionId, universityId) {
     try {
         const result = await model.examStructureModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { examStructureId },
+            where: { courseId,sessionId, universityId },
             include: [
                 {
                     model: model.courseModel,
                     as: "courseExam",
                     attributes: ["courseName","capacity"],
-                    // where: { universityId: universityId },
                 },
-                
+                {
+                    model:model.sessionModel,
+                    as:'sessionExam',
+                    attributes: ["sessionName"],
+                }
             ],
         });
         return result;

@@ -330,3 +330,11 @@ UPDATE exam_structure SET session_id = 1 WHERE session_id IS NULL;
 UPDATE exam_structure SET session_id = 1 WHERE session_id = 0;
 
 ALTER TABLE exam_structure ADD CONSTRAINT fk_session_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;
+
+ALTER TABLE exam_structure 
+DROP COLUMN exam_type,
+DROP COLUMN maximum_Iteration,
+DROP COLUMN jury_setup,
+DROP COLUMN prepared_by,
+DROP COLUMN evaluated_by,
+DROP COLUMN weightage;

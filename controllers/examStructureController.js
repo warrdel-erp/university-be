@@ -31,19 +31,27 @@ export async function getAllExamStructure(req, res) {
 }
 
 export async function getSingleExamStructure(req, res) {
-    const universityId = req.user.universityId;
-    try {
-        const { examStructureId } = req.query;
-        const examDetails = await examStructureServices.getSingleExamStructure(examStructureId, universityId);
-        if (examDetails) {
-            res.status(200).json(examDetails);
-        } else {
-            res.status(404).json({ message: "Exam Structure not found" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  const universityId = req.user.universityId;
+
+  try {
+    const courseId = parseInt(req.query.courseId, 10);
+    const sessionId = parseInt(req.query.sessionId, 10);
+
+    if (!courseId && !sessionId) {
+      return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
     }
-}
+
+    const examDetails = await examStructureServices.getSingleExamStructure(courseId, sessionId, universityId);
+
+    if (examDetails) {
+      res.status(200).json({ success: true, data: examDetails });
+    } else {
+      res.status(404).json({ success: false, message: "Exam Structure not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 
 export async function updateExamStructure(req, res) {
     try {
