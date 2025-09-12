@@ -116,4 +116,4 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
     description: unit.description,
     contactHours: unit.contactHours
   }));
-}
+};
