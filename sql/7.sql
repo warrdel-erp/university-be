@@ -357,3 +357,20 @@ CREATE TABLE exam_setup_type (
     CONSTRAINT fk_exam_setup_type_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_exam_setup_type_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+-- Add the exam_setup_type_id column with the foreign key reference in syllabus_details
+
+ALTER TABLE syllabus_details ADD COLUMN exam_setup_type_id INT DEFAULT NULL;
+
+UPDATE syllabus_details SET exam_setup_type_id = 1 WHERE exam_setup_type_id IS NULL;
+
+UPDATE syllabus_details SET exam_setup_type_id = 1 WHERE exam_setup_type_id = 0;
+
+ALTER TABLE syllabus_details ADD CONSTRAINT fk_exam_setup_type_id_syllabus FOREIGN KEY (exam_setup_type_id) REFERENCES exam_setup_type (exam_setup_type_id) ON DELETE CASCADE;
+
+ALTER TABLE syllabus_details 
+drop column internal ,
+drop column external ;
+
+ALTER TABLE syllabus_details 
+add column marks VARCHAR(255) NULL after total;
