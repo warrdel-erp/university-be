@@ -70,6 +70,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        employmentType: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'employment_type'
+        },
         employeeName: {
             type: DataTypes.STRING,
             allowNull: false,

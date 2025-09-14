@@ -389,5 +389,8 @@ DROP COLUMN vehicle_number,
 DROP COLUMN driving_license,
 DROP COLUMN driving_license_expire_date;
 
-INSERT INTO employee_code_master (code_master_type) VALUES 
-('MaritalStatus');
+ALTER TABLE employee 
+add column department VARCHAR(255) NULL;
+
+ALTER TABLE employee 
+add column employment_type VARCHAR(255) NULL;
