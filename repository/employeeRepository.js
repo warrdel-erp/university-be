@@ -19,7 +19,7 @@ export async function getAllEmployee(universityId,campusId,instituteId,acedmicYe
             ...(role === 'Head' && headInstituteId && { instituteId: headInstituteId }),
         };
         const result = await model.employeeModel.findAll({
-            attributes: ["employeeId","employeeName","employeeCode","dateOfBirth","workingHours","campusId","instituteId","acedmicYearId"],
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where : whereClause,
             include:[
                 {
@@ -33,7 +33,7 @@ export async function getAllEmployee(universityId,campusId,instituteId,acedmicYe
                {
                 model:model.employeeOfficeModel,
                 as:'office',
-                attributes: ["joiningDate"] ,
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                },
                {
                 model: model.employeeMetaDataModel,
