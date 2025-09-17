@@ -123,3 +123,25 @@ export async function getAssignTeacher() {
         throw error;
     }
 };
+
+export async function attendence(data) {
+    try {
+        const result = await model.teacherAttendeceModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add teacher attendence:", error);
+        throw error;
+    }
+};
+
+export async function updateAttendence(teacherAttendenceId, data) {
+    try {
+        const result = await model.teacherAttendeceModel.update(data, {
+            where: { teacherAttendenceId }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error updating Schedule creation ${teacherAttendenceId}:`, error);
+        throw error;
+    }
+};

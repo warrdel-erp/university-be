@@ -107,6 +107,7 @@ import syllabusUnitModel from './syllabusUnitModel.js';
 import examSetupTypeModel from './examSetupTypeModel.js';
 import scheduleModel from './scheduleModel.js';
 import scheduleAssignModel from './ScheduleAssignModel.js';
+import teacherAttendeceModel from './teacherAttendenceModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -874,4 +875,5 @@ export {
     examSetupTypeModel,
     scheduleModel,
     scheduleAssignModel,
+    teacherAttendeceModel,
 };

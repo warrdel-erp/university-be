@@ -1,6 +1,6 @@
 import {Router} from  'express'
 const router =  Router();
-import {addSchedule,getAllSchedule,getSingleScheduleDetails,updateSchedule,deleteSchedule,assignTeacher,getAssignTeacher} from "../controllers/scheduleController.js";
+import {addSchedule,getAllSchedule,getSingleScheduleDetails,updateSchedule,deleteSchedule,assignTeacher,getAssignTeacher,attendence,updateAttendence} from "../controllers/scheduleController.js";
 import userAuth from "../middleware/authUser.js"
 
 router.post('/', userAuth, addSchedule);
@@ -16,5 +16,9 @@ router.delete('/' ,userAuth, deleteSchedule);
 router.post('/assignTeacher', userAuth, assignTeacher);
 
 router.get('/assignTeacher', userAuth, getAssignTeacher);
+
+router.post('/attendence', userAuth,attendence);
+
+router.patch('/attendence', userAuth,updateAttendence);
 
 export default router;

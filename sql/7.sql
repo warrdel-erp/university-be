@@ -436,3 +436,19 @@ create table schedule_assign (
     CONSTRAINT fk_scheduleassign_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_scheduleassign_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE teacher_attendence (
+    teacher_attendence_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_assign_id INT NOT NULL,
+    check_in TIME NULL,
+    check_out TIME NULL,
+    date DATE NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_teacher_attendence_scheduleassign FOREIGN KEY (schedule_assign_id) REFERENCES schedule_assign(schedule_assign_id),
+    CONSTRAINT fk_teacher_attendence_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_teacher_attendence_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

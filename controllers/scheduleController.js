@@ -119,3 +119,32 @@ export async function getAssignTeacher(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function attendence(req, res) {
+    try {
+        const createdBy= req.user.userId;
+        const updatedBy =req.user.userId;
+        const {scheduleAssignId} = req.body
+        if(!(scheduleAssignId)){
+            return res.status(400).send('scheduleAssignId is required')
+         }
+        const assignTeacher = await scheduleCreation.attendence(req.body,createdBy,updatedBy);
+            res.status(200).json({message: "schedule assignTeacher succesfully",assignTeacher });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function updateAttendence(req, res) {
+    try {
+        const {teacherAttendenceId} = req.body
+        if(!(teacherAttendenceId)){
+            return res.status(400).send('teacherAttendenceId is required')
+         }
+         const updatedBy = req.user.userId;
+        const updatedSchedule = await scheduleCreation.updateAttendence(teacherAttendenceId, req.body,updatedBy);
+            res.status(200).json({message: "schedule update succesfully",updateSchedule });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
