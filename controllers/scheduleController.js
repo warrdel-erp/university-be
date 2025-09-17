@@ -95,3 +95,27 @@ export async function deleteSchedule(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function assignTeacher(req, res) {
+    try {
+        const createdBy= req.user.userId;
+        const updatedBy =req.user.userId;
+        const {scheduleId,employeeId} = req.body
+        if(!(scheduleId && employeeId)){
+            return res.status(400).send('scheduleId and employeeId is required')
+         }
+        const assignTeacher = await scheduleCreation.assignTeacher(scheduleId,employeeId,createdBy,updatedBy);
+            res.status(200).json({message: "schedule assignTeacher succesfully",assignTeacher });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function getAssignTeacher(req, res) {
+    try {
+        const schedule = await scheduleCreation.getAssignTeacher();
+        res.status(200).json(schedule);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

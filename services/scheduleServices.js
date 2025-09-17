@@ -30,7 +30,15 @@ export async function deleteSchedule(scheduleId) {
 };
 
 export async function updateSchedule(scheduleId, ScheduleData, updatedBy) {    
-
     ScheduleData.updatedBy = updatedBy;
     await scheduleCreationRepository.updateSchedule(scheduleId, ScheduleData);
+};
+
+export async function assignTeacher(scheduleId,employeeId,createdBy,updatedBy) {
+  const data ={scheduleId,employeeId,createdBy,updatedBy}
+    return await scheduleCreationRepository.assignTeacher(data);
+};
+
+export async function getAssignTeacher() {
+    return await scheduleCreationRepository.getAssignTeacher();
 };

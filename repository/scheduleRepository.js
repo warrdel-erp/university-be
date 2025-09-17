@@ -1,8 +1,6 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 
-export async function addSchedule(scheduleData) {   
-    console.log(`>>>>>scheduleData`,scheduleData)
+export async function addSchedule(scheduleData) {
     try {
         const result = await model.scheduleModel.create(scheduleData);
         return result;
@@ -12,7 +10,7 @@ export async function addSchedule(scheduleData) {
     }
 };
 
-export async function addScheduleDetails(scheduleData) {   
+export async function addScheduleDetails(scheduleData) {
     try {
         const result = await model.scheduleModel.bulkCreate(scheduleData);
         return result;
@@ -22,16 +20,16 @@ export async function addScheduleDetails(scheduleData) {
     }
 };
 
-export async function getScheduleDetails(universityId,acedmicYearId,instituteId,role) {
+export async function getScheduleDetails(universityId, acedmicYearId, instituteId, role) {
     try {
         const Schedule = await model.scheduleModel.findAll({
             where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId }),
-                        ...(universityId && { universityId }),
-                    },
-            attributes: { 
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                ...(acedmicYearId && { acedmicYearId }),
+                ...(role === 'Head' && { instituteId }),
+                ...(universityId && { universityId }),
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
             },
         });
         return Schedule;
@@ -41,12 +39,11 @@ export async function getScheduleDetails(universityId,acedmicYearId,instituteId,
     }
 };
 
-
-export async function getSingleScheduleDetails(scheduleId,universityId) {
+export async function getSingleScheduleDetails(scheduleId, universityId) {
     try {
         const Schedule = await model.scheduleModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { scheduleId,universityId},
+            where: { scheduleId, universityId },
         });
 
         return Schedule;
@@ -54,21 +51,75 @@ export async function getSingleScheduleDetails(scheduleId,universityId) {
         console.error('Error fetching Schedule details:', error);
         throw error;
     }
-}
+};
 
 export async function deleteSchedule(scheduleId) {
     const deleted = await model.scheduleModel.destroy({ where: { scheduleId: scheduleId } });
     return deleted > 0;
-}
+};
 
 export async function updateSchedule(scheduleId, scheduleData) {
     try {
         const result = await model.scheduleModel.update(scheduleData, {
             where: { scheduleId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating Schedule creation ${scheduleId}:`, error);
-        throw error; 
+        throw error;
+    }
+};
+
+export async function assignTeacher(data) {
+    try {
+        const result = await model.scheduleAssignModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add assign Teacher :", error);
+        throw error;
+    }
+};
+
+export async function getAssignTeacher() {
+    try {
+        const scheduleAssignments = await model.scheduleAssignModel.findAll({
+            // where: {
+            //             ...(acedmicYearId && { acedmicYearId }),
+            //             ...(role === 'Head' && { instituteId }),
+            //             ...(universityId && { universityId }),
+            //         },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+            },
+            include: [
+                {
+                    model: model.scheduleModel,
+                    as: "schedule",
+                    attributes: [
+                        "scheduleId",
+                        "scheduleName",
+                        "shiftHours",
+                        "startTime",
+                        "endTime"
+                    ]
+                },
+                {
+                    model: model.employeeModel,
+                    as: "employeeSchedule",
+                    attributes: [
+                        "employeeId",
+                        "employeeName",
+                        "employeeCode",
+                        "department",
+                        "employmentType"
+                    ]
+                }
+            ]
+        });
+
+        return scheduleAssignments;
+    } catch (error) {
+        console.error("Error fetching assigned teachers:", error);
+        throw error;
     }
 };

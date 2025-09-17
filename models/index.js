@@ -106,6 +106,7 @@ import examStructureModel from './examStructureModel.js';
 import syllabusUnitModel from './syllabusUnitModel.js';
 import examSetupTypeModel from './examSetupTypeModel.js';
 import scheduleModel from './scheduleModel.js';
+import scheduleAssignModel from './ScheduleAssignModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -758,6 +759,11 @@ instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syll
 examStructureModel.hasMany(examSetupTypeModel, { foreignKey: "exam_structure_id", as: "setupTypes" });
 examSetupTypeModel.belongsTo(examStructureModel, { foreignKey: "exam_structure_id", as: "examStructure" });
 
+scheduleModel.hasMany(scheduleAssignModel, { foreignKey: "scheduleId", as: "assignedEmployees" });
+scheduleAssignModel.belongsTo(scheduleModel, { foreignKey: "scheduleId", as: "schedule" }); 
+
+employeeModel.hasMany(scheduleAssignModel, { foreignKey: "employeeId", as: "assignedSchedules" });
+scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeSchedule" });
 export {
     settingModel,
     universityModel,
@@ -867,4 +873,5 @@ export {
     syllabusUnitModel,
     examSetupTypeModel,
     scheduleModel,
+    scheduleAssignModel,
 };

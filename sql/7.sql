@@ -421,3 +421,18 @@ create table schedule (
     CONSTRAINT fk_schedule_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_schedule_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+create table schedule_assign (
+    schedule_assign_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_scheduleassign_schedule FOREIGN KEY (schedule_id) REFERENCES schedule(schedule_id),
+    CONSTRAINT fk_scheduleassign_employee FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    CONSTRAINT fk_scheduleassign_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_scheduleassign_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
