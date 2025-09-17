@@ -69,3 +69,7 @@ export async function updateAttendence(teacherAttendenceId, data, updatedBy) {
   data.updatedBy = updatedBy;
   await scheduleCreationRepository.updateAttendence(teacherAttendenceId, data);
 };
+
+export async function getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate) {
+  return await scheduleCreationRepository.getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate);
+};

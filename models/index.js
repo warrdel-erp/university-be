@@ -765,6 +765,9 @@ scheduleAssignModel.belongsTo(scheduleModel, { foreignKey: "scheduleId", as: "sc
 
 employeeModel.hasMany(scheduleAssignModel, { foreignKey: "employeeId", as: "assignedSchedules" });
 scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeSchedule" });
+
+scheduleAssignModel.hasMany(teacherAttendeceModel, { foreignKey: "scheduleAssignId", as: "attendances" }); 
+teacherAttendeceModel.belongsTo(scheduleAssignModel, { foreignKey: "scheduleAssignId", as: "scheduleAssign" });
 export {
     settingModel,
     universityModel,

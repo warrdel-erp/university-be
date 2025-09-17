@@ -148,3 +148,16 @@ export async function updateAttendence(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function getAllAttendence(req, res) {
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    const {page,limit,fromDate,toDate} = req.query
+    try {
+        const schedule = await scheduleCreation.getAllAttendence(universityId,instituteId,role,page,limit,fromDate,toDate);
+        res.status(200).json(schedule);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

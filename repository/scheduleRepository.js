@@ -10,16 +10,6 @@ export async function addSchedule(scheduleData) {
     }
 };
 
-export async function addScheduleDetails(scheduleData) {
-    try {
-        const result = await model.scheduleModel.bulkCreate(scheduleData);
-        return result;
-    } catch (error) {
-        console.error("Error in add Schedule details:", error);
-        throw error;
-    }
-};
-
 export async function getScheduleDetails(universityId, acedmicYearId, instituteId, role) {
     try {
         const Schedule = await model.scheduleModel.findAll({
@@ -95,13 +85,9 @@ export async function getAssignTeacher() {
                 {
                     model: model.scheduleModel,
                     as: "schedule",
-                    attributes: [
-                        "scheduleId",
-                        "scheduleName",
-                        "shiftHours",
-                        "startTime",
-                        "endTime"
-                    ]
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+                    },
                 },
                 {
                     model: model.employeeModel,
@@ -144,4 +130,133 @@ export async function updateAttendence(teacherAttendenceId, data) {
         console.error(`Error updating Schedule creation ${teacherAttendenceId}:`, error);
         throw error;
     }
+};
+
+// export async function getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate) {
+//     try {
+//         const Schedule = await model.teacherAttendeceModel.findAll({
+//             attributes: {
+//                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+//             },
+//             include: [
+//                 {
+//                     model: model.scheduleAssignModel,
+//                     as: 'scheduleAssign',
+//                     attributes: {
+//                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+//                     },
+//                     include: [
+//                         {
+//                             model: model.scheduleModel,
+//                             as: "schedule",
+//                             attributes: {
+//                                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+//                             },
+//                             where: {
+//                 ...(role === 'Head' && { instituteId }),
+//                 ...(universityId && { universityId }),
+//             },
+//                         },
+//                         {
+//                             model: model.employeeModel,
+//                             as: "employeeSchedule",
+//                             attributes: [
+//                                 "employeeId",
+//                                 "employeeName",
+//                                 "employeeCode",
+//                                 "department",
+//                                 "employmentType"
+//                             ]
+//                         }
+//                     ]
+//                 }
+
+//             ]
+//         });
+//         return Schedule;
+//     } catch (error) {
+//         console.error('Error fetching Schedule with details:', error);
+//         throw error;
+//     }
+// };
+
+import { Op } from "sequelize";
+
+export async function getAllAttendence(universityId, instituteId, role, page, limit, fromDate, toDate) {
+  try {
+    const whereClause = {};
+
+    // ✅ filter by date range if provided
+    if (fromDate && toDate) {
+      whereClause.date = {
+        [Op.between]: [fromDate, toDate]
+      };
+    } else if (fromDate) {
+      whereClause.date = {
+        [Op.gte]: fromDate
+      };
+    } else if (toDate) {
+      whereClause.date = {
+        [Op.lte]: toDate
+      };
+    }
+
+    // ✅ pagination
+    const pageNumber = parseInt(page) || 1;
+    const pageSize = parseInt(limit) || 10;
+    const offset = (pageNumber - 1) * pageSize;
+
+    const attendances = await model.teacherAttendeceModel.findAndCountAll({
+      where: whereClause,
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+      },
+      include: [
+        {
+          model: model.scheduleAssignModel,
+          as: "scheduleAssign",
+          attributes: {
+            exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+          },
+          include: [
+            {
+              model: model.scheduleModel,
+              as: "schedule",
+              attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+              },
+              where: {
+                ...(role === "Head" && { instituteId }),
+                ...(universityId && { universityId })
+              }
+            },
+            {
+              model: model.employeeModel,
+              as: "employeeSchedule",
+              attributes: [
+                "employeeId",
+                "employeeName",
+                "employeeCode",
+                "department",
+                "employmentType"
+              ]
+            }
+          ]
+        }
+      ],
+      limit: pageSize,
+      offset: offset,
+      order: [["date", "DESC"]]
+    });
+
+    return {
+      totalRecords: attendances.count,
+      totalPages: Math.ceil(attendances.count / pageSize),
+      currentPage: pageNumber,
+      data: attendances.rows
+    };
+  } catch (error) {
+    console.error("Error fetching attendance with details:", error);
+    throw error;
+  }
 };
