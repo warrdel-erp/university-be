@@ -394,3 +394,61 @@ add column department VARCHAR(255) NULL;
 
 ALTER TABLE employee 
 add column employment_type VARCHAR(255) NULL;
+
+create table schedule (
+    schedule_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    schedule_name VARCHAR(100) NOT NULL,
+    shift_hours INT NOT NULL,
+    min_start_time TIME NOT NULL,
+    min_end_time TIME NOT NULL,
+    max_start_time TIME NOT NULL,
+    max_end_time TIME NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    break_time TIME NULL,
+    accept_extra_hours BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_schedule_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_schedule_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_schedule_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_schedule_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_schedule_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+create table schedule_assign (
+    schedule_assign_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_scheduleassign_schedule FOREIGN KEY (schedule_id) REFERENCES schedule(schedule_id),
+    CONSTRAINT fk_scheduleassign_employee FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    CONSTRAINT fk_scheduleassign_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_scheduleassign_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE teacher_attendence (
+    teacher_attendence_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_assign_id INT NOT NULL,
+    check_in TIME NULL,
+    check_out TIME NULL,
+    date DATE NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_teacher_attendence_scheduleassign FOREIGN KEY (schedule_assign_id) REFERENCES schedule_assign(schedule_assign_id),
+    CONSTRAINT fk_teacher_attendence_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_teacher_attendence_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
