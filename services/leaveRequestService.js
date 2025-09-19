@@ -95,5 +95,4 @@ export async function updateRequestStatus(requestId, status, reviewerId) {
   }else{
   return await repo.updateRequest(requestId, { status});
   }
-
 }

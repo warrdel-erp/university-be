@@ -6,7 +6,13 @@ export async function addBalance(data) {
 
 export async function getBalancesByEmployee(employeeId) {
   return await model.leaveBalanceModel.findAll({
-    where: { employeeId }
+    where: { employeeId },
+    include:[
+      {
+        model:model.leavePolicyModel,
+        as:'leaveBalancePolicy'
+      }
+    ]
   });
 }
 
