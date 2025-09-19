@@ -96,7 +96,7 @@ export default async function useAuth(req, res, next) {
         // Role-based access check
         const allowedRolesForRoute = `${accessRoute}-${permissionType}`;
 
-        console.log(`Allowed Roles and Permissions: ${allowedRolesForRoute}`);
+        // console.log(`Allowed Roles and Permissions: ${allowedRolesForRoute}`);
 
         //  required role for this route
         if (!role) {

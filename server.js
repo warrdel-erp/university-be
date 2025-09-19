@@ -61,6 +61,9 @@ import lesson from './router/lessonRoute.js';
 import notice from './router/noticeRoute.js';
 import examStructure from './router/examStructureRoute.js';
 import schedule from './router/scheduleRoute.js';
+import leavePolicy from "./router/leavePolicyRouter.js";
+import leaveRequest from "./router/leaveRequestRouter.js";
+import leaveBalance from "./router/leaveBalanceRouter.js";
 
 // middleware
 app.use(fileUpload());
@@ -124,6 +127,9 @@ app.use("/lesson",lesson);
 app.use("/notice",notice);
 app.use("/examStructure",examStructure);
 app.use("/schedule",schedule);
+app.use("/leave-policies", leavePolicy);
+app.use("/leave-requests", leaveRequest);
+app.use("/leave-balance", leaveBalance);
 
 
 app.listen(PORT, () => {

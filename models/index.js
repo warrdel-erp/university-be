@@ -107,7 +107,10 @@ import syllabusUnitModel from './syllabusUnitModel.js';
 import examSetupTypeModel from './examSetupTypeModel.js';
 import scheduleModel from './scheduleModel.js';
 import scheduleAssignModel from './ScheduleAssignModel.js';
-import teacherAttendeceModel from './teacherAttendenceModel.js'
+import teacherAttendeceModel from './teacherAttendenceModel.js';
+import leavePolicyModel from './leavePolicyModel.js';
+import leaveBalanceModel from './leaveBalanceModel.js';
+import leaveRequestModel from './leaveRequestModel.js'; 
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -768,6 +771,13 @@ scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "em
 
 scheduleAssignModel.hasMany(teacherAttendeceModel, { foreignKey: "scheduleAssignId", as: "attendances" }); 
 teacherAttendeceModel.belongsTo(scheduleAssignModel, { foreignKey: "scheduleAssignId", as: "scheduleAssign" });
+
+leaveRequestModel.hasMany(employeeModel, { foreignKey: "employee_id", as: "employeeRequest" });
+employeeModel.belongsTo(leaveRequestModel, { foreignKey: "employee_id", as: "employeePolicy" });
+
+leaveRequestModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveRequestsPolicy" });
+leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leaveRequests" });
+
 export {
     settingModel,
     universityModel,
@@ -879,4 +889,7 @@ export {
     scheduleModel,
     scheduleAssignModel,
     teacherAttendeceModel,
+    leaveBalanceModel,
+    leavePolicyModel,
+    leaveRequestModel,
 };
