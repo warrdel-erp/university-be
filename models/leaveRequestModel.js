@@ -24,10 +24,26 @@ export default sequelize.define(
       field: "policy_id",
       references: { model: leavePolicies, key: "policy_id" }
     },
-    startDate: { type: DataTypes.DATEONLY, allowNull: false, field: "start_date" },
-    endDate: { type: DataTypes.DATEONLY, allowNull: false, field: "end_date" },
-    totalDays: { type: DataTypes.INTEGER, allowNull: false, field: "total_days" },
-    reason: { type: DataTypes.TEXT, allowNull: true },
+    startDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      field: "start_date"
+    },
+    endDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+      field: "end_date"
+    },
+    totalDays: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "total_days"
+    },
+    reason:
+    {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     status: {
       type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled"),
       defaultValue: "pending"
@@ -38,7 +54,11 @@ export default sequelize.define(
       field: "reviewed_by",
       references: { model: users, key: "user_id" }
     },
-    reviewedAt: { type: DataTypes.DATE, allowNull: true, field: "reviewed_at" },
+    reviewedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "reviewed_at"
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
