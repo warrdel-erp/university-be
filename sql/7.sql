@@ -452,3 +452,55 @@ CREATE TABLE teacher_attendence (
     CONSTRAINT fk_teacher_attendence_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_teacher_attendence_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE leave_policies (
+    policy_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    policy_name VARCHAR(100) NOT NULL,
+    total_leaves_per_year INT NOT NULL,
+    maximum_number_of_days INT NULL,
+    carry_forward BOOLEAN NOT NULL DEFAULT FALSE,
+    earned_leave BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_policy_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_policy_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_policy_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_policy_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);      
+
+CREATE TABLE leave_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    policy_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_days INT NOT NULL,
+    reason TEXT NULL,
+    status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_request_employee FOREIGN KEY (employee_id) REFERENCES users(user_id),
+    CONSTRAINT fk_request_policy FOREIGN KEY (policy_id) REFERENCES leave_policies(policy_id),
+    CONSTRAINT fk_request_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE leave_balance (
+    balance_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    policy_id INT NOT NULL,
+    year INT NOT NULL,
+    total_allocated INT NOT NULL,
+    used_leaves INT NOT NULL DEFAULT 0,
+    remaining_leaves INT NOT NULL,
+    CONSTRAINT fk_balance_employee FOREIGN KEY (employee_id) REFERENCES users(user_id),
+    CONSTRAINT fk_balance_policy FOREIGN KEY (policy_id) REFERENCES leave_policies(policy_id)
+);
