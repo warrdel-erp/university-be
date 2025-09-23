@@ -16,7 +16,10 @@ export default sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       field: "employee_id",
-      references: { model: users, key: "user_id" }
+      references: {
+         model: employeeModel, 
+         key: "employee_id" 
+        }
     },
     policyId: {
       type: DataTypes.INTEGER,

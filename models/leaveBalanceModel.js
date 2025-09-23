@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import leavePolicies from "./leavePolicyModel.js";
+import employeeModel from "./employeeModel.js";
 
 export default sequelize.define(
   "leave_balance",
@@ -16,7 +17,9 @@ export default sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       field: "employee_id",
-      references: { model: users, key: "user_id" }
+      references: {
+         model: employeeModel, 
+         key: "employee_id" }
     },
     policyId: {
       type: DataTypes.INTEGER,
