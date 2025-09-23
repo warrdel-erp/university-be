@@ -6,7 +6,7 @@ export async function addPolicy(data) {
 
 export async function getPolicies(universityId, instituteId) {
   return await model.leavePolicyModel.findAll({
-    where: { universityId, instituteId, isActive: true },
+    where: { universityId, instituteId},
     attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }
   });
 }
