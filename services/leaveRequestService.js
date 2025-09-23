@@ -2,32 +2,6 @@ import * as repo from "../repository/leaveRequestRepository.js";
 import * as balanceRepo from "../repository/leaveBalanceRepository.js";
 import * as policyRepo from "../repository/leavePolicyRepository.js";
 
-// export async function addRequest(data) {
-//   try {
-//     const { employeeId, policyId, totalDays } = data;
-
-//     // Check active policy
-//     const policy = await policyRepo.getPolicyById(policyId, data.universityId);
-//     if (!policy || !policy.isActive) throw new Error("Policy not active");
-
-//     // Check balance
-//     const balance = await balanceRepo.getBalance(employeeId, policyId);
-//     if (!balance || balance.remainingLeaves < totalDays) {
-//       throw new Error("Not enough leave balance");
-//     }
-
-//     // Deduct temporary balance
-//     await balanceRepo.updateBalance(balance.balanceId, {
-//       usedLeaves: balance.usedLeaves + totalDays,
-//       remainingLeaves: balance.remainingLeaves - totalDays
-//     });
-
-//     return await repo.addRequest(data);
-//   } catch (err) {
-//     throw new Error(err.message);
-//   }
-// }
-
 export async function addRequest(data) {
   try {
     const { employeeId, policyId, totalDays, universityId } = data;
