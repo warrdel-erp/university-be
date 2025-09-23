@@ -504,3 +504,33 @@ CREATE TABLE leave_balance (
     CONSTRAINT fk_balance_employee FOREIGN KEY (employee_id) REFERENCES users(user_id),
     CONSTRAINT fk_balance_policy FOREIGN KEY (policy_id) REFERENCES leave_policies(policy_id)
 );
+
+ALTER TABLE leave_balance 
+  DROP FOREIGN KEY fk_balance_employee,
+  DROP INDEX fk_balance_employee,
+  DROP COLUMN employee_id;
+
+ALTER TABLE leave_requests
+  DROP FOREIGN KEY fk_request_employee,
+  DROP INDEX fk_request_employee,
+  DROP COLUMN employee_id;
+
+-- Add the employee_id column with the foreign key reference in leave_balance
+
+ALTER TABLE leave_balance ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE leave_balance SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE leave_balance SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE leave_balance ADD CONSTRAINT fk_leave_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
+
+-- Add the employee_id column with the foreign key reference in leave_requests
+
+ALTER TABLE leave_requests ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE leave_requests SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE leave_requests SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE leave_requests ADD CONSTRAINT fk_leave_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
