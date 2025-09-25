@@ -206,7 +206,6 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
                       model:model.employeeModel,
                       as: 'teacherEmployeeData',
                       attributes: ["employeeName","employeeCode","pickColor","employeeId"],
-                      where:whereClauseData
                   },
                 ],
             }

@@ -159,11 +159,9 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
 //   }
 // };
 
-import * as lessonRepo from './lessonRepository.js';
-
-export async function getLessonMappings(universityId, instituteId, role, acedmicYearId) {
+export async function getMapping(universityId, instituteId, role, acedmicYearId) {
   try {
-    const originalData = await lessonRepo.fetchLessonMappings(universityId, instituteId, role, acedmicYearId);
+    const originalData = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
 
     const grouped = {};
 
