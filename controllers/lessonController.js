@@ -104,3 +104,30 @@ export async function updateMapping(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function updateCompleteMapping(req, res) {
+    const { lessonMappingId } = req.params;
+    const updatedBy = req.user.userId;
+    try {
+        if (!lessonMappingId) {
+            return res.status(400).send("Mapping ID is required");
+        }
+        const lessonData = await lesson.updateCompleteMapping(lessonMappingId, req.body, updatedBy);
+        res.status(200).json({ message: "Data updated successfully", lessonData });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function deleteMapping(req, res) {
+    const { lessonMappingId } = req.params;
+    try {
+        if (!lessonMappingId) {
+            return res.status(400).send("Mapping ID is required");
+        }
+        await lesson.deleteMapping(lessonMappingId);
+        res.status(200).json({ message: "Data deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

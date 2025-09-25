@@ -772,8 +772,8 @@ scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "em
 scheduleAssignModel.hasMany(teacherAttendeceModel, { foreignKey: "scheduleAssignId", as: "attendances" }); 
 teacherAttendeceModel.belongsTo(scheduleAssignModel, { foreignKey: "scheduleAssignId", as: "scheduleAssign" });
 
-leaveRequestModel.hasMany(employeeModel, { foreignKey: "employee_id", as: "employeeRequest" });
-employeeModel.belongsTo(leaveRequestModel, { foreignKey: "employee_id", as: "employeePolicy" });
+leaveRequestModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeRequest" });
+employeeModel.hasMany(leaveRequestModel, { foreignKey: "employee_id", as: "employeePolicy" });
 
 leaveRequestModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveRequestsPolicy" });
 leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leaveRequests" });

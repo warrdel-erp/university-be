@@ -172,4 +172,67 @@ export async function updateMapping(completeDate, lessonMappingId) {
     console.error('Error updating mapping:', error);
     throw error;
   }
+};
+
+export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
+  const transaction = await sequelize.transaction();
+  try {
+    const payload = {
+      topicId: data.topicId,
+      timeTableMappingId: data.timeTableMappingId,
+      date: data.date,
+      completeDate: data.completeDate || null,
+      note: data.note || null,
+      lectureUrl: data.lectureUrl || null,
+      file: data.file || null,
+      status: data.status || 'inComplete',
+      updatedBy
+    };
+
+    const updatedLesson = await lesson.updateLessionMapping(
+      lessonMappingId,
+      payload,
+      transaction
+    );
+
+    if (data.subTopic && Array.isArray(data.subTopic)) {
+      for (const sub of data.subTopic) {
+        if (sub.subTopicId) {
+          await lesson.updateSubTopic(
+            sub.subTopicId, 
+            {
+              name: sub.name,
+              description: sub.description || null,
+              updatedBy
+            },
+            transaction
+          );
+        }
+      }
+    }
+
+    await transaction.commit();
+    return updatedLesson;
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in updateCompleteMapping:", error);
+    throw error;
+  }
+}
+
+
+export async function deleteMapping(lessonMappingId) {
+  const transaction = await sequelize.transaction();
+  try {
+    // await lesson.deleteSubTopicsByMapping(lessonMappingId, transaction);
+
+    await lesson.deleteLessionMapping(lessonMappingId, transaction);
+
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in deleteMapping:", error);
+    throw error;
+  }
 }

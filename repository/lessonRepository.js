@@ -223,4 +223,56 @@ export async function updateMapping(lessonMappingId, data) {
     console.error('Repository error during updateMapping:', error);
     throw error;
   }
+};
+
+export async function updateLessionMapping(lessonMappingId, data, transaction) {
+  try {
+    const result = await model.lessonMappingModel.update(data, {
+      where: { lessonMappingId},
+      transaction
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in update Lession Mapping:", error);
+    throw error;
+  }
+}
+
+export async function updateSubTopic(subTopicId, data, transaction) {
+  try {
+    const result = await model.subTopicModel.update(data, {
+      where: {subTopicId },
+      transaction
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in update SubTopic:", error);
+    throw error;
+  }
+}
+
+export async function deleteLessionMapping(lessonMappingId, transaction) {
+  try {
+    const result = await model.lessonMappingModel.destroy({
+      where: { lessonMappingId },
+      transaction
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in delete Lession Mapping:", error);
+    throw error;
+  }
+}
+
+export async function deleteSubTopicsByMapping(mappingId, transaction) {
+  try {
+    const result = await model.subTopicModel.destroy({
+      where: { topicId: mappingId },
+      transaction
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in delete SubTopics:", error);
+    throw error;
+  }
 }
