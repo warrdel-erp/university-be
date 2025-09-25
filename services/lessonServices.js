@@ -89,6 +89,76 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
   }
 };
 
+// export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+//   try {
+//     const originalData = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
+
+//     const grouped = {};
+
+//     originalData.forEach(item => {
+//       const empDetails = item.timeTableMapping?.employeeDetails;
+//       if (!empDetails) return;  // skip if no employee details
+
+//       const empId = empDetails.employeeId;
+
+//       if (!grouped[empId]) {
+//         grouped[empId] = {
+//           employeeId: empId,
+//           employeeName: empDetails.employeeName,
+//           employeeCode: empDetails.employeeCode,
+//           pickColor: empDetails.pickColor,
+//           timeTables: []
+//         };
+//       }
+
+//       const ttMapping = item.timeTableMapping || {};
+//       const ttCreate = ttMapping.timeTablecreate || {};
+//       const classSection = ttCreate.timeTableClassSection || {};
+//       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
+//       const lesson = item.mappingTopic?.lessonTopic || {};
+//       const topic = item.mappingTopic || {};
+//       const subTopics = topic.subTopic || [];
+
+//       grouped[empId].timeTables.push({
+//         timeTableMappingId: ttMapping.timeTableMappingId,
+//         day: ttMapping.day,
+//         date: item.date,
+//         lectureUrl: item.lectureUrl,
+//         note: item.note,
+//         lessonMappingId: item.lessonMappingId,
+//         status: item.status,
+//         completeDate: item.completeDate,
+//         period: ttMapping.period,
+//         timeTableType: ttMapping.timeTableType,
+//         classSection,
+//         subject,
+//         lesson: {
+//           lessonId: lesson.lessonId,
+//           name: lesson.name,
+//           description: lesson.description
+//         },
+//         topic: {
+//           topicId: topic.topicId,
+//           name: topic.name,
+//           description: topic.description,
+//           subTopics
+//         }
+//       });
+//     });
+
+//     const filteredData = Object.values(grouped);
+
+//     return {
+//       original: originalData,
+//       filtered: filteredData
+//     };
+
+//   } catch (error) {
+//     console.error("Error in getMapping:", error);
+//     throw error;
+//   }
+// };
+
 export async function getMapping(universityId, instituteId, role, acedmicYearId) {
   try {
     const originalData = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
@@ -97,16 +167,19 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
 
     originalData.forEach(item => {
       const empDetails = item.timeTableMapping?.employeeDetails;
-      if (!empDetails) return;  // skip if no employee details
 
-      const empId = empDetails.employeeId;
+      // only skip if timeTableMapping itself is missing
+      if (!item.timeTableMapping) return;
+
+      // fallback empId if employeeDetails is null
+      const empId = empDetails?.employeeId || item.timeTableMapping.timeTableMappingId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
-          employeeId: empId,
-          employeeName: empDetails.employeeName,
-          employeeCode: empDetails.employeeCode,
-          pickColor: empDetails.pickColor,
+          employeeId: empDetails?.employeeId || null,
+          employeeName: empDetails?.employeeName || 'N/A',
+          employeeCode: empDetails?.employeeCode || 'N/A',
+          pickColor: empDetails?.pickColor || '#ccc',
           timeTables: []
         };
       }

@@ -7,7 +7,7 @@ export async function addFeeInvoiceDetailRecord(req, res) {
   const instituteId = req.user.instituteId;
 
   try {
-    if (!studentInvoiceMapperId   ) {
+    if (!studentInvoiceMapperId) {
       return res.status(400).json({ error: "studentInvoiceMapperId is required" });
     }
 
