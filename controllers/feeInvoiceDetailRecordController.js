@@ -1,17 +1,18 @@
 import * as feeInvoiceRecordService  from  "../services/feeInvoiceDetailRecordService.js";
 
 export async function addFeeInvoiceDetailRecord(req, res) {
-  const { studentInvoiceMapperId } = req.body;
+  const feeInvoiceArray = req.body; 
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   const instituteId = req.user.instituteId;
 
-  try {
-    if (!studentInvoiceMapperId) {
-      return res.status(400).json({ error: "studentInvoiceMapperId is required" });
-    }
+  const invalidRecords = feeInvoiceArray.filter(record => !record.studentInvoiceMapperId);
+  if (invalidRecords.length > 0) {
+    return res.status(400).json({ error: "All records must have studentInvoiceMapperId" });
+  }
 
-    const feeInvoice = await feeInvoiceRecordService.addFeeInvoiceDetailRecord(req.body,createdBy,updatedBy,instituteId);
+  try {
+    const feeInvoice = await feeInvoiceRecordService.addFeeInvoiceDetailRecord(feeInvoiceArray, createdBy, updatedBy, instituteId);
     return res.status(201).json({
       message: "Data added successfully",
       feeInvoice
@@ -21,6 +22,7 @@ export async function addFeeInvoiceDetailRecord(req, res) {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 export async function getAllFeeInvoiceDetailRecord(req, res) {
     const universityId = req.user.universityId;
