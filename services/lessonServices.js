@@ -159,32 +159,36 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
 //   }
 // };
 
-export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+import * as lessonRepo from './lessonRepository.js';
+
+export async function getLessonMappings(universityId, instituteId, role, acedmicYearId) {
   try {
-    const originalData = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
+    const originalData = await lessonRepo.fetchLessonMappings(universityId, instituteId, role, acedmicYearId);
 
     const grouped = {};
 
     originalData.forEach(item => {
-      const empDetails = item.timeTableMapping?.employeeDetails;
+      const ttMapping = item.timeTableMapping;
 
-      // only skip if timeTableMapping itself is missing
-      if (!item.timeTableMapping) return;
+      if (!ttMapping) return; // skip if mapping is missing
 
-      // fallback empId if employeeDetails is null
-      const empId = empDetails?.employeeId || item.timeTableMapping.timeTableMappingId;
+      // Prefer direct employee, otherwise teacher from teacherSubjectMapping
+      const empDetails = ttMapping.employeeDetails;
+      const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
+      const finalEmp = empDetails || teacherMapping;
+
+      const empId = finalEmp?.employeeId || ttMapping.timeTableMappingId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
-          employeeId: empDetails?.employeeId || null,
-          employeeName: empDetails?.employeeName || 'N/A',
-          employeeCode: empDetails?.employeeCode || 'N/A',
-          pickColor: empDetails?.pickColor || '#ccc',
+          employeeId: finalEmp?.employeeId || null,
+          employeeName: finalEmp?.employeeName || 'N/A',
+          employeeCode: finalEmp?.employeeCode || 'N/A',
+          pickColor: finalEmp?.pickColor || '#ccc',
           timeTables: []
         };
       }
 
-      const ttMapping = item.timeTableMapping || {};
       const ttCreate = ttMapping.timeTablecreate || {};
       const classSection = ttCreate.timeTableClassSection || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
@@ -225,9 +229,8 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
       original: originalData,
       filtered: filteredData
     };
-
   } catch (error) {
-    console.error("Error in getMapping:", error);
+    console.error('Error in lesson service:', error);
     throw error;
   }
 };

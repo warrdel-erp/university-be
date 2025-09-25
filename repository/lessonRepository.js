@@ -196,6 +196,19 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               model: model.employeeModel,
               as: 'employeeDetails',
               attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"]
+            },
+            {
+              model:model.teacherSubjectMappingModel,
+              as: 'timeTableTeacherSubject',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated","employee_id","class_subject_mapper_id"]},
+                include:[
+                  {
+                      model:model.employeeModel,
+                      as: 'teacherEmployeeData',
+                      attributes: ["employeeName","employeeCode","pickColor","employeeId"],
+                      where:whereClauseData
+                  },
+                ],
             }
           ]
         }
