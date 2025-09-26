@@ -1,28 +1,20 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import institute from './instituteModel.js';
-import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
-import course from './courseModel.js';
-import users from './userModel.js';
+import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
+import instituteModel from "./instituteModel.js";
+import university from "./universityModel.js";
+import course from "./courseModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
-    'syllabus',
+    'exam_structure',
     {
-        syllabusId: {
+        examStructureId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'syllabus_id'
-        },
-        instituteId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'institute_id',
-            references: {
-                model: institute,
-                key: 'institute_id'
-            }
+            field: 'exam_structure_id'
         },
         acedmicYearId: {
             type: DataTypes.INTEGER,
@@ -33,15 +25,33 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
         courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -50,6 +60,27 @@ export default sequelize.define(
                 model: course,
                 key: 'course_id'
             }
+        },
+        jury:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        internal:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        external:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        permission:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        totalMarks:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'total_marks'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,7 +119,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'syllabus',
+        tableName: 'exam_structure',
         timestamps: true,
         paranoid: true
     }

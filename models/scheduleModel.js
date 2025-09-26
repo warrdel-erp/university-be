@@ -1,19 +1,27 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from 'sequelize';
+import { DataTypes } from "sequelize";
+import users from "./userModel.js";
 import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
-import course from './courseModel.js';
-import users from './userModel.js';
+import universityModel from "./universityModel.js";
 
 export default sequelize.define(
-    'syllabus',
+    "schedule",
     {
-        syllabusId: {
+        scheduleId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'syllabus_id'
+            field: "schedule_id",
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -33,23 +41,56 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
-        courseId: {
+        scheduleName: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: "schedule_name",
+        },
+        shiftHours: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
+            field: "shift_hours",
+        },
+        minStartTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "min_start_time",
+        },
+        minEndTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "min_end_time",
+        },
+        maxStartTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "max_start_time",
+        },
+        maxEndTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "max_end_time",
+        },
+        startTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "start_time",
+        },
+        endTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: "end_time",
+        },
+        breakTime: {
+            type: DataTypes.TIME,
+            allowNull: true,
+            field: "break_time",
+        },
+        acceptExtraHours: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: "accept_extra_hours",
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,8 +129,8 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'syllabus',
+        tableName: "schedule",
         timestamps: true,
-        paranoid: true
+        paranoid: true,
     }
 );

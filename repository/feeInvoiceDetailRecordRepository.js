@@ -1,17 +1,15 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addFeeInvoiceDetailRecord(feeInvoiceData) {
-console.log(`>>>>>feeInvoiceData`,feeInvoiceData);
-
-    try {
-        const result = await model.feeInvoiceDetailRecordModel.create(feeInvoiceData);
-        return result;
-    } catch (error) {
-        console.error("Error in add Fee Invoice Record :", error);
-        throw error;
-    }
-};
+export async function addFeeInvoiceDetailRecord(feeInvoiceArray) {
+  try {
+    const result = await model.feeInvoiceDetailRecordModel.bulkCreate(feeInvoiceArray, { returning: true });
+    return result;
+  } catch (error) {
+    console.error("Error in add Fee Invoice Record :", error);
+    throw error;
+  }
+}
 
 export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, instituteId, role) {
     try {

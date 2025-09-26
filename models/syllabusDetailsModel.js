@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import syllabus from './syllabusModel.js';
 import users from './userModel.js';
-import subject from './subjectModel.js'
+import subject from './subjectModel.js';
+import examSetupType from "./examSetupTypeModel.js";
 
 export default sequelize.define(
     'syllabus_details',
@@ -20,6 +21,15 @@ export default sequelize.define(
             references: {
                 model: syllabus,
                 key: 'syllabus_id'
+            }
+        },
+        examSetupTypeId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'exam_setup_type_id',
+            references: {
+                model: examSetupType,
+                key: 'exam_setup_type_id'
             }
         },
         subjectId: {
@@ -40,13 +50,9 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        internal: {
+        marks: {
             type: DataTypes.STRING,
-            allowNull: false,
-        },
-        external: {
-            type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: true,
         },
         total: {
             type: DataTypes.STRING,

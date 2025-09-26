@@ -1,55 +1,54 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import institute from './instituteModel.js';
-import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
-import course from './courseModel.js';
-import users from './userModel.js';
+import users from "./userModel.js";
+import examStructureModel from "./examStructureModel.js";
 
 export default sequelize.define(
-    'syllabus',
+    'exam_setup_type',
     {
-        syllabusId: {
+        examSetupTypeId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'syllabus_id'
+            field: 'exam_setup_type_id'
         },
-        instituteId: {
+        examStructureId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'institute_id',
+            field: 'exam_structure_id',
             references: {
-                model: institute,
-                key: 'institute_id'
+                model: examStructureModel,
+                key: 'exam_structure_id'
             }
         },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
+        examType: {
+            type: DataTypes.STRING,
+            field: 'exam_type',
+            allowNull: true
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
+        maximumIteration:{
+            type:DataTypes.INTEGER,
+            allowNull:true,
+            field:'maximum_Iteration'
+        },
+        jurySetup:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'jury_setup'
+        },
+        preparedBy:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'prepared_by'
+        },
+        evaluatedBy:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'evaluated_by'
+        },
+        weightage:{
+            type:DataTypes.STRING,
+            allowNull:true,
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,7 +87,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'syllabus',
+        tableName: 'exam_setup_type',
         timestamps: true,
         paranoid: true
     }

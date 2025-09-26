@@ -3,15 +3,18 @@ import * as FeeInvoiceDetailsCreationService  from "../repository/feeInvoiceDeta
 import sequelize from '../database/sequelizeConfig.js'; 
 import { getInstituteCode } from "../repository/collegeRepository.js";
 import moment from 'moment';
-
 import * as repository from "../repository/feeInvoiceDetailRecordRepository.js";
 
-export async function addFeeInvoiceDetailRecord(feeInvoiceDataRecord, createdBy, updatedBy, instituteId) {
-    feeInvoiceDataRecord.createdBy = createdBy;
-    feeInvoiceDataRecord.updatedBy = updatedBy;
+export async function addFeeInvoiceDetailRecord(feeInvoiceArray, createdBy, updatedBy, instituteId) {
+  const dataWithMeta = feeInvoiceArray.map(record => ({
+    ...record,
+    createdBy,
+    updatedBy,
+    instituteId
+  }));
 
-    const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(feeInvoiceDataRecord);
-    return createdRecords;
+  const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(dataWithMeta);
+  return createdRecords;
 }
 
 

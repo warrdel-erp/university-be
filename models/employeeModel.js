@@ -66,26 +66,35 @@ export default sequelize.define(
             allowNull: false,
             field: 'employee_Code',
         },
+        department: {
+            type: DataTypes.STRING,
+            allowNull: true,
+        },
+        employmentType: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field:'employment_type'
+        },
         employeeName: {
             type: DataTypes.STRING,
             allowNull: false,
             field: 'employee_name',
         },
-        shortName: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'short_name',
-        },
+        // shortName: {
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field: 'short_name',
+        // },
         dateOfBirth: {
             type: DataTypes.DATE,
             allowNull: true,
             field: 'date_of_birth',
         },
-        anniversaryDate: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'anniversary_date',
-        },
+        // anniversaryDate: {
+        //     type: DataTypes.DATE,
+        //     allowNull: true,
+        //     field: 'anniversary_date',
+        // },
         fatherName: {
             type: DataTypes.STRING,
             allowNull: true,
@@ -96,39 +105,39 @@ export default sequelize.define(
             allowNull: true,
             field: 'mother_name',
         },
-        workingHours: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'working_hours',
-        },
-        aicteCode: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'aicte_code',
-        },
-        from: {
-            type: DataTypes.DATE,
-            allowNull: true,
-        },
-        to: {
-            type: DataTypes.DATE,
-            allowNull: true,
-        },
-        vehicleNumber: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'vehicle_number',
-        },
-        drivingLicense: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'driving_license',
-        },
-        drivingLicenseExpireDate: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'driving_license_expire_date',
-        },
+        // workingHours: {
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field: 'working_hours',
+        // },
+        // aicteCode: {
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field: 'aicte_code',
+        // },
+        // from: {
+        //     type: DataTypes.DATE,
+        //     allowNull: true,
+        // },
+        // to: {
+        //     type: DataTypes.DATE,
+        //     allowNull: true,
+        // },
+        // vehicleNumber: {
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field: 'vehicle_number',
+        // },
+        // drivingLicense: {
+        //     type: DataTypes.STRING,
+        //     allowNull: true,
+        //     field: 'driving_license',
+        // },
+        // drivingLicenseExpireDate: {
+        //     type: DataTypes.DATE,
+        //     allowNull: true,
+        //     field: 'driving_license_expire_date',
+        // },
         pickColor: {
             type: DataTypes.STRING,
             allowNull: true,

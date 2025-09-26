@@ -14,7 +14,7 @@ export async function addDepartment(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getAllDepartment(req, res) {
     const universityId = req.user.universityId;
@@ -24,7 +24,7 @@ export async function getAllDepartment(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getSingleDepartmentDetails(req, res) {
     const universityId = req.user.universityId;
@@ -39,7 +39,7 @@ export async function getSingleDepartmentDetails(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateDepartment(req, res) {
     try {
@@ -53,7 +53,7 @@ export async function updateDepartment(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function deleteDepartment(req, res) {
     try {
@@ -80,4 +80,19 @@ export async function getAllAccount(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
+
+export async function getDepartmentByIdEmployee(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const { departmentId } = req.query;
+        const departmentDetails = await DepartmentCreation.getDepartmentByIdEmployee(departmentId,universityId);
+        if (departmentDetails) {
+            res.status(200).json(departmentDetails);
+        } else {
+            res.status(404).json({ message: "departmentDetails not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

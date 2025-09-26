@@ -2,18 +2,29 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
-import course from './courseModel.js';
+import semesterModel from './semesterModel.js';
+import subjectModel from './subjectModel.js';
 import users from './userModel.js';
+import universityModel from "./universityModel.js";
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
-    'syllabus',
+    'syllabus_unit',
     {
-        syllabusId: {
+        syllabusUnitId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'syllabus_id'
+            field: 'syllabus_unit_id'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -33,23 +44,50 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
-        courseId: {
+        semesterId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'semester_id',
             references: {
-                model: course,
-                key: 'course_id'
+                model: semesterModel,
+                key: 'semester_id'
             }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
+        },
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'subject_id',
+            references: {
+                model: subjectModel,
+                key: 'subject_id'
+            }
+        },
+        unitNumber:{
+            type:DataTypes.INTEGER,
+            allowNull:true,
+            field:'unit_number'
+        },
+        name:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        description:{
+            type:DataTypes.STRING,
+            allowNull:true,
+        },
+        contactHours:{
+            type:DataTypes.STRING,
+            allowNull:true,
+            field:'contact_hours'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,7 +126,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'syllabus',
+        tableName: 'syllabus_unit',
         timestamps: true,
         paranoid: true
     }

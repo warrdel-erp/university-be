@@ -5,7 +5,7 @@ export async function addSyllabus(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(courseId && acedmicYearId && instituteId && classId)){
+        if(!(courseId && acedmicYearId && instituteId )){
            return res.status(400).send('courseId,acedmicYearId and instituteId is required')
         }
         const Syllabus = await syllabusCreation.addSyllabus(req.body,createdBy,updatedBy);
@@ -91,6 +91,40 @@ export async function courseAllSubject(req, res) {
         } else {
             res.status(404).json({ message: "Syllabus not found" });
         }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function addSyllabusUnit(req, res) {
+    const {semesterId,subjectId,acedmicYearId,sessionId} = req.body
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    try {
+        if(!(semesterId && subjectId && acedmicYearId && sessionId)){
+           return res.status(400).send('semesterId,sessionId,subjectId and acedmicYearId is required')
+        }
+        const Syllabus = await syllabusCreation.addSyllabusUnit(req.body,createdBy,updatedBy,universityId,instituteId);
+        if(Syllabus){
+            res.status(201).json({ message: "Data added successfully", Syllabus });
+        }else{
+            res.status(404).json({ message: "something went wrong" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function syllabusUnitGet(req, res) {
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    const {acedmicYearId} = req.query
+    try {
+        const syllabus = await syllabusCreation.syllabusUnitGet(universityId,acedmicYearId,instituteId,role);
+        res.status(200).json(syllabus);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

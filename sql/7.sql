@@ -257,3 +257,280 @@ ALTER TABLE employee_address
 ADD COLUMN p_country VARCHAR(255) NULL,
 ADD COLUMN p_state VARCHAR(255) NULL,
 ADD COLUMN p_city VARCHAR(255) NULL;
+
+CREATE TABLE exam_structure (
+    exam_structure_id INT PRIMARY KEY AUTO_INCREMENT,
+    acedmic_year_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    university_id INT NOT NULL,
+    course_id INT NOT NULL,
+    exam_type VARCHAR(255),
+    maximum_Iteration INT,
+    jury VARCHAR(255),
+    internal VARCHAR(255),
+    external VARCHAR(255),
+    jury_setup VARCHAR(255),
+    permission VARCHAR(255),
+    total_marks VARCHAR(255),
+    prepared_by VARCHAR(255),
+    evaluated_by VARCHAR(255),
+    weightage VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_exam_structure_acedmicYear FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_exam_structure_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_exam_structure_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_exam_structure_course FOREIGN KEY (course_id) REFERENCES course(course_id),
+    CONSTRAINT fk_exam_structure_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_exam_structure_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE syllabus_unit (
+    syllabus_unit_id INT PRIMARY KEY AUTO_INCREMENT,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    session_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    subject_id INT NOT NULL,
+    unit_number INT,
+    name VARCHAR(255),
+    description VARCHAR(255),
+    contact_hours VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_syllabus_unit_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_syllabus_unit_session FOREIGN KEY (session_id) REFERENCES session(session_id),
+    CONSTRAINT fk_syllabus_unit_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_syllabus_unit_acedmicYear FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_syllabus_unit_semester FOREIGN KEY (semester_id) REFERENCES semester(semester_id),
+    CONSTRAINT fk_syllabus_unit_subject FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    CONSTRAINT fk_syllabus_unit_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_syllabus_unit_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+update employee_code_master set code_master_type = 'Designation' where code_master_type = 'Salutation';
+
+ALTER TABLE syllabus DROP FOREIGN KEY syllabus_ibfk_3;
+
+ALTER TABLE syllabus DROP COLUMN class_sections_id;
+
+-- Add the session_id column with the foreign key reference in exam_structure
+
+ALTER TABLE exam_structure ADD COLUMN session_id INT DEFAULT NULL;
+
+UPDATE exam_structure SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE exam_structure SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE exam_structure ADD CONSTRAINT fk_session_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;
+
+ALTER TABLE exam_structure 
+DROP COLUMN exam_type,
+DROP COLUMN maximum_Iteration,
+DROP COLUMN jury_setup,
+DROP COLUMN prepared_by,
+DROP COLUMN evaluated_by,
+DROP COLUMN weightage;
+
+CREATE TABLE exam_setup_type (
+    exam_setup_type_id INT PRIMARY KEY AUTO_INCREMENT,
+    exam_structure_id INT NOT NULL,
+    exam_type VARCHAR(255),
+    maximum_iteration INT,
+    jury_setup VARCHAR(255),
+    prepared_by VARCHAR(255),
+    evaluated_by VARCHAR(255),
+    weightage VARCHAR(255),
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_exam_setup_type_examStructure FOREIGN KEY (exam_structure_id) REFERENCES exam_structure(exam_structure_id) ON DELETE CASCADE,
+    CONSTRAINT fk_exam_setup_type_createdBy FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_exam_setup_type_updatedBy FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+-- Add the exam_setup_type_id column with the foreign key reference in syllabus_details
+
+ALTER TABLE syllabus_details ADD COLUMN exam_setup_type_id INT DEFAULT NULL;
+
+UPDATE syllabus_details SET exam_setup_type_id = 1 WHERE exam_setup_type_id IS NULL;
+
+UPDATE syllabus_details SET exam_setup_type_id = 1 WHERE exam_setup_type_id = 0;
+
+ALTER TABLE syllabus_details ADD CONSTRAINT fk_exam_setup_type_id_syllabus FOREIGN KEY (exam_setup_type_id) REFERENCES exam_setup_type (exam_setup_type_id) ON DELETE CASCADE;
+
+ALTER TABLE syllabus_details 
+drop column internal ,
+drop column external ;
+
+ALTER TABLE syllabus_details 
+add column marks VARCHAR(255) NULL after total;
+
+ALTER TABLE employee 
+add column department VARCHAR(255) NULL;
+
+ALTER TABLE employee
+DROP COLUMN short_name,
+DROP COLUMN anniversary_date,
+DROP COLUMN working_hours,
+DROP COLUMN aicte_code,
+DROP COLUMN `from`,
+DROP COLUMN `to`,
+DROP COLUMN vehicle_number,
+DROP COLUMN driving_license,
+DROP COLUMN driving_license_expire_date;
+
+ALTER TABLE employee 
+add column department VARCHAR(255) NULL;
+
+ALTER TABLE employee 
+add column employment_type VARCHAR(255) NULL;
+
+create table schedule (
+    schedule_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    acedmic_year_id INT NOT NULL,
+    schedule_name VARCHAR(100) NOT NULL,
+    shift_hours INT NOT NULL,
+    min_start_time TIME NOT NULL,
+    min_end_time TIME NOT NULL,
+    max_start_time TIME NOT NULL,
+    max_end_time TIME NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    break_time TIME NULL,
+    accept_extra_hours BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_schedule_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_schedule_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_schedule_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+    CONSTRAINT fk_schedule_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_schedule_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+create table schedule_assign (
+    schedule_assign_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_scheduleassign_schedule FOREIGN KEY (schedule_id) REFERENCES schedule(schedule_id),
+    CONSTRAINT fk_scheduleassign_employee FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    CONSTRAINT fk_scheduleassign_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_scheduleassign_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE teacher_attendence (
+    teacher_attendence_id INT AUTO_INCREMENT PRIMARY KEY,
+    schedule_assign_id INT NOT NULL,
+    check_in TIME NULL,
+    check_out TIME NULL,
+    date DATE NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_teacher_attendence_scheduleassign FOREIGN KEY (schedule_assign_id) REFERENCES schedule_assign(schedule_assign_id),
+    CONSTRAINT fk_teacher_attendence_createdby FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_teacher_attendence_updatedby FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE leave_policies (
+    policy_id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id INT NOT NULL,
+    institute_id INT NOT NULL,
+    policy_name VARCHAR(100) NOT NULL,
+    total_leaves_per_year INT NOT NULL,
+    maximum_number_of_days INT NULL,
+    carry_forward BOOLEAN NOT NULL DEFAULT FALSE,
+    earned_leave BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_policy_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+    CONSTRAINT fk_policy_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+    CONSTRAINT fk_policy_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_policy_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);      
+
+CREATE TABLE leave_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    policy_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_days INT NOT NULL,
+    reason TEXT NULL,
+    status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_request_employee FOREIGN KEY (employee_id) REFERENCES users(user_id),
+    CONSTRAINT fk_request_policy FOREIGN KEY (policy_id) REFERENCES leave_policies(policy_id),
+    CONSTRAINT fk_request_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(user_id)
+);
+
+CREATE TABLE leave_balance (
+    balance_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    policy_id INT NOT NULL,
+    year INT NOT NULL,
+    total_allocated INT NOT NULL,
+    used_leaves INT NOT NULL DEFAULT 0,
+    remaining_leaves INT NOT NULL,
+    CONSTRAINT fk_balance_employee FOREIGN KEY (employee_id) REFERENCES users(user_id),
+    CONSTRAINT fk_balance_policy FOREIGN KEY (policy_id) REFERENCES leave_policies(policy_id)
+);
+
+ALTER TABLE leave_balance 
+  DROP FOREIGN KEY fk_balance_employee,
+  DROP INDEX fk_balance_employee,
+  DROP COLUMN employee_id;
+
+ALTER TABLE leave_requests
+  DROP FOREIGN KEY fk_request_employee,
+  DROP INDEX fk_request_employee,
+  DROP COLUMN employee_id;
+
+-- Add the employee_id column with the foreign key reference in leave_balance
+
+ALTER TABLE leave_balance ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE leave_balance SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE leave_balance SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE leave_balance ADD CONSTRAINT fk_leave_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
+
+-- Add the employee_id column with the foreign key reference in leave_requests
+
+ALTER TABLE leave_requests ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE leave_requests SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE leave_requests SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE leave_requests ADD CONSTRAINT fk_leave_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;

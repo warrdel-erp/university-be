@@ -55,18 +55,18 @@ export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,
                     as:'syllabusCourse',
                     attributes:["courseName","courseCode"]
                 },
-                {
-                    model:model.courseModel,
-                    as:'syllabusCourse',
-                    attributes:["courseName","courseCode"]
-                },
-                {
-                    model:model.classSectionModel,
-                    as:'syllabusClassSection',
-                    attributes: { 
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
-                    }                
-                },
+                // {
+                //     model:model.courseModel,
+                //     as:'syllabusCourse',
+                //     attributes:["courseName","courseCode"]
+                // },
+                // {
+                //     model:model.classSectionModel,
+                //     as:'syllabusClassSection',
+                //     attributes: { 
+                //         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                //     }                
+                // },
                 {
                     model: model.syllabusDetailsModel,
                     as: 'syllabusDetails',  
@@ -150,4 +150,61 @@ export async function courseAllSubject(courseId) {
         console.error('Error fetching Syllabus details:', error);
         throw error;
     }
-}
+};
+
+export async function addSyllabusUnit(syllabusData) {   
+    try {
+        const result = await model.syllabusUnitModel.bulkCreate(syllabusData);
+        return result;
+    } catch (error) {
+        console.error("Error in add Syllabus unit :", error);
+        throw error;
+    }
+};
+
+export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role) {
+    try {
+        const excludedFields = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
+
+        const syllabusUnit = await model.syllabusUnitModel.findAll({
+            where: {
+                ...(acedmicYearId && { acedmicYearId }),
+                ...(role === 'Head' && { instituteId }),
+                ...(universityId && { universityId }),
+            },
+            attributes: { exclude: excludedFields },
+            include: [
+                {
+                    model: model.instituteModel,
+                    as: 'instituteUnit',
+                    attributes: ["instituteName", "instituteCode"],
+                },
+                {
+                    model: model.acedmicYearModel,
+                    as: 'acedmicYearUnit',
+                    attributes: ["yearTitle", "startingDate", "endingDate"],
+                },
+                {
+                    model: model.sessionModel,
+                    as: 'sessionUnit',
+                    attributes: ["sessionName"],
+                },
+                {
+                    model: model.semesterModel,
+                    as: 'semesterUnit',
+                    attributes: { exclude: excludedFields },
+                },
+                {
+                    model: model.subjectModel,
+                    as: 'subjectUnit',
+                    attributes: { exclude: excludedFields },
+                },
+            ],
+        });
+
+        return syllabusUnit;
+    } catch (error) {
+        console.error('Error fetching syllabus unit with details:', error);
+        throw error;
+    }
+};

@@ -102,6 +102,15 @@ import topicModel from './topicModel.js';
 import subTopicModel from './subTopicModel.js';
 import lessonMappingModel from './lessonMappingModel.js';
 import noticeModel from './noticeModel.js';
+import examStructureModel from './examStructureModel.js';
+import syllabusUnitModel from './syllabusUnitModel.js';
+import examSetupTypeModel from './examSetupTypeModel.js';
+import scheduleModel from './scheduleModel.js';
+import scheduleAssignModel from './ScheduleAssignModel.js';
+import teacherAttendeceModel from './teacherAttendenceModel.js';
+import leavePolicyModel from './leavePolicyModel.js';
+import leaveBalanceModel from './leaveBalanceModel.js';
+import leaveRequestModel from './leaveRequestModel.js'; 
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -640,8 +649,8 @@ acedmicYearModel.hasMany(syllabusModel, { foreignKey: 'acedmic_year_id', as: 'sy
 syllabusModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
 courseModel.hasMany(syllabusModel, { foreignKey: 'course_id', as: 'syllabusCourse' });
 
-syllabusModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
-classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
+// syllabusModel.belongsTo(classSectionModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
+// classSectionModel.hasMany(syllabusModel, { foreignKey: 'class_sections_id', as: 'syllabusClassSection' });
 
 faculityLoadModel.belongsTo(employeeModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
 employeeModel.hasMany(faculityLoadModel, { foreignKey: 'employee_id', as: 'employeeFaculity' });
@@ -729,6 +738,48 @@ topicModel.hasMany(subTopicModel, { foreignKey: 'topicId', as: 'subTopic' });
 
 lessonMappingModel.belongsTo(timeTableMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
 timeTableMappingModel.hasMany(lessonMappingModel, { foreignKey: 'timeTableMappingId', as: 'timeTableMapping' });
+
+courseModel.hasMany(examStructureModel, { foreignKey: 'courseId', sourceKey: 'courseId', as: 'examStructuresCourse' });
+examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: 'courseId', as: 'courseExam' });
+
+sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
+examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
+
+syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
+acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
+
+syllabusUnitModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionUnit" });
+sessionModel.hasMany(syllabusUnitModel, { foreignKey: "sessionId", as: "syllabusUnitsSession" });
+
+syllabusUnitModel.belongsTo(semesterModel, { foreignKey: "semesterId",as: "semesterUnit" });
+semesterModel.hasMany(syllabusUnitModel, { foreignKey: "semesterId",  as: "syllabusUnitsSemester" });
+
+syllabusUnitModel.belongsTo(subjectModel, { foreignKey: "subjectId",  as: "subjectUnit" });
+subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabusUnitsSubject" });
+
+syllabusUnitModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteUnit" });
+instituteModel.hasMany(syllabusUnitModel, { foreignKey: "instituteId", as: "syllabusUnitsInstitute" });
+
+examStructureModel.hasMany(examSetupTypeModel, { foreignKey: "exam_structure_id", as: "setupTypes" });
+examSetupTypeModel.belongsTo(examStructureModel, { foreignKey: "exam_structure_id", as: "examStructure" });
+
+scheduleModel.hasMany(scheduleAssignModel, { foreignKey: "scheduleId", as: "assignedEmployees" });
+scheduleAssignModel.belongsTo(scheduleModel, { foreignKey: "scheduleId", as: "schedule" }); 
+
+employeeModel.hasMany(scheduleAssignModel, { foreignKey: "employeeId", as: "assignedSchedules" });
+scheduleAssignModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeSchedule" });
+
+scheduleAssignModel.hasMany(teacherAttendeceModel, { foreignKey: "scheduleAssignId", as: "attendances" }); 
+teacherAttendeceModel.belongsTo(scheduleAssignModel, { foreignKey: "scheduleAssignId", as: "scheduleAssign" });
+
+leaveRequestModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeRequest" });
+employeeModel.hasMany(leaveRequestModel, { foreignKey: "employee_id", as: "employeePolicy" });
+
+leaveRequestModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveRequestsPolicy" });
+leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leaveRequests" });
+
+leaveBalanceModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveBalancePolicy" });
+leavePolicyModel.hasMany(leaveBalanceModel, { foreignKey: "policy_id", as: "leaveBalance" });
 
 export {
     settingModel,
@@ -835,4 +886,13 @@ export {
     subTopicModel,
     lessonMappingModel,
     noticeModel,
+    examStructureModel,
+    syllabusUnitModel,
+    examSetupTypeModel,
+    scheduleModel,
+    scheduleAssignModel,
+    teacherAttendeceModel,
+    leaveBalanceModel,
+    leavePolicyModel,
+    leaveRequestModel,
 };

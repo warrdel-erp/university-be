@@ -1,55 +1,39 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from 'sequelize';
-import institute from './instituteModel.js';
-import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
-import course from './courseModel.js';
-import users from './userModel.js';
+import { DataTypes } from "sequelize";
+import users from "./userModel.js";
+import scheduleAssignModel from "./ScheduleAssignModel.js";
 
 export default sequelize.define(
-    'syllabus',
+    "teacher_attendence",
     {
-        syllabusId: {
+        teacherAttendenceId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'syllabus_id'
+            field: "teacher_attendence_id",
         },
-        instituteId: {
+        scheduleAssignId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'institute_id',
+            field: 'schedule_assign_id',
             references: {
-                model: institute,
-                key: 'institute_id'
+                model: scheduleAssignModel,
+                key: 'schedule_assign_id'
             }
         },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
+        checkIn: {
+            type: DataTypes.TIME,
+            allowNull: true,
+            field: "check_in",
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
+        checkOut: {
+            type: DataTypes.TIME,
+            allowNull: true,
+            field: "check_out",
+        },
+        date:{
+            type:DataTypes.DATE,
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -88,8 +72,8 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'syllabus',
+        tableName: "teacher_attendence",
         timestamps: true,
-        paranoid: true
+        paranoid: true,
     }
 );

@@ -8,6 +8,11 @@ import { getPermissionByRole } from "../repository/rolePermissionMappingReposito
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
 import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 
+import jwt from "jsonwebtoken";
+// import bcrypt from "bcrypt";
+// import { findByEmail, updatePassword } from "../repository/userRepository.js";
+import sendEmail from "../utility/sendEmail.js";
+
 //register
 
 export async function register(info) {
@@ -281,10 +286,10 @@ export async function changePassword(info) {
 };
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
-  console.log(`Fetching roles and permissions for userId: ${userId}`);
+  // console.log(`Fetching roles and permissions for userId: ${userId}`);
 
   const data = await registerRepository.getUserRoleAndPermissionsByUserId(userId);
-  console.log(`Raw data received:`, JSON.stringify(data, null, 2));
+  // console.log(`Raw data received:`, JSON.stringify(data, null, 2));
 
   const groupedData = data.reduce((acc, item) => {
     const uid = item.user_id;
@@ -303,13 +308,13 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
     }
 
     const permissions = acc[uid].permissions;
-    console.log(`Current permissions for user ${uid}:`, permissions);
+    // console.log(`Current permissions for user ${uid}:`, permissions);
 
     if (!permissions.some(p => p.permissionId === item.permission_id)) {
       if (item.userPermission) {
         permissions.push(item.userPermission);
       } else {
-        console.warn(`Missing userPermission for item:`, item);
+        console.warn(`Missing userPermission for item:`);
       }
     }
 
@@ -317,7 +322,7 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
   }, {});
 
   const result = Object.values(groupedData);
-  console.log(`Final grouped result:`, JSON.stringify(result, null, 2));
+  // console.log(`Final grouped result:`, JSON.stringify(result, null, 2));
   return result;
 };
 
@@ -419,4 +424,19 @@ export async function changeStatus(userId) {
     console.error(`Error changing status for user ${userId}:`, error);
     throw error; 
   }
+};
+
+export const sendLink = async (email, req) => {
+  const user = await registerRepository.findEmailByEmail(email);
+  if (!user) throw new Error("User not found");
+
+  const token = jwt.sign({email: user.email }, 'warrdelUniversityERPWarrdelUniversityERP', { expiresIn: "5m" });
+
+  const baseUrl = `${req.protocol}://${req.headers.host}` || "http://localhost:3000";
+
+  console.log(`>>>>>>>>>>>baseUrl`,baseUrl);
+  
+  const link = `${baseUrl}/password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
+console.log(`>>>>>>>>>>>link`,link)
+  await sendEmail(user.email, "Password Reset", `Click here: ${link}`);
 };
