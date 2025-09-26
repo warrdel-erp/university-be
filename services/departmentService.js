@@ -51,7 +51,7 @@ export async function getAllAccount() {
 
 export async function getDepartmentByIdEmployee(departmentId, universityId) {
     try {
-        const result = await getSingleSubAccountDetails(departmentId, universityId);
+        const result = await getSingleSubAccountDetails(departmentId);
 
         if (!result) {
             throw new Error(`Department not found with ID: ${departmentId} and University ID: ${universityId}`);
