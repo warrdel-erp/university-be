@@ -46,4 +46,22 @@ export async function updateDepartment(departmentId, departmentData, updatedBy) 
 
 export async function getAllAccount() {
     return await departmentCreationRepository.getAllAccount();
+};
+
+export async function getDepartmentByIdEmployee(departmentId, universityId) {
+    try {
+        const result = await departmentCreationRepository.getSingleDepartmentDetails(departmentId, universityId);
+
+        if (!result) {
+            throw new Error(`Department not found with ID: ${departmentId} and University ID: ${universityId}`);
+        }
+
+        const departmentName = result.dataValues.departmentName;
+        const employeeDetail = await departmentCreationRepository.employeeDetail(departmentName);
+
+        return employeeDetail;
+    } catch (error) {
+        console.error('Error fetching employees by department ID:', error.message);
+        throw error; 
+    }
 }

@@ -87,3 +87,19 @@ export async function getlatestEntry(subAccountId) {
         throw error;
     }
 }
+
+export async function employeeDetail(departmentName) {    
+    try {
+        const employees = await model.employeeModel.findAll({
+            where: { department:departmentName },
+            attributes: { 
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+            },
+        });
+
+        return employees;
+    } catch (error) {
+        console.error('Error fetching employee details:', error);
+        throw error;
+    }
+};
