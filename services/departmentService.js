@@ -1,4 +1,5 @@
 import * as departmentCreationRepository  from "../repository/departmentRepository.js";
+import { getSingleSubAccountDetails } from "../repository/subAccountRepository.js";
 
 export async function addDepartment(departmentData, createdBy, updatedBy, universityId) {
     try {
@@ -50,7 +51,7 @@ export async function getAllAccount() {
 
 export async function getDepartmentByIdEmployee(departmentId, universityId) {
     try {
-        const result = await departmentCreationRepository.getSingleDepartmentDetails(departmentId, universityId);
+        const result = await getSingleSubAccountDetails(departmentId, universityId);
 
         if (!result) {
             throw new Error(`Department not found with ID: ${departmentId} and University ID: ${universityId}`);
