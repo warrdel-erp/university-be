@@ -81,3 +81,18 @@ export async function getAllAccount(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function getDepartmentByIdEmployee(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const { departmentId } = req.query;
+        const departmentDetails = await DepartmentCreation.getDepartmentByIdEmployee(departmentId,universityId);
+        if (departmentDetails) {
+            res.status(200).json(departmentDetails);
+        } else {
+            res.status(404).json({ message: "departmentDetails not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

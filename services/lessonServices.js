@@ -96,22 +96,27 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
     const grouped = {};
 
     originalData.forEach(item => {
-      const empDetails = item.timeTableMapping?.employeeDetails;
-      if (!empDetails) return;  // skip if no employee details
+      const ttMapping = item.timeTableMapping;
 
-      const empId = empDetails.employeeId;
+      if (!ttMapping) return; // skip if mapping is missing
+
+      // Prefer direct employee, otherwise teacher from teacherSubjectMapping
+      const empDetails = ttMapping.employeeDetails;
+      const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
+      const finalEmp = empDetails || teacherMapping;
+
+      const empId = finalEmp?.employeeId || ttMapping.timeTableMappingId;
 
       if (!grouped[empId]) {
         grouped[empId] = {
-          employeeId: empId,
-          employeeName: empDetails.employeeName,
-          employeeCode: empDetails.employeeCode,
-          pickColor: empDetails.pickColor,
+          employeeId: finalEmp?.employeeId || null,
+          employeeName: finalEmp?.employeeName || 'N/A',
+          employeeCode: finalEmp?.employeeCode || 'N/A',
+          pickColor: finalEmp?.pickColor || '#ccc',
           timeTables: []
         };
       }
 
-      const ttMapping = item.timeTableMapping || {};
       const ttCreate = ttMapping.timeTablecreate || {};
       const classSection = ttCreate.timeTableClassSection || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
@@ -152,9 +157,8 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
       original: originalData,
       filtered: filteredData
     };
-
   } catch (error) {
-    console.error("Error in getMapping:", error);
+    console.error('Error in lesson service:', error);
     throw error;
   }
 };
@@ -170,6 +174,69 @@ export async function updateMapping(completeDate, lessonMappingId) {
     return result;
   } catch (error) {
     console.error('Error updating mapping:', error);
+    throw error;
+  }
+};
+
+export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
+  const transaction = await sequelize.transaction();
+  try {
+    const payload = {
+      topicId: data.topicId,
+      timeTableMappingId: data.timeTableMappingId,
+      date: data.date,
+      completeDate: data.completeDate || null,
+      note: data.note || null,
+      lectureUrl: data.lectureUrl || null,
+      file: data.file || null,
+      status: data.status || 'inComplete',
+      updatedBy
+    };
+
+    const updatedLesson = await lesson.updateLessionMapping(
+      lessonMappingId,
+      payload,
+      transaction
+    );
+
+    if (data.subTopic && Array.isArray(data.subTopic)) {
+      for (const sub of data.subTopic) {
+        if (sub.subTopicId) {
+          await lesson.updateSubTopic(
+            sub.subTopicId, 
+            {
+              name: sub.name,
+              description: sub.description || null,
+              updatedBy
+            },
+            transaction
+          );
+        }
+      }
+    }
+
+    await transaction.commit();
+    return updatedLesson;
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in updateCompleteMapping:", error);
+    throw error;
+  }
+}
+
+
+export async function deleteMapping(lessonMappingId) {
+  const transaction = await sequelize.transaction();
+  try {
+    // await lesson.deleteSubTopicsByMapping(lessonMappingId, transaction);
+
+    await lesson.deleteLessionMapping(lessonMappingId, transaction);
+
+    await transaction.commit();
+    return true;
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in deleteMapping:", error);
     throw error;
   }
 }
