@@ -1,4 +1,5 @@
 import * as employee  from '../services/employeeServices.js';
+import * as fileHandler from '../utility/fileHandler.js';
 
 export const addEmployee = async (req,res) => {
     const universityId = req.user.universityId;
@@ -60,4 +61,39 @@ export const deleteEmployeeDetail = async (req,res) => {
         console.error(`Error in deleting employeeId Id ${employeeId}:`, error);
         res.status(500).send("Internal Server Error");
     }
+};
+
+export const importEmployeeData = async (req, res) => {
+  try {
+    const { campusId, instituteId, roleId, acedmicYearId } = req.body;
+    const universityId = req.user.universityId;    
+    const createdBy = req.user.userId;
+    const data = { ...req.body, universityId, createdBy }; 
+
+    if (!(campusId && instituteId && roleId && acedmicYearId)) {
+      return res.status(400).json({ error: 'campusId, instituteId, roleId, and acedmicYearId are required' });
+    }
+
+    const excelFile = req.files?.employee;
+    if (!excelFile) {
+      return res.status(400).json({ error: 'Excel file is required' });
+    }
+
+    const excelData = fileHandler.readExcelFile(excelFile.data);
+    if (!excelData) {
+      return res.status(400).json({ error: 'Error reading the Excel file' });
+    }
+
+    const result = await employee.importEmployeeData(excelData, data);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.status(200).json({ message: result.message });
+
+  } catch (error) {
+    console.error("Controller Error:", error); 
+    res.status(500).json({ error: error.message || 'An unexpected error occurred' });
+  }
 };
