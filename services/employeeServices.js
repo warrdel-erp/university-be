@@ -306,7 +306,7 @@ function validateEmployeeRow(employee) {
     "acedmicYearId",
     "createdBy",
     "department",
-    "employmentType"
+    "employmentType",
   ];
 
   for (const field of requiredFields) {
