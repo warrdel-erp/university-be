@@ -294,4 +294,113 @@ export async function deleteEmployeeDetail(employeeId) {
       console.error('Error deleting employee:', error);
       return { message: 'An error occurred while trying to delete the employee', error: error.message };
     }
-  }  
+}; 
+
+function validateEmployeeRow(employee) {
+  const requiredFields = [
+    "employeeName",
+    // "employeeCode",
+    "campusId",
+    "instituteId",
+    "roleId",
+    "acedmicYearId",
+    "createdBy",
+    "department",
+    "employmentType",
+  ];
+
+  for (const field of requiredFields) {
+    if (!employee[field] || employee[field] === "") {
+      return `Missing required field: ${field}`;
+    }
+  }
+
+  return null;
+}
+
+
+export async function importEmployeeData(excelData, commonData) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    for (const [index, employee] of excelData.entries()) {
+      const convertedData = { ...employee, ...commonData };
+
+      const error = validateEmployeeRow(convertedData);
+      if (error) {
+        throw new Error(`Row ${index + 1} (${employee.employeeName || "Unknown"}): ${error}`);
+      }
+    }
+
+    for (const employee of excelData) {
+      const convertedData = { ...employee, ...commonData };
+
+      const employeeData = {
+        employeeName: convertedData.employeeName,
+        employeeCode: convertedData.employeeCode ? convertedData.employeeCode : "KY01012025" ,
+        employmentType: convertedData.employmentType,
+        dateOfBirth: convertedData.dateOfBirth,
+        fatherName: convertedData.fatherName,
+        motherName: convertedData.motherName,
+        pickColor: convertedData.pickColor,
+        campusId: convertedData.campusId,
+        instituteId: convertedData.instituteId,
+        roleId: convertedData.roleId,
+        acedmicYearId: convertedData.acedmicYearId,
+        createdBy: convertedData.createdBy,
+      };
+
+      const officeData = {
+        joiningDate: convertedData.joiningDate,
+        confirmationDate: convertedData.confirmationDate,
+        relievingDate: convertedData.relievingDate,
+        retirementDate: convertedData.retirementDate,
+        employeeFileNumber: convertedData.employeeFileNumber,
+        noticePeriod: convertedData.noticePeriod,
+        createdBy: convertedData.createdBy,
+      };
+
+      const addressData = {
+        pAddress: convertedData.pAddress,
+        pPincode: convertedData.pPincode,
+        // pCountry: convertedData.pCountry,
+        // pState: convertedData.pState,
+        // pCity: convertedData.pCity,
+        phoneNumber: convertedData.phoneNumber,
+        mobileNumber: convertedData.mobileNumber,
+        officalMobileNumber: convertedData.officalMobileNumber,
+        officalEmailId: convertedData.officalEmailId,
+        personalEmail: convertedData.personalEmail,
+        createdBy: convertedData.createdBy,
+      };
+
+
+     const result =  await employeeRepository.createEmployeeWithDetails(employeeData, officeData, addressData, transaction);
+     const employeeId = result.dataValues.employeeId
+
+          
+              const employeeRegisterData = {
+                instituteId: convertedData.instituteId,
+                roleId: convertedData.roleId,
+                employeeName: convertedData.employeeName,
+                universityId:convertedData.universityId,
+                employeeId
+            }
+                    const employeePersonalDetail = {
+                        personalEmail: convertedData.personalEmail,
+                        mobileNumber: convertedData.mobileNumber
+                    }
+
+        await employeeRegister (employeePersonalDetail,employeeRegisterData,transaction)
+
+    }
+
+    await transaction.commit();
+    return { success: true, message: "All employees imported successfully" };
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in importing employee data:", error.message);
+    return { success: false, error: error.message };
+  }
+}

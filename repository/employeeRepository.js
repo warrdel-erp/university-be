@@ -340,3 +340,25 @@ export async function deleteEmployeeDetail (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+
+export async function createEmployeeWithDetails(employeeData, officeData, addressData, transaction) {
+  //  Create Employee
+  const employee = await model.employeeModel.create(employeeData, { transaction });
+  console.log(`>>>>>employee`,employee);
+  
+
+  // Create Employee Office
+  if (officeData) {
+    officeData.employeeId = employee.employeeId;
+    await model.employeeOfficeModel.create(officeData, { transaction });
+  }
+
+  //  Create Employee Address
+  if (addressData) {
+    addressData.employeeId = employee.employeeId;
+    await model.employeeAddressModel.create(addressData, { transaction });
+  }
+
+  return employee;
+}
