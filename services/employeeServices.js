@@ -341,6 +341,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
+        department:convertedData.department,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
