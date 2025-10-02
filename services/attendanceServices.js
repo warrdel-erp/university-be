@@ -70,6 +70,9 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
       fullName: [studentAttendance?.firstName, studentAttendance?.middleName, studentAttendance?.lastName]
         .filter(Boolean)
         .join(" "),
+      firstName:studentAttendance?.firstName,
+      middleName:studentAttendance?.middleName,
+      lastName:studentAttendance?.lastName,
       attentenceStatus,
       date: recordDate,
       description,
