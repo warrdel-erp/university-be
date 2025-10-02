@@ -299,7 +299,7 @@ export async function deleteEmployeeDetail(employeeId) {
 function validateEmployeeRow(employee) {
   const requiredFields = [
     "employeeName",
-    // "employeeCode",
+    "Gender",
     "campusId",
     "instituteId",
     "roleId",
@@ -341,6 +341,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
+        department:convertedData.department,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,

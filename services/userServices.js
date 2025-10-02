@@ -7,10 +7,7 @@ import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
 import { getSingleRoleDetails } from "../repository/roleRepository.js";
 import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
-
 import jwt from "jsonwebtoken";
-// import bcrypt from "bcrypt";
-// import { findByEmail, updatePassword } from "../repository/userRepository.js";
 import sendEmail from "../utility/sendEmail.js";
 
 //register
@@ -30,17 +27,7 @@ export async function register(info) {
   };
 
   return await registerRepository.register(data);
-}
-
-// export async function getEmployeeRolePermissionUserId(userId) {
-//     try {
-//         const result = await getEmployeeRolePermissionByUserId(userId);
-//         return result;
-//     } catch (error) {
-//         console.error('Error in getEmployeeRolePermissionUserId:', error);
-//         throw error;
-//     }
-// };
+};
 
 export async function getEmployeeRolePermissionUserId(userId) {
   try {

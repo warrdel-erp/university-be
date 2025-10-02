@@ -1,9 +1,6 @@
 import * as model from '../models/index.js'
-import sequelize from "../database/sequelizeConfig.js"; 
-import { Op, fn } from 'sequelize';
 
-export async function addAttendance(attendanceRecords) {   
-     
+export async function addAttendance(attendanceRecords) {      
     try {
         const result = await model.attendanceModel.bulkCreate(attendanceRecords);
         return result;
@@ -105,5 +102,16 @@ export async function updateAttendance(attendanceId, record) {
     } catch (error) {
         console.error(`Error updating attendance ${attendanceId}:`, error);
         throw error; 
+    }
+};
+
+export async function addImportAttendance(attendanceRecords) {   
+     
+    try {
+        const result = await model.attendanceModel.create(attendanceRecords);
+        return result;
+    } catch (error) {
+        console.error("Error in adding attendance bulk import:", error);
+        throw error;
     }
 };

@@ -52,19 +52,10 @@ export async function deleteSession(sessionId) {
     return await sessionCreationService.deleteSession(sessionId);
 };
 
-// export async function couseSessionMapping(data,createdBy,updatedBy,universityId,instituteId) {
-// console.log(`>>>>>>>>>>>data,createdBy,updatedBy,universityId,instituteId`,data,createdBy,updatedBy,universityId,instituteId);
-//         sessionData.createdBy = createdBy;
-//         sessionData.updatedBy = updatedBy;
-//         sessionData.universityId = universityId;
-//         sessionData.instituteId = instituteId
-//         const session = await sessionCreationService.addSession(sessionData);
-//         return session;
-// };
+
 
 export async function couseSessionMapping(data, createdBy, updatedBy, universityId, instituteId) {
   try {
-    console.log(`>>>>>>>>>>>data,createdBy,updatedBy,universityId,instituteId`, data, createdBy, updatedBy, universityId, instituteId);
 
     if (!Array.isArray(data.courseId) || data.courseId.length === 0) {
       throw new Error("courseId must be a non-empty array");
