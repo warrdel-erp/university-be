@@ -299,7 +299,7 @@ export async function deleteEmployeeDetail(employeeId) {
 function validateEmployeeRow(employee) {
   const requiredFields = [
     "employeeName",
-    // "employeeCode",
+    "Gender",
     "campusId",
     "instituteId",
     "roleId",
