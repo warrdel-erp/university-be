@@ -176,13 +176,11 @@ export async function importAttendanceData(excelData, commonData) {
   try {
     for (const [index, row] of excelData.entries()) {
       const parsedStudent = parseStudentString(row.studentName);
-      console.log(`>>>>>>>>>>parsedStudent`,parsedStudent)
       if (!parsedStudent) {
         throw new Error(`Row ${index + 1}: Invalid studentName format`);
       }
 
       const convertedDate = excelDateToJSDate(row.date);
-      console.log(`>>>>>>>>>>convertedDate`,convertedDate)
 
       const convertedData = {
         ...row,
@@ -207,3 +205,51 @@ export async function importAttendanceData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
+
+export async function getAttendanceByDate(date, classSectionsId,employeeId) {
+    const data = await attendanceService.getAttendanceByDate(date, classSectionsId,employeeId);
+
+    const { attendanceDetails = [], subjectDetail = {} } = data;
+
+    const grouped = {};
+
+    attendanceDetails.forEach(att => {
+        const classAtt = att.classAttendance;
+        if (!classAtt) return;
+
+        const courseName = classAtt.courseSection?.courseName || '';
+        const className = classAtt.class || '';
+        const sectionName = classAtt.section || '';
+        const dateStr = att.date?.toISOString().split('T')[0] || '';
+
+        //  Subject comes from subjectDetail, not courseSection
+        const subjectName = subjectDetail?.employeeSubject?.subjects?.subjectName || '';
+        
+        const key = `${courseName}-${className}-${sectionName}-${subjectName}-${dateStr}`;
+
+        if (!grouped[key]) {
+            grouped[key] = {
+                course: courseName,
+                class: className,
+                section: sectionName,
+                subject: subjectName,
+                date: dateStr,
+                students: []
+            };
+        }
+
+        // Add student
+        grouped[key].students.push({
+            firstName: att.studentAttendance?.firstName || '',
+            scholarNumber: att.studentAttendance?.scholarNumber || '',
+            enrollNumber: att.studentAttendance?.enrollNumber || '',
+            attendenceStatus: att.attentenceStatus || '',
+            notes: att.notes || ''
+        });
+    });
+
+    return {
+        // originalData: data,
+        groupedData: Object.values(grouped)
+    };
+}
