@@ -22,3 +22,20 @@ export async function deleteEmployeeWard (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeWards(employeeId, wards,createdBy, updatedBy, transaction) {
+  try {
+    await model.employeeWardModel.destroy({ where: { employeeId }, transaction });
+
+    const insertData = wards.map(w => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...w
+    }));
+
+    return await model.employeeWardModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee wards:", error);
+    throw error;
+  }
+};

@@ -21,6 +21,31 @@ export async function addCorsAddress(data,transaction) {
     }
 };
 
+export async function updateAddress(employeeId, data, transaction) {
+  try {
+    return await model.employeeAddressModel.update(
+      data,
+      { where: { employeeId}, transaction }
+    );
+  } catch (error) {
+    console.error("Error updating employee address:", error);
+    throw error;
+  }
+}
+
+export async function updateCorsAddress(employeeId, data, transaction) {
+  try {
+    return await model.employeeCorAddressModel.update(
+      data,
+      { where: { employeeId}, transaction }
+    );
+  } catch (error) {
+    console.error("Error updating employee correspondence address:", error);
+    throw error;
+  }
+}
+
+
 export async function deleteEmployeeAddress (employeeId) {
     try {
         const result = await model.employeeAddressModel.destroy({

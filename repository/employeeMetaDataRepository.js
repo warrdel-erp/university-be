@@ -22,3 +22,53 @@ export async function deleteEmployeeMetaData (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+// export async function refreshEmployeeMetaData(employeeId, entries, transaction) {
+//   try {
+//     await model.employeeMetaDataModel.destroy({
+//       where: { employeeId },
+//       transaction
+//     });
+
+//     if (entries && entries.length > 0) {
+//       return await model.employeeMetaDataModel.bulkCreate(entries, { transaction });
+//     }
+
+//     return [];
+//   } catch (error) {
+//     console.error("Error refreshing employee meta data:", error);
+//     throw error;
+//   }
+// }
+
+export async function updateEmployeeMetaData(employeeId, entries, transaction) {
+  try {
+    if (!entries || entries.length === 0) return [];
+
+    const updatePromises = entries.map(async (entry) => {
+      const [updatedCount] = await model.employeeMetaDataModel.update(
+        { codes: entry.codes, updatedBy: entry.updatedBy },
+        {
+          where: {
+            employeeId,
+            types: entry.types
+          },
+          transaction
+        }
+      );
+
+      if (updatedCount === 0) {
+        await model.employeeMetaDataModel.create(
+          { employeeId, types: entry.types, codes: entry.codes, updatedBy: entry.updatedBy },
+          { transaction }
+        );
+      }
+    });
+
+    await Promise.all(updatePromises);
+    return entries;
+  } catch (error) {
+    console.error("Error updating employee meta data:", error);
+    throw error;
+  }
+};

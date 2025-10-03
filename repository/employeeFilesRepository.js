@@ -9,3 +9,15 @@ export async function addEmployeeFiles(data,transaction) {
         throw error;
     }
 };
+
+export async function updateEmployee(employeeId, data, transaction) {
+  try {
+    return await model.employeeModel.update(data, {
+      where: {employeeId },
+      transaction
+    });
+  } catch (error) {
+    console.error("Error in updateEmployee:", error);
+    throw error;
+  }
+}

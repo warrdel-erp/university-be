@@ -22,3 +22,20 @@ export async function deleteEmployeeQualification (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeQualifications(employeeId, qualifications,createdBy, updatedBy, transaction) {
+  try {
+    await model.employeeQualificationModel.destroy({ where: { employeeId }, transaction });
+
+    const insertData = qualifications.map(q => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...q
+    }));
+
+    return await model.employeeQualificationModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee qualifications:", error);
+    throw error;
+  }
+}
