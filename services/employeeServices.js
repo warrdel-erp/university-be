@@ -411,20 +411,6 @@ export async function updateEmployee(employeeId, data, files, updatedBy,createdB
   const transaction = await sequelize.transaction();
   try {
 
-    // const address = data.address ? JSON.parse(data.address) : null;
-    // const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
-    // const office = data.office ? JSON.parse(data.office) : null;
-    // const skills = data.skill ? JSON.parse(data.skill) : [];
-    // const documents = data.documents ? JSON.parse(data.documents) : [];
-    // const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
-    // const experiences = data.experience ? JSON.parse(data.experience) : [];
-    // const achievements = data.achievements ? JSON.parse(data.achievements) : [];
-    // const wards = data.ward ? JSON.parse(data.ward) : [];
-    // const activities = data.activity ? JSON.parse(data.activity) : [];
-    // const references = data.reference ? JSON.parse(data.reference) : [];
-    // const research = data.research ? JSON.parse(data.research) : [];
-    // const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
-
     const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
 const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
 const office = typeof data.office === 'string' && data.office ? JSON.parse(data.office) : data.office || null;
@@ -442,31 +428,14 @@ const research = typeof data.research === 'string' && data.research ? JSON.parse
 const longLeaves = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
 const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
 
-
-    // const address = typeof data.address === 'string' ? JSON.parse(data.address) : data.address || null;
-    // const corsAddress = typeof data.corsAddress === 'string' ? JSON.parse(data.corsAddress) : data.corsAddress || null;
-    // const office = typeof data.office === 'string' ? JSON.parse(data.office) : data.office || null;
-    // const skills = typeof data.skill === 'string' ? JSON.parse(data.skill) : data.skill || [];
-    // const documents = typeof data.documents === 'string' ? JSON.parse(data.documents) : data.documents || [];
-    // const qualifications = typeof data.qualification === 'string' ? JSON.parse(data.qualification) : data.qualification || [];
-    // const experiences = typeof data.experience === 'string' ? JSON.parse(data.experience) : data.experience || [];
-    // const achievements = typeof data.achievements === 'string' ? JSON.parse(data.achievements) : data.achievements || [];
-    // const wards = typeof data.ward === 'string' ? JSON.parse(data.ward) : data.ward || [];
-    // const activities = typeof data.activity === 'string' ? JSON.parse(data.activity) : data.activity || [];
-    // const references = typeof data.reference === 'string' ? JSON.parse(data.reference) : data.reference || [];
-    // const research = typeof data.research === 'string' ? JSON.parse(data.research) : data.research || [];
-    // const longLeaves = typeof data.longLeave === 'string' ? JSON.parse(data.longLeave) : data.longLeave || [];
-
-
-
-    // 🔹 Update main employee table
+    //  Update main employee table
     await employeeRepository.updateEmployee(employeeId, {
       ...data,
       roleId,
       updatedBy
     }, transaction);
 
-    // 🔹 Upload/update files
+    //  Upload/update files
     if (files) {
       const uploadPromises = Object.keys(files).map(async key => {
         const file = files[key];
@@ -478,7 +447,7 @@ const allDropDownData = typeof data.allDropDownData === 'string' && data.allDrop
       await Promise.all(uploadPromises);
     }
 
-    // 🔹 Update Address
+    //  Update Address
     if (address) {
       await employeeAddressRepository.updateAddress(employeeId, {
         updatedBy,
@@ -493,7 +462,7 @@ const allDropDownData = typeof data.allDropDownData === 'string' && data.allDrop
       }, transaction);
     }
 
-    // 🔹 Update Office details
+    //  Update Office details
     if (office) {
       await employeeOfficeRepository.updateOfficeDetails(employeeId, {
         updatedBy,
@@ -501,7 +470,7 @@ const allDropDownData = typeof data.allDropDownData === 'string' && data.allDrop
       }, transaction);
     }
 
-   // 🔹 Update Skills
+   //  Update Skills
 if (skills && skills.length > 0) {
   await employeeSkillRepository.refreshEmployeeSkills(
     employeeId,
@@ -512,7 +481,7 @@ if (skills && skills.length > 0) {
   );
 }
 
-// 🔹 Update Documents
+//  Update Documents
 if (documents && documents.length > 0) {
   await employeeDocumentRepository.refreshEmployeeDocuments(
     employeeId,
@@ -523,7 +492,7 @@ if (documents && documents.length > 0) {
   );
 }
 
-// 🔹 Update Qualifications
+// Update Qualifications
 if (qualifications && qualifications.length > 0) {
   await employeeQualificationRepository.refreshEmployeeQualifications(
     employeeId,
@@ -534,7 +503,7 @@ if (qualifications && qualifications.length > 0) {
   );
 }
 
-// 🔹 Update Experiences
+// Update Experiences
 if (experiences && experiences.length > 0) {
   await employeeExperianceRepository.refreshEmployeeExperiences(
     employeeId,
@@ -545,7 +514,7 @@ if (experiences && experiences.length > 0) {
   );
 }
 
-// 🔹 Update Achievements
+// Update Achievements
 if (achievements && achievements.length > 0) {
   await employeeAchivementRepository.refreshEmployeeAchievements(
     employeeId,
@@ -556,7 +525,7 @@ if (achievements && achievements.length > 0) {
   );
 }
 
-// 🔹 Update Wards
+// Update Wards
 if (wards && wards.length > 0) {
   await employeeWardRepository.refreshEmployeeWards(
     employeeId,
@@ -567,7 +536,7 @@ if (wards && wards.length > 0) {
   );
 }
 
-// 🔹 Update Activities
+// Update Activities
 if (activities && activities.length > 0) {
   await employeeActivityRepository.refreshEmployeeActivities(
     employeeId,
@@ -578,7 +547,7 @@ if (activities && activities.length > 0) {
   );
 }
 
-// 🔹 Update References
+// Update References
 if (references && references.length > 0) {
   await employeeReferenceRepository.refreshEmployeeReferences(
     employeeId,
@@ -589,7 +558,7 @@ if (references && references.length > 0) {
   );
 }
 
-// 🔹 Update Research
+// Update Research
 if (research && research.length > 0) {
   await employeeResearchRepository.refreshEmployeeResearch(
     employeeId,
@@ -600,7 +569,7 @@ if (research && research.length > 0) {
   );
 }
 
-// 🔹 Update Long Leaves
+//  Update Long Leaves
 if (longLeaves && longLeaves.length > 0) {
   await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
     employeeId,
@@ -611,7 +580,7 @@ if (longLeaves && longLeaves.length > 0) {
   );
 }
 
-    // 🔹 Dropdown data
+    //  Dropdown data
     if (data.allDropDownData) {
       const allDropDownDataObject = typeof data.allDropDownData === "string"
         ? JSON.parse(data.allDropDownData)
@@ -629,7 +598,7 @@ if (longLeaves && longLeaves.length > 0) {
           codes: code[index]
         }));
 
-        await employeeMetaDataRepository.updateEmployeeMetaData(employeeId, entries, transaction);
+        await employeeMetaDataRepository.updateEmployeeMetaData( entries, transaction);
       }
     }
 

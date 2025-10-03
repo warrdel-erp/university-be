@@ -23,52 +23,74 @@ export async function deleteEmployeeMetaData (employeeId) {
     }
 };
 
-// export async function refreshEmployeeMetaData(employeeId, entries, transaction) {
-//   try {
-//     await model.employeeMetaDataModel.destroy({
-//       where: { employeeId },
-//       transaction
-//     });
+export async function updateEmployeeMetaData(entries, transaction) {
+  console.log(`>>>>>>entries`,entries)
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
 
-//     if (entries && entries.length > 0) {
-//       return await model.employeeMetaDataModel.bulkCreate(entries, { transaction });
-//     }
-
-//     return [];
-//   } catch (error) {
-//     console.error("Error refreshing employee meta data:", error);
-//     throw error;
-//   }
-// }
-
-export async function updateEmployeeMetaData(employeeId, entries, transaction) {
   try {
-    if (!entries || entries.length === 0) return [];
+    console.log(" Starting employee meta data update...");
+    console.log("Using transaction:", transaction ? "Yes" : "No");
 
-    const updatePromises = entries.map(async (entry) => {
-      const [updatedCount] = await model.employeeMetaDataModel.update(
-        { codes: entry.codes, updatedBy: entry.updatedBy },
-        {
-          where: {
-            employeeId,
-            types: entry.types
+    for (const entry of entries) {
+      console.log(">>>> Processing entry:", entry);
+
+      //  Validate required fields before upsert
+      if (!entry.employeeId || !entry.types || !entry.codes) {
+        console.error(
+          ` Skipping invalid entry: Missing required field(s)`,
+          entry
+        );
+        skipped++;
+        continue;
+      }
+
+      try {
+        const [record, created] = await model.employeeMetaDataModel.upsert(
+          {
+            employee_id: entry.employeeId,
+            types: entry.types,
+            codes: entry.codes,
+            createdBy: entry.createdBy ,
+            updated_by: entry.updatedBy || null,
           },
-          transaction
-        }
-      );
-
-      if (updatedCount === 0) {
-        await model.employeeMetaDataModel.create(
-          { employeeId, types: entry.types, codes: entry.codes, updatedBy: entry.updatedBy },
           { transaction }
         );
-      }
-    });
 
-    await Promise.all(updatePromises);
-    return entries;
+        if (created) {
+          inserted++;
+          console.log(
+            ` Inserted new entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
+          );
+        } else {
+          updated++;
+          console.log(
+            ` Updated entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
+          );
+        }
+
+        // Optional: log the actual DB row
+        console.log("DB Row after upsert:", record?.toJSON?.() || record);
+
+      } catch (innerError) {
+        console.error(
+          ` Failed upsert → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
+          innerError.message
+        );
+        throw innerError; 
+      }
+    }
+
+    // ✅ Summary
+    console.log(
+      ` Summary: ${inserted} inserted, ${updated} updated, ${skipped} skipped`
+    );
+    console.log(" All employee meta data entries processed successfully.");
+    return true;
+
   } catch (error) {
-    console.error("Error updating employee meta data:", error);
+    console.error(" Error replacing employee meta data entries:", error);
     throw error;
   }
-};
+}
