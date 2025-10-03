@@ -24,7 +24,8 @@ export async function deleteEmployeeMetaData (employeeId) {
 };
 
 export async function updateEmployeeMetaData(entries, transaction) {
-  console.log(`>>>>>>entries`,entries)
+  console.log(">>>>>> entries:", entries);
+
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
@@ -36,59 +37,68 @@ export async function updateEmployeeMetaData(entries, transaction) {
     for (const entry of entries) {
       console.log(">>>> Processing entry:", entry);
 
-      //  Validate required fields before upsert
+      //  Validate required fields
       if (!entry.employeeId || !entry.types || !entry.codes) {
-        console.error(
-          ` Skipping invalid entry: Missing required field(s)`,
-          entry
-        );
+        console.warn(" Skipping invalid entry →", entry);
         skipped++;
         continue;
       }
 
       try {
-        const [record, created] = await model.employeeMetaDataModel.upsert(
+        // First try update
+        const [affectedCount] = await model.employeeMetaDataModel.update(
           {
-            employee_id: entry.employeeId,
             types: entry.types,
-            codes: entry.codes,
-            createdBy: entry.createdBy ,
+            created_by: entry.createdBy,
             updated_by: entry.updatedBy || null,
           },
-          { transaction }
+          {
+            where: {
+              employee_id: entry.employeeId,
+              codes: entry.codes,
+            },
+            transaction,
+          }
         );
 
-        if (created) {
-          inserted++;
-          console.log(
-            ` Inserted new entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
-          );
-        } else {
+        if (affectedCount > 0) {
           updated++;
           console.log(
             ` Updated entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
           );
+        } else {
+          // No existing row → insert new
+          await model.employeeMetaDataModel.create(
+            {
+              employeeId: entry.employeeId,
+              types: entry.types,
+              codes: entry.codes,
+              createdBy: entry.createdBy,
+              updatedBy: entry.updatedBy 
+            },
+            { transaction }
+          );
+          inserted++;
+          console.log(
+            ` Inserted new entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
+          );
         }
-
-        // Optional: log the actual DB row
-        console.log("DB Row after upsert:", record?.toJSON?.() || record);
-
       } catch (innerError) {
         console.error(
-          ` Failed upsert → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
-          innerError.message
+          `Error processing entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
+          innerError
         );
         throw innerError; 
       }
     }
 
-    // ✅ Summary
+    //  Final summary
     console.log(
       ` Summary: ${inserted} inserted, ${updated} updated, ${skipped} skipped`
     );
     console.log(" All employee meta data entries processed successfully.");
-    return true;
 
+    return true;
   } catch (error) {
     console.error(" Error replacing employee meta data entries:", error);
     throw error;

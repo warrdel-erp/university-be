@@ -249,7 +249,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
     });
 
     return {
-        // originalData: data,
+        originalData: data,
         groupedData: Object.values(grouped)
     };
 }
