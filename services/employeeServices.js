@@ -425,19 +425,37 @@ export async function updateEmployee(employeeId, data, files, updatedBy,createdB
     // const research = data.research ? JSON.parse(data.research) : [];
     // const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
 
-    const address = typeof data.address === 'string' ? JSON.parse(data.address) : data.address || null;
-    const corsAddress = typeof data.corsAddress === 'string' ? JSON.parse(data.corsAddress) : data.corsAddress || null;
-    const office = typeof data.office === 'string' ? JSON.parse(data.office) : data.office || null;
-    const skills = typeof data.skill === 'string' ? JSON.parse(data.skill) : data.skill || [];
-    const documents = typeof data.documents === 'string' ? JSON.parse(data.documents) : data.documents || [];
-    const qualifications = typeof data.qualification === 'string' ? JSON.parse(data.qualification) : data.qualification || [];
-    const experiences = typeof data.experience === 'string' ? JSON.parse(data.experience) : data.experience || [];
-    const achievements = typeof data.achievements === 'string' ? JSON.parse(data.achievements) : data.achievements || [];
-    const wards = typeof data.ward === 'string' ? JSON.parse(data.ward) : data.ward || [];
-    const activities = typeof data.activity === 'string' ? JSON.parse(data.activity) : data.activity || [];
-    const references = typeof data.reference === 'string' ? JSON.parse(data.reference) : data.reference || [];
-    const research = typeof data.research === 'string' ? JSON.parse(data.research) : data.research || [];
-    const longLeaves = typeof data.longLeave === 'string' ? JSON.parse(data.longLeave) : data.longLeave || [];
+    const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
+const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
+const office = typeof data.office === 'string' && data.office ? JSON.parse(data.office) : data.office || null;
+
+// array
+const skills = typeof data.skill === 'string' && data.skill ? JSON.parse(data.skill) : data.skill || [];
+const documents = typeof data.documents === 'string' && data.documents ? JSON.parse(data.documents) : data.documents || [];
+const qualifications = typeof data.qualification === 'string' && data.qualification ? JSON.parse(data.qualification) : data.qualification || [];
+const experiences = typeof data.experience === 'string' && data.experience ? JSON.parse(data.experience) : data.experience || [];
+const achievements = typeof data.achievements === 'string' && data.achievements ? JSON.parse(data.achievements) : data.achievements || [];
+const wards = typeof data.ward === 'string' && data.ward ? JSON.parse(data.ward) : data.ward || [];
+const activities = typeof data.activity === 'string' && data.activity ? JSON.parse(data.activity) : data.activity || [];
+const references = typeof data.reference === 'string' && data.reference ? JSON.parse(data.reference) : data.reference || [];
+const research = typeof data.research === 'string' && data.research ? JSON.parse(data.research) : data.research || [];
+const longLeaves = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
+const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
+
+
+    // const address = typeof data.address === 'string' ? JSON.parse(data.address) : data.address || null;
+    // const corsAddress = typeof data.corsAddress === 'string' ? JSON.parse(data.corsAddress) : data.corsAddress || null;
+    // const office = typeof data.office === 'string' ? JSON.parse(data.office) : data.office || null;
+    // const skills = typeof data.skill === 'string' ? JSON.parse(data.skill) : data.skill || [];
+    // const documents = typeof data.documents === 'string' ? JSON.parse(data.documents) : data.documents || [];
+    // const qualifications = typeof data.qualification === 'string' ? JSON.parse(data.qualification) : data.qualification || [];
+    // const experiences = typeof data.experience === 'string' ? JSON.parse(data.experience) : data.experience || [];
+    // const achievements = typeof data.achievements === 'string' ? JSON.parse(data.achievements) : data.achievements || [];
+    // const wards = typeof data.ward === 'string' ? JSON.parse(data.ward) : data.ward || [];
+    // const activities = typeof data.activity === 'string' ? JSON.parse(data.activity) : data.activity || [];
+    // const references = typeof data.reference === 'string' ? JSON.parse(data.reference) : data.reference || [];
+    // const research = typeof data.research === 'string' ? JSON.parse(data.research) : data.research || [];
+    // const longLeaves = typeof data.longLeave === 'string' ? JSON.parse(data.longLeave) : data.longLeave || [];
 
 
 
