@@ -240,6 +240,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 
         // Add student
         grouped[key].students.push({
+            attendanceId : att.attendanceId,
             firstName: att.studentAttendance?.firstName || '',
             scholarNumber: att.studentAttendance?.scholarNumber || '',
             enrollNumber: att.studentAttendance?.enrollNumber || '',
@@ -249,7 +250,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
     });
 
     return {
-        originalData: data,
+        // originalData: data,
         groupedData: Object.values(grouped)
     };
 }
