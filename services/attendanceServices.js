@@ -244,7 +244,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
             firstName: att.studentAttendance?.firstName || '',
             scholarNumber: att.studentAttendance?.scholarNumber || '',
             enrollNumber: att.studentAttendance?.enrollNumber || '',
-            attendenceStatus: att.attentenceStatus || '',
+            attentenceStatus: att.attentenceStatus || '',
             notes: att.notes || ''
         });
     });
