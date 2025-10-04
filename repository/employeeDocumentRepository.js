@@ -22,3 +22,20 @@ export async function deleteEmployeeDocuments (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeDocuments(employeeId, documents,createdBy, updatedBy, transaction) {
+  try {
+    await model.employeeDocumentsModel.destroy({ where: { employeeId }, transaction });
+
+    const insertData = documents.map(doc => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...doc
+    }));
+
+    return await model.employeeDocumentsModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee documents:", error);
+    throw error;
+  }
+}

@@ -21,16 +21,13 @@ export async function getAttendanceDetails(req, res) {
     const instituteId = req.user.instituteId;
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
-    // if(!acedmicYearId){
-    //     return res.status(400).send('acedmicYearId is required')
-    // }
     try {
         const Attendance = await AttendanceCreation.getAttendanceDetails(universityId,acedmicYearId,role,instituteId);
         res.status(200).json(Attendance);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateAttendance(req, res) {
 
@@ -89,3 +86,24 @@ export const importAttendance = async (req, res) => {
     res.status(500).json({ error: error.message || 'An unexpected error occurred' });
   }
 };
+
+export async function getAttendanceByDate(req, res) {
+    const { date, classSectionsId,employeeId } = req.query;
+
+    if (!date || !classSectionsId || !employeeId) {
+        return res.status(400).json({ error: "required date,employeeId and classSectionsId" });
+    }
+
+    try {
+        const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionsId,employeeId);
+
+        if (!attendance || attendance.length === 0) {
+            return res.status(200).json({ message: "No data available" });
+        }
+
+        return res.status(200).json(attendance);
+    } catch (error) {
+        console.error("Error fetching attendance:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+}
