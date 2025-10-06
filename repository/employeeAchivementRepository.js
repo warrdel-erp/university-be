@@ -22,3 +22,20 @@ export async function deleteEmployeeAchievement (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeAchievements(employeeId, achievements,createdBy, updatedBy, transaction) {
+  try {
+    await model.employeeAchievementModel.destroy({ where: { employeeId }, transaction });
+
+    const insertData = achievements.map(a => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...a
+    }));
+
+    return await model.employeeAchievementModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee achievements:", error);
+    throw error;
+  }
+};

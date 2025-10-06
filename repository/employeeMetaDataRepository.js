@@ -22,3 +22,85 @@ export async function deleteEmployeeMetaData (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function updateEmployeeMetaData(entries, transaction) {
+  console.log(">>>>>> entries:", entries);
+
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  try {
+    console.log(" Starting employee meta data update...");
+    console.log("Using transaction:", transaction ? "Yes" : "No");
+
+    for (const entry of entries) {
+      console.log(">>>> Processing entry:", entry);
+
+      //  Validate required fields
+      if (!entry.employeeId || !entry.types || !entry.codes) {
+        console.warn(" Skipping invalid entry →", entry);
+        skipped++;
+        continue;
+      }
+
+      try {
+        // First try update
+        const [affectedCount] = await model.employeeMetaDataModel.update(
+          {
+            types: entry.types,
+            created_by: entry.createdBy,
+            updated_by: entry.updatedBy || null,
+          },
+          {
+            where: {
+              employee_id: entry.employeeId,
+              codes: entry.codes,
+            },
+            transaction,
+          }
+        );
+
+        if (affectedCount > 0) {
+          updated++;
+          console.log(
+            ` Updated entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
+          );
+        } else {
+          // No existing row → insert new
+          await model.employeeMetaDataModel.create(
+            {
+              employeeId: entry.employeeId,
+              types: entry.types,
+              codes: entry.codes,
+              createdBy: entry.createdBy,
+              updatedBy: entry.updatedBy 
+            },
+            { transaction }
+          );
+          inserted++;
+          console.log(
+            ` Inserted new entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
+          );
+        }
+      } catch (innerError) {
+        console.error(
+          `Error processing entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
+          innerError
+        );
+        throw innerError; 
+      }
+    }
+
+    //  Final summary
+    console.log(
+      ` Summary: ${inserted} inserted, ${updated} updated, ${skipped} skipped`
+    );
+    console.log(" All employee meta data entries processed successfully.");
+
+    return true;
+  } catch (error) {
+    console.error(" Error replacing employee meta data entries:", error);
+    throw error;
+  }
+}

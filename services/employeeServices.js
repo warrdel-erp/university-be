@@ -299,7 +299,7 @@ export async function deleteEmployeeDetail(employeeId) {
 function validateEmployeeRow(employee) {
   const requiredFields = [
     "employeeName",
-    // "employeeCode",
+    "Gender",
     "campusId",
     "instituteId",
     "roleId",
@@ -316,7 +316,7 @@ function validateEmployeeRow(employee) {
   }
 
   return null;
-}
+};
 
 
 export async function importEmployeeData(excelData, commonData) {
@@ -341,6 +341,7 @@ export async function importEmployeeData(excelData, commonData) {
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,
+        department:convertedData.department,
         motherName: convertedData.motherName,
         pickColor: convertedData.pickColor,
         campusId: convertedData.campusId,
@@ -403,4 +404,209 @@ export async function importEmployeeData(excelData, commonData) {
     console.error("Error in importing employee data:", error.message);
     return { success: false, error: error.message };
   }
+};
+export async function updateEmployee(employeeId, data, files, updatedBy,createdBy, universityId, roleId, instituteId) {
+  console.log(`>>>>>>>>>>>data`,data);
+  
+  const transaction = await sequelize.transaction();
+  try {
+
+    const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
+const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
+const office = typeof data.office === 'string' && data.office ? JSON.parse(data.office) : data.office || null;
+
+// array
+const skills = typeof data.skill === 'string' && data.skill ? JSON.parse(data.skill) : data.skill || [];
+const documents = typeof data.documents === 'string' && data.documents ? JSON.parse(data.documents) : data.documents || [];
+const qualifications = typeof data.qualification === 'string' && data.qualification ? JSON.parse(data.qualification) : data.qualification || [];
+const experiences = typeof data.experience === 'string' && data.experience ? JSON.parse(data.experience) : data.experience || [];
+const achievements = typeof data.achievements === 'string' && data.achievements ? JSON.parse(data.achievements) : data.achievements || [];
+const wards = typeof data.ward === 'string' && data.ward ? JSON.parse(data.ward) : data.ward || [];
+const activities = typeof data.activity === 'string' && data.activity ? JSON.parse(data.activity) : data.activity || [];
+const references = typeof data.reference === 'string' && data.reference ? JSON.parse(data.reference) : data.reference || [];
+const research = typeof data.research === 'string' && data.research ? JSON.parse(data.research) : data.research || [];
+const longLeaves = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
+const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
+
+    //  Update main employee table
+    await employeeRepository.updateEmployee(employeeId, {
+      ...data,
+      roleId,
+      updatedBy
+    }, transaction);
+
+    //  Upload/update files
+    if (files) {
+      const uploadPromises = Object.keys(files).map(async key => {
+        const file = files[key];
+        const s3Response = await uploadFile(file);
+        const url = s3Response.Location;
+        const fileData = { key, url, employeeId, updatedBy };
+        await employeeFilesRepository.updateEmployee(employeeId,fileData, transaction);
+      });
+      await Promise.all(uploadPromises);
+    }
+
+    //  Update Address
+    if (address) {
+      await employeeAddressRepository.updateAddress(employeeId, {
+        updatedBy,
+        ...address
+      }, transaction);
+    }
+
+    if (corsAddress) {
+      await employeeAddressRepository.updateCorsAddress(employeeId, {
+        updatedBy,
+        ...corsAddress
+      }, transaction);
+    }
+
+    //  Update Office details
+    if (office) {
+      await employeeOfficeRepository.updateOfficeDetails(employeeId, {
+        updatedBy,
+        ...office
+      }, transaction);
+    }
+
+   //  Update Skills
+if (skills && skills.length > 0) {
+  await employeeSkillRepository.refreshEmployeeSkills(
+    employeeId,
+    skills,
+    createdBy,
+    updatedBy,
+    transaction
+  );
 }
+
+//  Update Documents
+if (documents && documents.length > 0) {
+  await employeeDocumentRepository.refreshEmployeeDocuments(
+    employeeId,
+    documents,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Qualifications
+if (qualifications && qualifications.length > 0) {
+  await employeeQualificationRepository.refreshEmployeeQualifications(
+    employeeId,
+    qualifications,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Experiences
+if (experiences && experiences.length > 0) {
+  await employeeExperianceRepository.refreshEmployeeExperiences(
+    employeeId,
+    experiences,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Achievements
+if (achievements && achievements.length > 0) {
+  await employeeAchivementRepository.refreshEmployeeAchievements(
+    employeeId,
+    achievements,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Wards
+if (wards && wards.length > 0) {
+  await employeeWardRepository.refreshEmployeeWards(
+    employeeId,
+    wards,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Activities
+if (activities && activities.length > 0) {
+  await employeeActivityRepository.refreshEmployeeActivities(
+    employeeId,
+    activities,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update References
+if (references && references.length > 0) {
+  await employeeReferenceRepository.refreshEmployeeReferences(
+    employeeId,
+    references,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+// Update Research
+if (research && research.length > 0) {
+  await employeeResearchRepository.refreshEmployeeResearch(
+    employeeId,
+    research,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+//  Update Long Leaves
+if (longLeaves && longLeaves.length > 0) {
+  await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
+    employeeId,
+    longLeaves,
+    createdBy,
+    updatedBy,
+    transaction
+  );
+}
+
+    //  Dropdown data
+    if (data.allDropDownData) {
+      const allDropDownDataObject = typeof data.allDropDownData === "string"
+        ? JSON.parse(data.allDropDownData)
+        : data.allDropDownData;
+
+      if (Array.isArray(allDropDownDataObject.type) && Array.isArray(allDropDownDataObject.code)) {
+        const type = allDropDownDataObject.type;
+        const code = allDropDownDataObject.code;
+
+        const entries = type.map((types, index) => ({
+          employeeId,
+          createdBy,
+          updatedBy,
+          types,
+          codes: code[index]
+        }));
+
+        await employeeMetaDataRepository.updateEmployeeMetaData( entries, transaction);
+      }
+    }
+
+    await transaction.commit();
+    return { message: "Employee data successfully updated" };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error updating employee data:", error);
+    throw new Error("Failed to update employee data");
+  }
+};

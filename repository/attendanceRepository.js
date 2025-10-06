@@ -1,9 +1,7 @@
+import { Op, fn, col,where } from "sequelize";
 import * as model from '../models/index.js'
-import sequelize from "../database/sequelizeConfig.js"; 
-import { Op, fn } from 'sequelize';
 
-export async function addAttendance(attendanceRecords) {   
-     
+export async function addAttendance(attendanceRecords) {      
     try {
         const result = await model.attendanceModel.bulkCreate(attendanceRecords);
         return result;
@@ -105,5 +103,130 @@ export async function updateAttendance(attendanceId, record) {
     } catch (error) {
         console.error(`Error updating attendance ${attendanceId}:`, error);
         throw error; 
+    }
+};
+
+export async function addImportAttendance(attendanceRecords) {   
+     
+    try {
+        const result = await model.attendanceModel.create(attendanceRecords);
+        return result;
+    } catch (error) {
+        console.error("Error in adding attendance bulk import:", error);
+        throw error;
+    }
+};
+
+
+export async function getAttendanceByDate(date, classSectionsId, employeeId) {
+
+    try {
+        const attendanceDetails = await model.attendanceModel.findAll({
+            attributes: {
+                exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt",
+                    "createdBy",
+                    "updatedBy",
+                    "class_sections_id",
+                    "studentId"
+                ]
+            },
+            where: {
+                classSectionsId,
+                date: { [Op.eq]: fn("DATE", date) }
+            },
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: "classAttendance",
+                    attributes: {
+                        exclude: [
+                            "createdAt",
+                            "updatedAt",
+                            "deletedAt",
+                            "createdBy",
+                            "course_id",
+                            "semester_id",
+                            "class_id",
+                            "acedmic_year_id",
+                            "specialization_id",
+                            "session_id"
+                        ]
+                    },
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: "courseSection"
+                        }
+                    ]
+                },
+                {
+                    model: model.studentModel,
+                    as: "studentAttendance",
+                    attributes: [
+                        "firstName",
+                        "middleName",
+                        "lastName",
+                        "scholarNumber",
+                        "enrollNumber"
+                    ]
+                }
+            ]
+        });
+
+        const subjectDetail = await model.teacherSubjectMappingModel.findOne({
+            attributes: {
+                exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt",
+                    "createdBy",
+                    "updatedBy"
+                ]
+            },
+            where: { employeeId },
+            include: [
+                {
+                    model: model.classSubjectMapperModel,
+                    as: "employeeSubject",
+                    attributes: {
+                        exclude: [
+                            "createdAt",
+                            "updatedAt",
+                            "deletedAt",
+                            "createdBy",
+                            "updatedBy"
+                        ]
+                    },
+                    include: [
+                        {
+                            model: model.subjectModel,
+                            as: "subjects",
+                            attributes: {
+                                exclude: [
+                                    "createdAt",
+                                    "updatedAt",
+                                    "deletedAt",
+                                    "createdBy",
+                                    "updatedBy"
+                                ]
+                            },
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return {
+            attendanceDetails: attendanceDetails,
+            subjectDetail: subjectDetail
+        };
+
+
+    } catch (error) {
+        console.error("Error fetching attendance:", error);
+        throw error;
     }
 };

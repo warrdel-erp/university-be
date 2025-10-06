@@ -22,3 +22,22 @@ export async function deleteEmployeeSkill (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeSkills(employeeId, skills,createdBy, updatedBy, transaction) {
+  try {
+    // Delete old
+    await model.employeeSkillModel.destroy({ where: { employeeId }, transaction });
+
+    // Insert new
+    const insertData = skills.map(skill => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...skill
+    }));
+
+    return await model.employeeSkillModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee skills:", error);
+    throw error;
+  }
+};

@@ -22,3 +22,20 @@ export async function deleteEmployeeLongLeave (employeeId) {
         throw new Error('Unable to soft delete account');
     }
 };
+
+export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy, updatedBy, transaction) {
+  try {
+    await model.employeeLongLeaveModel.destroy({ where: { employeeId }, transaction });
+
+    const insertData = longLeaves.map(l => ({
+      employeeId,createdBy,
+      updatedBy,
+      ...l
+    }));
+
+    return await model.employeeLongLeaveModel.bulkCreate(insertData, { transaction });
+  } catch (error) {
+    console.error("Error refreshing employee long leaves:", error);
+    throw error;
+  }
+};

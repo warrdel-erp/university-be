@@ -10,6 +10,19 @@ export async function addOfficeDetails(data,transaction) {
     }
 };
 
+export async function updateOfficeDetails(employeeId, data, transaction) {
+  try {
+    return await model.employeeOfficeModel.update(
+      data,
+      { where: { employeeId }, transaction }
+    );
+  } catch (error) {
+    console.error("Error updating employee office details:", error);
+    throw error;
+  }
+}
+
+
 export async function deleteEmployeeOffice (employeeId) {
     try {
         const result = await model.employeeOfficeModel.destroy({

@@ -10,6 +10,19 @@ export async function addEmployee(data,transaction) {
     }
 };
 
+export async function updateEmployee(employeeId, data, transaction) {
+  try {
+    const result = await model.employeeModel.update(
+      data,
+      { where: { employeeId }, transaction }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error in update employee:", error);
+    throw error;
+  }
+};
+
 export async function getAllEmployee(universityId,campusId,instituteId,acedmicYearId,headInstituteId,role) {
     try {
         const whereClause = {
