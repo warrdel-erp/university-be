@@ -81,11 +81,11 @@ export async function deleteSyllabus(req, res) {
 export async function courseAllSubject(req, res) {
     const universityId = req.user.universityId;
     try {
-        const { courseId } = req.query;
-        if(!courseId){
-           return res.status(400).send('courseId is required')
+        const { courseId,sessionId } = req.query;
+        if(!courseId && sessionId){
+           return res.status(400).send('courseId and sessionId is required')
         }
-        const Syllabus = await syllabusCreation.courseAllSubject(courseId);
+        const Syllabus = await syllabusCreation.courseAllSubject(courseId,sessionId,universityId);
         if (Syllabus) {
             res.status(200).json(Syllabus);
         } else {
