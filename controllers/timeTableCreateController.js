@@ -114,8 +114,8 @@ export const getTimeTableCellData = async (req,res) => {
     const instituteId = req.user.instituteId;
     const role = req.user.role;
     const {courseId,classSectionsId} = req.query
-    if (!(courseId && classSectionsId)){
-           return res.status(400).send("courseId and classSectionsId is required");
+    if (!(courseId )){
+           return res.status(400).send("courseId  is required");
         }
     try {
         const result = await timeTableCreateServices.getTimeTableCellData(courseId,classSectionsId,universityId,instituteId,role);
