@@ -108,3 +108,20 @@ export const getSingletimeTableMappingDetail = async (req,res) => {
 //         res.status(500).send("Internal Server Error");
 //     }
 // };
+
+export const getTimeTableCellData = async (req,res) => {
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    const {courseId,classSectionsId} = req.query
+    if (!(courseId && classSectionsId)){
+           return res.status(400).send("courseId and classSectionsId is required");
+        }
+    try {
+        const result = await timeTableCreateServices.getTimeTableCellData(courseId,classSectionsId,universityId,instituteId,role);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting time table cell data:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};

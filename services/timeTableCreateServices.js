@@ -251,3 +251,116 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
 export async function getSingletimeTableMappingDetail(courseId,universityId){
     return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId,universityId)
 };
+
+// export async function getTimeTableCellData(courseId,classSectionsId,universityId,instituteId,role){
+//     const data =  await timeTableCreateRepository.getTimeTableCellData(courseId,classSectionsId,universityId,instituteId,role)
+//     console.log(`>>>>data>>>`,data);
+//     return data
+// };
+
+export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
+  try {
+    // Fetch raw data from repository
+    const data = await timeTableCreateRepository.getTimeTableCellData(
+      courseId,
+      classSectionsId,
+      universityId,
+      instituteId,
+      role
+    );
+
+    if (!data || !data.timeTablecreate) return null;
+
+    const { 
+      courseId: cId, 
+      classSectionsId: csId, 
+      startingDate, 
+      endingDate,
+      timeTableCourse,
+      timeTableClassSection,
+      timeTablecreate 
+    } = data;
+
+    // Group periods by day
+    const dayMap = {};
+
+    timeTablecreate.forEach(tt => {
+      const day = tt.day;
+      if (!dayMap[day]) dayMap[day] = [];
+
+      // Prepare mappingData array
+      const mappingData = [];
+
+      // Teacher-subject mapping
+      if (tt.timeTableTeacherSubject) {
+        const teacher = tt.timeTableTeacherSubject.teacherEmployeeData;
+        const subject = tt.timeTableTeacherSubject.employeeSubject?.subjects;
+        if (teacher && subject) {
+          mappingData.push({
+            employeeName: teacher.employeeName,
+            employeeCode: teacher.employeeCode,
+            employeeId: teacher.employeeId,
+            pickColor: teacher.pickColor,
+            subject: {
+              subjectId: subject.subjectId,
+              Name: subject.subjectName,
+              Code: subject.subjectCode
+            }
+          });
+        }
+      }
+
+      // Additional employeeDetails if exists
+      if (tt.employeeDetails && tt.timeTableSubject) {
+        mappingData.push({
+          employeeName: tt.employeeDetails.employeeName,
+          employeeCode: tt.employeeDetails.employeeCode,
+          employeeId: tt.employeeDetails.employeeId,
+          pickColor: tt.employeeDetails.pickColor,
+          subject: {
+            subjectId: tt.timeTableSubject.subjectId,
+            Name: tt.timeTableSubject.subjectName,
+            Code: tt.timeTableSubject.subjectCode
+          }
+        });
+      }
+
+      // Create period object
+      const periodObj = {
+        periodName: tt.timeTablecreation.periodName,
+        startTime: tt.timeTablecreation.startTime,
+        endTime: tt.timeTablecreation.endTime,
+        periodLength: tt.timeTablecreation.periodLength,
+        mappingData
+      };
+
+      dayMap[day].push(periodObj);
+    });
+
+    // Convert map to array
+    const sectionRoutine = Object.entries(dayMap).map(([day, periods]) => ({
+      day,
+      period: periods
+    }));
+
+    // Final formatted data
+    const formattedData = {
+      courseName: timeTableCourse.courseName,
+      courseCode: timeTableCourse.courseCode,
+      courseId: cId,
+      section: timeTableClassSection.section,
+      class: timeTableClassSection.class,
+      classSectionsId: csId,
+      startingDate,
+      endingDate,
+      sectionRoutine
+    };
+
+    console.log(`>>>>formattedData>>>`, formattedData);
+    return formattedData;
+
+  } catch (error) {
+    console.error("Error in getTimeTableCellData:", error);
+    throw error;
+  }
+};

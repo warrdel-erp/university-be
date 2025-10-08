@@ -258,3 +258,97 @@ export async function getTimeTableMappingDetail(universityId,instituteId,role) {
         throw error;
     };
 };
+
+export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
+  try {
+    const whereClause = {
+      ...(courseId && { courseId }),
+      ...(classSectionsId && { classSectionsId }),
+    };
+    const whereClauseData = {
+            ...(role === 'Head' && { instituteId }),
+    };
+
+    const result = await model.timeTableCreateModel.findOne({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","time_table_name_id","course_id","campus_id","class_sections_id","acedmic_year_id"],
+      },
+      where: whereClause,
+      include:[
+        {
+            model:model.courseModel,
+            as:'timeTableCourse',
+            attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt","affiliated_university_id","institute_id","acedmic_year_id"]}
+        },
+        {
+            model:model.classSectionModel,
+            as:'timeTableClassSection',
+            attributes:{exclude:["createdAt","updatedAt","createdBy","deletedAt","course_id","semester_id","class_id","acedmic_year_id","specialization_id","session_id"]}
+        },
+        {
+            model:model.timeTableMappingModel,
+            as:'timeTablecreate',
+            attributes:{exclude:["createdAt","updatedAt","createdBy","updatedBy","deletedAt","teacher_subject_mapping_id","time_table_create_id","time_table_creation_id","class_room_section_id","elective_subject_id","subject_id"]},
+            include:[
+                {
+                    model:model.timeTableCreationModel,
+                    as:'timeTablecreation',
+                    attributes:{exclude:["createdAt","updatedAt","createdBy","updatedBy","deletedAt","time_table_name_id","course_id"]}
+                },
+                {
+                    model:model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated","employee_id","class_subject_mapper_id"]},
+                    include:[
+                        {
+                            model:model.employeeModel,
+                            as: 'teacherEmployeeData',
+                            attributes: ["employeeName","employeeCode","pickColor","employeeId"],
+                            where:whereClauseData
+                        },
+                        {
+                            model:model.classSubjectMapperModel,
+                            as: 'employeeSubject',
+                            attributes: ["classSubjectMapperId"],
+                            where:whereClauseData,
+                            include:[
+                                {
+                                    model:model.subjectModel,
+                                    as: 'subjects',
+                                    attributes: ["subjectId","subjectName","subjectCode"],
+                                }
+                            ]
+                        },
+                        
+                    ]
+                },
+                {
+                            model:model.classRoomModel,
+                            as: 'classRoom',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","floor_id"]}
+                        },
+                        {
+                            model:model.electiveSubjectModel,
+                            as: 'timeTableElective',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                        },
+                        {
+                            model:model.subjectModel,
+                            as: 'timeTableSubject',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
+                        },
+                        {
+                            model:model.employeeModel,
+                            as: 'employeeDetails',
+                            attributes:  ["employeeName","employeeCode","pickColor","employeeId"]
+                        }
+            ]
+        }
+      ]
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getTimeTableCellData:", error);
+    throw error;
+  }
+};
