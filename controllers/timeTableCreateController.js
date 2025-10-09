@@ -142,3 +142,20 @@ export const getTimeTableCellData = async (req,res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const getTimeTableElective = async (req,res) => {
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    const {courseId} = req.query
+    if (!(courseId )){
+           return res.status(400).send("courseId  is required");
+        }
+    try {
+        const result = await timeTableCreateServices.getTimeTableElective(courseId,universityId,instituteId,role);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting time table cell data:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};

@@ -1,4 +1,5 @@
 import * as attendanceService  from "../repository/attendanceRepository.js";
+import moment from "moment";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
     
@@ -98,16 +99,7 @@ export async function updateAttendance(attendanceId, record, updatedBy) {
     }
 };
 
-function parseDateHeader(header) {
-  try {
-    const parsed = new Date(header);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  } catch {
-    return null;
-  }
-}
-
-//  Parse student field (example: "Raven$90%70&37")
+/* ----------------  Parse student string ---------------- */
 function parseStudentString(studentString) {
   if (!studentString) return null;
   try {
@@ -118,9 +110,9 @@ function parseStudentString(studentString) {
 
     return {
       studentName: namePart,
-      studentId: parseInt(studentId, 10),
-      classSectionsId: parseInt(classSectionsId, 10),
-      timeTableMappingId: parseInt(timeTableMappingId, 10),
+      studentId: Number(studentId),
+      classSectionsId: Number(classSectionsId),
+      timeTableMappingId: Number(timeTableMappingId),
     };
   } catch (error) {
     console.error(" Error parsing student string:", studentString, error);
@@ -128,7 +120,18 @@ function parseStudentString(studentString) {
   }
 }
 
-//  Validate required fields
+/* ----------------  Parse date column correctly ---------------- */
+function parseExcelDate(dateString) {
+  try {
+    const parsed = moment(dateString, "D MMMM YYYY", true);
+    if (!parsed.isValid()) return null;
+    return parsed.format("YYYY-MM-DD"); //remove timee
+  } catch {
+    return null;
+  }
+}
+
+/* ----------------  Validate required fields ---------------- */
 function validateAttendanceRow(attendance) {
   const requiredFields = [
     "studentId",
@@ -143,40 +146,41 @@ function validateAttendanceRow(attendance) {
   ];
 
   for (const field of requiredFields) {
-    if (attendance[field] === undefined || attendance[field] === null || attendance[field] === "") {
+    if (!attendance[field]) {
       return `Missing required field: ${field}`;
     }
   }
   return null;
 }
 
+/* ----------------  Main Import Function ---------------- */
 export async function importAttendanceData(excelData, commonData) {
   try {
-    // Skip weekday header row
-    const dataRows = excelData.slice(1);
+    const dateColumns = Object.keys(excelData[0]).filter(
+      (key) => key !== "Name" && key !== "Scholar No"
+    );
 
-    // Extract date columns (3rd column onwards)
-    const dateColumns = Object.keys(excelData[0]);
-console.log(`>>>>>>>>>>>>dateColumns`,dateColumns);
+    const dataRows = excelData.slice(1);
+    let totalEntries = 0;
 
     for (const [index, row] of dataRows.entries()) {
       const parsedStudent = parseStudentString(row.Name);
-      console.log(`>>>>>>>>>>parsedStudent`,parsedStudent);
-      
       if (!parsedStudent) {
         throw new Error(`Row ${index + 2}: Invalid student name format`);
       }
 
       for (const dateCol of dateColumns) {
-        const status = row[dateCol]?.trim();
-        console.log(`>>>>>status`,status);
-        
-        if (!status) continue; //  Skip dates with no attendance
+        const status = String(row[dateCol]).trim();
 
-        const date = parseDateHeader(dateCol);
-        console.log(`>>>>date`,date);
-        
-        if (!date) continue;
+        if (!status) continue; 
+
+        if (status.toLowerCase() === 'undefined') {
+             console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
+            continue; 
+        }
+
+        const date = parseExcelDate(dateCol);
+        if (!date && !status) continue;
 
         const attendanceEntry = {
           studentId: parsedStudent.studentId,
@@ -194,18 +198,20 @@ console.log(`>>>>>>>>>>>>dateColumns`,dateColumns);
           );
         }
         await attendanceService.addImportAttendance(attendanceEntry);
+        totalEntries++;
       }
     }
 
     return {
       success: true,
-      message: " Attendance imported successfully (skipped empty dates)",
+      message: `Attendance imported successfully. Total entries: ${totalEntries}`,
     };
   } catch (error) {
     console.error(" Error importing attendance data:", error.message);
     return { success: false, error: error.message };
   }
-}
+};
+
 
 export async function getAttendanceByDate(date, classSectionsId,employeeId) {
     const data = await attendanceService.getAttendanceByDate(date, classSectionsId,employeeId);
