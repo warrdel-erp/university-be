@@ -128,6 +128,16 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 };
 
+export async function updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy) {    
+    try {
+        const data = {timeTableType,updatedBy}
+       const result =  await timeTableCreateRepository.updatetimeTableCreate(timeTableMappingId, data);
+        return result
+    } catch (error) {
+        throw error; 
+    }
+};
+
 
 export async function getTimeTableMappingDetail(universityId, instituteId, role) {
   const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, role);

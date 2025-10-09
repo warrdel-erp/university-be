@@ -74,6 +74,23 @@ export const getSingletimeTableMappingDetail = async (req,res) => {
     }
 };
 
+// update time table 
+export const updatetimeTableCreate = async (req,res) => {
+    const {timeTableType,timeTableMappingId}= req.body
+    const updatedBy = req.user.userId;
+    try {
+            if (!(timeTableType && timeTableMappingId)) {
+                return res.status(400).send("timeTableType and timeTableMappingId are required for each object.");
+            }
+        
+        const result = await timeTableCreateServices.updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in updating time table type`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
 // // update time table 
 // export const updateFaculityLoad = async (req,res) => {
 //     const info = req.body;   
