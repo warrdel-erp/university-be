@@ -2,9 +2,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
-import classSection from './classSectionModel.js';
 import course from './courseModel.js';
 import users from './userModel.js';
+import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
     'syllabus',
@@ -33,15 +33,6 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        // classSectionsId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'class_sections_id',
-        //     references: {
-        //         model: classSection,
-        //         key: 'class_sections_id'
-        //     }
-        // },
         courseId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -49,6 +40,15 @@ export default sequelize.define(
             references: {
                 model: course,
                 key: 'course_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
             }
         },
         createdBy: {

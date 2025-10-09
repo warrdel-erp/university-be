@@ -115,22 +115,23 @@ export async function updateSyllabus(SyllabusId, syllabusData) {
     }
 };
 
-export async function courseAllSubject(courseId) {
+export async function courseAllSubject(courseId,sessionId,universityId) {
     try {
         const Syllabus = await model.syllabusModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { courseId },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","institute_id","acedmic_year_id","course_id"] },
+            where: { courseId,sessionId},
             include:[
                 {
                     model:model.courseModel,
                     as:'syllabusCourse',
-                    attributes:["courseName","courseCode"]
+                    attributes:["courseName","courseCode"],
+                    where:{universityId}
                 },
                 {
                     model: model.syllabusDetailsModel,
                     as: 'syllabusDetails',  
                     attributes: { 
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","syllabus_id","subject_id"] 
                     },
                     include:[
                         {
