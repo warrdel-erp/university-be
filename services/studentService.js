@@ -332,15 +332,23 @@ export async function importStudentData(excelData, data) {
       // Step 5: Add default annual income
       convertedData.annualIncome = 0;
 
-      // ✅ Step 6: Generate scholar number BEFORE inserting the student
-      const scholarNumber = await generateScholarNumber(
+      //  Step 6: Generate scholar number BEFORE inserting the student
+      const scholarNumberData = await generateScholarNumber(
         convertedData.courseId,
         convertedData.instituteId
       );
-      convertedData.scholarNumber = scholarNumber;
+      // convertedData.scholarNumber = scholarNumber;
+      const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
+      convertedData.scholarNumber = number;
 
-      // ✅ Step 7: Insert student with scholar number
+      //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
+
+      const role = 'Student';
+      const roleId = convertedData.roleId || 1
+      const {studentId, email, phoneNumber, mobileNumber, scholarNumber,universityId}=result.dataValues
+      const registerStudentData = {studentId,email,phoneNumber,mobileNumber,scholarNumber,universityId,role,roleId}
+      await studentRegister (registerStudentData,transaction)
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
