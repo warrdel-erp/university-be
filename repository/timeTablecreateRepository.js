@@ -149,6 +149,18 @@ export async function addtimeTableMapping(data,transaction) {
     }
 };
 
+export async function updatetimeTableCreate(timeTableMappingId, data) {
+    try {
+        const result = await model.timeTableMappingModel.update(data, {
+            where: { timeTableMappingId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating time table type  ${timeTableMappingId}:`, error);
+        throw error; 
+    }
+};
+
 export async function getTimeTableMappingDetail(universityId,instituteId,role) {
         const whereClause = {
             ...(universityId && { universityId }),

@@ -106,8 +106,7 @@ export async function updateAttendance(attendanceId, record) {
     }
 };
 
-export async function addImportAttendance(attendanceRecords) {   
-     
+export async function addImportAttendance(attendanceRecords) {
     try {
         const result = await model.attendanceModel.create(attendanceRecords);
         return result;
