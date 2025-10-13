@@ -534,3 +534,26 @@ UPDATE leave_requests SET employee_id = 1 WHERE employee_id IS NULL;
 UPDATE leave_requests SET employee_id = 1 WHERE employee_id = 0;
 
 ALTER TABLE leave_requests ADD CONSTRAINT fk_leave_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
+
+-- Add the employee_id column with the foreign key reference in syllabus
+
+ALTER TABLE syllabus ADD COLUMN session_id INT DEFAULT NULL;
+
+UPDATE syllabus SET session_id = 1 WHERE session_id IS NULL;
+
+UPDATE syllabus SET session_id = 1 WHERE session_id = 0;
+
+ALTER TABLE syllabus ADD CONSTRAINT fk_syllabus_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;
+
+ALTER TABLE students 
+MODIFY COLUMN student_status 
+ENUM(
+  'Cancel Student',
+  'Left Student',
+  'Long Absent',
+  'Non Attendant',
+  'active',
+  'deactive',
+  'transferred',
+  'graduated'
+) DEFAULT 'active';

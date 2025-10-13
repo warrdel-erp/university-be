@@ -1,4 +1,5 @@
 import * as attendanceService  from "../repository/attendanceRepository.js";
+import moment from "moment";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
     
@@ -98,6 +99,39 @@ export async function updateAttendance(attendanceId, record, updatedBy) {
     }
 };
 
+/* ----------------  Parse student string ---------------- */
+function parseStudentString(studentString) {
+  if (!studentString) return null;
+  try {
+    const [namePart, idsPart] = studentString.split("$");
+    const [studentId, classSectionsId, timeTableMappingId] = idsPart
+      .replace(/\s+/g, "")
+      .split(/[%&]/);
+
+    return {
+      studentName: namePart,
+      studentId: Number(studentId),
+      classSectionsId: Number(classSectionsId),
+      timeTableMappingId: Number(timeTableMappingId),
+    };
+  } catch (error) {
+    console.error(" Error parsing student string:", studentString, error);
+    return null;
+  }
+}
+
+/* ----------------  Parse date column correctly ---------------- */
+function parseExcelDate(dateString) {
+  try {
+    const parsed = moment(dateString, "D MMMM YYYY", true);
+    if (!parsed.isValid()) return null;
+    return parsed.format("YYYY-MM-DD"); //remove timee
+  } catch {
+    return null;
+  }
+}
+
+/* ----------------  Validate required fields ---------------- */
 function validateAttendanceRow(attendance) {
   const requiredFields = [
     "studentId",
@@ -108,103 +142,76 @@ function validateAttendanceRow(attendance) {
     "createdBy",
     "updatedBy",
     "attentenceStatus",
-    "date"
+    "date",
   ];
 
   for (const field of requiredFields) {
-    if (!attendance[field] || attendance[field] === "") {
+    if (!attendance[field]) {
       return `Missing required field: ${field}`;
     }
   }
   return null;
 }
 
- function excelDateToJSDate(value) {
-  if (!value) return null;
-
-  // If already a Date object
-  if (value instanceof Date) return value;
-
-  // If it's a number → treat as Excel serial date
-  if (!isNaN(value)) {
-    try {
-      const excelEpoch = new Date(Date.UTC(1899, 11, 30)); 
-      return new Date(excelEpoch.getTime() + value * 86400000);
-    } catch (error) {
-      console.error("Error converting excel serial date:", value, error);
-      return null;
-    }
-  }
-
-  // If it's a string → try parsing directly
-  if (typeof value === "string") {
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    } else {
-      console.error("Invalid date string:", value);
-      return null;
-    }
-  }
-
-  return null;
-};
-
- function parseStudentString(studentString) {
-  if (!studentString) return null;
-
+/* ----------------  Main Import Function ---------------- */
+export async function importAttendanceData(excelData, commonData) {
   try {
-    const [namePart, idsPart] = studentString.split("$");
-    const [studentId, classSectionsId, timeTableMappingId] = idsPart
-      .replace(/\s+/g, "") 
-      .split(/[%&]/);
+    const dateColumns = Object.keys(excelData[0]).filter(
+      (key) => key !== "Name" && key !== "Scholar No"
+    );
+
+    const dataRows = excelData.slice(1);
+    let totalEntries = 0;
+
+    for (const [index, row] of dataRows.entries()) {
+      const parsedStudent = parseStudentString(row.Name);
+      if (!parsedStudent) {
+        throw new Error(`Row ${index + 2}: Invalid student name format`);
+      }
+
+      for (const dateCol of dateColumns) {
+        const status = String(row[dateCol]).trim();
+
+        if (!status) continue; 
+
+        if (status.toLowerCase() === 'undefined') {
+             console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
+            continue; 
+        }
+
+        const date = parseExcelDate(dateCol);
+        if (!date && !status) continue;
+
+        const attendanceEntry = {
+          studentId: parsedStudent.studentId,
+          classSectionsId: parsedStudent.classSectionsId,
+          timeTableMappingId: parsedStudent.timeTableMappingId,
+          date,
+          attentenceStatus: status,
+          ...commonData,
+        };
+
+        const error = validateAttendanceRow(attendanceEntry);
+        if (error) {
+          throw new Error(
+            `Row ${index + 2} (${parsedStudent.studentName}) — ${error}`
+          );
+        }
+        await attendanceService.addImportAttendance(attendanceEntry);
+        totalEntries++;
+      }
+    }
 
     return {
-      studentName: namePart,
-      studentId: parseInt(studentId, 10),
-      classSectionsId: parseInt(classSectionsId, 10),
-      timeTableMappingId: parseInt(timeTableMappingId, 10),
+      success: true,
+      message: `Attendance imported successfully. Total entries: ${totalEntries}`,
     };
   } catch (error) {
-    console.error("Error parsing student string:", studentString, error);
-    return null;
-  }
-};
-
-export async function importAttendanceData(excelData, commonData) {
-
-  try {
-    for (const [index, row] of excelData.entries()) {
-      const parsedStudent = parseStudentString(row.studentName);
-      if (!parsedStudent) {
-        throw new Error(`Row ${index + 1}: Invalid studentName format`);
-      }
-
-      const convertedDate = excelDateToJSDate(row.date);
-
-      const convertedData = {
-        ...row,
-        ...commonData,
-        studentId: parsedStudent.studentId,
-        classSectionsId: parsedStudent.classSectionsId,
-        timeTableMappingId: parsedStudent.timeTableMappingId,
-        date: convertedDate, 
-      };
-
-      const error = validateAttendanceRow(convertedData);
-      if (error) {
-        throw new Error(`Row ${index + 1} (${parsedStudent.studentName}): ${error}`);
-      }
-
-      await attendanceService.addImportAttendance(convertedData);
-    } 
-
-    return { success: true, message: "Attendance imported successfully" };
-  } catch (error) {
-    console.error("Error in importing attendance data:", error.message);
+    console.error(" Error importing attendance data:", error.message);
     return { success: false, error: error.message };
   }
 };
+
 
 export async function getAttendanceByDate(date, classSectionsId,employeeId) {
     const data = await attendanceService.getAttendanceByDate(date, classSectionsId,employeeId);

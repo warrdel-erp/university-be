@@ -10,6 +10,7 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
             instituteId: syllabusData.instituteId,
             acedmicYearId: syllabusData.acedmicYearId,
             courseId: syllabusData.courseId,
+            sessionId:syllabusData.sessionId,
             createdBy,
             updatedBy
         }, { transaction });
@@ -62,8 +63,8 @@ export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
     await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
 };
 
-export async function courseAllSubject(courseId) {
-    return await SyllabusCreationRepository.courseAllSubject(courseId);
+export async function courseAllSubject(courseId,sessionId,universityId) {
+    return await SyllabusCreationRepository.courseAllSubject(courseId,sessionId,universityId);
 };
 
 export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, instituteId) {
