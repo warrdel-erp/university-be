@@ -54,7 +54,7 @@ export const state = ['RAJASTHAN','HARYANA','Punjab']
 
 export const city = ['JAIPUR','KOTA','KOTPUTLI','REWARI','GURUGRAM']
 
-export const studentStatus = ['Cancel Student','Left Student','Long Absent','Non Attendant']
+export const studentStatus = ['Cancel Student','Left Student','Long Absent','Non Attendant','active', 'deactive', 'transferred','graduated']
 
 export const admissionCategory = ['11A','11B','11C']
 
