@@ -544,3 +544,16 @@ UPDATE syllabus SET session_id = 1 WHERE session_id IS NULL;
 UPDATE syllabus SET session_id = 1 WHERE session_id = 0;
 
 ALTER TABLE syllabus ADD CONSTRAINT fk_syllabus_session_id FOREIGN KEY (session_id) REFERENCES session (session_id) ON DELETE CASCADE;
+
+ALTER TABLE students 
+MODIFY COLUMN student_status 
+ENUM(
+  'Cancel Student',
+  'Left Student',
+  'Long Absent',
+  'Non Attendant',
+  'active',
+  'deactive',
+  'transferred',
+  'graduated'
+) DEFAULT 'active';
