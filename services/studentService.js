@@ -10,6 +10,7 @@ import { getCourseByName,getClassByName } from '../repository/courseRepository.j
 import {studentRegister} from '../services/userServices.js';
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
 import { findByPlanId } from '../repository/feePlanRepository.js';
+import { parseCustomDate } from '../utility/dateFormat.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -340,6 +341,15 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
+
+      const formatDob = await parseCustomDate(convertedData.birthDate)
+      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
+      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
+
+      convertedData.birthDate = formatDob
+      convertedData.enrollDate = formatEnrollDate
+      convertedData.admissionDate = formatAdmissionDate
+      
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
