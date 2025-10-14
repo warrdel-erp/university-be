@@ -10,6 +10,7 @@ import { getCourseByName,getClassByName } from '../repository/courseRepository.j
 import {studentRegister} from '../services/userServices.js';
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
 import { findByPlanId } from '../repository/feePlanRepository.js';
+import { parseCustomDate } from '../utility/dateFormat.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -340,6 +341,27 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
+      console.log(`>>>>>>>>>>convertedData.birthDate`,convertedData.birthDate);
+
+      const formatDob = await parseCustomDate(convertedData.birthDate)
+      console.log(`>>>>>>>>>formatDob`,formatDob);
+      
+      console.log(`>>>>>>>>convertedData.enrollDate`,convertedData.enrollDate);
+      
+      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
+      console.log(`>>>>>formatEnrollDate>>>>>>>>`,formatEnrollDate);
+      console.log(`>>>>>>>convertedData.admissionDate`,convertedData.admissionDate);
+      
+      
+      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
+      console.log(`>>>>>>>formatAdmissionDate>>>>`,formatAdmissionDate);
+      
+
+      convertedData.birthDate = formatDob
+      convertedData.enrollDate = formatEnrollDate
+      convertedData.admisssionDate = formatAdmissionDate
+      console.log(`>>>>>>>>>>>convertedData`,convertedData);
+      
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
@@ -360,15 +382,15 @@ export async function importStudentData(excelData, data) {
       });
 
       // Optional metadata (uncomment if needed)
-      // const metaDataEntries = matchedPairs.map(pair => ({
-      //   studentId: result.dataValues.studentId,
-      //   codes: pair.dataId,
-      //   types: pair.codeId,
-      //   createdBy: result.dataValues.createdBy
-      // }));
-      // if (metaDataEntries.length > 0) {
-      //   await studentRepository.studentMetaData(metaDataEntries, transaction);
-      // }
+      const metaDataEntries = matchedPairs.map(pair => ({
+        studentId: result.dataValues.studentId,
+        codes: pair.dataId,
+        types: pair.codeId,
+        createdBy: result.dataValues.createdBy
+      }));
+      if (metaDataEntries.length > 0) {
+        await studentRepository.studentMetaData(metaDataEntries, transaction);
+      }
 
       // Step 9: Store result
       results.push(result);
