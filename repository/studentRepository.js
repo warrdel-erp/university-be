@@ -51,7 +51,7 @@ export async function addStudentsCorsAddress(data, transaction) {
     }
 };
 
-export async function studentMetaData(data, transaction) {
+export async function studentMetaData(data, transaction) {    
     try {
         const result = await model.studentMetaData.bulkCreate(data, { transaction });
         return result;
