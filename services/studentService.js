@@ -341,14 +341,26 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
+      console.log(`>>>>>>>>>>convertedData.birthDate`,convertedData.birthDate);
 
       const formatDob = await parseCustomDate(convertedData.birthDate)
+      console.log(`>>>>>>>>>formatDob`,formatDob);
+      
+      console.log(`>>>>>>>>convertedData.enrollDate`,convertedData.enrollDate);
+      
       const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
+      console.log(`>>>>>formatEnrollDate>>>>>>>>`,formatEnrollDate);
+      console.log(`>>>>>>>convertedData.admissionDate`,convertedData.admissionDate);
+      
+      
       const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
+      console.log(`>>>>>>>formatAdmissionDate>>>>`,formatAdmissionDate);
+      
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admissionDate = formatAdmissionDate
+      convertedData.admisssionDate = formatAdmissionDate
+      console.log(`>>>>>>>>>>>convertedData`,convertedData);
       
 
       //  Step 7: Insert student with scholar number
@@ -370,15 +382,15 @@ export async function importStudentData(excelData, data) {
       });
 
       // Optional metadata (uncomment if needed)
-      // const metaDataEntries = matchedPairs.map(pair => ({
-      //   studentId: result.dataValues.studentId,
-      //   codes: pair.dataId,
-      //   types: pair.codeId,
-      //   createdBy: result.dataValues.createdBy
-      // }));
-      // if (metaDataEntries.length > 0) {
-      //   await studentRepository.studentMetaData(metaDataEntries, transaction);
-      // }
+      const metaDataEntries = matchedPairs.map(pair => ({
+        studentId: result.dataValues.studentId,
+        codes: pair.dataId,
+        types: pair.codeId,
+        createdBy: result.dataValues.createdBy
+      }));
+      if (metaDataEntries.length > 0) {
+        await studentRepository.studentMetaData(metaDataEntries, transaction);
+      }
 
       // Step 9: Store result
       results.push(result);
