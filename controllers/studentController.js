@@ -265,11 +265,7 @@ export const getFeePlanId = async (req, res) => {
   const universityId = req.user.universityId;
 
   try {
-    const result = await studentService.getFeePlanId(semesterId,
-      acedmicYearId,
-      courseId,
-      universityId
-    );
+    const result = await studentService.getFeePlanId(semesterId,acedmicYearId,courseId,universityId);
 
     if (result && result.success === false) {
       return res.status(400).json({
@@ -282,6 +278,7 @@ export const getFeePlanId = async (req, res) => {
       success: true,
       data: result,
     });
+    
   } catch (error) {
     console.error("Error in getting fee plan by IDs:", error);
 

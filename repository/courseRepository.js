@@ -16,6 +16,33 @@ export async function getCourseByCourseId(courseId) {
     }
 };
 
+export async function addBulkCourse(courseData) {    
+    try {
+        const result = await model.courseModel.bulkCreate(courseData);
+                console.log(`>>>>>>resultCOurse`,result.length);
+
+        return result;
+    } catch (error) {
+        console.error("Error in add course bulk:", error);
+        throw error;
+    }
+};
+
+export async function getCourseByAcedmicId(acedmicYearId) {
+    try {
+        const result = await model.courseModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                acedmicYearId: acedmicYearId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting course details By Acedmic Year:", error);
+        throw error;
+    }
+};
+
 export async function getCourseByName(courseName) {
     try {
         const result = await model.courseModel.findOne({

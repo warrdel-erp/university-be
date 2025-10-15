@@ -1,5 +1,8 @@
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
+import { addBulkCourse, getCourseByAcedmicId } from "../repository/courseRepository.js";
+import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from "../repository/electiveSubjectRepository.js";
 import { getAllSubject, subjectBulkCreate } from "../repository/mainRepository.js";
+import { addBulkSession, getSessionDetailsByAcedmic } from "../repository/sessionRepository.js";
 
 export async function addacedmicYear(acedmicYearData, createdBy, updatedBy,universityId) {
 
@@ -154,57 +157,73 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
       for (const dataType of copyData) {
         switch (dataType) {
           case 'subject':
-            const subjects = await getAllSubject('',copyAcedmicYearId,'','')            
+            const subjects = await getAllSubject('',copyAcedmicYearId,'','') 
+            console.log(`>>>>>>>>>>>>subject `,subjects.length);
+            
             const newSubjects = subjects.map(subject => ({
               ...subject.get({ plain: true }),
               acedmicYearId: acedmicYearId,
               createdBy: createdBy,
               updated_by: updatedBy,
-              createdBy:createdBy,
+              // createdBy:createdBy,
               subjectId: undefined  // Remove the id so a new one is generated
             }));            
+                        console.log(`>>>>>>>>>>>>newSubjects `,newSubjects.length);
+
             await subjectBulkCreate(newSubjects);
             console.log(`Copied subjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
             break;
 
-          // case 'electiveSubject':
-          //   const electives = await electiveSubjectModel.findAll({ where: { academic_year_id: copyAcedmicYearId } });
-          //   const newElectives = electives.map(item => ({
-          //     ...item.get({ plain: true }),
-          //     academic_year_id: acedmicYearId,
-          //     created_by: createdBy,
-          //     updated_by: updatedBy,
-          //     id: undefined
-          //   }));
-          //   await electiveSubjectModel.bulkCreate(newElectives);
-          //   console.log(`Copied electiveSubjects`);
-          //   break;
+          case 'electiveSubject':
+            const electives = await getSingleElectiveSubjectByAcedmicId(copyAcedmicYearId);
+                                    console.log(`>>>>>>>>>>>>electives `,electives.length);
 
-          // case 'session':
-          //   const sessions = await sessionModel.findAll({ where: { academic_year_id: copyAcedmicYearId } });
-          //   const newSessions = sessions.map(item => ({
-          //     ...item.get({ plain: true }),
-          //     academic_year_id: acedmicYearId,
-          //     created_by: createdBy,
-          //     updated_by: updatedBy,
-          //     id: undefined
-          //   }));
-          //   await sessionModel.bulkCreate(newSessions);
-          //   console.log(`Copied sessions`);
-          //   break;
+            const newElectives = electives.map(item => ({
+              ...item.get({ plain: true }),
+              acedmicYearId: acedmicYearId,
+              createdBy: createdBy,
+              updatedBy: updatedBy,
+              electiveSubjectId: undefined
+            }));
+            console.log(`>>>>>>>newElectives`,newElectives.length);
+            
+            await addBulkElectiveSubject(newElectives);
+            console.log(`Copied electiveSubjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
+            break;
 
-          // case 'semesterSubjectMapping':
-          //   const mappings = await semesterSubjectMappingModel.findAll({ where: { academic_year_id: copyAcedmicYearId } });
-          //   const newMappings = mappings.map(item => ({
-          //     ...item.get({ plain: true }),
-          //     academic_year_id: acedmicYearId,
-          //     created_by: createdBy,
-          //     updated_by: updatedBy,
-          //     id: undefined
-          //   }));
-          //   await semesterSubjectMappingModel.bulkCreate(newMappings);
-          //   console.log(`Copied semesterSubjectMappings`);
-          //   break;
+          case 'session':
+            const sessions = await getSessionDetailsByAcedmic(copyAcedmicYearId)
+                        console.log(`>>>>>>>sessions`,sessions.length);
+
+            const newSessions = sessions.map(item => ({
+              ...item.get({ plain: true }),
+              acedmicYearId: acedmicYearId,
+              createdBy: createdBy,
+              updatedBy: updatedBy,
+              sessionId: undefined
+            }));
+                                    console.log(`>>>>>>>newSessions`,newSessions.length);
+
+            await addBulkSession (newSessions);
+            console.log(`Copied session from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
+            break;
+
+          case 'course':
+            const courses = await getCourseByAcedmicId(copyAcedmicYearId);
+            console.log(`>>>>>>>courses`,courses.length);
+            
+            const newCourse = courses.map(item => ({
+              ...item.get({ plain: true }),
+              acedmicYearId: acedmicYearId,
+              createdBy: createdBy,
+              updatedBy: updatedBy,
+              courseId: undefined
+            }));
+                        console.log(`>>>>>>>newCourse`,newCourse.length);
+
+            await addBulkCourse (newCourse);
+            console.log(`Copied course from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
+            break;
 
           default:
             console.warn(`Unknown data type: ${dataType}`);

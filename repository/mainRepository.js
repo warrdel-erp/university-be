@@ -229,6 +229,8 @@ export async function addSubject(data) {
 export async function subjectBulkCreate(data) {
     try {
         const result = await model.subjectModel.bulkCreate(data);
+        console.log(`>>>>>>resultSubject`,result.length);
+        
         return result;
     } catch (error) {
         console.error("Error in subject bulk create:", error);
