@@ -295,6 +295,10 @@ export async function getSemester(courseId,specializationId,universityId,acedmic
     return await mainRepository.getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role)
 };
 
+export async function getSemesterById(semesterId){
+    return await mainRepository.getSemesterById(semesterId)
+};
+
 export async function createClass(data, createdBy, universityId,instituteId) {
     const results = [];
     try {

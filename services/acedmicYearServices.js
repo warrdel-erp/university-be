@@ -18,6 +18,10 @@ export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
     return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId,universityId);
 };
 
+export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
+    return await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
+};
+
 // export async function updateacedmicYear(acedmicYearData, updatedBy) {
 //   const { startingDate, endingDate } = acedmicYearData;
 

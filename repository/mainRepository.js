@@ -482,3 +482,20 @@ export async function getSectionByClassId(classId) {
         throw error;
     }
 };
+
+export async function getSemesterById(semesterId) {
+    try {
+
+        const whereClause = {
+            semesterId
+        };
+        const result = await model.semesterModel.findOne({
+            attributes: ['semesterId','name','semesterDuration','termType'],
+            where: whereClause,
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in get semester by id", error);
+        throw error;
+    }
+};

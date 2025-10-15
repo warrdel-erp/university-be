@@ -128,6 +128,22 @@ export async function getSingleFeePlanDetails(feePlanId) {
         console.error('Error fetching Fee Plan details single:', error);
         throw error;
     }
+};
+
+export async function getfeePlanByCourseAndAcedmic(courseId,acedmicYearId) {
+     try {
+        const FeePlan = await model.feePlanModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where:{
+                courseId,acedmicYearId
+            },
+        });
+
+        return FeePlan;
+    } catch (error) {
+        console.error('Error fetching Fee Plan details by course and acedmic year:', error);
+        throw error;
+    }
 }
 
 export async function updateFeePlan(poId, data) {
