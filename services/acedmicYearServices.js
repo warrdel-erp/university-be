@@ -208,22 +208,22 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
             console.log(`Copied session from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
             break;
 
-          case 'course':
-            const courses = await getCourseByAcedmicId(copyAcedmicYearId);
-            console.log(`>>>>>>>courses`,courses.length);
+          // case 'course':
+          //   const courses = await getCourseByAcedmicId(copyAcedmicYearId);
+          //   console.log(`>>>>>>>courses`,courses.length);
             
-            const newCourse = courses.map(item => ({
-              ...item.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updatedBy: updatedBy,
-              courseId: undefined
-            }));
-                        console.log(`>>>>>>>newCourse`,newCourse.length);
+          //   const newCourse = courses.map(item => ({
+          //     ...item.get({ plain: true }),
+          //     acedmicYearId: acedmicYearId,
+          //     createdBy: createdBy,
+          //     updatedBy: updatedBy,
+          //     courseId: undefined
+          //   }));
+          //               console.log(`>>>>>>>newCourse`,newCourse.length);
 
-            await addBulkCourse (newCourse);
-            console.log(`Copied course from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
+          //   await addBulkCourse (newCourse);
+          //   console.log(`Copied course from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
+          //   break;
 
           default:
             console.warn(`Unknown data type: ${dataType}`);

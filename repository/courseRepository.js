@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 export async function getCourseByCourseId(courseId) {
     try {
         const result = await model.courseModel.findOne({
-            attributes: ["universityId","courseDuration"] ,
+            attributes: ["universityId","courseDuration","isActive"] ,
             where: {
                 courseId: courseId
             },
@@ -27,6 +27,18 @@ export async function addBulkCourse(courseData) {
         throw error;
     }
 };
+
+export async function changeCourseStatuss(courseId, status) {
+    try {
+        const result = await model.courseModel.update(status, {
+            where: { courseId }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error change coursse status ${courseId}:`, error);
+        throw error;
+    }
+}
 
 export async function getCourseByAcedmicId(acedmicYearId) {
     try {

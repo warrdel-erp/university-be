@@ -557,3 +557,9 @@ ENUM(
   'transferred',
   'graduated'
 ) DEFAULT 'active';
+
+ALTER TABLE course ADD COLUMN isActive BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE course DROP FOREIGN KEY fk_course_acedmic_year_id;
+
+ALTER TABLE course DROP COLUMN acedmic_year_id;

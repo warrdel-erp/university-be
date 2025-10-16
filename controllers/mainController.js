@@ -86,6 +86,20 @@ export const addCourse = async (req,res) => {
     }
 };
 
+export const changeCourseStatus = async (req,res) => {
+    try {
+        const {courseId} = req.query;
+        if(!(courseId)){
+            return res.status(400).send('courseId is required')
+        } 
+        const result = await mainServices.changeCourseStatus(courseId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  change status Course:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
 export const addSpecialization = async (req,res) => {
     try {
         const {universityId,course_Id,acedmicYearId} = req.body;

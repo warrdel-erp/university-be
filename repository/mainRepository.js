@@ -76,8 +76,9 @@ export async function getAllCourse(universityId,acedmicYearId,instituteId,role,m
         const whereClause = {
             university_id: universityId,
             // ...(mainInstituteId && { institute_id:mainInstituteId }),
-            ...(acedmicYearId && { acedmicYearId }),
+            // ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
+
         };
         const result = await model.courseModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","universityId"] },
@@ -228,9 +229,7 @@ export async function addSubject(data) {
 
 export async function subjectBulkCreate(data) {
     try {
-        const result = await model.subjectModel.bulkCreate(data);
-        console.log(`>>>>>>resultSubject`,result.length);
-        
+        const result = await model.subjectModel.bulkCreate(data);        
         return result;
     } catch (error) {
         console.error("Error in subject bulk create:", error);
@@ -392,12 +391,12 @@ export async function getClassSubjectMapper(semesterId,universityId,acedmicYearI
                                         },
                                     ],
                                 },
-                                {
-                                    model: model.acedmicYearModel,
-                                    as: 'courseacedmicYear',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                    where: acedmicYearId ? { acedmicYearId } : undefined
-                                },
+                                // {
+                                //     model: model.acedmicYearModel,
+                                //     as: 'courseacedmicYear',
+                                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                //     where: acedmicYearId ? { acedmicYearId } : undefined
+                                // },
                             ],
                         },
                         // {

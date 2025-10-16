@@ -1,4 +1,4 @@
-import { getCourseByCourseId } from '../repository/courseRepository.js';
+import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 
@@ -167,6 +167,23 @@ export async function addCourse(data, createdBy, instituteId) {
     }
 };
 
+export const changeCourseStatus = async (courseId) => {
+    const course = await getCourseByCourseId (courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    const newStatus = !course.dataValues.isActive;
+    console.log(`>>>>>>>>newStatus`,newStatus);
+    
+
+    await changeCourseStatuss(courseId,{isActive: newStatus});
+
+    return {
+        message: `Course status updated successfully to`,
+        isActive: newStatus
+    };
+};
 
 export async function addSpecialization(data,createdBy,instituteId) {
     const results = [];
