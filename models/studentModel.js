@@ -125,7 +125,7 @@ export default sequelize.define(
         },
         feePlanId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'fee_plan_id',
             references: {
                 model: feePlanModel,

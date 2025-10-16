@@ -563,3 +563,9 @@ ALTER TABLE course ADD COLUMN isActive BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE course DROP FOREIGN KEY fk_course_acedmic_year_id;
 
 ALTER TABLE course DROP COLUMN acedmic_year_id;
+
+ALTER TABLE students DROP FOREIGN KEY fk_fee_plan_id;
+
+ALTER TABLE students MODIFY COLUMN fee_plan_id INT NULL;
+
+ALTER TABLE students ADD CONSTRAINT fk_fee_plan_id FOREIGN KEY (fee_plan_id) REFERENCES fee_plan(fee_plan_id) ON DELETE CASCADE;

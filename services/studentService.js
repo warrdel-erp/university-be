@@ -344,36 +344,42 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
-      console.log(`>>>>>>>>>>convertedData.birthDate`,convertedData.birthDate);
 
       const formatDob = await parseCustomDate(convertedData.birthDate)
-      console.log(`>>>>>>>>>formatDob`,formatDob);
+            
+      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)      
       
-      console.log(`>>>>>>>>convertedData.enrollDate`,convertedData.enrollDate);
-      
-      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
-      console.log(`>>>>>formatEnrollDate>>>>>>>>`,formatEnrollDate);
-      console.log(`>>>>>>>convertedData.admissionDate`,convertedData.admissionDate);
-      
-      
-      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
-      console.log(`>>>>>>>formatAdmissionDate>>>>`,formatAdmissionDate);
-      
+      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)      
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admisssionDate = formatAdmissionDate
-      console.log(`>>>>>>>>>>>convertedData`,convertedData);
-      
+      convertedData.admisssionDate = formatAdmissionDate      
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
-
+      // student register 
       const role = 'Student';
       const roleId = convertedData.roleId || 1
       const {studentId, email, phoneNumber, mobileNumber, scholarNumber,universityId}=result.dataValues
       const registerStudentData = {studentId,email,phoneNumber,mobileNumber,scholarNumber,universityId,role,roleId}
       await studentRegister (registerStudentData,transaction)
+
+      // student Invoice mapping
+      const feePlanId = result?.dataValues?.feePlanId
+
+      if(feePlanId){
+          const getInvoice = await findByPlanId(feePlanId)
+          const dataToInsert = getInvoice.map(invoice => ({
+            studentId,
+            universityId,
+            feePlanId,
+            feeNewInvoiceId: invoice.feeNewInvoiceId,
+            invoiceStatus: false,
+            createdBy,
+            updatedBy :createdBy
+          }));
+          await studentRepository.addStudentInvoiceMapper(dataToInsert,transaction)
+        }
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
@@ -847,8 +853,10 @@ export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityI
   
   const [startYear, endYear] = yearTitle.split('-').map(Number);
 
-  const newStartYear = startYear - acedmiceBack.group;
-  const newEndYear = endYear - acedmiceBack.group;
+  const backAcedmicYear = acedmiceBack.group -1
+
+  const newStartYear = startYear - backAcedmicYear;
+  const newEndYear = endYear - backAcedmicYear;
 
   const updatedYearTitle = `${newStartYear}-${newEndYear}`;
   const previousAcedmicYear = await getSingleacedmicYearDetailsByTitle(updatedYearTitle)
@@ -859,7 +867,9 @@ export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityI
       return { message: `Please activate academic year ${updatedYearTitle}`, success: false };
   }
   
-const feePlanId = await getfeePlanByCourseAndAcedmic(courseId,previousAcedmicYearId)
+  return await getfeePlanByCourseAndAcedmic(courseId,previousAcedmicYearId)
+};
 
-  return feePlanId
+export async function getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role){
+  return await studentRepository.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role)
 };

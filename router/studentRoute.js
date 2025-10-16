@@ -1,4 +1,4 @@
-import {addStudent ,getAllStudents ,getSingleStudentDetail,importStudentData,updateStudentDetails,deleteStudentDetail,getEmptyEnrollNumber,studentCourseMapping,classStudentMapping,addElectiveSubject,getclassStudentMapping,promoteStudent,getFeePlanId} from "../controllers/studentController.js"
+import {addStudent ,getAllStudents ,getSingleStudentDetail,importStudentData,updateStudentDetails,deleteStudentDetail,getEmptyEnrollNumber,studentCourseMapping,classStudentMapping,addElectiveSubject,getclassStudentMapping,promoteStudent,getFeePlanId,getEmptyFeeDetails} from "../controllers/studentController.js"
 import userAuth from "../middleware/authUser.js"
 // router
 import {Router} from  'express'
@@ -30,6 +30,6 @@ router.post('/promoteStudent',userAuth , promoteStudent);
 
 router.get('/fee',userAuth , getFeePlanId);
 
-// router.get('/electiveSubject',userAuth, addElectiveSubject);
+router.get('/emptyfeeDetails',userAuth , getEmptyFeeDetails);
 
 export default router;

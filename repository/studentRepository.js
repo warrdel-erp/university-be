@@ -824,10 +824,10 @@ export async function getStudentForPromate(studentId) {
 export async function getSemesterByCourseId(courseId) {
     try {
         return await model.semesterModel.findAll({
-  where: { courseId },
-  order: [['semesterId', 'ASC']],
-  raw: true
-});
+            where: { courseId },
+            order: [['semesterId', 'ASC']],
+            raw: true
+        });
     } catch (error) {
         console.error(`Error get semester By course Id ${courseId} :`, error);
         throw error;
@@ -854,6 +854,46 @@ export async function updateStudentfeeStatus(studentId, data) {
         return result;
     } catch (error) {
         console.error(`Error updating student details ${studentId} :`, error);
+        throw error;
+    }
+};
+
+export async function getEmptyFeeDetails(universityId, acedmicYearId,instituteId,role) {    
+    try {
+        const result = await model.studentModel.findAll({
+            where: {
+                ...(acedmicYearId && { acedmicYearId }),
+                feePlanId: {
+                    [Op.or]: [null, '']
+                },
+                ...(role === 'Head' && { instituteId })
+            },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseName", "courseCode"],
+                    where: {
+                        universityId: universityId
+                    }
+                },
+                {
+                    model:model.classSectionModel,
+                    as:'studentSections',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                },
+                {
+                    model:model.semesterModel,
+                    as:'studentSemester',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                },
+            ]
+        });
+
+        return result;
+    } catch (error) {
+        console.error('Error in getting feeplan details:', error);
         throw error;
     }
 };

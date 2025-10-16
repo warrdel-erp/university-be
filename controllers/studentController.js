@@ -289,3 +289,17 @@ export const getFeePlanId = async (req, res) => {
     });
   }
 };
+
+export const getEmptyFeeDetails = async (req,res) => {
+    const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    try {
+        const result = await studentService.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in getting empty fee details:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
