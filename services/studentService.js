@@ -866,7 +866,6 @@ export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityI
  if (!isActive) {
       return { message: `Please activate academic year ${updatedYearTitle}`, success: false };
   }
-  
   return await getfeePlanByCourseAndAcedmic(courseId,previousAcedmicYearId)
 };
 
