@@ -339,93 +339,192 @@ export async function addClassSubjectMapper(data) {
     }
 };
 
+// export async function getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role) {
+//     try {
+//         const queryOptions = {
+//             attributes: ['classSubjectMapperId'],
+//             where: {
+//                 ...(semesterId && { semesterId: semesterId }),
+//                 ...(role === 'Head' && { instituteId })
+//             },
+//             include: [
+//                 {
+//                     model:model.userModel,
+//                     as:"userClassSubjectMapper",
+//                     attributes:["universityId","userId"],
+//                     where: {
+//                         universityId:universityId
+//                     }, 
+//                 },
+//                 {
+//                     model: model.semesterModel,
+//                     as: 'semestermapping',
+//                     where: acedmicYearId ? { acedmicYearId } : undefined,
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                     include: [
+//                         {
+//                             model: model.classSectionModel,
+//                             as: "classSections",
+//                             attributes: {
+//                                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+//                             },
+//                             include: [
+//                                 {
+//                                     model: model.acedmicYearModel,
+//                                     as: "acedmicYearSection", // ✅ Correctly placed here
+//                                     attributes: {
+//                                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+//                                     },
+//                                 },
+//                             ],
+//                         },
+//                         {
+//                             model: model.courseModel,
+//                             as: 'semesterCourse',
+//                             attributes: ['courseName',"capacity",'courseId'],
+//                             include: [
+//                                 {
+//                                     model: model.affiliatedIniversityModel,
+//                                     as: 'affiliated',
+//                                     attributes: ['affiliatedUniversityName'],
+//                                     include: [
+//                                         {
+//                                             model: model.instituteModel,
+//                                             as: 'institut',
+//                                             attributes: ['instituteName','instituteId'],
+//                                             include: [
+//                                                 {
+//                                                     model: model.campusModel,
+//                                                     as: 'campues',
+//                                                     attributes: ['campusName','campusId'],
+//                                                 },
+//                                             ],
+//                                         },
+//                                     ],
+//                                 },
+//                                 // {
+//                                 //     model: model.acedmicYearModel,
+//                                 //     as: 'courseacedmicYear',
+//                                 //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                                 //     where: acedmicYearId ? { acedmicYearId } : undefined
+//                                 // },
+//                             ],
+//                         },
+//                         {
+//                             model: model.acedmicYearModel,
+//                             as: 'acedmicYearSection',
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                         },
+//                         {
+//                             model: model.specializationModel,
+//                             as: 'specializationSemester',
+//                             attributes: ['specializationName'],
+//                         },
+//                     ],
+//                 },
+//                 {
+//                     model: model.subjectModel,
+//                     as: 'subjects',
+//                     attributes: ['subjectName', 'subjectId', 'subjectType', 'subjectCode'],
+//                     where: acedmicYearId ? { acedmicYearId } : undefined
+//                 },
+//             ],
+//         };
+//         const result = await model.classSubjectMapperModel.findAll(queryOptions);
+
+//         return result;
+
+//     } catch (error) {
+//         console.error('Error fetching class subject mapper details:', error.message);
+//         throw error;
+//     }
+// };
+
 export async function getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role) {
     try {
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
             where: {
-                ...(semesterId && { semesterId: semesterId }),
-                ...(role === 'Head' && { instituteId })
+                ...(semesterId && { semesterId }),
+                ...(role === 'Head' && { instituteId }),
             },
             include: [
                 {
-                    model:model.userModel,
-                    as:"userClassSubjectMapper",
-                    attributes:["universityId","userId"],
-                    where: {
-                        universityId:universityId
-                    }, 
+                    model: model.userModel,
+                    as: "userClassSubjectMapper",
+                    attributes: ["universityId", "userId"],
+                    where: { universityId },
                 },
                 {
                     model: model.semesterModel,
-                    as: 'semestermapping',
+                    as: "semestermapping",
                     where: acedmicYearId ? { acedmicYearId } : undefined,
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+                    },
                     include: [
                         {
-                            model :model.classSectionModel,
-                            as :'classSections',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            model: model.classSectionModel,
+                            as: "classSections",
+                            attributes: {
+                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+                            },
+                            include: [
+                                {
+                                  model: model.acedmicYearModel,
+                                  as: "acedmicYearSection", // ✅ Correctly placed here
+                                  attributes: {
+                                    exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+                                  },
+                                },
+                            ],
                         },
                         {
                             model: model.courseModel,
-                            as: 'semesterCourse',
-                            attributes: ['courseName',"capacity",'courseId'],
+                            as: "semesterCourse",
+                            attributes: ["courseName", "capacity", "courseId"],
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,
-                                    as: 'affiliated',
-                                    attributes: ['affiliatedUniversityName'],
+                                    as: "affiliated",
+                                    attributes: ["affiliatedUniversityName"],
                                     include: [
                                         {
                                             model: model.instituteModel,
-                                            as: 'institut',
-                                            attributes: ['instituteName','instituteId'],
+                                            as: "institut",
+                                            attributes: ["instituteName", "instituteId"],
                                             include: [
                                                 {
                                                     model: model.campusModel,
-                                                    as: 'campues',
-                                                    attributes: ['campusName','campusId'],
+                                                    as: "campues",
+                                                    attributes: ["campusName", "campusId"],
                                                 },
                                             ],
                                         },
                                     ],
                                 },
-                                // {
-                                //     model: model.acedmicYearModel,
-                                //     as: 'courseacedmicYear',
-                                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                //     where: acedmicYearId ? { acedmicYearId } : undefined
-                                // },
                             ],
                         },
-                        // {
-                        //     model: model.acedmicYearModel,
-                        //     as: 'acedmicYearSection',
-                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        // },
                         {
                             model: model.specializationModel,
-                            as: 'specializationSemester',
-                            attributes: ['specializationName'],
+                            as: "specializationSemester",
+                            attributes: ["specializationName"],
                         },
                     ],
                 },
                 {
                     model: model.subjectModel,
-                    as: 'subjects',
-                    attributes: ['subjectName', 'subjectId', 'subjectType', 'subjectCode'],
-                    where: acedmicYearId ? { acedmicYearId } : undefined
-
+                    as: "subjects",
+                    attributes: ["subjectName", "subjectId", "subjectType", "subjectCode"],
+                    where: acedmicYearId ? { acedmicYearId } : undefined,
                 },
             ],
         };
+
         const result = await model.classSubjectMapperModel.findAll(queryOptions);
-
         return result;
-
     } catch (error) {
-        console.error('Error fetching class subject mapper details:', error.message);
+        console.error("Error fetching class subject mapper details:", error.message);
         throw error;
     }
 };
