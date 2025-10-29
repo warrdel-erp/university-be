@@ -67,7 +67,8 @@ export default sequelize.define(
         },
         startingDate:{
             type:DataTypes.DATEONLY,
-            allowNull:true
+            allowNull:true,
+            field:'starting_date'
         },
         createdBy: {
             type: DataTypes.INTEGER,

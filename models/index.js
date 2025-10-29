@@ -111,6 +111,7 @@ import teacherAttendeceModel from './teacherAttendenceModel.js';
 import leavePolicyModel from './leavePolicyModel.js';
 import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
+import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -784,6 +785,15 @@ leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leav
 leaveBalanceModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveBalancePolicy" });
 leavePolicyModel.hasMany(leaveBalanceModel, { foreignKey: "policy_id", as: "leaveBalance" });
 
+examSetupTypeModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "exam_setup_type_id",as: "scheduleMappers"});
+examStructureScheduleMappingModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupType"});
+
+sessionModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "session_id",as: "sessionSchedule"});
+examStructureScheduleMappingModel.belongsTo(sessionModel, {foreignKey: "session_id",as: "sessionSchedule"});
+
+examSetupTypeModel.hasMany(syllabusDetailsModel, {foreignKey: "exam_setup_type_id",as: "syllabusDetailsExam"});
+syllabusDetailsModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupTypeSyllabus"});
+
 export {
     settingModel,
     universityModel,
@@ -898,4 +908,5 @@ export {
     leaveBalanceModel,
     leavePolicyModel,
     leaveRequestModel,
+    examStructureScheduleMappingModel,
 };

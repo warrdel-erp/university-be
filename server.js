@@ -64,6 +64,7 @@ import schedule from './router/scheduleRoute.js';
 import leavePolicy from "./router/leavePolicyRouter.js";
 import leaveRequest from "./router/leaveRequestRouter.js";
 import leaveBalance from "./router/leaveBalanceRouter.js";
+import examScheduleMapping from "./router/examStructureScheduleMappingRoute.js"
 
 // middleware
 app.use(fileUpload());
@@ -130,6 +131,7 @@ app.use("/schedule",schedule);
 app.use("/leave-policies", leavePolicy);
 app.use("/leave-requests", leaveRequest);
 app.use("/leave-balance", leaveBalance);
+app.use("/examScheduleMapping",examScheduleMapping)
 
 
 app.listen(PORT, () => {

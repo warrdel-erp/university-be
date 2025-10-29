@@ -1,0 +1,202 @@
+import * as model from "../models/index.js";
+
+export async function addExamStructureSchedule(examDetailSchedule) {
+    try {
+        const result = await model.examStructureScheduleMappingModel.create(examDetailSchedule);
+        return result;
+    } catch (error) {
+        console.error("Error adding exam Structure Schedule:", error);
+        throw error;
+    }
+};
+
+// export async function getExamStructureSchedule(universityId,acedmicYearId,role,instituteId) {
+//     try {
+//         const whereClause = {
+//         ...(universityId && { universityId }),
+//         ...(acedmicYearId && { acedmicYearId }),
+//         ...(role === 'Head' && { institute_id: instituteId })
+//         };
+//         const result = await model.examStructureScheduleMappingModel.findAll({
+//             attributes: {
+//                 exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+//             },
+//             where:whereClause,
+//             include: [
+//                 {
+//                     model: model.examSetupTypeModel,
+//                     as: "examSetupType",
+//                     exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",],
+//                     include:[
+//                         {
+//                             model:model.syllabusDetailsModel,
+//                             as:"syllabusDetailsExam",
+//                             exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
+//                             include:[
+//                                 {
+//                                     model:model.subjectModel,
+//                                     as:'syllabusSubject',
+//                                     exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
+//                                 }
+//                             ]
+//                         }
+//                     ]
+//                 }, 
+//             ],
+//         });
+//         return result;
+//     } catch (error) {
+//         console.error("Error fetching exam Structures schedule:", error);
+//         throw error;
+//     }
+// };
+
+
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId) {
+    try {
+        const whereClause = {
+            ...(universityId && { universityId }),
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(role === 'Head' && { instituteId }),
+        };
+
+        const schedules = await model.examStructureScheduleMappingModel.findAll({
+            attributes: ['examStructureScheduleMapperId', 'name', 'startingDate'],
+            where: whereClause,
+            include: [
+                {
+                    model: model.examSetupTypeModel,
+                    as: "examSetupType",
+                    attributes: ['examType'],
+                    include: [
+                        {
+                            model: model.syllabusDetailsModel,
+                            as: "syllabusDetailsExam",
+                            attributes: ['subjectId'],
+                            include: [
+                                {
+                                    model: model.subjectModel,
+                                    as: 'syllabusSubject',
+                                    attributes: ['subjectName']
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    model: model.sessionModel,
+                    as: "sessionSchedule",
+                    attributes: ["sessionName"]
+                }
+            ]
+        });
+
+        return schedules;
+
+    } catch (error) {
+        console.error("Error fetching exam structure schedule:", error);
+        throw error;
+    }
+}
+
+export async function getSingleExamStructureSchedule(courseId, sessionId, universityId) {
+    try {
+        const result = await model.examStructureScheduleMappingModel.findOne({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: { courseId, sessionId, universityId },
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "courseExam",
+                    attributes: ["courseName", "capacity"],
+                },
+                {
+                    model: model.sessionModel,
+                    as: "sessionExam",
+                    attributes: ["sessionName"],
+                },
+                {
+                    model: model.examSetupTypeModel,
+                    as: "setupTypes", 
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+                }
+            ],
+        });
+
+        return result;
+    } catch (error) {
+        console.error("Error fetching exam Structure:", error);
+        throw error;
+    }
+};
+
+
+export async function deleteExamStructureSchedule(examStructureId) {
+    try {
+        const deleted = await model.examStructureScheduleMappingModel.destroy({ where: { examStructureId } });
+        return deleted > 0;
+    } catch (error) {
+        console.error("Error deleting exam Structure:", error);
+        throw error;
+    }
+};
+
+export async function updateExamStructureSchedule(examStructureId, examDetail) {
+    try {
+        const result = await model.examStructureScheduleMappingModel.update(examDetail, {
+            where: { examStructureId },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error updating exam Structure:", error);
+        throw error;
+    }
+};
+
+export async function addExamType(examDetail) {
+    try {
+        const result = await model.examSetupTypeModel.create(examDetail);
+        return result;
+    } catch (error) {
+        console.error("Error adding exam Structure setup type:", error);
+        throw error;
+    }
+};
+
+export async function getDetailByExamType(examSetupTypeId) {
+  try {
+    const result = await model.examSetupTypeModel.findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { examSetupTypeId },
+      include: [
+        {
+          model: model.examStructureScheduleMappingModel,
+          as: "examStructure",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          include: [
+            {
+              model: model.courseModel,
+              as: "courseExam",
+              attributes: ["courseName", "capacity"],
+            },
+            {
+              model: model.sessionModel,
+              as: "sessionExam",
+              attributes: ["sessionName"],
+            },
+            {
+              model: model.acedmicYearModel,
+              as: "acedmicExam",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+          ],
+        },
+      ],
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam structure details:", error.message);
+    throw error;
+  }
+};
