@@ -32,3 +32,7 @@ export async function addExamType(examDetail, createdBy, updatedBy,universityId,
     const result = await examStructureRepository.addExamType(examDetail);
     return result;
 };
+
+export async function getDetailByExamType(examSetupTypeId) {
+    return await examStructureRepository.getDetailByExamType(examSetupTypeId);
+};

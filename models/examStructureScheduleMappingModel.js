@@ -4,17 +4,17 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
-import course from "./courseModel.js";
-import sessionModel from "./sessionModel.js";
+import session from "./sessionModel.js";
+import examSetupTypeModel from "./examSetupTypeModel.js"
 
 export default sequelize.define(
-    'exam_structure',
+    'exam_structure_schedule_mapper',
     {
-        examStructureId: {
+        examStructureScheduleMapperId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_structure_id'
+            field: 'exam_structure_schedule_mapper_id'
         },
         acedmicYearId: {
             type: DataTypes.INTEGER,
@@ -23,15 +23,6 @@ export default sequelize.define(
             references: {
                 model: acedmicYear,
                 key: 'acedmic_year_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
             }
         },
         instituteId: {
@@ -52,40 +43,31 @@ export default sequelize.define(
                 key: 'university_id'
             }
         },
-        courseId: {
+        sessionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'session_id',
             references: {
-                model: course,
-                key: 'course_id'
+                model: session,
+                key: 'session_id'
             }
         },
-        examScheduling:{
-            type:DataTypes.STRING,
-            field:'exam_scheduling',
-            allowNull:false
+        examSetupTypeId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'exam_setup_type_id',
+            references: {
+                model: examSetupTypeModel,
+                key: 'exam_setup_type_id'
+            }
         },
-        jury:{
-            type:DataTypes.STRING,
-            allowNull:true,
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false
         },
-        internal:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        external:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        permission:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        totalMarks:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'total_marks'
+        startingDate:{
+            type:DataTypes.DATEONLY,
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -124,7 +106,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'exam_structure',
+        tableName: 'exam_structure_schedule_mapper',
         timestamps: true,
         paranoid: true
     }

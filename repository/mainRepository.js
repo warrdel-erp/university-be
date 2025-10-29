@@ -472,7 +472,7 @@ export async function getClassSubjectMapper(semesterId,universityId,acedmicYearI
                             include: [
                                 {
                                   model: model.acedmicYearModel,
-                                  as: "acedmicYearSection", // ✅ Correctly placed here
+                                  as: "acedmicYearSection",
                                   attributes: {
                                     exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
                                   },

@@ -569,3 +569,28 @@ ALTER TABLE students DROP FOREIGN KEY fk_fee_plan_id;
 ALTER TABLE students MODIFY COLUMN fee_plan_id INT NULL;
 
 ALTER TABLE students ADD CONSTRAINT fk_fee_plan_id FOREIGN KEY (fee_plan_id) REFERENCES fee_plan(fee_plan_id) ON DELETE CASCADE;
+
+ALTER TABLE exam_structure ADD COLUMN exam_scheduling VARCHAR(255) NOT NULL;
+
+CREATE TABLE exam_structure_schedule_mapper (
+  exam_structure_schedule_mapper_id INT AUTO_INCREMENT PRIMARY KEY,
+  acedmic_year_id INT NOT NULL,
+  institute_id INT NOT NULL,
+  university_id INT NOT NULL,
+  session_id INT NOT NULL,
+  exam_setup_type_id INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  starting_date DATE DEFAULT NULL,
+  created_by INT NOT NULL,
+  updated_by INT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_exam_schedule_acedmic_year FOREIGN KEY (acedmic_year_id) REFERENCES acedmic_year(acedmic_year_id),
+  CONSTRAINT fk_exam_schedule_institute FOREIGN KEY (institute_id) REFERENCES institute(institute_id),
+  CONSTRAINT fk_exam_schedule_university FOREIGN KEY (university_id) REFERENCES university(university_id),
+  CONSTRAINT fk_exam_schedule_session  FOREIGN KEY (session_id) REFERENCES session(session_id),
+  CONSTRAINT fk_exam_schedule_exam_setup_type  FOREIGN KEY (exam_setup_type_id) REFERENCES exam_setup_type(exam_setup_type_id),
+  CONSTRAINT fk_exam_schedule_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+  CONSTRAINT fk_exam_schedule_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

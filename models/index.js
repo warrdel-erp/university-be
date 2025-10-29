@@ -745,6 +745,9 @@ examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: '
 sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
 examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
 
+acedmicYearModel.hasMany(examStructureModel, { foreignKey: 'acedmicYearId', sourceKey: 'acedmicYearId', as: 'examStructuresAcedmic' });
+examStructureModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmicYearId', targetKey: 'acedmicYearId', as: 'acedmicExam' });
+
 syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
 acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
 
