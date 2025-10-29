@@ -61,23 +61,52 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
         };
 
         const schedules = await model.examStructureScheduleMappingModel.findAll({
-            attributes: ['examStructureScheduleMapperId', 'name', 'startingDate'],
+            // attributes: ['examStructureScheduleMapperId', 'name', 'startingDate'],
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
             where: whereClause,
             include: [
                 {
                     model: model.examSetupTypeModel,
                     as: "examSetupType",
-                    attributes: ['examType'],
+                    // attributes: ['examType'],
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
                     include: [
                         {
                             model: model.syllabusDetailsModel,
                             as: "syllabusDetailsExam",
-                            attributes: ['subjectId'],
+                            // attributes: ['subjectId'],
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
                             include: [
                                 {
                                     model: model.subjectModel,
                                     as: 'syllabusSubject',
-                                    attributes: ['subjectName']
+                                    // attributes: ['subjectName'],
+                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
+                                    include:[
+                                        {
+                                            model:model.classSubjectMapperModel,
+                                            as:'subjects',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                            include:[
+                                                {
+                                                    model:model.semesterModel,
+                                                    as:'semestermapping',
+                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }, 
+                                                    include:[
+                                                        {
+                                                            model:model.studentModel,
+                                                            as:'studentSemester',
+                                                            attributes:['firstName','scholarNumber','enrollNumber']
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
                                 }
                             ]
                         }
