@@ -215,3 +215,43 @@ export async function getDetailByExamType(examSetupTypeId) {
     throw error;
   }
 };
+
+export async function getExamDetailByStudentId(studentId) {
+  try {
+    const result = await model.studentModel.findOne({
+      attributes: ["studentId","semesterId","firstName"] ,
+      where: { studentId },
+      include: [
+        {
+          model: model.semesterModel,
+          as: "studentSemester",
+          attributes: ["semesterId","name"] ,
+          include: [
+            {
+              model: model.examScheduleModel,
+              as: "examSchedules",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+              include:[
+                {
+                    model:model.subjectModel,
+                    as:'subjectSchedule',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model:model.examStructureScheduleMappingModel,
+                    as:'mapperSchedule',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                }
+              ]
+            }
+          ],
+        },
+      ],
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam structure details for student:", error.message);
+    throw error;
+  }
+};

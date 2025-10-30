@@ -124,3 +124,30 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy,universit
 export async function getDetailByExamType(examSetupTypeId) {
     return await examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);
 };
+
+export async function getExamDetailByStudentId(studentId) {
+  const data = await examStructureScheduleRepository.getExamDetailByStudentId(studentId);
+
+  if (!data || !data.studentSemester) {
+    return null;
+  }
+
+  const studentInfo = {
+    studentId: data.studentId,
+    studentName: data.firstName,
+    semesterId: data.studentSemester.semesterId,
+    semesterName: data.studentSemester.name,
+    exams: data.studentSemester.examSchedules.map(exam => ({
+      subjectId: exam.subjectId,
+      subjectName: exam.subjectSchedule?.subjectName,
+      subjectCode: exam.subjectSchedule?.subjectCode,
+      subjectType: exam.subjectSchedule?.subjectType,
+      type: exam.type,
+      examDate: exam.examDate,
+      examTime: exam.examTime,
+      duration: exam.duration
+    }))
+  };
+
+  return studentInfo;
+};

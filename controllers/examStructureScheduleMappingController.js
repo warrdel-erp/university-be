@@ -112,3 +112,23 @@ export async function getDetailByExamType(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export async function getExamDetailByStudentId(req, res) {
+
+  try {
+    const studentId = parseInt(req.query.studentId, 10);
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: "studentId is required" });
+    }
+
+    const examDetails = await examStructureScheduleServices.getExamDetailByStudentId(studentId);
+
+    if (examDetails) {
+      res.status(200).json({ success: true, data: examDetails });
+    } else {
+      res.status(404).json({ success: false, message: "Exam type not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
