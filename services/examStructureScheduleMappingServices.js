@@ -94,10 +94,10 @@ export async function updateExamStructureSchedule(examStructureScheduleId, examD
     await examStructureScheduleRepository.updateExamStructureSchedule(examStructureScheduleId, examDetail);
 };
 
-export async function addExamType(examDetail, createdBy, updatedBy,universityId,instituteId) {
+export async function addExamSchedule(examDetail, createdBy, updatedBy,universityId,instituteId) {
     examDetail.createdBy = createdBy;
     examDetail.updatedBy = updatedBy;
-    const result = await examStructureScheduleRepository.addExamType(examDetail);
+    const result = await examStructureScheduleRepository.addExamSchedule(examDetail);
     return result;
 };
 

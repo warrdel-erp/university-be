@@ -111,7 +111,8 @@ import teacherAttendeceModel from './teacherAttendenceModel.js';
 import leavePolicyModel from './leavePolicyModel.js';
 import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
-import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js'
+import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js';
+import examScheduleModel from './examScheduleModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -909,4 +910,5 @@ export {
     leavePolicyModel,
     leaveRequestModel,
     examStructureScheduleMappingModel,
+    examScheduleModel,
 };

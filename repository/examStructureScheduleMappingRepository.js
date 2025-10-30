@@ -182,12 +182,12 @@ export async function updateExamStructureSchedule(examStructureId, examDetail) {
     }
 };
 
-export async function addExamType(examDetail) {
+export async function addExamSchedule(examDetail) {
     try {
-        const result = await model.examSetupTypeModel.create(examDetail);
+        const result = await model.examScheduleModel.create(examDetail);
         return result;
     } catch (error) {
-        console.error("Error adding exam Structure setup type:", error);
+        console.error("Error adding exam schedule:", error);
         throw error;
     }
 };

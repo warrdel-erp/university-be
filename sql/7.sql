@@ -594,3 +594,25 @@ CREATE TABLE exam_structure_schedule_mapper (
   CONSTRAINT fk_exam_schedule_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
   CONSTRAINT fk_exam_schedule_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+CREATE TABLE exam_schedule (
+    exam_schedule_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_id INT NULL,
+    semester_id INT NULL,
+    exam_structure_schedule_mapper_id INT NULL,
+    exam_date DATE NOT NULL,
+    exam_time TIME NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    duration VARCHAR(255) NOT NULL,
+    is_publish BOOLEAN NOT NULL DEFAULT FALSE,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_exam_schedule_subject FOREIGN KEY (subject_id) REFERENCES subject (subject_id),
+    CONSTRAINT fk_exam_schedule_semester FOREIGN KEY (semester_id) REFERENCES semester (semester_id),
+    CONSTRAINT fk_exam_schedule_exam_structure_schedule_mapper FOREIGN KEY (exam_structure_schedule_mapper_id) REFERENCES exam_structure_schedule_mapper (exam_structure_schedule_mapper_id),
+    CONSTRAINT fk_exam_schedul_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_exam_schedul_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);

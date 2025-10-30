@@ -84,16 +84,16 @@ export async function deleteExamStructureSchedule(req, res) {
     }
 };
 
-export async function addExamType(req, res) {
-    const {examStructureScheduleId } = req.body;
+export async function addExamSchedule(req, res) {
+    const {examStructureScheduleMapperId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(examStructureScheduleId)) {
-            return res.status(400).send("examStructureScheduleId Required fields are missing");
+        if (!(examStructureScheduleMapperId)) {
+            return res.status(400).send("examStructureScheduleMapperId Required fields are missing");
         }
-        const examStructureSchedule = await examStructureScheduleServices.addExamType(req.body, createdBy, updatedBy);
-        res.status(201).json({ message: "Exam setup type created successfully", examStructureSchedule });
+        const examSchedule = await examStructureScheduleServices.addExamSchedule(req.body, createdBy, updatedBy);
+        res.status(201).json({ message: "Exam schedule created successfully", examSchedule });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

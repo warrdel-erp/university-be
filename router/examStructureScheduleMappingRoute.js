@@ -6,7 +6,7 @@ import {
     getSingleExamStructureSchedule,
     updateExamStructureSchedule,
     deleteExamStructureSchedule,
-    addExamType,getDetailByExamType
+    addExamSchedule,getDetailByExamType
 } from "../controllers/examStructureScheduleMappingController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -20,7 +20,7 @@ router.patch("/", userAuth, updateExamStructureSchedule);
 
 router.delete("/", userAuth, deleteExamStructureSchedule);
 
-router.post("/examType", userAuth, addExamType);
+router.post("/schedule", userAuth, addExamSchedule);
 
 router.get("/examType", userAuth, getDetailByExamType);
 
