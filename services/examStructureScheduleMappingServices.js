@@ -9,12 +9,13 @@ export async function addExamStructureSchedule(examScheduleDetail, createdBy, up
     return result;
 };
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId,examSetupTypeId) {
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
   const data = await examStructureScheduleRepository.getExamStructureSchedule(
     universityId,
     acedmicYearId,
     role,
-    instituteId,examSetupTypeId
+    instituteId,
+    examSetupTypeId
   );
 
   if (!data || !data.length) {
@@ -26,18 +27,19 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
   const secondScreenData = [];
 
   data.forEach(schedule => {
+    const examStructureScheduleMapperId = schedule.examStructureScheduleMapperId;
     const examName = schedule.name;
     const examType = schedule.examSetupType?.examType;
     const examSetupTypeId = schedule.examSetupType?.examSetupTypeId;
     const startingDate = schedule.startingDate;
     const sessionName = schedule.sessionSchedule?.sessionName;
+    const mapperSchedule = schedule.mapperSchedule || [];
 
     const subjects = schedule.examSetupType?.syllabusDetailsExam || [];
     const totalSubjects = subjects.length;
 
-    //  Data for first screen
+    // ----------- FIRST SCREEN DATA -----------
     const subjectNames = subjects.map(s => s.syllabusSubject?.subjectName);
-
     firstScreenData.push({
       examSetupTypeId,
       examName,
@@ -48,11 +50,14 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
       sessionName,
     });
 
-    //  Data for second screen
+    // ----------- SECOND SCREEN DATA -----------
     subjects.forEach(subDetail => {
       const subjectName = subDetail.syllabusSubject?.subjectName;
       const subjectId = subDetail.syllabusSubject?.subjectId;
       const subjectType = subDetail.subjectType;
+
+      // Match schedule data by subjectId
+      const matchedSchedule = mapperSchedule.find(ms => ms.subjectId === subjectId);
 
       subDetail.syllabusSubject?.subjects?.forEach(sub => {
         const semesterName = sub.semestermapping?.name;
@@ -61,13 +66,14 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
         const studentCount = students.length;
 
         const studentList = students.map(stu => ({
-          studentId:stu.studentId,
+          studentId: stu.studentId,
           studentName: stu.firstName,
           scholarNumber: stu.scholarNumber,
           enrollNumber: stu.enrollNumber,
         }));
 
         secondScreenData.push({
+          examStructureScheduleMapperId,
           examSetupTypeId,
           subjectName,
           subjectId,
@@ -75,22 +81,28 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
           semesterId,
           studentCount,
           subjectType,
-          studentList,
+          // studentList
+          // --- Matched schedule details ---
+          examScheduleId: matchedSchedule?.examScheduleId || null,
+          examDate: matchedSchedule?.examDate || null,
+          examTime: matchedSchedule?.examTime || null,
+          duration: matchedSchedule?.duration || null,
+          type: matchedSchedule?.type || null,
         });
       });
     });
   });
 
-  console.log(`>>>>>>>>>>>>>>1111`,JSON.stringify(firstScreenData, null, 2));
-
-  console.log(`>>>>>>>>>>>>>>>>>>222`,JSON.stringify(secondScreenData, null, 2));
+  console.log(">>> First Screen Data:", JSON.stringify(firstScreenData, null, 2));
+  console.log(">>> Second Screen Data:", JSON.stringify(secondScreenData, null, 2));
 
   return { firstScreenData, secondScreenData };
-}
+};
 
-
-export async function getSingleExamStructureSchedule(courseId,sessionId, universityId) {
-    return await examStructureScheduleRepository.getSingleExamStructureSchedule(courseId,sessionId, universityId);
+export async function publishExamStructureSchedule(publishExamStructureSchedule) {
+  const { examScheduleId } = publishExamStructureSchedule;
+  const data = { isPublish: true };
+  return await examStructureScheduleRepository.publishExamStructureSchedule(examScheduleId,data);
 };
 
 export async function deleteExamStructureSchedule(examStructureScheduleId) {

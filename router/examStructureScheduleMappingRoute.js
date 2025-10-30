@@ -3,7 +3,7 @@ const router = Router();
 import {
     addExamStructureSchedule,
     getAllExamStructureSchedule,
-    getSingleExamStructureSchedule,
+    publishExamStructureSchedule,
     updateExamStructureSchedule,
     deleteExamStructureSchedule,
     addExamSchedule,getDetailByExamType
@@ -14,7 +14,7 @@ router.post("/", userAuth, addExamStructureSchedule);
 
 router.get("/", userAuth, getAllExamStructureSchedule);
 
-router.get("/single", userAuth, getSingleExamStructureSchedule);
+router.patch("/publish", userAuth, publishExamStructureSchedule);
 
 router.patch("/", userAuth, updateExamStructureSchedule);
 

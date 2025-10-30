@@ -117,6 +117,11 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
                     model: model.sessionModel,
                     as: "sessionSchedule",
                     attributes: ["sessionName"]
+                },
+                {
+                    model:model.examScheduleModel,
+                    as:'mapperSchedule',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 }
             ]
         });
@@ -171,10 +176,10 @@ export async function deleteExamStructureSchedule(examStructureId) {
     }
 };
 
-export async function updateExamStructureSchedule(examStructureId, examDetail) {
+export async function publishExamStructureSchedule(examScheduleId,data) {
     try {
-        const result = await model.examStructureScheduleMappingModel.update(examDetail, {
-            where: { examStructureId },
+        const result = await model.examScheduleModel.update(data, {
+            where: { examScheduleId },
         });
         return result;
     } catch (error) {

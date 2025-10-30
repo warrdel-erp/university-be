@@ -31,23 +31,14 @@ export async function getAllExamStructureSchedule(req, res) {
     }
 }
 
-export async function getSingleExamStructureSchedule(req, res) {
-  const universityId = req.user.universityId;
-
+export async function publishExamStructureSchedule(req, res) {
   try {
-    const courseId = parseInt(req.query.courseId, 10);
-    const sessionId = parseInt(req.query.sessionId, 10);
-
-    if (!courseId && !sessionId) {
-      return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
-    }
-
-    const examDetails = await examStructureScheduleServices.getSingleExamStructureSchedule(courseId, sessionId, universityId);
+    const examDetails = await examStructureScheduleServices.publishExamStructureSchedule(req.body);
 
     if (examDetails) {
-      res.status(200).json({ success: true, data: examDetails });
+      res.status(200).json({ success: true,message: "Exam Structure Schedule publish successfully"});
     } else {
-      res.status(404).json({ success: false, message: "Exam StructureSchedule not found" });
+      res.status(404).json({ success: false, message: "Exam StructureSchedule publish in error" });
     }
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
