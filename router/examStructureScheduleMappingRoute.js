@@ -3,9 +3,9 @@ const router = Router();
 import {
     addExamStructureSchedule,
     getAllExamStructureSchedule,
-    publishExamStructureSchedule,
-    updateExamStructureSchedule,
-    deleteExamStructureSchedule,
+    publishExamSchedule,
+    updateExamSchedule,
+    deleteExamSchedule,
     addExamSchedule,getDetailByExamType
 } from "../controllers/examStructureScheduleMappingController.js";
 import userAuth from "../middleware/authUser.js";
@@ -14,11 +14,11 @@ router.post("/", userAuth, addExamStructureSchedule);
 
 router.get("/", userAuth, getAllExamStructureSchedule);
 
-router.patch("/publish", userAuth, publishExamStructureSchedule);
+router.patch("/publish", userAuth, publishExamSchedule);
 
-router.patch("/", userAuth, updateExamStructureSchedule);
+router.patch("/schedule", userAuth, updateExamSchedule);
 
-router.delete("/", userAuth, deleteExamStructureSchedule);
+router.delete("/schedule", userAuth, deleteExamSchedule);
 
 router.post("/schedule", userAuth, addExamSchedule);
 

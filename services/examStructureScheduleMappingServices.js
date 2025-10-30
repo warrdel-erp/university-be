@@ -99,19 +99,19 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
   return { firstScreenData, secondScreenData };
 };
 
-export async function publishExamStructureSchedule(publishExamStructureSchedule) {
+export async function publishExamSchedule(publishExamStructureSchedule) {
   const { examScheduleId } = publishExamStructureSchedule;
   const data = { isPublish: true };
-  return await examStructureScheduleRepository.publishExamStructureSchedule(examScheduleId,data);
+  return await examStructureScheduleRepository.publishExamSchedule(examScheduleId,data);
 };
 
-export async function deleteExamStructureSchedule(examStructureScheduleId) {
-    return await examStructureScheduleRepository.deleteExamStructureSchedule(examStructureScheduleId);
+export async function deleteExamSchedule(examScheduleId) {
+    return await examStructureScheduleRepository.deleteExamSchedule(examScheduleId);
 };
 
-export async function updateExamStructureSchedule(examStructureScheduleId, examDetail, updatedBy) {
+export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
     examDetail.updatedBy = updatedBy;
-    await examStructureScheduleRepository.updateExamStructureSchedule(examStructureScheduleId, examDetail);
+    await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 };
 
 export async function addExamSchedule(examDetail, createdBy, updatedBy,universityId,instituteId) {

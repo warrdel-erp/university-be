@@ -134,56 +134,36 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     }
 }
 
-export async function getSingleExamStructureSchedule(courseId, sessionId, universityId) {
-    try {
-        const result = await model.examStructureScheduleMappingModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { courseId, sessionId, universityId },
-            include: [
-                {
-                    model: model.courseModel,
-                    as: "courseExam",
-                    attributes: ["courseName", "capacity"],
-                },
-                {
-                    model: model.sessionModel,
-                    as: "sessionExam",
-                    attributes: ["sessionName"],
-                },
-                {
-                    model: model.examSetupTypeModel,
-                    as: "setupTypes", 
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-                }
-            ],
-        });
-
-        return result;
-    } catch (error) {
-        console.error("Error fetching exam Structure:", error);
-        throw error;
-    }
-};
-
-
-export async function deleteExamStructureSchedule(examStructureId) {
-    try {
-        const deleted = await model.examStructureScheduleMappingModel.destroy({ where: { examStructureId } });
-        return deleted > 0;
-    } catch (error) {
-        console.error("Error deleting exam Structure:", error);
-        throw error;
-    }
-};
-
-export async function publishExamStructureSchedule(examScheduleId,data) {
+export async function updateExamSchedule(examScheduleId,data) {
     try {
         const result = await model.examScheduleModel.update(data, {
             where: { examScheduleId },
         });
         return result;
     } catch (error) {
-        console.error("Error updating exam Structure:", error);
+        console.error("Error updating exam Schedule:", error);
+        throw error;
+    }
+};
+
+export async function deleteExamSchedule(examScheduleId){
+    try {
+        const deleted = await model.examScheduleModel.destroy({ where: { examScheduleId } });
+        return deleted > 0;
+    } catch (error) {
+        console.error("Error deleting exam Schedule:", error);
+        throw error;
+    }
+};
+
+export async function publishExamSchedule(examScheduleId,data) {
+    try {
+        const result = await model.examScheduleModel.update(data, {
+            where: { examScheduleId },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error updating exam Schedule:", error);
         throw error;
     }
 };

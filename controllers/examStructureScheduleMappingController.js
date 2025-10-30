@@ -31,43 +31,43 @@ export async function getAllExamStructureSchedule(req, res) {
     }
 }
 
-export async function publishExamStructureSchedule(req, res) {
+export async function publishExamSchedule(req, res) {
   try {
-    const examDetails = await examStructureScheduleServices.publishExamStructureSchedule(req.body);
+    const examDetails = await examStructureScheduleServices.publishExamSchedule(req.body);
 
     if (examDetails) {
-      res.status(200).json({ success: true,message: "Exam Structure Schedule publish successfully"});
+      res.status(200).json({ success: true,message: "Exam  Schedule publish successfully"});
     } else {
-      res.status(404).json({ success: false, message: "Exam StructureSchedule publish in error" });
+      res.status(404).json({ success: false, message: "Exam Schedule publish in error" });
     }
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-export async function updateExamStructureSchedule(req, res) {
+export async function updateExamSchedule(req, res) {
     try {
-        const { examStructureScheduleId } = req.body;
-        if (!examStructureScheduleId) {
-            return res.status(400).send("examStructureScheduleId is required");
+        const { examScheduleId } = req.body;
+        if (!examScheduleId) {
+            return res.status(400).send("examScheduleId is required");
         }
         const updatedBy = req.user.userId;
-        const examDetails = await examStructureScheduleServices.updateExamStructureSchedule(examStructureScheduleId, req.body, updatedBy);
-        res.status(200).json({ message: "Exam StructureSchedule updated successfully", examDetails });
+        const examDetails = await examStructureScheduleServices.updateExamSchedule(examScheduleId, req.body, updatedBy);
+        res.status(200).json({ message: "Exam Schedule updated successfully", examDetails });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-export async function deleteExamStructureSchedule(req, res) {
+export async function deleteExamSchedule(req, res) {
     try {
-        const { examStructureScheduleId } = req.query;
-        if (!examStructureScheduleId) {
-            return res.status(400).json({ message: "examStructureScheduleId is required" });
+        const { examScheduleId } = req.query;
+        if (!examScheduleId) {
+            return res.status(400).json({ message: "examScheduleId is required" });
         }
-        const deleted = await examStructureScheduleServices.deleteExamStructureSchedule(examStructureScheduleId);
+        const deleted = await examStructureScheduleServices.deleteExamSchedule(examScheduleId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for exam StructureSchedule ID ${examStructureScheduleId}` });
+            res.status(200).json({ message: `Delete successful for exam StructureSchedule ID ${examScheduleId}` });
         } else {
             res.status(404).json({ message: "Exam StructureSchedule not found" });
         }
