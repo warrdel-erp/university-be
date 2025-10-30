@@ -9,12 +9,12 @@ export async function addExamStructureSchedule(examScheduleDetail, createdBy, up
     return result;
 };
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId) {
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId,examSetupTypeId) {
   const data = await examStructureScheduleRepository.getExamStructureSchedule(
     universityId,
     acedmicYearId,
     role,
-    instituteId
+    instituteId,examSetupTypeId
   );
 
   if (!data || !data.length) {
@@ -28,6 +28,7 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
   data.forEach(schedule => {
     const examName = schedule.name;
     const examType = schedule.examSetupType?.examType;
+    const examSetupTypeId = schedule.examSetupType?.examSetupTypeId;
     const startingDate = schedule.startingDate;
     const sessionName = schedule.sessionSchedule?.sessionName;
 
@@ -38,6 +39,7 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     const subjectNames = subjects.map(s => s.syllabusSubject?.subjectName);
 
     firstScreenData.push({
+      examSetupTypeId,
       examName,
       examType,
       startingDate,
@@ -49,22 +51,28 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     //  Data for second screen
     subjects.forEach(subDetail => {
       const subjectName = subDetail.syllabusSubject?.subjectName;
+      const subjectId = subDetail.syllabusSubject?.subjectId;
       const subjectType = subDetail.subjectType;
 
       subDetail.syllabusSubject?.subjects?.forEach(sub => {
         const semesterName = sub.semestermapping?.name;
+        const semesterId = sub.semestermapping?.semesterId;
         const students = sub.semestermapping?.studentSemester || [];
         const studentCount = students.length;
 
         const studentList = students.map(stu => ({
+          studentId:stu.studentId,
           studentName: stu.firstName,
           scholarNumber: stu.scholarNumber,
           enrollNumber: stu.enrollNumber,
         }));
 
         secondScreenData.push({
+          examSetupTypeId,
           subjectName,
+          subjectId,
           semesterName,
+          semesterId,
           studentCount,
           subjectType,
           studentList,
