@@ -9,13 +9,14 @@ export async function addExamStructureSchedule(examScheduleDetail, createdBy, up
     return result;
 };
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId,examStructureScheduleMapperId) {
   const data = await examStructureScheduleRepository.getExamStructureSchedule(
     universityId,
     acedmicYearId,
     role,
     instituteId,
-    examSetupTypeId
+    examSetupTypeId,
+    examStructureScheduleMapperId
   );
 
   if (!data || !data.length) {

@@ -21,10 +21,11 @@ export async function getAllExamStructureSchedule(req, res) {
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
     const {examSetupTypeId} = req.query
+    const {examStructureScheduleMapperId} = req.query
     const role = req.user.role;    
     const instituteId = req.user.instituteId;
     try {
-        const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId,acedmicYearId,role,instituteId,examSetupTypeId);
+        const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId,acedmicYearId,role,instituteId,examSetupTypeId,examStructureScheduleMapperId);
         res.status(200).json(StructureSchedules);
     } catch (error) {
         res.status(500).json({ error: error.message });

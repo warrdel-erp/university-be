@@ -29,7 +29,7 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
             {
               model: model.courseModel,
               as: 'courseInfo',
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id", "acedmic_year_id"] },
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id"] },
             }
           ]
         },

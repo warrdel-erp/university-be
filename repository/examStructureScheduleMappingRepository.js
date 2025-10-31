@@ -52,13 +52,14 @@ export async function addExamStructureSchedule(examDetailSchedule) {
 // };
 
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId,examSetupTypeId) {
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId,examSetupTypeId,examStructureScheduleMapperId) {
     try {
         const whereClause = {
             ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { instituteId }),
             ...(examSetupTypeId && {examSetupTypeId}),
+            ...(examStructureScheduleMapperId && {examStructureScheduleMapperId})
         };
 
         const schedules = await model.examStructureScheduleMappingModel.findAll({
