@@ -1,0 +1,109 @@
+import sequelize from "../database/sequelizeConfig.js";
+import { DataTypes } from 'sequelize';
+import users from "./userModel.js";
+import subjectModel from "./subjectModel.js";
+import examStructureScheduleMappingModel from "./examStructureScheduleMappingModel.js";
+import semesterModel from "./semesterModel.js";
+
+export default sequelize.define(
+    'exam_schedule',
+    {
+        examScheduleId: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            autoIncrement: true,
+            field: 'exam_schedule_id'
+        },
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_id',
+            references: {
+                model: subjectModel,
+                key: 'subject_id'
+            }
+        },
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'semester_id',
+            references: {
+                model: semesterModel,
+                key: 'semester_id'
+            }
+        },
+        examStructureScheduleMapperId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'exam_structure_schedule_mapper_id',
+            references: {
+                model: examStructureScheduleMappingModel,
+                key: 'exam_structure_schedule_mapper_id'
+            }
+        },
+        examDate:{
+            type:DataTypes.DATEONLY,
+            allowNull:false,
+            field:'exam_date'
+        },
+        examTime:{
+            type:DataTypes.TIME,
+            allowNull:false,
+            field:'exam_time'
+        },
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        duration: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        isPublish:{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            defaultValue:false,
+            field:'is_publish'
+        },
+        createdBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'created_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        updatedBy: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'updated_by',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+            field: 'created_at'
+        },
+        updatedAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+            field: 'updated_at'
+        },
+        deletedAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deleted_at'
+        }
+    },
+    {
+        tableName: 'exam_schedule',
+        timestamps: true,
+        paranoid: true
+    }
+);

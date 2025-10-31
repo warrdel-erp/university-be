@@ -98,3 +98,25 @@ export async function addExamType(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function getDetailByExamType(req, res) {
+  const universityId = req.user.universityId;
+
+  try {
+    const examSetupTypeId = parseInt(req.query.examSetupTypeId, 10);
+
+    if (!examSetupTypeId) {
+      return res.status(400).json({ success: false, message: "examSetupTypeId is required" });
+    }
+
+    const examDetails = await examStructureServices.getDetailByExamType(examSetupTypeId);
+
+    if (examDetails) {
+      res.status(200).json({ success: true, data: examDetails });
+    } else {
+      res.status(404).json({ success: false, message: "Exam type not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

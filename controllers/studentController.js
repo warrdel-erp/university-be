@@ -259,3 +259,47 @@ export const promoteStudent = async (req, res) => {
         return res.status(500).send("Internal Server Error: " + error.message);
     }
 };
+
+export const getFeePlanId = async (req, res) => {
+  const { semesterId, acedmicYearId, courseId } = req.query;
+  const universityId = req.user.universityId;
+
+  try {
+    const result = await studentService.getFeePlanId(semesterId,acedmicYearId,courseId,universityId);
+
+    if (result && result.success === false) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+    
+  } catch (error) {
+    console.error("Error in getting fee plan by IDs:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+export const getEmptyFeeDetails = async (req,res) => {
+    const universityId = req.user.universityId;
+    const {acedmicYearId} = req.query
+    const instituteId = req.user.instituteId;
+    const role = req.user.role;
+    try {
+        const result = await studentService.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in getting empty fee details:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};

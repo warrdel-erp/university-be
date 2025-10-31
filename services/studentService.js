@@ -9,8 +9,11 @@ import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRep
 import { getCourseByName,getClassByName } from '../repository/courseRepository.js';
 import {studentRegister} from '../services/userServices.js';
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
-import { findByPlanId } from '../repository/feePlanRepository.js';
+import { findByPlanId, getfeePlanByCourseAndAcedmic } from '../repository/feePlanRepository.js';
 import { parseCustomDate } from '../utility/dateFormat.js';
+import { getSemesterById } from './mainServices.js';
+import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from './acedmicYearServices.js';
+import { getSemesterGroup } from '../utility/semesterGroup.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -341,36 +344,42 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
-      console.log(`>>>>>>>>>>convertedData.birthDate`,convertedData.birthDate);
 
       const formatDob = await parseCustomDate(convertedData.birthDate)
-      console.log(`>>>>>>>>>formatDob`,formatDob);
+            
+      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)      
       
-      console.log(`>>>>>>>>convertedData.enrollDate`,convertedData.enrollDate);
-      
-      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
-      console.log(`>>>>>formatEnrollDate>>>>>>>>`,formatEnrollDate);
-      console.log(`>>>>>>>convertedData.admissionDate`,convertedData.admissionDate);
-      
-      
-      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
-      console.log(`>>>>>>>formatAdmissionDate>>>>`,formatAdmissionDate);
-      
+      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)      
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admisssionDate = formatAdmissionDate
-      console.log(`>>>>>>>>>>>convertedData`,convertedData);
-      
+      convertedData.admisssionDate = formatAdmissionDate      
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
-
+      // student register 
       const role = 'Student';
       const roleId = convertedData.roleId || 1
       const {studentId, email, phoneNumber, mobileNumber, scholarNumber,universityId}=result.dataValues
       const registerStudentData = {studentId,email,phoneNumber,mobileNumber,scholarNumber,universityId,role,roleId}
       await studentRegister (registerStudentData,transaction)
+
+      // student Invoice mapping
+      const feePlanId = result?.dataValues?.feePlanId
+
+      if(feePlanId){
+          const getInvoice = await findByPlanId(feePlanId)
+          const dataToInsert = getInvoice.map(invoice => ({
+            studentId,
+            universityId,
+            feePlanId,
+            feeNewInvoiceId: invoice.feeNewInvoiceId,
+            invoiceStatus: false,
+            createdBy,
+            updatedBy :createdBy
+          }));
+          await studentRepository.addStudentInvoiceMapper(dataToInsert,transaction)
+        }
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
@@ -833,4 +842,33 @@ function incrementScholarNumber(scholarNumber) {
 
   parts[parts.length - 1] = incremented;
   return parts.join('/');
-}
+};
+
+export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityId){
+  const semesterDetail = await getSemesterById(semesterId)
+  const {name,semesterDuration} = semesterDetail.dataValues
+  const acedmiceBack =  getSemesterGroup(name,semesterDuration)
+  const acedmicYearDetail = await getSingleacedmicYearDetails(acedmicYearId,universityId)
+  const {yearTitle,startingDate,endingDate} = acedmicYearDetail.dataValues
+  
+  const [startYear, endYear] = yearTitle.split('-').map(Number);
+
+  const backAcedmicYear = acedmiceBack.group -1
+
+  const newStartYear = startYear - backAcedmicYear;
+  const newEndYear = endYear - backAcedmicYear;
+
+  const updatedYearTitle = `${newStartYear}-${newEndYear}`;
+  const previousAcedmicYear = await getSingleacedmicYearDetailsByTitle(updatedYearTitle)
+  const previousAcedmicYearId = previousAcedmicYear.dataValues.acedmicYearId
+  const isActive = previousAcedmicYear.dataValues.isActive
+
+ if (!isActive) {
+      return { message: `Please activate academic year ${updatedYearTitle}`, success: false };
+  }
+  return await getfeePlanByCourseAndAcedmic(courseId,previousAcedmicYearId)
+};
+
+export async function getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role){
+  return await studentRepository.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role)
+};

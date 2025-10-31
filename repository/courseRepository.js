@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 export async function getCourseByCourseId(courseId) {
     try {
         const result = await model.courseModel.findOne({
-            attributes: ["universityId","courseDuration"] ,
+            attributes: ["universityId","courseDuration","isActive"] ,
             where: {
                 courseId: courseId
             },
@@ -12,6 +12,45 @@ export async function getCourseByCourseId(courseId) {
         return result;
     } catch (error) {
         console.error("Error in getting course details:", error);
+        throw error;
+    }
+};
+
+export async function addBulkCourse(courseData) {    
+    try {
+        const result = await model.courseModel.bulkCreate(courseData);
+                console.log(`>>>>>>resultCOurse`,result.length);
+
+        return result;
+    } catch (error) {
+        console.error("Error in add course bulk:", error);
+        throw error;
+    }
+};
+
+export async function changeCourseStatuss(courseId, status) {
+    try {
+        const result = await model.courseModel.update(status, {
+            where: { courseId }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error change coursse status ${courseId}:`, error);
+        throw error;
+    }
+}
+
+export async function getCourseByAcedmicId(acedmicYearId) {
+    try {
+        const result = await model.courseModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                acedmicYearId: acedmicYearId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting course details By Acedmic Year:", error);
         throw error;
     }
 };

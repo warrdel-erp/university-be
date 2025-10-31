@@ -44,10 +44,26 @@ export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
         console.error('Error fetching acedmicYear details:', error);
         throw error;
     }
+};
+
+export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
+    console.log(`>>>>>>>yearTitle`,yearTitle);
+    
+    try {
+        const acedmicYear = await model.acedmicYearModel.findOne({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: { yearTitle },
+        });
+console.log(`>>>>>>acedmicYear`,acedmicYear);
+
+        return acedmicYear;
+    } catch (error) {
+        console.error('Error fetching acedmicYear details:', error);
+        throw error;
+    }
 }
 
 export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
-    console.log(`>>>>>>>>>>>>>acedmicYearId, acedmicYearData`,acedmicYearId, acedmicYearData);
         try {
         const result = await model.acedmicYearModel.update(acedmicYearData, {
             where: { acedmicYearId }

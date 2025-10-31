@@ -111,6 +111,8 @@ import teacherAttendeceModel from './teacherAttendenceModel.js';
 import leavePolicyModel from './leavePolicyModel.js';
 import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
+import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js';
+import examScheduleModel from './examScheduleModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -171,8 +173,8 @@ affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_univers
 courseModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'instituted' });
 instituteModel.hasMany(courseModel, { foreignKey: 'institute_id', as: 'instituted' });
 
-courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
-acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
+// courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
+// acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
@@ -745,6 +747,9 @@ examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: '
 sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
 examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
 
+acedmicYearModel.hasMany(examStructureModel, { foreignKey: 'acedmicYearId', sourceKey: 'acedmicYearId', as: 'examStructuresAcedmic' });
+examStructureModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmicYearId', targetKey: 'acedmicYearId', as: 'acedmicExam' });
+
 syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
 acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
 
@@ -780,6 +785,24 @@ leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leav
 
 leaveBalanceModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveBalancePolicy" });
 leavePolicyModel.hasMany(leaveBalanceModel, { foreignKey: "policy_id", as: "leaveBalance" });
+
+examSetupTypeModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "exam_setup_type_id",as: "scheduleMappers"});
+examStructureScheduleMappingModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupType"});
+
+sessionModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "session_id",as: "sessionSchedule"});
+examStructureScheduleMappingModel.belongsTo(sessionModel, {foreignKey: "session_id",as: "sessionSchedule"});
+
+examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+
+examScheduleModel.belongsTo(subjectModel, {foreignKey: "subject_id",as: "subjectSchedule"});
+subjectModel.hasMany(examScheduleModel, {foreignKey: "subject_id",as: "scheduleSubject"});
+
+examSetupTypeModel.hasMany(syllabusDetailsModel, {foreignKey: "exam_setup_type_id",as: "syllabusDetailsExam"});
+syllabusDetailsModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupTypeSyllabus"});
+
+examScheduleModel.belongsTo(semesterModel, {foreignKey: "semesterId",targetKey: "semesterId",as: "semesterexam"});
+semesterModel.hasMany(examScheduleModel, {foreignKey: "semesterId",sourceKey: "semesterId",as: "examSchedules"});
 
 export {
     settingModel,
@@ -895,4 +918,6 @@ export {
     leaveBalanceModel,
     leavePolicyModel,
     leaveRequestModel,
+    examStructureScheduleMappingModel,
+    examScheduleModel,
 };
