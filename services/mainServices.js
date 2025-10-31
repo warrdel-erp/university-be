@@ -10,7 +10,7 @@ export async function getAllCollegesAndCourses(universityId,campusId,instituteId
             mainRepository.getAllCampus(universityId,campusId),
             mainRepository.getAllInstitute(universityId,instituteId,headInstituteId,role,campusId),
             mainRepository.getAllAffiliatedUniversity(universityId,instituteId,headInstituteId,role),
-            mainRepository.getAllCourse(universityId,acedmicYearId,headInstituteId,role,instituteId,campusId),
+            mainRepository.getAllCourse(universityId,headInstituteId,role,instituteId,campusId),
             mainRepository.getAllSpecialization(universityId,acedmicYearId,headInstituteId,role),
             mainRepository.getAllSubject(universityId,acedmicYearId,headInstituteId,role,instituteId)
         ]);
@@ -256,6 +256,10 @@ export async function addClass(data,createdBy,universityId,instituteId) {
 
 export async function getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role){
     return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role)
+};
+
+export async function getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId){
+    return await mainRepository.getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId);
 };
 
 export async function addClassSubjectMapper(data, createdBy,instituteId) {  

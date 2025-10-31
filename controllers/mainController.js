@@ -168,6 +168,20 @@ export const getClass = async (req,res) => {
     }
 };
 
+export const getClassSpecific = async (req,res) => {
+    try {
+        const {campusId,instituteId,acedmicYearId,courseId,sessionId} = req.query
+        const universityId = req.user.universityId;
+        const role = req.user.role;    
+        const headInstituteId = req.user.instituteId;
+        const result = await mainServices.getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class specific Details:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
 export const addClassSubjectMapper = async (req,res) => {
     try {
         // const {classId} = req.body;
