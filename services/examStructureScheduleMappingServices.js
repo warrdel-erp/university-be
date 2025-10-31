@@ -42,6 +42,7 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     // ----------- FIRST SCREEN DATA -----------
     const subjectNames = subjects.map(s => s.syllabusSubject?.subjectName);
     firstScreenData.push({
+      examStructureScheduleMapperId,
       examSetupTypeId,
       examName,
       examType,
