@@ -173,14 +173,17 @@ affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_univers
 courseModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'instituted' });
 instituteModel.hasMany(courseModel, { foreignKey: 'institute_id', as: 'instituted' });
 
-// courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
-// acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
+employeeCodeMasterType.hasMany(courseModel, { foreignKey: "course_levelId", as: "coursesCodeMaster", });
+courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as: "courseLevelCourses", });
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 
 instituteModel.belongsTo(campusModel, { foreignKey: 'institute_id', as: 'campues' });
 campusModel.hasMany(instituteModel, { foreignKey: 'institute_id', as: 'campues' });
+
+campusModel.hasMany(instituteModel, {foreignKey: "campusId",as: "instituteData"});
+instituteModel.belongsTo(campusModel, {foreignKey: "campusId",  as: "campusData",});
 
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSectionAdd' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSectionAdd' });

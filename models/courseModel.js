@@ -4,7 +4,6 @@ import university from "./universityModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
-// import acedmicYearModel from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
