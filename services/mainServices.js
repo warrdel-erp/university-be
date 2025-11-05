@@ -1,6 +1,7 @@
 import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
+import * as studentRepository from '../repository/studentRepository.js';
 
 export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId) {
     try {
@@ -367,4 +368,8 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
         console.error("Error in creating subject bulk upload:", error);
         throw new Error("Failed to create subject bulk upload");
     }
+};
+
+export async function getClassRecord(courseId,semesterId,classSectionId,acedmicYearId){
+    return await studentRepository.getClassRecord(courseId,semesterId,classSectionId,acedmicYearId);
 };

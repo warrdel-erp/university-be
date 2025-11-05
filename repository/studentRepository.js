@@ -897,3 +897,72 @@ export async function getEmptyFeeDetails(universityId, acedmicYearId,instituteId
         throw error;
     }
 };
+
+export async function getStudentSubject(studentId) {    
+    try {
+        const result = await model.studentModel.findAll({
+            where: {
+                studentId
+            },
+            attributes:  ["studentId","firstName","middleName","lastName"] ,
+            include: [
+                {
+                    model: model.semesterModel,
+                    as: "studentSemester",
+                    attributes: ["semesterId","name","termType","semesterDuration","courseDuration","totalSemester"],
+                    include:[
+                        {
+                            model:model.classSubjectMapperModel,
+                            as:'semestermapping',
+                            attributes:['classSubjectMapperId','subjectId','semesterId'],
+                            include:[
+                                {
+                                    model:model.subjectModel,
+                                    as:'subjects',
+                                    attributes:['subjectId','subjectName','subjectCode','subjectType']
+                                }
+                            ]
+                        }
+                    ]
+                },
+               
+            ]
+        });
+
+        return result;
+    } catch (error) {
+        console.error('Error in getting feeplan details:', error);
+        throw error;
+    }
+};
+
+export async function getClassRecord(courseId,semesterId,classSectionId,acedmicYearId){    
+    try {
+        const student = await model.studentModel.findAll({
+            where: {
+                classSectionsId:classSectionId,
+                courseId,semesterId,acedmicYearId
+            },
+            attributes:  ["studentId","firstName","middleName","lastName","scholarNumber","email","mobileNumber","phoneNumber","courseId","semesterId","classSectionsId","acedmicYearId"] ,
+        });
+
+        const teacher = await model.teacherSectionMappingModel.findAll({
+            where: {
+                class_sections_id:classSectionId
+            },
+            attributes:  ["teacherSectionMappingId","classSectionsId","employeeId","isCordinatory"] ,
+            include:[
+                {
+                    model:model.employeeModel,
+                    as:'employeeData',
+                    attributes:["employeeId","employeeName","employeeCode","department","employmentType","dateOfBirth","pickColor"]
+                }
+            ]
+        });
+
+        return {student,teacher};
+    } catch (error) {
+        console.error('Error in getting class record details:', error);
+        throw error;
+    }
+};

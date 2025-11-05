@@ -17,13 +17,33 @@ import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepos
 import * as employeeFilesRepository from '../repository/employeeFilesRepository.js';
 import { uploadFile } from '../utility/awsServices.js';
 import {employeeRegister} from '../services/userServices.js'
+import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
+
+async function generateEmployeeNumber(campusId,instituteId) {
+  const getCampusCodeDetail = await getCampusCode(campusId);
+  const getInstitueCodeDetail = await getInstituteCode(instituteId);
+  const campusCode = getCampusCodeDetail.get('campus_code');
+  const institueCode = getInstitueCodeDetail.get('institute_code');
+  const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
+  const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
+  let enrollNumber;
+  if (previousEnrollNumber) {
+    const enrollNumberParts = previousEnrollNumber.split('/');
+    const enrollNumberPrefix = enrollNumberParts.slice(0, 3).join('/');
+    const enrollNumberSuffix = parseInt(enrollNumberParts[3]) + 1;
+    enrollNumber = `${enrollNumberPrefix}/${enrollNumberSuffix.toString().padStart(6, '0')}`;
+  } else {
+    const yearLastTwoDigits = moment().format('YY');
+    enrollNumber = `${campusCode}/${institueCode}/${yearLastTwoDigits}/100001`;
+  }
+  return enrollNumber;
+};
 
 // const data = { campusId: '1', instituteId: '1', resumeNumber: '12', employeeCode: '44', employeeName: 'AMIT', shortName: 'AMIT', dateOfBirth: '2024-09-02', anniversaryDate: '2024-09-02', fatherName: 'Darryl Jordan', motherName: 'Cailin Perkins', bodySign: 'A BLACK MOLE ON FACE', workingHours: '78', aicteCode: '44', from: '2024-09-02', to: '2024-09-02', vehicleNumber: 'ABC0101', drivingLicense: 'ABCD010101', drivingLicenseExpireDate: '2024-09-02', address: '{"pAddress":"DELHI","pPincode":"111111","cAddress":"DELHI","cPincode":"111111","phoneNumber":"1234567890","mobileNumber":"1234567890","officialMobileNumber":"1234567890","officialEmailId":"ABC@GMAIL.COM","personalEmail":"ABCD@GMAIL.COM"}', office: '{"joiningDate":"2024-09-02","confirmationDate":"2024-09-02","relievingDate":"2024-09-02","retirementDate":"2024-09-02","transferDate":"2024-09-02","resignationDate":"2024-09-02","noticePeriod":"12","employeeFileNumber":"12","istActive":true,"bankName":"ABC","accountNumber":"1234567890","ifscCode":"ABC123","iindActive":true,"contractBased":true,"gpf":"QWERTYU","esiNumber":"QWERTYU","uanNumber":"QWERTYU","lectureBased":true,"pfNumber":"QWERTYU","panNumber":"QWERTY1234","voterId":"ABC123","aadharNumber":"1234567890","spouseName":"AMITAMIT","nomineeName":"AMITAMITAMIT","officeExtensionNumber":"1234567890","employeeRank":"MANAGER"}', roles: '["Hostel","Transport"]', skill: '[{"name":"Kuldeep","experienceInMonth":"12","experienceInYear":"1","proficiencyLevel":1}]', documents: '[{"qualifications":1,"degreeLevel":1,"stream":1,"fromYear":"2024-09-02","toYear":"2024-09-02","universityBoard":"12122","medicalCouncilName":"12","medicalRegistrationNumber":"12","medicalCouncilRegistrationDate":"2024-09-02","medicalRegistrationExpiryDate":"2024-09-02","percentage":"1212","remarks":"12","pursuing":true}]', qualification: '[{"document":1,"receivedDate":"2024-09-02","returnedDate":"2024-09-02","documentCopy":"{}"}]', experience: '[{"experienceType":1,"organization":"12","designation":"12","fromDate":"2024-09-02","toDate":"2024-09-02","totalExperienceMonths":"12","totalExperienceYears":"12","totalExperienceDays":"12","lastSalary":"12","remarks":"12"}]', achievements: '[{"achievementCategory":1,"title":"12","description":"21","noOfTimes":"12","discipline":"12","date":"2024-09-02","nameOf":"12121"}]', ward: '[{"wardName":"12","studyIn":"12","annualFees":"12","dateOfBirth":"2024-09-02"}]', activity: '[{"activity":"21","monthYear":"2024-09-02","remarks":"12"}]', reference: '[{"name":"12","designation":"12","mobaileNumber":"12","address":"12"}]', research: '[{"thesisName":"12","associate":"12","periodFrom":"2024-09-02","to":"2024-09-02","institution":"1212"}]', longLeave: '[{"leaveType":1,"dateOfLeaving":"2024-09-02","dateOfRejoining":"2024-09-02","remark":"12"}]', allDropDownData: '{"type":[],"code":[]}' }
 export async function addEmployee(data,files,createdBy,universityId,roleId,instituteId) {  
     
     const transaction = await sequelize.transaction();
     try {
-
         const address = data.address ? JSON.parse(data.address) : null;
         const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
         const office = data.office ? JSON.parse(data.office) : null;
@@ -43,6 +63,7 @@ export async function addEmployee(data,files,createdBy,universityId,roleId,insti
         // Add employee 
         data.createdBy = createdBy
         data.roleId = roleId
+        data.employeeCode = generateEmployeeNumber(data.campusId,data.instituteId)
         const employee = await employeeRepository.addEmployee(data,transaction );
         const employeeId = employee.dataValues.employeeId;
         const {employeeName} = employee.dataValues
@@ -334,10 +355,11 @@ export async function importEmployeeData(excelData, commonData) {
 
     for (const employee of excelData) {
       const convertedData = { ...employee, ...commonData };
+      const employeeCode = generateEmployeeNumber(convertedData.campusId,commonData.instituteId)
 
       const employeeData = {
         employeeName: convertedData.employeeName,
-        employeeCode: convertedData.employeeCode ? convertedData.employeeCode : "KY01012025" ,
+        employeeCode: convertedData.employeeCode ? convertedData.employeeCode : employeeCode ,
         employmentType: convertedData.employmentType,
         dateOfBirth: convertedData.dateOfBirth,
         fatherName: convertedData.fatherName,

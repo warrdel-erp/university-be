@@ -303,3 +303,18 @@ export const getEmptyFeeDetails = async (req,res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const getStudentSubject = async (req,res) => {
+    const {studentId} = req.params;
+    try {
+        if (!studentId){
+            res.status(400).send("student Id is required");
+        }else{
+            const result = await studentService.getStudentSubject(studentId);
+            res.status(200).send(result);
+        }
+    } catch (error) {
+        console.error(`Error in student subject student Id ${studentId}:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
