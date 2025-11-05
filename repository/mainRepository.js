@@ -343,6 +343,119 @@ export async function getClassDetails(classSectionsId, universityId, acedmicYear
     }
 };
 
+// export async function getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId) {
+//   try {
+//     const result = await model.campusModel.findOne({
+//       attributes: ["campusId", "campusName"],
+//       where: {
+//         universityId,
+//         ...(campusId && { campusId }),
+//       },
+//       include: [
+//         {
+//           model: model.instituteModel,
+//           as: "instituteData",
+//           attributes: ["instituteId", "instituteName"],
+//           where: {
+//             university_id: universityId,
+//             ...(role === "Head"
+//               ? { institute_id: headInstituteId }
+//               : instituteId
+//               ? { institute_id: instituteId }
+//               : {}),
+//           },
+//           include: [
+//             {
+//               model: model.courseModel,
+//               as: "instituted",
+//               attributes: [ "courseId", "courseName","courseCode", "instituteId", "affiliatedUniversityId", "courseDuration", "capacity", "isActive"],
+//               where: {
+//                 universityId,
+//                 ...(courseId && { courseId }),
+//               },
+//               include:[
+//                 {
+//                     model:model.subjectInfo,
+//                     as:'subjectInfo',
+//                     attributes:['subjectId','subjectName','subjectCode','subjectType']
+//                 }
+//               ]
+
+//               // Conditional if courseId include
+//               include: courseId
+//                 ? [
+//                     {
+//                       model: model.affiliatedIniversityModel,
+//                       as: "affiliated",
+//                       attributes: ["affiliatedUniversityName", "instituteId"],
+//                     },
+//                     {
+//                       model: model.employeeCodeMasterType,
+//                       as: "courseLevelCourses",
+//                       attributes: [ "employeeCodeMasterTypeId", "employeeCodeMasterId", "code", ],
+//                     },
+//                     {
+//                       model: model.semesterModel,
+//                       as: "semesterCourse",
+//                       attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
+//                       where: {
+//                         universityId,
+//                         ...(acedmicYearId && { acedmicYearId }),
+//                       },
+//                       include: [
+//                         {
+//                           model: model.classSectionModel,
+//                           as: "classSections",
+//                           attributes: [ "sessionId", "sectionId", "classId", "semesterId", "section", "class"],
+//                         },
+//                       ],
+//                     },
+//                     {
+//                       model: model.sessionCouseMappingModel,
+//                       as: "sessionCourseMappings",
+//                       attributes: {
+//                         exclude: [ "createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy"],
+//                       },
+//                       include: [
+//                         {
+//                           model: model.sessionModel,
+//                           as: "session",
+//                           attributes: [ "sessionName", "startingDate", "endingDate", "classTillDate"],
+//                         },
+//                       ],
+//                     },
+//                   ]
+//                   //else condition
+//                 : [
+//                     {
+//                       model: model.affiliatedIniversityModel,
+//                       as: "affiliated",
+//                       attributes: ["affiliatedUniversityName","instituteId",],
+//                     },
+//                     {
+//                       model: model.employeeCodeMasterType,
+//                       as: "courseLevelCourses",
+//                       attributes: ["employeeCodeMasterTypeId","employeeCodeMasterId","code"],
+//                     },
+//                     {
+//                       model: model.semesterModel,
+//                       as: "semesterCourse",
+//                       attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
+//                     }
+//                   ],
+//             },
+//           ],
+//         },
+//       ],
+//     });
+
+//     return result;
+//   } catch (error) {
+//     console.error("Error in getting class Details specific:", error);
+//     throw error;
+//   }
+// }
+
 export async function getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId) {
   try {
     const result = await model.campusModel.findOne({
@@ -368,74 +481,90 @@ export async function getClassSpecific(universityId,headInstituteId,role,campusI
             {
               model: model.courseModel,
               as: "instituted",
-              attributes: [ "courseId", "courseName", "instituteId", "affiliatedUniversityId", "courseDuration", "capacity", "isActive"],
+              attributes: [ "courseId", "courseName","courseCode", "instituteId", "affiliatedUniversityId", "courseDuration", "capacity", "isActive"],
               where: {
                 universityId,
                 ...(courseId && { courseId }),
               },
-
-              // Conditional if courseId include
-              include: courseId
-                ? [
-                    {
-                      model: model.affiliatedIniversityModel,
-                      as: "affiliated",
-                      attributes: ["affiliatedUniversityName", "instituteId"],
-                    },
-                    {
-                      model: model.employeeCodeMasterType,
-                      as: "courseLevelCourses",
-                      attributes: [ "employeeCodeMasterTypeId", "employeeCodeMasterId", "code", ],
-                    },
-                    {
-                      model: model.semesterModel,
-                      as: "semesterCourse",
-                      attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
-                      where: {
-                        universityId,
-                        ...(acedmicYearId && { acedmicYearId }),
+              include:[
+                {
+                    model:model.subjectModel,
+                    as:'subjectInfo',
+                    attributes:['subjectId','subjectName','subjectCode','subjectType']
+                },
+                ...(courseId
+                  ? [
+                      {
+                        model: model.affiliatedIniversityModel,
+                        as: "affiliated",
+                        attributes: ["affiliatedUniversityName", "instituteId"],
                       },
-                      include: [
-                        {
-                          model: model.classSectionModel,
-                          as: "classSections",
-                          attributes: [ "sessionId", "sectionId", "classId", "semesterId", "section", "class"],
-                        },
-                      ],
-                    },
-                    {
-                      model: model.sessionCouseMappingModel,
-                      as: "sessionCourseMappings",
-                      attributes: {
-                        exclude: [ "createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy"],
+                      {
+                        model: model.employeeCodeMasterType,
+                        as: "courseLevelCourses",
+                        attributes: [ "employeeCodeMasterTypeId", "employeeCodeMasterId", "code", ],
                       },
-                      include: [
-                        {
-                          model: model.sessionModel,
-                          as: "session",
-                          attributes: [ "sessionName", "startingDate", "endingDate", "classTillDate"],
+                      {
+                        model: model.semesterModel,
+                        as: "semesterCourse",
+                        attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
+                        where: {
+                          universityId,
+                          ...(acedmicYearId && { acedmicYearId }),
                         },
-                      ],
-                    },
-                  ]
-                  //else condition
-                : [
-                    {
-                      model: model.affiliatedIniversityModel,
-                      as: "affiliated",
-                      attributes: ["affiliatedUniversityName","instituteId",],
-                    },
-                    {
-                      model: model.employeeCodeMasterType,
-                      as: "courseLevelCourses",
-                      attributes: ["employeeCodeMasterTypeId","employeeCodeMasterId","code"],
-                    },
-                    {
-                      model: model.semesterModel,
-                      as: "semesterCourse",
-                      attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
-                    }
-                  ],
+                        include: [
+                          {
+                            model: model.classSectionModel,
+                            as: "classSections",
+                            attributes: [ "sessionId", "sectionId", "classId", "semesterId", "section", "class"],
+                          },
+                          {
+                            model:model.classSubjectMapperModel,
+                            as:'semestermapping',
+                            attributes:['classSubjectMapperId','subjectId','semesterId'],
+                            include:[
+                                {
+                                    model:model.subjectModel,
+                                    as:'subjects',
+                                    attributes:['subjectId','subjectName','subjectCode','subjectType']
+                                }
+                            ]
+                          }
+                        ],
+                      },
+                      {
+                        model: model.sessionCouseMappingModel,
+                        as: "sessionCourseMappings",
+                        attributes: {
+                          exclude: [ "createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy"],
+                        },
+                        include: [
+                          {
+                            model: model.sessionModel,
+                            as: "session",
+                            attributes: [ "sessionName", "startingDate", "endingDate", "classTillDate"],
+                          },
+                        ],
+                      },
+                    ]
+                  : [
+                      {
+                        model: model.affiliatedIniversityModel,
+                        as: "affiliated",
+                        attributes: ["affiliatedUniversityName","instituteId",],
+                      },
+                      {
+                        model: model.employeeCodeMasterType,
+                        as: "courseLevelCourses",
+                        attributes: ["employeeCodeMasterTypeId","employeeCodeMasterId","code"],
+                      },
+                      {
+                        model: model.semesterModel,
+                        as: "semesterCourse",
+                        attributes: [ "termType", "totalSemester", "semesterId", "name", "acedmicYearId"],
+                      }
+                    ]),
+              ],
             },
           ],
         },
@@ -447,9 +576,7 @@ export async function getClassSpecific(universityId,headInstituteId,role,campusI
     console.error("Error in getting class Details specific:", error);
     throw error;
   }
-}
-
-
+};
 
 export async function addClassSubjectMapper(data) {
     try {
