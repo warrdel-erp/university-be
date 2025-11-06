@@ -377,7 +377,11 @@ export async function getClassSpecific(universityId,headInstituteId,role,campusI
                 {
                     model:model.subjectModel,
                     as:'subjectInfo',
-                    attributes:['subjectId','subjectName','subjectCode','subjectType']
+                    attributes:['subjectId','subjectName','subjectCode','subjectType'],
+                    where: {
+                          universityId,
+                          ...(acedmicYearId && { acedmicYearId }),
+                        },
                 },
                 ...(courseId
                   ? [
