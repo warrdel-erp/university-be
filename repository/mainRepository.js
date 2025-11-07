@@ -407,7 +407,7 @@ export async function getClassSpecific(universityId,headInstituteId,role,campusI
                           {
                             model: model.classSectionModel,
                             as: "classSections",
-                            attributes: [ "sessionId", "sectionId", "classId", "semesterId", "section", "class"],
+                            attributes: [ "classSectionsId","sessionId", "sectionId", "classId", "semesterId", "section", "class"],
                           },
                           {
                             model:model.classSubjectMapperModel,
