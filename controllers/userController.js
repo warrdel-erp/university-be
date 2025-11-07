@@ -131,7 +131,7 @@ export const changePassword = async (req, res) => {
     }
     const isPasswordCorrect = await bcrypt.compare(
       oldPassword,
-      existingEmail.dataValues.password,
+      existingEmail.dataValues.dummyPassword,
     );
     
 
