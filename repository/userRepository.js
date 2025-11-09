@@ -245,3 +245,17 @@ export async function headRegister(data, transaction) {
         throw new Error('Failed to create user');
     }
 };
+
+
+export async function updateUser(userId,data) {    
+    
+    try {
+        const result = await model.userModel.update(data, {
+            where: { userId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating user ${userId}:`, error);
+        throw error; 
+    }
+};

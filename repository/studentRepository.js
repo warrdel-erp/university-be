@@ -944,6 +944,18 @@ export async function getClassRecord(courseId,semesterId,classSectionId,acedmicY
                 courseId,semesterId,acedmicYearId
             },
             attributes:  ["studentId","firstName","middleName","lastName","scholarNumber","email","mobileNumber","phoneNumber","courseId","semesterId","classSectionsId","acedmicYearId"] ,
+            include:[
+                {
+                    model:model.classSectionModel,
+                    as:'studentSections',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                },
+                {
+                    model:model.semesterModel,
+                    as:'studentSemester',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                }
+            ]
         });
 
         const teacher = await model.teacherSectionMappingModel.findAll({
@@ -955,7 +967,28 @@ export async function getClassRecord(courseId,semesterId,classSectionId,acedmicY
                 {
                     model:model.employeeModel,
                     as:'employeeData',
-                    attributes:["employeeId","employeeName","employeeCode","department","employmentType","dateOfBirth","pickColor"]
+                    attributes:["employeeId","employeeName","fatherName","motherName","employeeCode","department","employmentType","dateOfBirth","pickColor"],
+                    include:[
+                        {
+                            model:model.teacherSubjectMappingModel,
+                            as:'teacherEmployeeData',
+                            attributes:['teacherSubjectMappingId','classSubjectMapperId'],
+                            include:[
+                                {
+                                    model:model.classSubjectMapperModel,
+                                    as:'employeeSubject',
+                                    attributes:['classSubjectMapperId','subjectId'],
+                                    include:[
+                                        {
+                                            model:model.subjectModel,
+                                            as:'subjects',
+                                            attributes:['subjectName','subjectCode','subjectType']
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         });

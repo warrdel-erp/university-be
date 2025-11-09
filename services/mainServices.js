@@ -370,6 +370,35 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
     }
 };
 
-export async function getClassRecord(courseId,semesterId,classSectionId,acedmicYearId){
-    return await studentRepository.getClassRecord(courseId,semesterId,classSectionId,acedmicYearId);
+export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
+  const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+
+  const response = {
+    student: result.student.map((s) => ({
+      studentId: s.studentId,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      scholarNumber: s.scholarNumber,
+      email: s.email,
+      phoneNumber: s.phoneNumber,
+      semesterName: s.studentSemester?.name || null,
+      className: s.studentSections?.class || null,
+      sectionName: s.studentSections?.section || null,
+    })),
+
+    teacher: result.teacher.map((t) => ({
+      employeeId: t.employeeData?.employeeId,
+      employeeName: t.employeeData?.employeeName,
+      employeeCode: t.employeeData?.employeeCode,
+      department: t.employeeData?.department,
+      dateOfBirth: t.employeeData?.dateOfBirth,
+      subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
+        subjectName: sub.employeeSubject?.subjects?.subjectName,
+        subjectCode: sub.employeeSubject?.subjects?.subjectCode,
+        subjectType: sub.employeeSubject?.subjects?.subjectType,
+      })) || [],
+    })),
+  };
+
+  return response;
 };
