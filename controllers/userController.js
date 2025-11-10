@@ -115,6 +115,44 @@ export async function getAdminRegisterStudentAndEmployee(req, res) {
 }
 
 // change register password student and employee
+// export const changePassword = async (req, res) => {
+//   try {
+//     const { email, oldPassword, password, confirmPassword } = req.body;
+
+//     if (!email || !oldPassword || !password || !confirmPassword) {
+//       return res.status(400).json({ message: "All input fields are required" });
+//     }
+
+//     if (password !== confirmPassword) {
+//       return res
+//         .status(400)
+//         .json({ message: "New password and confirm password do not match" });
+//     }
+
+//     const existingUser = await userRepository.findEmailByEmail(email);
+//     if (!existingUser) {
+//       return res.status(404).json({ message: "Email does not exist" });
+//     }
+
+//     const isOldPasswordCorrect = (oldPassword === existingUser.dummyPassword);
+//     if (!isOldPasswordCorrect) {
+//       return res.status(400).json({ message: "Incorrect old password" });
+//     }
+
+//     const updatedUser = await userService.changePassword({ email, password });
+
+//     return res.status(200).json({
+//       message: "Password changed successfully",
+//       data: updatedUser,
+//     });
+//   } catch (error) {
+//     console.error("Error during password change:", error);
+//     return res
+//       .status(500)
+//       .json({ message: "Internal server error", error: error.message });
+//   }
+// };
+
 export const changePassword = async (req, res) => {
   try {
     const { email, oldPassword, password, confirmPassword } = req.body;
@@ -134,7 +172,14 @@ export const changePassword = async (req, res) => {
       return res.status(404).json({ message: "Email does not exist" });
     }
 
-    const isOldPasswordCorrect = oldPassword === existingUser.dummyPassword;
+    let isOldPasswordCorrect = false;
+
+    if (existingUser.dummyPassword && existingUser.dummyPassword.trim() !== "") {
+      isOldPasswordCorrect = oldPassword === existingUser.dummyPassword;
+    } else {
+      isOldPasswordCorrect = await bcrypt.compare(oldPassword, existingUser.password);
+    }
+
     if (!isOldPasswordCorrect) {
       return res.status(400).json({ message: "Incorrect old password" });
     }
