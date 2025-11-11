@@ -1,6 +1,7 @@
 import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
+import * as studentRepository from '../repository/studentRepository.js';
 
 export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId) {
     try {
@@ -367,4 +368,37 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
         console.error("Error in creating subject bulk upload:", error);
         throw new Error("Failed to create subject bulk upload");
     }
+};
+
+export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
+  const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+
+  const response = {
+    student: result.student.map((s) => ({
+      studentId: s.studentId,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      scholarNumber: s.scholarNumber,
+      email: s.email,
+      phoneNumber: s.phoneNumber,
+      semesterName: s.studentSemester?.name || null,
+      className: s.studentSections?.class || null,
+      sectionName: s.studentSections?.section || null,
+    })),
+
+    teacher: result.teacher.map((t) => ({
+      employeeId: t.employeeData?.employeeId,
+      employeeName: t.employeeData?.employeeName,
+      employeeCode: t.employeeData?.employeeCode,
+      department: t.employeeData?.department,
+      dateOfBirth: t.employeeData?.dateOfBirth,
+      subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
+        subjectName: sub.employeeSubject?.subjects?.subjectName,
+        subjectCode: sub.employeeSubject?.subjects?.subjectCode,
+        subjectType: sub.employeeSubject?.subjects?.subjectType,
+      })) || [],
+    })),
+  };
+
+  return response;
 };

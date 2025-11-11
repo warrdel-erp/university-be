@@ -358,7 +358,6 @@ export async function deleteEmployeeDetail (employeeId) {
 export async function createEmployeeWithDetails(employeeData, officeData, addressData, transaction) {
   //  Create Employee
   const employee = await model.employeeModel.create(employeeData, { transaction });
-  console.log(`>>>>>employee`,employee);
   
 
   // Create Employee Office
@@ -374,4 +373,23 @@ export async function createEmployeeWithDetails(employeeData, officeData, addres
   }
 
   return employee;
-}
+};
+
+export async function getPreviousEnrollNumber(instituteCode) {
+    try {
+        const attribute = ["employee_Code"];
+        const result = await model.employeeModel.findOne({
+            attributes: attribute,
+            where: {
+                employee_Code: {
+                    [Op.regexp]: `^${instituteCode}(/|$)`
+                }
+            },
+            order: [['employee_Code', 'DESC']]
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in get Previous Enroll Number for institue Code ${instituteCode}:`, error);
+        throw error;
+    }
+};

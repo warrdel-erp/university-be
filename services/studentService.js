@@ -872,3 +872,7 @@ export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityI
 export async function getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role){
   return await studentRepository.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role)
 };
+
+export async function getStudentSubject(studentId){
+  return await studentRepository.getStudentSubject(studentId)
+};

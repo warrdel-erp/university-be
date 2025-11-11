@@ -115,36 +115,86 @@ export async function getAdminRegisterStudentAndEmployee(req, res) {
 }
 
 // change register password student and employee
+// export const changePassword = async (req, res) => {
+//   try {
+//     const { email, oldPassword, password, confirmPassword } = req.body;
+
+//     if (!email || !oldPassword || !password || !confirmPassword) {
+//       return res.status(400).json({ message: "All input fields are required" });
+//     }
+
+//     if (password !== confirmPassword) {
+//       return res
+//         .status(400)
+//         .json({ message: "New password and confirm password do not match" });
+//     }
+
+//     const existingUser = await userRepository.findEmailByEmail(email);
+//     if (!existingUser) {
+//       return res.status(404).json({ message: "Email does not exist" });
+//     }
+
+//     const isOldPasswordCorrect = (oldPassword === existingUser.dummyPassword);
+//     if (!isOldPasswordCorrect) {
+//       return res.status(400).json({ message: "Incorrect old password" });
+//     }
+
+//     const updatedUser = await userService.changePassword({ email, password });
+
+//     return res.status(200).json({
+//       message: "Password changed successfully",
+//       data: updatedUser,
+//     });
+//   } catch (error) {
+//     console.error("Error during password change:", error);
+//     return res
+//       .status(500)
+//       .json({ message: "Internal server error", error: error.message });
+//   }
+// };
+
 export const changePassword = async (req, res) => {
   try {
-    const { email,oldPassword,password,confirmPassword} = req.body;
-    
-    const existingEmail = await userRepository.findEmailByEmail(email);
-    if (!(email && oldPassword && password)) {
-      res.status(400).send("All input is required");
-    }
-    if (password !== confirmPassword) {
-      return res.status(400).send("new pasword and confirm password does not match");
-    }
-    if (!existingEmail) {
-      return res.status(400).send("Email does not exist");
-    }
-    const isPasswordCorrect = await bcrypt.compare(
-      oldPassword,
-      existingEmail.dataValues.password,
-    );
-    
+    const { email, oldPassword, password, confirmPassword } = req.body;
 
-    if (!isPasswordCorrect) {
-      return res.status(400).send("Incorrect Old Password");
+    if (!email || !oldPassword || !password || !confirmPassword) {
+      return res.status(400).json({ message: "All input fields are required" });
     }
-     else {
-      const result = await userService.changePassword(req.body);
-      res.status(200).send(result);
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ message: "New password and confirm password do not match" });
     }
+
+    const existingUser = await userRepository.findEmailByEmail(email);
+    if (!existingUser) {
+      return res.status(404).json({ message: "Email does not exist" });
+    }
+
+    let isOldPasswordCorrect = false;
+
+    if (existingUser.dummyPassword && existingUser.dummyPassword.trim() !== "") {
+      isOldPasswordCorrect = oldPassword === existingUser.dummyPassword;
+    } else {
+      isOldPasswordCorrect = await bcrypt.compare(oldPassword, existingUser.password);
+    }
+
+    if (!isOldPasswordCorrect) {
+      return res.status(400).json({ message: "Incorrect old password" });
+    }
+
+    const updatedUser = await userService.changePassword({ email, password });
+
+    return res.status(200).json({
+      message: "Password changed successfully",
+      data: updatedUser,
+    });
   } catch (error) {
-    console.error("Error during change password:", error);
-    res.status(500).send("Internal server error");
+    console.error("Error during password change:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -164,10 +214,36 @@ export const changeStatus = async (req, res) => {
 };
 
 export const sendLink = async (req, res) => {
-   try {
-    await userService.sendLink(req.body.email, req);
-    res.json({ message: "Password reset link sent to email" });
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const result = await userService.sendLink(email.trim());
+
+    if (result && result.email && result.messageId) {
+      return res.status(200).json({
+        success: true,
+        message: "Password reset link sent to email successfully",
+        data: result,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to send password reset link. Please try again.",
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error in sendLink controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
   }
 };
