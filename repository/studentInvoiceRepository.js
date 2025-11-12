@@ -123,6 +123,12 @@ export async function getAllActiveInvoice(universityId) {
                     as: "studentMakePayment",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     
+                }, 
+                {
+                    model: model.feeTypeModel,
+                    as: "studentinvoiceFeeType",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    
                 },    
             ]
         });
@@ -143,6 +149,16 @@ export async function updateFeeNewInvoice(feeNewInvoiceId, data) {
     } catch (error) {
         console.error(`Error updating studentInvoiceMapperModel  ${feeNewInvoiceId}:`, error);
         throw error; 
+    }
+};
+
+export async function addStudentSpecificInvoice(data) {    
+    try {
+        const result = await model.studentInvoiceMapperModel.create(data);
+        return result;
+    } catch (error) {
+        console.error("Error in add Student specific Invoice:", error);
+        throw error;
     }
 };
 
