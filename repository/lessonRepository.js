@@ -292,4 +292,54 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
     console.error("Error in delete SubTopics:", error);
     throw error;
   }
-}
+};
+
+export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId) {
+  try {
+    const whereClause = {
+      ...(employeeId && { employeeId }),
+      ...(acedmicYearId && { acedmicYearId }),
+    };
+    const lesson = await model.teacherSubjectMappingModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: whereClause,
+      include: [
+        {
+          model: model.classSubjectMapperModel,
+          as: "employeeSubject",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          include: [
+            {
+              model: model.subjectModel,
+              as: 'subjects',
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+              include:[
+                {
+                  model:model.lessonModel,
+                  as:'lessonSubject',
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  include:[
+                    {
+                      model: model.topicModel,
+                      as: 'topicSession',
+                      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+                    },
+                    {
+                      model: model.semesterModel,
+                      as: 'lessionSemester',
+                      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    return lesson;
+  } catch (error) {
+    console.error('Error fetching lesson details:', error);
+    throw error;
+  }
+};

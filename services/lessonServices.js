@@ -239,4 +239,8 @@ export async function deleteMapping(lessonMappingId) {
     console.error("Error in deleteMapping:", error);
     throw error;
   }
-}
+};
+
+export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId) {
+    return await lesson.getEmployeeSubjectAndLesson(acedmicYearId,employeeId);
+};
