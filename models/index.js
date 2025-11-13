@@ -729,6 +729,9 @@ sessionModel.hasMany(feePlanModel, { foreignKey: 'sessionId', as: 'feePlanSessio
 lessonModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
 subjectModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
 
+lessonModel.belongsTo(employeeModel, { foreignKey: 'employeeId', as: 'employeeLesson' });
+employeeModel.hasMany(lessonModel, { foreignKey: 'employeeId', as: 'employeeLesson' });
+
 lessonModel.belongsTo(semesterModel, { foreignKey: 'subjectId', as: 'lessionSemester' });
 semesterModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'semesterLession' });
 

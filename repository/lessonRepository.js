@@ -47,6 +47,11 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
           model: model.topicModel,
           as: 'topicSession',
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+        },
+        {
+          model:model.employeeModel,
+          as:'employeeLesson',
+          attributes:["employeeId","campusId","instituteId","employeeCode","employeeName"],
         }
       ]
     });

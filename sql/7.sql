@@ -633,3 +633,13 @@ UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id IS NULL;
 UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id = 0;
 
 ALTER TABLE student_invoice_mapper ADD CONSTRAINT fk_invoice_fee_type_id FOREIGN KEY (fee_type_id) REFERENCES fee_type (fee_type_id) ON DELETE CASCADE;
+
+-- Add the employee_id column with the foreign key reference in lesson
+
+ALTER TABLE lesson ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE lesson SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE lesson SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE lesson ADD CONSTRAINT fk_lesson_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
