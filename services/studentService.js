@@ -14,6 +14,7 @@ import { parseCustomDate } from '../utility/dateFormat.js';
 import { getSemesterById } from './mainServices.js';
 import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from './acedmicYearServices.js';
 import { getSemesterGroup } from '../utility/semesterGroup.js';
+import * as feeInvoiceRepository  from '../repository/feeInvoiceRepository.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -875,4 +876,69 @@ export async function getEmptyFeeDetails(universityId,acedmicYearId,instituteId,
 
 export async function getStudentSubject(studentId){
   return await studentRepository.getStudentSubject(studentId)
+};
+
+export async function getFeeDetailsByStudentId(studentId) {
+    const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
+
+    if (!invoices || !invoices.length) return [];
+
+    const formatted = invoices.map((invoice) => {
+        const feeData = invoice.feeInvoicedata || {};
+
+        // 1. Map semesters
+        const semesters = (feeData.semesters || []).map((sem, index) => ({
+            name: sem.name || `Semester ${index + 1}`,
+            amount: Number(sem.fee || 0),
+            subTotal: Number(sem.fee || 0),
+            dueDate: feeData.EndDate || null,
+        }));
+
+        // 2. Map additional fees
+        const additionalFees = (feeData.additionalFees || []).map((fee, index) => ({
+            name: fee.name || `Additional Fee ${index + 1}`,
+            amount: Number(fee.fee || 0),
+            subTotal: Number(fee.fee || 0),
+            dueDate: feeData.EndDate || null,
+        }));
+
+        // 3. Combine feeItems
+        const feeItems = [...semesters, ...additionalFees];
+
+        // 4. Calculate paid amount
+        const payments = invoice.studentMakePayment || [];
+        const totalPaidAmount = payments.reduce(
+            (sum, pay) => sum + Number(pay.paidAmount || 0),
+            0
+        );
+
+        // 5. Last Payment
+        const lastPayment =
+            payments.length > 0 ? payments[payments.length - 1] : null;
+
+        // 6. Prepare formatted invoice
+        return {
+            studentInvoiceMapperId: invoice.studentInvoiceMapperId,
+            studentId: invoice.studentId,
+            invoiceNumber: invoice.invoiceNumber,
+            invoiceStatus: invoice.invoiceStatus,
+            total: Number(feeData.total || 0),
+            subTotal: Number(feeData.total || 0),
+            dueDate: feeData.EndDate || null,
+
+            feeItems,   // full list of semester + additional fees
+
+            totalPaidAmount,
+            remainingAmount:
+                Number(feeData.total || 0) - totalPaidAmount,
+
+            lastPayment,
+
+            // optional raw sections (only if needed)
+            feePlan: feeData.feePlan || null,
+            feeType: invoice.studentinvoiceFeeType || null,
+        };
+    });
+
+    return formatted;
 };

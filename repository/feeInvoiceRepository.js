@@ -215,3 +215,58 @@ export async function latestInvoiceDetailNumber(instituteCode) {
         throw error;
     }
 };
+
+export async function getFeeDetailsByStudentId(studentId) {
+    try {
+        const feeInvoice = await model.studentInvoiceMapperModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+            where: { studentId },
+            include:[
+                {
+                    model:model.feeTypeModel,
+                    as:'studentinvoiceFeeType',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    include:[
+                        {
+                            model:model.feeGroupModel,
+                            as:'feeGroup',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        }
+                    ]
+                },
+                {
+                    model:model.feeNewInvoiceModel,
+                    as:'feeInvoicedata',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    include:[
+                        {
+                            model:model.feePlanModel,
+                            as:'feePlan',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model: model.feePlanTypeModel,
+                            as: "additionalFees",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        },
+                        {
+                            model: model.feePlanSemesterModel,
+                            as: "semesters",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                        }
+                    ]
+                },
+                {
+                    model:model.feeInvoiceDetailRecordModel,
+                    as:'studentMakePayment',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                }
+            ]
+        });
+
+        return feeInvoice;
+    } catch (error) {
+        console.error('Error fetching student FeeInvoice details:', error);
+        throw error;
+    }
+};
