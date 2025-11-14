@@ -957,15 +957,15 @@ export async function getFeeDetailsByStudentId(studentId) {
             };
         }
 
-        // =========================
-        // STUDENT BASIC INFO
-        // =========================
-        const student = invoices[0].studentinvoice;
+        const student = invoices[0]?.studentinvoice || {};
 
+        // =========================
+        // STUDENT INFO
+        // =========================
         const studentInfo = {
-            studentName: `${student.firstName} ${student.middleName ?? ""} ${student.lastName}`.trim(),
+            studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
             course: student.course?.courseName || "",
-            scholarNumber: student.scholarNumber,
+            scholarNumber: student.scholarNumber || "",
             classSection: student.studentSemester?.classSections?.[0]?.section || "",
             semester: student.studentSemester?.name || "",
             academicYear: student.acdemicYear?.yearTitle || ""
@@ -973,80 +973,86 @@ export async function getFeeDetailsByStudentId(studentId) {
 
         // PERSONAL INFO
         const personalInfo = {
-            contactNo: student.phoneNumber,
-            email: student.email
+            contactNo: student.phoneNumber || "",
+            email: student.email || ""
         };
 
         // PARENT INFO
         const parentInfo = {
-            fatherName: student.fatherName,
+            fatherName: student.fatherName || "",
             contactNo: student.parentNumber || "",
             email: student.parentEmail || "",
-            address: student.pAddress
+            address: student.pAddress || ""
         };
 
         // =========================
-        // INVOICES MAPPING
+        // INVOICES
         // =========================
         const formattedInvoices = invoices.map(inv => {
-            const fee = inv.feeInvoicedata;
+            const fee = inv.feeInvoicedata || {}; // very strong null check
 
-            // build feeItems (semesters + additional fees)
+            const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
+            const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+
+            // BUILD ITEMS
             const feeItems = [];
 
-            if (fee.semesters?.length) {
-                fee.semesters.forEach(s => {
-                    feeItems.push({
-                        name: s.name,
-                        dueDate: fee.EndDate,
-                        amount: s.fee,
-                        subTotal: s.fee
-                    });
+            semesters.forEach(s => {
+                if (!s) return;
+                feeItems.push({
+                    name: s.name || "",
+                    dueDate: fee.EndDate || null,
+                    amount: s.fee || 0,
+                    subTotal: s.fee || 0
                 });
-            }
+            });
 
-            if (fee.additionalFees?.length) {
-                fee.additionalFees.forEach(a => {
-                    feeItems.push({
-                        name: a.name,
-                        dueDate: fee.EndDate,
-                        amount: a.fee,
-                        subTotal: a.fee
-                    });
+            additionalFees.forEach(a => {
+                if (!a) return;
+                feeItems.push({
+                    name: a.name || "",
+                    dueDate: fee.EndDate || null,
+                    amount: a.fee || 0,
+                    subTotal: a.fee || 0
                 });
-            }
+            });
 
-            const isApplied = inv.studentMakePayment.some(p => p.isApplyed === true);
+            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+
+            const isApplied = payments.some(p => p?.isApplyed === true);
 
             return {
-                studentInvoiceMapperId: inv.studentInvoiceMapperId,
-                invoiceNo: fee.InvoiceNumber,
-                title: fee.semesters?.[0]?.name || "",
-                dueDate: fee.EndDate,
+                studentInvoiceMapperId: inv.studentInvoiceMapperId || "",
+                invoiceNo: fee.InvoiceNumber || "",
+                title: semesters[0]?.name || "",
+                dueDate: fee.EndDate || "",
                 isApplied,
-                total: fee.total,
-                subTotal: fee.total,
+                total: fee.total || 0,
+                subTotal: fee.total || 0,
                 feeItems
             };
         });
 
         // =========================
-        // SUMMARY CALCULATION
+        // SUMMARY
         // =========================
         let appliedPayments = 0;
         let unappliedPayments = 0;
 
         invoices.forEach(inv => {
-            inv.studentMakePayment.forEach(pay => {
-                if (pay.isApplyed) {
-                    appliedPayments += Number(pay.paidAmount || 0);
-                } else {
-                    unappliedPayments += Number(pay.paidAmount || 0);
-                }
+            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+            payments.forEach(p => {
+                const amount = Number(p?.paidAmount || 0);
+                if (p?.isApplyed) appliedPayments += amount;
+                else unappliedPayments += amount;
             });
         });
 
-        const totalDue = invoices.reduce((sum, inv) => sum + (inv.feeInvoicedata?.total || 0), 0);
+        const totalDue = invoices.reduce(
+            (sum, inv) => sum + (inv?.feeInvoicedata?.total || 0),
+            0
+        );
+
         const remainingAmount = totalDue - appliedPayments;
 
         const summary = {
