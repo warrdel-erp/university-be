@@ -943,6 +943,147 @@ export async function getStudentSubject(studentId){
 //     return formatted;
 // };
 
+// 2nd correct data
+
+// export async function getFeeDetailsByStudentId(studentId) {
+
+//     try {
+//         const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
+
+//         if (!invoices || invoices.length === 0) {
+//             return {
+//                 studentInfo: {},
+//                 personalInfo: {},
+//                 parentInfo: {},
+//                 invoices: [],
+//                 summary: {}
+//             };
+//         }
+
+//         const student = invoices[0]?.studentinvoice || {};
+
+//         // =========================
+//         // STUDENT INFO
+//         // =========================
+//         const studentInfo = {
+//             studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
+//             course: student.course?.courseName || "",
+//             scholarNumber: student.scholarNumber || "",
+//             classSection: student.studentSemester?.classSections?.[0]?.section || "",
+//             semester: student.studentSemester?.name || "",
+//             academicYear: student.acdemicYear?.yearTitle || ""
+//         };
+
+//         // PERSONAL INFO
+//         const personalInfo = {
+//             contactNo: student.phoneNumber || "",
+//             email: student.email || ""
+//         };
+
+//         // PARENT INFO
+//         const parentInfo = {
+//             fatherName: student.fatherName || "",
+//             contactNo: student.parentNumber || "",
+//             email: student.parentEmail || "",
+//             address: student.pAddress || ""
+//         };
+
+//         // =========================
+//         // INVOICES
+//         // =========================
+//         const formattedInvoices = invoices.map(inv => {
+//             const fee = inv.feeInvoicedata || inv.studentinvoiceFeeType || {}
+
+//             const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
+//             const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+
+//             // BUILD ITEMS
+//             const feeItems = [];
+
+//             semesters.forEach(s => {
+//                 if (!s) return;
+//                 feeItems.push({
+//                     name: s.name || "",
+//                     dueDate: fee.EndDate || null,
+//                     amount: s.fee || 0,
+//                     subTotal: s.fee || 0
+//                 });
+//             });
+
+//             additionalFees.forEach(a => {
+//                 if (!a) return;
+//                 feeItems.push({
+//                     name: a.name || "",
+//                     dueDate: fee.EndDate || null,
+//                     amount: a.fee || 0,
+//                     subTotal: a.fee || 0
+//                 });
+//             });
+
+//             const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+
+//             const isApplied = payments.some(p => p?.isApplyed === true);
+
+//             return {
+//                 studentInvoiceMapperId: inv.studentInvoiceMapperId || "",
+//                 invoiceNo: fee.InvoiceNumber || "",
+//                 title: semesters[0]?.name || "",
+//                 dueDate: fee.EndDate || "",
+//                 isApplied,
+//                 total: fee.total || 0,
+//                 subTotal: fee.total || 0,
+//                 feeItems
+//             };
+//         });
+
+//         // =========================
+//         // SUMMARY
+//         // =========================
+//         let appliedPayments = 0;
+//         let unappliedPayments = 0;
+
+//         invoices.forEach(inv => {
+//             const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+//             payments.forEach(p => {
+//                 const amount = Number(p?.paidAmount || 0);
+//                 if (p?.isApplyed) appliedPayments += amount;
+//                 else unappliedPayments += amount;
+//             });
+//         });
+
+//         const totalDue = invoices.reduce(
+//             (sum, inv) => sum + (inv?.feeInvoicedata?.total || 0),
+//             0
+//         );
+
+//         const remainingAmount = totalDue - appliedPayments;
+
+//         const summary = {
+//             appliedPayments,
+//             unappliedPayments,
+//             remainingAmount,
+//             totalDue
+//         };
+
+//         // =========================
+//         // FINAL RESPONSE
+//         // =========================
+//         return {
+//             studentInfo,
+//             personalInfo,
+//             parentInfo,
+//             invoices: formattedInvoices,
+//             summary
+//         };
+
+//     } catch (error) {
+//         console.error("Error formatting Fee Invoice Details:", error);
+//         throw error;
+//     }
+// };
+
+// 3rd correct option 
+
 export async function getFeeDetailsByStudentId(studentId) {
     try {
         const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
@@ -986,22 +1127,31 @@ export async function getFeeDetailsByStudentId(studentId) {
         };
 
         // =========================
-        // INVOICES
+        // INVOICES MAPPING
         // =========================
         const formattedInvoices = invoices.map(inv => {
-            const fee = inv.feeInvoicedata || {}; // very strong null check
 
+            let fee = {};
+
+            if (inv.feeInvoicedata && typeof inv.feeInvoicedata === "object") {
+                fee = inv.feeInvoicedata;
+            } else if (inv.studentinvoiceFeeType && typeof inv.studentinvoiceFeeType === "object") {
+                fee = inv.studentinvoiceFeeType;
+            } else {
+                fee = {}; // no data
+            }
+
+            // SAFE ARRAYS
             const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
             const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
 
-            // BUILD ITEMS
             const feeItems = [];
 
             semesters.forEach(s => {
                 if (!s) return;
                 feeItems.push({
                     name: s.name || "",
-                    dueDate: fee.EndDate || null,
+                    dueDate: fee.EndDate || "",
                     amount: s.fee || 0,
                     subTotal: s.fee || 0
                 });
@@ -1011,13 +1161,16 @@ export async function getFeeDetailsByStudentId(studentId) {
                 if (!a) return;
                 feeItems.push({
                     name: a.name || "",
-                    dueDate: fee.EndDate || null,
+                    dueDate: fee.EndDate || "",
                     amount: a.fee || 0,
                     subTotal: a.fee || 0
                 });
             });
 
-            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+            // SAFE PAYMENTS
+            const payments = Array.isArray(inv.studentMakePayment)
+                ? inv.studentMakePayment
+                : [];
 
             const isApplied = payments.some(p => p?.isApplyed === true);
 
@@ -1034,13 +1187,16 @@ export async function getFeeDetailsByStudentId(studentId) {
         });
 
         // =========================
-        // SUMMARY
+        // SUMMARY COMPUTATION
         // =========================
         let appliedPayments = 0;
         let unappliedPayments = 0;
 
         invoices.forEach(inv => {
-            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+            const payments = Array.isArray(inv.studentMakePayment)
+                ? inv.studentMakePayment
+                : [];
+
             payments.forEach(p => {
                 const amount = Number(p?.paidAmount || 0);
                 if (p?.isApplyed) appliedPayments += amount;
@@ -1077,4 +1233,4 @@ export async function getFeeDetailsByStudentId(studentId) {
         console.error("Error formatting Fee Invoice Details:", error);
         throw error;
     }
-};
+}

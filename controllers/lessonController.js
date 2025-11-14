@@ -134,9 +134,9 @@ export async function deleteMapping(req, res) {
 
 export async function getEmployeeSubjectAndLesson(req, res) {
     const role = req.user.role;    
-    const {acedmicYearId,employeeId} = req.query
+    const {acedmicYearId,employeeId,courseId} = req.query
     try {
-        const Lessons = await lesson.getEmployeeSubjectAndLesson(acedmicYearId,employeeId);
+        const Lessons = await lesson.getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId);
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });
