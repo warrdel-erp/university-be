@@ -1098,11 +1098,11 @@ export async function getFeeDetailsByStudentId(studentId) {
             };
         }
 
-        const student = invoices[0]?.studentinvoice || {};
-
         // =========================
         // STUDENT INFO
         // =========================
+        const student = invoices[0]?.studentinvoice || {};
+
         const studentInfo = {
             studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
             course: student.course?.courseName || "",
@@ -1112,13 +1112,11 @@ export async function getFeeDetailsByStudentId(studentId) {
             academicYear: student.acdemicYear?.yearTitle || ""
         };
 
-        // PERSONAL INFO
         const personalInfo = {
             contactNo: student.phoneNumber || "",
             email: student.email || ""
         };
 
-        // PARENT INFO
         const parentInfo = {
             fatherName: student.fatherName || "",
             contactNo: student.parentNumber || "",
@@ -1127,47 +1125,83 @@ export async function getFeeDetailsByStudentId(studentId) {
         };
 
         // =========================
-        // INVOICES MAPPING
+        // INVOICES (2 TYPE LOGIC)
         // =========================
         const formattedInvoices = invoices.map(inv => {
+            // Flags
+            const hasPlanInvoice =
+                inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
 
-            let fee = {};
+            const hasFeeTypeInvoice =
+                !hasPlanInvoice &&
+                inv.studentinvoiceFeeType &&
+                typeof inv.studentinvoiceFeeType === "object";
 
-            if (inv.feeInvoicedata && typeof inv.feeInvoicedata === "object") {
-                fee = inv.feeInvoicedata;
-            } else if (inv.studentinvoiceFeeType && typeof inv.studentinvoiceFeeType === "object") {
-                fee = inv.studentinvoiceFeeType;
-            } else {
-                fee = {}; // no data
+            let invoiceNo = inv.invoiceNumber || ""; // mapper invoice number as base
+            let title = "";
+            let dueDate = inv.dueDate || "";
+            let total = 0;
+            let feeItems = [];
+
+            // ===== CASE 1: Plan-based invoice (feeNewInvoiceId present) =====
+            if (hasPlanInvoice) {
+                const fee = inv.feeInvoicedata;
+
+                const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
+                const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+
+                // Items
+                semesters.forEach(s => {
+                    if (!s) return;
+                    feeItems.push({
+                        name: s.name || "",
+                        dueDate: fee.EndDate || dueDate || "",
+                        amount: s.fee || 0,
+                        subTotal: s.fee || 0
+                    });
+                });
+
+                additionalFees.forEach(a => {
+                    if (!a) return;
+                    feeItems.push({
+                        name: a.name || "",
+                        dueDate: fee.EndDate || dueDate || "",
+                        amount: a.fee || 0,
+                        subTotal: a.fee || 0
+                    });
+                });
+
+                total = fee.total || feeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+                invoiceNo = fee.InvoiceNumber || invoiceNo;
+                title = semesters[0]?.name || fee.name || "";
+                dueDate = fee.EndDate || dueDate || "";
             }
 
-            // SAFE ARRAYS
-            const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
-            const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+            // ===== CASE 2: Only feeType-based invoice (no feeNewInvoiceId) =====
+            else if (hasFeeTypeInvoice) {
+                const ft = inv.studentinvoiceFeeType;
 
-            const feeItems = [];
+                const amount = Number(ft.feeValue || 0);
 
-            semesters.forEach(s => {
-                if (!s) return;
                 feeItems.push({
-                    name: s.name || "",
-                    dueDate: fee.EndDate || "",
-                    amount: s.fee || 0,
-                    subTotal: s.fee || 0
+                    name: ft.name || "",
+                    dueDate: dueDate || "",
+                    amount,
+                    subTotal: amount
                 });
-            });
 
-            additionalFees.forEach(a => {
-                if (!a) return;
-                feeItems.push({
-                    name: a.name || "",
-                    dueDate: fee.EndDate || "",
-                    amount: a.fee || 0,
-                    subTotal: a.fee || 0
-                });
-            });
+                total = amount;
+                title = ft.name || "";
+                // invoiceNo already from mapper (NW-25-06 in your example)
+            }
 
-            // SAFE PAYMENTS
+            // ===== CASE 3: No plan, no feeType — keep empty but safe =====
+            else {
+                // invoiceNo, dueDate already from mapper, total = 0, feeItems = []
+            }
+
+            // Payments
             const payments = Array.isArray(inv.studentMakePayment)
                 ? inv.studentMakePayment
                 : [];
@@ -1176,18 +1210,18 @@ export async function getFeeDetailsByStudentId(studentId) {
 
             return {
                 studentInvoiceMapperId: inv.studentInvoiceMapperId || "",
-                invoiceNo: fee.InvoiceNumber || "",
-                title: semesters[0]?.name || "",
-                dueDate: fee.EndDate || "",
+                invoiceNo,
+                title,
+                dueDate,
                 isApplied,
-                total: fee.total || 0,
-                subTotal: fee.total || 0,
+                total,
+                subTotal: total,
                 feeItems
             };
         });
 
         // =========================
-        // SUMMARY COMPUTATION
+        // SUMMARY
         // =========================
         let appliedPayments = 0;
         let unappliedPayments = 0;
@@ -1204,8 +1238,9 @@ export async function getFeeDetailsByStudentId(studentId) {
             });
         });
 
-        const totalDue = invoices.reduce(
-            (sum, inv) => sum + (inv?.feeInvoicedata?.total || 0),
+        // Now use formattedInvoices so both plan & feeType invoices are counted
+        const totalDue = formattedInvoices.reduce(
+            (sum, inv) => sum + (inv.total || 0),
             0
         );
 
@@ -1218,9 +1253,6 @@ export async function getFeeDetailsByStudentId(studentId) {
             totalDue
         };
 
-        // =========================
-        // FINAL RESPONSE
-        // =========================
         return {
             studentInfo,
             personalInfo,

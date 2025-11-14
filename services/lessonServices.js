@@ -241,6 +241,6 @@ export async function deleteMapping(lessonMappingId) {
   }
 };
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId) {
-    return await lesson.getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId);
+export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
+    return await lesson.getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId);
 };

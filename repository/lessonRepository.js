@@ -294,7 +294,7 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
   }
 };
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId) {
+export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
   try {
     const whereClause = {
       ...(employeeId && { employeeId }),
@@ -319,6 +319,7 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,cours
                   model:model.lessonModel,
                   as:'lessonSubject',
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  where:{sessionId},
                   include:[
                     {
                       model: model.topicModel,
