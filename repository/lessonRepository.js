@@ -294,12 +294,66 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
   }
 };
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
+// export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
+//   try {
+//     const whereClause = {
+//       ...(employeeId && { employeeId }),
+//       ...(acedmicYearId && { acedmicYearId }),
+//     };
+//     const lesson = await model.teacherSubjectMappingModel.findAll({
+//       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//       where: whereClause,
+//       include: [
+//         {
+//           model: model.classSubjectMapperModel,
+//           as: "employeeSubject",
+//           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//           include: [
+//             {
+//               model: model.subjectModel,
+//               as: 'subjects',
+//               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//               where:{courseId},
+//               include:[
+//                 {
+//                   model:model.lessonModel,
+//                   as:'lessonSubject',
+//                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+//                   where:{sessionId},
+//                   include:[
+//                     {
+//                       model: model.topicModel,
+//                       as: 'topicSession',
+//                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+//                     },
+//                     {
+//                       model: model.semesterModel,
+//                       as: 'lessionSemester',
+//                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+//                       where:{courseId}
+//                     }
+//                   ]
+//                 }
+//               ]
+//             }
+//           ]
+//         }
+//       ]
+//     });
+//     return lesson;
+//   } catch (error) {
+//     console.error('Error fetching lesson details:', error);
+//     throw error;
+//   }
+// };
+
+export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
   try {
     const whereClause = {
       ...(employeeId && { employeeId }),
       ...(acedmicYearId && { acedmicYearId }),
     };
+
     const lesson = await model.teacherSubjectMappingModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
@@ -311,26 +365,30 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,cours
           include: [
             {
               model: model.subjectModel,
-              as: 'subjects',
+              as: "subjects",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              where:{courseId},
-              include:[
+              ...(courseId && { where: { courseId } }),   // Correct filter
+              required: false,
+              include: [
                 {
-                  model:model.lessonModel,
-                  as:'lessonSubject',
+                  model: model.lessonModel,
+                  as: "lessonSubject",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                  where:{sessionId},
-                  include:[
+                  ...(sessionId && { where: { sessionId } }),
+                  required: false,
+                  include: [
                     {
                       model: model.topicModel,
-                      as: 'topicSession',
+                      as: "topicSession",
                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
+                      required: false
                     },
                     {
                       model: model.semesterModel,
-                      as: 'lessionSemester',
+                      as: "lessionSemester",
                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
-                      where:{courseId}
+                      ...(courseId && { where: { courseId } }),
+                      required: false
                     }
                   ]
                 }
@@ -340,9 +398,11 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,cours
         }
       ]
     });
+
     return lesson;
+
   } catch (error) {
-    console.error('Error fetching lesson details:', error);
+    console.error("Error fetching lesson details:", error);
     throw error;
   }
 };
