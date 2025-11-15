@@ -123,13 +123,26 @@ export async function getAllActiveInvoice(universityId) {
                     as: "studentMakePayment",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     
-                }, 
+                },
                 {
-                    model: model.feeTypeModel,
-                    as: "studentinvoiceFeeType",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    
-                },    
+                    model: model.feeTypeGroupModel,
+                    as: "feeTypeGroup",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.feeTypeModel,
+                            as: "feeTypes",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            include: [
+                                {
+                                    model: model.feeGroupModel,
+                                    as: "feeGroup",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                }
+                            ]
+                        }
+                    ]
+                }    
             ]
         });
 

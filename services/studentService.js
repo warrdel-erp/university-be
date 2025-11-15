@@ -1054,7 +1054,7 @@ export async function getFeeDetailsByStudentId(studentId) {
             };
         }
 
-        // ⭐ NEW: Convert new DB structure into old key for backward compatibility
+        //  NEW: Convert new DB structure into old key for backward compatibility
         filtered.forEach(inv => {
             inv.studentinvoiceFeeType = inv.feeTypeGroup?.feeTypes || null;
         });
