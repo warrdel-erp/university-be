@@ -222,16 +222,23 @@ export async function getFeeDetailsByStudentId(studentId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { studentId },
             include: [
-                // ========== Fee Type + Fee Group ==========
+                // ========== feeTypeGroupModel + Fee Type + Fee Group ==========
                 {
-                    model: model.feeTypeModel,
-                    as: "studentinvoiceFeeType",
+                    model: model.feeTypeGroupModel,
+                    as: "feeTypeGroup",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
                         {
-                            model: model.feeGroupModel,
-                            as: "feeGroup",
+                            model: model.feeTypeModel,
+                            as: "feeTypes",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            include: [
+                                {
+                                    model: model.feeGroupModel,
+                                    as: "feeGroup",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                }
+                            ]
                         }
                     ]
                 },
