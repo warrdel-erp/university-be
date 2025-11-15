@@ -1198,8 +1198,8 @@ export async function getFeeDetailsByStudentId(studentId) {
         const summary = {
             appliedPayments: '',
             unappliedPayments: '',
-            remainingAmount: '',
-            totalDue: ''
+            remainingAmount: remainingAmount,
+            totalDue: totalDue
         };
 
         return {
