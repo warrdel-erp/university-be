@@ -67,21 +67,48 @@ export async function updateInvoices(universityId, instituteId, data) {
   }
 };
 
-export async function addStudentSpecificInvoice(universityId,createdBy,updatedBy,instituteId,data) {
+export async function addStudentSpecificInvoice(universityId, createdBy, updatedBy, instituteId, data) {
+    const transaction = await sequelize.transaction();
 
-  try {
-    const mergeData = {
-      ...data,
-      invoiceStatus: true,
-      createdBy,
-      updatedBy,
-      instituteId,universityId
-    };
-    const invoice = await studentInvoice.addStudentSpecificInvoice(mergeData);
-    return invoice;
-  } catch (error) {
-    throw new Error(error.message);
-  }
+    try {
+        const invoiceData = {
+            studentId: data.studentId,
+            invoiceDate: data.invoiceDate,
+            invoiceNumber: data.invoiceNumber,
+            dueDate: data.dueDate,
+            invoiceStatus: true,
+            createdBy,
+            updatedBy,
+            instituteId,
+            universityId
+        };
+
+        const invoice = await studentInvoice.addStudentSpecificInvoice(invoiceData, transaction);
+        const studentInvoiceMapperId = invoice.studentInvoiceMapperId;
+
+        const feeTypeArray = data.feeTypes.map((ft) => ({
+            feeTypeId: ft.feeTypeId,
+            amount: ft.Amount,
+            waiver: ft.waiver,
+            subtotal: ft.subTotal,
+            studentInvoiceMapperId,
+            createdBy,
+            updatedBy
+        }));
+
+        await studentInvoice.addMultipleFeeTypeGroup(feeTypeArray, transaction);
+        await transaction.commit();
+
+        return {
+            status: true,
+            message: "Invoice created successfully",
+            studentInvoiceMapperId
+        };
+
+    } catch (error) {
+        await transaction.rollback();
+        throw new Error(error.message);
+    }
 };
 
 export async function getAllActiveInvoice(universityId) {

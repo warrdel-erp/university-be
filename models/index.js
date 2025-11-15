@@ -113,6 +113,7 @@ import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
 import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js';
 import examScheduleModel from './examScheduleModel.js';
+import feeTypeGroupModel from './feeTypeGroupModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -711,8 +712,14 @@ feePlanTypeModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'fee_new_invoice_id
 studentInvoiceMapperModel.belongsTo(studentModel, { foreignKey: 'studentId', as: 'studentinvoice'  }); 
 studentModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'studentId',  as: 'invoicestudent'  });
 
-studentInvoiceMapperModel.belongsTo(feeTypeModel, { foreignKey: 'feeTypeId', as: 'studentinvoiceFeeType'  }); 
-feeTypeModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeTypeId',  as: 'invoicestudentFeeType'  });
+studentInvoiceMapperModel.hasMany(feeTypeGroupModel, { foreignKey: "studentInvoiceMapperId", as: "feeTypeGroup" });
+feeTypeGroupModel.belongsTo(studentInvoiceMapperModel, { foreignKey: "studentInvoiceMapperId", as: "invoiceMapper" });
+
+feeTypeModel.hasMany(feeTypeGroupModel, { foreignKey: "feeTypeId", as: "feeTypeGroups" });
+feeTypeGroupModel.belongsTo(feeTypeModel, { foreignKey: "feeTypeId", as: "feeTypes" });
+
+// studentInvoiceMapperModel.belongsTo(feeTypeModel, { foreignKey: 'feeTypeId', as: 'studentinvoiceFeeType'  }); 
+// feeTypeModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeTypeId',  as: 'invoicestudentFeeType'  });
 
 studentInvoiceMapperModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'feeNewInvoiceId',  as: 'feeInvoicedata' }); 
 feeNewInvoiceModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeNewInvoiceId', as: 'invoiceMappings' });
@@ -929,4 +936,5 @@ export {
     leaveRequestModel,
     examStructureScheduleMappingModel,
     examScheduleModel,
+    feeTypeGroupModel,
 };

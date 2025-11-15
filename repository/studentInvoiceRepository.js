@@ -152,12 +152,20 @@ export async function updateFeeNewInvoice(feeNewInvoiceId, data) {
     }
 };
 
-export async function addStudentSpecificInvoice(data) {    
+export async function addStudentSpecificInvoice(data, transaction = null) {
     try {
-        const result = await model.studentInvoiceMapperModel.create(data);
-        return result;
+        return await model.studentInvoiceMapperModel.create(data, { transaction });
     } catch (error) {
         console.error("Error in add Student specific Invoice:", error);
+        throw error;
+    }
+};
+
+export async function addMultipleFeeTypeGroup(dataArray, transaction = null) {
+    try {
+        return await model.feeTypeGroupModel.bulkCreate(dataArray, { transaction });
+    } catch (error) {
+        console.error("Error in bulk insert fee type group:", error);
         throw error;
     }
 };

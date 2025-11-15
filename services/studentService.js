@@ -878,12 +878,16 @@ export async function getStudentSubject(studentId){
   return await studentRepository.getStudentSubject(studentId)
 };
 
-// export async function getFeeDetailsByStudentId(studentId) {
+// latest 
 
+// export async function getFeeDetailsByStudentId(studentId) {
 //     try {
 //         const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
 
-//         if (!invoices || invoices.length === 0) {
+//         // --- Filter only invoiceStatus = true ---
+//         const filtered = invoices.filter(inv => inv.invoiceStatus === true);
+
+//         if (filtered.length === 0) {
 //             return {
 //                 studentInfo: {},
 //                 personalInfo: {},
@@ -893,8 +897,8 @@ export async function getStudentSubject(studentId){
 //             };
 //         }
 
-//         // STUDENT INFO
-//         const student = invoices[0]?.studentinvoice || {};
+//         // -------- STUDENT INFO ---------
+//         const student = filtered[0].studentinvoice || {};
 
 //         const studentInfo = {
 //             studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
@@ -917,121 +921,98 @@ export async function getStudentSubject(studentId){
 //             address: student.pAddress || ""
 //         };
 
-//         // INVOICES (2 TYPE LOGIC)
-//         const formattedInvoices = invoices.map(inv => {
+//         // -------- INVOICE LOOP ---------
+//         const formattedInvoices = filtered.map(inv => {
 //             // Flags
-//             const hasPlanInvoice =
-//                 inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
+//             const hasPlan = inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
+//             const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
 
-//             const hasFeeTypeInvoice =
-//                 !hasPlanInvoice &&
-//                 inv.studentinvoiceFeeType &&
-//                 typeof inv.studentinvoiceFeeType === "object";
-
-//             let invoiceNo = inv.invoiceNumber || ""; // mapper invoice number as base
-//             let title = "";
+//             let invoiceNo = inv.invoiceNumber || "";
 //             let dueDate = inv.dueDate || "";
+//             let title = "";
 //             let total = 0;
 //             let feeItems = [];
 
-//             // ===== CASE 1: Plan-based invoice (feeNewInvoiceId present) =====
-//             if (hasPlanInvoice) {
+//             // -------- CASE 1: PLAN INVOICE ---------
+//             if (hasPlan) {
 //                 const fee = inv.feeInvoicedata;
 
 //                 const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
 //                 const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
 
-//                 // Items
 //                 semesters.forEach(s => {
-//                     if (!s) return;
 //                     feeItems.push({
 //                         name: s.name || "",
-//                         dueDate: fee.EndDate || dueDate || "",
+//                         dueDate: fee.EndDate || dueDate,
 //                         amount: s.fee || 0,
 //                         subTotal: s.fee || 0
 //                     });
 //                 });
 
 //                 additionalFees.forEach(a => {
-//                     if (!a) return;
 //                     feeItems.push({
 //                         name: a.name || "",
-//                         dueDate: fee.EndDate || dueDate || "",
+//                         dueDate: fee.EndDate || dueDate,
 //                         amount: a.fee || 0,
 //                         subTotal: a.fee || 0
 //                     });
 //                 });
 
-//                 total = fee.total || feeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
+//                 total = fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
 //                 invoiceNo = fee.InvoiceNumber || invoiceNo;
 //                 title = semesters[0]?.name || fee.name || "";
-//                 dueDate = fee.EndDate || dueDate || "";
+//                 dueDate = fee.EndDate || dueDate;
 //             }
 
-//             // ===== CASE 2: Only feeType-based invoice (no feeNewInvoiceId) =====
-//             else if (hasFeeTypeInvoice) {
+//             // -------- CASE 2: FEE TYPE INVOICE ---------
+//             else if (hasFeeType) {
 //                 const ft = inv.studentinvoiceFeeType;
 
 //                 const amount = Number(ft.feeValue || 0);
 
 //                 feeItems.push({
 //                     name: ft.name || "",
-//                     dueDate: dueDate || "",
+//                     dueDate: dueDate,
 //                     amount,
 //                     subTotal: amount
 //                 });
 
 //                 total = amount;
 //                 title = ft.name || "";
-//                 // invoiceNo already from mapper (NW-25-06 in your example)
 //             }
 
-//             // ===== CASE 3: No plan, no feeType — keep empty but safe =====
-//             else {
-//                 // invoiceNo, dueDate already from mapper, total = 0, feeItems = []
-//             }
+//             // -------- PAYMENTS FOR THIS INVOICE ---------
+//             const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
 
-//             // Payments
-//             const payments = Array.isArray(inv.studentMakePayment)
-//                 ? inv.studentMakePayment
-//                 : [];
-
-//             const isApplied = payments.some(p => p?.isApplyed === true);
+//             const isApplied = payments.some(p => p.isApplyed === true);
 
 //             return {
-//                 studentInvoiceMapperId: inv.studentInvoiceMapperId || "",
+//                 studentInvoiceMapperId: inv.studentInvoiceMapperId,
 //                 invoiceNo,
 //                 title,
 //                 dueDate,
-//                 isApplied :false,
+//                 isApplied : false,
 //                 total,
 //                 subTotal: total,
-//                 feeItems
+//                 feeItems,
+//                 payments 
 //             };
 //         });
 
-//         // SUMMARY
+//         // -------- SUMMARY ---------
 //         let appliedPayments = 0;
 //         let unappliedPayments = 0;
 
-//         invoices.forEach(inv => {
-//             const payments = Array.isArray(inv.studentMakePayment)
-//                 ? inv.studentMakePayment
-//                 : [];
-
+//         filtered.forEach(inv => {
+//             const payments = inv.studentMakePayment || [];
 //             payments.forEach(p => {
-//                 const amount = Number(p?.paidAmount || 0);
-//                 if (p?.isApplyed) appliedPayments += amount;
-//                 else unappliedPayments += amount;
+//                 const amt = Number(p.paidAmount || 0);
+//                 if (p.isApplyed) appliedPayments += amt;
+//                 else unappliedPayments += amt;
 //             });
 //         });
 
-//         // Now use formattedInvoices so both plan & feeType invoices are counted
-//         const totalDue = formattedInvoices.reduce(
-//             (sum, inv) => sum + (inv.total || 0),
-//             0
-//         );
+//         const totalDue = formattedInvoices.reduce((sum, f) => sum + (f.total || 0), 0);
 
 //         const remainingAmount = totalDue - appliedPayments;
 
@@ -1056,7 +1037,6 @@ export async function getStudentSubject(studentId){
 //     }
 // };
 
-
 export async function getFeeDetailsByStudentId(studentId) {
     try {
         const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
@@ -1073,6 +1053,11 @@ export async function getFeeDetailsByStudentId(studentId) {
                 summary: {}
             };
         }
+
+        // ⭐ NEW: Convert new DB structure into old key for backward compatibility
+        filtered.forEach(inv => {
+            inv.studentinvoiceFeeType = inv.feeTypeGroup?.feeTypes || null;
+        });
 
         // -------- STUDENT INFO ---------
         const student = filtered[0].studentinvoice || {};
@@ -1100,9 +1085,10 @@ export async function getFeeDetailsByStudentId(studentId) {
 
         // -------- INVOICE LOOP ---------
         const formattedInvoices = filtered.map(inv => {
-            // Flags
+
             const hasPlan = inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
             const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
+            const hasFeeTypeGroup = !hasPlan && !hasFeeType && Array.isArray(inv.feeTypeGroup) && inv.feeTypeGroup.length > 0;
 
             let invoiceNo = inv.invoiceNumber || "";
             let dueDate = inv.dueDate || "";
@@ -1141,7 +1127,7 @@ export async function getFeeDetailsByStudentId(studentId) {
                 dueDate = fee.EndDate || dueDate;
             }
 
-            // -------- CASE 2: FEE TYPE INVOICE ---------
+            // -------- CASE 2: OLD FEE TYPE INVOICE ---------
             else if (hasFeeType) {
                 const ft = inv.studentinvoiceFeeType;
 
@@ -1149,18 +1135,35 @@ export async function getFeeDetailsByStudentId(studentId) {
 
                 feeItems.push({
                     name: ft.name || "",
-                    dueDate: dueDate,
+                    dueDate,
                     amount,
                     subTotal: amount
                 });
 
                 total = amount;
-                title = ft.name || "";
+                title = ft.name;
             }
 
-            // -------- PAYMENTS FOR THIS INVOICE ---------
-            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+            // -------- ⭐ CASE 3: NEW FEE TYPE GROUP INVOICE ---------
+            else if (hasFeeTypeGroup) {
+                inv.feeTypeGroup.forEach(ftg => {
+                    const ft = ftg.feeTypes;
 
+                    feeItems.push({
+                        name: ft?.name || "",
+                        dueDate,
+                        amount: Number(ftg.subtotal || ftg.amount || 0),
+                        subTotal: Number(ftg.subtotal || ftg.amount || 0)
+                    });
+
+                    total += Number(ftg.subtotal || ftg.amount || 0);
+                });
+
+                title = feeItems[0]?.name || "";
+            }
+
+            // -------- PAYMENTS ---------
+            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
             const isApplied = payments.some(p => p.isApplyed === true);
 
             return {
@@ -1168,11 +1171,11 @@ export async function getFeeDetailsByStudentId(studentId) {
                 invoiceNo,
                 title,
                 dueDate,
-                isApplied : false,
+                isApplied: false,
                 total,
                 subTotal: total,
                 feeItems,
-                payments 
+                payments
             };
         });
 
@@ -1190,14 +1193,13 @@ export async function getFeeDetailsByStudentId(studentId) {
         });
 
         const totalDue = formattedInvoices.reduce((sum, f) => sum + (f.total || 0), 0);
-
         const remainingAmount = totalDue - appliedPayments;
 
         const summary = {
-            appliedPayments:'',
-            unappliedPayments:'',
-            remainingAmount:'',
-            totalDue:''
+            appliedPayments: '',
+            unappliedPayments: '',
+            remainingAmount: '',
+            totalDue: ''
         };
 
         return {

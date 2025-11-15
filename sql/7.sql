@@ -624,15 +624,10 @@ DROP COLUMN fee_plan_id;
 
 ALTER TABLE student_invoice_mapper ADD COLUMN due_date DATETIME NULL;
 
--- Add the fee_type_id column with the foreign key reference in student_invoice_mapper
-
-ALTER TABLE student_invoice_mapper ADD COLUMN fee_type_id INT DEFAULT NULL;
-
-UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id IS NULL;
-
-UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id = 0;
-
-ALTER TABLE student_invoice_mapper ADD CONSTRAINT fk_invoice_fee_type_id FOREIGN KEY (fee_type_id) REFERENCES fee_type (fee_type_id) ON DELETE CASCADE;
+ALTER TABLE student_invoice_mapper
+  DROP FOREIGN KEY fk_invoice_fee_type_id,
+  DROP INDEX fk_invoice_fee_type_id,
+  DROP COLUMN fee_type_id;
 
 -- Add the employee_id column with the foreign key reference in lesson
 
@@ -643,3 +638,21 @@ UPDATE lesson SET employee_id = 1 WHERE employee_id IS NULL;
 UPDATE lesson SET employee_id = 1 WHERE employee_id = 0;
 
 ALTER TABLE lesson ADD CONSTRAINT fk_lesson_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;
+
+CREATE TABLE fee_type_group (
+    fee_type_group_id INT AUTO_INCREMENT PRIMARY KEY,
+    fee_type_id INT NULL,
+    student_invoice_mapper_id INT NULL,
+    amount INT NOT NULL,
+    waiver INT NULL,
+    subtotal VARCHAR(255) NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_fee_type_group_fee_type FOREIGN KEY (fee_type_id) REFERENCES fee_type (fee_type_id),
+    CONSTRAINT fk_fee_type_group_invoice_mapper FOREIGN KEY (student_invoice_mapper_id) REFERENCES student_invoice_mapper (student_invoice_mapper_id),
+    CONSTRAINT fk_fee_type_group_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_fee_type_group_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);
