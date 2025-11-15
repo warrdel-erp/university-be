@@ -10,7 +10,8 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceArray, createdBy, upda
     ...record,
     createdBy,
     updatedBy,
-    instituteId
+    instituteId,
+    isApplyed:false
   }));
 
   const createdRecords = await feeInvoiceRecordRepository.addFeeInvoiceDetailRecord(dataWithMeta);
