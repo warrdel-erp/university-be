@@ -351,7 +351,6 @@ export async function getFeeDetailsByStudentId(studentId) {
                 }
             ]
         });
-console.log(`>>>>>feeInvoice`,JSON.stringify(feeInvoice));
 
         return feeInvoice;
 
