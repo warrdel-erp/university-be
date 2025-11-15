@@ -16,8 +16,7 @@ export async function getStudentCount(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
-
+};
 
 export async function activeInvoice(req, res) {
     const universityId = req.user.universityId;  
@@ -29,7 +28,21 @@ export async function activeInvoice(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
+
+export async function addStudentSpecificInvoice(req, res) {
+    const universityId = req.user.universityId;  
+    const instituteId = req.user.instituteId;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    const data = req.body
+    try {
+        const feePlans = await invoice.addStudentSpecificInvoice(universityId,createdBy,updatedBy,instituteId,data);
+        res.status(200).json(feePlans);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 export async function getAllActiveInvoice(req, res) {
     const universityId = req.user.universityId;

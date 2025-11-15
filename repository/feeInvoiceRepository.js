@@ -215,3 +215,140 @@ export async function latestInvoiceDetailNumber(instituteCode) {
         throw error;
     }
 };
+
+export async function getFeeDetailsByStudentId(studentId) {
+    try {
+        const feeInvoice = await model.studentInvoiceMapperModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: { studentId },
+            include: [
+                // ========== Fee Type + Fee Group ==========
+                {
+                    model: model.feeTypeModel,
+                    as: "studentinvoiceFeeType",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.feeGroupModel,
+                            as: "feeGroup",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        }
+                    ]
+                },
+
+                // ========== Invoice + Fee Plan + Additional Fees + Semesters ==========
+                {
+                    model: model.feeNewInvoiceModel,
+                    as: "feeInvoicedata",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.feePlanModel,
+                            as: "feePlan",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                        {
+                            model: model.feePlanTypeModel,
+                            as: "additionalFees",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        },
+                        {
+                            model: model.feePlanSemesterModel,
+                            as: "semesters",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        }
+                    ]
+                },
+
+                // ========== Student Payments ==========
+                {
+                    model: model.feeInvoiceDetailRecordModel,
+                    as: "studentMakePayment",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                },
+
+                // ========== Student Info + Multiple Tables ==========
+                {
+                    model: model.studentModel,
+                    as: "studentinvoice",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.acedmicYearModel,
+                            as: "acdemicYear",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        },
+                        {
+                            model: model.affiliatedIniversityModel,
+                            as: "affiliatedUniversity",
+                            attributes: {
+                                exclude: [
+                                    "createdAt",
+                                    "updatedAt",
+                                    "deletedAt",
+                                    "universityId",
+                                    "affiliatedUniversityId",
+                                    "instituteId",
+                                    "affiliatedUniversityCode"
+                                ]
+                            }
+                        },
+                        {
+                            model: model.courseModel,
+                            as: "course",
+                            attributes: {
+                                exclude: [
+                                    "createdAt",
+                                    "updatedAt",
+                                    "deletedAt",
+                                    "universityId",
+                                    "courseId",
+                                    "course_levelId",
+                                    "courseCode"
+                                ]
+                            }
+                        },
+                        {
+                            model: model.semesterModel,
+                            as: "studentSemester",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            include: [
+                                {
+                                    model: model.classSectionModel,
+                                    as: "classSections",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                }
+                            ]
+                        },
+                        {
+                            model: model.sessionModel,
+                            as: "studentSession",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        },
+                        {
+                            model: model.specializationModel,
+                            as: "specialization",
+                            attributes: {
+                                exclude: [
+                                    "createdAt",
+                                    "updatedAt",
+                                    "deletedAt",
+                                    "universityId",
+                                    "specializationId",
+                                    "course_Id",
+                                    "specializationCode"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return feeInvoice;
+
+    } catch (error) {
+        console.error("Error fetching student FeeInvoice details:", error);
+        throw error;
+    }
+};

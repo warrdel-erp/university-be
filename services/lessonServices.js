@@ -239,4 +239,19 @@ export async function deleteMapping(lessonMappingId) {
     console.error("Error in deleteMapping:", error);
     throw error;
   }
+};
+
+export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
+    const data = await lesson.getEmployeeSubjectAndLesson(
+        acedmicYearId,
+        employeeId,
+        courseId,
+        sessionId
+    );
+
+    const filteredData = data.filter(item =>
+        item?.employeeSubject?.subjects !== null
+    );
+
+    return filteredData;
 }

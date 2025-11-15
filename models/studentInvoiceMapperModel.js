@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import studentModel from "./studentModel.js";
 import universityModel from "./universityModel.js";
 import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
-import feePlanModel from "./feePlanModel.js";
+import feeTypeModel from "./feeTypeModel.js";
 
 export default sequelize.define(
     'student_invoice_mapper',
@@ -42,13 +42,13 @@ export default sequelize.define(
                 key: 'fee_new_invoice_id'
             }
         }, 
-        feePlanId: {
+        feeTypeId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'fee_plan_id',
+            field: 'fee_type_id',
             references: {
-                model: feePlanModel,
-                key: 'fee_plan_id'
+                model: feeTypeModel,
+                key: 'fee_type_id'
             }
         },
         invoiceDate: {
@@ -65,6 +65,11 @@ export default sequelize.define(
             type: DataTypes.BOOLEAN,
             allowNull: true,
             field:'invoice_status'
+        },
+        dueDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field:'due_date'
         },
         createdBy: {
             type: DataTypes.INTEGER,

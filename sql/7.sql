@@ -616,3 +616,30 @@ CREATE TABLE exam_schedule (
     CONSTRAINT fk_exam_schedul_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
     CONSTRAINT fk_exam_schedul_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
 );
+
+ALTER TABLE student_invoice_mapper 
+DROP FOREIGN KEY fk_simb_fee_plan,
+DROP INDEX fk_simb_fee_plan,
+DROP COLUMN fee_plan_id;
+
+ALTER TABLE student_invoice_mapper ADD COLUMN due_date DATETIME NULL;
+
+-- Add the fee_type_id column with the foreign key reference in student_invoice_mapper
+
+ALTER TABLE student_invoice_mapper ADD COLUMN fee_type_id INT DEFAULT NULL;
+
+UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id IS NULL;
+
+UPDATE student_invoice_mapper SET fee_type_id = 1 WHERE fee_type_id = 0;
+
+ALTER TABLE student_invoice_mapper ADD CONSTRAINT fk_invoice_fee_type_id FOREIGN KEY (fee_type_id) REFERENCES fee_type (fee_type_id) ON DELETE CASCADE;
+
+-- Add the employee_id column with the foreign key reference in lesson
+
+ALTER TABLE lesson ADD COLUMN employee_id INT DEFAULT NULL;
+
+UPDATE lesson SET employee_id = 1 WHERE employee_id IS NULL;
+
+UPDATE lesson SET employee_id = 1 WHERE employee_id = 0;
+
+ALTER TABLE lesson ADD CONSTRAINT fk_lesson_employee_id FOREIGN KEY (employee_id) REFERENCES employee (employee_id) ON DELETE CASCADE;

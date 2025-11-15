@@ -67,6 +67,23 @@ export async function updateInvoices(universityId, instituteId, data) {
   }
 };
 
+export async function addStudentSpecificInvoice(universityId,createdBy,updatedBy,instituteId,data) {
+
+  try {
+    const mergeData = {
+      ...data,
+      invoiceStatus: true,
+      createdBy,
+      updatedBy,
+      instituteId,universityId
+    };
+    const invoice = await studentInvoice.addStudentSpecificInvoice(mergeData);
+    return invoice;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export async function getAllActiveInvoice(universityId) {
     return await studentInvoice.getAllActiveInvoice(universityId);
 }
