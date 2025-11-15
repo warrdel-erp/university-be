@@ -355,40 +355,48 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
     };
 
     const lesson = await model.teacherSubjectMappingModel.findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+
       include: [
         {
           model: model.classSubjectMapperModel,
           as: "employeeSubject",
+          required: false,
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
               model: model.subjectModel,
               as: "subjects",
+              required: false,       // ⭐ prevents NULL join issues
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              ...(courseId && { where: { courseId } }),   // Correct filter
-              required: false,
+              ...(courseId && { where: { courseId } }),   // Filter when provided
+
               include: [
                 {
                   model: model.lessonModel,
                   as: "lessonSubject",
+                  required: false,
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                   ...(sessionId && { where: { sessionId } }),
-                  required: false,
+
                   include: [
                     {
                       model: model.topicModel,
                       as: "topicSession",
-                      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
-                      required: false
+                      required: false,
+                      attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"]
+                      },
                     },
                     {
                       model: model.semesterModel,
                       as: "lessionSemester",
-                      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
-                      ...(courseId && { where: { courseId } }),
-                      required: false
+                      required: false,
+                      attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"]
+                      },
+                      ...(courseId && { where: { courseId } })
                     }
                   ]
                 }
