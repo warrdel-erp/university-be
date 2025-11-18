@@ -113,7 +113,11 @@ import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
 import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js';
 import examScheduleModel from './examScheduleModel.js';
-import feeTypeGroupModel from './feeTypeGroupModel.js'
+import feeTypeGroupModel from './feeTypeGroupModel.js';
+import libraryFloorModel from './libraryFloorModel.js';
+import libraryAisleModel from './libraryAisleModel.js';
+import libraryRackModel from './libraryRackModel.js';
+import libraryRowModel from './libraryRowModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -820,6 +824,21 @@ syllabusDetailsModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type
 examScheduleModel.belongsTo(semesterModel, {foreignKey: "semesterId",targetKey: "semesterId",as: "semesterexam"});
 semesterModel.hasMany(examScheduleModel, {foreignKey: "semesterId",sourceKey: "semesterId",as: "examSchedules"});
 
+campusModel.hasMany(libraryFloorModel, { foreignKey: "campus_id", as: "floorCampus" });
+libraryFloorModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campusFloor" });
+
+instituteModel.hasMany(libraryFloorModel, { foreignKey: "institute_id", as: "floorInstitute" });
+libraryFloorModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "instituteFloor" });
+
+libraryFloorModel.hasMany(libraryAisleModel, { foreignKey: "library_floor_id", as: "aisles" });
+libraryAisleModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floor" });
+
+libraryAisleModel.hasMany(libraryRackModel, { foreignKey: "library_aisle_id", as: "racks" });
+libraryRackModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisle" });
+
+libraryRackModel.hasMany(libraryRowModel, { foreignKey: "library_rack_id", as: "rows" });
+libraryRowModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as: "rack" });
+
 export {
     settingModel,
     universityModel,
@@ -937,4 +956,8 @@ export {
     examStructureScheduleMappingModel,
     examScheduleModel,
     feeTypeGroupModel,
+    libraryFloorModel,
+    libraryAisleModel,
+    libraryRackModel,
+    libraryRowModel,
 };
