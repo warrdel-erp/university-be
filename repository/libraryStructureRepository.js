@@ -200,3 +200,52 @@ export async function updateRow(libraryRowId, data) {
 export async function deleteRow(libraryRowId) {
     return await model.libraryRowModel.destroy({ where: { libraryRowId } });
 }
+
+
+export async function getAisleIdByName(name) {
+    try {
+        const aisle = await model.libraryAisleModel.findOne({
+            where: { name }
+        });
+
+        if (!aisle) throw new Error(`Aisle not found: ${name}`);
+
+        return aisle.libraryAisleId;
+
+    } catch (error) {
+        console.error("Error finding aisle:", error);
+        throw new Error(error.message);
+    }
+}
+
+export async function getRackIdByName(name) {
+    try {
+        const rack = await model.libraryRackModel.findOne({
+            where: { name }
+        });
+
+        if (!rack) throw new Error(`Rack not found: ${name}`);
+
+        return rack.libraryRackId;
+
+    } catch (error) {
+        console.error("Error finding rack:", error);
+        throw new Error(error.message);
+    }
+}
+
+export async function getRowIdByName(name) {
+    try {
+        const row = await model.libraryRowModel.findOne({
+            where: { name }
+        });
+
+        if (!row) throw new Error(`Row not found: ${name}`);
+
+        return row.libraryRowId;
+
+    } catch (error) {
+        console.error("Error finding row:", error);
+        throw new Error(error.message);
+    }
+};

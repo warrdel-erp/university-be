@@ -5,33 +5,35 @@ import moment from "moment";
 export async function addMember(memberData, createdBy, updatedBy) {
     try {
 
-        const memberTypePrefix = memberData.memberType.slice(0, 2).toUpperCase();
+        const staticPrefix = "ASA-L1";
 
-        const memberId = await libraryMemberService.getPreviousMemberId();
+        const typePrefix = memberData.memberType.slice(0, 3).toUpperCase();
 
-        const lastMemberId = memberId ? memberId.dataValues.member_id : '';
+        const last = await libraryMemberService.getPreviousMemberId();
+        const lastMemberId = last ? last.dataValues.member_id : "";
 
         let newMemberId;
 
         if (lastMemberId) {
-            const lastNumber = parseInt(lastMemberId.slice(2)) || 0;
+            const lastNumber = parseInt(lastMemberId.split("-")[3]) || 0;
             const incrementedNumber = lastNumber + 1;
-            newMemberId = `${memberTypePrefix}${String(incrementedNumber).padStart(4, '0')}`;
+
+            newMemberId = `${staticPrefix}-${typePrefix}-${String(incrementedNumber).padStart(5, "0")}`;
         } else {
-            newMemberId = `${memberTypePrefix}0001`;
+            newMemberId = `${staticPrefix}-${typePrefix}-00001`;
         }
 
+        memberData.memberId = newMemberId;
         memberData.createdBy = createdBy;
         memberData.updatedBy = updatedBy;
-        memberData.memberId = newMemberId;
 
-        const member = await libraryMemberService.addMember(memberData);
-        return member;
+        return await libraryMemberService.addMember(memberData);
+
     } catch (error) {
-        console.error('Error adding member:', error);
-        throw new Error('Unable to add member');
+        console.error("Error adding member:", error);
+        throw new Error("Unable to add member");
     }
-}
+};
 
 export async function getMemberDetails(universityId) {
     return await libraryMemberService.getMemberDetails(universityId);

@@ -61,3 +61,73 @@ CREATE TABLE library_row (
     CONSTRAINT fk_row_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
     CONSTRAINT fk_row_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
 );
+
+ALTER TABLE library_creation
+    ADD COLUMN description VARCHAR(255) NULL AFTER name,
+    DROP COLUMN books_to_issued,
+    DROP COLUMN issued_from_book_bank,
+    DROP COLUMN library_fine,
+    DROP COLUMN library_transaction,
+    DROP COLUMN active;
+
+ALTER TABLE library_creation ADD COLUMN library_floor_id INT DEFAULT NULL;
+
+UPDATE library_creation SET library_floor_id = 1 WHERE library_floor_id IS NULL;
+
+UPDATE library_creation SET library_floor_id = 1 WHERE library_floor_id = 0;
+
+ALTER TABLE library_creation ADD CONSTRAINT fk_library_floor_id FOREIGN KEY (library_floor_id) REFERENCES library_floor (library_floor_id) ON DELETE CASCADE;
+
+CREATE TABLE library_book (
+    library_book_id INT AUTO_INCREMENT PRIMARY KEY,
+    library_creation_id INT NULL,
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255) NULL,
+    authors VARCHAR(255) NULL,
+    publisher VARCHAR(255) NULL,
+    place_of_publication VARCHAR(255) NULL,
+    year_of_publication INT NULL,
+    edition VARCHAR(255) NULL,
+    series_title VARCHAR(255) NULL,
+    volume_number VARCHAR(255) NULL,
+    language VARCHAR(255) NULL,
+    isbn VARCHAR(255) NULL,
+    issn VARCHAR(255) NULL,
+    physical_description VARCHAR(255) NULL,
+    number_of_pages INT NULL,
+    illustrations TINYINT(1) NULL,
+    summary TEXT NULL,
+    keywords TEXT NULL,
+    additional_author TEXT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_book_creation FOREIGN KEY (library_creation_id) REFERENCES library_creation (library_creation_id),
+    CONSTRAINT fk_book_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
+    CONSTRAINT fk_book_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
+);
+
+CREATE TABLE library_book_inventory (
+    inventory_id INT AUTO_INCREMENT PRIMARY KEY,
+    library_book_id INT NOT NULL,
+    barcode VARCHAR(255) NULL,
+    library_aisle_id INT NOT NULL,
+    library_rack_id INT NOT NULL,
+    library_row_id INT NOT NULL,
+    student_id INT NULL,
+    employee_id INT NULL,
+    issue_date TIMESTAMP NULL,
+    due_date TIMESTAMP NULL,
+    status ENUM('available', 'issued') DEFAULT 'available',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT fk_inventory_book FOREIGN KEY (library_book_id) REFERENCES library_book (library_book_id),
+    CONSTRAINT fk_inventory_aisle FOREIGN KEY (library_aisle_id) REFERENCES library_aisle (library_aisle_id),
+    CONSTRAINT fk_inventory_rack FOREIGN KEY (library_rack_id) REFERENCES library_rack (library_rack_id),
+    CONSTRAINT fk_inventory_row FOREIGN KEY (library_row_id) REFERENCES library_row (library_row_id),
+    CONSTRAINT fk_inventory_student FOREIGN KEY (student_id) REFERENCES students (student_id),
+    CONSTRAINT fk_inventory_employee FOREIGN KEY (employee_id) REFERENCES employee (employee_id)
+);
