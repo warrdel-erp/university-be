@@ -11,6 +11,18 @@ export async function addSession(sessionData,transaction) {
     }
 };
 
+export async function addBulkSession(sessionData) {    
+    try {
+        const result = await model.sessionModel.bulkCreate(sessionData);
+                console.log(`>>>>>>resultSession`,result.length);
+
+        return result;
+    } catch (error) {
+        console.error("Error in add Session bulk:", error);
+        throw error;
+    }
+};
+
 export async function courseSectionMapping(sessionData,transaction) {    
     try {
         const result = await model.sessionCouseMappingModel.bulkCreate(sessionData,{transaction});
@@ -75,6 +87,20 @@ export async function getSingleSessionDetails(sessionId) {
         return Session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
+        throw error;
+    }
+}
+
+export async function getSessionDetailsByAcedmic(acedmicYearId) {
+    try {
+        const Session = await model.sessionModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: { acedmicYearId },
+        });
+
+        return Session;
+    } catch (error) {
+        console.error('Error fetching Session details By Acedmic Id:', error);
         throw error;
     }
 }

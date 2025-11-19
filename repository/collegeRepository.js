@@ -16,6 +16,22 @@ export async function getCourseCode(courseId) {
     };
 };
 
+export async function getCampusCode(campusId) {
+    try {
+        const attribute = ["campus_code"]
+        const result = await model.campusModel.findOne({
+            attributes:attribute,
+            where: {
+                campus_id: courseId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in campus code${campusId}:`, error);
+        throw error;
+    };
+};
+
 export async function getInstituteCode(instituteId) {
     try {
         const attribute = ["institute_code"]

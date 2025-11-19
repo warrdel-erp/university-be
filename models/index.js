@@ -111,6 +111,13 @@ import teacherAttendeceModel from './teacherAttendenceModel.js';
 import leavePolicyModel from './leavePolicyModel.js';
 import leaveBalanceModel from './leaveBalanceModel.js';
 import leaveRequestModel from './leaveRequestModel.js'; 
+import examStructureScheduleMappingModel from './examStructureScheduleMappingModel.js';
+import examScheduleModel from './examScheduleModel.js';
+import feeTypeGroupModel from './feeTypeGroupModel.js';
+import libraryFloorModel from './libraryFloorModel.js';
+import libraryAisleModel from './libraryAisleModel.js';
+import libraryRackModel from './libraryRackModel.js';
+import libraryRowModel from './libraryRowModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -171,14 +178,17 @@ affiliatedIniversityModel.hasMany(courseModel, { foreignKey: 'affiliated_univers
 courseModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'instituted' });
 instituteModel.hasMany(courseModel, { foreignKey: 'institute_id', as: 'instituted' });
 
-courseModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
-acedmicYearModel.hasMany(courseModel, { foreignKey: 'acedmic_year_id', as: 'courseacedmicYear' });
+employeeCodeMasterType.hasMany(courseModel, { foreignKey: "course_levelId", as: "coursesCodeMaster", });
+courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as: "courseLevelCourses", });
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: 'affiliated_university_id', as: 'institut' });
 
 instituteModel.belongsTo(campusModel, { foreignKey: 'institute_id', as: 'campues' });
 campusModel.hasMany(instituteModel, { foreignKey: 'institute_id', as: 'campues' });
+
+campusModel.hasMany(instituteModel, {foreignKey: "campusId",as: "instituteData"});
+instituteModel.belongsTo(campusModel, {foreignKey: "campusId",  as: "campusData",});
 
 classSectionModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'courseSectionAdd' });
 courseModel.hasMany(classSectionModel, { foreignKey: 'course_id', as: 'courseSectionAdd' });
@@ -682,8 +692,8 @@ sessionCouseMappingModel.belongsTo(sessionModel, {foreignKey: 'sessionId',as: 's
 courseModel.hasMany(sessionCouseMappingModel, {foreignKey: 'courseId',as: 'sessionCourseMappings'});
 sessionCouseMappingModel.belongsTo(courseModel, {foreignKey: 'courseId',as: 'courses'});
 
-feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
-feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+// feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
+// feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
 
 feeInvoiceDetailRecordModel.belongsTo(studentInvoiceMapperModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
 studentInvoiceMapperModel.hasMany(feeInvoiceDetailRecordModel, { foreignKey: 'studentInvoiceMapperId', as: 'studentMakePayment' });
@@ -706,6 +716,15 @@ feePlanTypeModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'fee_new_invoice_id
 studentInvoiceMapperModel.belongsTo(studentModel, { foreignKey: 'studentId', as: 'studentinvoice'  }); 
 studentModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'studentId',  as: 'invoicestudent'  });
 
+studentInvoiceMapperModel.hasMany(feeTypeGroupModel, { foreignKey: "studentInvoiceMapperId", as: "feeTypeGroup" });
+feeTypeGroupModel.belongsTo(studentInvoiceMapperModel, { foreignKey: "studentInvoiceMapperId", as: "invoiceMapper" });
+
+feeTypeModel.hasMany(feeTypeGroupModel, { foreignKey: "feeTypeId", as: "feeTypeGroups" });
+feeTypeGroupModel.belongsTo(feeTypeModel, { foreignKey: "feeTypeId", as: "feeTypes" });
+
+// studentInvoiceMapperModel.belongsTo(feeTypeModel, { foreignKey: 'feeTypeId', as: 'studentinvoiceFeeType'  }); 
+// feeTypeModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeTypeId',  as: 'invoicestudentFeeType'  });
+
 studentInvoiceMapperModel.belongsTo(feeNewInvoiceModel, { foreignKey: 'feeNewInvoiceId',  as: 'feeInvoicedata' }); 
 feeNewInvoiceModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeNewInvoiceId', as: 'invoiceMappings' });
 
@@ -720,6 +739,9 @@ sessionModel.hasMany(feePlanModel, { foreignKey: 'sessionId', as: 'feePlanSessio
 
 lessonModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
 subjectModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'lessonSubject' });
+
+lessonModel.belongsTo(employeeModel, { foreignKey: 'employeeId', as: 'employeeLesson' });
+employeeModel.hasMany(lessonModel, { foreignKey: 'employeeId', as: 'employeeLesson' });
 
 lessonModel.belongsTo(semesterModel, { foreignKey: 'subjectId', as: 'lessionSemester' });
 semesterModel.hasMany(lessonModel, { foreignKey: 'subjectId', as: 'semesterLession' });
@@ -744,6 +766,9 @@ examStructureModel.belongsTo(courseModel, { foreignKey: 'courseId', targetKey: '
 
 sessionModel.hasMany(examStructureModel, { foreignKey: 'sessionId', sourceKey: 'sessionId', as: 'examStructuresSession' });
 examStructureModel.belongsTo(sessionModel, { foreignKey: 'sessionId', targetKey: 'sessionId', as: 'sessionExam' });
+
+acedmicYearModel.hasMany(examStructureModel, { foreignKey: 'acedmicYearId', sourceKey: 'acedmicYearId', as: 'examStructuresAcedmic' });
+examStructureModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmicYearId', targetKey: 'acedmicYearId', as: 'acedmicExam' });
 
 syllabusUnitModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", targetKey: "acedmicYearId", as: "acedmicYearUnit" });
 acedmicYearModel.hasMany(syllabusUnitModel, { foreignKey: "acedmicYearId", sourceKey: "acedmicYearId", as: "syllabusUnitsAcedmic" });
@@ -780,6 +805,39 @@ leavePolicyModel.hasMany(leaveRequestModel, { foreignKey: "policy_id", as: "leav
 
 leaveBalanceModel.belongsTo(leavePolicyModel, { foreignKey: "policy_id", as: "leaveBalancePolicy" });
 leavePolicyModel.hasMany(leaveBalanceModel, { foreignKey: "policy_id", as: "leaveBalance" });
+
+examSetupTypeModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "exam_setup_type_id",as: "scheduleMappers"});
+examStructureScheduleMappingModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupType"});
+
+sessionModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "session_id",as: "sessionSchedule"});
+examStructureScheduleMappingModel.belongsTo(sessionModel, {foreignKey: "session_id",as: "sessionSchedule"});
+
+examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+
+examScheduleModel.belongsTo(subjectModel, {foreignKey: "subject_id",as: "subjectSchedule"});
+subjectModel.hasMany(examScheduleModel, {foreignKey: "subject_id",as: "scheduleSubject"});
+
+examSetupTypeModel.hasMany(syllabusDetailsModel, {foreignKey: "exam_setup_type_id",as: "syllabusDetailsExam"});
+syllabusDetailsModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupTypeSyllabus"});
+
+examScheduleModel.belongsTo(semesterModel, {foreignKey: "semesterId",targetKey: "semesterId",as: "semesterexam"});
+semesterModel.hasMany(examScheduleModel, {foreignKey: "semesterId",sourceKey: "semesterId",as: "examSchedules"});
+
+campusModel.hasMany(libraryFloorModel, { foreignKey: "campus_id", as: "floorCampus" });
+libraryFloorModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campusFloor" });
+
+instituteModel.hasMany(libraryFloorModel, { foreignKey: "institute_id", as: "floorInstitute" });
+libraryFloorModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "instituteFloor" });
+
+libraryFloorModel.hasMany(libraryAisleModel, { foreignKey: "library_floor_id", as: "aisles" });
+libraryAisleModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floor" });
+
+libraryAisleModel.hasMany(libraryRackModel, { foreignKey: "library_aisle_id", as: "racks" });
+libraryRackModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisle" });
+
+libraryRackModel.hasMany(libraryRowModel, { foreignKey: "library_rack_id", as: "rows" });
+libraryRowModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as: "rack" });
 
 export {
     settingModel,
@@ -895,4 +953,11 @@ export {
     leaveBalanceModel,
     leavePolicyModel,
     leaveRequestModel,
+    examStructureScheduleMappingModel,
+    examScheduleModel,
+    feeTypeGroupModel,
+    libraryFloorModel,
+    libraryAisleModel,
+    libraryRackModel,
+    libraryRowModel,
 };

@@ -101,3 +101,41 @@ export async function addExamType(examDetail) {
         throw error;
     }
 };
+
+export async function getDetailByExamType(examSetupTypeId) {
+  try {
+    const result = await model.examSetupTypeModel.findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { examSetupTypeId },
+      include: [
+        {
+          model: model.examStructureModel,
+          as: "examStructure",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          include: [
+            {
+              model: model.courseModel,
+              as: "courseExam",
+              attributes: ["courseName", "capacity"],
+            },
+            {
+              model: model.sessionModel,
+              as: "sessionExam",
+              attributes: ["sessionName"],
+            },
+            {
+              model: model.acedmicYearModel,
+              as: "acedmicExam",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+          ],
+        },
+      ],
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam structure details:", error.message);
+    throw error;
+  }
+};

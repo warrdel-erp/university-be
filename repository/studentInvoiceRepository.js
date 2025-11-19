@@ -123,7 +123,26 @@ export async function getAllActiveInvoice(universityId) {
                     as: "studentMakePayment",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
                     
-                },    
+                },
+                {
+                    model: model.feeTypeGroupModel,
+                    as: "feeTypeGroup",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
+                        {
+                            model: model.feeTypeModel,
+                            as: "feeTypes",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            include: [
+                                {
+                                    model: model.feeGroupModel,
+                                    as: "feeGroup",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                }
+                            ]
+                        }
+                    ]
+                }    
             ]
         });
 
@@ -143,6 +162,24 @@ export async function updateFeeNewInvoice(feeNewInvoiceId, data) {
     } catch (error) {
         console.error(`Error updating studentInvoiceMapperModel  ${feeNewInvoiceId}:`, error);
         throw error; 
+    }
+};
+
+export async function addStudentSpecificInvoice(data, transaction = null) {
+    try {
+        return await model.studentInvoiceMapperModel.create(data, { transaction });
+    } catch (error) {
+        console.error("Error in add Student specific Invoice:", error);
+        throw error;
+    }
+};
+
+export async function addMultipleFeeTypeGroup(dataArray, transaction = null) {
+    try {
+        return await model.feeTypeGroupModel.bulkCreate(dataArray, { transaction });
+    } catch (error) {
+        console.error("Error in bulk insert fee type group:", error);
+        throw error;
     }
 };
 

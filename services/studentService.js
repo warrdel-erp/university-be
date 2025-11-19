@@ -9,8 +9,12 @@ import {getEmployeeCodesTypesForStudentImport} from '../repository/codeMasterRep
 import { getCourseByName,getClassByName } from '../repository/courseRepository.js';
 import {studentRegister} from '../services/userServices.js';
 import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
-import { findByPlanId } from '../repository/feePlanRepository.js';
+import { findByPlanId, getfeePlanByCourseAndAcedmic } from '../repository/feePlanRepository.js';
 import { parseCustomDate } from '../utility/dateFormat.js';
+import { getSemesterById } from './mainServices.js';
+import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from './acedmicYearServices.js';
+import { getSemesterGroup } from '../utility/semesterGroup.js';
+import * as feeInvoiceRepository  from '../repository/feeInvoiceRepository.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -341,36 +345,42 @@ export async function importStudentData(excelData, data) {
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber ?convertedData.scholarNumber:scholarNumberData;    
       convertedData.scholarNumber = number;
-      console.log(`>>>>>>>>>>convertedData.birthDate`,convertedData.birthDate);
 
       const formatDob = await parseCustomDate(convertedData.birthDate)
-      console.log(`>>>>>>>>>formatDob`,formatDob);
+            
+      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)      
       
-      console.log(`>>>>>>>>convertedData.enrollDate`,convertedData.enrollDate);
-      
-      const formatEnrollDate = await parseCustomDate(convertedData.enrollDate)
-      console.log(`>>>>>formatEnrollDate>>>>>>>>`,formatEnrollDate);
-      console.log(`>>>>>>>convertedData.admissionDate`,convertedData.admissionDate);
-      
-      
-      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)
-      console.log(`>>>>>>>formatAdmissionDate>>>>`,formatAdmissionDate);
-      
+      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate)      
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admisssionDate = formatAdmissionDate
-      console.log(`>>>>>>>>>>>convertedData`,convertedData);
-      
+      convertedData.admisssionDate = formatAdmissionDate      
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
-
+      // student register 
       const role = 'Student';
       const roleId = convertedData.roleId || 1
       const {studentId, email, phoneNumber, mobileNumber, scholarNumber,universityId}=result.dataValues
       const registerStudentData = {studentId,email,phoneNumber,mobileNumber,scholarNumber,universityId,role,roleId}
       await studentRegister (registerStudentData,transaction)
+
+      // student Invoice mapping
+      const feePlanId = result?.dataValues?.feePlanId
+
+      if(feePlanId){
+          const getInvoice = await findByPlanId(feePlanId)
+          const dataToInsert = getInvoice.map(invoice => ({
+            studentId,
+            universityId,
+            feePlanId,
+            feeNewInvoiceId: invoice.feeNewInvoiceId,
+            invoiceStatus: false,
+            createdBy,
+            updatedBy :createdBy
+          }));
+          await studentRepository.addStudentInvoiceMapper(dataToInsert,transaction)
+        }
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
@@ -833,4 +843,375 @@ function incrementScholarNumber(scholarNumber) {
 
   parts[parts.length - 1] = incremented;
   return parts.join('/');
-}
+};
+
+export async function getFeePlanId(semesterId,acedmicYearId,courseId,universityId){
+  const semesterDetail = await getSemesterById(semesterId)
+  const {name,semesterDuration} = semesterDetail.dataValues
+  const acedmiceBack =  getSemesterGroup(name,semesterDuration)
+  const acedmicYearDetail = await getSingleacedmicYearDetails(acedmicYearId,universityId)
+  const {yearTitle,startingDate,endingDate} = acedmicYearDetail.dataValues
+  
+  const [startYear, endYear] = yearTitle.split('-').map(Number);
+
+  const backAcedmicYear = acedmiceBack.group -1
+
+  const newStartYear = startYear - backAcedmicYear;
+  const newEndYear = endYear - backAcedmicYear;
+
+  const updatedYearTitle = `${newStartYear}-${newEndYear}`;
+  const previousAcedmicYear = await getSingleacedmicYearDetailsByTitle(updatedYearTitle)
+  const previousAcedmicYearId = previousAcedmicYear.dataValues.acedmicYearId
+  const isActive = previousAcedmicYear.dataValues.isActive
+
+ if (!isActive) {
+      return { message: `Please activate academic year ${updatedYearTitle}`, success: false };
+  }
+  return await getfeePlanByCourseAndAcedmic(courseId,previousAcedmicYearId)
+};
+
+export async function getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role){
+  return await studentRepository.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role)
+};
+
+export async function getStudentSubject(studentId){
+  return await studentRepository.getStudentSubject(studentId)
+};
+
+// latest 
+
+// export async function getFeeDetailsByStudentId(studentId) {
+//     try {
+//         const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
+
+//         // --- Filter only invoiceStatus = true ---
+//         const filtered = invoices.filter(inv => inv.invoiceStatus === true);
+
+//         if (filtered.length === 0) {
+//             return {
+//                 studentInfo: {},
+//                 personalInfo: {},
+//                 parentInfo: {},
+//                 invoices: [],
+//                 summary: {}
+//             };
+//         }
+
+//         // -------- STUDENT INFO ---------
+//         const student = filtered[0].studentinvoice || {};
+
+//         const studentInfo = {
+//             studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
+//             course: student.course?.courseName || "",
+//             scholarNumber: student.scholarNumber || "",
+//             classSection: student.studentSemester?.classSections?.[0]?.section || "",
+//             semester: student.studentSemester?.name || "",
+//             academicYear: student.acdemicYear?.yearTitle || ""
+//         };
+
+//         const personalInfo = {
+//             contactNo: student.phoneNumber || "",
+//             email: student.email || ""
+//         };
+
+//         const parentInfo = {
+//             fatherName: student.fatherName || "",
+//             contactNo: student.parentNumber || "",
+//             email: student.parentEmail || "",
+//             address: student.pAddress || ""
+//         };
+
+//         // -------- INVOICE LOOP ---------
+//         const formattedInvoices = filtered.map(inv => {
+//             // Flags
+//             const hasPlan = inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
+//             const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
+
+//             let invoiceNo = inv.invoiceNumber || "";
+//             let dueDate = inv.dueDate || "";
+//             let title = "";
+//             let total = 0;
+//             let feeItems = [];
+
+//             // -------- CASE 1: PLAN INVOICE ---------
+//             if (hasPlan) {
+//                 const fee = inv.feeInvoicedata;
+
+//                 const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
+//                 const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+
+//                 semesters.forEach(s => {
+//                     feeItems.push({
+//                         name: s.name || "",
+//                         dueDate: fee.EndDate || dueDate,
+//                         amount: s.fee || 0,
+//                         subTotal: s.fee || 0
+//                     });
+//                 });
+
+//                 additionalFees.forEach(a => {
+//                     feeItems.push({
+//                         name: a.name || "",
+//                         dueDate: fee.EndDate || dueDate,
+//                         amount: a.fee || 0,
+//                         subTotal: a.fee || 0
+//                     });
+//                 });
+
+//                 total = fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
+//                 invoiceNo = fee.InvoiceNumber || invoiceNo;
+//                 title = semesters[0]?.name || fee.name || "";
+//                 dueDate = fee.EndDate || dueDate;
+//             }
+
+//             // -------- CASE 2: FEE TYPE INVOICE ---------
+//             else if (hasFeeType) {
+//                 const ft = inv.studentinvoiceFeeType;
+
+//                 const amount = Number(ft.feeValue || 0);
+
+//                 feeItems.push({
+//                     name: ft.name || "",
+//                     dueDate: dueDate,
+//                     amount,
+//                     subTotal: amount
+//                 });
+
+//                 total = amount;
+//                 title = ft.name || "";
+//             }
+
+//             // -------- PAYMENTS FOR THIS INVOICE ---------
+//             const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+
+//             const isApplied = payments.some(p => p.isApplyed === true);
+
+//             return {
+//                 studentInvoiceMapperId: inv.studentInvoiceMapperId,
+//                 invoiceNo,
+//                 title,
+//                 dueDate,
+//                 isApplied : false,
+//                 total,
+//                 subTotal: total,
+//                 feeItems,
+//                 payments 
+//             };
+//         });
+
+//         // -------- SUMMARY ---------
+//         let appliedPayments = 0;
+//         let unappliedPayments = 0;
+
+//         filtered.forEach(inv => {
+//             const payments = inv.studentMakePayment || [];
+//             payments.forEach(p => {
+//                 const amt = Number(p.paidAmount || 0);
+//                 if (p.isApplyed) appliedPayments += amt;
+//                 else unappliedPayments += amt;
+//             });
+//         });
+
+//         const totalDue = formattedInvoices.reduce((sum, f) => sum + (f.total || 0), 0);
+
+//         const remainingAmount = totalDue - appliedPayments;
+
+//         const summary = {
+//             appliedPayments:'',
+//             unappliedPayments:'',
+//             remainingAmount:'',
+//             totalDue:''
+//         };
+
+//         return {
+//             studentInfo,
+//             personalInfo,
+//             parentInfo,
+//             invoices: formattedInvoices,
+//             summary
+//         };
+
+//     } catch (error) {
+//         console.error("Error formatting Fee Invoice Details:", error);
+//         throw error;
+//     }
+// };
+
+export async function getFeeDetailsByStudentId(studentId) {
+    try {
+        const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
+
+        // --- Filter only invoiceStatus = true ---
+        const filtered = invoices.filter(inv => inv.invoiceStatus === true);
+
+        if (filtered.length === 0) {
+            return {
+                studentInfo: {},
+                personalInfo: {},
+                parentInfo: {},
+                invoices: [],
+                summary: {}
+            };
+        }
+
+        //  NEW: Convert new DB structure into old key for backward compatibility
+        filtered.forEach(inv => {
+            inv.studentinvoiceFeeType = inv.feeTypeGroup?.feeTypes || null;
+        });
+
+        // -------- STUDENT INFO ---------
+        const student = filtered[0].studentinvoice || {};
+
+        const studentInfo = {
+            studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
+            course: student.course?.courseName || "",
+            scholarNumber: student.scholarNumber || "",
+            classSection: student.studentSemester?.classSections?.[0]?.section || "",
+            semester: student.studentSemester?.name || "",
+            academicYear: student.acdemicYear?.yearTitle || ""
+        };
+
+        const personalInfo = {
+            contactNo: student.phoneNumber || "",
+            email: student.email || ""
+        };
+
+        const parentInfo = {
+            fatherName: student.fatherName || "",
+            contactNo: student.parentNumber || "",
+            email: student.parentEmail || "",
+            address: student.pAddress || ""
+        };
+
+        // -------- INVOICE LOOP ---------
+        const formattedInvoices = filtered.map(inv => {
+
+            const hasPlan = inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
+            const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
+            const hasFeeTypeGroup = !hasPlan && !hasFeeType && Array.isArray(inv.feeTypeGroup) && inv.feeTypeGroup.length > 0;
+
+            let invoiceNo = inv.invoiceNumber || "";
+            let dueDate = inv.dueDate || "";
+            let title = "";
+            let total = 0;
+            let feeItems = [];
+
+            // -------- CASE 1: PLAN INVOICE ---------
+            if (hasPlan) {
+                const fee = inv.feeInvoicedata;
+
+                const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
+                const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+
+                semesters.forEach(s => {
+                    feeItems.push({
+                        name: s.name || "",
+                        dueDate: fee.EndDate || dueDate,
+                        amount: s.fee || 0,
+                        subTotal: s.fee || 0
+                    });
+                });
+
+                additionalFees.forEach(a => {
+                    feeItems.push({
+                        name: a.name || "",
+                        dueDate: fee.EndDate || dueDate,
+                        amount: a.fee || 0,
+                        subTotal: a.fee || 0
+                    });
+                });
+
+                total = fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
+                invoiceNo = fee.InvoiceNumber || invoiceNo;
+                title = semesters[0]?.name || fee.name || "";
+                dueDate = fee.EndDate || dueDate;
+            }
+
+            // -------- CASE 2: OLD FEE TYPE INVOICE ---------
+            else if (hasFeeType) {
+                const ft = inv.studentinvoiceFeeType;
+
+                const amount = Number(ft.feeValue || 0);
+
+                feeItems.push({
+                    name: ft.name || "",
+                    dueDate,
+                    amount,
+                    subTotal: amount
+                });
+
+                total = amount;
+                title = ft.name;
+            }
+
+            // -------- ⭐ CASE 3: NEW FEE TYPE GROUP INVOICE ---------
+            else if (hasFeeTypeGroup) {
+                inv.feeTypeGroup.forEach(ftg => {
+                    const ft = ftg.feeTypes;
+
+                    feeItems.push({
+                        name: ft?.name || "",
+                        dueDate,
+                        amount: Number(ftg.subtotal || ftg.amount || 0),
+                        subTotal: Number(ftg.subtotal || ftg.amount || 0)
+                    });
+
+                    total += Number(ftg.subtotal || ftg.amount || 0);
+                });
+
+                title = feeItems[0]?.name || "";
+            }
+
+            // -------- PAYMENTS ---------
+            const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+            const isApplied = payments.some(p => p.isApplyed === true);
+
+            return {
+                studentInvoiceMapperId: inv.studentInvoiceMapperId,
+                invoiceNo,
+                title,
+                dueDate,
+                isApplied: false,
+                total,
+                subTotal: total,
+                feeItems,
+                payments
+            };
+        });
+
+        // -------- SUMMARY ---------
+        let appliedPayments = 0;
+        let unappliedPayments = 0;
+
+        filtered.forEach(inv => {
+            const payments = inv.studentMakePayment || [];
+            payments.forEach(p => {
+                const amt = Number(p.paidAmount || 0);
+                if (p.isApplyed) appliedPayments += amt;
+                else unappliedPayments += amt;
+            });
+        });
+
+        const totalDue = formattedInvoices.reduce((sum, f) => sum + (f.total || 0), 0);
+        const remainingAmount = totalDue - appliedPayments;
+
+        const summary = {
+            appliedPayments: '',
+            unappliedPayments: '',
+            remainingAmount: remainingAmount,
+            totalDue: totalDue
+        };
+
+        return {
+            studentInfo,
+            personalInfo,
+            parentInfo,
+            invoices: formattedInvoices,
+            summary
+        };
+
+    } catch (error) {
+        console.error("Error formatting Fee Invoice Details:", error);
+        throw error;
+    }
+};

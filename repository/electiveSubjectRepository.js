@@ -11,6 +11,18 @@ export async function addElectiveSubject(electiveSubjectData) {
     }
 };
 
+export async function addBulkElectiveSubject(electiveSubjectData) {    
+    try {
+        const result = await model.electiveSubjectModel.bulkCreate(electiveSubjectData);
+                console.log(`>>>>>>resultelectiveSubject`,result.length);
+
+        return result;
+    } catch (error) {
+        console.error("Error in add electiveSubject :", error);
+        throw error;
+    }
+};
+
 export async function getElectiveSubjectDetails(universityId,acedmicYearId) {
     try {
         const whereClause = {
@@ -40,6 +52,20 @@ export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
         return electiveSubject;
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);
+        throw error;
+    }
+}
+
+export async function getSingleElectiveSubjectByAcedmicId(acedmicYearId) {
+    try {
+        const electiveSubject = await model.electiveSubjectModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: { acedmicYearId },
+        });
+
+        return electiveSubject;
+    } catch (error) {
+        console.error('Error fetching electiveSubject details by acedmic Id:', error);
         throw error;
     }
 }

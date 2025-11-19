@@ -1,74 +1,44 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import instituteModel from "./instituteModel.js";
-import subjectModel from "./subjectModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
-import sessionModel from "./sessionModel.js";
-import universityModel from "./universityModel.js";
-import employeeModel from "./employeeModel.js";
+import campus from "./campusModel.js";
+import institute from "./instituteModel.js";
+import university from "./universityModel.js";
 
 export default sequelize.define(
-    'lesson',
+    'library_floor',
     {
-        lessonId: {
+        libraryFloorId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'lesson_id'
-        },
-        instituteId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'institute_id',
-            references: {
-                model: instituteModel,
-                key: 'institute_id'
-            }
-        }, 
-        employeeId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'employee_id',
-            references: {
-                model: employeeModel,
-                key: 'employee_id'
-            }
+            field: 'library_floor_id'
         },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'university_id',
             references: {
-                model: universityModel,
+                model: university,
                 key: 'university_id'
             }
-        }, 
-        subjectId: {
+        },
+        campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'subject_id',
+            field: 'campus_id',
             references: {
-                model: subjectModel,
-                key: 'subject_id'
+                model: campus,
+                key: 'campus_id'
             }
         },
-        acedmicYearId: {
+        instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'acedmic_year_id',
+            field: 'institute_id',
             references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
-            }
-        }, 
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
+                model: institute,
+                key: 'institute_id'
             }
         },
         name: {
@@ -116,7 +86,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'lesson',
+        tableName: 'library_floor',
         timestamps: true,
         paranoid: true
     }

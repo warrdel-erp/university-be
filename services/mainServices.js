@@ -1,6 +1,7 @@
-import { getCourseByCourseId } from '../repository/courseRepository.js';
+import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
+import * as studentRepository from '../repository/studentRepository.js';
 
 export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId) {
     try {
@@ -10,7 +11,7 @@ export async function getAllCollegesAndCourses(universityId,campusId,instituteId
             mainRepository.getAllCampus(universityId,campusId),
             mainRepository.getAllInstitute(universityId,instituteId,headInstituteId,role,campusId),
             mainRepository.getAllAffiliatedUniversity(universityId,instituteId,headInstituteId,role),
-            mainRepository.getAllCourse(universityId,acedmicYearId,headInstituteId,role,instituteId,campusId),
+            mainRepository.getAllCourse(universityId,headInstituteId,role,instituteId,campusId),
             mainRepository.getAllSpecialization(universityId,acedmicYearId,headInstituteId,role),
             mainRepository.getAllSubject(universityId,acedmicYearId,headInstituteId,role,instituteId)
         ]);
@@ -167,6 +168,23 @@ export async function addCourse(data, createdBy, instituteId) {
     }
 };
 
+export const changeCourseStatus = async (courseId) => {
+    const course = await getCourseByCourseId (courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    const newStatus = !course.dataValues.isActive;
+    console.log(`>>>>>>>>newStatus`,newStatus);
+    
+
+    await changeCourseStatuss(courseId,{isActive: newStatus});
+
+    return {
+        message: `Course status updated successfully to`,
+        isActive: newStatus
+    };
+};
 
 export async function addSpecialization(data,createdBy,instituteId) {
     const results = [];
@@ -241,6 +259,10 @@ export async function getClassDetails(classSectionId,universityId,acedmicYearId,
     return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role)
 };
 
+export async function getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId){
+    return await mainRepository.getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId);
+};
+
 export async function addClassSubjectMapper(data, createdBy,instituteId) {  
     try {
         const { semesterId, subjectIds } = data;
@@ -295,6 +317,10 @@ export async function getSemester(courseId,specializationId,universityId,acedmic
     return await mainRepository.getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role)
 };
 
+export async function getSemesterById(semesterId){
+    return await mainRepository.getSemesterById(semesterId)
+};
+
 export async function createClass(data, createdBy, universityId,instituteId) {
     const results = [];
     try {
@@ -342,4 +368,37 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
         console.error("Error in creating subject bulk upload:", error);
         throw new Error("Failed to create subject bulk upload");
     }
+};
+
+export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
+  const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+
+  const response = {
+    student: result.student.map((s) => ({
+      studentId: s.studentId,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      scholarNumber: s.scholarNumber,
+      email: s.email,
+      phoneNumber: s.phoneNumber,
+      semesterName: s.studentSemester?.name || null,
+      className: s.studentSections?.class || null,
+      sectionName: s.studentSections?.section || null,
+    })),
+
+    teacher: result.teacher.map((t) => ({
+      employeeId: t.employeeData?.employeeId,
+      employeeName: t.employeeData?.employeeName,
+      employeeCode: t.employeeData?.employeeCode,
+      department: t.employeeData?.department,
+      dateOfBirth: t.employeeData?.dateOfBirth,
+      subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
+        subjectName: sub.employeeSubject?.subjects?.subjectName,
+        subjectCode: sub.employeeSubject?.subjects?.subjectCode,
+        subjectType: sub.employeeSubject?.subjects?.subjectType,
+      })) || [],
+    })),
+  };
+
+  return response;
 };

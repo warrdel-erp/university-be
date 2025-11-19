@@ -140,6 +140,12 @@ export async function courseAllSubject(courseId,sessionId,universityId) {
                             attributes: { 
                                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
                             },
+                            // include:[
+                            //     {
+                            //         model:model.classSubjectMapperModel,
+                            //         as:'subjects'
+                            //     }
+                            // ]
                         }
                     ]
                 },

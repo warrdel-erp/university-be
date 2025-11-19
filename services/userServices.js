@@ -9,6 +9,7 @@ import { getSingleRoleDetails } from "../repository/roleRepository.js";
 import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
 import jwt from "jsonwebtoken";
 import sendEmail from "../utility/sendEmail.js";
+import 'dotenv/config';
 
 //register
 
@@ -413,17 +414,40 @@ export async function changeStatus(userId) {
   }
 };
 
-export const sendLink = async (email, req) => {
-  const user = await registerRepository.findEmailByEmail(email);
-  if (!user) throw new Error("User not found");
+export const sendLink = async (email) => {
+  try {
+    const user = await registerRepository.findEmailByEmail(email);
+    if (!user) throw new Error("User not found");
 
-  const token = jwt.sign({email: user.email }, 'warrdelUniversityERPWarrdelUniversityERP', { expiresIn: "5m" });
+    const jwtSecret = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
+    const baseUrl = process.env.FRONTEND_URL;
 
-  const baseUrl = `${req.protocol}://${req.headers.host}` || "http://localhost:3000";
+    if (!baseUrl) {
+      throw new Error("FRONTEND_URL is not configured in environment variables");
+    }
 
-  console.log(`>>>>>>>>>>>baseUrl`,baseUrl);
-  
-  const link = `${baseUrl}/password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
-console.log(`>>>>>>>>>>>link`,link)
-  await sendEmail(user.email, "Password Reset", `Click here: ${link}`);
+    const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
+
+    const resetLink = `${baseUrl}/password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
+    console.log("Password Reset Link:", resetLink);
+
+    const emailResponse = await sendEmail(user.email, "Password Reset", resetLink);
+
+    if (!emailResponse?.messageId) {
+      throw new Error("Failed to send email. Please check email address or SMTP credentials.");
+    }
+
+    const userId = user.dataValues.userId;
+    const updatedUser = await registerRepository.updateUser(userId, token);
+
+    return {
+      email: user.email,
+      messageId: emailResponse.messageId,
+      updated: !!updatedUser,
+    };
+
+  } catch (error) {
+    console.error("Error in userService.sendLink:", error);
+    throw new Error(error.message || "Internal Server Error in sendLink");
+  }
 };

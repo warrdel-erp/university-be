@@ -86,6 +86,20 @@ export const addCourse = async (req,res) => {
     }
 };
 
+export const changeCourseStatus = async (req,res) => {
+    try {
+        const {courseId} = req.query;
+        if(!(courseId)){
+            return res.status(400).send('courseId is required')
+        } 
+        const result = await mainServices.changeCourseStatus(courseId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in  change status Course:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
 export const addSpecialization = async (req,res) => {
     try {
         const {universityId,course_Id,acedmicYearId} = req.body;
@@ -150,6 +164,20 @@ export const getClass = async (req,res) => {
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getClassSpecific = async (req,res) => {
+    try {
+        const {campusId,instituteId,acedmicYearId,courseId,sessionId} = req.query
+        const universityId = req.user.universityId;
+        const role = req.user.role;    
+        const headInstituteId = req.user.instituteId;
+        const result = await mainServices.getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class specific Details:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
@@ -261,5 +289,22 @@ export const subjectExcel = async (req,res) => {
     } catch (error) {
         console.error("Error in  Add Subject Excel:", error);
         res.status(500).send("Internal Server Error");
+    }
+};
+
+export const getClassRecord = async (req,res) => {
+    try {
+        const semesterId = req.query.semesterId;
+        const acedmicYearId = req.query.acedmicYearId
+         const courseId = req.query.courseId;
+        const classSectionId = req.query.classSectionId 
+        // const universityId = req.user.universityId;
+        // const role = req.user.role;    
+        // const instituteId = req.user.instituteId;
+        const result = await mainServices.getClassRecord(courseId,semesterId,classSectionId,acedmicYearId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting class record Details:", error);
+        return res.status(500).send("Internal Server Error");
     }
 };

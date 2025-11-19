@@ -1,21 +1,29 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
-import subjectModel from "./subjectModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
-import sessionModel from "./sessionModel.js";
-import universityModel from "./universityModel.js";
-import employeeModel from "./employeeModel.js";
+import university from "./universityModel.js";
+import session from "./sessionModel.js";
+import examSetupTypeModel from "./examSetupTypeModel.js"
 
 export default sequelize.define(
-    'lesson',
+    'exam_structure_schedule_mapper',
     {
-        lessonId: {
+        examStructureScheduleMapperId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'lesson_id'
+            field: 'exam_structure_schedule_mapper_id'
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
         },
         instituteId: {
             type: DataTypes.INTEGER,
@@ -25,59 +33,42 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
-        employeeId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'employee_id',
-            references: {
-                model: employeeModel,
-                key: 'employee_id'
-            }
         },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'university_id',
             references: {
-                model: universityModel,
+                model: university,
                 key: 'university_id'
             }
-        }, 
-        subjectId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'subject_id',
-            references: {
-                model: subjectModel,
-                key: 'subject_id'
-            }
         },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
-            }
-        }, 
         sessionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'session_id',
             references: {
-                model: sessionModel,
+                model: session,
                 key: 'session_id'
+            }
+        },
+        examSetupTypeId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'exam_setup_type_id',
+            references: {
+                model: examSetupTypeModel,
+                key: 'exam_setup_type_id'
             }
         },
         name: {
             type: DataTypes.STRING,
-            allowNull: false,
+            allowNull: false
         },
-        description: {
-            type: DataTypes.STRING,
-            allowNull:true
+        startingDate:{
+            type:DataTypes.DATEONLY,
+            allowNull:true,
+            field:'starting_date'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -116,7 +107,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'lesson',
+        tableName: 'exam_structure_schedule_mapper',
         timestamps: true,
         paranoid: true
     }

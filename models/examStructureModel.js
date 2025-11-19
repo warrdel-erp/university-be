@@ -61,6 +61,11 @@ export default sequelize.define(
                 key: 'course_id'
             }
         },
+        examScheduling:{
+            type:DataTypes.STRING,
+            field:'exam_scheduling',
+            allowNull:false
+        },
         jury:{
             type:DataTypes.STRING,
             allowNull:true,

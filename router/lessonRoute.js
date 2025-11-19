@@ -1,6 +1,6 @@
 import {Router} from  'express'
 const router =  Router();
-import {addLesson,getAllLesson,getSingleLessonDetails,addTopice,addMapping,getMapping,updateMapping,updateCompleteMapping,deleteMapping} from "../controllers/lessonController.js";
+import {addLesson,getAllLesson,getSingleLessonDetails,addTopice,addMapping,getMapping,updateMapping,updateCompleteMapping,deleteMapping,getEmployeeSubjectAndLesson} from "../controllers/lessonController.js";
 import userAuth from "../middleware/authUser.js"
 
 router.post('/', userAuth, addLesson);
@@ -20,5 +20,7 @@ router.patch('/', userAuth, updateMapping);
 router.patch('/mapping/:lessonMappingId', userAuth, updateCompleteMapping);
 
 router.delete('/mapping/:lessonMappingId', userAuth, deleteMapping);
+
+router.get('/employee', userAuth, getEmployeeSubjectAndLesson);
 
 export default router;

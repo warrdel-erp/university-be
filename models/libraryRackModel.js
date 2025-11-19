@@ -1,66 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import studentModel from "./studentModel.js";
-import universityModel from "./universityModel.js";
-import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
-import feeTypeModel from "./feeTypeModel.js";
+import libraryAisleModel from "./libraryAisleModel.js";
 
 export default sequelize.define(
-    'student_invoice_mapper',
+    'library_rack',
     {
-        studentInvoiceMapperId: {
+        libraryRackId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'student_invoice_mapper_id'
+            field: 'library_rack_id'
         },
-        studentId: {
+        libraryAisleId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'student_id',
+            field: 'library_aisle_id',
             references: {
-                model: studentModel,
-                key: 'student_id'
+                model: libraryAisleModel,
+                key: 'library_aisle_id'
             }
-        }, 
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id',
-            references: {
-                model: universityModel,
-                key: 'university_id'
-            }
-        }, 
-        feeNewInvoiceId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'fee_new_invoice_id',
-            references: {
-                model: feeNewInvoiceModel,
-                key: 'fee_new_invoice_id'
-            }
-        }, 
-        invoiceDate: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field:'invoice_date'
         },
-        invoiceNumber: {
+        name: {
             type: DataTypes.STRING,
-            allowNull: true,
-            field:'invoice_number'
+            allowNull: false,
         },
-        invoiceStatus: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            field:'invoice_status'
-        },
-        dueDate: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field:'due_date'
+        description: {
+            type: DataTypes.STRING,
+            allowNull:true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -96,10 +63,10 @@ export default sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
             field: 'deleted_at'
-        },
+        }
     },
     {
-        tableName: 'student_invoice_mapper',
+        tableName: 'library_rack',
         timestamps: true,
         paranoid: true
     }

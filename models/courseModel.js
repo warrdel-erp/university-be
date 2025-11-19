@@ -4,7 +4,6 @@ import university from "./universityModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
@@ -52,15 +51,15 @@ export default sequelize.define(
                 key: 'institute_id'
             }
         },
-        acedmicYearId:{
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references:{
-                model:acedmicYearModel ,
-                key: 'acedmic_year_id'
-            }
-        },
+        // acedmicYearId:{
+        //     type: DataTypes.INTEGER,
+        //     allowNull: false,
+        //     field: 'acedmic_year_id',
+        //     references:{
+        //         model:acedmicYearModel ,
+        //         key: 'acedmic_year_id'
+        //     }
+        // },
         courseDuration: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -79,6 +78,11 @@ export default sequelize.define(
         capacity: {
             type: DataTypes.STRING,
             allowNull: true,
+        },
+        isActive:{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            defaultValue:true
         },
         createdAt: {
             type: DataTypes.DATE,
