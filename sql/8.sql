@@ -131,3 +131,40 @@ CREATE TABLE library_book_inventory (
     CONSTRAINT fk_inventory_student FOREIGN KEY (student_id) REFERENCES students (student_id),
     CONSTRAINT fk_inventory_employee FOREIGN KEY (employee_id) REFERENCES employee (employee_id)
 );
+
+ALTER TABLE students MODIFY general_remark TEXT;
+ALTER TABLE students MODIFY cancel_reason TEXT;
+ALTER TABLE students MODIFY preference TEXT;
+ALTER TABLE students MODIFY additional_notes TEXT;
+
+ALTER TABLE students MODIFY p_address TEXT;
+ALTER TABLE students MODIFY c_address TEXT;
+ALTER TABLE students MODIFY place_of_birth TEXT;
+
+ALTER TABLE students MODIFY bank_name TEXT;
+ALTER TABLE students MODIFY account_number TEXT;
+ALTER TABLE students MODIFY ifsc_code TEXT;
+
+ALTER TABLE students MODIFY scholar_number VARCHAR(150);
+ALTER TABLE students MODIFY father_name VARCHAR(150);
+ALTER TABLE students MODIFY mother_name VARCHAR(150);
+
+ALTER TABLE students MODIFY first_name VARCHAR(100);
+ALTER TABLE students MODIFY middle_name VARCHAR(100);
+ALTER TABLE students MODIFY last_name VARCHAR(100);
+ALTER TABLE students MODIFY email VARCHAR(100);
+ALTER TABLE students MODIFY parent_email VARCHAR(100);
+ALTER TABLE students MODIFY pan_number VARCHAR(100);
+ALTER TABLE students MODIFY aadhar_number VARCHAR(100);
+ALTER TABLE students MODIFY p_country VARCHAR(100);
+ALTER TABLE students MODIFY p_state VARCHAR(100);
+ALTER TABLE students MODIFY p_city VARCHAR(100);
+ALTER TABLE students MODIFY c_country VARCHAR(100);
+ALTER TABLE students MODIFY c_state VARCHAR(100);
+ALTER TABLE students MODIFY c_city VARCHAR(100);
+ALTER TABLE students MODIFY contact VARCHAR(100);
+
+ALTER TABLE students MODIFY enroll_number VARCHAR(50);
+ALTER TABLE students MODIFY phone_number VARCHAR(50);
+ALTER TABLE students MODIFY mobile_number VARCHAR(50);
+ALTER TABLE students MODIFY parent_number VARCHAR(50);
