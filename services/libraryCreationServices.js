@@ -9,7 +9,7 @@ export async function addLibrary(libraryData, createdBy, updatedBy) {
         // Add library data
         libraryData.createdBy = createdBy;
         libraryData.updatedBy = updatedBy;
-        return await libraryCreationService.addLibrary(libraryData, transaction);
+        const result =  await libraryCreationService.addLibrary(libraryData, transaction);
 
         // const libraryCreationId = library.dataValues.libraryCreationId;
 
@@ -27,6 +27,7 @@ export async function addLibrary(libraryData, createdBy, updatedBy) {
         // }
 
         await transaction.commit();
+        return result;
     } catch (error) {
         // Rollback the transaction in case of error
         await transaction.rollback();
