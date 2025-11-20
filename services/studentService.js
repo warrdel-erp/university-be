@@ -355,7 +355,8 @@ export async function importStudentData(excelData, data) {
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admisssionDate = formatAdmissionDate      
+      convertedData.admisssionDate = formatAdmissionDate 
+      // convertedData.feePlanId = convertedData.feePlanId ? Number(convertedData.feePlanId) : null;     
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
