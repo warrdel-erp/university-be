@@ -11,7 +11,7 @@ export async function addFloor(floorData) {
     }
 };
 
-export async function getFloorDetails(universityId) {
+export async function getFloorDetails(universityId) {    
     try {
         const Floor = await model.libraryFloorModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -37,31 +37,61 @@ export async function getFloorDetails(universityId) {
     }
 }
 
-export async function getSingleFloorDetails(libraryFloorId,universityId) {
+export async function getSingleFloorDetails(libraryFloorId, universityId) {
     try {
-        const floor = await model.libraryFloorModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { libraryFloorId,universityId },
-            include:[
+        return await model.libraryFloorModel.findOne({
+            attributes: { 
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+            },
+            where: { libraryFloorId, universityId },
+
+            include: [
                 {
                     model: model.campusModel,
                     as: "campusFloor",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    },
+                    where: { universityId },
                 },
                 {
                     model: model.instituteModel,
                     as: "instituteFloor",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    },
+                    where: { universityId },
                 },
+                {
+                    model: model.libraryAisleModel,
+                    as: "aisles",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    required: false,
+                    include: [
+                        {
+                            model: model.libraryRackModel,
+                            as: "racks",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            required: false,
+                            include: [
+                                {
+                                    model: model.libraryRowModel,
+                                    as: "rows",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    required: false
+                                }
+                            ]
+                        }
+                    ]
+                }
             ]
         });
 
-        return floor;
     } catch (error) {
-        console.error('Error fetching Floor details:', error);
+        console.error("Error fetching Floor details:", error);
         throw error;
     }
-}
+};
 
 export async function updateFloor(libraryFloorId, floorData) {
     try {
