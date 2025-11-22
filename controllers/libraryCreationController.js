@@ -103,8 +103,9 @@ export async function addBookWithInventory(req, res) {
 
 export async function getAllBooks(req, res) {
         const universityId = req.user.universityId;
+        const {libraryCreationId} = req.query
     try {
-        const books = await libraryCreation.getAllBooks(universityId);
+        const books = await libraryCreation.getAllBooks(universityId,libraryCreationId);
         res.status(200).json(books);
     } catch (error) {
         res.status(500).json({ error: error.message });

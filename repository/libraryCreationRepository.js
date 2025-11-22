@@ -152,21 +152,32 @@ export async function createInventory(inventoryData, transaction) {
     }
 };
 
-export async function getAllBooks(universityId) {
-    return await model.libraryBookModel.findAll({
+export async function getAllBooks(universityId,libraryCreationId) {
+    return await model.libraryCreationModel.findAll({
         attributes: {
             exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
         },
+        where:{libraryCreationId},
         include: [
             {
-                model: model.libraryBookInventoryModel,
-                as: "inventoryCopies",
+                model: model.libraryBookModel,
+                as: "books",
                 attributes: {
-                    exclude: ["createdAt", "updatedAt", "deletedAt", "studentId", "employeeId"]
-                }
-            }
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "studentId", "employeeId"],
+                    order: [["libraryBookId", "DESC"]],
+                },
+                include:[
+                    {
+                        model:model.libraryBookInventoryModel,
+                        as:'inventoryCopies',
+                        attributes: {
+                            exclude: ["createdAt", "updatedAt", "deletedAt", "studentId", "employeeId"]
+                        },
+                    }
+                ]
+            },
+            
         ],
-        order: [["libraryBookId", "DESC"]]
     });
 };
 

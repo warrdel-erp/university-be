@@ -847,6 +847,9 @@ libraryRowModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as:
 libraryBookModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_book_id", as: "inventoryCopies" });
 libraryBookInventoryModel.belongsTo(libraryBookModel, { foreignKey: "library_book_id", as: "bookDetails" });
 
+libraryCreationModel.hasMany(libraryBookModel, { foreignKey: "library_creation_id", sourceKey: "libraryCreationId", as: "books" }); 
+libraryBookModel.belongsTo(libraryCreationModel, { foreignKey: "library_creation_id", targetKey: "libraryCreationId", as: "library" });
+
 libraryAisleModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_aisle_id", as: "inventoryAisle" });
 libraryBookInventoryModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisleDetails" });
 
