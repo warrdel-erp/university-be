@@ -11,7 +11,7 @@ export async function addFloor(floorData) {
     }
 };
 
-export async function getFloorDetails(universityId) {
+export async function getFloorDetails(universityId) {    
     try {
         const Floor = await model.libraryFloorModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
@@ -37,31 +37,61 @@ export async function getFloorDetails(universityId) {
     }
 }
 
-export async function getSingleFloorDetails(libraryFloorId,universityId) {
+export async function getSingleFloorDetails(libraryFloorId, universityId) {
     try {
-        const floor = await model.libraryFloorModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { libraryFloorId,universityId },
-            include:[
+        return await model.libraryFloorModel.findOne({
+            attributes: { 
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+            },
+            where: { libraryFloorId, universityId },
+
+            include: [
                 {
                     model: model.campusModel,
                     as: "campusFloor",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    },
+                    where: { universityId },
                 },
                 {
                     model: model.instituteModel,
                     as: "instituteFloor",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    attributes: { 
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    },
+                    where: { universityId },
                 },
+                {
+                    model: model.libraryAisleModel,
+                    as: "aisles",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    required: false,
+                    include: [
+                        {
+                            model: model.libraryRackModel,
+                            as: "racks",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            required: false,
+                            include: [
+                                {
+                                    model: model.libraryRowModel,
+                                    as: "rows",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                    required: false
+                                }
+                            ]
+                        }
+                    ]
+                }
             ]
         });
 
-        return floor;
     } catch (error) {
-        console.error('Error fetching Floor details:', error);
+        console.error("Error fetching Floor details:", error);
         throw error;
     }
-}
+};
 
 export async function updateFloor(libraryFloorId, floorData) {
     try {
@@ -200,3 +230,52 @@ export async function updateRow(libraryRowId, data) {
 export async function deleteRow(libraryRowId) {
     return await model.libraryRowModel.destroy({ where: { libraryRowId } });
 }
+
+
+export async function getAisleIdByName(name) {
+    try {
+        const aisle = await model.libraryAisleModel.findOne({
+            where: { name }
+        });
+
+        if (!aisle) throw new Error(`Aisle not found: ${name}`);
+
+        return aisle.libraryAisleId;
+
+    } catch (error) {
+        console.error("Error finding aisle:", error);
+        throw new Error(error.message);
+    }
+}
+
+export async function getRackIdByName(name) {
+    try {
+        const rack = await model.libraryRackModel.findOne({
+            where: { name }
+        });
+
+        if (!rack) throw new Error(`Rack not found: ${name}`);
+
+        return rack.libraryRackId;
+
+    } catch (error) {
+        console.error("Error finding rack:", error);
+        throw new Error(error.message);
+    }
+}
+
+export async function getRowIdByName(name) {
+    try {
+        const row = await model.libraryRowModel.findOne({
+            where: { name }
+        });
+
+        if (!row) throw new Error(`Row not found: ${name}`);
+
+        return row.libraryRowId;
+
+    } catch (error) {
+        console.error("Error finding row:", error);
+        throw new Error(error.message);
+    }
+};

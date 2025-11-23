@@ -15,6 +15,7 @@ import { getSemesterById } from './mainServices.js';
 import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from './acedmicYearServices.js';
 import { getSemesterGroup } from '../utility/semesterGroup.js';
 import * as feeInvoiceRepository  from '../repository/feeInvoiceRepository.js';
+import * as libraryRepository  from '../repository/libraryCreationRepository.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -354,7 +355,8 @@ export async function importStudentData(excelData, data) {
 
       convertedData.birthDate = formatDob
       convertedData.enrollDate = formatEnrollDate
-      convertedData.admisssionDate = formatAdmissionDate      
+      convertedData.admisssionDate = formatAdmissionDate 
+      // convertedData.feePlanId = convertedData.feePlanId ? Number(convertedData.feePlanId) : null;     
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(convertedData, transaction);
@@ -1215,3 +1217,42 @@ export async function getFeeDetailsByStudentId(studentId) {
         throw error;
     }
 };
+
+export async function getBooksIssuedToStudent(studentId) {
+    const rawData = await libraryRepository.getBooksIssuedToStudent(studentId);
+
+    if (!rawData || rawData.length === 0) {
+        return { message: "No issued books found", books: [] };
+    }
+
+    const studentDetails = rawData[0].studentDetailsBook;
+
+    const groupedBooks = {};
+
+    rawData.forEach(item => {
+        const bookId = item.bookDetails.libraryBookId;
+
+        if (!groupedBooks[bookId]) {
+            groupedBooks[bookId] = {
+                bookDetails: item.bookDetails,
+                inventory: []
+            };
+        }
+
+        groupedBooks[bookId].inventory.push({
+            inventoryId: item.inventoryId,
+            barcode: item.barcode,
+            issueDate: item.issueDate,
+            dueDate: item.dueDate,
+            status: item.status,
+            createdAt: item.createdAt,
+        });
+    });
+
+    const booksArray = Object.values(groupedBooks);
+
+    return {
+        studentDetails,
+        books: booksArray
+    };
+}

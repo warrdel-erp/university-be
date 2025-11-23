@@ -333,3 +333,19 @@ export const getFeeDetailsByStudentId = async (req,res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export async function getBooksIssuedToStudent(req, res) {
+    try {
+        const { studentId } = req.query;
+
+        if (!studentId) {
+            return res.status(400).json({ message: "studentId is required" });
+        }
+
+        const result = await studentService.getBooksIssuedToStudent(studentId);
+        res.status(200).json(result);
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
