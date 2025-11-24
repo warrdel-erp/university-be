@@ -328,6 +328,15 @@ export async function getAllIssuedBooks() {
                         "edition",
                         "isbn",
                         "issn"
+                    ],
+                    include:[
+                        {
+                            model:model.libraryCreationModel,
+                            as:'library',
+                            attributes: {
+                                exclude: ["createdAt", "updatedAt", "deletedAt"]
+                            },
+                        }
                     ]
                 },
                 {

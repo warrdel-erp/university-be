@@ -1,5 +1,4 @@
 export function getSemesterGroup(name, semesterDuration) {
-    console.log(`>>>>>name, semesterDuration`,name, semesterDuration);
     
   const num = parseInt(String(name).replace(/\D/g, ''), 10);
 

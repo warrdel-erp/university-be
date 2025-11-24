@@ -1,7 +1,6 @@
 import moment from "moment";
 
 export function parseCustomDate(dateValue) {
-  console.log(">>>>>>[parseCustomDate] Input:", dateValue);
 
   if (!dateValue) return null;
 
@@ -17,11 +16,9 @@ export function parseCustomDate(dateValue) {
   }
 
   if (!formatted.isValid()) {
-    console.log(">>>>>>> Invalid date:", dateValue);
     return null;
   }
 
   //  Log for debugging
-  console.log(">>>> [parseCustomDate] For logs:", formatted.format("DD-MM-YYYY"));
   return formatted.format("YYYY-MM-DD");
 };

@@ -14,7 +14,6 @@ export async function addElectiveSubject(electiveSubjectData) {
 export async function addBulkElectiveSubject(electiveSubjectData) {    
     try {
         const result = await model.electiveSubjectModel.bulkCreate(electiveSubjectData);
-                console.log(`>>>>>>resultelectiveSubject`,result.length);
 
         return result;
     } catch (error) {

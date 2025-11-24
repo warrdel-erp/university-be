@@ -175,7 +175,6 @@ export const changeCourseStatus = async (courseId) => {
     }
 
     const newStatus = !course.dataValues.isActive;
-    console.log(`>>>>>>>>newStatus`,newStatus);
     
 
     await changeCourseStatuss(courseId,{isActive: newStatus});

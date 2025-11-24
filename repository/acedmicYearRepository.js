@@ -47,14 +47,12 @@ export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
 };
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
-    console.log(`>>>>>>>yearTitle`,yearTitle);
     
     try {
         const acedmicYear = await model.acedmicYearModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { yearTitle },
         });
-console.log(`>>>>>>acedmicYear`,acedmicYear);
 
         return acedmicYear;
     } catch (error) {

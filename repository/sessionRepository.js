@@ -14,7 +14,6 @@ export async function addSession(sessionData,transaction) {
 export async function addBulkSession(sessionData) {    
     try {
         const result = await model.sessionModel.bulkCreate(sessionData);
-                console.log(`>>>>>>resultSession`,result.length);
 
         return result;
     } catch (error) {
@@ -117,9 +116,7 @@ export async function updateSession(sessionId, sessionData) {
     }
 }
 
-export async function deleteSession(sessionId) {
-    console.log(`>>>>>>>>>>>sessionId`,sessionId);
-    
+export async function deleteSession(sessionId) {    
     const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
     return deleted > 0;
 };

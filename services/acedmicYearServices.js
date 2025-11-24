@@ -83,8 +83,6 @@ export async function updateacedmicYear(acedmicYearData, updatedBy) {
       updatedBy
     };
 
-    console.log(`>>>>>>>>>>>>>Updating ID ${acedmicYearId} =>`, updatePayload);
-
     await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
   }
 };
@@ -157,9 +155,7 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
       for (const dataType of copyData) {
         switch (dataType) {
           case 'subject':
-            const subjects = await getAllSubject('',copyAcedmicYearId,'','') 
-            console.log(`>>>>>>>>>>>>subject `,subjects.length);
-            
+            const subjects = await getAllSubject('',copyAcedmicYearId,'','')             
             const newSubjects = subjects.map(subject => ({
               ...subject.get({ plain: true }),
               acedmicYearId: acedmicYearId,
@@ -168,7 +164,6 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
               // createdBy:createdBy,
               subjectId: undefined  // Remove the id so a new one is generated
             }));            
-                        console.log(`>>>>>>>>>>>>newSubjects `,newSubjects.length);
 
             await subjectBulkCreate(newSubjects);
             console.log(`Copied subjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
@@ -176,7 +171,6 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
 
           case 'electiveSubject':
             const electives = await getSingleElectiveSubjectByAcedmicId(copyAcedmicYearId);
-                                    console.log(`>>>>>>>>>>>>electives `,electives.length);
 
             const newElectives = electives.map(item => ({
               ...item.get({ plain: true }),
@@ -185,7 +179,6 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
               updatedBy: updatedBy,
               electiveSubjectId: undefined
             }));
-            console.log(`>>>>>>>newElectives`,newElectives.length);
             
             await addBulkElectiveSubject(newElectives);
             console.log(`Copied electiveSubjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
@@ -193,7 +186,6 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
 
           case 'session':
             const sessions = await getSessionDetailsByAcedmic(copyAcedmicYearId)
-                        console.log(`>>>>>>>sessions`,sessions.length);
 
             const newSessions = sessions.map(item => ({
               ...item.get({ plain: true }),
@@ -202,7 +194,6 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
               updatedBy: updatedBy,
               sessionId: undefined
             }));
-                                    console.log(`>>>>>>>newSessions`,newSessions.length);
 
             await addBulkSession (newSessions);
             console.log(`Copied session from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
