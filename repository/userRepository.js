@@ -21,7 +21,6 @@ export async function findEmailByEmail(email) {
     });
 
     if (!result) {
-        console.log('User not found');
         return null;
     }
 

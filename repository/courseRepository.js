@@ -19,7 +19,6 @@ export async function getCourseByCourseId(courseId) {
 export async function addBulkCourse(courseData) {    
     try {
         const result = await model.courseModel.bulkCreate(courseData);
-                console.log(`>>>>>>resultCOurse`,result.length);
 
         return result;
     } catch (error) {

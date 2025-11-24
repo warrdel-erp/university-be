@@ -24,18 +24,14 @@ export async function deleteEmployeeMetaData (employeeId) {
 };
 
 export async function updateEmployeeMetaData(entries, transaction) {
-  console.log(">>>>>> entries:", entries);
 
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
 
   try {
-    console.log(" Starting employee meta data update...");
-    console.log("Using transaction:", transaction ? "Yes" : "No");
 
     for (const entry of entries) {
-      console.log(">>>> Processing entry:", entry);
 
       //  Validate required fields
       if (!entry.employeeId || !entry.types || !entry.codes) {

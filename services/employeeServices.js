@@ -429,7 +429,6 @@ export async function importEmployeeData(excelData, commonData) {
   }
 };
 export async function updateEmployee(employeeId, data, files, updatedBy,createdBy, universityId, roleId, instituteId) {
-  console.log(`>>>>>>>>>>>data`,data);
   
   const transaction = await sequelize.transaction();
   try {

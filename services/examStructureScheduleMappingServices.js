@@ -95,8 +95,6 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     });
   });
 
-  console.log(">>> First Screen Data:", JSON.stringify(firstScreenData, null, 2));
-  console.log(">>> Second Screen Data:", JSON.stringify(secondScreenData, null, 2));
 
   return { firstScreenData, secondScreenData };
 };

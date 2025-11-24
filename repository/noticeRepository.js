@@ -36,7 +36,6 @@ export async function getAllStudentNotice(universityId,acedmicYearId,instituteId
 };
 
 export async function getAllEmployeeNotice(universityId, academicYearId, instituteId, role, createdBy) {
-    console.log(`>>>>>>>>>>>role`,role);
     try {
         // First query
         const whereClauseCreated = {

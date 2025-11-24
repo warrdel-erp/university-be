@@ -61,7 +61,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
             period
         } = data;
 
-        console.log(`>>>>>>> timeTableCreationId: ${timeTableCreationId}`);
 
         // Fetch time table data
         const timeTableData = await getSingleTimeTableById(timeTableCreationId);
@@ -70,14 +69,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         }
 
         const periodLength = timeTableData[0]?.dataValues?.periodLength || 0;
-        console.log(`>>>>>> periodLength: ${periodLength}`);
 
         if (teacherSubjectMappingId) {
             teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
             if (!teacherSubjectData || !teacherSubjectData[0]) {
                 throw new Error(`No teacher-subject mapping found for ID ${teacherSubjectMappingId}`);
             }
-            console.log(`>>>>>>>>>>> teacherSubjectData:`, teacherSubjectData);
         }
 
         const employeeIdData = teacherSubjectData
@@ -88,21 +85,17 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
             throw new Error(`Employee ID is missing or invalid.`);
         }
 
-        console.log(`>>>>>> employeeIdData: ${employeeIdData}`);
 
         // Fetch faculty load details
         const faculityLoad = await getSingleFaculityLoadDetails(employeeIdData);
-        console.log(`>>>>>> faculityLoad:`, faculityLoad);
 
         if (!faculityLoad || !faculityLoad[0]) {
             throw new Error(`No faculty load record found for employee ID ${employeeIdData}`);
         }
 
         const faculityCurrentLoad = faculityLoad[0].dataValues?.currentLoad || 0;
-        console.log(`>>>>>> faculityCurrentLoad: ${faculityCurrentLoad}`);
 
         const currentLoad = parseInt(faculityCurrentLoad) + periodLength || 0;
-        console.log(`>>>>>> currentLoad: ${currentLoad}`);
 
         // Update faculty load
         await updateFaculityLoadByEmployeeId(

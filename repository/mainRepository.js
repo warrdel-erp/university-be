@@ -134,7 +134,6 @@ export async function getAllCourse(universityId,headInstituteId,role,mainInstitu
                 }
             ]
         });
-        console.log(`>>>>>>>>>result`,result);
         return result;
     } catch (error) {
         console.error("Error in get all course details:", error);
