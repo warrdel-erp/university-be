@@ -6,7 +6,6 @@ export const getAllSelectBoxData = async (req, res) => {
     settingstype = settingstype || "all";
 
     const result = await settingsService.getAllSelectBoxData(settingstype);
-    console.log("result", result.length);
 
     if (result.length > 0) {
       return res.status(200).json({

@@ -68,7 +68,6 @@ export async function updateLibrary(libraryCreationId, libraryData, updatedBy) {
         // await Promise.all(authorityUpdates);
 
         // await transaction.commit();
-        console.log(`Successfully updated library and authorities.`);
         return result
     } catch (error) {
         // await transaction.rollback();

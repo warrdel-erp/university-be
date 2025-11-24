@@ -791,7 +791,6 @@ export async function addElectiveSubject(data) {
 };
 
 export async function promoteStudent(studentId, data) {
-    console.log(`>>>>>>>>>>>>>>studentId, data`,studentId, data);
     
     return 
     try {
@@ -960,7 +959,7 @@ export async function getClassRecord(courseId,semesterId,classSectionId,acedmicY
 
         const teacher = await model.teacherSectionMappingModel.findAll({
             where: {
-                class_sections_id:classSectionId
+                classSectionsId:classSectionId
             },
             attributes:  ["teacherSectionMappingId","classSectionsId","employeeId","isCordinatory"] ,
             include:[
