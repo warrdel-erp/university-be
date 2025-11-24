@@ -36,18 +36,28 @@ export const getSingletimeTableCreateDetails = async (req,res) => {
     }
 };
 
-export const addtimeTableMapping = async (req,res) => {
+export const addtimeTableMapping = async (req, res) => {
     try {
         const data = req.body;        
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const result = await timeTableCreateServices.addtimeTableMapping(data,createdBy,updatedBy);
+
+        const result = await timeTableCreateServices.addtimeTableMapping(
+            data,
+            createdBy,
+            updatedBy
+        );
+
         res.status(200).send(result);
+
     } catch (error) {
-        console.error("Error in adding time table create :", error);
-        res.status(500).send("Internal Server Error");
+        res.status(400).send({
+            success: false,
+            message: error.message || "Something went wrong",
+        });
     }
 };
+
 
 export const getTimeTableMappingDetail = async (req,res) => {
     const universityId = req.user.universityId;
