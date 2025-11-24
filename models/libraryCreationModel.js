@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
+import libraryFloorModel from "./libraryFloorModel.js";
 
 export default sequelize.define(
     'library_creation',
@@ -21,38 +22,22 @@ export default sequelize.define(
                 key: 'institute_id'
             }
         },
+        libraryFloorId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'library_floor_id',
+            references: {
+                model: libraryFloorModel,
+                key: 'library_floor_id'
+            }
+        },
         name: {
             type: DataTypes.STRING,
             allowNull: true
         },
-        booksToIssued: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false,
-            field: 'books_to_issued'
-        },
-        issuedFromBookBank: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false,
-            field: 'issued_from_book_bank'
-        },
-        libraryFine: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false,
-            field: 'library_fine'
-        },
-        libraryTransaction: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false,
-            field: 'library_transaction'
-        },
-        active: {
-            type: DataTypes.BOOLEAN,
-            allowNull: true,
-            defaultValue: false
+        description: {
+            type: DataTypes.STRING,
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,

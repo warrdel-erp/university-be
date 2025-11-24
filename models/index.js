@@ -118,6 +118,8 @@ import libraryFloorModel from './libraryFloorModel.js';
 import libraryAisleModel from './libraryAisleModel.js';
 import libraryRackModel from './libraryRackModel.js';
 import libraryRowModel from './libraryRowModel.js';
+import libraryBookInventoryModel from './libraryBookInventoryModel.js';
+import libraryBookModel from './libraryBookModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -833,11 +835,35 @@ libraryFloorModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "i
 libraryFloorModel.hasMany(libraryAisleModel, { foreignKey: "library_floor_id", as: "aisles" });
 libraryAisleModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floor" });
 
+libraryFloorModel.hasMany(libraryCreationModel, { foreignKey: "library_floor_id", as: "libraryCreations" });
+libraryCreationModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floorDetails" });
+
 libraryAisleModel.hasMany(libraryRackModel, { foreignKey: "library_aisle_id", as: "racks" });
 libraryRackModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisle" });
 
 libraryRackModel.hasMany(libraryRowModel, { foreignKey: "library_rack_id", as: "rows" });
 libraryRowModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as: "rack" });
+
+libraryBookModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_book_id", as: "inventoryCopies" });
+libraryBookInventoryModel.belongsTo(libraryBookModel, { foreignKey: "library_book_id", as: "bookDetails" });
+
+libraryCreationModel.hasMany(libraryBookModel, { foreignKey: "library_creation_id", sourceKey: "libraryCreationId", as: "books" }); 
+libraryBookModel.belongsTo(libraryCreationModel, { foreignKey: "library_creation_id", targetKey: "libraryCreationId", as: "library" });
+
+libraryAisleModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_aisle_id", as: "inventoryAisle" });
+libraryBookInventoryModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisleDetails" });
+
+libraryRackModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_rack_id", as: "inventoryRack" });
+libraryBookInventoryModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as: "rackDetails" });
+
+libraryRowModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_row_id", as: "inventoryRow" });
+libraryBookInventoryModel.belongsTo(libraryRowModel, { foreignKey: "library_row_id", as: "rowDetails" });
+
+studentModel.hasMany(libraryBookInventoryModel, { foreignKey: "student_id", as: "studentIssuedBooks" });
+libraryBookInventoryModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentDetailsBook" });
+
+employeeModel.hasMany(libraryBookInventoryModel, { foreignKey: "employee_id", as: "employeeIssuedBooks" }); 
+libraryBookInventoryModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeDetailsBook" });
 
 export {
     settingModel,
@@ -960,4 +986,6 @@ export {
     libraryAisleModel,
     libraryRackModel,
     libraryRowModel,
+    libraryBookInventoryModel,
+    libraryBookModel,
 };

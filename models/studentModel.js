@@ -133,33 +133,33 @@ export default sequelize.define(
             }
         },
         scholarNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(150),
             allowNull: false,
             field:'scholar_number'
         },
         enrollNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(50),
             allowNull: true,
             field:'enroll_number',
             // unique:true
         },
         firstName:{
-            type:DataTypes.STRING,
+            type:DataTypes.STRING(100),
             allowNull: false,
             field:'first_name'
         },
         middleName:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field:'middle_name',
         },
         lastName:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull:true,
             field:'last_name'
         },
         fatherName:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(150),
             allowNull: false,
             field:'father_name'
         },
@@ -169,7 +169,7 @@ export default sequelize.define(
             field:'annual_income'
         },
         motherName:{
-            type:DataTypes.STRING,
+            type:DataTypes.STRING(150),
             allowNull : true,
             field:'mother_name'
         },
@@ -208,61 +208,61 @@ export default sequelize.define(
 			allowNull:true,
 		},
         phoneNumber:{
-			type:DataTypes.STRING,
+			type:DataTypes.STRING(50),
 			allowNull:false,
             field:'phone_number'
 		},
         mobileNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(50),
             allowNull: true,
             field:'mobile_number'
         },
         email:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: false,
         },
         parentEmail:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field:'parent_email'
         },
         parentNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(50),
             allowNull: true,
             field:'parent_number'
         },
         aadharNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field:'aadhar_number'
         },
         panNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'pan_number'
         },
         AdditionalNotes:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'additional_notes'
         },
         bankName:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'bank_name'
         },
         accountNumber:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'account_number'
         },
         ifscCode:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field: 'ifsc_code'
         },
         placeOfBirth:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field:'place_of_birth'
         },
@@ -277,17 +277,17 @@ export default sequelize.define(
             field:'cancel_date'
         },
         cancelReason:{
-            type:DataTypes.STRING,
+            type:DataTypes.TEXT,
             allowNull:true,
             field:'cancel_reason'
         },
         generalRemark:{
-            type:DataTypes.STRING,
+            type:DataTypes.TEXT,
             allowNull:true,
             field:'general_remark'
         },
         preference:{
-            type:DataTypes.STRING,
+            type:DataTypes.TEXT,
             allowNull:true,
         },
         documentStatus:{
@@ -303,7 +303,7 @@ export default sequelize.define(
             field:'fee_status',
         },
         pAddress:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field:'p_address'
         },
@@ -313,26 +313,26 @@ export default sequelize.define(
             field:'p_pincode'
 		},
         pCountry: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'p_country',
         },
         pState: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'p_state',
         },
         pCity: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'p_city',
         },
         contact:{
-            type:DataTypes.STRING,
+            type:DataTypes.STRING(100),
             allowNull:true
         },
         cAddress:{
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: true,
             field:'c_address'
         },
@@ -342,17 +342,17 @@ export default sequelize.define(
             field:'c_pincode'
 		},
         cCountry: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'c_country',
         },
         cState: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'c_state',
         },
         cCity: {
-            type: DataTypes.STRING,
+            type: DataTypes.STRING(100),
             allowNull: true,
             field: 'c_city',
         },

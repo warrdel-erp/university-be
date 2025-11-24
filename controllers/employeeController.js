@@ -129,3 +129,19 @@ export const updateEmployee = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
+
+export async function getBooksIssuedToEmployee(req, res) {
+    try {
+        const { employeeId } = req.query;
+
+        if (!employeeId) {
+            return res.status(400).json({ message: "employeeId is required" });
+        }
+
+        const result = await employee.getBooksIssuedToEmployee(employeeId);
+        res.status(200).json(result);
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

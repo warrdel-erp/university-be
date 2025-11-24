@@ -18,6 +18,7 @@ import * as employeeFilesRepository from '../repository/employeeFilesRepository.
 import { uploadFile } from '../utility/awsServices.js';
 import {employeeRegister} from '../services/userServices.js'
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
+import * as libraryRepository from '../repository/libraryCreationRepository.js'
 
 async function generateEmployeeNumber(campusId,instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -631,4 +632,42 @@ if (longLeaves && longLeaves.length > 0) {
     console.error("Error updating employee data:", error);
     throw new Error("Failed to update employee data");
   }
+};
+
+export async function getBooksIssuedToEmployee(employeeId) {
+    const rawData = await libraryRepository.getBooksIssuedToEmployee(employeeId);
+    if (!rawData || rawData.length === 0) {
+        return { message: "No issued books found", books: [] };
+    }
+
+    const employeeDetails = rawData[0].employeeDetails 
+                         || rawData[0].employeeDetailsBook 
+                         || null;
+
+    const groupedBooks = {};
+
+    rawData.forEach(item => {
+        const bookId = item.bookDetails.libraryBookId;
+
+        if (!groupedBooks[bookId]) {
+            groupedBooks[bookId] = {
+                bookDetails: item.bookDetails,
+                inventory: []
+            };
+        }
+
+        groupedBooks[bookId].inventory.push({
+            inventoryId: item.inventoryId,
+            barcode: item.barcode,
+            issueDate: item.issueDate,
+            dueDate: item.dueDate,
+            status: item.status,
+            createdAt: item.createdAt
+        });
+    });
+
+    return {
+        employeeDetails,
+        books: Object.values(groupedBooks)
+    };
 };
