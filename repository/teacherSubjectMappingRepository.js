@@ -131,7 +131,13 @@ export async function getTeacherSubjectMapping(employeeId, universityId, acedmic
                                     as :'classSections',
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                                 },
+                                
                             ]
+                        },
+                        {
+                            model:model.subjectModel,
+                            as:'subjects',
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                         }
                     ]
                 }

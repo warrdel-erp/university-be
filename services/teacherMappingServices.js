@@ -48,16 +48,42 @@ export async function getTeacherSectionMappingService(employeeId,universityId,ac
   return await getTeacherSectionMapping(employeeId,universityId,acedmicYearId,instituteId,role)
 };
 
-export async function updateTeacherSubjectMapping(data, teacherSubjectMappingId) {  
-  const { employeeId, classSubjectMapperId } = data;
-  const results = [];
+export async function saveOrUpdateTeacherSubjectMapping(list, userId) {
+    const results = [];
 
-  for (const id of classSubjectMapperId) {
-    const entryData = { employeeId, classSubjectMapperId: id };
-    const result = await updateTeachersSubjectMapping(teacherSubjectMappingId, entryData); 
-    results.push(result);
-  }  
-  return results;
+    for (const item of list) {
+
+        const { teacherSubjectMappingId, employeeId, classSubjectMapperId } = item;
+
+        if (teacherSubjectMappingId) {
+            const updated = await updateTeachersSubjectMapping(teacherSubjectMappingId, {
+                employeeId,
+                classSubjectMapperId
+            });
+
+            results.push({
+                action: "updated",
+                teacherSubjectMappingId,
+                result: updated
+            });
+
+        } 
+        else {
+            const created = await teacherSubjectMapping({
+                employeeId,
+                classSubjectMapperId,
+                createdBy: userId
+            });
+
+            results.push({
+                action: "created",
+                teacherSubjectMappingId: created.teacherSubjectMappingId,
+                result: created
+            });
+        }
+    }
+
+    return results;
 };
 
 export async function updateTeacherSectionMapping(data,teacherSectionMappingId){

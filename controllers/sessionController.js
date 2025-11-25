@@ -92,3 +92,19 @@ export async function couseSessionMapping(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function updateCouseSessionMapping(req, res) {
+    const {sessionCourseMappingId} = req.body
+    const updatedBy = req.user.userId;
+    const universityId = req.user.universityId;
+    const instituteId = req.user.instituteId;
+    try {
+        if(!(sessionCourseMappingId)){
+           return res.status(400).send('sessionCourseMappingId is required')
+        }
+        const session = await sessionCreation.updateCouseSessionMapping(req.body,updatedBy,universityId,instituteId);
+        res.status(201).json({ message: "Data added successfully", session });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

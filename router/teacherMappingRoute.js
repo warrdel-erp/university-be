@@ -11,6 +11,8 @@ router.post('/teacherSection',userAuth , teacherSectionMapping);
 
 router.get('/teacherSubject',userAuth , getTeacherSubjectMapping);
 
+// router.get('/teacherSubject/employee',userAuth , getTeacherSubjectMappingByEmployee);
+
 router.get('/teacherSection',userAuth , getTeacherSectionMapping);
 
 router.patch('/teacherSubject',userAuth , updateTeacherSubjectMapping);

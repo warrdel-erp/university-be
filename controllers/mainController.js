@@ -134,6 +134,23 @@ export const addSubject = async (req,res) => {
     }
 };
 
+export const updateSubject = async (req,res) => {
+    try {
+        const updateBy = req.user.userId;
+        const {subjectId} = req.body;
+        const data = req.body;
+        const instituteId = req.user.instituteId;
+        if(!(subjectId)){
+            return res.status(400).send('subjectId is required')
+        } 
+        const result = await mainServices.updateSubject(data,updateBy,instituteId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in update SUbject:", error);
+        return res.status(500).send("Internal Server Error");
+    }
+};
+
 export const addClass = async (req,res) => {
     try {
         const {courseId,specializationId} = req.body;

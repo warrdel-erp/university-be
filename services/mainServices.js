@@ -226,6 +226,13 @@ export async function addSubject(data,createdBy,instituteId) {
     }
 };
 
+export async function updateSubject(data,updateBy,instituteId) {    
+        data.updateBy = updateBy;
+        data.instituteId= instituteId;
+        const subjectId = data?.subjectId
+       return await mainRepository.updateSubject(subjectId, data);
+};
+
 export async function addClass(data,createdBy,universityId,instituteId) {
     const results = [];
     try {

@@ -68,20 +68,19 @@ export const getTeacherSectionMapping = async (req,res) => {
 };
 
 export const updateTeacherSubjectMapping = async (req, res) => {
-    let { employeeId, classSubjectMapperId,teacherSubjectMappingId} = req.body;
-    const data = req.body
-    const createdBy = req.user.userId;
-    try {
-        // required fields
-        if (!( employeeId && classSubjectMapperId && teacherSubjectMappingId)) {
-            return res.status(400).send("employeeId, classSubjectMapperId and teacherSubjectMappingId is required");
-        }
+    const { data } = req.body;
+    const userId = req.user.userId;
 
-        // Add the teacher subject mapping
-        const result = await teacherMapping.updateTeacherSubjectMapping(data,teacherSubjectMappingId);
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        return res.status(400).send("data must be a non-empty array");
+    }
+
+    try {
+        const result = await teacherMapping.saveOrUpdateTeacherSubjectMapping(data, userId);
         return res.status(200).send(result);
+
     } catch (error) {
-        console.error("Error in updating teacher subject mapping:", error);
+        console.error("Error while updating/inserting teacher subject mapping:", error);
         return res.status(500).send("Internal Server Error");
     }
 };

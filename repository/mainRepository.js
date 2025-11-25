@@ -240,6 +240,18 @@ export async function addSubject(data) {
     }
 };
 
+export async function updateSubject(subjectId, data) {
+    try {
+        const result = await model.subjectModel.update(data, {
+            where: { subjectId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating subject update for ${subjectId}:`, error);
+        throw error; 
+    }
+};
+
 export async function subjectBulkCreate(data) {
     try {
         const result = await model.subjectModel.bulkCreate(data);        
