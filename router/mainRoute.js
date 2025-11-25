@@ -1,6 +1,6 @@
 import {Router} from  'express';
 const router =  Router();
-import {getAllCollegesAndCourses,addCampus,addInstitute,addAffiliatedUniversity,addCourse,addSpecialization,addSubject,addClass,getClass,addClassSubjectMapper,getClassSubjectMapper,addSemester,getSemester,createClass,subjectExcel,changeCourseStatus,getClassSpecific,getClassRecord} from '../controllers/mainController.js';
+import {getAllCollegesAndCourses,addCampus,addInstitute,addAffiliatedUniversity,addCourse,addSpecialization,addSubject,addClass,getClass,addClassSubjectMapper,getClassSubjectMapper,addSemester,getSemester,createClass,subjectExcel,changeCourseStatus,getClassSpecific,getClassRecord,updateSubject} from '../controllers/mainController.js';
 import userAuth  from '../middleware/authUser.js'
 
 router.get('/all', userAuth , getAllCollegesAndCourses);
@@ -20,6 +20,8 @@ router.patch('/course',userAuth, changeCourseStatus);
 router.post('/specialization',userAuth, addSpecialization);
 
 router.post('/subject',userAuth, addSubject);
+
+router.patch('/subject/update',userAuth, updateSubject);
 
 router.post('/class',userAuth, addClass);
 

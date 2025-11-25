@@ -82,4 +82,12 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
     console.error("❌ Error inserting course-session mapping:", error);
     throw error;
   }
-}
+};
+
+export async function updateCouseSessionMapping(data,updatedBy,universityId,instituteId) {    
+        data.updatedBy = updatedBy;
+        data.instituteId= instituteId;
+        data.universityId= universityId;
+        const sessionCourseMappingId = data?.sessionCourseMappingId
+       return await sessionCreationService.updateCouseSessionMapping(sessionCourseMappingId, data);
+};

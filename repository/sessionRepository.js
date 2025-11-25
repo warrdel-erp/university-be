@@ -32,6 +32,18 @@ export async function courseSectionMapping(sessionData,transaction) {
     }
 };
 
+export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
+    try {
+        const result = await model.sessionCouseMappingModel.update(data, {
+            where: { sessionCourseMappingId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating course session mapping for ${sessionCourseMappingId}:`, error);
+        throw error; 
+    }
+};
+
 export async function getSessionDetails(universityId,instituteId,role,acedmicYearId) {
     try {
         const session = await model.sessionModel.findAll({
