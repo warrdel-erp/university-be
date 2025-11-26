@@ -325,3 +325,13 @@ export const getClassRecord = async (req,res) => {
         return res.status(500).send("Internal Server Error");
     }
 };
+
+export async function getMonthlyIncome(req, res) {
+  try {
+    const data = await mainServices.getMonthlyIncomeService();
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error in getMonthlyIncome:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};

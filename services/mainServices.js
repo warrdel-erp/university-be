@@ -408,3 +408,34 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
 
   return response;
 };
+
+export async function getMonthlyIncomeService() {
+  try {
+    const rows = await mainRepository.getMonthlyIncomeRepository();
+
+    const labels = [];
+    const incomeData = [];
+
+    rows.forEach((row) => {
+      labels.push(row.dataValues.month);
+      incomeData.push(parseFloat(row.dataValues.totalIncome) || 0);
+    });
+
+    return {
+      labels,
+      datasets: [
+        {
+          type: "bar",
+          label: "Income",
+          data: incomeData,
+          backgroundColor: "rgba(75, 192, 192, 0.5)",
+          borderColor: "rgb(75, 192, 192)"
+        }
+      ]
+    };
+
+  } catch (error) {
+    console.error("Error in getMonthlyIncomeService:", error);
+    throw error;
+  }
+};

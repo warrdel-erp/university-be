@@ -998,3 +998,38 @@ export async function getClassRecord(courseId,semesterId,classSectionId,acedmicY
         throw error;
     }
 };
+
+export async function getStudentDetailsRepository(studentId) {
+  try {
+
+    return await model.studentModel.findOne({
+      where: { studentId },
+      include: [
+        {
+          model: model.classSectionModel,
+          as: "studentSections"
+        },
+        {
+          model: model.semesterModel,
+          as: "studentSemester",
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "semestermapping",
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+  } catch (error) {
+    console.error("Error in getStudentDetailsRepository:", error);
+    throw error;
+  }
+}

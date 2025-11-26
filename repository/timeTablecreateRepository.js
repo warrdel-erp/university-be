@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import * as model from '../models/index.js'
 
 export async function addTimeTableCreate(data,transaction) {
@@ -148,6 +149,52 @@ export async function addtimeTableMapping(data,transaction) {
         throw error;
     }
 };
+
+export async function getPeriodInfoRepository(timeTableCreationId) {
+  try {
+    return await model.timeTableCreationModel.findOne({
+      where: { timeTableCreationId },
+      attributes: ["startTime", "endTime", "periodLength"]
+    });
+  } catch (error) {
+    console.error("Error in getPeriodInfoRepository:", error);
+    throw error;
+  }
+}
+
+export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
+  try {
+    return await model.timeTableMappingModel.findOne({
+      where: {
+        employeeId,
+        day
+      },
+      include: [
+        {
+          model: model.timeTableCreationModel,
+          as: "timeTablecreation",
+          attributes: ["startTime", "endTime"],
+          where: {
+            [Op.or]: [
+              { startTime: { [Op.between]: [startTime, endTime] } },
+              { endTime: { [Op.between]: [startTime, endTime] } },
+              {
+                [Op.and]: [
+                  { startTime: { [Op.lte]: startTime } },
+                  { endTime: { [Op.gte]: endTime } }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in checkTeacherConflictRepository:", error);
+    throw error;
+  }
+}
+
 
 export async function updatetimeTableCreate(timeTableMappingId, data) {
     try {
@@ -363,3 +410,179 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
     throw error;
   }
 };
+
+export async function getTeacherTimeTable(employeeId) {
+  try {
+
+    const teacherWhere = { employeeId };
+
+    const result = await model.timeTableCreateModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        is_publish: true
+      },
+      include: [
+        {
+          model: model.courseModel,
+          as: "timeTableCourse"
+        },
+        {
+          model: model.classSectionModel,
+          as: "timeTableClassSection"
+        },
+        {
+          model: model.timeTableMappingModel,
+          as: "timeTablecreate",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          required: true,   
+          include: [
+            {
+              model: model.timeTableCreationModel,
+              as: "timeTablecreation"
+            },
+            
+
+            //  ELECTIVE SUBJECT FLOW
+            {
+              model: model.teacherSubjectMappingModel,
+              as: "timeTableTeacherSubject",
+              required: false,
+              where: teacherWhere,
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: "teacherEmployeeData",
+                  attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+                  where: teacherWhere
+                },
+                {
+                  model: model.classSubjectMapperModel,
+                  as: "employeeSubject",
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: "subjects"
+                    }
+                  ]
+                }
+              ]
+            },
+
+            //  NORMAL SUBJECT FLOW
+            {
+              model: model.employeeModel,
+              as: "employeeDetails",
+              attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+              required: false,
+              where: teacherWhere
+            },
+
+            // SUBJECT DIRECT
+            {
+              model: model.subjectModel,
+              as: "timeTableSubject"
+            },
+
+            // ELECTIVE DIRECT SUBJECT
+            {
+              model: model.electiveSubjectModel,
+              as: "timeTableElective"
+            }
+          ]
+        }
+      ]
+    });
+
+    return result;
+
+  } catch (error) {
+    console.error("Error in getTeacherTimeTable:", error);
+    throw error;
+  }
+};
+
+export async function getStudentTimeTableRepository(classSectionsId, subjectIds) {
+  try {
+
+    return await model.timeTableCreateModel.findAll({
+        where:{
+              is_publish: true
+        },
+      include: [
+        {
+          model: model.courseModel,
+          as: "timeTableCourse"
+        },
+        {
+          model: model.classSectionModel,
+          as: "timeTableClassSection"
+        },
+        {
+          model: model.timeTableMappingModel,
+          as: "timeTablecreate",
+          required: true,
+          where: {
+            // class_sections_id: classSectionsId,
+            subject_id: subjectIds
+          },
+          include: [
+            {
+              model: model.timeTableCreationModel,
+              as: "timeTablecreation"
+            },
+            {
+              model: model.subjectModel,
+              as: "timeTableSubject"
+            },
+            {
+              model: model.employeeModel,
+              as: "employeeDetails"
+            },
+            {
+              model: model.teacherSubjectMappingModel,
+              as: "timeTableTeacherSubject",
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: "teacherEmployeeData"
+                },
+                {
+                  model: model.classSubjectMapperModel,
+                  as: "employeeSubject",
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: "subjects"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              model: model.electiveSubjectModel,
+              as: "timeTableElective"
+            }
+          ]
+        }
+      ]
+    });
+
+  } catch (error) {
+    console.error("Error in getStudentTimeTableRepository:", error);
+    throw error;
+  }
+};
+
+export async function publishTimeTableRepository(timeTableCreateId) {
+  try {
+    const result = await model.timeTableCreateModel.update(
+      { isPublish: true },
+      { where: { timeTableCreateId } }
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error in publishTimeTableRepository:", error);
+    throw error;
+  }
+}

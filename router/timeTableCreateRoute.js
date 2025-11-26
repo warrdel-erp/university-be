@@ -1,7 +1,7 @@
 import {Router} from  'express'
 const router =  Router();
 import {addtimeTableCreate,gettimeTableCreateDetails,getSingletimeTableCreateDetails,addtimeTableMapping,getTimeTableMappingDetail,getSingletimeTableMappingDetail,getTimeTableCellData
-   ,updatetimeTableCreate,getTimeTableElective,
+   ,updatetimeTableCreate,getTimeTableElective,publishTimeTable
     // ,deletetimeTableCreate
 } from '../controllers/timeTableCreateController.js';
 import userAuth from "../middleware/authUser.js"
@@ -29,5 +29,7 @@ router.patch('/mapping' ,userAuth, updatetimeTableCreate);
 router.get('/cellData', userAuth, getTimeTableCellData);
 
 router.get('/elective', userAuth, getTimeTableElective);
+
+router.patch("/publish", userAuth, publishTimeTable);
 
 export default router;
