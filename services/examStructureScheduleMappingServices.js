@@ -13,9 +13,7 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
 
   const schedules = await examStructureScheduleRepository.getExamStructureSchedule(
     universityId, acedmicYearId, role, instituteId, examSetupTypeId
-  );
-  console.log(`>>>>schedules`,JSON.stringify(schedules));
-  
+  );  
 
   const secondScreenData = [];
 

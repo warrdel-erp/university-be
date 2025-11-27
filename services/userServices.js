@@ -407,7 +407,6 @@ export async function changeStatus(userId) {
     // Update the status
     await registerRepository.changeStatus(userId, { status: newStatus });
 
-    console.log(`Status updated successfully: ${newStatus}`);
   } catch (error) {
     console.error(`Error changing status for user ${userId}:`, error);
     throw error; 
@@ -429,7 +428,6 @@ export const sendLink = async (email) => {
     const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
 
     const resetLink = `${baseUrl}/password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
-    console.log("Password Reset Link:", resetLink);
 
     const emailResponse = await sendEmail(user.email, "Password Reset", resetLink);
 
