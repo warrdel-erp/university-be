@@ -349,3 +349,21 @@ export async function getBooksIssuedToStudent(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getStudentTimeTable = async (req, res) => {
+  try {
+    const { studentId } = req.query;
+
+    if (!studentId) {
+      return res.status(400).send("studentId is required");
+    }
+
+    const result = await studentService.getStudentTimeTable(studentId);
+
+    return res.status(200).send(result);
+
+  } catch (error) {
+    console.error("Error in getStudentTimeTable:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};

@@ -14,7 +14,7 @@ export async function addDormitoryList(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getAllDormitoryList(req, res) {
     const universityId = req.user.universityId;
@@ -27,7 +27,7 @@ export async function getAllDormitoryList(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getSingleDormitoryListDetails(req, res) {
     const universityId = req.user.universityId;
@@ -42,7 +42,7 @@ export async function getSingleDormitoryListDetails(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateDormitoryList(req, res) {
     try {
@@ -56,7 +56,7 @@ export async function updateDormitoryList(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function deleteDormitoryList(req, res) {
     try {
@@ -73,4 +73,4 @@ export async function deleteDormitoryList(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};

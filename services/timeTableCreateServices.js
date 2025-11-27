@@ -121,6 +121,83 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 };
 
+// export async function addtimeTableMapping(data, createdBy, updatedBy) {
+//   const transaction = await sequelize.transaction();
+//   let teacherSubjectData = null;
+
+//   try {
+//     const {
+//       timeTableCreateId,
+//       timeTableCreationId,
+//       employeeId,
+//       teacherSubjectMappingId,
+//       day
+//     } = data;
+
+    
+//     const periodInfo = await getPeriodInfoRepository(timeTableCreationId);
+
+//     if (!periodInfo) {
+//       throw new Error("Invalid timeTableCreationId");
+//     }
+
+//     const { startTime, endTime, periodLength } = periodInfo;
+
+    
+//     if (teacherSubjectMappingId) {
+//       teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+
+//       if (!teacherSubjectData?.[0])
+//         throw new Error("Invalid teacherSubjectMappingId");
+
+//       data.employeeId = teacherSubjectData[0].employeeId;
+//     }
+
+//     const teacherId = data.employeeId;
+//     if (!teacherId) throw new Error("employeeId is required");
+
+//     const conflict = await checkTeacherConflictRepository(
+//       teacherId,
+//       day,
+//       startTime,
+//       endTime
+//     );
+
+//     if (conflict) {
+//       throw new Error(
+//         `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`
+//       );
+//     }
+
+    
+//     const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
+
+//     const currentLoad =
+//       (facultyLoad?.[0]?.currentLoad || 0) + (periodLength || 0);
+
+//     await updateFaculityLoadByEmployeeId(
+//       teacherId,
+//       { currentLoad },
+//       transaction
+//     );
+
+   
+//     data.createdBy = createdBy;
+//     data.updatedBy = updatedBy;
+
+//     const result = await addMapRepo(data, transaction);
+
+//     await transaction.commit();
+//     return result;
+
+//   } catch (error) {
+//     await transaction.rollback();
+//     console.error("Error in addtimeTableMapping:", error);
+//     throw new Error(error.message);
+//   }
+// }
+
+
 export async function updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy) {    
     try {
         const data = {timeTableType,updatedBy}
@@ -681,4 +758,20 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
   }, []);
 
   return { formatted: finalAggregatedRoutines };
+};
+
+export async function publishTimeTableService(timeTableCreateId) {
+  try {
+    const result = await timeTableCreateRepository.publishTimeTableRepository(timeTableCreateId);
+
+    if (result[0] === 0) {
+      throw new Error("Time table create ID not found");
+    }
+
+    return { message: "Time table published successfully" };
+
+  } catch (error) {
+    console.error("Error in publishTimeTableService:", error);
+    throw error;
+  }
 }
