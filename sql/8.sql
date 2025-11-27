@@ -168,3 +168,5 @@ ALTER TABLE students MODIFY enroll_number VARCHAR(50);
 ALTER TABLE students MODIFY phone_number VARCHAR(50);
 ALTER TABLE students MODIFY mobile_number VARCHAR(50);
 ALTER TABLE students MODIFY parent_number VARCHAR(50);
+
+ALTER TABLE time_table_create ADD COLUMN is_publish TINYINT(1) DEFAULT 0 NULL AFTER class_sections_id;

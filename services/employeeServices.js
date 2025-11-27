@@ -18,7 +18,8 @@ import * as employeeFilesRepository from '../repository/employeeFilesRepository.
 import { uploadFile } from '../utility/awsServices.js';
 import {employeeRegister} from '../services/userServices.js'
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
-import * as libraryRepository from '../repository/libraryCreationRepository.js'
+import * as libraryRepository from '../repository/libraryCreationRepository.js';
+import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 
 async function generateEmployeeNumber(campusId,instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -670,3 +671,139 @@ export async function getBooksIssuedToEmployee(employeeId) {
         books: Object.values(groupedBooks)
     };
 };
+
+export async function getTeacherTimeTable(employeeId, universityId, instituteId, role) {
+
+  const allData = await timeTableCreateRepository.getTeacherTimeTable(
+    employeeId,
+    universityId,
+    instituteId,
+    role
+  );
+
+  const allMappings = [];
+
+  for (const item of allData) {
+
+    const course = item.timeTableCourse || {};
+    const classSection = item.timeTableClassSection || {};
+
+    (item.timeTablecreate || []).forEach(period => {
+
+      const {
+        day,
+        timeTableMappingId,
+        isSameTeacher,
+        timeTableCreationId,
+        timeTableType,
+        timeTablecreation,
+        timeTableSubject,
+        employeeDetails,
+        timeTableTeacherSubject,
+        timeTableElective
+      } = period;
+
+      const sameTeacher = isSameTeacher;
+
+      const subjectData = sameTeacher
+        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        : timeTableSubject;
+
+      const teacherData = sameTeacher
+        ? timeTableTeacherSubject?.teacherEmployeeData
+        : employeeDetails;
+
+      const mappingEntry = {
+        timeTableMappingId,
+        employeeId: teacherData?.employeeId,
+        employeeName: teacherData?.employeeName,
+        employeeCode: teacherData?.employeeCode,
+        pickColor: teacherData?.pickColor,
+        timeTableType,
+        subject: timeTableElective
+          ? {
+              subjectId: timeTableElective?.electiveSubjectId,
+              Name: timeTableElective?.electiveSubjectName,
+              Code: timeTableElective?.electiveSubjectCode
+            }
+          : {
+              subjectId: subjectData?.subjectId,
+              Name: subjectData?.subjectName,
+              Code: subjectData?.subjectCode
+            }
+      };
+
+      allMappings.push({
+        day,
+        timeTableCreationId,
+        periodDetails: timeTablecreation,
+        mappingEntry,
+        baseMetadata: {
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+          courseId: item.courseId,
+          class: classSection.class,
+          section: classSection.section,
+          classSectionsId: item.classSectionsId,
+          startingDate: item.startingDate,
+          endingDate: item.endingDate,
+          timeTableType
+        }
+      });
+
+    });
+
+  }
+
+  const finalOutput = [];
+
+  allMappings.forEach(curr => {
+
+    const type = curr.mappingEntry.timeTableType;
+
+    let record = finalOutput.find(r => r.timeTableType === type);
+
+    if (!record) {
+      record = {
+        timeTableType: type,
+        courseName: curr.baseMetadata.courseName,
+        courseCode: curr.baseMetadata.courseCode,
+        courseId: curr.baseMetadata.courseId,
+        class: curr.baseMetadata.class,
+        section: curr.baseMetadata.section,
+        classSectionsId: curr.baseMetadata.classSectionsId,
+        startingDate: curr.baseMetadata.startingDate,
+        endingDate: curr.baseMetadata.endingDate,
+        sectionRoutine: []
+      };
+      finalOutput.push(record);
+    }
+
+    let dayObj = record.sectionRoutine.find(d => d.day === curr.day);
+    if (!dayObj) {
+      dayObj = { day: curr.day, period: [] };
+      record.sectionRoutine.push(dayObj);
+    }
+
+    let existPeriod = dayObj.period.find(p => p.timeTableCreationId === curr.timeTableCreationId);
+
+    if (!existPeriod) {
+      dayObj.period.push({
+        timeTableCreationId: curr.timeTableCreationId,
+        periodName: curr.periodDetails?.periodName,
+        isBreak: curr.periodDetails?.isBreak,
+        periodLength: curr.periodDetails?.periodLength,
+        periodGap: curr.periodDetails?.periodGap,
+        startTime: curr.periodDetails?.startTime,
+        endTime: curr.periodDetails?.endTime,
+        mappingData: [curr.mappingEntry]
+      });
+    } else {
+      existPeriod.mappingData.push(curr.mappingEntry);
+    }
+
+  });
+
+  return { formatted: finalOutput };
+
+}

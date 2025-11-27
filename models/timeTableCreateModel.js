@@ -53,6 +53,12 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
+        isPublish :{
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field:'is_publish'
+        },
         campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,

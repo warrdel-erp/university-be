@@ -16,6 +16,7 @@ import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from 
 import { getSemesterGroup } from '../utility/semesterGroup.js';
 import * as feeInvoiceRepository  from '../repository/feeInvoiceRepository.js';
 import * as libraryRepository  from '../repository/libraryCreationRepository.js';
+import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 
 export async function addStudent(info, files,createdBy,universityId,roleId,acedmicYearId,classSectionId,semesterId,sessionId) {
   const transaction = await sequelize.transaction();
@@ -1255,4 +1256,133 @@ export async function getBooksIssuedToStudent(studentId) {
         studentDetails,
         books: booksArray
     };
+};
+
+export async function getStudentTimeTable(studentId) {
+
+  //  Fetch student details
+  const student = await studentRepository.getStudentDetailsRepository(studentId);
+
+  if (!student) return { formatted: [] };
+
+  const classSectionsId = student.dataValues.class_sections_id;
+  const semesterId = student.dataValues.semester_id;
+  const courseId = student.dataValues.course_id;
+
+  //  Fetch subjects for student's semester
+  const subjectMaps = student.studentSemester?.semestermapping || [];
+  const subjectIds = subjectMaps.map(item => item.subjects.subjectId);
+
+  if (subjectIds.length === 0) return { formatted: [] };
+
+  //  Fetch timetable data
+  const timetable = await timeTableCreateRepository.getStudentTimeTableRepository(
+    classSectionsId,
+    subjectIds
+  );
+
+  //  Format output
+  return formatStudentTimetable(timetable);
 }
+
+function formatStudentTimetable(allData) {
+  const allMappings = [];
+
+  for (const item of allData) {
+
+    const course = item.timeTableCourse || {};
+    const classSection = item.timeTableClassSection || {};
+
+    (item.timeTablecreate || []).forEach(period => {
+
+      const {
+        day,
+        timeTableMappingId,
+        isSameTeacher,
+        timeTableCreationId,
+        timeTablecreation,
+        timeTableSubject,
+        employeeDetails,
+        timeTableTeacherSubject
+      } = period;
+
+      const subjectData = isSameTeacher
+        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        : timeTableSubject;
+
+      const teacherData = isSameTeacher
+        ? timeTableTeacherSubject?.teacherEmployeeData
+        : employeeDetails;
+
+      const mappingEntry = {
+        timeTableMappingId,
+        employeeId: teacherData?.employeeId,
+        employeeName: teacherData?.employeeName,
+        employeeCode: teacherData?.employeeCode,
+        pickColor: teacherData?.pickColor,
+        subject: {
+          subjectId: subjectData?.subjectId,
+          Name: subjectData?.subjectName,
+          Code: subjectData?.subjectCode
+        }
+      };
+
+      allMappings.push({
+        day,
+        timeTableCreationId,
+        periodDetails: timeTablecreation,
+        mappingEntry,
+        baseMetadata: {
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+          courseId: item.courseId,
+          class: classSection.class,
+          section: classSection.section,
+          classSectionsId: item.classSectionsId
+        }
+      });
+
+    });
+  }
+
+  const formatted = [];
+
+  allMappings.forEach(curr => {
+    let rec = formatted.find(r => r.courseId === curr.baseMetadata.courseId);
+
+    if (!rec) {
+      rec = {
+        courseName: curr.baseMetadata.courseName,
+        courseCode: curr.baseMetadata.courseCode,
+        courseId: curr.baseMetadata.courseId,
+        class: curr.baseMetadata.class,
+        section: curr.baseMetadata.section,
+        classSectionsId: curr.baseMetadata.classSectionsId,
+        sectionRoutine: []
+      };
+      formatted.push(rec);
+    }
+
+    let dayObj = rec.sectionRoutine.find(d => d.day === curr.day);
+    if (!dayObj) {
+      dayObj = { day: curr.day, period: [] };
+      rec.sectionRoutine.push(dayObj);
+    }
+
+    let periodObj = dayObj.period.find(p => p.timeTableCreationId === curr.timeTableCreationId);
+    if (!periodObj) {
+      dayObj.period.push({
+        timeTableCreationId: curr.timeTableCreationId,
+        periodName: curr.periodDetails.periodName,
+        isBreak: curr.periodDetails.isBreak,
+        startTime: curr.periodDetails.startTime,
+        endTime: curr.periodDetails.endTime,
+        mappingData: [curr.mappingEntry]
+      });
+    } else {
+      periodObj.mappingData.push(curr.mappingEntry);
+    }
+  });
+
+  return { formatted };
+};

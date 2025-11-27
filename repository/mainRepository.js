@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import sequelize from "sequelize";
 
 export async function getAllUniversity(universityId) {
     try {
@@ -764,4 +765,28 @@ export async function getSemesterById(semesterId) {
         console.error("Error in get semester by id", error);
         throw error;
     }
+};
+
+export async function getMonthlyIncomeRepository() {
+  try {
+    const result = await model.feeInvoiceDetailRecordModel.findAll({
+      attributes: [
+        [
+          sequelize.fn("DATE_FORMAT", sequelize.col("payment_date"), "%Y-%m-01"),
+          "month"
+        ],
+        [sequelize.fn("SUM", sequelize.col("paid_amount")), "totalIncome"]
+      ],
+      where: {
+        paymentStatus: "paid"
+      },
+      group: ["month"],
+      order: [[sequelize.literal("month"), "ASC"]]
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error in getMonthlyIncomeRepository:", error);
+    throw error;
+  }
 };
