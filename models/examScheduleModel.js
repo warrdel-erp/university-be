@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import examStructureScheduleMappingModel from "./examStructureScheduleMappingModel.js";
+import examSetupTypeModel from "./examSetupTypeModel.js";
 import semesterModel from "./semesterModel.js";
 
 export default sequelize.define(
@@ -32,13 +32,13 @@ export default sequelize.define(
                 key: 'semester_id'
             }
         },
-        examStructureScheduleMapperId: {
+        examSetupTypeId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'exam_structure_schedule_mapper_id',
+            field: 'exam_setup_type_id',
             references: {
-                model: examStructureScheduleMappingModel,
-                key: 'exam_structure_schedule_mapper_id'
+                model: examSetupTypeModel,
+                key: 'exam_setup_type_id'
             }
         },
         examDate:{
@@ -58,12 +58,6 @@ export default sequelize.define(
         duration: {
             type: DataTypes.STRING,
             allowNull: false
-        },
-        isPublish:{
-            type:DataTypes.BOOLEAN,
-            allowNull:false,
-            defaultValue:false,
-            field:'is_publish'
         },
         createdBy: {
             type: DataTypes.INTEGER,

@@ -8,7 +8,7 @@ import course from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 
 export default sequelize.define(
-    'exam_structure',
+    'exam_structure', // exam_rule 
     {
         examStructureId: {
             type: DataTypes.INTEGER,
@@ -60,27 +60,6 @@ export default sequelize.define(
                 model: course,
                 key: 'course_id'
             }
-        },
-        examScheduling:{
-            type:DataTypes.STRING,
-            field:'exam_scheduling',
-            allowNull:false
-        },
-        jury:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        internal:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        external:{
-            type:DataTypes.STRING,
-            allowNull:true,
-        },
-        permission:{
-            type:DataTypes.STRING,
-            allowNull:true,
         },
         totalMarks:{
             type:DataTypes.STRING,

@@ -21,11 +21,11 @@ export async function getAllExamStructureSchedule(req, res) {
     const universityId = req.user.universityId;
     const {acedmicYearId} = req.query
     const {examSetupTypeId} = req.query
-    const {examStructureScheduleMapperId} = req.query
+    // const {examStructureScheduleMapperId} = req.query
     const role = req.user.role;    
     const instituteId = req.user.instituteId;
     try {
-        const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId,acedmicYearId,role,instituteId,examSetupTypeId,examStructureScheduleMapperId);
+        const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId,acedmicYearId,role,instituteId,examSetupTypeId);
         res.status(200).json(StructureSchedules);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -78,12 +78,12 @@ export async function deleteExamSchedule(req, res) {
 };
 
 export async function addExamSchedule(req, res) {
-    const {examStructureScheduleMapperId } = req.body;
+    const {examSetupTypeId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(examStructureScheduleMapperId)) {
-            return res.status(400).send("examStructureScheduleMapperId Required fields are missing");
+        if (!(examSetupTypeId)) {
+            return res.status(400).send("examSetupTypeId Required fields are missing");
         }
         const examSchedule = await examStructureScheduleServices.addExamSchedule(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Exam schedule created successfully", examSchedule });

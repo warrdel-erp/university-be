@@ -26,9 +26,13 @@ export async function getExamStructure(universityId,acedmicYearId,role,institute
                 {
                     model: model.courseModel,
                     as: "courseExam",
-                    attributes: ["courseName","capacity"],
-                    // where: { universityId: universityId },
-                }, 
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+                },
+                {
+                    model: model.sessionModel,
+                    as: "sessionExam",
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+                },
             ],
         });
         return result;
@@ -47,18 +51,13 @@ export async function getSingleExamStructure(courseId, sessionId, universityId) 
                 {
                     model: model.courseModel,
                     as: "courseExam",
-                    attributes: ["courseName", "capacity"],
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
                 },
                 {
                     model: model.sessionModel,
                     as: "sessionExam",
-                    attributes: ["sessionName"],
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
                 },
-                {
-                    model: model.examSetupTypeModel,
-                    as: "setupTypes", 
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-                }
             ],
         });
 
@@ -116,12 +115,12 @@ export async function getDetailByExamType(examSetupTypeId) {
             {
               model: model.courseModel,
               as: "courseExam",
-              attributes: ["courseName", "capacity"],
+              attributes: ["courseId","courseName", "capacity"],
             },
             {
               model: model.sessionModel,
               as: "sessionExam",
-              attributes: ["sessionName"],
+              attributes: ["sessionId","sessionName"],
             },
             {
               model: model.acedmicYearModel,
@@ -138,4 +137,66 @@ export async function getDetailByExamType(examSetupTypeId) {
     console.error("Error fetching exam structure details:", error.message);
     throw error;
   }
+};
+
+export async function getSingleExamType(courseId, sessionId, universityId) {
+  try {
+    const result = await model.examSetupTypeModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    //   where: { examSetupTypeId },
+      include: [
+        {
+          model: model.examStructureModel,
+          as: "examStructure",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          where: { courseId, sessionId, universityId },
+          include: [
+            {
+              model: model.courseModel,
+              as: "courseExam",
+              attributes: ["courseId","courseName", "capacity"],
+            },
+            {
+              model: model.sessionModel,
+              as: "sessionExam",
+              attributes: ["sessionId","sessionName"],
+            },
+            {
+              model: model.acedmicYearModel,
+              as: "acedmicExam",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+          ],
+        },
+      ],
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam structure details:", error.message);
+    throw error;
+  }
+};
+
+
+export async function deleteExamType(examSetupTypeId) {
+    try {
+        const deleted = await model.examSetupTypeModel.destroy({ where: { examSetupTypeId } });
+        return deleted > 0;
+    } catch (error) {
+        console.error("Error deleting exam type:", error);
+        throw error;
+    }
+};
+
+export async function updateExamType(examSetupTypeId, examDetail) {
+    try {
+        const result = await model.examSetupTypeModel.update(examDetail, {
+            where: { examSetupTypeId },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error updating exam type:", error);
+        throw error;
+    }
 };

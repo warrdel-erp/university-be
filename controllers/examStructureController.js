@@ -120,3 +120,57 @@ export async function getDetailByExamType(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export async function getSingleExamType(req, res) {
+  const universityId = req.user.universityId;
+
+  try {
+    const courseId = parseInt(req.query.courseId, 10);
+    const sessionId = parseInt(req.query.sessionId, 10);
+
+    if (!courseId && !sessionId) {
+      return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
+    }
+
+    const examDetails = await examStructureServices.getSingleExamType(courseId, sessionId, universityId);
+
+    if (examDetails) {
+      res.status(200).json({ success: true, data: examDetails });
+    } else {
+      res.status(404).json({ success: false, message: "Exam Type not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export async function updateExamType(req, res) {
+    try {
+        const { examSetupTypeId } = req.body;
+        if (!examSetupTypeId) {
+            return res.status(400).send("ExamTypeId is required");
+        }
+        const updatedBy = req.user.userId;
+        const examDetails = await examStructureServices.updateExamType(examSetupTypeId, req.body, updatedBy);
+        res.status(200).json({ message: "Exam Type updated successfully", examDetails });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function deleteExamType(req, res) {
+    try {
+        const { examSetupTypeId } = req.query;
+        if (!examSetupTypeId) {
+            return res.status(400).json({ message: "examSetupTypeId is required" });
+        }
+        const deleted = await examStructureServices.deleteExamType(examSetupTypeId);
+        if (deleted) {
+            res.status(200).json({ message: `Delete successful for exam type ID ${examSetupTypeId}` });
+        } else {
+            res.status(404).json({ message: "Exam examType not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

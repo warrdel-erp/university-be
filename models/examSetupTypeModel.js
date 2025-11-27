@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import examStructureModel from "./examStructureModel.js";
 
 export default sequelize.define(
-    'exam_setup_type',
+    'exam_setup_type', // exam Type 1.1
     {
         examSetupTypeId: {
             type: DataTypes.INTEGER,
@@ -26,29 +26,31 @@ export default sequelize.define(
             field: 'exam_type',
             allowNull: true
         },
-        maximumIteration:{
+        maximumAssessment:{
             type:DataTypes.INTEGER,
             allowNull:true,
-            field:'maximum_Iteration'
+            field:'maximum_assessment'
         },
-        jurySetup:{
+        examName: {
+            type: DataTypes.STRING,
+            field: 'exam_name',
+            allowNull: true
+        },
+        scheduledBy:{
             type:DataTypes.STRING,
             allowNull:true,
-            field:'jury_setup'
-        },
-        preparedBy:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'prepared_by'
+            field:'scheduled_by'
         },
         evaluatedBy:{
             type:DataTypes.STRING,
             allowNull:true,
             field:'evaluated_by'
         },
-        weightage:{
-            type:DataTypes.STRING,
-            allowNull:true,
+        isPublish:{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            defaultValue:false,
+            field:'is_publish'
         },
         createdBy: {
             type: DataTypes.INTEGER,
