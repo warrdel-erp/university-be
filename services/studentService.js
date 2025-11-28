@@ -751,58 +751,44 @@ export async function promoteStudent(data) {
   if(data){
         return { message: 'next acedmic year is active for promate the student and semester is required' };
   }
-  console.log(`Incoming data:`, data);
 
   const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
-  console.log(`Student Detail:`, studentDetail);
 
   const courseId = studentDetail.dataValues.course_id;
-  console.log(`Course ID:`, courseId);
 
   const currentAcademicYearId = studentDetail.dataValues.acedmic_year_id;
-  console.log(`Current Academic Year ID:`, currentAcademicYearId);
 
   const allSemestersRaw = await studentRepository.getSemesterByCourseId(courseId);
-  console.log(`Raw Semester Data:`, allSemestersRaw);
 
   const allAcedmicYears = await acedmicYearCreationService.getacedmicYearDetails();
-  console.log(`All Academic Years:`, allAcedmicYears.map(a => a.dataValues));
 
   //  Ensure semesters are in array format
   const allSemesters = Array.isArray(allSemestersRaw)
     ? allSemestersRaw
     : [allSemestersRaw];    
 
-  console.log(`Converted Semesters Array:`, allSemesters.map(s => s.name));
 
   //  Sort semesters by ID (or name if needed)
   const sortedSemesters = allSemesters.sort((a, b) => a.semesterId - b.semesterId);
   
-  console.log(`Sorted Semesters:`, sortedSemesters.map(s => s.name));
-
   //  Find current semester index
   const currentSemesterIndex = sortedSemesters.findIndex(
     sem => sem.semesterId === data.semesterId
   );
-  console.log(`Current Semester Index:`, currentSemesterIndex);
 
   if (currentSemesterIndex === -1) {
-    console.log(`Semester ID ${data.semesterId} not found`);
     return { message: 'Invalid semester ID for student' };
   }
 
   //  Get current semester object
   const currentSemester = sortedSemesters[currentSemesterIndex];
-  console.log(`Current Semester:`, currentSemester.dataValues.name);
 
   const nextSemester = sortedSemesters[currentSemesterIndex + 1];
-  console.log(`Next Semester:`, nextSemester?.dataValues?.name || 'No more semesters');
 
   let nextAcedmicYearId = currentAcademicYearId;
 
   //  Determine how many semesters per academic year
   const semPerYear = 12 / currentSemester.dataValues.semesterDuration;
-  console.log(` Semesters per Academic Year:`, semPerYear);
 
   //  Check if promotion crosses to next academic year
   if ((currentSemesterIndex + 1) % semPerYear === 0) {
@@ -811,18 +797,15 @@ export async function promoteStudent(data) {
       a => a.dataValues.acedmicYearId === currentAcademicYearId
     );
     const currentIndex = allAcedmicYears.indexOf(currentAcedmicYearObj);
-    console.log(`Current Academic Year Index:`, currentIndex);
 
     if (currentIndex !== -1 && currentIndex + 1 < allAcedmicYears.length) {
       nextAcedmicYearId = allAcedmicYears[currentIndex + 1].dataValues.acedmicYearId;
-      console.log(`Promoting to Next Academic Year ID:`, nextAcedmicYearId);
     } else {
       console.log(`No next academic year found`);
     }
   }
 
   if (!nextSemester) {
-    console.log(`Student has completed all semesters`);
     return { message: 'Student has completed all semesters' };
   }
 
@@ -833,7 +816,6 @@ export async function promoteStudent(data) {
     classSectionId: data.classSectionId, // if needed
   });
 
-  console.log(`Student promoted successfully:`, result);
 
   return { message: 'Student promoted', result };
 };

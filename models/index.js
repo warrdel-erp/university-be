@@ -814,11 +814,14 @@ examStructureScheduleMappingModel.belongsTo(examSetupTypeModel, {foreignKey: "ex
 sessionModel.hasMany(examStructureScheduleMappingModel, {foreignKey: "session_id",as: "sessionSchedule"});
 examStructureScheduleMappingModel.belongsTo(sessionModel, {foreignKey: "session_id",as: "sessionSchedule"});
 
-examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
-examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+// examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
+// examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
 
 examScheduleModel.belongsTo(subjectModel, {foreignKey: "subject_id",as: "subjectSchedule"});
 subjectModel.hasMany(examScheduleModel, {foreignKey: "subject_id",as: "scheduleSubject"});
+
+examSetupTypeModel.hasMany(examScheduleModel, { foreignKey: "examSetupTypeId", as: "examSchedulesTypes"});
+examScheduleModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "examSetupTypeSchedule" });
 
 examSetupTypeModel.hasMany(syllabusDetailsModel, {foreignKey: "exam_setup_type_id",as: "syllabusDetailsExam"});
 syllabusDetailsModel.belongsTo(examSetupTypeModel, {foreignKey: "exam_setup_type_id",as: "examSetupTypeSyllabus"});
