@@ -152,7 +152,7 @@ export async function createInventory(inventoryData, transaction) {
     }
 };
 
-export async function getAllBooks(universityId,libraryCreationId) {
+export async function getAllBooks(universityId,libraryCreationId,libraryFloorId) {
     return await model.libraryCreationModel.findAll({
         attributes: {
             exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
@@ -176,7 +176,17 @@ export async function getAllBooks(universityId,libraryCreationId) {
                     }
                 ]
             },
-            
+            {
+                
+                model:model.libraryFloorModel,
+                as:'floorDetails',
+                attributes: {
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "campus_id", "institute_id","library_creation_id","campusId","instituteId","createdBy","updatedBy"]
+                },
+                where:{
+                    libraryFloorId,universityId,libraryCreationId
+                }
+            }
         ],
     });
 };

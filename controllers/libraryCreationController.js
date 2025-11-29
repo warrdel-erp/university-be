@@ -128,9 +128,11 @@ export async function addBookWithInventory(req, res) {
 
 export async function getAllBooks(req, res) {
         const universityId = req.user.universityId;
-        const {libraryCreationId} = req.query
+        const {libraryCreationId,libraryFloorId} = req.query
+        if (!(libraryCreationId && libraryFloorId))
+            return res.status(400).json({ message: "libraryCreationId,libraryFloorId is required" });
     try {
-        const books = await libraryCreation.getAllBooks(universityId,libraryCreationId);
+        const books = await libraryCreation.getAllBooks(universityId,libraryCreationId,libraryFloorId);
         res.status(200).json(books);
     } catch (error) {
         res.status(500).json({ error: error.message });

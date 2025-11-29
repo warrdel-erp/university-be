@@ -107,8 +107,8 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
     }
 };
 
-export async function getAllBooks(universityId,libraryCreationId) {
-    return await libraryCreationService.getAllBooks(universityId,libraryCreationId);
+export async function getAllBooks(universityId,libraryCreationId,libraryFloorId) {
+    return await libraryCreationService.getAllBooks(universityId,libraryCreationId,libraryFloorId);
 }
 
 export async function getSingleBookDetails(libraryBookId) {
