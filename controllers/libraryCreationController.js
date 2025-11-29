@@ -2,19 +2,44 @@ import * as libraryCreation  from  "../services/libraryCreationServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 
 export async function addLibrary(req, res) {
-    const {instituteId,name} = req.body
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
     try {
-        if(!(instituteId && name)){
-           return res.status(400).send('instituteId and name is required')
+        const { instituteId, name, description, floors,campusId } = req.body;
+        const createdBy = req.user.userId;
+        const universityId = req.user.universityId;
+
+        if (!instituteId || !name) {
+            return res.status(400).json({ message: "instituteId and name are required" });
         }
-        const newLibrary = await libraryCreation.addLibrary(req.body,createdBy,updatedBy);
-        res.status(201).json({ message: "Data Add Successfully" });
+
+        if (!Array.isArray(floors) || floors.length === 0) {
+            return res.status(400).json({ message: "At least one floor is required" });
+        }
+
+        for (const f of floors) {
+            if (!f.name) {
+                return res.status(400).json({ message: "Each floor must have a name" });
+            }
+        }
+
+        const payload = {
+            instituteId,
+            name,
+            description: description || null,
+            floors
+        };
+
+        const result = await libraryCreation.addLibrary(payload, createdBy, createdBy,instituteId,universityId,campusId);
+
+        return res.status(201).json({
+            message: "Library and floors added successfully",
+            libraryId: result.libraryCreationId
+        });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Controller Error:", error);
+        return res.status(500).json({ message: error.message });
     }
-}
+};
 
 export async function getLibraryDetails(req, res) {
     const universityId = req.user.universityId;
