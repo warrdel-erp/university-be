@@ -549,7 +549,6 @@ roleModel.hasMany(rolePermissionMappingModel, { foreignKey: 'role_id', as: 'user
 rolePermissionMappingModel.belongsTo(permissionModel, { foreignKey: 'permission_id', as: 'permissionMapped' });
 permissionModel.hasMany(rolePermissionMappingModel, { foreignKey: 'permission_id', as: 'permissionMapped' });
 
-
 //user role permission join to role and permission
 userRolePermissionModel.belongsTo(roleModel, { foreignKey: 'role_id', as: 'userRole' });
 roleModel.hasMany(userRolePermissionModel, { foreignKey: 'role_id', as: 'userRole' });
@@ -838,8 +837,11 @@ libraryFloorModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "i
 libraryFloorModel.hasMany(libraryAisleModel, { foreignKey: "library_floor_id", as: "aisles" });
 libraryAisleModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floor" });
 
-libraryFloorModel.hasMany(libraryCreationModel, { foreignKey: "library_floor_id", as: "libraryCreations" });
-libraryCreationModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floorDetails" });
+// libraryFloorModel.hasMany(libraryCreationModel, { foreignKey: "library_floor_id", as: "libraryCreations" });
+// libraryCreationModel.belongsTo(libraryFloorModel, { foreignKey: "library_floor_id", as: "floorDetails" });
+
+libraryCreationModel.hasMany(libraryFloorModel, { foreignKey: "library_creation_id", as: "floorDetails" }); 
+ libraryFloorModel.belongsTo(libraryCreationModel, { foreignKey: "library_creation_id", as: "libraryCreations" });
 
 libraryAisleModel.hasMany(libraryRackModel, { foreignKey: "library_aisle_id", as: "racks" });
 libraryRackModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisle" });

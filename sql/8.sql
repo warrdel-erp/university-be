@@ -201,3 +201,25 @@ UPDATE exam_schedule SET exam_setup_type_id = 1 WHERE exam_setup_type_id IS NULL
 UPDATE exam_schedule SET exam_setup_type_id = 1 WHERE exam_setup_type_id = 0;
 
 ALTER TABLE exam_schedule ADD CONSTRAINT fk_exam_setup_type_id FOREIGN KEY (exam_setup_type_id) REFERENCES exam_setup_type (exam_setup_type_id) ON DELETE CASCADE;
+
+ALTER TABLE library_creation 
+DROP FOREIGN KEY fk_library_floor_id,
+DROP COLUMN library_floor_id;
+
+ALTER TABLE library_floor ADD COLUMN library_creation_id INT DEFAULT NULL;
+
+UPDATE library_floor SET library_creation_id = 1 WHERE library_creation_id IS NULL;
+
+UPDATE library_floor SET library_creation_id = 1 WHERE library_creation_id = 0;
+
+ALTER TABLE library_floor DROP FOREIGN KEY fk_floor_campus;
+
+ALTER TABLE library_floor DROP FOREIGN KEY fk_floor_university;
+
+ALTER TABLE library_floor ADD CONSTRAINT fk_library_floor_university FOREIGN KEY (university_id) REFERENCES university(university_id);
+
+ALTER TABLE library_floor ADD CONSTRAINT fk_library_floor_campus FOREIGN KEY (campus_id) REFERENCES campus(campus_id);
+
+ALTER TABLE library_floor ADD INDEX idx_library_creation_id (library_creation_id);
+
+ALTER TABLE library_floor ADD CONSTRAINT fk_library_creation_id FOREIGN KEY (library_creation_id)REFERENCES library_creation(library_creation_id)ON DELETE CASCADE;

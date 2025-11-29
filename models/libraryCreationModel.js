@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
-import libraryFloorModel from "./libraryFloorModel.js";
 
 export default sequelize.define(
     'library_creation',
@@ -20,15 +19,6 @@ export default sequelize.define(
             references: {
                 model: instituteModel,
                 key: 'institute_id'
-            }
-        },
-        libraryFloorId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'library_floor_id',
-            references: {
-                model: libraryFloorModel,
-                key: 'library_floor_id'
             }
         },
         name: {
