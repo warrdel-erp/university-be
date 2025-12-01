@@ -36,3 +36,16 @@ export async function addExamType(examDetail, createdBy, updatedBy,universityId,
 export async function getDetailByExamType(examSetupTypeId) {
     return await examStructureRepository.getDetailByExamType(examSetupTypeId);
 };
+
+export async function getSingleExamType(courseId,sessionId, universityId) {
+    return await examStructureRepository.getSingleExamType(courseId,sessionId, universityId);
+};
+
+export async function deleteExamType(examSetupTypeId) {
+    return await examStructureRepository.deleteExamType(examSetupTypeId);
+};
+
+export async function updateExamType(examSetupTypeId, examDetail, updatedBy) {
+    examDetail.updatedBy = updatedBy;
+    await examStructureRepository.updateExamType(examSetupTypeId, examDetail);
+};

@@ -2,36 +2,37 @@ import * as libraryCreationService  from "../repository/libraryCreationRepositor
 import * as libraryStructureRepository  from "../repository/libraryStructureRepository.js";
 import sequelize from '../database/sequelizeConfig.js'; 
 
-export async function addLibrary(libraryData, createdBy, updatedBy) {
+export async function addLibrary(data, createdBy, updatedBy,instituteId,universityId,campusId) {
     const transaction = await sequelize.transaction();
 
     try {
-        // Add library data
-        libraryData.createdBy = createdBy;
-        libraryData.updatedBy = updatedBy;
-        const result =  await libraryCreationService.addLibrary(libraryData, transaction);
+        // 1. Create Library
+        const library = await libraryStructureRepository.createLibrary({
+            instituteId: data.instituteId,
+            name: data.name,
+            description: data.description,
+            createdBy,
+            updatedBy
+        }, transaction);
 
-        // const libraryCreationId = library.dataValues.libraryCreationId;
-
-        // const libraryCreationId = library?.dataValues?.libraryCreationId;
-        // if (!libraryCreationId) throw new Error('libraryCreationId not returned');
-        
-        // // Add authorities
-        // for (const auth of libraryData.authorities) {
-        //     await libraryCreationService.addLibraryAuthority({
-        //         libraryCreationId,
-        //         createdBy,
-        //         updatedBy,
-        //         ...auth
-        //     }, transaction);
-        // }
+        // 2. Create Floors
+        for (const floor of data.floors) {
+            await libraryStructureRepository.createFloor({
+                libraryCreationId: library.libraryCreationId,
+                instituteId: data.instituteId,
+                name: floor.name,
+                description: floor.description || null,
+                createdBy,
+                updatedBy,instituteId,universityId,campusId
+            }, transaction);
+        }
 
         await transaction.commit();
-        return result;
+        return library;
+
     } catch (error) {
-        // Rollback the transaction in case of error
         await transaction.rollback();
-        console.error('Error adding library and authorities:', error);
+        console.error("Service Error:", error);
         throw error;
     }
 };
@@ -106,8 +107,8 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
     }
 };
 
-export async function getAllBooks(universityId,libraryCreationId) {
-    return await libraryCreationService.getAllBooks(universityId,libraryCreationId);
+export async function getAllBooks(universityId,libraryCreationId,libraryFloorId) {
+    return await libraryCreationService.getAllBooks(universityId,libraryCreationId,libraryFloorId);
 }
 
 export async function getSingleBookDetails(libraryBookId) {

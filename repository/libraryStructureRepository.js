@@ -1,15 +1,24 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addFloor(floorData) {    
+export async function createLibrary(payload, transaction) {
     try {
-        const result = await model.libraryFloorModel.create(floorData);
-        return result;
+        return await model.libraryCreationModel.create(payload, { transaction });
     } catch (error) {
-        console.error("Error in add Floor :", error);
+        console.error("Repository createLibrary error:", error);
         throw error;
     }
-};
+}
+
+export async function createFloor(payload, transaction) {
+    try {
+        return await model.libraryFloorModel.create(payload, { transaction });
+    } catch (error) {
+        console.error("Repository createFloor error:", error);
+        throw error;
+    }
+}
+
 
 export async function getFloorDetails(universityId) {    
     try {

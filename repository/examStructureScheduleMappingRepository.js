@@ -51,89 +51,63 @@ export async function addExamStructureSchedule(examDetailSchedule) {
 //     }
 // };
 
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId,examSetupTypeId,examStructureScheduleMapperId) {
-    try {
-        const whereClause = {
-            ...(universityId && { universityId }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { instituteId }),
-            ...(examSetupTypeId && {examSetupTypeId}),
-            ...(examStructureScheduleMapperId && {examStructureScheduleMapperId})
-        };
+    const whereClause = {
+        // ...(universityId && { universityId }),
+        // ...(acedmicYearId && { acedmicYearId }),
+        // ...(role === 'Head' && { instituteId }),
+        ...(examSetupTypeId && { examSetupTypeId })
+    };
 
-        const schedules = await model.examStructureScheduleMappingModel.findAll({
-            // attributes: ['examStructureScheduleMapperId', 'name', 'startingDate'],
+    return await model.examSetupTypeModel.findAll({
+        where: whereClause,
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
+        include: [
+            {
+                model: model.syllabusDetailsModel,
+                as: "syllabusDetailsExam",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                include: [
+                    {
+                        model: model.subjectModel,
+                        as: 'syllabusSubject',
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-
-            where: whereClause,
-            include: [
-                {
-                    model: model.examSetupTypeModel,
-                    as: "examSetupType",
-                    // attributes: ['examType'],
+                        include: [
+                            {
+                                model: model.classSubjectMapperModel,
+                                as: "subjects",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-
-                    include: [
-                        {
-                            model: model.syllabusDetailsModel,
-                            as: "syllabusDetailsExam",
-                            // attributes: ['subjectId'],
+                                include: [
+                                    {
+                                        model: model.semesterModel,
+                                        as: 'semestermapping',
                                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                        include: [
+                                            {
+                                                model: model.studentModel,
+                                                as: 'studentSemester',
+                                                attributes: ['studentId','firstName','scholarNumber','enrollNumber']
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
 
-                            include: [
-                                {
-                                    model: model.subjectModel,
-                                    as: 'syllabusSubject',
-                                    // attributes: ['subjectName'],
-                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-
-                                    include:[
-                                        {
-                                            model:model.classSubjectMapperModel,
-                                            as:'subjects',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                            include:[
-                                                {
-                                                    model:model.semesterModel,
-                                                    as:'semestermapping',
-                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }, 
-                                                    include:[
-                                                        {
-                                                            model:model.studentModel,
-                                                            as:'studentSemester',
-                                                            attributes:['studentId','firstName','scholarNumber','enrollNumber']
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                },
-                {
-                    model: model.sessionModel,
-                    as: "sessionSchedule",
-                    attributes: ["sessionName"]
-                },
-                {
-                    model:model.examScheduleModel,
-                    as:'mapperSchedule',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                }
-            ]
-        });
-
-        return schedules;
-
-    } catch (error) {
-        console.error("Error fetching exam structure schedule:", error);
-        throw error;
-    }
-}
+            // include exam schedule directly
+            {
+                model: model.examScheduleModel,
+                as: "examSchedulesTypes",
+                attributes: { exclude: ["createdAt","updatedAt","deletedAt"] }
+            }
+        ]
+    });
+};
 
 export async function updateExamSchedule(examScheduleId,data) {
     try {
@@ -157,10 +131,10 @@ export async function deleteExamSchedule(examScheduleId){
     }
 };
 
-export async function publishExamSchedule(examScheduleId,data) {
+export async function publishExamSchedule(examSetupTypeId,data) {
     try {
-        const result = await model.examScheduleModel.update(data, {
-            where: { examScheduleId },
+        const result = await model.examSetupTypeModel.update(data, {
+            where: { examSetupTypeId },
         });
         return result;
     } catch (error) {
@@ -239,12 +213,15 @@ export async function getExamDetailByStudentId(studentId) {
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
-                    model:model.examStructureScheduleMappingModel,
-                    as:'mapperSchedule',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                  model: model.examSetupTypeModel,
+                  as: "examSetupTypeSchedule",
+                  attributes: { exclude: ["createdAt","updatedAt","deletedAt"] },
+                  where: { isPublish: true },
+                  required: true,
                 }
               ]
-            }
+            },
+            
           ],
         },
       ],

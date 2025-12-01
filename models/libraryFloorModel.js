@@ -4,6 +4,7 @@ import users from "./userModel.js";
 import campus from "./campusModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
+import libraryCreationModel from "./libraryCreationModel.js";
 
 export default sequelize.define(
     'library_floor',
@@ -30,6 +31,15 @@ export default sequelize.define(
             references: {
                 model: campus,
                 key: 'campus_id'
+            }
+        },
+        libraryCreationId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'library_creation_id',
+            references: {
+                model: libraryCreationModel,
+                key: 'library_creation_id'
             }
         },
         instituteId: {
