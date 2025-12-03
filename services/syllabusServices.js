@@ -118,3 +118,7 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
     contactHours: unit.contactHours
   }));
 };
+
+export async function semesterAllSubject(semesterId) {
+    return await SyllabusCreationRepository.semesterAllSubject(semesterId);
+};

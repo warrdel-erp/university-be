@@ -215,3 +215,52 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
         throw error;
     }
 };
+
+export async function semesterAllSubject(semesterId) {
+    try {
+        const Syllabus = await model.semesterModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {semesterId},
+            include:[
+                {
+                    model: model.classSubjectMapperModel,
+                    as: "semestermapping",
+                    attributes: ["classSubjectMapperId","subjectId","semesterId",],
+                    include: [
+                        {
+                            model: model.subjectModel,
+                            as: "subjects",
+                            attributes: [ "subjectId", "subjectName", "subjectCode", "subjectType"],
+                            include:[
+                                {
+                                    model:model.syllabusDetailsModel,
+                                    as:'syllabusSubject',
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                    include:[
+                                        {
+                                            model:model.examSetupTypeModel,
+                                            as:'examSetupTypeSyllabus',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                            include:[
+                                                {
+                                                    model:model.examStructureModel,
+                                                    as:'examStructure',
+                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                    ],
+                },
+            ]
+        });
+
+        return Syllabus;
+    } catch (error) {
+        console.error('Error fetching Syllabus details subject:', error);
+        throw error;
+    }
+};
