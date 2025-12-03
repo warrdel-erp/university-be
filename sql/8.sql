@@ -249,3 +249,26 @@ CREATE TABLE internal_assessment (
     CONSTRAINT fk_internal_assessment_created_by FOREIGN KEY (created_by) REFERENCES users (user_id),
     CONSTRAINT fk_internal_assessment_updated_by FOREIGN KEY (updated_by) REFERENCES users (user_id)
 );
+
+CREATE TABLE assessment_evalution (
+    assessment_evalution_id INT AUTO_INCREMENT PRIMARY KEY,
+    subject_id INT NOT NULL,
+    employee_id INT NOT NULL,
+    exam_assessment_id INT NOT NULL,
+    student_id INT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    marks INT NOT NULL,
+    comments VARCHAR(255) NOT NULL,
+    file JSON DEFAULT NULL,
+    created_by INT NOT NULL,
+    updated_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    CONSTRAINT fk_assessment_evalution_subject FOREIGN KEY (subject_id) REFERENCES subject(subject_id),
+    CONSTRAINT fk_assessment_evalution_employee FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
+    CONSTRAINT fk_assessment_evalution_assessment FOREIGN KEY (exam_assessment_id) REFERENCES internal_assessment(exam_assessment_id),
+    CONSTRAINT fk_assessment_evalution_student FOREIGN KEY (student_id) REFERENCES students(student_id),
+    CONSTRAINT fk_assessment_evalution_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
+    CONSTRAINT fk_assessment_evalution_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
+);

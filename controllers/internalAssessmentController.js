@@ -45,7 +45,7 @@ export async function getSingleInternalAssessment(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateInternalAssessments(req, res) {
   try {
@@ -83,4 +83,62 @@ export async function deleteInternalAssessment(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+};
+
+export async function evaluationInternalAssessment(req, res) {
+    const { subjectId,employeeId } = req.query;
+    if (!(subjectId && employeeId)) return res.status(400).json({ message: "subjectId,employeeId is required" });
+    try {
+        const record = await InternalAssessmentServices.evaluationInternalAssessment(subjectId,employeeId);
+        if (record) res.status(200).json(record);
+        else res.status(404).json({ message: "Not found data" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export async function createAssessmentEvaluation(req, res) {
+  try {
+    const body = req.body;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+
+    if (!body.subjectId || !body.employeeId || !body.examAssessmentId) {
+      return res.status(400).json({
+        message: "subjectId, employeeId, examAssessmentId are required"
+      });
+    }
+
+    if (!Array.isArray(body.students) || body.students.length === 0) {
+      return res.status(400).json({
+        message: "students array is required"
+      });
+    }
+
+    const response = await InternalAssessmentServices.createAssessmentEvaluation(body,createdBy,updatedBy);
+
+    res.status(201).json({
+      message: "Evaluation saved successfully",
+      data: response
+    });
+
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export async function updateAssessmentEvaluation(req, res) {
+  try {
+    const body = req.body;
+
+    const result = await InternalAssessmentServices.updateAssessmentEvaluation(body);
+
+    return res.status(200).json({
+      message: "Assessment Evaluation updated successfully",
+      data: result
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };

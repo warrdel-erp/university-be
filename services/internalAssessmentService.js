@@ -17,7 +17,6 @@ export async function addInternalAssessment(data,files) {
 
 export async function getAllInternalAssessment(examSetupTypeId) {
     const assessments = await InternalAssessmentRepository.getAllInternalAssessment(examSetupTypeId);
-    console.log(`>>>>>assessments`,JSON.stringify(assessments));
     
 
     return assessments.map(item => {
@@ -124,7 +123,6 @@ export async function getInternalAssessmentById(examAssessmentId) {
 
 
 export async function updateInternalAssessment(dataArray) {
-    console.log(">>>>>>>updateInternalAssessment", dataArray);
 
     try {
         const results = [];
@@ -158,4 +156,101 @@ export async function updateInternalAssessment(dataArray) {
 
 export async function deleteInternalAssessment(id) {
     return await InternalAssessmentRepository.deleteInternalAssessment(id);
+};
+
+
+export async function evaluationInternalAssessment(subjectId, employeeId) {
+  const data = await InternalAssessmentRepository.evaluationInternalAssessment(subjectId, employeeId);
+  if (!data) return null;
+
+  const ia = data.dataValues ?? data;
+
+  // first syllabus marks (always first element)
+  const syllabusList = ia.assessmentExamType?.syllabusDetailsExam ?? [];
+  const firstSyllabus = syllabusList.length ? syllabusList[0] : null;
+  const syllabusMarks = firstSyllabus?.marks ? Number(firstSyllabus.marks) : 0;
+
+  const weightage = ia.weightage ? Number(ia.weightage) : 0;
+  const totalMarks = ia.totalMarks ? Number(ia.totalMarks) : 0;
+
+  const division = Number(((weightage * syllabusMarks) / 100).toFixed(2));
+
+  const semesterStudents = ia.assessmentSemester?.studentSemester ?? [];
+
+  const students = semesterStudents.map(student => {
+    const results = Array.isArray(student.studentresult) ? student.studentresult : [];
+
+    let sr = results.find(r => {
+      const rId = Number(r.examAssessmentId ?? r.exam_assessment_id ?? 0);
+      return rId === Number(ia.examAssessmentId ?? ia.exam_assessment_id ?? 0);
+    });
+
+    if (!sr && results.length > 0) sr = results[0];
+
+    const studentMarks = sr && (sr.marks !== undefined && sr.marks !== null) ? Number(sr.marks) : '--';
+
+    const conversion = (totalMarks > 0)
+      ? Number(((division * studentMarks) / totalMarks).toFixed(2))
+      : '--';
+
+    return {
+      studentId: student.studentId,
+      scholarNumber: student.scholarNumber,
+      name: `${student.firstName ?? ""} ${student.middleName ?? ""} ${student.lastName ?? ""}`.replace(/\s+/g, " ").trim(),
+      marks: studentMarks,
+      conversion,
+      status: sr?.status ?? "pending",
+      comments: sr?.comments ?? '--',
+      file: sr?.file ?? '--'
+    };
+  });
+
+  return {
+    internalAssessmentId: ia.examAssessmentId,
+    subjectId: ia.subjectId,
+    subjectName: ia.assessmentSubject?.subjectName ?? ia.assessmentSubject?.subject_name ?? null,
+    employeeId: ia.employeeId ?? employeeId,
+    semesterId: ia.semesterId,
+    weightage,
+    syllabusMarks,
+    totalMarks,
+    division,
+    students
+  };
+};
+
+
+export async function createAssessmentEvaluation(body,createdBy,updatedBy) {
+  try {
+    const {
+      subjectId,
+      employeeId,
+      examAssessmentId,
+      students
+    } = body;
+
+    const dataToInsert = students.map(student => ({
+      subjectId: Number(subjectId),
+      employeeId: Number(employeeId),
+      examAssessmentId: Number(examAssessmentId),
+      studentId: Number(student.studentId),
+      status: student.status || "pending",
+      marks: Number(student.marks),
+      comments: student.comments || "",
+      file: student.file || null,
+      createdBy: Number(createdBy),
+      updatedBy: Number(updatedBy)
+    }));
+
+    return await InternalAssessmentRepository.bulkInsertEvaluation(dataToInsert);
+
+  } catch (error) {
+    console.error("Service Error:", error);
+    throw error;
+  }
+};
+
+export async function updateAssessmentEvaluation(data) {
+  const {assessmentEvalutionId} = data;
+  return await InternalAssessmentRepository.updateEvaluation(assessmentEvalutionId, data);
 }
