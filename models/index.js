@@ -870,6 +870,9 @@ libraryBookInventoryModel.belongsTo(studentModel, { foreignKey: "student_id", as
 employeeModel.hasMany(libraryBookInventoryModel, { foreignKey: "employee_id", as: "employeeIssuedBooks" }); 
 libraryBookInventoryModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeDetailsBook" });
 
+syllabusDetailsModel.hasMany(classSubjectMapperModel, { foreignKey: "subjectId", as: "classSubjects" });
+classSubjectMapperModel.belongsTo(syllabusDetailsModel, { foreignKey: "subjectId", as: "subjectDetails"});
+
 export {
     settingModel,
     universityModel,

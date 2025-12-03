@@ -806,4 +806,8 @@ export async function getTeacherTimeTable(employeeId, universityId, instituteId,
 
   return { formatted: finalOutput };
 
-}
+};
+
+export async function getTeacherSubject(employeeId,universityId,instituteId,role){
+    return await employeeRepository.getTeacherSubject(employeeId,universityId,instituteId,role)
+};
