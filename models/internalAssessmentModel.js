@@ -4,6 +4,7 @@ import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
 import semesterModel from "./semesterModel.js";
+import employeeModel from "./employeeModel.js";
 
 export default sequelize.define(
     'internal_assessment',
@@ -21,6 +22,15 @@ export default sequelize.define(
             references: {
                 model: subjectModel,
                 key: 'subject_id'
+            }
+        },
+        employeeId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'employee_id',
+            references: {
+                model: employeeModel,
+                key: 'employee_id'
             }
         },
         semesterId: {
@@ -47,7 +57,12 @@ export default sequelize.define(
         },
         totalMarks: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: false,
+            field:'total_marks'
+        },
+        weightage: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
         },
         publishDate: {
             type: DataTypes.DATE,
@@ -63,7 +78,7 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
-        signature:{
+        file:{
             type:DataTypes.JSON,
             allowNull:true,
         },

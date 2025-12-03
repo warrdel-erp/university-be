@@ -4,7 +4,7 @@ import {
     addInternalAssessment,
     getAllInternalAssessment,
     getSingleInternalAssessment,
-    updateInternalAssessment,
+    updateInternalAssessments,
     deleteInternalAssessment,
 } from "../controllers/internalAssessmentController.js";
 import userAuth from "../middleware/authUser.js";
@@ -15,7 +15,7 @@ router.get("/", userAuth, getAllInternalAssessment);
 
 router.get("/single", userAuth, getSingleInternalAssessment);
 
-router.patch("/", userAuth, updateInternalAssessment);
+router.patch("/", userAuth, updateInternalAssessments);
 
 router.delete("/", userAuth, deleteInternalAssessment);
 

@@ -1,116 +1,77 @@
 import * as model from "../models/index.js";
 
-export async function addInternalAssessment(examDetail) {
-    try {
-        const result = await model.InternalAssessmentModel.create(examDetail);
-        return result;
-    } catch (error) {
-        console.error("Error adding exam setup:", error);
-        throw error;
-    }
+export async function addInternalAssessment(data) {
+    return await model.internalAssessmentModel.create(data);
 }
 
-export async function getInternalAssessment(universityId,acedmicYearId,role,instituteId) {
-    try {
-        const result = await model.InternalAssessmentModel.findAll({
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+export async function getAllInternalAssessment(examSetupTypeId) {
+    return await model.internalAssessmentModel.findAll({
+        where:{
+            examSetupTypeId
+        },
+        include: [
+            { model: model.subjectModel, as: "assessmentSubject",   attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] } },
+            { model: model.semesterModel, as: "assessmentSemester" ,    attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }},
+            { model: model.examSetupTypeModel, as: "assessmentExamType",     attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+                include:[
+                    {
+                        model:model.syllabusDetailsModel,
+                        as:'syllabusDetailsExam',
+                        attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }
+                    },
+                    {
+                        model:model.examStructureModel,
+                        as:'examStructure',
+                        attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }
+                    }
+                ]
             },
-            include: [
-                {
-                    model: model.courseModel,
-                    as: "course",
-                    attributes: ["courseName","capacity"],
-                    where: { universityId: universityId },
-                },
-                {
-                    model: model.subjectModel,
-                    as: "subject",
-                    attributes: ["subjectId", "subjectName", "subjectCode"],
-                    where: { universityId: universityId },
-                },
-                {
-                    model: model.examTypeModel,
-                    as: "examType",
-                    attributes: ["examTypeId", "examName"],
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId }),
+        ],
+        order: [["createdAt", "DESC"]]
+    });
+};
 
+export async function getInternalAssessmentById(examAssessmentId) {
+    return await model.internalAssessmentModel.findOne({
+        where:{
+            examAssessmentId
+        },
+        include: [
+            { model: model.subjectModel, as: "assessmentSubject",   attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] } },
+            { model: model.semesterModel, as: "assessmentSemester" ,    attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }},
+            { model: model.examSetupTypeModel, as: "assessmentExamType",     attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+                include:[
+                    {
+                        model:model.syllabusDetailsModel,
+                        as:'syllabusDetailsExam',
+                        attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }
                     },
-                },
-                {
-                    model: model.employeeModel,
-                    as: "employee",
-                    attributes: ["employee_id", "employee_name"],
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId })
-                    },
-                },
-                {
-                    model: model.classRoomModel,
-                    as: "room",
-                    attributes: ["room_number", "capacity", "classRoomSectionId"],
-                },
-                {
-                    model: model.userModel,
-                    as: 'InternalAssessmentUser',
-                    attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
+                    {
+                        model:model.examStructureModel,
+                        as:'examStructure',
+                        attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }
                     }
-                }
-               
-            ],
-        });
-        return result;
-    } catch (error) {
-        console.error("Error fetching exam setups:", error);
-        throw error;
-    }
+                ]
+            },
+        ],
+    });
 }
 
-export async function getSingleInternalAssessment(InternalAssessmentId, universityId) {
+export async function updateInternalAssessment(examAssessmentId, data) {
     try {
-        const result = await model.InternalAssessmentModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { InternalAssessmentId },
-            include: [
-                {
-                    model: model.userModel,
-                    as: 'InternalAssessmentUser',
-                    attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
-            ]
-        });
-        return result;
+        return await model.internalAssessmentModel.update(
+            data,
+            { where: { examAssessmentId } }
+        );
     } catch (error) {
-        console.error("Error fetching exam setup:", error);
+        console.error(
+            `Error updating internal assessment ID ${examAssessmentId}:`,
+            error
+        );
         throw error;
     }
-}
+};
 
-export async function deleteInternalAssessment(InternalAssessmentId) {
-    try {
-        const deleted = await model.InternalAssessmentModel.destroy({ where: { InternalAssessmentId } });
-        return deleted > 0;
-    } catch (error) {
-        console.error("Error deleting exam setup:", error);
-        throw error;
-    }
-}
-
-export async function updateInternalAssessment(InternalAssessmentId, examDetail) {
-    try {
-        const result = await model.InternalAssessmentModel.update(examDetail, {
-            where: { InternalAssessmentId },
-        });
-        return result;
-    } catch (error) {
-        console.error("Error updating exam setup:", error);
-        throw error;
-    }
+export async function deleteInternalAssessment(examAssessmentId) {
+    return await model.internalAssessmentModel.destroy({ where: { examAssessmentId } });
 }
