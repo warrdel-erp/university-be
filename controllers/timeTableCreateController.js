@@ -146,7 +146,7 @@ export const deletetimeTableMapping = async (req,res) => {
     const {timeTableMappingId} = req.query;
     try {
         if (!timeTableMappingId){
-            res.status(400).send("faculity Load Id is required");
+            res.status(400).send("time table mapping id is required");
         }else{
             const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId);
             res.status(200).send(result);
