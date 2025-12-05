@@ -45,6 +45,11 @@ export async function deleteTimeTableCreate(TimeTableCreateId){
     return await timeTableCreateRepository.deleteTimeTableCreate(TimeTableCreateId)
 };
 
+
+export async function deletetimeTableMapping(timeTableMappingId){
+    return await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId)
+};
+
 export async function addtimeTableMapping(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
     let teacherSubjectData = null;
@@ -208,6 +213,130 @@ export async function updatetimeTableCreate(timeTableMappingId,timeTableType,upd
     }
 };
 
+export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    if (!Array.isArray(mappingArray) || mappingArray.length === 0) {
+      throw new Error("Request body must be a non-empty array");
+    }
+
+    // Base row = first entry (existing mapping)
+    const base = mappingArray[0];
+
+    if (!base.timeTableMappingId) {
+      throw new Error("Base row must contain timeTableMappingId");
+    }
+
+    // Fetch base mapping row from DB & convert to plain object
+    let baseRow = await timeTableCreateRepository.findMappingById(base.timeTableMappingId);
+    if (!baseRow) {
+      throw new Error(`Base mapping ${base.timeTableMappingId} not found`);
+    }
+
+    baseRow = baseRow.get({ plain: true });  // IMPORTANT FIX
+
+    // Fetch timetable creation info (period length)
+    const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
+    if (!ttCreationData || !ttCreationData[0]) {
+      throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
+    }
+
+    const periodLength = ttCreationData[0].dataValues.periodLength || 0;
+
+    // PROCESS EACH ITEM IN THE REQUEST ARRAY
+    for (const item of mappingArray) {
+
+      // CASE 1: UPDATE EXISTING MAPPING
+      if (item.timeTableMappingId) {
+
+        const dbRow = await timeTableCreateRepository.findMappingById(item.timeTableMappingId);
+        if (!dbRow) {
+          throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
+        }
+
+        const noChange =
+          dbRow.isTeacher === item.isTeacher &&
+          dbRow.isAttendence === item.isAttendence;
+
+        if (!noChange) {
+          await timeTableCreateRepository.updateMapping(
+            item.timeTableMappingId,
+            {
+              isTeacher: item.isTeacher,
+              isAttendence: item.isAttendence,
+              updatedBy
+            },
+            transaction
+          );
+        }
+
+      }
+
+      // CASE 2: ADD NEW TEACHER
+      else if (item.isNew === true) {
+
+        if (!item.employeeId) {
+          throw new Error("employeeId is required for new teacher entry");
+        }
+
+        //  FACULTY LOAD LOGIC — ADD PERIOD LENGTH
+        const facLoad = await getSingleFaculityLoadDetails(item.employeeId);
+        if (!facLoad || !facLoad[0]) {
+          throw new Error(`Faculty load not found for employee ${item.employeeId}`);
+        }
+
+        const currentLoad = Number(facLoad[0].dataValues.currentLoad || 0);
+        const newLoad = currentLoad + periodLength;
+
+        await updateFaculityLoadByEmployeeId(
+          item.employeeId,
+          { currentLoad: newLoad },
+          transaction
+        );
+
+        //  CREATE NEW ROW using base row values + new teacher values
+        const newRow = {
+          timeTableNameId: baseRow.timeTableNameId,
+          timeTableCreateId: baseRow.timeTableCreateId,
+          timeTableCreationId: baseRow.timeTableCreationId,
+
+          // Copy subject & mapping info
+          subjectId: baseRow.subjectId,
+          electiveSubjectId: baseRow.electiveSubjectId,   // FIX APPLIED
+          teacherSubjectMappingId: baseRow.teacherSubjectMappingId,
+
+          // Class & timing fields
+          classRoomSectionId: baseRow.classRoomSectionId,
+          day: baseRow.day,
+          period: baseRow.period,
+
+          // Other flags
+          isSameTeacher: baseRow.isSameTeacher,
+          timeTableType: baseRow.timeTableType,
+
+          // NEW TEACHER VALUES
+          employeeId: item.employeeId,
+          isTeacher: item.isTeacher,
+          isAttendence: item.isAttendence,
+
+          createdBy,
+          updatedBy
+        };
+
+        await timeTableCreateRepository.addtimeTableMapping(newRow, transaction);
+      }
+    }
+
+    await transaction.commit();
+    return { success: true, message: "Teacher mapping updated successfully" };
+
+  } catch (err) {
+    await transaction.rollback();
+    console.error("Error in updateSimpleTeacherMapping:", err);
+    throw err;
+  }
+};
 
 export async function getTimeTableMappingDetail(universityId, instituteId, role) {
   const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, role);
@@ -605,6 +734,8 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
     instituteId,
     role
   );
+  console.log(`>>>>>>>>>>>>>>>allData`,JSON.stringify(allData));
+  
 
   // 1. Separate normal and elective to get base metadata
   const normalItemBase = allData.find(
@@ -656,6 +787,8 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
         employeeCode: teacherData?.employeeCode || "",
         pickColor: teacherData?.pickColor || "",
         employeeId: teacherData?.employeeId || null,
+        isTeacher: curr?.isTeacher || null,        
+        isAttendence: curr?.isAttendence ?? null,
         timeTableType, // Use the raw mapping type for the final grouping key
         subject: timeTableElective
           ? {

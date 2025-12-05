@@ -272,3 +272,7 @@ CREATE TABLE assessment_evalution (
     CONSTRAINT fk_assessment_evalution_created_by FOREIGN KEY (created_by) REFERENCES users(user_id),
     CONSTRAINT fk_assessment_evalution_updated_by FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );
+
+ALTER TABLE time_table_mapping 
+ADD COLUMN is_teacher VARCHAR(50) NOT NULL DEFAULT 'Primary' AFTER class_room_section_id,
+ADD COLUMN is_Attendence TINYINT(1) NOT NULL DEFAULT 1 AFTER is_teacher;
