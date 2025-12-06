@@ -158,14 +158,79 @@ export async function deleteInternalAssessment(id) {
     return await InternalAssessmentRepository.deleteInternalAssessment(id);
 };
 
+// export async function evaluationInternalAssessment(subjectId, employeeId) {
+//   const data = await InternalAssessmentRepository.evaluationInternalAssessment(subjectId, employeeId);
+//   if (!data) return null;
+
+//   const ia = data.dataValues ?? data;
+
+//   // first syllabus marks (always first element)
+//   const syllabusList = ia.assessmentExamType?.syllabusDetailsExam ?? [];
+//   const firstSyllabus = syllabusList.length ? syllabusList[0] : null;
+//   const syllabusMarks = firstSyllabus?.marks ? Number(firstSyllabus.marks) : 0;
+
+//   const weightage = ia.weightage ? Number(ia.weightage) : 0;
+//   const totalMarks = ia.totalMarks ? Number(ia.totalMarks) : 0;
+
+//   const division = Number(((weightage * syllabusMarks) / 100).toFixed(2));
+
+//   const semesterStudents = ia.assessmentSemester?.studentSemester ?? [];
+
+//   const students = semesterStudents.map(student => {
+//     const results = Array.isArray(student.studentresult) ? student.studentresult : [];
+
+//     let sr = results.find(r => {
+//       const rId = Number(r.examAssessmentId ?? r.exam_assessment_id ?? 0);
+//       return rId === Number(ia.examAssessmentId ?? ia.exam_assessment_id ?? 0);
+//     });
+
+//     if (!sr && results.length > 0) sr = results[0];
+
+//     const studentMarks = sr && (sr.marks !== undefined && sr.marks !== null) ? Number(sr.marks) : '--';
+
+//     const conversion = (totalMarks > 0)
+//       ? Number(((division * studentMarks) / totalMarks).toFixed(2))
+//       : '--';
+
+//     return {
+//       studentId: student.studentId,
+//       scholarNumber: student.scholarNumber,
+//       name: `${student.firstName ?? ""} ${student.middleName ?? ""} ${student.lastName ?? ""}`.replace(/\s+/g, " ").trim(),
+//       marks: studentMarks,
+//       conversion,
+//       status: sr?.status ?? "pending",
+//       comments: sr?.comments ?? '--',
+//       file: sr?.file ?? '--'
+//     };
+//   });
+
+//   return {
+//     internalAssessmentId: ia.examAssessmentId,
+//     subjectId: ia.subjectId,
+//     subjectName: ia.assessmentSubject?.subjectName ?? ia.assessmentSubject?.subject_name ?? null,
+//     employeeId: ia.employeeId ?? employeeId,
+//     semesterId: ia.semesterId,
+//     weightage,
+//     syllabusMarks,
+//     totalMarks,
+//     division,
+//     students
+//   };
+// };
 
 export async function evaluationInternalAssessment(subjectId, employeeId) {
-  const data = await InternalAssessmentRepository.evaluationInternalAssessment(subjectId, employeeId);
+
+  const data = await InternalAssessmentRepository.evaluationInternalAssessment(
+    subjectId,
+    employeeId
+  );  
+
   if (!data) return null;
 
-  const ia = data.dataValues ?? data;
+  const ia = data?.dataValues ?? data;
 
-  // first syllabus marks (always first element)
+  // const totalMarks = ia.totalMarks ?? 0;
+
   const syllabusList = ia.assessmentExamType?.syllabusDetailsExam ?? [];
   const firstSyllabus = syllabusList.length ? syllabusList[0] : null;
   const syllabusMarks = firstSyllabus?.marks ? Number(firstSyllabus.marks) : 0;
@@ -205,19 +270,28 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
     };
   });
 
+  /** ================= Final formatted output ================= */
   return {
-    internalAssessmentId: ia.examAssessmentId,
-    subjectId: ia.subjectId,
-    subjectName: ia.assessmentSubject?.subjectName ?? ia.assessmentSubject?.subject_name ?? null,
-    employeeId: ia.employeeId ?? employeeId,
-    semesterId: ia.semesterId,
-    weightage,
-    syllabusMarks,
-    totalMarks,
-    division,
+    assessment: {
+     assessmentType: ia.type ?? null,
+
+      subject: ia.assessmentSubject?.subjectName ?? null,
+      term: ia.assessmentSemester?.termName ?? null,
+      marks: totalMarks,
+      attachedFile: ia.file ?? null,
+      description: ia.description ?? null,
+
+      homeworkDate: ia.publishDate ?? null,
+      submissionDate: ia.dueDate ?? null,
+      evaluationDate: ia.dueDate ?? null,
+
+      createdBy: ia.employees?.employeeName ?? null,
+      evaluatedBy: ia.employees?.employeeName ?? null
+    },
+
     students
   };
-};
+}
 
 
 export async function createAssessmentEvaluation(body,createdBy,updatedBy) {
