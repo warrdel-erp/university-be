@@ -1,8 +1,8 @@
 import {Router} from  'express'
 const router =  Router();
 import {addtimeTableCreate,gettimeTableCreateDetails,getSingletimeTableCreateDetails,addtimeTableMapping,getTimeTableMappingDetail,getSingletimeTableMappingDetail,getTimeTableCellData
-   ,updatetimeTableCreate,getTimeTableElective,publishTimeTable
-    // ,deletetimeTableCreate
+   ,updatetimeTableCreate,getTimeTableElective,publishTimeTable,updateSimpleTeacherMappingController
+    ,deletetimeTableMapping
 } from '../controllers/timeTableCreateController.js';
 import userAuth from "../middleware/authUser.js"
 
@@ -24,7 +24,9 @@ router.get('/single/mapping' ,userAuth, getSingletimeTableMappingDetail);
 
 router.patch('/mapping' ,userAuth, updatetimeTableCreate);
 
-// router.delete('/mapping' ,userAuth, deletetimeTableCreate);
+router.patch('/mapping/update-create', userAuth, updateSimpleTeacherMappingController);
+
+router.delete('/mapping' ,userAuth, deletetimeTableMapping);
 
 router.get('/cellData', userAuth, getTimeTableCellData);
 

@@ -118,3 +118,53 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
     contactHours: unit.contactHours
   }));
 };
+
+export async function semesterAllSubject(semesterId) {
+  try {
+    const rawData = await SyllabusCreationRepository.semesterAllSubject(semesterId);
+
+    if (!rawData || rawData.length === 0) {
+      return { message: "Syllabus subject not found" };
+    }
+
+    const semester = rawData[0]; // one semester
+
+    const formatted = {
+      semesterId: semester.semesterId,
+      name: semester.name,
+      termType: semester.termType,
+      durationMonths: semester.semesterDuration,
+      courseDurationYears: semester.courseDuration,
+      totalSemesters: semester.totalSemester,
+
+      subjects: semester.semestermapping.map((item) => {
+        const subj = item.subjects;
+
+        return {
+          subjectId: subj.subjectId,
+          subjectName: subj.subjectName,
+          subjectCode: subj.subjectCode,
+          subjectType: subj.subjectType,
+
+          syllabus: subj.syllabusSubject.map((syl) => ({
+            syllabusDetailsId: syl.syllabusDetailsId,
+            syllabusId: syl.syllabusId,
+            assessmentType: syl.type,
+            marks: syl.marks ? Number(syl.marks) : null,
+            total: syl.total ? Number(syl.total) : null,
+
+            examType: syl.examSetupTypeSyllabus.examType,
+            maxAssessment: syl.examSetupTypeSyllabus.maximumAssessment,
+            evaluatedBy: syl.examSetupTypeSyllabus.evaluatedBy
+          }))
+        };
+      })
+    };
+
+    return formatted;
+
+  } catch (error) {
+    console.error("Service Error:", error);
+    throw error;
+  }
+};

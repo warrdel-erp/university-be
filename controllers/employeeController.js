@@ -172,3 +172,30 @@ export const getTeacherTimeTable = async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const getTeacherSubject = async (req, res) => {
+    try {
+        const { employeeId } = req.query;
+
+        if (!employeeId) {
+            return res.status(400).send("employeeId is required");
+        }
+
+        const universityId = req.user.universityId;
+        const instituteId = req.user.instituteId;
+        const role = req.user.role;
+
+        const result = await employee.getTeacherSubject(
+            employeeId,
+            universityId,
+            instituteId,
+            role
+        );
+
+        res.status(200).send(result);
+
+    } catch (error) {
+        console.error("Error in getTeacher subject:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};

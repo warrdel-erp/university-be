@@ -140,6 +140,19 @@ export async function deleteTimeTableCreate (faculityLoadId) {
     }
 };
 
+export async function deletetimeTableMapping(timeTableMappingId) {
+    try {
+        const result = await model.timeTableMappingModel.destroy({
+            where: { timeTableMappingId },
+            individualHooks: true
+        });
+        return { message: `time table mapping successfully for time Table Creation Id :-${timeTableMappingId}` };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        throw new Error('Unable to soft delete account');
+    }
+};
+
 export async function addtimeTableMapping(data,transaction) {
     try {
         const result = await model.timeTableMappingModel.create(data,{transaction});
@@ -160,7 +173,7 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
     console.error("Error in getPeriodInfoRepository:", error);
     throw error;
   }
-}
+};
 
 export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
   try {
@@ -193,8 +206,7 @@ export async function checkTeacherConflictRepository(employeeId, day, startTime,
     console.error("Error in checkTeacherConflictRepository:", error);
     throw error;
   }
-}
-
+};
 
 export async function updatetimeTableCreate(timeTableMappingId, data) {
     try {
@@ -206,6 +218,31 @@ export async function updatetimeTableCreate(timeTableMappingId, data) {
         console.error(`Error updating time table type  ${timeTableMappingId}:`, error);
         throw error; 
     }
+};
+
+export async function findMappingById(id) {
+  try {
+    const result = await model.timeTableMappingModel.findOne({
+      where: { timeTableMappingId: id }
+    });
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to fetch mapping record for ID ${id}`);
+  }
+}
+
+export async function updateMapping(id, data, transaction) {
+  try {
+    const result = await model.timeTableMappingModel.update(data, {
+      where: { timeTableMappingId: id },
+      transaction
+    });
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to update mapping record for ID ${id}`);
+  }
 };
 
 export async function getTimeTableMappingDetail(universityId,instituteId,role) {
