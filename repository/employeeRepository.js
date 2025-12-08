@@ -393,3 +393,64 @@ export async function getPreviousEnrollNumber(instituteCode) {
         throw error;
     }
 };
+
+export async function getTeacherSubject(employeeId, universityId, instituteId, role) {
+  try {
+    const result = await model.teacherSubjectMappingModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { employeeId },
+
+      include: [
+        {
+          model: model.classSubjectMapperModel,
+          as: "employeeSubject",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
+          include: [
+            {
+              model: model.subjectModel,
+              as: "subjects",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"]  },
+              include: [
+                {
+                  model: model.syllabusDetailsModel,
+                  as: "syllabusSubject",
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                  where: 
+                        {
+                            type: 'internalAssessment',
+                        },
+                        required: false,
+                  include:[
+                    {
+                        model:model.examSetupTypeModel,
+                        as:'examSetupTypeSyllabus',
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                        where: {
+                            examType: 'internalAssessment',
+                        },
+                        required: false,  
+                            include:[
+                                        {
+                                            model:model.examStructureModel,
+                                            as:'examStructure',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                        }
+                                    ]
+                    }
+                    ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    return result;
+
+  } catch (error) {
+    console.error("Error in getting employee subjects:", error);
+    throw error;
+  }
+};

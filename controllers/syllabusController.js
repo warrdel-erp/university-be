@@ -128,4 +128,22 @@ export async function syllabusUnitGet(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
+
+export async function semesterAllSubject(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const {semesterId} = req.query;
+        if(!semesterId){
+           return res.status(400).send('semesterId is required')
+        }
+        const Syllabus = await syllabusCreation.semesterAllSubject(semesterId);
+        if (Syllabus) {
+            res.status(200).json(Syllabus);
+        } else {
+            res.status(404).json({ message: "Syllabus subject not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

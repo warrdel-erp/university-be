@@ -120,6 +120,8 @@ import libraryRackModel from './libraryRackModel.js';
 import libraryRowModel from './libraryRowModel.js';
 import libraryBookInventoryModel from './libraryBookInventoryModel.js';
 import libraryBookModel from './libraryBookModel.js';
+import internalAssessmentModel from './internalAssessmentModel.js';
+import assessmentEvaluationModel from './assessmentEvaluationModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -870,6 +872,27 @@ libraryBookInventoryModel.belongsTo(studentModel, { foreignKey: "student_id", as
 employeeModel.hasMany(libraryBookInventoryModel, { foreignKey: "employee_id", as: "employeeIssuedBooks" }); 
 libraryBookInventoryModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeDetailsBook" });
 
+syllabusDetailsModel.hasMany(classSubjectMapperModel, { foreignKey: "subjectId", as: "classSubjects" });
+classSubjectMapperModel.belongsTo(syllabusDetailsModel, { foreignKey: "subjectId", as: "subjectDetails"});
+
+internalAssessmentModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "assessmentSubject" });
+subjectModel.hasMany(internalAssessmentModel, { foreignKey: "subjectId", as: "subjectAssessments" });
+
+internalAssessmentModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "assessmentSemester" });
+semesterModel.hasMany(internalAssessmentModel, { foreignKey: "semesterId", as: "semesterAssessments" });
+
+internalAssessmentModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "assessmentExamType" });
+examSetupTypeModel.hasMany(internalAssessmentModel, { foreignKey: "examSetupTypeId", as: "examTypeAssessments" });
+
+internalAssessmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employees" });
+employeeModel.hasMany(internalAssessmentModel, { foreignKey: "employeeId", as: "assessment" });
+
+internalAssessmentModel.hasMany(assessmentEvaluationModel, { foreignKey: "examAssessmentId", as: "evaluations" });
+assessmentEvaluationModel.belongsTo(internalAssessmentModel, { foreignKey: "examAssessmentId", as: "internalAssessment" });
+
+studentModel.hasMany(assessmentEvaluationModel, { foreignKey: "studentId", as: "studentresult" });
+assessmentEvaluationModel.belongsTo(studentModel, { foreignKey: "studentId", as: "studentevaluation" });
+
 export {
     settingModel,
     universityModel,
@@ -993,4 +1016,6 @@ export {
     libraryRowModel,
     libraryBookInventoryModel,
     libraryBookModel,
+    internalAssessmentModel,
+    assessmentEvaluationModel,
 };

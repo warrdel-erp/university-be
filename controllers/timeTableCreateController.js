@@ -101,6 +101,27 @@ export const updatetimeTableCreate = async (req,res) => {
     }
 };
 
+export const updateSimpleTeacherMappingController = async (req, res) => {
+  try {
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+
+    const data = req.body;
+
+    const result = await timeTableCreateServices.updateSimpleTeacherMapping(
+      data,
+      createdBy,
+      updatedBy
+    );
+
+    res.status(200).send(result);
+
+  } catch (err) {
+    console.error("Error in updateSimpleTeacherMappingController:", err);
+    res.status(500).send({ success: false, message: err.message });
+  }
+};
+
 // // update time table 
 // export const updateFaculityLoad = async (req,res) => {
 //     const info = req.body;   
@@ -119,22 +140,22 @@ export const updatetimeTableCreate = async (req,res) => {
 //     }
 // };
 
-// // delete time table
+ // delete time table
 
-// export const deleteFaculityLoad = async (req,res) => {
-//     const {timeTableCreateId} = req.query;
-//     try {
-//         if (!timeTableCreateId){
-//             res.status(400).send("faculity Load Id is required");
-//         }else{
-//             const result = await timeTableCreateServices.deleteFaculityLoad(timeTableCreateId);
-//             res.status(200).send(result);
-//         }
-//     } catch (error) {
-//         console.error(`Error in deleting faculity load Id ${timeTableCreateId}:`, error);
-//         res.status(500).send("Internal Server Error");
-//     }
-// };
+export const deletetimeTableMapping = async (req,res) => {
+    const {timeTableMappingId} = req.query;
+    try {
+        if (!timeTableMappingId){
+            res.status(400).send("time table mapping id is required");
+        }else{
+            const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId);
+            res.status(200).send(result);
+        }
+    } catch (error) {
+        console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
+        res.status(500).send("Internal Server Error");
+    }
+};
 
 export const getTimeTableCellData = async (req,res) => {
     const universityId = req.user.universityId;

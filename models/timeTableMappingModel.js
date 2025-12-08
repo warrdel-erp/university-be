@@ -101,6 +101,18 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        isTeacher:{
+            type: DataTypes.STRING,
+            allowNull: false,
+            field:'is_teacher',
+            defaultValue:'Primary'
+        },
+        isAttendence:{
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            field:'is_Attendence',
+            defaultValue:true,
+        },
         period:{
             type: DataTypes.INTEGER,
             allowNull: false,
