@@ -58,7 +58,7 @@ export const login = async (req, res) => {
     }
 
   //  const token = jwt.sign({ email: existingEmail.email }, process.env.SECRET_KEY,{ expiresIn: process.env.TOKEN_TIME });
-  const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '4h'});
+  const token = jwt.sign({ email: existingEmail.email }, 'warrdelUniversityERPWarrdelUniversityERP',{ expiresIn: '12h'});
   if(existingEmail.dataValues.dummyPassword){
     result = await userService.emptyPassword(req.body,existingEmail)
     userData = await userRepository.findEmailByEmail(email);

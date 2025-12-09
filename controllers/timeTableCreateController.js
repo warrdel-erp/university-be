@@ -207,3 +207,20 @@ export const publishTimeTable = async (req, res) => {
     res.status(500).send(error.message);
   }
 };
+
+export const ClassSubjectCount = async (req, res) => {
+  try {
+    const { classSectionsId } = req.query;    
+
+    if (!classSectionsId) {
+      return res.status(400).send("classSectionsId is required");
+    }
+
+    const response = await timeTableCreateServices.getSubjectWithCount(classSectionsId);
+
+    res.status(200).send(response);
+
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+};
