@@ -1050,6 +1050,7 @@ export async function getSubjectWithCount(classSectionsId) {
   const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
     id: s.subjectId,
     name: s.subjects?.subjectName,
+    subjectCode : s.subjects?.subjectCode,
   })) || [];
 
   const timeTable = timeTableData?.timeTablecreate || [];
@@ -1074,6 +1075,7 @@ export async function getSubjectWithCount(classSectionsId) {
   const result = subjectsList.map(s => ({
     subjectId: s.id,
     subject: s.name,
+    subjectCode:s.subjectCode,
     count: countMap[s.id] || 0
   }));
 
