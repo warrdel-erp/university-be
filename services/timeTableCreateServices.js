@@ -50,158 +50,157 @@ export async function deletetimeTableMapping(timeTableMappingId){
     return await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId)
 };
 
-export async function addtimeTableMapping(data, createdBy, updatedBy) {
-    const transaction = await sequelize.transaction();
-    let teacherSubjectData = null;
-
-    try {
-        const {
-            timeTableNameId,
-            timeTableCreateId,
-            timeTableCreationId,
-            employeeId,
-            teacherSubjectMappingId,
-            isSameTeacher,
-            day,
-            period
-        } = data;
-
-
-        // Fetch time table data
-        const timeTableData = await getSingleTimeTableById(timeTableCreationId);
-        if (!timeTableData || !timeTableData[0]) {
-            throw new Error(`No timetable found for ID ${timeTableCreationId}`);
-        }
-
-        const periodLength = timeTableData[0]?.dataValues?.periodLength || 0;
-
-        if (teacherSubjectMappingId) {
-            teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
-            if (!teacherSubjectData || !teacherSubjectData[0]) {
-                throw new Error(`No teacher-subject mapping found for ID ${teacherSubjectMappingId}`);
-            }
-        }
-
-        const employeeIdData = teacherSubjectData
-            ? teacherSubjectData[0].dataValues?.employeeId
-            : employeeId;
-
-        if (!employeeIdData) {
-            throw new Error(`Employee ID is missing or invalid.`);
-        }
-
-
-        // Fetch faculty load details
-        const faculityLoad = await getSingleFaculityLoadDetails(employeeIdData);
-
-        if (!faculityLoad || !faculityLoad[0]) {
-            throw new Error(`No faculty load record found for employee ID ${employeeIdData}`);
-        }
-
-        const faculityCurrentLoad = faculityLoad[0].dataValues?.currentLoad || 0;
-
-        const currentLoad = parseInt(faculityCurrentLoad) + periodLength || 0;
-
-        // Update faculty load
-        await updateFaculityLoadByEmployeeId(
-            employeeIdData,
-            { currentLoad },
-            transaction
-        );
-
-        data.createdBy = createdBy;
-        data.updatedBy = updatedBy;
-
-        const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
-
-        await transaction.commit();
-        return result;
-
-    } catch (error) {
-        await transaction.rollback();
-
-        console.error(" Error in addtimeTableMapping:", error);
-
-        throw new Error(`Failed to add timetable mapping: ${error.message}`);
-    }
-};
-
 // export async function addtimeTableMapping(data, createdBy, updatedBy) {
-//   const transaction = await sequelize.transaction();
-//   let teacherSubjectData = null;
+//     const transaction = await sequelize.transaction();
+//     let teacherSubjectData = null;
 
-//   try {
-//     const {
-//       timeTableCreateId,
-//       timeTableCreationId,
-//       employeeId,
-//       teacherSubjectMappingId,
-//       day
-//     } = data;
+//     try {
+//         const {
+//             timeTableNameId,
+//             timeTableCreateId,
+//             timeTableCreationId,
+//             employeeId,
+//             teacherSubjectMappingId,
+//             isSameTeacher,
+//             day,
+//             period
+//         } = data;
+
+
+//         // Fetch time table data
+//         const timeTableData = await getSingleTimeTableById(timeTableCreationId);
+//         if (!timeTableData || !timeTableData[0]) {
+//             throw new Error(`No timetable found for ID ${timeTableCreationId}`);
+//         }
+
+//         const periodLength = timeTableData[0]?.dataValues?.periodLength || 0;
+
+//         if (teacherSubjectMappingId) {
+//             teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+//             if (!teacherSubjectData || !teacherSubjectData[0]) {
+//                 throw new Error(`No teacher-subject mapping found for ID ${teacherSubjectMappingId}`);
+//             }
+//         }
+
+//         const employeeIdData = teacherSubjectData
+//             ? teacherSubjectData[0].dataValues?.employeeId
+//             : employeeId;
+
+//         if (!employeeIdData) {
+//             throw new Error(`Employee ID is missing or invalid.`);
+//         }
+
+
+//         // Fetch faculty load details
+//         const faculityLoad = await getSingleFaculityLoadDetails(employeeIdData);
+
+//         if (!faculityLoad || !faculityLoad[0]) {
+//             throw new Error(`No faculty load record found for employee ID ${employeeIdData}`);
+//         }
+
+//         const faculityCurrentLoad = faculityLoad[0].dataValues?.currentLoad || 0;
+
+//         const currentLoad = parseInt(faculityCurrentLoad) + periodLength || 0;
+
+//         // Update faculty load
+//         await updateFaculityLoadByEmployeeId(
+//             employeeIdData,
+//             { currentLoad },
+//             transaction
+//         );
+
+//         data.createdBy = createdBy;
+//         data.updatedBy = updatedBy;
+
+//         const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
+
+//         await transaction.commit();
+//         return result;
+
+//     } catch (error) {
+//         await transaction.rollback();
+
+//         console.error(" Error in addtimeTableMapping:", error);
+
+//         throw new Error(`Failed to add timetable mapping: ${error.message}`);
+//     }
+// };
+
+export async function addtimeTableMapping(data, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+  let teacherSubjectData = null;
+
+  try {
+    const {
+      timeTableCreateId,
+      timeTableCreationId,
+      employeeId,
+      teacherSubjectMappingId,
+      day
+    } = data;
 
     
-//     const periodInfo = await getPeriodInfoRepository(timeTableCreationId);
+    const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(timeTableCreationId);
 
-//     if (!periodInfo) {
-//       throw new Error("Invalid timeTableCreationId");
-//     }
+    if (!periodInfo) {
+      throw new Error("Invalid timeTableCreationId");
+    }
 
-//     const { startTime, endTime, periodLength } = periodInfo;
-
-    
-//     if (teacherSubjectMappingId) {
-//       teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
-
-//       if (!teacherSubjectData?.[0])
-//         throw new Error("Invalid teacherSubjectMappingId");
-
-//       data.employeeId = teacherSubjectData[0].employeeId;
-//     }
-
-//     const teacherId = data.employeeId;
-//     if (!teacherId) throw new Error("employeeId is required");
-
-//     const conflict = await checkTeacherConflictRepository(
-//       teacherId,
-//       day,
-//       startTime,
-//       endTime
-//     );
-
-//     if (conflict) {
-//       throw new Error(
-//         `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`
-//       );
-//     }
+    const { startTime, endTime, periodLength } = periodInfo;
 
     
-//     const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
+    if (teacherSubjectMappingId) {
+      teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
 
-//     const currentLoad =
-//       (facultyLoad?.[0]?.currentLoad || 0) + (periodLength || 0);
+      if (!teacherSubjectData?.[0])
+        throw new Error("Invalid teacherSubjectMappingId");
 
-//     await updateFaculityLoadByEmployeeId(
-//       teacherId,
-//       { currentLoad },
-//       transaction
-//     );
+      data.employeeId = teacherSubjectData[0].employeeId;
+    }
+
+    const teacherId = data.employeeId;
+    if (!teacherId) throw new Error("employeeId is required");
+
+    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
+      teacherId,
+      day,
+      startTime,
+      endTime
+    );
+
+    if (conflict) {
+      throw new Error(
+        `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`
+      );
+    }
+
+    
+    const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
+
+    const currentLoad =
+      (facultyLoad?.[0]?.currentLoad || 0) + (periodLength || 0);
+
+    await updateFaculityLoadByEmployeeId(
+      teacherId,
+      { currentLoad },
+      transaction
+    );
 
    
-//     data.createdBy = createdBy;
-//     data.updatedBy = updatedBy;
+    data.createdBy = createdBy;
+    data.updatedBy = updatedBy;
 
-//     const result = await addMapRepo(data, transaction);
+    const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
 
-//     await transaction.commit();
-//     return result;
+    await transaction.commit();
+    return result;
 
-//   } catch (error) {
-//     await transaction.rollback();
-//     console.error("Error in addtimeTableMapping:", error);
-//     throw new Error(error.message);
-//   }
-// }
-
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in addtimeTableMapping:", error);
+    throw new Error(error.message);
+  }
+};
 
 export async function updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy) {    
     try {
@@ -213,6 +212,131 @@ export async function updatetimeTableCreate(timeTableMappingId,timeTableType,upd
     }
 };
 
+// export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
+//   const transaction = await sequelize.transaction();
+
+//   try {
+//     if (!Array.isArray(mappingArray) || mappingArray.length === 0) {
+//       throw new Error("Request body must be a non-empty array");
+//     }
+
+//     // Base row = first entry (existing mapping)
+//     const base = mappingArray[0];
+
+//     if (!base.timeTableMappingId) {
+//       throw new Error("Base row must contain timeTableMappingId");
+//     }
+
+//     // Fetch base mapping row from DB & convert to plain object
+//     let baseRow = await timeTableCreateRepository.findMappingById(base.timeTableMappingId);
+//     if (!baseRow) {
+//       throw new Error(`Base mapping ${base.timeTableMappingId} not found`);
+//     }
+
+//     baseRow = baseRow.get({ plain: true });  // IMPORTANT FIX
+
+//     // Fetch timetable creation info (period length)
+//     const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
+//     if (!ttCreationData || !ttCreationData[0]) {
+//       throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
+//     }
+
+//     const periodLength = ttCreationData[0].dataValues.periodLength || 0;
+
+//     // PROCESS EACH ITEM IN THE REQUEST ARRAY
+//     for (const item of mappingArray) {
+
+//       // CASE 1: UPDATE EXISTING MAPPING
+//       if (item.timeTableMappingId) {
+
+//         const dbRow = await timeTableCreateRepository.findMappingById(item.timeTableMappingId);
+//         if (!dbRow) {
+//           throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
+//         }
+
+//         const noChange =
+//           dbRow.isTeacher === item.isTeacher &&
+//           dbRow.isAttendence === item.isAttendence;
+
+//         if (!noChange) {
+//           await timeTableCreateRepository.updateMapping(
+//             item.timeTableMappingId,
+//             {
+//               isTeacher: item.isTeacher,
+//               isAttendence: item.isAttendence,
+//               updatedBy
+//             },
+//             transaction
+//           );
+//         }
+
+//       }
+
+//       // CASE 2: ADD NEW TEACHER
+//       else if (item.isNew === true) {
+
+//         if (!item.employeeId) {
+//           throw new Error("employeeId is required for new teacher entry");
+//         }
+
+//         //  FACULTY LOAD LOGIC — ADD PERIOD LENGTH
+//         const facLoad = await getSingleFaculityLoadDetails(item.employeeId);
+//         if (!facLoad || !facLoad[0]) {
+//           throw new Error(`Faculty load not found for employee ${item.employeeId}`);
+//         }
+
+//         const currentLoad = Number(facLoad[0].dataValues.currentLoad || 0);
+//         const newLoad = currentLoad + periodLength;
+
+//         await updateFaculityLoadByEmployeeId(
+//           item.employeeId,
+//           { currentLoad: newLoad },
+//           transaction
+//         );
+
+//         //  CREATE NEW ROW using base row values + new teacher values
+//         const newRow = {
+//           timeTableNameId: baseRow.timeTableNameId,
+//           timeTableCreateId: baseRow.timeTableCreateId,
+//           timeTableCreationId: baseRow.timeTableCreationId,
+
+//           // Copy subject & mapping info
+//           subjectId: baseRow.subjectId,
+//           electiveSubjectId: baseRow.electiveSubjectId,   // FIX APPLIED
+//           teacherSubjectMappingId: baseRow.teacherSubjectMappingId,
+
+//           // Class & timing fields
+//           classRoomSectionId: baseRow.classRoomSectionId,
+//           day: baseRow.day,
+//           period: baseRow.period,
+
+//           // Other flags
+//           isSameTeacher: baseRow.isSameTeacher,
+//           timeTableType: baseRow.timeTableType,
+
+//           // NEW TEACHER VALUES
+//           employeeId: item.employeeId,
+//           isTeacher: item.isTeacher,
+//           isAttendence: item.isAttendence,
+
+//           createdBy,
+//           updatedBy
+//         };
+
+//         await timeTableCreateRepository.addtimeTableMapping(newRow, transaction);
+//       }
+//     }
+
+//     await transaction.commit();
+//     return { success: true, message: "Teacher mapping updated successfully" };
+
+//   } catch (err) {
+//     await transaction.rollback();
+//     console.error("Error in updateSimpleTeacherMapping:", err);
+//     throw err;
+//   }
+// };
+
 export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
@@ -221,35 +345,55 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       throw new Error("Request body must be a non-empty array");
     }
 
-    // Base row = first entry (existing mapping)
     const base = mappingArray[0];
 
     if (!base.timeTableMappingId) {
       throw new Error("Base row must contain timeTableMappingId");
     }
 
-    // Fetch base mapping row from DB & convert to plain object
     let baseRow = await timeTableCreateRepository.findMappingById(base.timeTableMappingId);
+
     if (!baseRow) {
       throw new Error(`Base mapping ${base.timeTableMappingId} not found`);
     }
 
-    baseRow = baseRow.get({ plain: true });  // IMPORTANT FIX
+    baseRow = baseRow.get({ plain: true });
 
-    // Fetch timetable creation info (period length)
     const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
+
     if (!ttCreationData || !ttCreationData[0]) {
       throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
     }
 
     const periodLength = ttCreationData[0].dataValues.periodLength || 0;
 
-    // PROCESS EACH ITEM IN THE REQUEST ARRAY
+    // LOOP
     for (const item of mappingArray) {
+      
+      // 🧨 BEFORE doing anything, check conflict
+      if (item.employeeId) {
 
-      // CASE 1: UPDATE EXISTING MAPPING
+        const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
+        const { startTime, endTime } = periodInfo;
+
+        const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
+          item.employeeId,
+          baseRow.day,
+          startTime,
+          endTime
+        );
+
+        if (conflict) {
+          throw new Error(
+            `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime}`
+          );
+        }
+      }
+      // conflict logic END
+      
+
+      // ===== CASE 1: update existing mapping =====
       if (item.timeTableMappingId) {
-
         const dbRow = await timeTableCreateRepository.findMappingById(item.timeTableMappingId);
         if (!dbRow) {
           throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
@@ -270,17 +414,15 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
             transaction
           );
         }
-
       }
 
-      // CASE 2: ADD NEW TEACHER
+      // ===== CASE 2: NEW ENTRY =====
       else if (item.isNew === true) {
-
         if (!item.employeeId) {
           throw new Error("employeeId is required for new teacher entry");
         }
 
-        //  FACULTY LOAD LOGIC — ADD PERIOD LENGTH
+        // update faculty load
         const facLoad = await getSingleFaculityLoadDetails(item.employeeId);
         if (!facLoad || !facLoad[0]) {
           throw new Error(`Faculty load not found for employee ${item.employeeId}`);
@@ -295,31 +437,21 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           transaction
         );
 
-        //  CREATE NEW ROW using base row values + new teacher values
         const newRow = {
           timeTableNameId: baseRow.timeTableNameId,
           timeTableCreateId: baseRow.timeTableCreateId,
           timeTableCreationId: baseRow.timeTableCreationId,
-
-          // Copy subject & mapping info
           subjectId: baseRow.subjectId,
-          electiveSubjectId: baseRow.electiveSubjectId,   // FIX APPLIED
+          electiveSubjectId: baseRow.electiveSubjectId,
           teacherSubjectMappingId: baseRow.teacherSubjectMappingId,
-
-          // Class & timing fields
           classRoomSectionId: baseRow.classRoomSectionId,
           day: baseRow.day,
           period: baseRow.period,
-
-          // Other flags
           isSameTeacher: baseRow.isSameTeacher,
           timeTableType: baseRow.timeTableType,
-
-          // NEW TEACHER VALUES
           employeeId: item.employeeId,
           isTeacher: item.isTeacher,
           isAttendence: item.isAttendence,
-
           createdBy,
           updatedBy
         };
@@ -922,15 +1054,12 @@ export async function getSubjectWithCount(classSectionsId) {
 
   const timeTable = timeTableData?.timeTablecreate || [];
 
-  // Count map
   const countMap = {};
 
-  // Initialize with 0
   subjectsList.forEach(s => {
     countMap[s.id] = 0;
   });
 
-  // Count actual occurrences
   timeTable.forEach(t => {
     const subjectId =
       t.timeTableSubject?.subjectId ||
@@ -942,7 +1071,6 @@ export async function getSubjectWithCount(classSectionsId) {
     }
   });
 
-  // Final formatted response
   const result = subjectsList.map(s => ({
     subjectId: s.id,
     subject: s.name,

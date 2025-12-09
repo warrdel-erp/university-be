@@ -680,13 +680,11 @@ export async function timeTableData(classSectionsId) {
               ]
             },
 
-            // SUBJECT DIRECT
             {
               model: model.subjectModel,
               as: "timeTableSubject"
             },
 
-            // ELECTIVE DIRECT SUBJECT
             {
               model: model.electiveSubjectModel,
               as: "timeTableElective"
