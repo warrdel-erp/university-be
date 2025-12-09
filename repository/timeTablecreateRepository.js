@@ -622,4 +622,82 @@ export async function publishTimeTableRepository(timeTableCreateId) {
     console.error("Error in publishTimeTableRepository:", error);
     throw error;
   }
-}
+};
+
+export async function ClassSubjectCount(classSectionsId) {
+  try {
+    return await model.classSectionModel.findOne({
+        where:{classSectionsId},
+        include:[
+          {
+            model:model.semesterModel,
+            as:'semesterDetail',
+            include:[
+              {
+                model:model.classSubjectMapperModel,
+                as:'semestermapping',
+                include:[
+                  {
+                    model:model.subjectModel,
+                    as:'subjects'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+    });
+
+  } catch (error) {
+    console.error("Error in subject Count repository:", error);
+    throw error;
+  }
+};
+
+export async function timeTableData(classSectionsId) {
+  try {
+    return await model.timeTableCreateModel.findOne({
+        where:{classSectionsId},
+        include:[
+          {
+            model:model.timeTableMappingModel,
+            as:'timeTablecreate',
+            include:[
+              {
+              model: model.teacherSubjectMappingModel,
+              as: "timeTableTeacherSubject",
+              include: [
+                {
+                  model: model.classSubjectMapperModel,
+                  as: "employeeSubject",
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: "subjects"
+                    }
+                  ]
+                }
+              ]
+            },
+
+            // SUBJECT DIRECT
+            {
+              model: model.subjectModel,
+              as: "timeTableSubject"
+            },
+
+            // ELECTIVE DIRECT SUBJECT
+            {
+              model: model.electiveSubjectModel,
+              as: "timeTableElective"
+            }
+            ]
+          }
+        ]
+    });
+
+  } catch (error) {
+    console.error("Error in subject Count time table repository:", error);
+    throw error;
+  }
+};

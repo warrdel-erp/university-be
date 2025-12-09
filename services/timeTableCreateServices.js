@@ -907,4 +907,47 @@ export async function publishTimeTableService(timeTableCreateId) {
     console.error("Error in publishTimeTableService:", error);
     throw error;
   }
+};
+
+export async function getSubjectWithCount(classSectionsId) {
+  const [subjectsData, timeTableData] = await Promise.all([
+    timeTableCreateRepository.ClassSubjectCount(classSectionsId),
+    timeTableCreateRepository.timeTableData(classSectionsId)
+  ]);
+
+  const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+    id: s.subjectId,
+    name: s.subjects?.subjectName,
+  })) || [];
+
+  const timeTable = timeTableData?.timeTablecreate || [];
+
+  // Count map
+  const countMap = {};
+
+  // Initialize with 0
+  subjectsList.forEach(s => {
+    countMap[s.id] = 0;
+  });
+
+  // Count actual occurrences
+  timeTable.forEach(t => {
+    const subjectId =
+      t.timeTableSubject?.subjectId ||
+      t.timeTableTeacherSubject?.employeeSubject?.subjectId ||
+      null;
+
+    if (subjectId && countMap[subjectId] !== undefined) {
+      countMap[subjectId]++;
+    }
+  });
+
+  // Final formatted response
+  const result = subjectsList.map(s => ({
+    subjectId: s.id,
+    subject: s.name,
+    count: countMap[s.id] || 0
+  }));
+
+  return result;
 }
