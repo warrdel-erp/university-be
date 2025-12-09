@@ -163,11 +163,10 @@ export async function getAllSpecialization(universityId,acedmicYearId,instituteI
 export async function getAllSubject(universityId,acedmicYearId,instituteId,role,mainInstituteId) {    
     try {
         const whereClause = {
-            // university_id: universityId,
-            ...(mainInstituteId && { institute_id:mainInstituteId }),
-            ...(universityId && { universityId }),
+            ...(instituteId && { institute_id: instituteId }),
+            ...(universityId && { university_id: universityId }),
             ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { institute_id: instituteId })
+            ...(role === 'Head' && { institute_id: mainInstituteId })
         };
         const result = await model.subjectModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
