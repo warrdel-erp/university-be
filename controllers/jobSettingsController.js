@@ -1,11 +1,7 @@
 import * as jobSettingsService from "../services/jobSettingsService.js";
 
-export async function addJobType(req, res) {
-  console.log(`>>>>>>>>>>>>>>>>>>>`);
-  
-  try {
-    console.log(`>>>>>req.user.universityId`,req.user.universityId);
-    
+export async function addJobType(req, res) {  
+  try {    
     const data = {
     universityId: req.user.universityId,
     instituteId: req.user.instituteId,
@@ -13,8 +9,6 @@ export async function addJobType(req, res) {
     updatedBy: req.user.userId,
     ...req.body
   };
-  console.log(`>>>>>>data`,data);
-  
     const result = await jobSettingsService.addJobType(data);
     return res.status(201).json({
       success: true,
@@ -25,17 +19,20 @@ export async function addJobType(req, res) {
     console.error("Error in addJobType:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};
 
 export async function getAllJobTypes(req, res) {
   try {
-    const result = await jobSettingsService.getAllJobTypes();
+    const universityId= req.user.universityId;
+    const instituteId=req.user.instituteId;
+    const role = req.user.role; 
+    const result = await jobSettingsService.getAllJobTypes(universityId,instituteId,role);
     return res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error("Error in getAllJobTypes:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};
 
 export async function getSingleJobType(req, res) {
   try {
@@ -45,7 +42,7 @@ export async function getSingleJobType(req, res) {
     console.error("Error in getSingleJobType:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};
 
 export async function updateJobType(req, res) {
   try {
@@ -59,7 +56,7 @@ export async function updateJobType(req, res) {
     console.error("Error in updateJobType:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};
 
 export async function deleteJobType(req, res) {
   try {
@@ -72,4 +69,4 @@ export async function deleteJobType(req, res) {
     console.error("Error in deleteJobType:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};

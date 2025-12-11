@@ -895,6 +895,22 @@ assessmentEvaluationModel.belongsTo(internalAssessmentModel, { foreignKey: "exam
 studentModel.hasMany(assessmentEvaluationModel, { foreignKey: "studentId", as: "studentresult" });
 assessmentEvaluationModel.belongsTo(studentModel, { foreignKey: "studentId", as: "studentevaluation" });
 
+jobModel.belongsTo(jobSettingModel, { foreignKey: "jobSettingId", as: "jobType" });
+jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
+
+jobModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "facultyJobs" });
+employeeModel.hasMany(jobModel, { foreignKey: "employeeId", as: "jobsFaculty" });
+
+jobModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "departmentJobs" });
+departmentModel.hasMany(jobModel, { foreignKey: "departmentId", as: "jobsDepartment" });
+
+jobModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectJobs" });
+subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
+
+jobModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseJobs" });
+courseModel.hasMany(jobModel, { foreignKey: "courseId", as: "jobsCourse" });
+
+
 export {
     settingModel,
     universityModel,

@@ -1,7 +1,6 @@
 import * as model from "../models/index.js";
 
 export async function addJobType(data) {
-  console.log(`>>>>>data`,data)
   try {
     return await model.jobSettingModel.create(data);
   } catch (error) {
@@ -10,13 +9,23 @@ export async function addJobType(data) {
   }
 }
 
-export async function getAllJobTypes() {
+export async function getAllJobTypes(universityId, instituteId, role) {
+
+  const whereClause = {
+    isActive: true,
+    ...(universityId && { universityId }),
+    ...(role === "Head" && { instituteId }),
+  };
+
   try {
-    return await model.jobSettingModel.findAll({ where: { isActive: true } });
+    return await model.jobSettingModel.findAll({
+      where: whereClause
+    });
+
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
 export async function getSingleJobType(jobSettingId) {
   try {

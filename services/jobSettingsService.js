@@ -10,15 +10,15 @@ export async function addJobType(data) {
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
-export async function getAllJobTypes() {
+export async function getAllJobTypes(universityId,instituteId,role) {
   try {
-    return await jobSettingsRepository.getAllJobTypes();
+    return await jobSettingsRepository.getAllJobTypes(universityId,instituteId,role);
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
 export async function getSingleJobType(jobSettingId) {
   try {
@@ -27,7 +27,7 @@ export async function getSingleJobType(jobSettingId) {
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
 export async function updateJobType(jobSettingId, data) {
   try {
@@ -36,7 +36,7 @@ export async function updateJobType(jobSettingId, data) {
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
 export async function deleteJobType(jobSettingId) {
   try {
