@@ -46,8 +46,8 @@ import electiveSubject from './router/electiveSubjectRoute.js';
 import building from './router/buildingRoute.js';
 import floor from './router/floorRoute.js';
 import head from './router/headRoute.js';
-import subAccount from './router/subAccountRoute.js';
-import department from './router/departmentRoute.js';
+import subAccount from './router/subAccountRoute.js'; // this is department
+import department from './router/departmentRoute.js'; // this is sub_account 
 import staff from './router/staffRoute.js';
 import departmentStructure from './router/departmentStructureRoute.js';
 import syllabus from './router/syllabusRoute.js';
@@ -117,8 +117,8 @@ app.use("/electiveSubject",electiveSubject);
 app.use("/building",building);
 app.use("/floor",floor);
 app.use("/head",head);
-app.use("/subAccount",subAccount);
-app.use("/department",department);
+app.use("/subAccount",subAccount); // this is department
+app.use("/department",department); // this is sub_account
 app.use("/staff",staff);
 app.use ("/departmentStructure",departmentStructure);
 app.use ("/syllabus",syllabus);

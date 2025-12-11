@@ -17,7 +17,7 @@ router.post("/add", useAuth, addJob);
 router.get("/list", useAuth, getAllJobs);
 router.get("/calendar", useAuth, getCalendarView); 
 router.get("/calendar/faculty/:employeeId", useAuth, getFacultyCalendar);
-router.get("/calendar/department/:departmentId", useAuth, getDepartmentCalendar);
+router.get("/calendar/department/:subAccountId", useAuth, getDepartmentCalendar);
 
 router.get("/:id", useAuth, getSingleJob);
 router.patch("/update/:id", useAuth, updateJob);

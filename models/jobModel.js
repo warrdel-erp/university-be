@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import departmentModel from "./departmentModel.js";
+// import departmentModel from "./departmentModel.js";
+import subAccount from "./subAccountModel.js" // this is department
 import courseModel from "./courseModel.js";
 import subjectModel from "./subjectModel.js";
 import employeeModel from "./employeeModel.js";
@@ -53,13 +54,13 @@ export default sequelize.define(
       },
     },
 
-    departmentId: {
+    subAccountId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "department_id",
+      field: "sub_account_id",
       references: {
-        model: departmentModel,
-        key: "department_id",
+        model: subAccount,
+        key: "sub_account_id",
       },
     },
 

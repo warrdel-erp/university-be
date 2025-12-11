@@ -19,7 +19,7 @@ export async function getAllJobs(universityId, instituteId, role) {
         ...(role === "Head" && { instituteId }),
         deletedAt: null
       },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "departmentId", "subjectId", "courseId" ] },
+      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "subAccountId", "subjectId", "courseId" ] },
       include: [
         {
           model: model.jobSettingModel,
@@ -32,9 +32,9 @@ export async function getAllJobs(universityId, instituteId, role) {
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
         },
         {
-          model: model.departmentModel,
+          model: model.subAccountModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "departmentId"]
+          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
         },
         {
           model: model.subjectModel,
@@ -59,7 +59,7 @@ export async function getSingleJob(jobId) {
   try {
     return await model.jobModel.findOne({
       where: { jobId, deletedAt: null },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "departmentId", "subjectId", "courseId" ] },
+      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "subAccountId", "subjectId", "courseId" ] },
       include: [
         {
           model: model.jobSettingModel,
@@ -72,9 +72,9 @@ export async function getSingleJob(jobId) {
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
         },
         {
-          model: model.departmentModel,
+          model: model.subAccountModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "departmentId"]
+          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
         },
         {
           model: model.subjectModel,
@@ -193,10 +193,10 @@ export async function getFacultyCalendar(employeeId, start, end) {
 }
 
 // DEPARTMENT CALENDAR
-export async function getDepartmentCalendar(departmentId, start, end) {
+export async function getDepartmentCalendar(subAccountId, start, end) {
   return await model.jobModel.findAll({
     where: {
-      departmentId,
+      subAccountId,
       jobDate: { [Op.between]: [start, end] }
     },
     order: [["jobDate", "ASC"], ["startTime", "ASC"]]
@@ -207,7 +207,7 @@ export async function getFilteredJobs(filters) {
   const {
     type,
     jobTypeId,
-    departmentId,
+    subAccountId,
     employeeId,
     date,
     status,
@@ -222,7 +222,7 @@ export async function getFilteredJobs(filters) {
     universityId,
     ...(role === "Head" && { instituteId }),
     ...(jobTypeId && { jobSettingId: jobTypeId }),
-    ...(departmentId && { departmentId }),
+    ...(subAccountId && { subAccountId }),
     ...(employeeId && { employeeId }),
     ...(status && { status }),
     ...(date && { jobDate: date })
@@ -272,9 +272,9 @@ export async function getFilteredJobs(filters) {
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
       },
       {
-        model: model.departmentModel,
+        model: model.subAccountModel,
         as: "departmentJobs",
-        attributes: ["departmentName", "departmentId"]
+        attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
       },
       {
         model: model.subjectModel,

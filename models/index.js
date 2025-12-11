@@ -901,8 +901,8 @@ jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
 jobModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "facultyJobs" });
 employeeModel.hasMany(jobModel, { foreignKey: "employeeId", as: "jobsFaculty" });
 
-jobModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "departmentJobs" });
-departmentModel.hasMany(jobModel, { foreignKey: "departmentId", as: "jobsDepartment" });
+jobModel.belongsTo(subAccountModel, { foreignKey: "subAccountId", as: "departmentJobs" });
+subAccountModel.hasMany(jobModel, { foreignKey: "subAccountId", as: "jobsDepartment" });
 
 jobModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectJobs" });
 subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });

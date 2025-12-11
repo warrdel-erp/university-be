@@ -31,6 +31,35 @@ export async function getSingleJobType(jobSettingId) {
   try {
     return await model.jobSettingModel.findOne({
       where: { jobSettingId },
+      include :[
+        {
+          model :model.jobModel,
+          as:'jobs',
+          attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+          include:[
+                    {
+                      model: model.employeeModel,
+                      as: "facultyJobs",
+                      attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
+                    },
+                    {
+                      model: model.subAccountModel,
+                      as: "departmentJobs",
+                      attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
+                    },
+                    {
+                      model: model.subjectModel,
+                      as: "subjectJobs",
+                      attributes: ["subjectName", "subjectCode", "subjectId"]
+                    },
+                    {
+                      model: model.courseModel,
+                      as: "courseJobs",
+                      attributes: ["courseId", "courseName", "courseCode"]
+                    }
+          ]
+        }
+      ]
     });
   } catch (error) {
     throw new Error(error.message);

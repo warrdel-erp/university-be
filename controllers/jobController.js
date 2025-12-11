@@ -130,10 +130,10 @@ export async function getFacultyCalendar(req, res) {
 // DEPARTMENT CALENDAR
 export async function getDepartmentCalendar(req, res) {
   try {
-    const { departmentId } = req.params;
+    const { subAccountId } = req.params;
     const { start, end } = req.query;
 
-    const result = await jobService.getDepartmentCalendar({ departmentId, start, end });
+    const result = await jobService.getDepartmentCalendar({ subAccountId, start, end });
 
     return res.status(200).json({ success: true, data: result });
 
@@ -142,12 +142,14 @@ export async function getDepartmentCalendar(req, res) {
   }
 }
 
+// Get Filter Data
+
 export async function getFilteredJobs(req, res) {
   try {
     const {
       type = "upcoming", // upcoming | previous | master
       jobTypeId,
-      departmentId,
+      subAccountId,
       employeeId,
       date,
       status,
@@ -158,7 +160,7 @@ export async function getFilteredJobs(req, res) {
     const filters = {
       type,
       jobTypeId,
-      departmentId,
+      subAccountId,
       employeeId,
       date,
       status,
