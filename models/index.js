@@ -122,6 +122,8 @@ import libraryBookInventoryModel from './libraryBookInventoryModel.js';
 import libraryBookModel from './libraryBookModel.js';
 import internalAssessmentModel from './internalAssessmentModel.js';
 import assessmentEvaluationModel from './assessmentEvaluationModel.js';
+import jobSettingModel from './jobSettingModel.js';
+import jobModel from './jobModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -1018,4 +1020,6 @@ export {
     libraryBookModel,
     internalAssessmentModel,
     assessmentEvaluationModel,
+    jobSettingModel,
+    jobModel,
 };

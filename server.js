@@ -67,6 +67,7 @@ import leaveBalance from "./router/leaveBalanceRouter.js";
 import examScheduleMapping from "./router/examStructureScheduleMappingRoute.js";
 import libraryStructure from "./router/libraryStructureRoute.js";
 import internalAssessment from "./router/internalAssessmentRoute.js";
+import jobSetting from "./router/jobSettingsRoutes.js"
 
 // middleware
 app.use(fileUpload());
@@ -136,6 +137,7 @@ app.use("/leave-balance", leaveBalance);
 app.use("/examScheduleMapping",examScheduleMapping);
 app.use("/libraryStructure",libraryStructure);
 app.use("/internalAssessment",internalAssessment);
+app.use("/jobSetting",jobSetting)
 
 
 app.listen(PORT, () => {
