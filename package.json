@@ -7,14 +7,21 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "server": "nodemon deplay--500ms server.js",
     "docker:build": "docker build -t univ-be .",
-    "docker:run": "docker run -td --name univ-be --env-file .env -p 6002:6002 --restart on-failure:5 univ-be "
+    "docker:run": "docker run -td --name univ-be --env-file .env -p 6002:6002 --restart on-failure:5 univ-be ",
+    "migrate": "npx sequelize-cli db:migrate --env development",
+    "migrate:status": "npx sequelize-cli db:migrate:status --env development",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo --env development",
+    "migrate:undo:all": "npx sequelize-cli db:migrate:undo:all --env development",
+    "seed": "npx sequelize-cli db:seed:all --env development",
+    "seed:undo": "npx sequelize-cli db:seed:undo:all --env development",
+    "server": "nodemon deplay--500ms server.js"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "sequelize-cli": "^6.6.3"
   },
   "dependencies": {
     "aws-sdk": "^2.1658.0",

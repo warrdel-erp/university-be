@@ -175,6 +175,39 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
   }
 };
 
+// export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
+//   try {
+//     return await model.timeTableMappingModel.findOne({
+//       where: {
+//         employeeId,
+//         day
+//       },
+//       include: [
+//         {
+//           model: model.timeTableCreationModel,
+//           as: "timeTablecreation",
+//           attributes: ["startTime", "endTime"],
+//           where: {
+//             [Op.or]: [
+//               { startTime: { [Op.between]: [startTime, endTime] } },
+//               { endTime: { [Op.between]: [startTime, endTime] } },
+//               {
+//                 [Op.and]: [
+//                   { startTime: { [Op.lte]: startTime } },
+//                   { endTime: { [Op.gte]: endTime } }
+//                 ]
+//               }
+//             ]
+//           }
+//         }
+//       ]
+//     });
+//   } catch (error) {
+//     console.error("Error in checkTeacherConflictRepository:", error);
+//     throw error;
+//   }
+// };
+
 export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
   try {
     return await model.timeTableMappingModel.findOne({
@@ -188,20 +221,15 @@ export async function checkTeacherConflictRepository(employeeId, day, startTime,
           as: "timeTablecreation",
           attributes: ["startTime", "endTime"],
           where: {
-            [Op.or]: [
-              { startTime: { [Op.between]: [startTime, endTime] } },
-              { endTime: { [Op.between]: [startTime, endTime] } },
-              {
-                [Op.and]: [
-                  { startTime: { [Op.lte]: startTime } },
-                  { endTime: { [Op.gte]: endTime } }
-                ]
-              }
+            [Op.and]: [
+              { startTime: { [Op.lt]: endTime } },
+              { endTime: { [Op.gt]: startTime } }
             ]
           }
         }
       ]
     });
+
   } catch (error) {
     console.error("Error in checkTeacherConflictRepository:", error);
     throw error;
