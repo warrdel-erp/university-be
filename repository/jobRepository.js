@@ -177,6 +177,7 @@ export async function getCalendarJobs(view, date, universityId, instituteId, rol
           universityId,
           ...(role === "Head" && { instituteId }),
       },
+      
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
