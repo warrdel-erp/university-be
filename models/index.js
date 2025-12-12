@@ -122,6 +122,8 @@ import libraryBookInventoryModel from './libraryBookInventoryModel.js';
 import libraryBookModel from './libraryBookModel.js';
 import internalAssessmentModel from './internalAssessmentModel.js';
 import assessmentEvaluationModel from './assessmentEvaluationModel.js';
+import jobSettingModel from './jobSettingModel.js';
+import jobModel from './jobModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -893,6 +895,22 @@ assessmentEvaluationModel.belongsTo(internalAssessmentModel, { foreignKey: "exam
 studentModel.hasMany(assessmentEvaluationModel, { foreignKey: "studentId", as: "studentresult" });
 assessmentEvaluationModel.belongsTo(studentModel, { foreignKey: "studentId", as: "studentevaluation" });
 
+jobModel.belongsTo(jobSettingModel, { foreignKey: "jobSettingId", as: "jobType" });
+jobSettingModel.hasMany(jobModel, { foreignKey: "jobSettingId", as: "jobs" });
+
+jobModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "facultyJobs" });
+employeeModel.hasMany(jobModel, { foreignKey: "employeeId", as: "jobsFaculty" });
+
+jobModel.belongsTo(subAccountModel, { foreignKey: "subAccountId", as: "departmentJobs" });
+subAccountModel.hasMany(jobModel, { foreignKey: "subAccountId", as: "jobsDepartment" });
+
+jobModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectJobs" });
+subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
+
+jobModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseJobs" });
+courseModel.hasMany(jobModel, { foreignKey: "courseId", as: "jobsCourse" });
+
+
 export {
     settingModel,
     universityModel,
@@ -1018,4 +1036,6 @@ export {
     libraryBookModel,
     internalAssessmentModel,
     assessmentEvaluationModel,
+    jobSettingModel,
+    jobModel,
 };

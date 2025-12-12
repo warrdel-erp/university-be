@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export const dbConfig = {
     HOST: process.env.HOST || 'localhost',
     USER: process.env.MYSQL_USERNAME || 'root',

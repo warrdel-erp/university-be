@@ -6,6 +6,7 @@ import university from "./universityModel.js";
 
 export default sequelize.define(
     'sub_account',
+    //this is department model not sub_account model
     {
         subAccountId: {
             type: DataTypes.INTEGER,
