@@ -173,10 +173,38 @@ export async function getCalendarJobs(view, date, universityId, instituteId, rol
 
   return await model.jobModel.findAll({
     where: {
-      jobDate: { [Op.between]: [start, end] },
-      universityId,
-      ...(role === "Head" && { instituteId })
-    },
+          jobDate: { [Op.between]: [start, end] },
+          universityId,
+          ...(role === "Head" && { instituteId }),
+      },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      include: [
+        {
+          model: model.jobSettingModel,
+          as: "jobType",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+        },
+        {
+          model: model.employeeModel,
+          as: "facultyJobs",
+          attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
+        },
+        {
+          model: model.subAccountModel,
+          as: "departmentJobs",
+          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
+        },
+        {
+          model: model.subjectModel,
+          as: "subjectJobs",
+          attributes: ["subjectName", "subjectCode", "subjectId"]
+        },
+        {
+          model: model.courseModel,
+          as: "courseJobs",
+          attributes: ["courseId", "courseName", "courseCode"]
+        }
+      ],
     order: [["jobDate", "ASC"], ["startTime", "ASC"]]
   });
 }
