@@ -19,7 +19,7 @@ export async function getAllJobs(universityId, instituteId, role) {
         ...(role === "Head" && { instituteId }),
         deletedAt: null
       },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "subAccountId", "subjectId", "courseId" ] },
+      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
           model: model.jobSettingModel,
@@ -59,7 +59,7 @@ export async function getSingleJob(jobId) {
   try {
     return await model.jobModel.findOne({
       where: { jobId, deletedAt: null },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "jobSettingId", "employeeId", "subAccountId", "subjectId", "courseId" ] },
+      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
           model: model.jobSettingModel,
@@ -177,7 +177,7 @@ export async function getCalendarJobs(view, date, universityId, instituteId, rol
           universityId,
           ...(role === "Head" && { instituteId }),
       },
-      
+
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
