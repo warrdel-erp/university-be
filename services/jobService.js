@@ -81,8 +81,7 @@ export async function addJob(data) {
     console.error("Error in addJob:", error.message);
     throw new Error(error.message || "Unable to add job");
   }
-}
-
+};
 
 // UPDATE JOB
 export async function updateJob(jobId, data) {
