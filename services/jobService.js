@@ -171,7 +171,7 @@ export async function getDepartmentCalendar({ subAccountId, start, end }) {
     console.error("Error in getDepartmentCalendar:", error.message);
     throw new Error("Unable to fetch department calendar");
   }
-}
+};
 
 export async function getFilteredJobs(filters) {
   try {
@@ -179,4 +179,60 @@ export async function getFilteredJobs(filters) {
   } catch (error) {
     throw new Error(error.message);
   }
+};
+
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
+}
+
+export async function getScheduleData(filters) {
+  const {
+    type,          // undefined | previous | upcoming
+    page = 1,
+    limit = 10
+  } = filters;
+
+  const today = todayStr();
+
+  // 1️ Decide date range
+  let fromDate, toDate;
+
+  if (!type) {
+    fromDate = today;
+    toDate = today;
+  } else if (type === "previous") {
+    fromDate = null;      // timetable startDate will be used
+    toDate = today;
+  } else if (type === "upcoming") {
+    fromDate = today;
+    toDate = null;        // timetable endDate will be used
+  }
+
+  // 2️ Fetch job data
+  const jobRows = await jobRepository.fetchJobs(filters, fromDate, toDate);
+
+  // 3️ Fetch timetable (already converted to job-like rows)
+  const lectureRows = await jobRepository.fetchTimetableAsJobs(filters, fromDate, toDate);
+console.log(`>>>>>>>>>>>>>>>lectureRows`,lectureRows);
+
+  // 4️ Merge
+  const merged = [...jobRows, ...lectureRows];
+
+  // 5 Sort by date + time
+  // merged.sort((a, b) => {
+  //   if (a.date === b.date) {
+  //     return a.startTime.localeCompare(b.startTime);
+  //   }
+  //   return a.date.localeCompare(b.date);
+  // });
+
+  // 6️ Pagination AFTER merge
+  const start = (page - 1) * limit;
+
+  return {
+    total: merged.length,
+    page: Number(page),
+    limit: Number(limit),
+    data: merged.slice(start, start + Number(limit))
+  };
 }
