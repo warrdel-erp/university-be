@@ -343,99 +343,112 @@ export async function getJobData(filters, targetDate) {
   });
 }
 
-// export async function getLectureData(filters, targetDate, dayName) {
-//   const tables = await model.timeTableCreateModel.findAll({
-//     where: {
-//       isPublish: true,
-//       startingDate: { [Op.lte]: targetDate },
-//       endingDate: { [Op.gte]: targetDate }
-//     }
-//   });
+export async function fetchJobs(filters, fromDate, toDate) {
+  const where = {
+    universityId: filters.universityId,
+    instituteId: filters.instituteId,
+    ...(filters.employeeId && { employeeId: filters.employeeId }),
+    ...(filters.subAccountId && { subAccountId: filters.subAccountId }),
+    ...(filters.status && { status: filters.status })
+  };
 
-//   const lectures = [];
+  if (fromDate && toDate) {
+    where.jobDate = { [Op.between]: [fromDate, toDate] };
+  } else if (fromDate) {
+    where.jobDate = { [Op.gte]: fromDate };
+  } else if (toDate) {
+    where.jobDate = { [Op.lte]: toDate };
+  }
 
-//   for (const t of tables) {
-//     const config = await model.timeTableCreationModel.findOne({
-//       where: { timeTableNameId: t.timeTableNameId }
-//     });
-
-//     if (config.weekOff.includes(dayName)) continue;
-
-//     const rows = await model.timeTableMappingModel.findAll({
-//       where: {
-//         timeTableCreateId: t.timeTableCreateId,
-//         day: dayName,
-//         ...(filters.employeeId && { employeeId: filters.employeeId })
-//       },
-//       include: [
-//         { model: model.employeeModel, as: "employeeDetails" },
-//         // { model: model.classSectionModel, as: "classSection" }
-//       ]
-//     });
-
-//     lectures.push(...rows);
-//   }
-
-//   return lectures;
-// }
-
-// ✅ JOB FETCH (DATEONLY SAFE)
-export async function fetchJobs(filters, dateStr) {
-  return model.jobModel.findAll({
-    where: {
-      universityId: filters.universityId,
-      instituteId: filters.instituteId,
-      jobDate: dateStr,
-      ...(filters.employeeId && { employeeId: filters.employeeId }),
-      ...(filters.status && { status: filters.status })
-    },
+  const jobs = await model.jobModel.findAll({
+    where,
     include: [
       { model: model.employeeModel, as: "facultyJobs" },
       { model: model.subAccountModel, as: "departmentJobs" }
     ]
   });
+
+  return jobs.map(j => ({
+    jobId:j.jobId,
+    jobTitle: j.jobTitle,
+    faculty: j.facultyJobs?.employeeName,
+    date: j.jobDate,
+    startTime: j.startTime,
+    endTime: j.endTime,
+    department: j.departmentJobs?.departmentName,
+    status: j.status,
+    type: "Event"
+  }));
 }
 
-// ✅ TIMETABLE FETCH (DAY + WEEK OFF SAFE)
-export async function fetchLectures(filters, dateStr, dayName) {
+/* -------------------- TIMETABLE -------------------- */
+function getDayName(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function nextDate(d) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + 1);
+  return x.toISOString().split("T")[0];
+}
+
+export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
+  const today = new Date().toISOString().split("T")[0];
+
   const tables = await model.timeTableCreateModel.findAll({
     where: {
       isPublish: true,
-      startingDate: { [Op.lte]: dateStr },
-      endingDate: { [Op.gte]: dateStr }
+      ...(fromDate && { endingDate: { [Op.gte]: fromDate } }),
+      ...(toDate && { startingDate: { [Op.lte]: toDate } })
     }
   });
 
-  const lectures = [];
+  const rows = [];
 
-  for (const t of tables) {
+  for (const table of tables) {
     const config = await model.timeTableCreationModel.findOne({
-      where: { timeTableNameId: t.timeTableNameId }
+      where: { timeTableNameId: table.timeTableNameId }
     });
 
     if (!config) continue;
 
-    // ✅ SAFE weekOff parse
     const weekOff = Array.isArray(config.weekOff)
       ? config.weekOff
       : JSON.parse(config.weekOff || "[]");
 
-    if (weekOff.includes(dayName)) continue;
+    let start = fromDate || table.startingDate;
+    let end = toDate || table.endingDate;
 
-    const rows = await model.timeTableMappingModel.findAll({
-      where: {
-        timeTableCreateId: t.timeTableCreateId,
-        day: dayName,
-        ...(filters.employeeId && { employeeId: filters.employeeId })
-      },
-      include: [
-        { model: model.employeeModel, as: "employeeDetails" },
-        // { model: model.classSectionModel, as: "classSection" }
-      ]
-    });
+    for (let d = start; d <= end; d = nextDate(d)) {
+      const dayName = getDayName(d);
+      if (weekOff.includes(dayName)) continue;
 
-    lectures.push(...rows);
+      const lectures = await model.timeTableMappingModel.findAll({
+        where: {
+          timeTableCreateId: table.timeTableCreateId,
+          day: dayName,
+          ...(filters.employeeId && { employeeId: filters.employeeId })
+        },
+        include: [
+          { model: model.employeeModel, as: "employeeDetails" },
+          // { model: model.classSectionModel, as: "classSection" }
+        ]
+      });
+
+      for (const l of lectures) {
+        rows.push({
+          jobTitle: "TimeTable",
+          faculty: l.employeeDetails?.employeeName,
+          date: d,
+          startTime: l.startTime,
+          endTime: l.endTime,
+          department: l.employeeDetails?.department,
+          status: "Active",
+          type: "Lecture"
+        });
+      }
+    }
   }
 
-  return lectures;
+  return rows;
 }

@@ -181,139 +181,58 @@ export async function getFilteredJobs(filters) {
   }
 };
 
-// function getTargetDate(type) {
-//   const d = new Date();
-//   if (type === "previous") d.setDate(d.getDate() - 1);
-//   if (type === "upcoming") d.setDate(d.getDate() + 1);
-//   return d;
-// }
-
-// function getDayName(date) {
-//   return date.toLocaleString("en-US", { weekday: "long" });
-// }
-
-// export async function getScheduleData(filters) {
-//   const {
-//     type = "today",
-//     page = 1,
-//     limit = 10
-//   } = filters;
-
-//   const targetDate = getTargetDate(type);
-//   const dayName = getDayName(targetDate);
-
-//   // 1️⃣ Fetch job + timetable
-//   const jobs = await jobRepository.getJobData(filters, targetDate);
-//   const lectures = await jobRepository.getLectureData(filters, targetDate, dayName);
-
-//   // 2️⃣ Normalize JOB → UI format
-//   const jobRows = jobs.map(j => ({
-//     title: j.jobTitle,
-//     faculty: j.facultyJobs?.employeeName,
-//     date: j.jobDate,
-//     time: `${j.startTime} - ${j.endTime}`,
-//     type: "Event",
-//     event: j.departmentJobs?.departmentName || "N/A",
-//     status: j.status
-//   }));
-
-//   // 3️⃣ Normalize TIMETABLE → UI format
-//   const lectureRows = lectures.map(l => ({
-//     // title: "Lecture",
-//     faculty: l.employeeDetails?.employeeName,
-//     date: targetDate.toISOString().slice(0, 10),
-//     time: `${l.startTime} - ${l.endTime}`,
-//     type: "Lecture",
-//     // event: l.classSection?.sectionName,
-//     event:'uih',
-//     status: "Active"
-//   }));
-
-//   // 4️⃣ Merge
-//   const merged = [...jobRows, ...lectureRows];
-
-//   // 5️⃣ Sort by time
-//   merged.sort((a, b) => a.time.localeCompare(b.time));
-
-//   // 6️⃣ Pagination AFTER merge
-//   const start = (page - 1) * limit;
-//   const paginated = merged.slice(start, start + Number(limit));
-
-//   return {
-//     total: merged.length,
-//     page: Number(page),
-//     limit: Number(limit),
-//     data: paginated
-//   };
-// };
-
-// ✅ SAFE DATE STRING
-function getDateString(type) {
-  const d = new Date();
-  if (type === "previous") d.setDate(d.getDate() - 1);
-  if (type === "upcoming") d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0]; // YYYY-MM-DD
-}
-
-// ✅ FORCE FULL DAY NAME
-function getDayName(dateStr) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    weekday: "long"
-  });
+function todayStr() {
+  return new Date().toISOString().split("T")[0];
 }
 
 export async function getScheduleData(filters) {
   const {
-    type = "today",
+    type,          // undefined | previous | upcoming
     page = 1,
     limit = 10
   } = filters;
 
-  const dateStr = getDateString(type);
-  const dayName = getDayName(dateStr);
+  const today = todayStr();
 
-  // 1️⃣ Fetch data
-  const jobs = await jobRepository.fetchJobs(filters, dateStr);
-  const lectures = await jobRepository.fetchLectures(filters, dateStr, dayName);
+  // 1️⃣ Decide date range
+  let fromDate, toDate;
 
-  // 2️⃣ Normalize JOBS
-  const jobRows = jobs.map(j => ({
-    jobId:j.jobId,
-    jobTitle: j.jobTitle,
-    faculty: j.facultyJobs?.employeeName || "-",
-    date: j.jobDate,
-    time: `${j.startTime} - ${j.endTime}`,
-    type: "Event",
-    department: j.departmentJobs?.departmentName || "N/A",
-    status: j.status
-  }));
+  if (!type) {
+    fromDate = today;
+    toDate = today;
+  } else if (type === "previous") {
+    fromDate = null;      // timetable startDate will be used
+    toDate = today;
+  } else if (type === "upcoming") {
+    fromDate = today;
+    toDate = null;        // timetable endDate will be used
+  }
 
-  // 3️⃣ Normalize LECTURES
-  const lectureRows = lectures.map(l => ({
-    // title: "Lecture",
-    faculty: l.employeeDetails?.employeeName || "-",
-    date: dateStr,
-    time: `${l.startTime} - ${l.endTime}`,
-    type: "Lecture",
-    // event: l.classSection?.sectionName || "-",
-    department:l.employeeDetails?.department || "-",
-    jobTitle:'hpp',
-    status: "Active"
-  }));
+  // 2️⃣ Fetch job data
+  const jobRows = await jobRepository.fetchJobs(filters, fromDate, toDate);
 
-  // 4️⃣ Merge + sort
-  const merged = [...jobRows, ...lectureRows].sort(
-    (a, b) => a.time.localeCompare(b.time)
-  );
+  // 3️⃣ Fetch timetable (already converted to job-like rows)
+  const lectureRows = await jobRepository.fetchTimetableAsJobs(filters, fromDate, toDate);
+console.log(`>>>>>>>>>>>>>>>lectureRows`,lectureRows);
 
-  // 5️⃣ Pagination AFTER merge
+  // 4️⃣ Merge
+  const merged = [...jobRows, ...lectureRows];
+
+  // 5️⃣ Sort by date + time
+  // merged.sort((a, b) => {
+  //   if (a.date === b.date) {
+  //     return a.startTime.localeCompare(b.startTime);
+  //   }
+  //   return a.date.localeCompare(b.date);
+  // });
+
+  // 6️⃣ Pagination AFTER merge
   const start = (page - 1) * limit;
-  const data = merged.slice(start, start + Number(limit));
 
   return {
     total: merged.length,
     page: Number(page),
     limit: Number(limit),
-    data
+    data: merged.slice(start, start + Number(limit))
   };
-};
+}
