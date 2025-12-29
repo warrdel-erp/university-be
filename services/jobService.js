@@ -279,7 +279,7 @@ export async function getScheduleData(filters) {
   // 2️⃣ Normalize JOBS
   const jobRows = jobs.map(j => ({
     jobId:j.jobId,
-    event: j.jobTitle,
+    jobTitle: j.jobTitle,
     faculty: j.facultyJobs?.employeeName || "-",
     date: j.jobDate,
     time: `${j.startTime} - ${j.endTime}`,
@@ -297,7 +297,7 @@ export async function getScheduleData(filters) {
     type: "Lecture",
     // event: l.classSection?.sectionName || "-",
     department:l.employeeDetails?.department || "-",
-    event:'hpp',
+    jobTitle:'hpp',
     status: "Active"
   }));
 
