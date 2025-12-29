@@ -194,7 +194,7 @@ export async function getScheduleData(filters) {
 
   const today = todayStr();
 
-  // 1️⃣ Decide date range
+  // 1️ Decide date range
   let fromDate, toDate;
 
   if (!type) {
@@ -208,17 +208,17 @@ export async function getScheduleData(filters) {
     toDate = null;        // timetable endDate will be used
   }
 
-  // 2️⃣ Fetch job data
+  // 2️ Fetch job data
   const jobRows = await jobRepository.fetchJobs(filters, fromDate, toDate);
 
-  // 3️⃣ Fetch timetable (already converted to job-like rows)
+  // 3️ Fetch timetable (already converted to job-like rows)
   const lectureRows = await jobRepository.fetchTimetableAsJobs(filters, fromDate, toDate);
 console.log(`>>>>>>>>>>>>>>>lectureRows`,lectureRows);
 
-  // 4️⃣ Merge
+  // 4️ Merge
   const merged = [...jobRows, ...lectureRows];
 
-  // 5️⃣ Sort by date + time
+  // 5 Sort by date + time
   // merged.sort((a, b) => {
   //   if (a.date === b.date) {
   //     return a.startTime.localeCompare(b.startTime);
@@ -226,7 +226,7 @@ console.log(`>>>>>>>>>>>>>>>lectureRows`,lectureRows);
   //   return a.date.localeCompare(b.date);
   // });
 
-  // 6️⃣ Pagination AFTER merge
+  // 6️ Pagination AFTER merge
   const start = (page - 1) * limit;
 
   return {
