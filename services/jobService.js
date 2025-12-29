@@ -278,23 +278,25 @@ export async function getScheduleData(filters) {
 
   // 2️⃣ Normalize JOBS
   const jobRows = jobs.map(j => ({
-    title: j.jobTitle,
+    jobId:j.jobId,
+    event: j.jobTitle,
     faculty: j.facultyJobs?.employeeName || "-",
     date: j.jobDate,
     time: `${j.startTime} - ${j.endTime}`,
     type: "Event",
-    event: j.departmentJobs?.departmentName || "N/A",
+    department: j.departmentJobs?.departmentName || "N/A",
     status: j.status
   }));
 
   // 3️⃣ Normalize LECTURES
   const lectureRows = lectures.map(l => ({
-    title: "Lecture",
+    // title: "Lecture",
     faculty: l.employeeDetails?.employeeName || "-",
     date: dateStr,
     time: `${l.startTime} - ${l.endTime}`,
     type: "Lecture",
     // event: l.classSection?.sectionName || "-",
+    department:l.employeeDetails?.department || "-",
     event:'hpp',
     status: "Active"
   }));
