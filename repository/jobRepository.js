@@ -326,3 +326,116 @@ export async function getFilteredJobs(filters) {
     data: jobs.rows
   };
 }
+
+export async function getJobData(filters, targetDate) {
+  return model.jobModel.findAll({
+    where: {
+      universityId: filters.universityId,
+      instituteId: filters.instituteId,
+      jobDate: targetDate.toISOString().slice(0, 10),
+      ...(filters.employeeId && { employeeId: filters.employeeId }),
+      ...(filters.status && { status: filters.status })
+    },
+    include: [
+      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.subAccountModel, as: "departmentJobs" }
+    ]
+  });
+}
+
+// export async function getLectureData(filters, targetDate, dayName) {
+//   const tables = await model.timeTableCreateModel.findAll({
+//     where: {
+//       isPublish: true,
+//       startingDate: { [Op.lte]: targetDate },
+//       endingDate: { [Op.gte]: targetDate }
+//     }
+//   });
+
+//   const lectures = [];
+
+//   for (const t of tables) {
+//     const config = await model.timeTableCreationModel.findOne({
+//       where: { timeTableNameId: t.timeTableNameId }
+//     });
+
+//     if (config.weekOff.includes(dayName)) continue;
+
+//     const rows = await model.timeTableMappingModel.findAll({
+//       where: {
+//         timeTableCreateId: t.timeTableCreateId,
+//         day: dayName,
+//         ...(filters.employeeId && { employeeId: filters.employeeId })
+//       },
+//       include: [
+//         { model: model.employeeModel, as: "employeeDetails" },
+//         // { model: model.classSectionModel, as: "classSection" }
+//       ]
+//     });
+
+//     lectures.push(...rows);
+//   }
+
+//   return lectures;
+// }
+
+// ✅ JOB FETCH (DATEONLY SAFE)
+export async function fetchJobs(filters, dateStr) {
+  return model.jobModel.findAll({
+    where: {
+      universityId: filters.universityId,
+      instituteId: filters.instituteId,
+      jobDate: dateStr,
+      ...(filters.employeeId && { employeeId: filters.employeeId }),
+      ...(filters.status && { status: filters.status })
+    },
+    include: [
+      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.subAccountModel, as: "departmentJobs" }
+    ]
+  });
+}
+
+// ✅ TIMETABLE FETCH (DAY + WEEK OFF SAFE)
+export async function fetchLectures(filters, dateStr, dayName) {
+  const tables = await model.timeTableCreateModel.findAll({
+    where: {
+      isPublish: true,
+      startingDate: { [Op.lte]: dateStr },
+      endingDate: { [Op.gte]: dateStr }
+    }
+  });
+
+  const lectures = [];
+
+  for (const t of tables) {
+    const config = await model.timeTableCreationModel.findOne({
+      where: { timeTableNameId: t.timeTableNameId }
+    });
+
+    if (!config) continue;
+
+    // ✅ SAFE weekOff parse
+    const weekOff = Array.isArray(config.weekOff)
+      ? config.weekOff
+      : JSON.parse(config.weekOff || "[]");
+
+    if (weekOff.includes(dayName)) continue;
+
+    const rows = await model.timeTableMappingModel.findAll({
+      where: {
+        timeTableCreateId: t.timeTableCreateId,
+        day: dayName,
+        ...(filters.employeeId && { employeeId: filters.employeeId })
+      },
+      include: [
+        { model: model.employeeModel, as: "employeeDetails" },
+        // { model: model.classSectionModel, as: "classSection" }
+      ]
+    });
+
+    lectures.push(...rows);
+  }
+
+  return lectures;
+}

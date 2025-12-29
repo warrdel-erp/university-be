@@ -171,7 +171,7 @@ export async function getDepartmentCalendar({ subAccountId, start, end }) {
     console.error("Error in getDepartmentCalendar:", error.message);
     throw new Error("Unable to fetch department calendar");
   }
-}
+};
 
 export async function getFilteredJobs(filters) {
   try {
@@ -179,4 +179,139 @@ export async function getFilteredJobs(filters) {
   } catch (error) {
     throw new Error(error.message);
   }
+};
+
+// function getTargetDate(type) {
+//   const d = new Date();
+//   if (type === "previous") d.setDate(d.getDate() - 1);
+//   if (type === "upcoming") d.setDate(d.getDate() + 1);
+//   return d;
+// }
+
+// function getDayName(date) {
+//   return date.toLocaleString("en-US", { weekday: "long" });
+// }
+
+// export async function getScheduleData(filters) {
+//   const {
+//     type = "today",
+//     page = 1,
+//     limit = 10
+//   } = filters;
+
+//   const targetDate = getTargetDate(type);
+//   const dayName = getDayName(targetDate);
+
+//   // 1️⃣ Fetch job + timetable
+//   const jobs = await jobRepository.getJobData(filters, targetDate);
+//   const lectures = await jobRepository.getLectureData(filters, targetDate, dayName);
+
+//   // 2️⃣ Normalize JOB → UI format
+//   const jobRows = jobs.map(j => ({
+//     title: j.jobTitle,
+//     faculty: j.facultyJobs?.employeeName,
+//     date: j.jobDate,
+//     time: `${j.startTime} - ${j.endTime}`,
+//     type: "Event",
+//     event: j.departmentJobs?.departmentName || "N/A",
+//     status: j.status
+//   }));
+
+//   // 3️⃣ Normalize TIMETABLE → UI format
+//   const lectureRows = lectures.map(l => ({
+//     // title: "Lecture",
+//     faculty: l.employeeDetails?.employeeName,
+//     date: targetDate.toISOString().slice(0, 10),
+//     time: `${l.startTime} - ${l.endTime}`,
+//     type: "Lecture",
+//     // event: l.classSection?.sectionName,
+//     event:'uih',
+//     status: "Active"
+//   }));
+
+//   // 4️⃣ Merge
+//   const merged = [...jobRows, ...lectureRows];
+
+//   // 5️⃣ Sort by time
+//   merged.sort((a, b) => a.time.localeCompare(b.time));
+
+//   // 6️⃣ Pagination AFTER merge
+//   const start = (page - 1) * limit;
+//   const paginated = merged.slice(start, start + Number(limit));
+
+//   return {
+//     total: merged.length,
+//     page: Number(page),
+//     limit: Number(limit),
+//     data: paginated
+//   };
+// };
+
+// ✅ SAFE DATE STRING
+function getDateString(type) {
+  const d = new Date();
+  if (type === "previous") d.setDate(d.getDate() - 1);
+  if (type === "upcoming") d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0]; // YYYY-MM-DD
 }
+
+// ✅ FORCE FULL DAY NAME
+function getDayName(dateStr) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
+    weekday: "long"
+  });
+}
+
+export async function getScheduleData(filters) {
+  const {
+    type = "today",
+    page = 1,
+    limit = 10
+  } = filters;
+
+  const dateStr = getDateString(type);
+  const dayName = getDayName(dateStr);
+
+  // 1️⃣ Fetch data
+  const jobs = await jobRepository.fetchJobs(filters, dateStr);
+  const lectures = await jobRepository.fetchLectures(filters, dateStr, dayName);
+
+  // 2️⃣ Normalize JOBS
+  const jobRows = jobs.map(j => ({
+    title: j.jobTitle,
+    faculty: j.facultyJobs?.employeeName || "-",
+    date: j.jobDate,
+    time: `${j.startTime} - ${j.endTime}`,
+    type: "Event",
+    event: j.departmentJobs?.departmentName || "N/A",
+    status: j.status
+  }));
+
+  // 3️⃣ Normalize LECTURES
+  const lectureRows = lectures.map(l => ({
+    title: "Lecture",
+    faculty: l.employeeDetails?.employeeName || "-",
+    date: dateStr,
+    time: `${l.startTime} - ${l.endTime}`,
+    type: "Lecture",
+    // event: l.classSection?.sectionName || "-",
+    event:'hpp',
+    status: "Active"
+  }));
+
+  // 4️⃣ Merge + sort
+  const merged = [...jobRows, ...lectureRows].sort(
+    (a, b) => a.time.localeCompare(b.time)
+  );
+
+  // 5️⃣ Pagination AFTER merge
+  const start = (page - 1) * limit;
+  const data = merged.slice(start, start + Number(limit));
+
+  return {
+    total: merged.length,
+    page: Number(page),
+    limit: Number(limit),
+    data
+  };
+};
