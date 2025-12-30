@@ -8,7 +8,7 @@ import {
   deleteJob,
   getCalendarView,
   getFacultyCalendar,
-  getDepartmentCalendar,getFilteredJobs
+  getDepartmentCalendar,getFilteredJobs,getScheduleList
 } from "../controllers/jobController.js";
 
 const router = express.Router();
@@ -24,5 +24,7 @@ router.patch("/update/:id", useAuth, updateJob);
 router.delete("/delete/:id", useAuth, deleteJob);
 
 router.get("/list/filter", useAuth, getFilteredJobs);
+
+router.get("/schedule/list", useAuth, getScheduleList);
 
 export default router;

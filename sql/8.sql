@@ -277,4 +277,4 @@ ALTER TABLE time_table_mapping
 ADD COLUMN is_teacher VARCHAR(50) NOT NULL DEFAULT 'Primary' AFTER class_room_section_id,
 ADD COLUMN is_Attendence TINYINT(1) NOT NULL DEFAULT 1 AFTER is_teacher;
 
--- use migration 
+-- use migration ..

@@ -182,4 +182,22 @@ export async function getFilteredJobs(req, res) {
     console.error("Error in getFilteredJobs:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
-}
+};
+
+export async function getScheduleList(req, res) {
+  try {
+    const result = await jobService.getScheduleData({
+      ...req.query,
+      universityId: req.user.universityId,
+      instituteId: req.user.instituteId
+    });
+
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
