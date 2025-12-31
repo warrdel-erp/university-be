@@ -124,6 +124,10 @@ import internalAssessmentModel from './internalAssessmentModel.js';
 import assessmentEvaluationModel from './assessmentEvaluationModel.js';
 import jobSettingModel from './jobSettingModel.js';
 import jobModel from './jobModel.js';
+import gradeModel from './gradeModel.js';
+import gradeScaleModel from './gradeScaleModel.js';
+import gradeCourseModel from './gradeCourseModel.js';
+import gradePassFailModel from './gradePassFailModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -1038,4 +1042,8 @@ export {
     assessmentEvaluationModel,
     jobSettingModel,
     jobModel,
+    gradeModel,
+    gradeCourseModel,
+    gradePassFailModel,
+    gradeScaleModel,
 };
