@@ -52,9 +52,15 @@ export async function getSingleGradeScheme(req, res) {
 
 export async function updateGradeScheme(req, res) {
   try {
+
+    const data = {
+      ...req.body,
+      createdBy: req.user.userId,   
+      updatedBy: req.user.userId  
+    };
     const result = await gradeSchemeService.updateGradeScheme(
       req.params.id,
-      req.body
+      data
     );
 
     return res.status(200).json({
