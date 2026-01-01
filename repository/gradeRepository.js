@@ -31,32 +31,92 @@ export async function getAllGrades(universityId, instituteId, role) {
       where: {
         ...(universityId && { universityId }),
         ...(role === "Head" && { instituteId })
-      }
-    });
-  } catch (error) {
-    throw new Error("Unable to fetch grade schemes");
-  }
-}
+      },
 
-export async function getSingleGrade(gradeId) {
-  try {
-    return await model.gradeModel.findOne({
-      where: { gradeId },
       include: [
-        { model: model.gradeScaleModel, as: "scales" },
+       
+        // {
+        //   model: model.gradeScaleModel,
+        //   as: "scales"
+        // },
         {
           model: model.gradeCourseModel,
-          as: "courses",
+          as: "coursesGrade",
           include: [
-            { model: model.gradePassFailModel, as: "passFail" }
+            // {
+            //   model: model.gradePassFailModel,
+            //   as: "passFail"
+            // },
+
+            {
+              model: model.courseModel,
+              as: "Allcourse"
+            },
+
+            // {
+            //   model: model.sessionModel,
+            //   as: "sessions"
+            // },
+
+            // {
+            //   model: model.acedmicYearModel,
+            //   as: "academicYear"
+            // }
           ]
         }
       ]
     });
   } catch (error) {
+    console.error("Repository Error - getAllGrades:", error.message);
+    throw new Error("Unable to fetch grade schemes");
+  }
+}
+
+
+export async function getSingleGrade(gradeId) {
+  try {
+    return await model.gradeModel.findOne({
+      where: { gradeId },
+
+      include: [
+        {
+          model: model.gradeScaleModel,
+          as: "scales"
+        },
+
+        {
+          model: model.gradeCourseModel,
+          as: "coursesGrade",
+          include: [
+            {
+              model: model.gradePassFailModel,
+              as: "passFail"
+            },
+
+            {
+              model: model.courseModel,
+              as: "Allcourse"
+            },
+
+            {
+              model: model.sessionModel,
+              as: "sessions"
+            },
+
+            {
+              model: model.acedmicYearModel,
+              as: "academicYear"
+            }
+          ]
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Repository Error - getSingleGradeScheme:", error.message);
     throw new Error("Unable to fetch grade scheme details");
   }
 }
+
 
 export async function deleteGrade(gradeId) {
   try {

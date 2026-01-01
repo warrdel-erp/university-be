@@ -170,7 +170,9 @@ export async function updateGradeScheme(gradeId, data) {
         ifAttendanceMinimum: data.ifAttendanceMinimum,
         resultStatus: data.resultStatus,
 
+        createdBy: data.createdBy,
         updatedBy: data.updatedBy
+
       },
       transaction
     );
@@ -188,8 +190,9 @@ export async function updateGradeScheme(gradeId, data) {
           data.scales.map(scale => ({
             ...scale,
             gradeId,
-            createdBy: data.updatedBy,
+            createdBy: data.createdBy,
             updatedBy: data.updatedBy
+
           })),
           transaction
         );
@@ -213,8 +216,9 @@ export async function updateGradeScheme(gradeId, data) {
             acedmicYearId: course.academicYearId,
             courseId: course.courseId,
             sessionId: course.sessionId,
-            createdBy: data.updatedBy,
+            createdBy: data.createdBy,
             updatedBy: data.updatedBy
+
           },
           transaction
         );
@@ -225,8 +229,9 @@ export async function updateGradeScheme(gradeId, data) {
             course.passFail.map(pf => ({
               ...pf,
               gradeCourseId: gradeCourse.gradeCourseId,
-              createdBy: data.updatedBy,
+              createdBy: data.createdBy,
               updatedBy: data.updatedBy
+
             })),
             transaction
           );

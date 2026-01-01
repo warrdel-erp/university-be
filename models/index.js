@@ -914,6 +914,23 @@ subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
 jobModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseJobs" });
 courseModel.hasMany(jobModel, { foreignKey: "courseId", as: "jobsCourse" });
 
+gradeModel.hasMany(gradeScaleModel, {foreignKey: "gradeId",as: "scales"});
+gradeScaleModel.belongsTo(gradeModel, {foreignKey: "gradeId",as: "gradeMaster"});
+
+gradeModel.hasMany(gradeCourseModel, {foreignKey: "gradeId",as: "coursesGrade"});
+gradeCourseModel.belongsTo(gradeModel, {foreignKey: "gradeId",as: "grade"});
+
+gradeCourseModel.hasMany(gradePassFailModel, {foreignKey: "gradeCourseId",as: "passFail"});
+gradePassFailModel.belongsTo(gradeCourseModel, {foreignKey: "gradeCourseId",as: "gradeCourse"});
+
+courseModel.hasMany(gradeCourseModel, { foreignKey: "courseId", as: "gradeCourses" });
+gradeCourseModel.belongsTo(courseModel, { foreignKey: "courseId", as: "Allcourse" });
+
+sessionModel.hasMany(gradeCourseModel, { foreignKey: "sessionId", as: "gradeSession" });
+gradeCourseModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessions"});
+
+acedmicYearModel.hasMany(gradeCourseModel, { foreignKey: "acedmicYearId", as: "gradeAcedmic" });
+gradeCourseModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "academicYear"});
 
 export {
     settingModel,
