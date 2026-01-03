@@ -124,6 +124,10 @@ import internalAssessmentModel from './internalAssessmentModel.js';
 import assessmentEvaluationModel from './assessmentEvaluationModel.js';
 import jobSettingModel from './jobSettingModel.js';
 import jobModel from './jobModel.js';
+import gradeModel from './gradeModel.js';
+import gradeScaleModel from './gradeScaleModel.js';
+import gradeCourseModel from './gradeCourseModel.js';
+import gradePassFailModel from './gradePassFailModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -910,6 +914,23 @@ subjectModel.hasMany(jobModel, { foreignKey: "subjectId", as: "jobsSubject" });
 jobModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseJobs" });
 courseModel.hasMany(jobModel, { foreignKey: "courseId", as: "jobsCourse" });
 
+gradeModel.hasMany(gradeScaleModel, {foreignKey: "gradeId",as: "scales"});
+gradeScaleModel.belongsTo(gradeModel, {foreignKey: "gradeId",as: "gradeMaster"});
+
+gradeModel.hasMany(gradeCourseModel, {foreignKey: "gradeId",as: "coursesGrade"});
+gradeCourseModel.belongsTo(gradeModel, {foreignKey: "gradeId",as: "grade"});
+
+gradeCourseModel.hasMany(gradePassFailModel, {foreignKey: "gradeCourseId",as: "passFail"});
+gradePassFailModel.belongsTo(gradeCourseModel, {foreignKey: "gradeCourseId",as: "gradeCourse"});
+
+courseModel.hasMany(gradeCourseModel, { foreignKey: "courseId", as: "gradeCourses" });
+gradeCourseModel.belongsTo(courseModel, { foreignKey: "courseId", as: "Allcourse" });
+
+sessionModel.hasMany(gradeCourseModel, { foreignKey: "sessionId", as: "gradeSession" });
+gradeCourseModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessions"});
+
+acedmicYearModel.hasMany(gradeCourseModel, { foreignKey: "acedmicYearId", as: "gradeAcedmic" });
+gradeCourseModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "academicYear"});
 
 export {
     settingModel,
@@ -1038,4 +1059,8 @@ export {
     assessmentEvaluationModel,
     jobSettingModel,
     jobModel,
+    gradeModel,
+    gradeCourseModel,
+    gradePassFailModel,
+    gradeScaleModel,
 };

@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-// import departmentModel from "./departmentModel.js";
 import subAccount from "./subAccountModel.js" // this is department
 import courseModel from "./courseModel.js";
 import subjectModel from "./subjectModel.js";

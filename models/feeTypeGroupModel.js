@@ -13,6 +13,7 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'fee_type_group_id'
         },
+        
         feeTypeId: {
             type: DataTypes.INTEGER,
             allowNull: true,
