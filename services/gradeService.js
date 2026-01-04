@@ -116,18 +116,128 @@ export async function getAllGradeSchemes(universityId, instituteId, role) {
   }
 }
 
+// export async function getSingleGradeScheme(gradeId) {
+//   try {
+//     if (!gradeId) throw new Error("gradeId is required");
+//     return await gradeRepo.getSingleGrade(gradeId);
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// }
+
 export async function getSingleGradeScheme(gradeId) {
   try {
     if (!gradeId) throw new Error("gradeId is required");
-    return await gradeRepo.getSingleGrade(gradeId);
+
+    const raw = await gradeRepo.getSingleGrade(gradeId);
+
+    if (!raw) return null;
+
+    return {
+      gradeId: raw.gradeId,
+      universityId: raw.universityId,
+      instituteId: raw.instituteId,
+      schemeName: raw.schemeName,
+      regulationCode: raw.regulationCode,
+      gradingType: raw.gradingType,
+      marksSystem: raw.marksSystem,
+      saveType: raw.saveType,
+
+      gpsFormula: raw.gpsFormula,
+      decimalPrecision: Number(raw.decimalPrecision),
+      roundingRule: raw.roundingRule,
+      includeFailedSubjectsInGpa: raw.includeFailedSubjectsInGpa,
+      includeSemester: raw.includeSemester,
+
+      gradeReplacementRule: raw.gradeReplacementRule,
+      maxAttemptsAllowed: Number(raw.maxAttemptsAllowed),
+      improvementAllowed: raw.improvementAllowed,
+      carryInternalMarksInBacklogs: raw.carryInternalMarksInBacklogs,
+
+      gradeMarksEnabled: raw.gradeMarksEnabled,
+      maxGracePerSubjects: Number(raw.maxGracePerSubjects),
+      maxGracePerSemester: Number(raw.maxGracePerSemester),
+      applyGrace: raw.applyGrace,
+      moderationType: raw.moderationType,
+      moderationValue: raw.moderationValue,
+
+      minimumAttendance: Number(raw.minimumAttendance),
+      condonationAllowed: raw.condonationAllowed,
+      condonationLimit: raw.condonationLimit,
+      ifAttendanceMinimum: raw.ifAttendanceMinimum,
+      resultStatus: raw.resultStatus,
+
+      // createdAt: raw.createdAt,
+      // updatedAt: raw.updatedAt,
+      // createdBy: raw.createdBy,
+      // updatedBy: raw.updatedBy,
+      // deletedAt: raw.deletedAt,
+
+      /* =======================
+         SCALES
+      ======================= */
+      scales: (raw.scales || []).map(s => ({
+        gradeScaleId: s.gradeScaleId,
+        gradeId: s.gradeId,
+        grade: s.grade,
+        minimum: s.minimun,
+        maximum: s.maximum,
+        gradePoint: s.gradePoint,
+        result: s.result,
+
+        // createdAt: s.createdAt,
+        // updatedAt: s.updatedAt,
+        // createdBy: s.createdBy,
+        // updatedBy: s.updatedBy,
+        // deletedAt: s.deletedAt
+      })),
+
+      /* =======================
+         COURSES
+      ======================= */
+      courses: (raw.coursesGrade || []).map(c => ({
+        gradeCourseId: c.gradeCourseId,
+        gradeId: c.gradeId,
+        academicYearId: c.acedmicYearId,
+        courseId: c.courseId,
+        sessionId: c.sessionId,
+
+        // createdAt: c.createdAt,
+        // updatedAt: c.updatedAt,
+        // createdBy: c.createdBy,
+        // updatedBy: c.updatedBy,
+        // deletedAt: c.deletedAt,
+
+        passFail: (c.passFail || []).map(p => ({
+          gradePassFailId: p.gradePassFailId,
+          gradeCourseId: p.gradeCourseId,
+          examSetupTypeId: p.examSetupTypeId,
+          overAllMinimum: p.overAllMinimum,
+          theoryMinimum: p.theoryMinimum,
+          practicalMinimum: p.practicalMinimum,
+          minimumPassingGrade: p.minimumPassingGrade,
+          componentWisePass: p.componentWisePass,
+
+          // createdAt: p.createdAt,
+          // updatedAt: p.updatedAt,
+          // createdBy: p.createdBy,
+          // updatedBy: p.updatedBy,
+          // deletedAt: p.deletedAt
+        })),
+
+        courseDetail: c.Allcourse,
+        sessionDetail: c.sessions,
+        academicYearDetail: c.academicYear
+      }))
+    };
+
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
-/* =========================
-   UPDATE (DRAFT)
-========================= */
+  //UPDATE (DRAFT)
+
 export async function updateGradeScheme(gradeId, data) {
   const transaction = await sequelize.transaction();
 

@@ -28,6 +28,7 @@ export async function updateGrade(gradeId, data, transaction) {
 export async function getAllGrades(universityId, instituteId, role) {
   try {
     return await model.gradeModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
       where: {
         ...(universityId && { universityId }),
         ...(role === "Head" && { instituteId })
@@ -42,6 +43,7 @@ export async function getAllGrades(universityId, instituteId, role) {
         {
           model: model.gradeCourseModel,
           as: "coursesGrade",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
           include: [
             // {
             //   model: model.gradePassFailModel,
@@ -50,7 +52,8 @@ export async function getAllGrades(universityId, instituteId, role) {
 
             {
               model: model.courseModel,
-              as: "Allcourse"
+              as: "Allcourse",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             },
 
             // {
@@ -95,17 +98,21 @@ export async function getSingleGrade(gradeId) {
 
             {
               model: model.courseModel,
-              as: "Allcourse"
+              as: "Allcourse",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             },
 
             {
               model: model.sessionModel,
-              as: "sessions"
+              as: "sessions",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
+
             },
 
             {
               model: model.acedmicYearModel,
-              as: "academicYear"
+              as: "academicYear",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             }
           ]
         }
