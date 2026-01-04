@@ -148,6 +148,36 @@ export async function deleteGradeScalesByGradeId(gradeId, transaction) {
   }
 }
 
+/* =========================
+   GRADE course
+========================= */
+
+export async function deleteGradeCoursesByGradeId(gradeId, transaction) {
+  try {
+    return await model.gradeCourseModel.destroy({
+      where: { gradeId },
+      transaction
+    });
+  } catch (error) {
+    throw new Error("Unable to delete grade scales");
+  }
+}
+
+export async function deleteGradePassFailByGradeCourseId(gradeId, transaction) {  
+  try {
+    const result = await model.gradePassFailModel.destroy({
+      
+      where: { gradeId },
+      transaction
+    });
+    return result 
+  } catch (error) {
+    console.error("Repository Error - deleteGradePassFailByGradeCourseId:", error.message);
+    throw new Error("Unable to delete pass/fail rules");
+  }
+}
+
+
 export async function addGradeScales(data, transaction) {
   try {
     return await model.gradeScaleModel.bulkCreate(data, { transaction });
@@ -176,7 +206,8 @@ export async function addGradeCourse(data, transaction) {
 
 export async function addGradePassFail(data, transaction) {
   try {
-    return await model.gradePassFailModel.bulkCreate(data, { transaction });
+    const result = await model.gradePassFailModel.bulkCreate(data, { transaction });    
+    return result
   } catch (error) {
     console.error("Repository Error - addGradePassFail:", error.message);
     throw new Error("Unable to add pass/fail rules");

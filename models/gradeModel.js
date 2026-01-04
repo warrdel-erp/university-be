@@ -44,18 +44,18 @@ export default sequelize.define(
     },
     gradingType: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field: "grading_type",
     },
     marksSystem: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field: "marks_system",
     },
 
     gpsFormula: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field: "gps_formula",
     },
 
@@ -86,13 +86,13 @@ export default sequelize.define(
 
     gradeReplacementRule: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'grade_replacement_rule'
     },
 
     maxAttemptsAllowed: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'max_attempts_allowed'
     },
 
@@ -119,31 +119,31 @@ export default sequelize.define(
 
     maxGracePerSubjects: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'max_grace_per_subjects'
     },
 
     maxGracePerSemester: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'max_grace_per_semester'
     },
 
     applyGrace: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'apply_grace'
     },
 
     moderationType: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'moderation_type'
     },
 
     moderationValue: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       field:'moderation_value'
     },
 
