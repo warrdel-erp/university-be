@@ -3,6 +3,7 @@ import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import gradeCourseModel from "./gradeCourseModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
+import gradeModel from "./gradeModel.js";
 
 export default sequelize.define(
   "grade_pass_fail",
@@ -20,6 +21,15 @@ export default sequelize.define(
          references: {
            model: gradeCourseModel,
            key: "grade_course_id"
+         }
+    },
+    gradeId: {
+         type: DataTypes.INTEGER,
+         allowNull: true,
+         field: "grade_id",
+         references: {
+           model: gradeModel,
+           key: "grade_id"
          }
     },
     examSetupTypeId: {

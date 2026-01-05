@@ -682,7 +682,6 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
     instituteId,
     role
   );
-  console.log(`>>>>>>>>>>>>>>>allData`,JSON.stringify(allData));
   
 
   // 1. Separate normal and elective to get base metadata

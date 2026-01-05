@@ -13,7 +13,7 @@ export async function addGradeScheme(data) {
       throw new Error("schemeName is required");
     }
 
-    /* 1️⃣ CREATE GRADE */
+    /*  CREATE GRADE */
     const grade = await gradeRepo.addGrade(
       {
         universityId: data.universityId,
@@ -51,7 +51,7 @@ export async function addGradeScheme(data) {
 
     const gradeId = grade.dataValues.gradeId;
 
-    /* 2️⃣ GRADE SCALES */
+    /*  GRADE SCALES */
     if (data.scales?.length) {
       await gradeRepo.addGradeScales(
         data.scales.map(s => ({
@@ -64,7 +64,7 @@ export async function addGradeScheme(data) {
       );
     }
 
-    /* 3️⃣ COURSE + PASS FAIL */
+    /*  COURSE + PASS FAIL */
     if (data.course?.length) {
       for (const course of data.course) {
 
@@ -84,6 +84,7 @@ export async function addGradeScheme(data) {
           await gradeRepo.addGradePassFail(
             course.passFail.map(pf => ({
               ...pf,
+              gradeId,
               gradeCourseId: gradeCourse.dataValues.gradeCourseId,
               createdBy: data.createdBy,
               updatedBy: data.updatedBy
@@ -102,7 +103,7 @@ export async function addGradeScheme(data) {
     console.error("Service Error - addGradeScheme:", error.message);
     throw new Error(error.message);
   }
-}
+};
 
 /* =========================
    READ
@@ -114,29 +115,132 @@ export async function getAllGradeSchemes(universityId, instituteId, role) {
   } catch (error) {
     throw new Error(error.message);
   }
-}
+};
 
 export async function getSingleGradeScheme(gradeId) {
   try {
     if (!gradeId) throw new Error("gradeId is required");
-    return await gradeRepo.getSingleGrade(gradeId);
+
+    const raw = await gradeRepo.getSingleGrade(gradeId);
+
+    if (!raw) return null;
+
+    return {
+      gradeId: raw.gradeId,
+      universityId: raw.universityId,
+      instituteId: raw.instituteId,
+      schemeName: raw.schemeName,
+      regulationCode: raw.regulationCode,
+      gradingType: raw.gradingType,
+      marksSystem: raw.marksSystem,
+      saveType: raw.saveType,
+
+      gpsFormula: raw.gpsFormula,
+      decimalPrecision: Number(raw.decimalPrecision),
+      roundingRule: raw.roundingRule,
+      includeFailedSubjectsInGpa: raw.includeFailedSubjectsInGpa,
+      includeSemester: raw.includeSemester,
+
+      gradeReplacementRule: raw.gradeReplacementRule,
+      maxAttemptsAllowed: Number(raw.maxAttemptsAllowed),
+      improvementAllowed: raw.improvementAllowed,
+      carryInternalMarksInBacklogs: raw.carryInternalMarksInBacklogs,
+
+      gradeMarksEnabled: raw.gradeMarksEnabled,
+      maxGracePerSubjects: Number(raw.maxGracePerSubjects),
+      maxGracePerSemester: Number(raw.maxGracePerSemester),
+      applyGrace: raw.applyGrace,
+      moderationType: raw.moderationType,
+      moderationValue: raw.moderationValue,
+
+      minimumAttendance: Number(raw.minimumAttendance),
+      condonationAllowed: raw.condonationAllowed,
+      condonationLimit: raw.condonationLimit,
+      ifAttendanceMinimum: raw.ifAttendanceMinimum,
+      resultStatus: raw.resultStatus,
+
+      // createdAt: raw.createdAt,
+      // updatedAt: raw.updatedAt,
+      // createdBy: raw.createdBy,
+      // updatedBy: raw.updatedBy,
+      // deletedAt: raw.deletedAt,
+
+      /* =======================
+         SCALES
+      ======================= */
+      scales: (raw.scales || []).map(s => ({
+        gradeScaleId: s.gradeScaleId,
+        gradeId: s.gradeId,
+        grade: s.grade,
+        minimum: s.minimun,
+        maximum: s.maximum,
+        gradePoint: s.gradePoint,
+        result: s.result,
+
+        // createdAt: s.createdAt,
+        // updatedAt: s.updatedAt,
+        // createdBy: s.createdBy,
+        // updatedBy: s.updatedBy,
+        // deletedAt: s.deletedAt
+      })),
+
+      /* =======================
+         COURSES
+      ======================= */
+      courses: (raw.coursesGrade || []).map(c => ({
+        gradeCourseId: c.gradeCourseId,
+        gradeId: c.gradeId,
+        academicYearId: c.acedmicYearId,
+        courseId: c.courseId,
+        sessionId: c.sessionId,
+
+        // createdAt: c.createdAt,
+        // updatedAt: c.updatedAt,
+        // createdBy: c.createdBy,
+        // updatedBy: c.updatedBy,
+        // deletedAt: c.deletedAt,
+
+        passFail: (c.passFail || []).map(p => ({
+          gradePassFailId: p.gradePassFailId,
+          gradeCourseId: p.gradeCourseId,
+          examSetupTypeId: p.examSetupTypeId,
+          overAllMinimum: p.overAllMinimum,
+          theoryMinimum: p.theoryMinimum,
+          practicalMinimum: p.practicalMinimum,
+          minimumPassingGrade: p.minimumPassingGrade,
+          componentWisePass: p.componentWisePass,
+
+          // createdAt: p.createdAt,
+          // updatedAt: p.updatedAt,
+          // createdBy: p.createdBy,
+          // updatedBy: p.updatedBy,
+          // deletedAt: p.deletedAt
+        })),
+
+        courseDetail: c.Allcourse,
+        sessionDetail: c.sessions,
+        academicYearDetail: c.academicYear
+      }))
+    };
+
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
-/* =========================
-   UPDATE (DRAFT)
-========================= */
+
+/* ======================================================
+   UPDATE GRADE SCHEME (DRAFT)
+====================================================== */
 export async function updateGradeScheme(gradeId, data) {
   const transaction = await sequelize.transaction();
 
   try {
     if (!gradeId) throw new Error("gradeId is required");
 
-    /* =========================
-       1️⃣ UPDATE GRADE (MAIN)
-    ========================= */
+    /* ======================================================
+        UPDATE GRADE (MAIN TABLE)
+    ====================================================== */
     await gradeRepo.updateGrade(
       gradeId,
       {
@@ -170,46 +274,50 @@ export async function updateGradeScheme(gradeId, data) {
         ifAttendanceMinimum: data.ifAttendanceMinimum,
         resultStatus: data.resultStatus,
 
-        createdBy: data.createdBy,
-        updatedBy: data.updatedBy
-
+        updatedBy: data.updatedBy   
       },
       transaction
     );
 
-    /* =========================
-       2️⃣ UPDATE GRADE SCALE
-    ========================= */
+    /* ======================================================
+        UPDATE GRADE SCALES 
+    ====================================================== */
     if (Array.isArray(data.scales)) {
-      // Remove old scales
+
+      // delete existing scales
       await gradeRepo.deleteGradeScalesByGradeId(gradeId, transaction);
 
-      // Insert new scales
+      // recreate scales
       if (data.scales.length > 0) {
         await gradeRepo.addGradeScales(
           data.scales.map(scale => ({
-            ...scale,
             gradeId,
+            grade: scale.grade,
+            minimun: scale.minimun,
+            maximum: scale.maximum,
+            gradePoint: scale.gradePoint,
+            result: scale.result,
             createdBy: data.createdBy,
             updatedBy: data.updatedBy
-
           })),
           transaction
         );
       }
     }
 
-    /* =========================
-       3️⃣ UPDATE GRADE COURSE + PASS FAIL
-    ========================= */
+    /* ======================================================
+        UPDATE GRADE COURSE + PASS FAIL
+    ====================================================== */
     if (Array.isArray(data.course)) {
 
-      // 🔴 HARD RESET STRATEGY (SAFE & SIMPLE)
-      // Delete old courses (cascade deletes passFail)
+      // delete old grade courses
       await gradeRepo.deleteGradeCoursesByGradeId(gradeId, transaction);
 
       for (const course of data.course) {
 
+        /* ===============================
+           CREATE GRADE COURSE
+        =============================== */
         const gradeCourse = await gradeRepo.addGradeCourse(
           {
             gradeId,
@@ -218,27 +326,47 @@ export async function updateGradeScheme(gradeId, data) {
             sessionId: course.sessionId,
             createdBy: data.createdBy,
             updatedBy: data.updatedBy
-
           },
           transaction
         );
 
-        // Insert pass/fail rules
-        if (Array.isArray(course.passFail) && course.passFail.length > 0) {
-          await gradeRepo.addGradePassFail(
-            course.passFail.map(pf => ({
-              ...pf,
-              gradeCourseId: gradeCourse.gradeCourseId,
-              createdBy: data.createdBy,
-              updatedBy: data.updatedBy
+        /* ===============================
+           PASS / FAIL RESET (BY gradeCourseId)
+        =============================== */
+        if (Array.isArray(course.passFail)) {
 
-            })),
+          // delete passFail for THIS gradeCourseId
+          await gradeRepo.deleteGradePassFailByGradeCourseId(
+            gradeId,
             transaction
           );
+          
+
+          //  recreate passFail
+          if (course.passFail.length > 0) {
+            await gradeRepo.addGradePassFail(
+              course.passFail.map(pf => ({
+                gradeId,
+                gradeCourseId: gradeCourse.gradeCourseId,
+                examSetupTypeId: pf.examSetupTypeId,
+                overAllMinimum: pf.overAllMinimum,
+                theoryMinimum: pf.theoryMinimum,
+                practicalMinimum: pf.practicalMinimum,
+                minimumPassingGrade: pf.minimumPassingGrade,
+                componentWisePass: pf.componentWisePass,
+                createdBy: data.createdBy,
+                updatedBy: data.updatedBy
+              })),
+              transaction
+            );
+          }
         }
       }
     }
 
+    /* ======================================================
+       COMMIT
+    ====================================================== */
     await transaction.commit();
     return true;
 
