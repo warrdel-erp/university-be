@@ -13,13 +13,7 @@ export async function addCredit(req, res) {
       return res.status(400).send("credits array is required");
     }
 
-    const result = await creditService.addCredit(
-      credits,
-      createdBy,
-      updatedBy,
-      universityId,
-      instituteId
-    );
+   const result = await creditService.addCredit( credits, createdBy, updatedBy, universityId, instituteId );
 
     res.status(201).json({
       message: "Credits added successfully",

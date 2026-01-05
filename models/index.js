@@ -933,37 +933,14 @@ gradeCourseModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "session
 acedmicYearModel.hasMany(gradeCourseModel, { foreignKey: "acedmicYearId", as: "gradeAcedmic" });
 gradeCourseModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "academicYear"});
 
-creditModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "courseCredit"
-});
+creditModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseCredit" });
+courseModel.hasMany(creditModel, { foreignKey: "courseId", as: "creditsCourse" });
 
-creditModel.belongsTo(sessionModel, {
-  foreignKey: "sessionId",
-  as: "sessionCredit"
-});
+creditModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionCredit" }); 
+sessionModel.hasMany(creditModel, { foreignKey: "sessionId", as: "creditsSession" });
 
-creditModel.belongsTo(subjectModel, {
-  foreignKey: "subjectId",
-  as: "subjectCredit"
-});
-
-courseModel.hasMany(creditModel, {
-  foreignKey: "courseId",
-  as: "creditsCourse"
-});
-
-sessionModel.hasMany(creditModel, {
-  foreignKey: "sessionId",
-  as: "creditsSession"
-});
-
-subjectModel.hasMany(creditModel, {
-  foreignKey: "subjectId",
-  as: "creditsSubject"
-});
-
-
+creditModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectCredit" }); 
+subjectModel.hasMany(creditModel, { foreignKey: "subjectId", as: "creditsSubject" });
 
 export {
     settingModel,

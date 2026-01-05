@@ -1,12 +1,6 @@
 import * as creditRepository  from "../repository/creditRepository.js";
 
-export async function addCredit(
-  credits,
-  createdBy,
-  updatedBy,
-  universityId,
-  instituteId
-) {
+export async function addCredit(credits,createdBy,updatedBy,universityId,instituteId) {
   const creditData = credits.map(item => ({
     ...item,
     createdBy,
