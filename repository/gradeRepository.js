@@ -28,6 +28,7 @@ export async function updateGrade(gradeId, data, transaction) {
 export async function getAllGrades(universityId, instituteId, role) {
   try {
     return await model.gradeModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
       where: {
         ...(universityId && { universityId }),
         ...(role === "Head" && { instituteId })
@@ -42,6 +43,7 @@ export async function getAllGrades(universityId, instituteId, role) {
         {
           model: model.gradeCourseModel,
           as: "coursesGrade",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
           include: [
             // {
             //   model: model.gradePassFailModel,
@@ -50,7 +52,8 @@ export async function getAllGrades(universityId, instituteId, role) {
 
             {
               model: model.courseModel,
-              as: "Allcourse"
+              as: "Allcourse",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             },
 
             // {
@@ -95,17 +98,21 @@ export async function getSingleGrade(gradeId) {
 
             {
               model: model.courseModel,
-              as: "Allcourse"
+              as: "Allcourse",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             },
 
             {
               model: model.sessionModel,
-              as: "sessions"
+              as: "sessions",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
+
             },
 
             {
               model: model.acedmicYearModel,
-              as: "academicYear"
+              as: "academicYear",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
             }
           ]
         }
@@ -141,6 +148,36 @@ export async function deleteGradeScalesByGradeId(gradeId, transaction) {
   }
 }
 
+/* =========================
+   GRADE course
+========================= */
+
+export async function deleteGradeCoursesByGradeId(gradeId, transaction) {
+  try {
+    return await model.gradeCourseModel.destroy({
+      where: { gradeId },
+      transaction
+    });
+  } catch (error) {
+    throw new Error("Unable to delete grade scales");
+  }
+}
+
+export async function deleteGradePassFailByGradeCourseId(gradeId, transaction) {  
+  try {
+    const result = await model.gradePassFailModel.destroy({
+      
+      where: { gradeId },
+      transaction
+    });
+    return result 
+  } catch (error) {
+    console.error("Repository Error - deleteGradePassFailByGradeCourseId:", error.message);
+    throw new Error("Unable to delete pass/fail rules");
+  }
+}
+
+
 export async function addGradeScales(data, transaction) {
   try {
     return await model.gradeScaleModel.bulkCreate(data, { transaction });
@@ -169,7 +206,8 @@ export async function addGradeCourse(data, transaction) {
 
 export async function addGradePassFail(data, transaction) {
   try {
-    return await model.gradePassFailModel.bulkCreate(data, { transaction });
+    const result = await model.gradePassFailModel.bulkCreate(data, { transaction });    
+    return result
   } catch (error) {
     console.error("Repository Error - addGradePassFail:", error.message);
     throw new Error("Unable to add pass/fail rules");

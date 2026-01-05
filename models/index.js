@@ -128,6 +128,7 @@ import gradeModel from './gradeModel.js';
 import gradeScaleModel from './gradeScaleModel.js';
 import gradeCourseModel from './gradeCourseModel.js';
 import gradePassFailModel from './gradePassFailModel.js';
+import creditModel from './creditModel.js'
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -932,6 +933,15 @@ gradeCourseModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "session
 acedmicYearModel.hasMany(gradeCourseModel, { foreignKey: "acedmicYearId", as: "gradeAcedmic" });
 gradeCourseModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "academicYear"});
 
+creditModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseCredit" });
+courseModel.hasMany(creditModel, { foreignKey: "courseId", as: "creditsCourse" });
+
+creditModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionCredit" }); 
+sessionModel.hasMany(creditModel, { foreignKey: "sessionId", as: "creditsSession" });
+
+creditModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectCredit" }); 
+subjectModel.hasMany(creditModel, { foreignKey: "subjectId", as: "creditsSubject" });
+
 export {
     settingModel,
     universityModel,
@@ -1063,4 +1073,5 @@ export {
     gradeCourseModel,
     gradePassFailModel,
     gradeScaleModel,
+    creditModel,
 };
