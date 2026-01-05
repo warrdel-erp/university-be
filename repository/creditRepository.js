@@ -1,23 +1,17 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addCredit(creditData) {    
-    try {
-        const result = await model.creditModel.create(creditData);
-        return result;
-    } catch (error) {
-        console.error("Error in add Credit :", error);
-        throw error;
-    }
+export async function addCredit(creditData) {
+  try {
+    const result = await model.creditModel.bulkCreate(creditData);
+    return result;
+  } catch (error) {
+    console.error("Error in add Credit:", error);
+    throw error;
+  }
 };
 
-export async function getCreditDetails(
-  universityId,
-  role,
-  instituteId,
-  courseId,
-  sessionId
-) {
+export async function getCreditDetails(universityId,courseId,sessionId,role,instituteId) {
   try {
     const credits = await model.creditModel.findAll({
       where: {

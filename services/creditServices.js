@@ -1,17 +1,27 @@
 import * as creditRepository  from "../repository/creditRepository.js";
 
-export async function addCredit(creditData, createdBy, updatedBy,universityId,instituteId) {
+export async function addCredit(
+  credits,
+  createdBy,
+  updatedBy,
+  universityId,
+  instituteId
+) {
+  const creditData = credits.map(item => ({
+    ...item,
+    createdBy,
+    updatedBy,
+    universityId,
+    instituteId
+  }));
 
-        creditData.createdBy = createdBy;
-        creditData.updatedBy = updatedBy;
-        creditData.universityId =universityId;
-        creditData.instituteId = instituteId 
-        const Credit = await creditRepository.addCredit(creditData);
-        return Credit;
-};
+  const result = await creditRepository.addCredit(creditData);
+  return result;
+}
 
-export async function getCreditDetails(universityId,acedmicYearId,role,instituteId) {
-    return await creditRepository.getCreditDetails(universityId,acedmicYearId,role,instituteId);
+
+export async function getCreditDetails(universityId,courseId,sessionId,role,instituteId) {
+    return await creditRepository.getCreditDetails(universityId,courseId,sessionId,role,instituteId);
 }
 
 export async function getSingleCreditDetails(creditId,universityId) {

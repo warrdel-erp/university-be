@@ -1,29 +1,43 @@
 import * as creditService  from  "../services/creditServices.js";
 
 export async function addCredit(req, res) {
-    const {credit,subjectId} = req.body
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
-    try {
-        if(!(credit && subjectId)){
-           return res.status(400).send('credit and subjectId is required')
-        }
-        const Credit = await creditService.addCredit(req.body,createdBy,updatedBy,universityId,instituteId);
-        res.status(201).json({ message: "Data added successfully", Credit });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  const { credits } = req.body;
+
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+  const universityId = req.user.universityId;
+  const instituteId = req.user.instituteId;
+
+  try {
+    if (!Array.isArray(credits) || credits.length === 0) {
+      return res.status(400).send("credits array is required");
     }
+
+    const result = await creditService.addCredit(
+      credits,
+      createdBy,
+      updatedBy,
+      universityId,
+      instituteId
+    );
+
+    res.status(201).json({
+      message: "Credits added successfully",
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 }
+
 
 export async function getAllCredit(req, res) {
     const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query;
+    const { courseId,sessionId } = req.query;
     const role = req.user.role;    
     const instituteId = req.user.instituteId;
     try {
-        const Credit = await creditService.getCreditDetails(universityId,acedmicYearId,role,instituteId);
+        const Credit = await creditService.getCreditDetails(universityId,courseId,sessionId,role,instituteId);
         res.status(200).json(Credit);
     } catch (error) {
         res.status(500).json({ error: error.message });
