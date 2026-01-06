@@ -1,7 +1,9 @@
 import {Router} from  'express';
 const router =  Router();
-import {addEmployee,getAllEmployee,getSingleEmployeeDetails,deleteEmployeeDetail,importEmployeeData,updateEmployee,getBooksIssuedToEmployee,getTeacherTimeTable,getTeacherSubject} from '../controllers/employeeController.js';
+import {addEmployee,getAllEmployee,getSingleEmployeeDetails,deleteEmployeeDetail,importEmployeeData,updateEmployee,getBooksIssuedToEmployee,getTeacherTimeTable,getTeacherSubject,getSubjectEvalution} from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
+
+router.get('/evaluation', userAuth, getSubjectEvalution);
 
 router.get('/cellData', userAuth, getTeacherTimeTable);
 

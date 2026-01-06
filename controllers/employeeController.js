@@ -199,3 +199,18 @@ export const getTeacherSubject = async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export async function getSubjectEvalution(req, res) {
+    const universityId = req.user.universityId;
+    try {
+        const { employeeId } = req.query;
+        const evaluation = await employee.getSubjectEvalution(employeeId);
+        if (evaluation) {
+            res.status(200).json(evaluation);
+        } else {
+            res.status(404).json({ message: "evaluation not found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}

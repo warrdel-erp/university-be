@@ -5,6 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "mg": "npx sequelize-cli migration:generate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
     "migrate": "npx sequelize-cli db:migrate --env development",

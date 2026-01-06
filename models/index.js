@@ -128,7 +128,8 @@ import gradeModel from './gradeModel.js';
 import gradeScaleModel from './gradeScaleModel.js';
 import gradeCourseModel from './gradeCourseModel.js';
 import gradePassFailModel from './gradePassFailModel.js';
-import creditModel from './creditModel.js'
+import creditModel from './creditModel.js';
+import evalutionModel from './evalutionModel.js';
 
 studentModel.belongsTo(campusModel, { foreignKey: 'campus_id', as: 'campus' });
 campusModel.hasMany(studentModel, { foreignKey: 'campus_id', as: 'campus' });
@@ -942,6 +943,15 @@ sessionModel.hasMany(creditModel, { foreignKey: "sessionId", as: "creditsSession
 creditModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectCredit" }); 
 subjectModel.hasMany(creditModel, { foreignKey: "subjectId", as: "creditsSubject" });
 
+examSetupTypeModel.hasMany(evalutionModel, { foreignKey: 'examSetupTypeId', as: 'evalutionsexam' }); 
+evalutionModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupTypeEvalution' });
+
+subjectModel.hasMany(evalutionModel, { foreignKey: 'subjectId', as: 'evalutionsSub' }); 
+evalutionModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subjectEvalution' });
+
+employeeModel.hasMany(evalutionModel, { foreignKey: 'employeeId', as: 'evalutionsEmp' }); 
+evalutionModel.belongsTo(employeeModel, { foreignKey: 'employeeId', as: 'employeeEvalution' });
+
 export {
     settingModel,
     universityModel,
@@ -1074,4 +1084,5 @@ export {
     gradePassFailModel,
     gradeScaleModel,
     creditModel,
+    evalutionModel,
 };
