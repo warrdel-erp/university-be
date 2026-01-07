@@ -260,4 +260,221 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
         // originalData: data,
         groupedData: Object.values(grouped)
     };
-}
+};
+
+// export async function getPreviousClasses(employeeId, req) {
+
+//   const mappings = await attendanceService.getTeacherMappings(employeeId);
+
+//   if (!mappings.length) {
+//     return { data: [] };
+//   }
+
+//   // ===== DATE RANGE  =====
+//   const startDates = mappings
+//     .map(m => m.timeTablecreate?.startingDate)
+//     .filter(d => d && moment(d).isValid())
+//     .map(d => moment(d));
+
+//   const endDates = mappings
+//     .map(m => m.timeTablecreate?.endingDate)
+//     .filter(d => d && moment(d).isValid())
+//     .map(d => moment(d));
+
+//   const startDate = moment.min(startDates);
+//   const endDate = moment.min(
+//     moment.max(endDates),
+//     moment().subtract(1, "day")
+//   );
+
+//   if (endDate.isBefore(startDate)) {
+//     return { data: [] };
+//   }
+
+//   // ===== WEEK OFF =====
+//   const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
+//     .map(d => d.toLowerCase());
+
+//   // ===== ATTENDANCE MAP =====
+//   const attendanceMap = await attendanceService.getAttendanceMap(
+//     mappings.map(m => m.timeTableMappingId),
+//     startDate.format("YYYY-MM-DD"),
+//     endDate.format("YYYY-MM-DD")
+//   );
+
+//   // ===== STUDENT COUNT CACHE =====
+//   const studentCountCache = {};
+
+//   // ===== FINAL GROUPED RESULT =====
+//   const dateMap = {};
+
+//   // ===== MAIN LOOP =====
+//   for (const map of mappings) {
+//     let date = startDate.clone();
+
+//     const sectionId = map.timeTablecreate?.classSectionsId;
+//     if (!sectionId) continue;
+
+//     if (!studentCountCache[sectionId]) {
+//       studentCountCache[sectionId] =
+//         await attendanceService.getStudentCount(sectionId);
+//     }
+
+//     const totalStudents = studentCountCache[sectionId];
+
+//     while (date.isSameOrBefore(endDate)) {
+
+//       const dayName = date.format("dddd");
+//       const dateStr = date.format("YYYY-MM-DD");
+
+//       if (
+//         map.day === dayName &&
+//         !weekOff.includes(dayName.toLowerCase())
+//       ) {
+
+//         const key = `${map.timeTableMappingId}_${dateStr}`;
+//         const presentCount = attendanceMap[key] ?? 0;
+
+//         if (!dateMap[dateStr]) {
+//           dateMap[dateStr] = {
+//             date: dateStr,
+//             day: dayName,
+//             classes: []
+//           };
+//         }
+
+//         dateMap[dateStr].classes.push({
+//           period: map.period,
+
+//           subject:
+//             map.timeTableSubject?.subjectName ||
+//             null,
+
+//           class:
+//             map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+
+//           section:
+//             map.timeTablecreate?.timeTableClassSection?.section || null,
+
+//           classSectionsId: sectionId,
+
+//           attendance: `${presentCount} / ${totalStudents}`,
+
+//           status:
+//             attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
+
+//           timeTableMappingId: map.timeTableMappingId
+//         });
+//       }
+
+//       date.add(1, "day");
+//     }
+//   }
+
+//   // ===== SORT DATES =====
+//   const finalData = Object.values(dateMap)
+//     .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+//   return {
+//     fromDate: startDate.format("YYYY-MM-DD"),
+//     toDate: endDate.format("YYYY-MM-DD"),
+//     data: finalData
+//   };
+// };
+
+export async function getPreviousClasses(employeeId, req) {
+  const mappings = await attendanceService.getTeacherMappings(employeeId);
+
+  if (!mappings.length) {
+    return { data: [] };
+  }
+
+  // ===== DATE RANGE =====
+  const startDates = mappings
+    .map(m => m.timeTablecreate?.startingDate)
+    .filter(d => d && moment(d).isValid())
+    .map(d => moment(d));
+
+  const endDates = mappings
+    .map(m => m.timeTablecreate?.endingDate)
+    .filter(d => d && moment(d).isValid())
+    .map(d => moment(d));
+
+  const startDate = moment.min(startDates);
+  const endDate = moment.min(
+    moment.max(endDates),
+    moment().subtract(1, "day")
+  );
+
+  if (endDate.isBefore(startDate)) {
+    return { data: [] };
+  }
+
+  // ===== WEEK OFF =====
+  const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
+    .map(d => d.toLowerCase());
+
+  // ===== ATTENDANCE MAP =====
+  const attendanceMap = await attendanceService.getAttendanceMap(
+    mappings.map(m => m.timeTableMappingId),
+    startDate.format("YYYY-MM-DD"),
+    endDate.format("YYYY-MM-DD")
+  );
+
+  const studentCountCache = {};
+  const flatData = []; // Changed from dateMap = {}
+
+  // ===== MAIN LOOP =====
+  for (const map of mappings) {
+    let date = startDate.clone();
+    const sectionId = map.timeTablecreate?.classSectionsId;
+    if (!sectionId) continue;
+
+    if (!studentCountCache[sectionId]) {
+      studentCountCache[sectionId] = await attendanceService.getStudentCount(sectionId);
+    }
+
+    const totalStudents = studentCountCache[sectionId];
+
+    while (date.isSameOrBefore(endDate)) {
+      const dayName = date.format("dddd");
+      const dateStr = date.format("YYYY-MM-DD");
+
+      if (
+        map.day === dayName &&
+        !weekOff.includes(dayName.toLowerCase())
+      ) {
+        const key = `${map.timeTableMappingId}_${dateStr}`;
+        const presentCount = attendanceMap[key] ?? 0;
+
+        // Push flat object directly to the array
+        flatData.push({
+          date: dateStr,
+          day: dayName,
+          period: map.period,
+          subject: map.timeTableSubject?.subjectName || null,
+          class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+          section: map.timeTablecreate?.timeTableClassSection?.section || null,
+          classSectionsId: sectionId,
+          attendance: `${presentCount} / ${totalStudents}`,
+          status: attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
+          timeTableMappingId: map.timeTableMappingId
+        });
+      }
+      date.add(1, "day");
+    }
+  }
+
+  // ===== SORT BY DATE DESCENDING, THEN BY PERIOD ASCENDING =====
+  flatData.sort((a, b) => {
+    const dateDiff = new Date(b.date) - new Date(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    return a.period - b.period; // Optional: keeps periods in order within the same day
+  });
+
+  return {
+    fromDate: startDate.format("YYYY-MM-DD"),
+    toDate: endDate.format("YYYY-MM-DD"),
+    data: flatData
+  };
+};

@@ -15,48 +15,6 @@ export default async function sendEmail(to, subject, link) {
       },
     });
 
-    // const htmlContent = `
-    //   <!DOCTYPE html>
-    //   <html>
-    //     <head>
-    //       <meta charset="UTF-8" />
-    //       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    //       <title>Password Reset</title>
-    //     </head>
-    //     <body style="margin:0;padding:0;background:#f6f9fc;font-family:Arial,Helvetica,sans-serif;">
-    //       <table align="center" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:20px auto;background:#ffffff;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,0.1);overflow:hidden;">
-    //         <tr style="background:#004aad;">
-    //           <td align="center" style="padding:20px;">
-    //             <img src="https://stage.hiveerp.com/static/media/edvantage%20logo%20white.e5ee9a85585189cc9565.png" alt="Logo" width="60" height="60" style="display:block;margin-bottom:10px;" />
-    //             <h1 style="margin:0;color:#ffffff;font-size:20px;">Edvantage Powered by</h1>
-    //             <h5 style="margin:0;color:#ffffff;font-size:14px;">Warrdel Solutions Pvt. Ltd.</h5>
-    //           </td>
-    //         </tr>
-
-    //         <tr>
-    //           <td style="padding:30px;text-align:center;">
-    //             <h2 style="color:#333333;font-size:22px;margin-bottom:20px;">Your Password Reset Link is Ready!</h2>
-    //             <p style="font-size:16px;color:#555;margin-bottom:30px;">
-    //               Hi there! We received a request to reset your password.  
-    //               Click the button below to set your new password.
-    //             </p>
-    //             <a href="${link}" style="background:#004aad;color:#ffffff;text-decoration:none;padding:12px 30px;border-radius:5px;font-size:16px;display:inline-block;">
-    //               Reset Password
-    //             </a>
-    //             <p style="font-size:16px;color:#555;margin-top:30px;">Please do not share this email with anyone to keep your account safe.</p>
-    //           </td>
-    //         </tr>
-
-    //         <tr style="background:#f6f9fc;">
-    //           <td style="padding:20px;text-align:center;font-size:12px;color:#999;">
-    //             <p>&copy; ${new Date().getFullYear()} Warrdel Solutions Pvt. Ltd. | Edvantage</p>
-    //           </td>
-    //         </tr>
-    //       </table>
-    //     </body>
-    //   </html>
-    // `;
-
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -108,8 +66,8 @@ export default async function sendEmail(to, subject, link) {
       <!-- Header -->
       <tr class="header fadeIn">
         <td align="center" style="padding:25px;">
-          <img src="https://sso.erpedvantage.com/static/media/edvantage%20logo%20white.e5ee9a85585189cc9565.png"
-               alt="Edvantage Logo" width="230" height="50"
+          <img src="https://accounts.candederp.com/static/media/Canded-logo_white.34d845a3db02db3246fb.png"
+               alt="Canded Logo" width="230" height="50"
                style="display:block;margin-bottom:10px;animation:fadeIn 1.5s ease-in-out;" />
           <h5 style="margin:5px 0 0;color:#e3f2fd;font-size:14px;">Powered By Warrdel Solutions Pvt. Ltd.</h5>
         </td>
@@ -146,7 +104,7 @@ export default async function sendEmail(to, subject, link) {
       <!-- Footer -->
       <tr style="background:#f6f9fc;">
         <td style="padding:20px;text-align:center;font-size:12px;color:#999;">
-          <p>&copy; ${new Date().getFullYear()} Warrdel Solutions Pvt. Ltd. | Edvantage</p>
+          <p>&copy; ${new Date().getFullYear()} Warrdel Solutions Pvt. Ltd. | Canded</p>
         </td>
       </tr>
 

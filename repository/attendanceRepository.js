@@ -1,4 +1,5 @@
 import { Op, fn, col,where } from "sequelize";
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js'
 
 export async function addAttendance(attendanceRecords) {      
@@ -223,9 +224,159 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
             subjectDetail: subjectDetail
         };
 
-
     } catch (error) {
         console.error("Error fetching attendance:", error);
         throw error;
     }
+};
+
+export async function getTimetable(timeTableCreateId) {
+  return await model.timeTableCreateModel.findOne({
+    where: {
+      timeTableCreateId,
+      deletedAt: null
+    },
+    attributes: [
+      "timeTableCreateId",
+      "startingDate",
+      "endingDate"
+    ],
+    include: [
+      {
+        model: model.timeTableCreationModel,
+        as: "timeTablecreation",
+        attributes: ["weekOff"],
+        required: true
+      }
+    ]
+  });
+}
+
+// export async function getTeacherMappings(employeeId) {
+//   return await model.timeTableMappingModel.findAll({
+//     where: {
+//       [Op.or]: [
+//         { employeeId: employeeId },
+//         { "$timeTableTeacherSubject.employee_id$": employeeId }
+//       ]
+//     },
+//     include: [
+//       {
+//         model: model.teacherSubjectMappingModel,
+//         as: "timeTableTeacherSubject",
+//         required: false
+//       },
+//       {
+//         model: model.subjectModel,
+//         as: "timeTableSubject",
+//         required: false
+//       },
+//       {
+//         model: model.classRoomModel,
+//         as: "classRoom",
+//         required: false
+//       },
+//       {
+//         model: model.timeTableCreateModel,
+//         as: "timeTablecreate",
+//         required: true,
+//         include: [
+//           {
+//             model: model.classSectionModel,
+//             as: "timeTableClassSection",
+//             required: false
+//           }
+//         ]
+//       },
+//       {
+//         model: model.timeTableCreationModel,
+//         as: "timeTablecreation",
+//         required: true
+//       }
+//     ]
+//   });
+// }
+
+export async function getAttendanceMap(mappingIds, from, to) {
+  const rows = await model.attendanceModel.findAll({
+    attributes: [
+      "timeTableMappingId",
+      "date",
+      [
+        sequelize.fn("COUNT",sequelize.col("student_id")),
+        "presentCount"
+      ]
+    ],
+    where: {
+      timeTableMappingId: mappingIds,
+      date: { [Op.between]: [from, to] },
+      attentenceStatus: "PRESENT"
+    },
+    group: ["timeTableMappingId", "date"]
+  });
+
+  const map = {};
+  for (const r of rows) {
+    const dateKey = r.date.toISOString().slice(0, 10);
+    const key = `${r.timeTableMappingId}_${dateKey}`;
+    map[key] = Number(r.get("presentCount"));
+  }
+
+  return map;
+}
+
+export async function getStudentCount(classSectionsId) {
+  return await model.studentModel.count({
+    where: {
+      classSectionsId: classSectionsId,
+      deletedAt: null
+    }
+  });
+};
+
+export async function getTeacherMappings(employeeId) {
+  return await model.timeTableMappingModel.findAll({
+    where: {
+      [Op.or]: [
+        { employeeId },
+        { "$timeTableTeacherSubject.employee_id$": employeeId }
+      ]
+    },
+    include: [
+      {
+        model: model.teacherSubjectMappingModel,
+        as: "timeTableTeacherSubject",
+        required: false
+      },
+      {
+        model: model.subjectModel,
+        as: "timeTableSubject",
+        required: false
+      },
+      {
+        model: model.timeTableCreateModel,
+        as: "timeTablecreate",
+        required: true,
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "timeTableClassSection",
+            required: false,
+            include: [
+              {
+                model: model.classModel,
+                as: "classGroup",
+                required: false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        model: model.timeTableCreationModel,
+        as: "timeTablecreation",
+        required: true
+      }
+    ]
+  });
 };
