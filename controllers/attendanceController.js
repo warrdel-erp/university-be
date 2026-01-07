@@ -106,4 +106,22 @@ export async function getAttendanceByDate(req, res) {
         console.error("Error fetching attendance:", error);
         return res.status(500).json({ error: "Internal Server Error" });
     }
-}
+};
+
+export async function getPreviousClasses(req, res) {
+  try {
+    const employeeId = req.params.employeeId 
+
+    if (!employeeId) {
+      throw new Error("employeeId is required");
+    }
+
+    const data = await AttendanceCreation.getPreviousClasses(
+      employeeId,
+      req
+    );
+    return res.status(200).json(data);
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+};

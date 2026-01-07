@@ -260,4 +260,264 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
         // originalData: data,
         groupedData: Object.values(grouped)
     };
-}
+};
+
+export async function getPreviousClasses(employeeId, req) {
+
+  const mappings = await attendanceService.getTeacherMappings(employeeId);
+
+  if (!mappings.length) {
+    return { data: [] };
+  }
+
+  // ===== DATE RANGE  =====
+  const startDates = mappings
+    .map(m => m.timeTablecreate?.startingDate)
+    .filter(d => d && moment(d).isValid())
+    .map(d => moment(d));
+
+  const endDates = mappings
+    .map(m => m.timeTablecreate?.endingDate)
+    .filter(d => d && moment(d).isValid())
+    .map(d => moment(d));
+
+  const startDate = moment.min(startDates);
+  const endDate = moment.min(
+    moment.max(endDates),
+    moment().subtract(1, "day")
+  );
+
+  if (endDate.isBefore(startDate)) {
+    return { data: [] };
+  }
+
+  // ===== WEEK OFF =====
+  const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
+    .map(d => d.toLowerCase());
+
+  // ===== ATTENDANCE MAP =====
+  const attendanceMap = await attendanceService.getAttendanceMap(
+    mappings.map(m => m.timeTableMappingId),
+    startDate.format("YYYY-MM-DD"),
+    endDate.format("YYYY-MM-DD")
+  );
+
+  // ===== STUDENT COUNT CACHE =====
+  const studentCountCache = {};
+
+  // ===== FINAL GROUPED RESULT =====
+  const dateMap = {};
+
+  // ===== MAIN LOOP =====
+  for (const map of mappings) {
+    let date = startDate.clone();
+
+    const sectionId = map.timeTablecreate?.classSectionsId;
+    if (!sectionId) continue;
+
+    if (!studentCountCache[sectionId]) {
+      studentCountCache[sectionId] =
+        await attendanceService.getStudentCount(sectionId);
+    }
+
+    const totalStudents = studentCountCache[sectionId];
+
+    while (date.isSameOrBefore(endDate)) {
+
+      const dayName = date.format("dddd");
+      const dateStr = date.format("YYYY-MM-DD");
+
+      if (
+        map.day === dayName &&
+        !weekOff.includes(dayName.toLowerCase())
+      ) {
+
+        const key = `${map.timeTableMappingId}_${dateStr}`;
+        const presentCount = attendanceMap[key] ?? 0;
+
+        if (!dateMap[dateStr]) {
+          dateMap[dateStr] = {
+            date: dateStr,
+            day: dayName,
+            classes: []
+          };
+        }
+
+        dateMap[dateStr].classes.push({
+          period: map.period,
+
+          subject:
+            map.timeTableSubject?.subjectName ||
+            null,
+
+          class:
+            map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+
+          section:
+            map.timeTablecreate?.timeTableClassSection?.section || null,
+
+          classSectionsId: sectionId,
+
+          attendance: `${presentCount} / ${totalStudents}`,
+
+          status:
+            attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
+
+          timeTableMappingId: map.timeTableMappingId
+        });
+      }
+
+      date.add(1, "day");
+    }
+  }
+
+  // ===== SORT DATES =====
+  const finalData = Object.values(dateMap)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return {
+    fromDate: startDate.format("YYYY-MM-DD"),
+    toDate: endDate.format("YYYY-MM-DD"),
+    data: finalData
+  };
+};
+
+
+// export async function getPreviousClasses(employeeId, req) {
+//   const { instituteId, universityId } = req.user;
+
+//    Get teacher mappings
+//   const mappings = await attendanceService.getTeacherMappings(employeeId);
+
+//   if (!mappings.length) {
+//     return {
+//       employeeId,
+//       data: []
+//     };
+//   }
+
+//   //  SAFELY CALCULATE START DATE
+//   const validStartDates = mappings
+//     .map(m => m.timeTablecreate?.startingDate)
+//     .filter(d => d && moment(d).isValid())
+//     .map(d => moment(d));
+
+//   if (!validStartDates.length) {
+//     throw new Error("No valid timetable start date found");
+//   }
+
+//   const startDate = moment.min(validStartDates);
+
+//   //  SAFELY CALCULATE END DATE (exclude today)
+//   const validEndDates = mappings
+//     .map(m => m.timeTablecreate?.endingDate)
+//     .filter(d => d && moment(d).isValid())
+//     .map(d => moment(d));
+
+//   if (!validEndDates.length) {
+//     throw new Error("No valid timetable end date found");
+//   }
+
+//   const endDate = moment.min(
+//     moment.max(validEndDates),
+//     moment().subtract(1, "day")
+//   );
+
+//   //  FINAL DATE GUARDS
+//   if (!startDate.isValid() || !endDate.isValid()) {
+//     throw new Error("Invalid timetable date range");
+//   }
+
+//   if (endDate.isBefore(startDate)) {
+//     return {
+//       fromDate: startDate.format("YYYY-MM-DD"),
+//       toDate: endDate.format("YYYY-MM-DD"),
+//       data: []
+//     };
+//   }
+
+//   //  WEEK OFF (normalized)
+//   const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
+//     .map(d => d.toLowerCase());
+
+//   const studentCountCache = {};
+//   const result = [];
+
+//   //  ATTENDANCE MAP
+//   const attendanceMap = await attendanceService.getAttendanceMap(
+//     mappings.map(m => m.timeTableMappingId),
+//     startDate.format("YYYY-MM-DD"),
+//     endDate.format("YYYY-MM-DD")
+//   );
+
+//   //  MAIN LOGIC
+//   for (const map of mappings) {
+//     let date = startDate.clone();
+
+//     const sectionId = map.timeTablecreate?.classSectionsId;
+//     if (!sectionId) continue;
+
+//     if (!studentCountCache[sectionId]) {
+//       studentCountCache[sectionId] =
+//         await attendanceService.getStudentCount(sectionId);
+//     }
+
+//     while (date.isSameOrBefore(endDate)) {
+//       const dayName = date.format("dddd");
+
+//       if (
+//         map.day === dayName &&
+//         !weekOff.includes(dayName.toLowerCase())
+//       ) {
+//         const key = `${map.timeTableMappingId}_${date.format("YYYY-MM-DD")}`;
+//         const presentCount = attendanceMap[key];
+
+//         result.push({
+//           date: date.format("YYYY-MM-DD"),
+//           day: dayName,
+//           period: map.period,
+
+//           subjectName:
+//             map.timeTableSubject?.subjectName ||
+//             map.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName ||
+//             null,
+
+//           subjectId: map.timeTableSubject?.subjectId || null,
+
+//           section:
+//             map.timeTablecreate?.timeTableClassSection?.section || null,
+
+//           class:
+//             map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+
+//           classSectionsId:
+//             map.timeTablecreate?.timeTableClassSection?.classSectionsId || null,
+
+//           attendance:
+//             presentCount !== undefined
+//               ? `${presentCount}/${studentCountCache[sectionId]}`
+//               : "Attendance Not Marked",
+
+//           status:
+//             presentCount !== undefined ? "MARKED" : "PENDING",
+
+//           timeTableMappingId: map.timeTableMappingId
+//         });
+//       }
+
+//       date.add(1, "day");
+//     }
+//   }
+
+//   //  SORT FOR UI
+//   result.sort((a, b) => {
+//     if (a.date === b.date) return a.period - b.period;
+//     return new Date(a.date) - new Date(b.date);
+//   });
+
+//   return {
+//     fromDate: startDate.format("YYYY-MM-DD"),
+//     toDate: endDate.format("YYYY-MM-DD"),
+//     data: result
+//   };
+// }
