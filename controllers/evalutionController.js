@@ -36,7 +36,7 @@ export async function getAllEvaluation(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function getSingleEvaluationDetails(req, res) {
     const universityId = req.user.universityId;
@@ -51,7 +51,7 @@ export async function getSingleEvaluationDetails(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 export async function updateEvaluation(req, res) {
     try {
