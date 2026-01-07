@@ -20,6 +20,8 @@ import {employeeRegister} from '../services/userServices.js'
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
+import * as evaluationRepository  from "../repository/evalutionRepository.js";
+
 
 async function generateEmployeeNumber(campusId,instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -811,3 +813,7 @@ export async function getTeacherTimeTable(employeeId, universityId, instituteId,
 export async function getTeacherSubject(employeeId,universityId,instituteId,role){
     return await employeeRepository.getTeacherSubject(employeeId,universityId,instituteId,role)
 };
+
+export async function getSubjectEvalution(employeeId) {
+    return await evaluationRepository.getTeacherSubjectEvalution(employeeId);
+}

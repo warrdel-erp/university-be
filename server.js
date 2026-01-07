@@ -70,7 +70,8 @@ import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
 import grade from "./router/gradeRoute.js";
-import credit from "./router/creditRoute.js"
+import credit from "./router/creditRoute.js";
+import evalution from "./router/evalutionRoute.js"
 
 // middleware
 app.use(fileUpload());
@@ -144,6 +145,7 @@ app.use("/jobSetting",jobSetting);
 app.use("/jobs",jobs);
 app.use("/grade",grade);
 app.use("/credit",credit);
+app.use("/evalution",evalution);
 
 
 app.listen(PORT, () => {

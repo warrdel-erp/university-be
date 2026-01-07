@@ -9,11 +9,57 @@ export async function addExamStructureSchedule(examScheduleDetail, createdBy, up
     return result;
 };
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
+// export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
 
-  const schedules = await examStructureScheduleRepository.getExamStructureSchedule(
-    universityId, acedmicYearId, role, instituteId, examSetupTypeId
-  );  
+//   const schedules = await examStructureScheduleRepository.getExamStructureSchedule(
+//     universityId, acedmicYearId, role, instituteId, examSetupTypeId
+//   );  
+
+//   const secondScreenData = [];
+
+//   schedules.forEach(row => {
+//     const subjects = row.syllabusDetailsExam || [];
+
+//     subjects.forEach(subDetail => {
+//       const subjectName = subDetail.syllabusSubject?.subjectName;
+//       const subjectId = subDetail.syllabusSubject?.subjectId;
+//       const subjectType = subDetail.subjectType;
+
+//       subDetail.syllabusSubject?.subjects?.forEach(sub => {
+//         const semesterName = sub.semestermapping?.name;
+//         const semesterId = sub.semestermapping?.semesterId;
+
+//         const students = sub.semestermapping?.studentSemester || [];
+//         const studentCount = students.length;
+
+//         // matched exam schedule
+//         const exam = row.examSchedulesTypes?.find(
+//           ex => ex.subjectId === subjectId && ex.semesterId === semesterId
+//         );
+
+//         secondScreenData.push({
+//           examSetupTypeId: row.examSetupTypeId,
+//           subjectName,
+//           subjectId,
+//           semesterName,
+//           semesterId,
+//           studentCount,
+//           subjectType,
+//           examScheduleId: exam?.examScheduleId || null,
+//           examDate: exam?.examDate || null,
+//           examTime: exam?.examTime || null,
+//           duration: exam?.duration || null,
+//           type: exam?.type || null
+//         });
+//       });
+//     });
+//   });
+
+//   return secondScreenData;
+// };
+
+export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId ) {
+ const schedules = await examStructureScheduleRepository.getExamStructureSchedule( universityId, acedmicYearId, role, instituteId, examSetupTypeId );
 
   const secondScreenData = [];
 
@@ -32,31 +78,48 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
         const students = sub.semestermapping?.studentSemester || [];
         const studentCount = students.length;
 
-        // matched exam schedule
+        const teachers = (sub.employeeSubject || []).map(ts => ({
+          teacherSubjectMappingId: ts.teacherSubjectMappingId,
+          employeeId: ts.employeeId,
+          employee: {
+            employeeId: ts.teacherEmployeeData?.employeeId || null,
+            employeeName: ts.teacherEmployeeData?.employeeName || null,
+            employeeCode: ts.teacherEmployeeData?.employeeCode || null,
+            department: ts.teacherEmployeeData?.department || null,
+            employmentType: ts.teacherEmployeeData?.employmentType || null
+          },
+          // teacherSection: ts.teacherSection || null
+        }));
+
         const exam = row.examSchedulesTypes?.find(
           ex => ex.subjectId === subjectId && ex.semesterId === semesterId
         );
 
         secondScreenData.push({
           examSetupTypeId: row.examSetupTypeId,
+
           subjectName,
           subjectId,
+          subjectType,
+
           semesterName,
           semesterId,
           studentCount,
-          subjectType,
+          
           examScheduleId: exam?.examScheduleId || null,
           examDate: exam?.examDate || null,
           examTime: exam?.examTime || null,
           duration: exam?.duration || null,
-          type: exam?.type || null
+          type: exam?.type || null,
+          teachers, 
+
         });
       });
     });
   });
 
   return secondScreenData;
-};
+}
 
 
 export async function publishExamSchedule(publishExamStructureSchedule) {

@@ -659,11 +659,13 @@ export async function getClassSubjectMapper(semesterId,universityId,acedmicYearI
                                             model: model.instituteModel,
                                             as: "institut",
                                             attributes: ["instituteName", "instituteId"],
+                                            required:false,
                                             include: [
                                                 {
                                                     model: model.campusModel,
                                                     as: "campues",
                                                     attributes: ["campusName", "campusId"],
+                                                    required:false,
                                                 },
                                             ],
                                         },

@@ -10,47 +10,6 @@ export async function addExamStructureSchedule(examDetailSchedule) {
     }
 };
 
-// export async function getExamStructureSchedule(universityId,acedmicYearId,role,instituteId) {
-//     try {
-//         const whereClause = {
-//         ...(universityId && { universityId }),
-//         ...(acedmicYearId && { acedmicYearId }),
-//         ...(role === 'Head' && { institute_id: instituteId })
-//         };
-//         const result = await model.examStructureScheduleMappingModel.findAll({
-//             attributes: {
-//                 exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-//             },
-//             where:whereClause,
-//             include: [
-//                 {
-//                     model: model.examSetupTypeModel,
-//                     as: "examSetupType",
-//                     exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",],
-//                     include:[
-//                         {
-//                             model:model.syllabusDetailsModel,
-//                             as:"syllabusDetailsExam",
-//                             exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-//                             include:[
-//                                 {
-//                                     model:model.subjectModel,
-//                                     as:'syllabusSubject',
-//                                     exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
-//                                 }
-//                             ]
-//                         }
-//                     ]
-//                 }, 
-//             ],
-//         });
-//         return result;
-//     } catch (error) {
-//         console.error("Error fetching exam Structures schedule:", error);
-//         throw error;
-//     }
-// };
-
 export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
 
     const whereClause = {
@@ -80,6 +39,18 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
                                 as: "subjects",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 include: [
+                                    {
+                                        model:model.teacherSubjectMappingModel,
+                                        as:'employeeSubject',
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                        include:[
+                                          {
+                                            model:model.employeeModel,
+                                            as:'teacherEmployeeData',
+                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                          }
+                                        ]
+                                    },
                                     {
                                         model: model.semesterModel,
                                         as: 'semestermapping',

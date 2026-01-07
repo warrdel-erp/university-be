@@ -116,7 +116,9 @@ npm run migrate:undo:all
 ## 📝 5. Creating a Migration
 
 Generate migration:
-npx sequelize-cli migration:generate --name add-new-column
+npx sequelize-cli migration:generate --name add-new-column {STUDENT}
+npm run mg -- --name {STUDENT}
+
 
 Rename file to .cjs:
 migrations/20251212120000-add-new-column.cjs
