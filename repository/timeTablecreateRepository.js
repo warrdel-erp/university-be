@@ -476,7 +476,7 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
   }
 };
 
-export async function getTeacherTimeTable(employeeId) {
+export async function getTeacherTimeTable(employeeId,universityId,instituteId,role) {
   try {
 
     const teacherWhere = { employeeId };
