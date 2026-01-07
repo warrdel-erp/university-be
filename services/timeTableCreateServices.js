@@ -857,45 +857,59 @@ export async function publishTimeTableService(timeTableCreateId) {
 };
 
 // export async function getSubjectWithCount(classSectionsId) {
+
 //   const [subjectsData, timeTableData] = await Promise.all([
 //     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
 //     timeTableCreateRepository.timeTableData(classSectionsId)
 //   ]);
+//   console.log(`>>>>>>subjectsData`,JSON.stringify(subjectsData));
+//   console.log(`>>>>>>timeTableData`,JSON.stringify(timeTableData));
 
-//   const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
-//     id: s.subjectId,
-//     name: s.subjects?.subjectName,
-//     subjectCode : s.subjects?.subjectCode,
-//   })) || [];
+//   const subjectsList =
+//     subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+//       subjectId: s.subjectId,
+//       subject: s.subjects?.subjectName,
+//       subjectCode: s.subjects?.subjectCode
+//     })) || [];
+
+//   const subjectIdSet = new Set(subjectsList.map(s => s.subjectId));
 
 //   const timeTable = timeTableData?.timeTablecreate || [];
 
 //   const countMap = {};
-
-//   subjectsList.forEach(s => {
-//     countMap[s.id] = 0;
-//   });
+//   subjectIdSet.forEach(id => (countMap[id] = 0));
 
 //   timeTable.forEach(t => {
-//     const subjectId =
-//       t.timeTableSubject?.subjectId ||
-//       t.timeTableTeacherSubject?.employeeSubject?.subjectId ||
-//       null;
+//     let subjectId = null;
 
-//     if (subjectId && countMap[subjectId] !== undefined) {
+//     //  Direct subject
+//     if (t.timeTableSubject?.id) {
+//       subjectId = t.timeTableSubject.id;
+//     }
+
+//     //  Teacher mapped subject
+//     else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+//       subjectId = t.timeTableTeacherSubject.employeeSubject.subjectId;
+//     }
+
+//     //  Elective subject
+//     else if (t.timeTableElective?.subjectId) {
+//       subjectId = t.timeTableElective.subjectId;
+//     }
+
+//     // Count only valid class subjects
+//     if (subjectIdSet.has(subjectId)) {
 //       countMap[subjectId]++;
 //     }
 //   });
 
-//   const result = subjectsList.map(s => ({
-//     subjectId: s.id,
-//     subject: s.name,
-//     subjectCode:s.subjectCode,
-//     count: countMap[s.id] || 0
+//   return subjectsList.map(s => ({
+//     subjectId: s.subjectId,
+//     subject: s.subject,
+//     subjectCode: s.subjectCode,
+//     count: countMap[s.subjectId] || 0
 //   }));
-
-//   return result;
-// }
+// };
 
 export async function getSubjectWithCount(classSectionsId) {
   const [subjectsData, timeTableData] = await Promise.all([
@@ -903,48 +917,61 @@ export async function getSubjectWithCount(classSectionsId) {
     timeTableCreateRepository.timeTableData(classSectionsId)
   ]);
 
-  const subjectsList =
-    subjectsData?.semesterDetail?.semestermapping?.map(s => ({
-      subjectId: s.subjectId,
-      subject: s.subjects?.subjectName,
-      subjectCode: s.subjects?.subjectCode
-    })) || [];
+  // 1. Get the list of all subjects assigned to this semester
+  const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+    subjectId: s.subjectId ? Number(s.subjectId) : null,
+    subject: s.subjects?.subjectName,
+    subjectCode: s.subjects?.subjectCode
+  })) || [];
 
-  const subjectIdSet = new Set(subjectsList.map(s => s.subjectId));
+  // Create a Set of Numbers for fast, accurate matching
+  const validSubjectIds = new Set(subjectsList.map(s => s.subjectId).filter(id => id !== null));
 
-  const timeTable = timeTableData?.timeTablecreate || [];
+  // 2. Access the mapping array from your log: timeTableData.timeTablecreate
+  const mappings = timeTableData?.timeTablecreate || [];
 
+  // 3. Initialize counts to 0
   const countMap = {};
-  subjectIdSet.forEach(id => (countMap[id] = 0));
+  validSubjectIds.forEach(id => (countMap[id] = 0));
 
-  timeTable.forEach(t => {
-    let subjectId = null;
+  // Set to prevent counting the same period/day/subject multiple times (due to multiple teachers)
+  const countedSlots = new Set();
 
-    //  Direct subject
-    if (t.timeTableSubject?.id) {
-      subjectId = t.timeTableSubject.id;
-    }
+  // 4. Loop through timetable mappings
+  mappings.forEach(t => {
+    let foundSubjectId = null;
 
-    //  Teacher mapped subject
+    // Check paths EXACTLY as they appear in your logs
+    if (t.subjectId) {
+      foundSubjectId = Number(t.subjectId);
+    } 
+    else if (t.timeTableSubject?.subjectId) {
+      foundSubjectId = Number(t.timeTableSubject.subjectId);
+    } 
     else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
-      subjectId = t.timeTableTeacherSubject.employeeSubject.subjectId;
-    }
-
-    //  Elective subject
+      foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
+    } 
     else if (t.timeTableElective?.subjectId) {
-      subjectId = t.timeTableElective.subjectId;
+      foundSubjectId = Number(t.timeTableElective.subjectId);
     }
 
-    // Count only valid class subjects
-    if (subjectIdSet.has(subjectId)) {
-      countMap[subjectId]++;
+    // 5. If the subject is in our semester list, increment count
+    if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
+      // Create a unique key to ensure we don't count the same slot twice
+      const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
+      
+      if (!countedSlots.has(slotKey)) {
+        countMap[foundSubjectId]++;
+        countedSlots.add(slotKey);
+      }
     }
   });
 
+  // 6. Return subjects with their counts (or 0 if not in timetable)
   return subjectsList.map(s => ({
     subjectId: s.subjectId,
     subject: s.subject,
     subjectCode: s.subjectCode,
     count: countMap[s.subjectId] || 0
   }));
-};
+}
