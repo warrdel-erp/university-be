@@ -263,131 +263,10 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 };
 
 // export async function getPreviousClasses(employeeId, req) {
-
 //   const mappings = await attendanceService.getTeacherMappings(employeeId);
 
-//   if (!mappings.length) {
-//     return { data: [] };
-//   }
-
-//   // ===== DATE RANGE  =====
-//   const startDates = mappings
-//     .map(m => m.timeTablecreate?.startingDate)
-//     .filter(d => d && moment(d).isValid())
-//     .map(d => moment(d));
-
-//   const endDates = mappings
-//     .map(m => m.timeTablecreate?.endingDate)
-//     .filter(d => d && moment(d).isValid())
-//     .map(d => moment(d));
-
-//   const startDate = moment.min(startDates);
-//   const endDate = moment.min(
-//     moment.max(endDates),
-//     moment().subtract(1, "day")
-//   );
-
-//   if (endDate.isBefore(startDate)) {
-//     return { data: [] };
-//   }
-
-//   // ===== WEEK OFF =====
-//   const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
-//     .map(d => d.toLowerCase());
-
-//   // ===== ATTENDANCE MAP =====
-//   const attendanceMap = await attendanceService.getAttendanceMap(
-//     mappings.map(m => m.timeTableMappingId),
-//     startDate.format("YYYY-MM-DD"),
-//     endDate.format("YYYY-MM-DD")
-//   );
-
-//   // ===== STUDENT COUNT CACHE =====
-//   const studentCountCache = {};
-
-//   // ===== FINAL GROUPED RESULT =====
-//   const dateMap = {};
-
-//   // ===== MAIN LOOP =====
-//   for (const map of mappings) {
-//     let date = startDate.clone();
-
-//     const sectionId = map.timeTablecreate?.classSectionsId;
-//     if (!sectionId) continue;
-
-//     if (!studentCountCache[sectionId]) {
-//       studentCountCache[sectionId] =
-//         await attendanceService.getStudentCount(sectionId);
-//     }
-
-//     const totalStudents = studentCountCache[sectionId];
-
-//     while (date.isSameOrBefore(endDate)) {
-
-//       const dayName = date.format("dddd");
-//       const dateStr = date.format("YYYY-MM-DD");
-
-//       if (
-//         map.day === dayName &&
-//         !weekOff.includes(dayName.toLowerCase())
-//       ) {
-
-//         const key = `${map.timeTableMappingId}_${dateStr}`;
-//         const presentCount = attendanceMap[key] ?? 0;
-
-//         if (!dateMap[dateStr]) {
-//           dateMap[dateStr] = {
-//             date: dateStr,
-//             day: dayName,
-//             classes: []
-//           };
-//         }
-
-//         dateMap[dateStr].classes.push({
-//           period: map.period,
-
-//           subject:
-//             map.timeTableSubject?.subjectName ||
-//             null,
-
-//           class:
-//             map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
-
-//           section:
-//             map.timeTablecreate?.timeTableClassSection?.section || null,
-
-//           classSectionsId: sectionId,
-
-//           attendance: `${presentCount} / ${totalStudents}`,
-
-//           status:
-//             attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
-
-//           timeTableMappingId: map.timeTableMappingId
-//         });
-//       }
-
-//       date.add(1, "day");
-//     }
-//   }
-
-//   // ===== SORT DATES =====
-//   const finalData = Object.values(dateMap)
-//     .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-//   return {
-//     fromDate: startDate.format("YYYY-MM-DD"),
-//     toDate: endDate.format("YYYY-MM-DD"),
-//     data: finalData
-//   };
-// };
-
-// production error code 
-
-// export async function getPreviousClasses(employeeId, req) {
-//   const mappings = await attendanceService.getTeacherMappings(employeeId);
-
-//   if (!mappings.length) {
+//   // Guard against null or empty mappings
+//   if (!Array.isArray(mappings) || !mappings.length) {
 //     return { data: [] };
 //   }
 
@@ -402,6 +281,11 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //     .filter(d => d && moment(d).isValid())
 //     .map(d => moment(d));
 
+//   // Ensure we have valid dates to calculate min/max
+//   if (!startDates.length || !endDates.length) {
+//     return { data: [] };
+//   }
+
 //   const startDate = moment.min(startDates);
 //   const endDate = moment.min(
 //     moment.max(endDates),
@@ -412,19 +296,27 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //     return { data: [] };
 //   }
 
-//   // ===== WEEK OFF =====
-//   const weekOff = (mappings[0].timeTablecreation?.weekOff || [])
-//     .map(d => d.toLowerCase());
+//   // ===== WEEK OFF (FIXED) =====
+//   // This handles if weekOff is an Object, Array, or Null
+//   const rawWeekOff = mappings[0]?.timeTablecreation?.weekOff || [];
+//   console.log(`>>>>>>>rawWeekOff>>>`,JSON.stringify(rawWeekOff));
+  
+//   const weekOffArray = Array.isArray(rawWeekOff) 
+//     ? rawWeekOff 
+//     : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
+//   console.log(`>>>>>>>weekOffArray>>>`,JSON.stringify(weekOffArray));
 
+//   const weekOff = weekOffArray.map(d => String(d).toLowerCase());
+//   console.log(`>>>>>>>weekOff>>>`,JSON.stringify(weekOff));
 //   // ===== ATTENDANCE MAP =====
-//   const attendanceMap = await attendanceService.getAttendanceMap(
+//   const attendanceMap = (await attendanceService.getAttendanceMap(
 //     mappings.map(m => m.timeTableMappingId),
 //     startDate.format("YYYY-MM-DD"),
 //     endDate.format("YYYY-MM-DD")
-//   );
+//   )) || {};
 
 //   const studentCountCache = {};
-//   const flatData = []; // Changed from dateMap = {}
+//   const flatData = []; 
 
 //   // ===== MAIN LOOP =====
 //   for (const map of mappings) {
@@ -436,12 +328,13 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //       studentCountCache[sectionId] = await attendanceService.getStudentCount(sectionId);
 //     }
 
-//     const totalStudents = studentCountCache[sectionId];
+//     const totalStudents = studentCountCache[sectionId] || 0;
 
 //     while (date.isSameOrBefore(endDate)) {
 //       const dayName = date.format("dddd");
 //       const dateStr = date.format("YYYY-MM-DD");
 
+//       // Check if this mapping applies to this day and is NOT a week off
 //       if (
 //         map.day === dayName &&
 //         !weekOff.includes(dayName.toLowerCase())
@@ -449,12 +342,11 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //         const key = `${map.timeTableMappingId}_${dateStr}`;
 //         const presentCount = attendanceMap[key] ?? 0;
 
-//         // Push flat object directly to the array
 //         flatData.push({
 //           date: dateStr,
 //           day: dayName,
 //           period: map.period,
-//           subject: map.timeTableSubject?.subjectName || null,
+//           subject: map.timeTableSubject?.subjectName || map.timeTableTeacherSubject?.subject?.subjectName || null,       
 //           class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
 //           section: map.timeTablecreate?.timeTableClassSection?.section || null,
 //           classSectionsId: sectionId,
@@ -471,7 +363,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //   flatData.sort((a, b) => {
 //     const dateDiff = new Date(b.date) - new Date(a.date);
 //     if (dateDiff !== 0) return dateDiff;
-//     return a.period - b.period; // Optional: keeps periods in order within the same day
+//     return (Number(a.period) || 0) - (Number(b.period) || 0);
 //   });
 
 //   return {
@@ -484,28 +376,29 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 export async function getPreviousClasses(employeeId, req) {
   const mappings = await attendanceService.getTeacherMappings(employeeId);
 
-  // Guard against null or empty mappings
   if (!Array.isArray(mappings) || !mappings.length) {
     return { data: [] };
   }
 
-  // ===== DATE RANGE =====
+  // Use the first mapping's configuration for dates and week-offs
+  const config = mappings[0].timeTablecreate || mappings[0].timeTablecreation;
+
   const startDates = mappings
-    .map(m => m.timeTablecreate?.startingDate)
+    .map(m => (m.timeTablecreate?.startingDate || m.timeTablecreation?.startingDate))
     .filter(d => d && moment(d).isValid())
     .map(d => moment(d));
 
   const endDates = mappings
-    .map(m => m.timeTablecreate?.endingDate)
+    .map(m => (m.timeTablecreate?.endingDate || m.timeTablecreation?.endingDate))
     .filter(d => d && moment(d).isValid())
     .map(d => moment(d));
 
-  // Ensure we have valid dates to calculate min/max
   if (!startDates.length || !endDates.length) {
     return { data: [] };
   }
 
   const startDate = moment.min(startDates);
+  // Cap the search at yesterday to avoid showing today's incomplete data or future dates
   const endDate = moment.min(
     moment.max(endDates),
     moment().subtract(1, "day")
@@ -515,19 +408,13 @@ export async function getPreviousClasses(employeeId, req) {
     return { data: [] };
   }
 
-  // ===== WEEK OFF (FIXED) =====
-  // This handles if weekOff is an Object, Array, or Null
-  const rawWeekOff = mappings[0]?.timeTablecreation?.weekOff || [];
-  console.log(`>>>>>>>rawWeekOff>>>`,JSON.stringify(rawWeekOff));
-  
+  // Improved Week Off handling to match property names in your includes
+  const rawWeekOff = config?.weekOff || [];
   const weekOffArray = Array.isArray(rawWeekOff) 
     ? rawWeekOff 
     : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
-  console.log(`>>>>>>>weekOffArray>>>`,JSON.stringify(weekOffArray));
-
   const weekOff = weekOffArray.map(d => String(d).toLowerCase());
-  console.log(`>>>>>>>weekOff>>>`,JSON.stringify(weekOff));
-  // ===== ATTENDANCE MAP =====
+
   const attendanceMap = (await attendanceService.getAttendanceMap(
     mappings.map(m => m.timeTableMappingId),
     startDate.format("YYYY-MM-DD"),
@@ -537,7 +424,6 @@ export async function getPreviousClasses(employeeId, req) {
   const studentCountCache = {};
   const flatData = []; 
 
-  // ===== MAIN LOOP =====
   for (const map of mappings) {
     let date = startDate.clone();
     const sectionId = map.timeTablecreate?.classSectionsId;
@@ -553,24 +439,23 @@ export async function getPreviousClasses(employeeId, req) {
       const dayName = date.format("dddd");
       const dateStr = date.format("YYYY-MM-DD");
 
-      // Check if this mapping applies to this day and is NOT a week off
-      if (
-        map.day === dayName &&
-        !weekOff.includes(dayName.toLowerCase())
-      ) {
+      if (map.day === dayName && !weekOff.includes(dayName.toLowerCase())) {
         const key = `${map.timeTableMappingId}_${dateStr}`;
-        const presentCount = attendanceMap[key] ?? 0;
+        const presentCount = attendanceMap[key]; // Do not use ?? 0 yet to check for undefined
 
         flatData.push({
           date: dateStr,
           day: dayName,
           period: map.period,
-          subject: map.timeTableSubject?.subjectName || null,
+          // Check primary subject mapping first, then check teacher-subject mapping
+          subject: map.timeTableSubject?.subjectName || 
+                   map.timeTableTeacherSubject?.subject?.subjectName || 
+                   "N/A",
           class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
           section: map.timeTablecreate?.timeTableClassSection?.section || null,
           classSectionsId: sectionId,
-          attendance: `${presentCount} / ${totalStudents}`,
-          status: attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
+          attendance: `${presentCount ?? 0} / ${totalStudents}`,
+          status: presentCount !== undefined ? "MARKED" : "PENDING",
           timeTableMappingId: map.timeTableMappingId
         });
       }
@@ -578,7 +463,6 @@ export async function getPreviousClasses(employeeId, req) {
     }
   }
 
-  // ===== SORT BY DATE DESCENDING, THEN BY PERIOD ASCENDING =====
   flatData.sort((a, b) => {
     const dateDiff = new Date(b.date) - new Date(a.date);
     if (dateDiff !== 0) return dateDiff;
