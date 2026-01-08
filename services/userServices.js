@@ -449,3 +449,39 @@ export const sendLink = async (email) => {
     throw new Error(error.message || "Internal Server Error in sendLink");
   }
 };
+
+export const forgotSendLink = async (email) => {
+  try {
+    const user = await registerRepository.findEmailByEmail(email);
+    if (!user) throw new Error("User not found");
+
+    const jwtSecret = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
+    const baseUrl = process.env.FRONTEND_URL;
+
+    if (!baseUrl) {
+      throw new Error("FRONTEND_URL is not configured in environment variables");
+    }
+
+    const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
+
+    const resetLink = `${baseUrl}/forget-password-change?token=${token}&email=${encodeURIComponent(user.email)}`;
+
+    const emailResponse = await sendEmail(user.email, "Forgot Password Reset", resetLink);
+
+    if (!emailResponse?.messageId) {
+      throw new Error("Failed to send email. Please check email address or SMTP credentials.");
+    }
+
+    // const userId = user.dataValues.userId;
+    // const updatedUser = await registerRepository.updateUser(userId, token);
+
+    return {
+      email: user.email,
+      messageId: emailResponse.messageId,
+    };
+
+  } catch (error) {
+    console.error("Error in userService.sendLink:", error);
+    throw new Error(error.message || "Internal Server Error in sendLink");
+  }
+};
