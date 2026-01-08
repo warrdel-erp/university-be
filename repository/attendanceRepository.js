@@ -1,6 +1,7 @@
 import { Op, fn, col,where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js'
+import moment from "moment";
 
 export async function addAttendance(attendanceRecords) {      
     try {
@@ -252,49 +253,32 @@ export async function getTimetable(timeTableCreateId) {
   });
 }
 
-// export async function getTeacherMappings(employeeId) {
-//   return await model.timeTableMappingModel.findAll({
-//     where: {
-//       [Op.or]: [
-//         { employeeId: employeeId },
-//         { "$timeTableTeacherSubject.employee_id$": employeeId }
+// export async function getAttendanceMap(mappingIds, from, to) {
+//   const rows = await model.attendanceModel.findAll({
+//     attributes: [
+//       "timeTableMappingId",
+//       "date",
+//       [
+//         sequelize.fn("COUNT",sequelize.col("student_id")),
+//         "presentCount"
 //       ]
+//     ],
+//     where: {
+//       timeTableMappingId: mappingIds,
+//       date: { [Op.between]: [from, to] },
+//       attentenceStatus: "PRESENT"
 //     },
-//     include: [
-//       {
-//         model: model.teacherSubjectMappingModel,
-//         as: "timeTableTeacherSubject",
-//         required: false
-//       },
-//       {
-//         model: model.subjectModel,
-//         as: "timeTableSubject",
-//         required: false
-//       },
-//       {
-//         model: model.classRoomModel,
-//         as: "classRoom",
-//         required: false
-//       },
-//       {
-//         model: model.timeTableCreateModel,
-//         as: "timeTablecreate",
-//         required: true,
-//         include: [
-//           {
-//             model: model.classSectionModel,
-//             as: "timeTableClassSection",
-//             required: false
-//           }
-//         ]
-//       },
-//       {
-//         model: model.timeTableCreationModel,
-//         as: "timeTablecreation",
-//         required: true
-//       }
-//     ]
+//     group: ["timeTableMappingId", "date"]
 //   });
+
+//   const map = {};
+//   for (const r of rows) {
+//     const dateKey = r.date.toISOString().slice(0, 10);
+//     const key = `${r.timeTableMappingId}_${dateKey}`;
+//     map[key] = Number(r.get("presentCount"));
+//   }
+
+//   return map;
 // }
 
 export async function getAttendanceMap(mappingIds, from, to) {
@@ -302,22 +286,19 @@ export async function getAttendanceMap(mappingIds, from, to) {
     attributes: [
       "timeTableMappingId",
       "date",
-      [
-        sequelize.fn("COUNT",sequelize.col("student_id")),
-        "presentCount"
-      ]
+      [sequelize.fn("COUNT", sequelize.col("student_id")), "presentCount"]
     ],
     where: {
       timeTableMappingId: mappingIds,
       date: { [Op.between]: [from, to] },
-      attentenceStatus: "PRESENT"
+      attentenceStatus: "present"
     },
     group: ["timeTableMappingId", "date"]
   });
 
   const map = {};
   for (const r of rows) {
-    const dateKey = r.date.toISOString().slice(0, 10);
+    const dateKey = moment(r.date).format("YYYY-MM-DD");
     const key = `${r.timeTableMappingId}_${dateKey}`;
     map[key] = Number(r.get("presentCount"));
   }

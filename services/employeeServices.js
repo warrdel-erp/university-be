@@ -414,7 +414,7 @@ export async function importEmployeeData(excelData, commonData) {
                 employeeId
             }
                     const employeePersonalDetail = {
-                        personalEmail: convertedData.personalEmail,
+                        officalEmailId: convertedData.officalEmailId,
                         mobileNumber: convertedData.mobileNumber
                     }
 
