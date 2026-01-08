@@ -291,7 +291,7 @@ export async function getAttendanceMap(mappingIds, from, to) {
     where: {
       timeTableMappingId: mappingIds,
       date: { [Op.between]: [from, to] },
-      attentenceStatus: "present"
+      attentenceStatus: "Present"
     },
     group: ["timeTableMappingId", "date"]
   });
