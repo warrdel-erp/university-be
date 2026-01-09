@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js'
 
 export async function addTimeTableCreate(data,transaction) {
@@ -476,15 +476,112 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
   }
 };
 
-export async function getTeacherTimeTable(employeeId,universityId,instituteId,role) {
+// export async function getTeacherTimeTable(employeeId,universityId,instituteId,role) {
+//   console.log(`>>>>>>>>employeeId`,employeeId);
+  
+//   try {
+
+//     const teacherWhere = { employeeId };
+
+//     const result = await model.timeTableCreateModel.findAll({
+//       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//       where: {
+//         is_publish: true
+//       },
+//       include: [
+//         {
+//           model: model.courseModel,
+//           as: "timeTableCourse"
+//         },
+//         {
+//           model: model.classSectionModel,
+//           as: "timeTableClassSection"
+//         },
+//         {
+//           model: model.timeTableMappingModel,
+//           as: "timeTablecreate",
+//           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//           required: true,   
+//           include: [
+//             {
+//               model: model.timeTableCreationModel,
+//               as: "timeTablecreation"
+//             },
+            
+
+//             //  ELECTIVE SUBJECT FLOW
+//             {
+//               model: model.teacherSubjectMappingModel,
+//               as: "timeTableTeacherSubject",
+//               required: false,
+//               where: teacherWhere,
+//               include: [
+//                 {
+//                   model: model.employeeModel,
+//                   as: "teacherEmployeeData",
+//                   attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+//                   where: teacherWhere
+//                 },
+//                 {
+//                   model: model.classSubjectMapperModel,
+//                   as: "employeeSubject",
+//                   include: [
+//                     {
+//                       model: model.subjectModel,
+//                       as: "subjects"
+//                     }
+//                   ]
+//                 }
+//               ]
+//             },
+
+//             //  NORMAL SUBJECT FLOW
+//             {
+//               model: model.employeeModel,
+//               as: "employeeDetails",
+//               attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
+//               required: false,
+//               where: teacherWhere
+//             },
+
+//             // SUBJECT DIRECT
+//             {
+//               model: model.subjectModel,
+//               as: "timeTableSubject"
+//             },
+
+//             // ELECTIVE DIRECT SUBJECT
+//             {
+//               model: model.electiveSubjectModel,
+//               as: "timeTableElective"
+//             }
+//           ]
+//         }
+//       ]
+//     });
+
+//     return result;
+
+//   } catch (error) {
+//     console.error("Error in getTeacherTimeTable:", error);
+//     throw error;
+//   }
+// };
+
+// import { Op, Sequelize } from "sequelize";
+
+export async function getTeacherTimeTable(
+  employeeId,
+  universityId,
+  instituteId,
+  role
+) {
   try {
-
-    const teacherWhere = { employeeId };
-
     const result = await model.timeTableCreateModel.findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: {
-        is_publish: true
+        is_publish: true,
+        // universityId,
+        // instituteId
       },
       include: [
         {
@@ -498,27 +595,44 @@ export async function getTeacherTimeTable(employeeId,universityId,instituteId,ro
         {
           model: model.timeTableMappingModel,
           as: "timeTablecreate",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          required: true,   
+          required: true,
+
+          // 🔥 REAL FIX IS HERE
+          where: {
+            [Op.or]: [
+              // NORMAL SUBJECT TEACHER
+              { employeeId },
+
+              // ELECTIVE SUBJECT TEACHER (EXISTS)
+              Sequelize.literal(`
+                EXISTS (
+                  SELECT 1
+                  FROM teacher_subject_mapping tsm
+                  WHERE tsm.teacher_subject_mapping_id = timeTablecreate.teacher_subject_mapping_id
+                  AND tsm.employee_id = ${employeeId}
+                )
+              `)
+            ]
+          },
+
           include: [
             {
               model: model.timeTableCreationModel,
               as: "timeTablecreation"
             },
-            
-
-            //  ELECTIVE SUBJECT FLOW
             {
               model: model.teacherSubjectMappingModel,
               as: "timeTableTeacherSubject",
-              required: false,
-              where: teacherWhere,
               include: [
                 {
                   model: model.employeeModel,
                   as: "teacherEmployeeData",
-                  attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
-                  where: teacherWhere
+                  attributes: [
+                    "employeeId",
+                    "employeeName",
+                    "employeeCode",
+                    "pickColor"
+                  ]
                 },
                 {
                   model: model.classSubjectMapperModel,
@@ -532,23 +646,20 @@ export async function getTeacherTimeTable(employeeId,universityId,instituteId,ro
                 }
               ]
             },
-
-            //  NORMAL SUBJECT FLOW
             {
               model: model.employeeModel,
               as: "employeeDetails",
-              attributes: ["employeeId", "employeeName", "employeeCode", "pickColor"],
-              required: false,
-              where: teacherWhere
+              attributes: [
+                "employeeId",
+                "employeeName",
+                "employeeCode",
+                "pickColor"
+              ]
             },
-
-            // SUBJECT DIRECT
             {
               model: model.subjectModel,
               as: "timeTableSubject"
             },
-
-            // ELECTIVE DIRECT SUBJECT
             {
               model: model.electiveSubjectModel,
               as: "timeTableElective"
@@ -559,12 +670,14 @@ export async function getTeacherTimeTable(employeeId,universityId,instituteId,ro
     });
 
     return result;
-
   } catch (error) {
     console.error("Error in getTeacherTimeTable:", error);
     throw error;
   }
-};
+}
+
+
+
 
 export async function getStudentTimeTableRepository(classSectionsId, subjectIds) {
   try {
