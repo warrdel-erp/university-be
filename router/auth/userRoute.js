@@ -26,6 +26,8 @@ router.patch("/changeStatus", changeStatus);
 
 router.patch("/sendLink", sendLink);
 
+// forgot 
+
 router.post("/forgotPassword", forgotPassword);
 
 router.patch("/forgotPassword",useAuth, forgotChangePassword);
