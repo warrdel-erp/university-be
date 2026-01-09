@@ -247,3 +247,74 @@ export const sendLink = async (req, res) => {
     });
   }
 };
+
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email} = req.body;
+
+    if (!email ) {
+      return res.status(400).json({ message: "email is required" });
+    }
+
+    const existingUser = await userRepository.findEmailByEmail(email);
+    if (!existingUser) {
+      return res.status(404).json({ message: "Email does not exist" });
+    }
+
+    const result = await userService.forgotSendLink(email.trim());
+
+    if (result && result.email && result.messageId) {
+      return res.status(200).json({
+        success: true,
+        message: "Frogot Password reset link sent to email successfully",
+        data: result,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to send forgot password reset link. Please try again.",
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error in sendLink controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const forgotChangePassword = async (req, res) => {
+  try {
+    const { email,  password, confirmPassword } = req.body;
+
+    if (!email  || !password || !confirmPassword) {
+      return res.status(400).json({ message: "All input fields are required" });
+    }
+
+    if (password !== confirmPassword) {
+      return res
+        .status(400)
+        .json({ message: "New password and confirm password do not match" });
+    }
+
+    const existingUser = await userRepository.findEmailByEmail(email);
+    if (!existingUser) {
+      return res.status(404).json({ message: "Email does not exist" });
+    }
+
+    const updatedUser = await userService.changePassword({ email, password });
+
+    return res.status(200).json({
+      message: "Password changed successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error during password change:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
