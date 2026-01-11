@@ -36,16 +36,27 @@ export const getSingletimeTableCreateDetails = async (req,res) => {
     }
 };
 
-export const getTimeTableBycourseAndSectionId = async (req,res) => {
-    const universityId = req.user.universityId;
-    let {courseId,classSectionsId} = req.query
-    try {
-        const result = await timeTableCreateServices.getTimeTableBycourseAndSectionId(courseId,classSectionsId);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting time table create by id:", error);
-        res.status(500).send("Internal Server Error");
-    }
+export const getTimeTableByCourseAndSection = async (req, res) => {
+  const { courseId, classSectionsId } = req.query;
+  const { universityId } = req.user;
+
+  if (!courseId || !classSectionsId) {
+    return res.status(400).send("courseId and classSectionsId are required");
+  }
+
+  try {
+    const result =
+      await timeTableCreateServices.getTimeTableByCourseAndSection(
+        courseId,
+        classSectionsId,
+        universityId
+      );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 export const addtimeTableMapping = async (req, res) => {

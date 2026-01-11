@@ -48,54 +48,61 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
   }
 };
 
-export async function getTimeTableBycourseAndSectionId(courseId,classSectionsId) {
+export async function getTimeTableByCourseAndSection(
+  courseId,
+  classSectionsId,
+  universityId
+) {
   try {
-    const result = await timeTableCreateRepository.getTimeTableBycourseAndSectionId(
-      courseId,classSectionsId
-    );
+    const data =
+      await timeTableCreateRepository.getTimeTableByCourseAndSection(
+        courseId,
+        classSectionsId,
+        universityId
+      );
 
-    if (!Array.isArray(result) || !result.length) return null;
+    if (!Array.isArray(data) || !data.length) return [];
 
-    const filtered = result[0];
+    return data.map(item => {
+      const periods =
+        item?.timeTableCreateName?.timeTableName?.map(period => ({
+          startTime: period.startTime,
+          endTime: period.endTime,
+          timeTableCreationId: period.timeTableCreationId,
+          type: period.type,
+          periodGap: period.periodGap,
+          periodLength: period.periodLength,
+          weekOff: period.weekOff,
+          isBreak: period.isBreak,
+          periodName: period.periodName,
+          classSectionsId: item.classSectionsId
+        })) || [];
 
-    const periods =
-      filtered?.timeTableCreateName?.timeTableName?.map(period => ({
-        startTime: period.startTime,
-        endTime: period.endTime,
-        timeTableCreationId: period.timeTableCreationId,
-        type: period.type,
-        periodGap: period.periodGap,
-        periodLength: period.periodLength,
-        weekOff: period.weekOff,
-        isBreak: period.isBreak,
-        periodName: period.periodName,
-        classSectionsId: filtered.classSectionsId,
-        sessionId: filtered?.timeTableClassSection?.classSession?.sessionId
-      })) || [];
-
-    const response = {
-      name: filtered?.timeTableCreateName?.name,
-      isPublish: filtered.isPublish,
-      timeTableNameId: filtered?.timeTableCreateName?.timeTableNameId,
-      maximumPeriod: filtered?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
-      isCourse: filtered?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
-      courseId: filtered?.timeTableCreateName?.timeTableName?.[0]?.courseId,
-      classSectionsId: filtered?.classSectionsId,
-      classSectionsName: filtered?.timeTableClassSection?.section,
-      courseName: filtered?.timeTableCourse?.courseName,
-      endingDate: filtered?.endingDate,
-      startingDate: filtered?.startingDate,
-      timeTableCreateId: filtered?.timeTableCreateId,
-      timeTableClassSection: filtered?.timeTableClassSection,
-      periods
-    };
-
-    return response;
+      return {
+        timeTableCreateId: item.timeTableCreateId,
+        name: item?.timeTableCreateName?.name,
+        isPublish: item.isPublish,
+        timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
+        maximumPeriod:
+          item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
+        isCourse:
+          item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+        courseId: item.courseId,
+        classSectionsId: item.classSectionsId,
+        classSectionsName: item?.timeTableClassSection?.section,
+        courseName: item?.timeTableCourse?.courseName,
+        startingDate: item.startingDate,
+        endingDate: item.endingDate,
+        timeTableClassSection: item?.timeTableClassSection,
+        periods
+      };
+    });
   } catch (error) {
-    console.error("Error in getTimeTableBycreateId:", error.message);
-    throw new Error(error.message);
+    console.error("Service error:", error);
+    throw error;
   }
-};
+}
+
 
 export async function updateTimeTableCreate(TimeTableCreateId,info,updatedBy) {
     try {
