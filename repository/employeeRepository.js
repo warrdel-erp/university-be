@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import * as model from '../models/index.js'
 
 export async function addEmployee(data,transaction) {    
