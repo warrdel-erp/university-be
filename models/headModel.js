@@ -95,7 +95,8 @@ export default sequelize.define(
         isAdmin:{
             type:DataTypes.BOOLEAN,
             allowNull:false,
-            defaultValue:false
+            defaultValue:false,
+            field: 'is_admin'
         },
         createdBy: {
             type: DataTypes.INTEGER,

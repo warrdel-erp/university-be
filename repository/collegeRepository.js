@@ -22,7 +22,7 @@ export async function getCampusCode(campusId) {
         const result = await model.campusModel.findOne({
             attributes:attribute,
             where: {
-                campus_id: courseId
+                campus_id: campusId
             },
         });
         return result;

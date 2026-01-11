@@ -3,6 +3,7 @@ import * as userRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getEmployeeRolePermissionByUserId, getUserRolePermissionByUserId } from "../repository/userRolePermissionRepository.js";
+import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 
 // register
 export const register = async (req, res) => {
@@ -65,6 +66,7 @@ export const login = async (req, res) => {
   }  
   const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId)
   const employeePermission = await userService.getEmployeeRolePermissionUserId(existingEmail.dataValues.userId)
+  const role = await getHeadDetailsByEmail(email)
   // const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
  
    res.cookie("token", token);
@@ -76,7 +78,7 @@ export const login = async (req, res) => {
     employeePermission,
     result,
     userData,
-    existingEmail
+    existingEmail,role
   });
   } catch (error) {
     console.error("Error during login:", error);

@@ -21,7 +21,9 @@ import { getCampusCode, getInstituteCode } from '../repository/collegeRepository
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
 import * as evaluationRepository  from "../repository/evalutionRepository.js";
-
+import { getSingleRoleDetails } from '../repository/roleRepository.js';
+import { addHead } from '../repository/headRepository.js';
+import moment from 'moment';
 
 async function generateEmployeeNumber(campusId,instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -67,12 +69,21 @@ export async function addEmployee(data,files,createdBy,universityId,roleId,insti
         // Add employee 
         data.createdBy = createdBy
         data.roleId = roleId
-        data.employeeCode = generateEmployeeNumber(data.campusId,data.instituteId)
+        data.employeeCode = await generateEmployeeNumber(data.campusId,data.instituteId)
         const employee = await employeeRepository.addEmployee(data,transaction );
         const employeeId = employee.dataValues.employeeId;
-        const {employeeName} = employee.dataValues
+        const {campusId,instituteId,employeeName,employmentType} = employee.dataValues
+        // const {employeeName} = employee.dataValues
+        const roleDetails = await getSingleRoleDetails(roleId)
+        const roleName = roleDetails.dataValues.role
+        let employeeRegisterData;
+
+            if (roleName?.trim().toLowerCase() === 'admin') {
+              employeeRegisterData = {universityId,roleId :13,employeeName,employeeId,instituteId}
+            }else{
+              employeeRegisterData = {universityId,roleId,employeeName,employeeId,instituteId}
+            }
         
-        const employeeRegisterData = {universityId,roleId,employeeName,employeeId,instituteId}
 
         // image upload
         if(files){
@@ -93,8 +104,8 @@ export async function addEmployee(data,files,createdBy,universityId,roleId,insti
             createdBy,
             ...address
         }, transaction);
-        const {personalEmail,mobileNumber} = addressDetail.dataValues
-        const employeePersonalDetail = {personalEmail,mobileNumber}
+        const {personalEmail,mobileNumber,officalMobileNumber,officalEmailId} = addressDetail.dataValues
+        const employeePersonalDetail = {personalEmail :officalEmailId,mobileNumber}
 
         // Add employee cor-address
         await employeeAddressRepository.addCorsAddress({
@@ -236,6 +247,11 @@ export async function addEmployee(data,files,createdBy,universityId,roleId,insti
       }
     }
         await employeeRegister (employeePersonalDetail,employeeRegisterData,transaction)
+
+    if (roleName?.trim().toLowerCase() === 'admin') {
+          const data = {campusId,instituteId,universityId,createdBy,updatedBy:createdBy,headName:employeeName,mobileNumber,alternateNumber:officalMobileNumber,registerEmail:officalEmailId,alternateEmail:personalEmail,isAdmin:true,designation:'Admin'}
+          await addHead(data,transaction)
+        }
         // Commit transaction
         await transaction.commit();
         return { message: "Employee data successfully added" };
