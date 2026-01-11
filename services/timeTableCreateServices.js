@@ -48,6 +48,55 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
   }
 };
 
+export async function getTimeTableBycourseAndSectionId(courseId,classSectionsId) {
+  try {
+    const result = await timeTableCreateRepository.getTimeTableBycourseAndSectionId(
+      courseId,classSectionsId
+    );
+
+    if (!Array.isArray(result) || !result.length) return null;
+
+    const filtered = result[0];
+
+    const periods =
+      filtered?.timeTableCreateName?.timeTableName?.map(period => ({
+        startTime: period.startTime,
+        endTime: period.endTime,
+        timeTableCreationId: period.timeTableCreationId,
+        type: period.type,
+        periodGap: period.periodGap,
+        periodLength: period.periodLength,
+        weekOff: period.weekOff,
+        isBreak: period.isBreak,
+        periodName: period.periodName,
+        classSectionsId: filtered.classSectionsId,
+        sessionId: filtered?.timeTableClassSection?.classSession?.sessionId
+      })) || [];
+
+    const response = {
+      name: filtered?.timeTableCreateName?.name,
+      isPublish: filtered.isPublish,
+      timeTableNameId: filtered?.timeTableCreateName?.timeTableNameId,
+      maximumPeriod: filtered?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
+      isCourse: filtered?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+      courseId: filtered?.timeTableCreateName?.timeTableName?.[0]?.courseId,
+      classSectionsId: filtered?.classSectionsId,
+      classSectionsName: filtered?.timeTableClassSection?.section,
+      courseName: filtered?.timeTableCourse?.courseName,
+      endingDate: filtered?.endingDate,
+      startingDate: filtered?.startingDate,
+      timeTableCreateId: filtered?.timeTableCreateId,
+      timeTableClassSection: filtered?.timeTableClassSection,
+      periods
+    };
+
+    return response;
+  } catch (error) {
+    console.error("Error in getTimeTableBycreateId:", error.message);
+    throw new Error(error.message);
+  }
+};
+
 export async function updateTimeTableCreate(TimeTableCreateId,info,updatedBy) {
     try {
         info.updatedBy = updatedBy;

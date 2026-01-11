@@ -64,6 +64,105 @@ export async function getTimeTableCreateDetails(universityId) {
     };
 };
 
+// export async function getSingleTimeTableCreateDetails(courseId,universityId) {    
+//     try {
+//         const result = await model.timeTableCreateModel.findAll({
+//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+//             include:[
+//                 {
+//                     model:model.timeTableNameModel,
+//                     as:"timeTableCreateName",
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]},
+//                     include:[
+//                         {
+//                             model:model.timeTableCreationModel,
+//                             as:"timeTableName",
+//                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]}
+//                         }
+//                     ]
+//                 },
+//                 {
+//                     model:model.courseModel,
+//                     as: 'timeTableCourse',
+//                     attributes: ["courseName"],
+//                 },
+//                 {
+//                     model:model.campusModel,
+//                     as: 'timeTableCampus',
+//                     attributes: ["campusName"],
+//                 },
+//                 {
+//                     model:model.classSectionModel,
+//                     as: 'timeTableClassSection',
+//                     attributes: ["section","class","section_id","class_sections_id"],
+//                 },
+//                 {
+//                     model:model.acedmicYearModel,
+//                     as: 'acedmicYearTimeTable',
+//                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+//                 },
+//             ],
+//             where:{
+//                 courseId:courseId,
+//             }
+//         });
+//         return result;
+//     } catch (error) {
+//         console.error(`Error in getting faculity load:`, error);
+//         throw error;
+//     };
+// };
+
+export async function getTimeTableBycourseAndSectionId(courseId,classSectionsId) {    
+    try {
+        const result = await model.timeTableCreateModel.findAll({
+          
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include:[
+                {
+                    model:model.timeTableNameModel,
+                    as:"timeTableCreateName",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]},
+                    include:[
+                        {
+                            model:model.timeTableCreationModel,
+                            as:"timeTableName",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated"]}
+                        }
+                    ]
+                },
+                {
+                    model:model.courseModel,
+                    as: 'timeTableCourse',
+                    attributes: ["courseName"],
+                },
+                {
+                    model:model.campusModel,
+                    as: 'timeTableCampus',
+                    attributes: ["campusName"],
+                },
+                {
+                    model:model.classSectionModel,
+                    as: 'timeTableClassSection',
+                    attributes: ["section","class","section_id","class_sections_id"],
+                },
+                {
+                    model:model.acedmicYearModel,
+                    as: 'acedmicYearTimeTable',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                },
+            ],
+            where:{
+                courseId,classSectionsId,
+            }
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in getting faculity load:`, error);
+        throw error;
+    };
+};
+
 export async function getSingleTimeTableCreateDetails(courseId,universityId) {    
     try {
         const result = await model.timeTableCreateModel.findAll({
