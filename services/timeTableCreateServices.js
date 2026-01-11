@@ -5,22 +5,72 @@ import { getSingleFaculityLoadDetails, updateFaculityLoad,updateFaculityLoadByEm
 import sequelize from '../database/sequelizeConfig.js'; 
 import { getHolidayStartEndDate } from '../repository/holidayRepository.js';
 
-export async function addtimeTableCreate(data, createdBy, updatedBy) {    
-    const transaction = await sequelize.transaction();
+// export async function addtimeTableCreate(data, createdBy, updatedBy) {    
+//     const transaction = await sequelize.transaction();
 
-    try {
-        data.createdBy = createdBy;
-        data.updatedBy = updatedBy;
+//     try {
+//         data.createdBy = createdBy;
+//         data.updatedBy = updatedBy;
 
-       const result =  await timeTableCreateRepository.addTimeTableCreate(data, transaction);
+//        const result =  await timeTableCreateRepository.addTimeTableCreate(data, transaction);
+// await timeTableCreateRepository.changeTimeTableCreate(timetableCreateId,{data:previous})
+//         await transaction.commit();
+//         return result
+//     } catch (error) {
+//         await transaction.rollback();
+//         throw error; 
+//     }
+// };
 
-        await transaction.commit();
-        return result
-    } catch (error) {
-        await transaction.rollback();
-        throw error; 
+export async function addtimeTableCreate(data, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    data.createdBy = createdBy;
+    data.updatedBy = updatedBy;
+
+    let result;
+
+    if (data.timeTableCreateId && data.previousDate) {
+
+      await timeTableCreateRepository.changeTimeTableCreate(
+        data.timeTableCreateId,
+        {
+          endingDate: data.previousDate,
+          updatedBy
+        },
+        // transaction
+      );
+
+      const {
+        timeTableCreateId,
+        previousDate,
+        ...newCreateData
+      } = data;
+
+      result = await timeTableCreateRepository.addTimeTableCreate(
+        newCreateData,
+        // transaction
+      );
+
+    } 
+    else {
+
+      result = await timeTableCreateRepository.addTimeTableCreate(
+        data,
+        // transaction
+      );
     }
-};
+
+    // await transaction.commit();
+    return result;
+
+  } catch (error) {
+    // await transaction.rollback();
+    throw error;
+  }
+}
+
 
 export async function gettimeTableCreateDetails(universityId) {
   try {
@@ -275,11 +325,11 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           endTime
         );
 
-        if (conflict) {
-          throw new Error(
-            `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime}`
-          );
-        }
+        // if (conflict) {
+        //   throw new Error(
+        //     `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime}`
+        //   );
+        // }
       }
       // conflict logic END
       
@@ -956,57 +1006,126 @@ export async function publishTimeTableService(timeTableCreateId) {
   }
 };
 
+// export async function getSubjectWithCount(classSectionsId) {
+//   const [subjectsData, timeTableData] = await Promise.all([
+//     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
+//     timeTableCreateRepository.timeTableData(classSectionsId)
+//   ]);
+
+//   const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+//     subjectId: s.subjectId ? Number(s.subjectId) : null,
+//     subject: s.subjects?.subjectName,
+//     subjectCode: s.subjects?.subjectCode
+//   })) || [];
+
+//   const validSubjectIds = new Set(subjectsList.map(s => s.subjectId).filter(id => id !== null));
+
+//   const mappings = timeTableData?.timeTablecreate || [];
+
+//   const countMap = {};
+//   validSubjectIds.forEach(id => (countMap[id] = 0));
+
+//   const countedSlots = new Set();
+
+//   mappings.forEach(t => {
+//     let foundSubjectId = null;
+
+//     if (t.subjectId) {
+//       foundSubjectId = Number(t.subjectId);
+//     } 
+//     else if (t.timeTableSubject?.subjectId) {
+//       foundSubjectId = Number(t.timeTableSubject.subjectId);
+//     } 
+//     else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+//       foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
+//     } 
+//     else if (t.timeTableElective?.subjectId) {
+//       foundSubjectId = Number(t.timeTableElective.subjectId);
+//     }
+
+//     if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
+//       const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
+      
+//       if (!countedSlots.has(slotKey)) {
+//         countMap[foundSubjectId]++;
+//         countedSlots.add(slotKey);
+//       }
+//     }
+//   });
+
+//   return subjectsList.map(s => ({
+//     subjectId: s.subjectId,
+//     subject: s.subject,
+//     subjectCode: s.subjectCode,
+//     count: countMap[s.subjectId] || 0
+//   }));
+// }
+
 export async function getSubjectWithCount(classSectionsId) {
+
   const [subjectsData, timeTableData] = await Promise.all([
     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
     timeTableCreateRepository.timeTableData(classSectionsId)
   ]);
 
-  const subjectsList = subjectsData?.semesterDetail?.semestermapping?.map(s => ({
-    subjectId: s.subjectId ? Number(s.subjectId) : null,
-    subject: s.subjects?.subjectName,
-    subjectCode: s.subjects?.subjectCode
-  })) || [];
+  //  Master subject list (same as before)
+  const subjectsList =
+    subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+      subjectId: Number(s.subjectId),
+      subject: s.subjects?.subjectName,
+      subjectCode: s.subjects?.subjectCode
+    })) || [];
 
-  const validSubjectIds = new Set(subjectsList.map(s => s.subjectId).filter(id => id !== null));
+  const validSubjectIds = new Set(subjectsList.map(s => s.subjectId));
 
-  const mappings = timeTableData?.timeTablecreate || [];
+  //  Result per timetable
+  const finalResult = [];
 
-  const countMap = {};
-  validSubjectIds.forEach(id => (countMap[id] = 0));
+  //  Loop each timetableCreate (A / B / C / D)
+  for (const tt of timeTableData) {
 
-  const countedSlots = new Set();
+    const countMap = {};
+    validSubjectIds.forEach(id => (countMap[id] = 0));
 
-  mappings.forEach(t => {
-    let foundSubjectId = null;
+    const countedSlots = new Set();
+    const mappings = tt?.timeTablecreate || [];
 
-    if (t.subjectId) {
-      foundSubjectId = Number(t.subjectId);
-    } 
-    else if (t.timeTableSubject?.subjectId) {
-      foundSubjectId = Number(t.timeTableSubject.subjectId);
-    } 
-    else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
-      foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
-    } 
-    else if (t.timeTableElective?.subjectId) {
-      foundSubjectId = Number(t.timeTableElective.subjectId);
-    }
+    //  Count subjects INSIDE THIS timetable
+    mappings.forEach(t => {
+      let foundSubjectId = null;
 
-    if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
-      const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
-      
-      if (!countedSlots.has(slotKey)) {
-        countMap[foundSubjectId]++;
-        countedSlots.add(slotKey);
+      if (t.subjectId) {
+        foundSubjectId = Number(t.subjectId);
+      } else if (t.timeTableSubject?.subjectId) {
+        foundSubjectId = Number(t.timeTableSubject.subjectId);
+      } else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+        foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
+      } else if (t.timeTableElective?.subjectId) {
+        foundSubjectId = Number(t.timeTableElective.subjectId);
       }
-    }
-  });
 
-  return subjectsList.map(s => ({
-    subjectId: s.subjectId,
-    subject: s.subject,
-    subjectCode: s.subjectCode,
-    count: countMap[s.subjectId] || 0
-  }));
-}
+      if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
+        const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
+
+        if (!countedSlots.has(slotKey)) {
+          countMap[foundSubjectId]++;
+          countedSlots.add(slotKey);
+        }
+      }
+    });
+
+    //  Attach subject counts to this timetable
+    finalResult.push({
+      timeTableNameId: tt.timeTableCreateName?.timeTableNameId,
+      timeTableName: tt.timeTableCreateName?.name,
+      subjects: subjectsList.map(s => ({
+        subjectId: s.subjectId,
+        subject: s.subject,
+        subjectCode: s.subjectCode,
+        count: countMap[s.subjectId] || 0
+      }))
+    });
+  }
+
+  return finalResult;
+};

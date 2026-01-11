@@ -1,9 +1,9 @@
 import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js'
 
-export async function addTimeTableCreate(data,transaction) {
+export async function addTimeTableCreate(data) {
     try {
-        const result = await model.timeTableCreateModel.create(data,{transaction});
+        const result = await model.timeTableCreateModel.create(data);
         return result;
     } catch (error) {
         console.error("Error in create create time table:", error);
@@ -902,7 +902,7 @@ export async function ClassSubjectCount(classSectionsId) {
 
 export async function timeTableData(classSectionsId) {
   try {
-    return await model.timeTableCreateModel.findOne({
+    return await model.timeTableCreateModel.findAll({
         where:{classSectionsId},
         include:[
           {
@@ -936,6 +936,10 @@ export async function timeTableData(classSectionsId) {
               as: "timeTableElective"
             }
             ]
+          },
+          {
+            model:model.timeTableNameModel,
+            as:'timeTableCreateName'
           }
         ]
     });
