@@ -36,6 +36,29 @@ export const getSingletimeTableCreateDetails = async (req,res) => {
     }
 };
 
+export const getTimeTableByCourseAndSection = async (req, res) => {
+  const { courseId, classSectionsId } = req.query;
+  const { universityId } = req.user;
+
+  if (!courseId || !classSectionsId) {
+    return res.status(400).send("courseId and classSectionsId are required");
+  }
+
+  try {
+    const result =
+      await timeTableCreateServices.getTimeTableByCourseAndSection(
+        courseId,
+        classSectionsId,
+        universityId
+      );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
 export const addtimeTableMapping = async (req, res) => {
     try {
         const data = req.body;        
@@ -80,6 +103,23 @@ export const getSingletimeTableMappingDetail = async (req,res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single time table create:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+// change time table 
+export const changeTimeTableCreate = async (req,res) => {
+    const {timeTableCreateId}= req.body
+    const updatedBy = req.user.userId;
+    try {
+            if (!timeTableCreateId) {
+                return res.status(400).send("timeTableCreateId is required for each object.");
+            }
+        
+        const result = await timeTableCreateServices.changeTimeTableCreate(req.body,updatedBy);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error(`Error in updating time table create`, error);
         res.status(500).send("Internal Server Error");
     }
 };

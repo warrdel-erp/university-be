@@ -1,9 +1,11 @@
 import {Router} from  'express'
 const router =  Router();
-import {addTimeTable,getTimeTableDetails,getSingleTimeTableDetails,updateTimeTable,deleteTimeTable} from "../controllers/timeTableController.js";
+import {addTimeTable,getTimeTableDetails,getSingleTimeTableDetails,updateTimeTable,deleteTimeTable,getAllTimeTableName} from "../controllers/timeTableController.js";
 import userAuth from "../middleware/authUser.js"
 
 router.post('/', userAuth, addTimeTable);
+
+router.get('/all_name', userAuth, getAllTimeTableName);
 
 router.get('/', userAuth, getTimeTableDetails);
 

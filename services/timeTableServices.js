@@ -97,6 +97,10 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 };
 
+export async function getAllTimeTableName(universityId,courseId){
+    return await timeTableRepository.getAllTimeTableName(universityId,courseId)
+};
+
 export async function getTimeTableDetails(){
     return await timeTableRepository.getTimeTableDetails()
 };

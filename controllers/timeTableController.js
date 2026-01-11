@@ -28,6 +28,18 @@ export const getTimeTableDetails = async (req,res) => {
     }
 };
 
+export const getAllTimeTableName = async (req,res) => {
+    const universityId = req.user.universityId;
+    let {courseId} = req.query
+    try {
+        const result = await timeTableServices.getAllTimeTableName(universityId,courseId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting time table strructure:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
 export const getSingleTimeTableDetails = async (req,res) => {
     const universityId = req.user.universityId;
     let {courseId} = req.query

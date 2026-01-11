@@ -48,6 +48,62 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
   }
 };
 
+export async function getTimeTableByCourseAndSection(
+  courseId,
+  classSectionsId,
+  universityId
+) {
+  try {
+    const data =
+      await timeTableCreateRepository.getTimeTableByCourseAndSection(
+        courseId,
+        classSectionsId,
+        universityId
+      );
+
+    if (!Array.isArray(data) || !data.length) return [];
+
+    return data.map(item => {
+      const periods =
+        item?.timeTableCreateName?.timeTableName?.map(period => ({
+          startTime: period.startTime,
+          endTime: period.endTime,
+          timeTableCreationId: period.timeTableCreationId,
+          type: period.type,
+          periodGap: period.periodGap,
+          periodLength: period.periodLength,
+          weekOff: period.weekOff,
+          isBreak: period.isBreak,
+          periodName: period.periodName,
+          classSectionsId: item.classSectionsId
+        })) || [];
+
+      return {
+        timeTableCreateId: item.timeTableCreateId,
+        name: item?.timeTableCreateName?.name,
+        isPublish: item.isPublish,
+        timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
+        maximumPeriod:
+          item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
+        isCourse:
+          item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+        courseId: item.courseId,
+        classSectionsId: item.classSectionsId,
+        classSectionsName: item?.timeTableClassSection?.section,
+        courseName: item?.timeTableCourse?.courseName,
+        startingDate: item.startingDate,
+        endingDate: item.endingDate,
+        timeTableClassSection: item?.timeTableClassSection,
+        periods
+      };
+    });
+  } catch (error) {
+    console.error("Service error:", error);
+    throw error;
+  }
+}
+
+
 export async function updateTimeTableCreate(TimeTableCreateId,info,updatedBy) {
     try {
         info.updatedBy = updatedBy;
@@ -140,6 +196,26 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     await transaction.rollback();
     console.error("Error in addtimeTableMapping:", error);
     throw new Error(error.message);
+  }
+};
+
+export async function changeTimeTableCreate(body, updatedBy) {
+  try {
+    const { timeTableCreateId, ...updateData } = body;
+
+    const data = {
+      ...updateData,
+      updatedBy
+    };
+
+    const result = await timeTableCreateRepository.changeTimeTableCreate(
+      timeTableCreateId,
+      data
+    );
+
+    return result;
+  } catch (error) {
+    throw error;
   }
 };
 
@@ -257,13 +333,13 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           timeTableNameId: baseRow.timeTableNameId,
           timeTableCreateId: baseRow.timeTableCreateId,
           timeTableCreationId: baseRow.timeTableCreationId,
-          subjectId: baseRow.subjectId,
-          electiveSubjectId: baseRow.electiveSubjectId,
-          teacherSubjectMappingId: baseRow.teacherSubjectMappingId,
+          subjectId: item.subjectId,
+          electiveSubjectId: item.electiveSubjectId,
+          // teacherSubjectMappingId: '',
           classRoomSectionId: baseRow.classRoomSectionId,
           day: baseRow.day,
           period: baseRow.period,
-          isSameTeacher: baseRow.isSameTeacher,
+          isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
           employeeId: item.employeeId,
           isTeacher: item.isTeacher,
@@ -720,12 +796,28 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
 
       // Extract subject and teacher details (Logic from original function)
       const sameTeacher = isSameTeacher;
-      const subjectData = sameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
-        : timeTableSubject;
-      const teacherData = sameTeacher
-        ? timeTableTeacherSubject?.teacherEmployeeData
-        : employeeDetails;
+
+  // const subjectData = sameTeacher
+  //       ? timeTableTeacherSubject?.employeeSubject?.subjects
+  //       : timeTableSubject;
+  //     const teacherData = sameTeacher
+  //       ? timeTableTeacherSubject?.teacherEmployeeData
+  //       : employeeDetails;
+
+  let teacherData = null;
+  let subjectData = null;
+
+    if (sameTeacher === true) {
+      // sameTeacher = true
+      // ONLY teacherSubjectMapping se data aayega
+      teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
+      subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
+    } else {
+      // sameTeacher = false
+      // ONLY direct employee + subject se data aayega
+      teacherData = employeeDetails || null;
+      subjectData = timeTableSubject || null;
+    }
 
       // Create the mapping entry
       const mappingEntry = {
@@ -831,7 +923,15 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
         mappingData: [mappingEntry],
       });
     } else {
-      existPeriod.mappingData.push(mappingEntry);
+      // existPeriod.mappingData.push(mappingEntry);
+      const alreadyExists = existPeriod.mappingData.some(m =>
+        m.employeeId === mappingEntry.employeeId &&
+        m.subject.subjectId === mappingEntry.subject.subjectId
+      );
+
+      if (!alreadyExists) {
+        existPeriod.mappingData.push(mappingEntry);
+      }
     }
 
     return acc;

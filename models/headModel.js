@@ -92,6 +92,11 @@ export default sequelize.define(
             allowNull: true,
             field: 'financial_status',
         },
+        isAdmin:{
+            type:DataTypes.BOOLEAN,
+            allowNull:false,
+            defaultValue:false
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
