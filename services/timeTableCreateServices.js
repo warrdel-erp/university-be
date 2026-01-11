@@ -667,9 +667,6 @@ export async function getTimeTableElective(courseId, classSectionsId, university
   return { formatted };
 };
 
-
-//----------&&----------
-
 // export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
 //   const allData = await timeTableCreateRepository.getTimeTableCellData(
 //     courseId,
@@ -867,12 +864,12 @@ export async function getTimeTableCellData(
     role
   );
 
-  // 🔹 STEP 1: Filter by classSectionsId (NOW multiple timetables possible)
+  // STEP 1: Filter by classSectionsId (NOW multiple timetables possible)
   const filteredBySection = allData.filter(
     item => item.classSectionsId === Number(classSectionsId)
   );
 
-  // 🔹 STEP 2: Group by timeTableNameId
+  // STEP 2: Group by timeTableNameId
   const groupedByTimeTableName = filteredBySection.reduce((acc, item) => {
     const key = item.timeTableNameId;
 
@@ -885,7 +882,7 @@ export async function getTimeTableCellData(
 
   const finalResult = [];
 
-  // 🔹 STEP 3: Process EACH timetableNameId separately
+  // STEP 3: Process EACH timetableNameId separately
   for (const timeTableNameId in groupedByTimeTableName) {
     const groupItems = groupedByTimeTableName[timeTableNameId];
 
@@ -900,7 +897,7 @@ export async function getTimeTableCellData(
     const allMappings = [];
     const itemsToProcess = [normalItemBase, electiveItemBase].filter(Boolean);
 
-    // 🔹 STEP 4: FLATTEN (NO CHANGE)
+    //  STEP 4: FLATTEN (NO CHANGE)
     for (const item of itemsToProcess) {
       const course = item.timeTableCourse || {};
       const classSection = item.timeTableClassSection || {};
@@ -970,7 +967,7 @@ export async function getTimeTableCellData(
       });
     }
 
-    // 🔹 STEP 5: AGGREGATION (NO RESPONSE CHANGE)
+    // STEP 5: AGGREGATION (NO RESPONSE CHANGE)
     const aggregated = allMappings.reduce((acc, current) => {
       const {
         day,
