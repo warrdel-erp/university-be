@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from "sequelize";
 
 export async function addHead(headData,transaction) {
     try {
@@ -80,4 +81,36 @@ export async function updateHead(headId, headData) {
         console.error(`Error updating head creation ${headId}:`, error);
         throw error;
     }
+}
+
+export async function getHeadDetailsByEmail(email) {
+  try {
+    const head = await model.headModel.findOne({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+      },
+      where: {
+        [Op.or]: [
+          { registerEmail: email },
+          { alternateEmail: email }
+        ]
+      },
+    });
+    console.log(`>>>>>>head`,head);
+    
+
+    if (!head) {
+      return null; 
+    }
+
+    return {
+  role: head.isAdmin ? "Admin" : "Head",
+  ...head.toJSON()
+};
+
+
+  } catch (error) {
+    console.error("Error fetching head details by email:", error);
+    throw error;
+  }
 }
