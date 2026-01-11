@@ -2,7 +2,7 @@ import {Router} from  'express'
 const router =  Router();
 import {addtimeTableCreate,gettimeTableCreateDetails,getSingletimeTableCreateDetails,addtimeTableMapping,getTimeTableMappingDetail,getSingletimeTableMappingDetail,getTimeTableCellData
    ,updatetimeTableCreate,getTimeTableElective,publishTimeTable,updateSimpleTeacherMappingController
-    ,deletetimeTableMapping,ClassSubjectCount
+    ,deletetimeTableMapping,ClassSubjectCount,changeTimeTableCreate
 } from '../controllers/timeTableCreateController.js';
 import userAuth from "../middleware/authUser.js"
 
@@ -12,7 +12,7 @@ router.get('/', userAuth, gettimeTableCreateDetails);
 
 router.get('/single' ,userAuth, getSingletimeTableCreateDetails);
 
-// router.patch('/' ,userAuth, updatetimeTableCreate);
+router.patch('/create' ,userAuth, changeTimeTableCreate);
 
 // router.delete('/' ,userAuth, deletetimeTableCreate);
 

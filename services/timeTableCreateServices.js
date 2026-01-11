@@ -143,6 +143,26 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   }
 };
 
+export async function changeTimeTableCreate(body, updatedBy) {
+  try {
+    const { timeTableCreateId, ...updateData } = body;
+
+    const data = {
+      ...updateData,
+      updatedBy
+    };
+
+    const result = await timeTableCreateRepository.changeTimeTableCreate(
+      timeTableCreateId,
+      data
+    );
+
+    return result;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export async function updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy) {    
     try {
         const data = {timeTableType,updatedBy}
@@ -257,13 +277,13 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           timeTableNameId: baseRow.timeTableNameId,
           timeTableCreateId: baseRow.timeTableCreateId,
           timeTableCreationId: baseRow.timeTableCreationId,
-          subjectId: baseRow.subjectId,
-          electiveSubjectId: baseRow.electiveSubjectId,
-          teacherSubjectMappingId: baseRow.teacherSubjectMappingId,
+          subjectId: item.subjectId,
+          electiveSubjectId: item.electiveSubjectId,
+          // teacherSubjectMappingId: '',
           classRoomSectionId: baseRow.classRoomSectionId,
           day: baseRow.day,
           period: baseRow.period,
-          isSameTeacher: baseRow.isSameTeacher,
+          isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
           employeeId: item.employeeId,
           isTeacher: item.isTeacher,
@@ -720,12 +740,28 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
 
       // Extract subject and teacher details (Logic from original function)
       const sameTeacher = isSameTeacher;
-      const subjectData = sameTeacher
-        ? timeTableTeacherSubject?.employeeSubject?.subjects
-        : timeTableSubject;
-      const teacherData = sameTeacher
-        ? timeTableTeacherSubject?.teacherEmployeeData
-        : employeeDetails;
+
+  // const subjectData = sameTeacher
+  //       ? timeTableTeacherSubject?.employeeSubject?.subjects
+  //       : timeTableSubject;
+  //     const teacherData = sameTeacher
+  //       ? timeTableTeacherSubject?.teacherEmployeeData
+  //       : employeeDetails;
+
+  let teacherData = null;
+  let subjectData = null;
+
+    if (sameTeacher === true) {
+      // sameTeacher = true
+      // ONLY teacherSubjectMapping se data aayega
+      teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
+      subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
+    } else {
+      // sameTeacher = false
+      // ONLY direct employee + subject se data aayega
+      teacherData = employeeDetails || null;
+      subjectData = timeTableSubject || null;
+    }
 
       // Create the mapping entry
       const mappingEntry = {
@@ -831,7 +867,15 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
         mappingData: [mappingEntry],
       });
     } else {
-      existPeriod.mappingData.push(mappingEntry);
+      // existPeriod.mappingData.push(mappingEntry);
+      const alreadyExists = existPeriod.mappingData.some(m =>
+        m.employeeId === mappingEntry.employeeId &&
+        m.subject.subjectId === mappingEntry.subject.subjectId
+      );
+
+      if (!alreadyExists) {
+        existPeriod.mappingData.push(mappingEntry);
+      }
     }
 
     return acc;

@@ -236,6 +236,18 @@ export async function checkTeacherConflictRepository(employeeId, day, startTime,
   }
 };
 
+export async function changeTimeTableCreate(timeTableCreateId, data) {
+    try {
+        const result = await model.timeTableCreateModel.update(data, {
+            where: { timeTableCreateId }
+        });
+        return result; 
+    } catch (error) {
+        console.error(`Error updating time table create  ${timeTableCreateId}:`, error);
+        throw error; 
+    }
+};
+
 export async function updatetimeTableCreate(timeTableMappingId, data) {
     try {
         const result = await model.timeTableMappingModel.update(data, {

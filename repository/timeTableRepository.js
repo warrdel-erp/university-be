@@ -55,6 +55,31 @@ export async function getSingleTimeTableDetails(courseId,universityId) {
     };
 };
 
+export async function getAllTimeTableName(universityId,courseId) {
+    try {
+        const result = await model.timeTableNameModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where:{
+                // universityId:universityId,
+            },
+            include:[
+                {
+                    model:model.timeTableCreationModel,
+                    as:'timeTableName',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    where:{
+                        courseId:courseId
+                    }
+                }
+            ]
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error in getting time table:`, error);
+        throw error;
+    };
+};
+
 export async function getSingleTimeTableById(timeTableCreationId,universityId) {
     try {
         const result = await model.timeTableCreationModel.findAll({
