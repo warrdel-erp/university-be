@@ -23,7 +23,7 @@ import * as timeTableCreateRepository from '../repository/timeTablecreateReposit
 import * as evaluationRepository  from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
-
+import moment from 'moment';
 
 async function generateEmployeeNumber(campusId,instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -72,7 +72,7 @@ export async function addEmployee(data,files,createdBy,universityId,roleId,insti
         data.employeeCode = await generateEmployeeNumber(data.campusId,data.instituteId)
         const employee = await employeeRepository.addEmployee(data,transaction );
         const employeeId = employee.dataValues.employeeId;
-        const {campusId,instituteId,universityId,employeeName,employmentType} = employee.dataValues
+        const {campusId,instituteId,employeeName,employmentType} = employee.dataValues
         // const {employeeName} = employee.dataValues
         const roleDetails = await getSingleRoleDetails(roleId)
         const roleName = roleDetails.dataValues.role
