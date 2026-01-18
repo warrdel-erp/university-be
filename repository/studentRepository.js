@@ -792,13 +792,21 @@ export async function addElectiveSubject(data) {
 
 export async function promoteStudent(studentId, data) {
     
-    return 
+    // return 
     try {
-        const result = await model.classStudentMapperModel.update(data, {
+        const result1 = await model.studentModel.update(data, {
             where: {
                 studentId: studentId
             },
         });
+
+        const result2 = await model.classStudentMapperModel.update(data, {
+            where: {
+                studentId: studentId
+            },
+        });
+        return {result1, result2};
+
         return result;
     } catch (error) {
         console.error(`Error updating student promote ${studentId} :`, error);
@@ -940,7 +948,9 @@ export async function getClassRecord(courseId,semesterId,classSectionId,acedmicY
         const student = await model.studentModel.findAll({
             where: {
                 classSectionsId:classSectionId,
-                courseId,semesterId,acedmicYearId
+                courseId,
+                semesterId,
+                acedmicYearId
             },
             attributes:  ["studentId","firstName","middleName","lastName","scholarNumber","email","mobileNumber","phoneNumber","courseId","semesterId","classSectionsId","acedmicYearId"] ,
             include:[

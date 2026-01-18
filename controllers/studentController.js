@@ -208,6 +208,7 @@ export const getclassStudentMapping = async (req, res) => {
     const acedmicYearId = req.query.acedmicYearId 
     const instituteId = req.user.instituteId;
     const role = req.user.role;
+    
     try {
         const result = await studentService.getclassStudentMapping(semesterId,universityId,acedmicYearId,instituteId,role);
         return res.status(200).send(result);

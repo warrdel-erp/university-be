@@ -748,15 +748,15 @@ export async function addElectiveSubject(data,createdBy){
 };
 
 export async function promoteStudent(data) {
-  if(data){
+  if(!data){
         return { message: 'next acedmic year is active for promate the student and semester is required' };
   }
 
   const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
 
-  const courseId = studentDetail.dataValues.course_id;
+  const courseId = studentDetail.dataValues.courseId;
 
-  const currentAcademicYearId = studentDetail.dataValues.acedmic_year_id;
+  const currentAcademicYearId = studentDetail.dataValues.acedmicYearId;
 
   const allSemestersRaw = await studentRepository.getSemesterByCourseId(courseId);
 
@@ -788,7 +788,7 @@ export async function promoteStudent(data) {
   let nextAcedmicYearId = currentAcademicYearId;
 
   //  Determine how many semesters per academic year
-  const semPerYear = 12 / currentSemester.dataValues.semesterDuration;
+  const semPerYear = 12 / currentSemester.semesterDuration;
 
   //  Check if promotion crosses to next academic year
   if ((currentSemesterIndex + 1) % semPerYear === 0) {
@@ -813,7 +813,7 @@ export async function promoteStudent(data) {
   const result = await studentRepository.promoteStudent(data.studentId, {
     semesterId: nextSemester.semesterId,
     acedmicYearId: nextAcedmicYearId,
-    classSectionId: data.classSectionId, // if needed
+    classSectionsId: data.classSectionsId, // if needed
   });
 
 
