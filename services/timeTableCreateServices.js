@@ -540,10 +540,9 @@ export async function getSingletimeTableMappingDetail(courseId,universityId){
 
 //---------------night
 
-export async function getTimeTableElective(courseId, classSectionsId, universityId, instituteId, role) {
+export async function getTimeTableElective(courseId,  universityId, instituteId, role) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
-    courseId,
-    classSectionsId,
+    Number(courseId),
     universityId,
     instituteId,
     role

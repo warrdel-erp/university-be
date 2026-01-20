@@ -497,7 +497,6 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
   try {
     const whereClause = {
       ...(courseId && { courseId }),
-      ...(classSectionsId && { classSectionsId }),
     };
     const whereClauseData = {
             ...(role === 'Head' && { instituteId }),
