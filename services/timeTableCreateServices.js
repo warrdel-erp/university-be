@@ -916,7 +916,8 @@ export async function getTimeTableCellData(
           timeTableSubject,
           employeeDetails,
           timeTableTeacherSubject,
-          timeTableElective
+          timeTableElective,
+          classRoom
         } = curr || {};
 
         let teacherData = null;
@@ -940,6 +941,7 @@ export async function getTimeTableCellData(
           isTeacher: curr?.isTeacher || null,
           isAttendence: curr?.isAttendence ?? null,
           timeTableType,
+          classRoom,
           subject: timeTableElective
             ? {
                 subjectId: timeTableElective?.electiveSubjectId,
@@ -991,6 +993,7 @@ export async function getTimeTableCellData(
             : electiveItemBase || baseMetadata;
 
         const course = sourceItem?.timeTableCourse || baseMetadata.course || {};
+
         const classSection =
           sourceItem?.timeTableClassSection ||
           baseMetadata.classSection ||
