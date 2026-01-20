@@ -40,8 +40,8 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
   const { courseId, classSectionsId } = req.query;
   const { universityId } = req.user;
 
-  if (!courseId || !classSectionsId) {
-    return res.status(400).send("courseId and classSectionsId are required");
+  if (!courseId && !classSectionsId) {
+    return res.status(400).send("one of courseId and classSectionsId is required");
   }
 
   try {
