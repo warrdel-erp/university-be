@@ -101,14 +101,16 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
 export async function getTimeTableByCourseAndSection(
   courseId,
   classSectionsId,
-  universityId
+  universityId,
+  timeTableType
 ) {
   try {
     const data =
       await timeTableCreateRepository.getTimeTableByCourseAndSection(
         courseId,
         classSectionsId,
-        universityId
+        universityId,
+        timeTableType
       );
 
     if (!Array.isArray(data) || !data.length) return [];
@@ -130,6 +132,7 @@ export async function getTimeTableByCourseAndSection(
 
       return {
         timeTableCreateId: item.timeTableCreateId,
+        timeTableType: item.timeTableType,
         name: item?.timeTableCreateName?.name,
         isPublish: item.isPublish,
         timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
