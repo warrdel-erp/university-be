@@ -116,14 +116,19 @@ export async function getTimeTableCreateDetails(universityId) {
 export async function getTimeTableByCourseAndSection(
   courseId,
   classSectionsId,
-  universityId
+  universityId,
+  timeTableType
 ) {
+
+
+  const whereClause = {
+    ...(courseId && { courseId }),
+    ...(classSectionsId && { classSectionsId }),
+    ...(timeTableType && { timeTableType }),
+    // ...(universityId && { universityId }),
+  };
   return await model.timeTableCreateModel.findAll({
-    where: {
-      courseId,
-      classSectionsId,
-      // universityId
-    },
+    where: whereClause,
     include: [
       {
         model: model.timeTableNameModel,
@@ -499,7 +504,7 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
 
     const result = await model.timeTableCreateModel.findAll({
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","time_table_name_id","course_id","campus_id","class_sections_id","acedmic_year_id"],
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","time_table_name_id","course_id","campus_id","acedmic_year_id"],
       },
       where: whereClause,
       include:[

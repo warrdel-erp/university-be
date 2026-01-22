@@ -101,14 +101,16 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
 export async function getTimeTableByCourseAndSection(
   courseId,
   classSectionsId,
-  universityId
+  universityId,
+  timeTableType
 ) {
   try {
     const data =
       await timeTableCreateRepository.getTimeTableByCourseAndSection(
         courseId,
         classSectionsId,
-        universityId
+        universityId,
+        timeTableType
       );
 
     if (!Array.isArray(data) || !data.length) return [];
@@ -130,6 +132,7 @@ export async function getTimeTableByCourseAndSection(
 
       return {
         timeTableCreateId: item.timeTableCreateId,
+        timeTableType: item.timeTableType,
         name: item?.timeTableCreateName?.name,
         isPublish: item.isPublish,
         timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
@@ -537,10 +540,9 @@ export async function getSingletimeTableMappingDetail(courseId,universityId){
 
 //---------------night
 
-export async function getTimeTableElective(courseId, classSectionsId, universityId, instituteId, role) {
+export async function getTimeTableElective(courseId,  universityId, instituteId, role) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
-    courseId,
-    classSectionsId,
+    Number(courseId),
     universityId,
     instituteId,
     role
@@ -561,7 +563,6 @@ export async function getTimeTableElective(courseId, classSectionsId, university
 
   // const combined = [...normal, ...elective];
     const combined = [...elective];
-
 
   //  Format final output
   const formatted = combined.map(item => {
@@ -913,7 +914,8 @@ export async function getTimeTableCellData(
           timeTableSubject,
           employeeDetails,
           timeTableTeacherSubject,
-          timeTableElective
+          timeTableElective,
+          classRoom
         } = curr || {};
 
         let teacherData = null;
@@ -937,6 +939,7 @@ export async function getTimeTableCellData(
           isTeacher: curr?.isTeacher || null,
           isAttendence: curr?.isAttendence ?? null,
           timeTableType,
+          classRoom,
           subject: timeTableElective
             ? {
                 subjectId: timeTableElective?.electiveSubjectId,
@@ -988,6 +991,7 @@ export async function getTimeTableCellData(
             : electiveItemBase || baseMetadata;
 
         const course = sourceItem?.timeTableCourse || baseMetadata.course || {};
+
         const classSection =
           sourceItem?.timeTableClassSection ||
           baseMetadata.classSection ||
