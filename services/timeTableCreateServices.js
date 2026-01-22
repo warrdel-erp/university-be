@@ -236,9 +236,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       transaction
     );
 
-   
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
+
+    if(data.timeTableType === "elective"){
+      data.isSameTeacher = false;
+    }
 
     const result = await timeTableCreateRepository.addtimeTableMapping(data, transaction);
 

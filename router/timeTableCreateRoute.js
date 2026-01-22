@@ -38,4 +38,4 @@ router.patch("/publish", userAuth, publishTimeTable);
 
 router.get("/subjectCount", userAuth, ClassSubjectCount);
 
-export default router;
+export default router; 
