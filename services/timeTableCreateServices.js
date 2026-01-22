@@ -564,7 +564,6 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
   // const combined = [...normal, ...elective];
     const combined = [...elective];
 
-
   //  Format final output
   const formatted = combined.map(item => {
     const course = item.timeTableCourse || {};

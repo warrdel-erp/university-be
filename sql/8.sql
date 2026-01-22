@@ -278,3 +278,33 @@ ADD COLUMN is_teacher VARCHAR(50) NOT NULL DEFAULT 'Primary' AFTER class_room_se
 ADD COLUMN is_Attendence TINYINT(1) NOT NULL DEFAULT 1 AFTER is_teacher;
 
 -- use migration ..
+
+
+
+SET SQL_SAFE_UPDATES = 0;
+
+UPDATE class_student_mapper csm
+JOIN students s ON s.student_id = csm.student_id
+SET csm.semester_id = 85,
+    csm.acedmic_year_id = 59
+WHERE s.class_sections_id = 201;
+
+UPDATE students
+SET semester_id = 85,
+    acedmic_year_id = 59,
+    class_sections_id = 198
+WHERE class_sections_id = 201;
+
+UPDATE class_student_mapper csm
+JOIN students s ON s.student_id = csm.student_id
+SET csm.semester_id = 85,
+    csm.acedmic_year_id = 59
+WHERE s.class_sections_id = 202;
+
+UPDATE students
+SET semester_id = 85,
+    acedmic_year_id = 59,
+    class_sections_id = 199
+WHERE class_sections_id = 202;
+
+SET SQL_SAFE_UPDATES = 1;
