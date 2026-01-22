@@ -3,3 +3,7 @@
 3. Class records of promoted students. (it is working for me)
 4. only 10 records are being shown on Student list
 5. Missing student in fee plan.
+
+---
+
+1. elective time table

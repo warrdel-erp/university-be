@@ -223,7 +223,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`
       );
     }
-
     
     const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
 
@@ -870,7 +869,7 @@ export async function getTimeTableCellData(
 
   // STEP 1: Filter by classSectionsId (NOW multiple timetables possible)
   const filteredBySection = allData.filter(
-    item => item.classSectionsId === Number(classSectionsId)
+    item => item.dataValues.timeTableType === "normal" ? item.classSectionsId === Number(classSectionsId): true
   );
 
   // STEP 2: Group by timeTableNameId
