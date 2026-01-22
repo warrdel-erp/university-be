@@ -37,11 +37,11 @@ export const getSingletimeTableCreateDetails = async (req,res) => {
 };
 
 export const getTimeTableByCourseAndSection = async (req, res) => {
-  const { courseId, classSectionsId } = req.query;
+  const { courseId, classSectionsId, timeTableType } = req.query;
   const { universityId } = req.user;
 
-  if (!courseId || !classSectionsId) {
-    return res.status(400).send("courseId and classSectionsId are required");
+  if (!courseId ) {
+    return res.status(400).send("courseId is required");
   }
 
   try {
@@ -49,7 +49,8 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
       await timeTableCreateServices.getTimeTableByCourseAndSection(
         courseId,
         classSectionsId,
-        universityId
+        universityId,
+        timeTableType
       );
 
     res.status(200).json(result);
