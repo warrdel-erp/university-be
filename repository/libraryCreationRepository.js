@@ -365,7 +365,7 @@ export async function getAllIssuedBooks() {
               include: [
                 {
                   model: model.libraryFloorModel,
-                  as: "libraryFloor",
+                  as: "floorDetails",
                   attributes: {
                     exclude: ["createdAt", "updatedAt", "deletedAt"],
                   },
