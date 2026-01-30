@@ -401,7 +401,6 @@ classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: "semesterId", as:
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: "employee_id", as: "employeeData" });
 teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeData" });
 
-// -----
 employeeModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "employeeCampus" });
 campusModel.hasMany(employeeModel, { foreignKey: "campus_id", as: "employeeCampus" });
 
@@ -414,8 +413,8 @@ roleModel.hasMany(employeeModel, { foreignKey: "role_id", as: "employeeRole" });
 employeeModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 instituteModel.hasMany(employeeModel, { foreignKey: "institute_id", as: "employeeInstitute" });
 
-classSectionModel.hasMany(teacherSectionMappingModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 teacherSectionMappingModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "employeeSection" });
+classSectionModel.hasMany(teacherSectionMappingModel, { foreignKey: "class_sections_id", as: "employeeSection" });
 
 classSectionModel.belongsTo(courseModel, { foreignKey: "course_id", as: "employeeCourse" });
 courseModel.hasMany(classSectionModel, { foreignKey: "course_id", as: "employeeCourse" });
@@ -470,7 +469,6 @@ employeeModel.hasMany(libraryAuthorityModel, { foreignKey: "employee_id", as: "l
 libraryCreationModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "libraryCreationInstitute" });
 instituteModel.hasMany(libraryCreationModel, { foreignKey: "institute_id", as: "libraryCreationInstitute" });
 
-// library item
 libraryAddItemModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userLibraryAddItem" });
 userModel.hasMany(libraryAddItemModel, { foreignKey: "createdBy", as: "userLibraryAddItem" });
 
@@ -483,6 +481,7 @@ employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: "aisle", as: "
 libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: "shelf", as: "shelfs" });
 employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: "shelf", as: "shelfs" });
 
+// library item
 // time table create
 timeTableCreationModel.belongsTo(timeTableNameModel, { foreignKey: "time_table_name_id", as: "timeTableName" });
 timeTableNameModel.hasMany(timeTableCreationModel, { foreignKey: "time_table_name_id", as: "timeTableName" });
@@ -505,10 +504,12 @@ classSectionModel.hasMany(timeTableCreateModel, { foreignKey: "class_sections_id
 timeTableCreateModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYearTimeTable" });
 acedmicYearModel.hasMany(timeTableCreateModel, { foreignKey: "acedmic_year_id", as: "acedmicYearTimeTable" });
 
+// -----
 timeTableMappingModel.belongsTo(teacherSubjectMappingModel, {
   foreignKey: "teacher_subject_mapping_id",
   as: "timeTableTeacherSubject",
 });
+
 teacherSubjectMappingModel.hasMany(timeTableMappingModel, {
   foreignKey: "teacher_subject_mapping_id",
   as: "timeTableTeacherSubject",

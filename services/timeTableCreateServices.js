@@ -1,11 +1,15 @@
-import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
-import { getSingleTimeTableById } from '../repository/timeTableRepository.js';
-import { getTeacherDetailsByTeacherSubjectId } from '../repository/teacherSubjectMappingRepository.js';
-import { getSingleFaculityLoadDetails, updateFaculityLoad,updateFaculityLoadByEmployeeId } from '../repository/faculityLoadRepository.js';
-import sequelize from '../database/sequelizeConfig.js'; 
-import { getHolidayStartEndDate } from '../repository/holidayRepository.js';
+import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import { getSingleTimeTableById } from "../repository/timeTableRepository.js";
+import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
+import {
+  getSingleFaculityLoadDetails,
+  updateFaculityLoad,
+  updateFaculityLoadByEmployeeId,
+} from "../repository/faculityLoadRepository.js";
+import sequelize from "../database/sequelizeConfig.js";
+import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
 
-// export async function addtimeTableCreate(data, createdBy, updatedBy) {    
+// export async function addtimeTableCreate(data, createdBy, updatedBy) {
 //     const transaction = await sequelize.transaction();
 
 //     try {
@@ -18,7 +22,7 @@ import { getHolidayStartEndDate } from '../repository/holidayRepository.js';
 //         return result
 //     } catch (error) {
 //         await transaction.rollback();
-//         throw error; 
+//         throw error;
 //     }
 // };
 
@@ -32,30 +36,22 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     let result;
 
     if (data.timeTableCreateId && data.previousDate) {
-
       await timeTableCreateRepository.changeTimeTableCreate(
         data.timeTableCreateId,
         {
           endingDate: data.previousDate,
-          updatedBy
+          updatedBy,
         },
         // transaction
       );
 
-      const {
-        timeTableCreateId,
-        previousDate,
-        ...newCreateData
-      } = data;
+      const { timeTableCreateId, previousDate, ...newCreateData } = data;
 
       result = await timeTableCreateRepository.addTimeTableCreate(
         newCreateData,
         // transaction
       );
-
-    } 
-    else {
-
+    } else {
       result = await timeTableCreateRepository.addTimeTableCreate(
         data,
         // transaction
@@ -64,13 +60,11 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
     // await transaction.commit();
     return result;
-
   } catch (error) {
     // await transaction.rollback();
     throw error;
   }
 }
-
 
 export async function gettimeTableCreateDetails(universityId) {
   try {
@@ -80,44 +74,33 @@ export async function gettimeTableCreateDetails(universityId) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
     throw new Error(error.message);
   }
-};
+}
 
 export async function getSingletimeTableCreateDetails(courseId, universityId) {
   try {
-
-    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(
-      courseId,
-      universityId
-    );
+    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
 
     return result;
-
   } catch (error) {
     console.error("Error in getSingletimeTableCreateDetails:", error.message);
     throw new Error(error.message);
   }
-};
+}
 
-export async function getTimeTableByCourseAndSection(
-  courseId,
-  classSectionsId,
-  universityId,
-  timeTableType
-) {
+export async function getTimeTableByCourseAndSection(courseId, classSectionsId, universityId, timeTableType) {
   try {
-    const data =
-      await timeTableCreateRepository.getTimeTableByCourseAndSection(
-        courseId,
-        classSectionsId,
-        universityId,
-        timeTableType
-      );
+    const data = await timeTableCreateRepository.getTimeTableByCourseAndSection(
+      courseId,
+      classSectionsId,
+      universityId,
+      timeTableType,
+    );
 
     if (!Array.isArray(data) || !data.length) return [];
 
-    return data.map(item => {
+    return data.map((item) => {
       const periods =
-        item?.timeTableCreateName?.timeTableName?.map(period => ({
+        item?.timeTableCreateName?.timeTableName?.map((period) => ({
           startTime: period.startTime,
           endTime: period.endTime,
           timeTableCreationId: period.timeTableCreationId,
@@ -127,7 +110,7 @@ export async function getTimeTableByCourseAndSection(
           weekOff: period.weekOff,
           isBreak: period.isBreak,
           periodName: period.periodName,
-          classSectionsId: item.classSectionsId
+          classSectionsId: item.classSectionsId,
         })) || [];
 
       return {
@@ -136,10 +119,8 @@ export async function getTimeTableByCourseAndSection(
         name: item?.timeTableCreateName?.name,
         isPublish: item.isPublish,
         timeTableNameId: item?.timeTableCreateName?.timeTableNameId,
-        maximumPeriod:
-          item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
-        isCourse:
-          item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
+        maximumPeriod: item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
+        isCourse: item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
         courseId: item.courseId,
         classSectionsId: item.classSectionsId,
         classSectionsName: item?.timeTableClassSection?.section,
@@ -147,7 +128,7 @@ export async function getTimeTableByCourseAndSection(
         startingDate: item.startingDate,
         endingDate: item.endingDate,
         timeTableClassSection: item?.timeTableClassSection,
-        periods
+        periods,
       };
     });
   } catch (error) {
@@ -156,39 +137,31 @@ export async function getTimeTableByCourseAndSection(
   }
 }
 
+export async function updateTimeTableCreate(TimeTableCreateId, info, updatedBy) {
+  try {
+    info.updatedBy = updatedBy;
+    const data = await timeTableCreateRepository.updateTimeTableCreate(TimeTableCreateId, info);
+    return data;
+  } catch (error) {
+    console.error("Error updating faculity load:", error);
+    throw new Error("Failed to update time table");
+  }
+}
 
-export async function updateTimeTableCreate(TimeTableCreateId,info,updatedBy) {
-    try {
-        info.updatedBy = updatedBy;
-        const data = await timeTableCreateRepository.updateTimeTableCreate(TimeTableCreateId, info);
-        return data; 
-    } catch (error) {
-        console.error('Error updating faculity load:', error);
-        throw new Error('Failed to update time table'); 
-    }
-};
+export async function deleteTimeTableCreate(TimeTableCreateId) {
+  return await timeTableCreateRepository.deleteTimeTableCreate(TimeTableCreateId);
+}
 
-export async function deleteTimeTableCreate(TimeTableCreateId){
-    return await timeTableCreateRepository.deleteTimeTableCreate(TimeTableCreateId)
-};
-
-
-export async function deletetimeTableMapping(timeTableMappingId){
-    return await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId)
-};
+export async function deletetimeTableMapping(timeTableMappingId) {
+  return await timeTableCreateRepository.deletetimeTableMapping(timeTableMappingId);
+}
 
 export async function addtimeTableMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
   let teacherSubjectData = null;
 
   try {
-    const {
-      timeTableCreateId,
-      timeTableCreationId,
-      employeeId,
-      teacherSubjectMappingId,
-      day
-    } = data;
+    const { timeTableCreateId, timeTableCreationId, employeeId, teacherSubjectMappingId, day } = data;
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(timeTableCreationId);
 
@@ -198,12 +171,10 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     const { startTime, endTime, periodLength } = periodInfo;
 
-    
     if (teacherSubjectMappingId) {
       teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
 
-      if (!teacherSubjectData?.[0])
-        throw new Error("Invalid teacherSubjectMappingId");
+      if (!teacherSubjectData?.[0]) throw new Error("Invalid teacherSubjectMappingId");
 
       data.employeeId = teacherSubjectData[0].employeeId;
     }
@@ -211,34 +182,22 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     const teacherId = data.employeeId;
     if (!teacherId) throw new Error("employeeId is required");
 
-    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
-      teacherId,
-      day,
-      startTime,
-      endTime
-    );
+    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(teacherId, day, startTime, endTime);
 
     if (conflict) {
-      throw new Error(
-        `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`
-      );
+      throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`);
     }
-    
+
     const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
 
-    const currentLoad =
-      (facultyLoad?.[0]?.currentLoad || 0) + (periodLength || 0);
+    const currentLoad = Number(facultyLoad?.[0]?.currentLoad || 0) + Number(periodLength || 0);
 
-    await updateFaculityLoadByEmployeeId(
-      teacherId,
-      { currentLoad },
-      transaction
-    );
+    await updateFaculityLoadByEmployeeId(teacherId, { currentLoad }, transaction);
 
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
-    if(data.timeTableType === "elective"){
+    if (data.timeTableType === "elective") {
       data.isSameTeacher = false;
     }
 
@@ -246,13 +205,12 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     await transaction.commit();
     return result;
-
   } catch (error) {
     await transaction.rollback();
     console.error("Error in addtimeTableMapping:", error);
     throw new Error(error.message);
   }
-};
+}
 
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
@@ -260,29 +218,26 @@ export async function changeTimeTableCreate(body, updatedBy) {
 
     const data = {
       ...updateData,
-      updatedBy
+      updatedBy,
     };
 
-    const result = await timeTableCreateRepository.changeTimeTableCreate(
-      timeTableCreateId,
-      data
-    );
+    const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableCreateId, data);
 
     return result;
   } catch (error) {
     throw error;
   }
-};
+}
 
-export async function updatetimeTableCreate(timeTableMappingId,timeTableType,updatedBy) {    
-    try {
-        const data = {timeTableType,updatedBy}
-       const result =  await timeTableCreateRepository.updatetimeTableCreate(timeTableMappingId, data);
-        return result
-    } catch (error) {
-        throw error; 
-    }
-};
+export async function updatetimeTableCreate(timeTableMappingId, timeTableType, updatedBy) {
+  try {
+    const data = { timeTableType, updatedBy };
+    const result = await timeTableCreateRepository.updatetimeTableCreate(timeTableMappingId, data);
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
 
 export async function updateSimpleTeacherMapping(mappingArray, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
@@ -312,14 +267,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       throw new Error(`No timetable found for ID ${baseRow.timeTableCreationId}`);
     }
 
-    const periodLength = ttCreationData[0].dataValues.periodLength || 0;
+    const periodLength = Number(ttCreationData[0].dataValues.periodLength) || 0;
 
     // LOOP
     for (const item of mappingArray) {
-      
       //  check conflict
       if (item.employeeId) {
-
         const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
         const { startTime, endTime } = periodInfo;
 
@@ -327,7 +280,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           item.employeeId,
           baseRow.day,
           startTime,
-          endTime
+          endTime,
         );
 
         // if (conflict) {
@@ -337,7 +290,6 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         // }
       }
       // conflict logic END
-      
 
       // ===== CASE 1: update existing mapping =====
       if (item.timeTableMappingId) {
@@ -346,9 +298,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
         }
 
-        const noChange =
-          dbRow.isTeacher === item.isTeacher &&
-          dbRow.isAttendence === item.isAttendence;
+        const noChange = dbRow.isTeacher === item.isTeacher && dbRow.isAttendence === item.isAttendence;
 
         if (!noChange) {
           await timeTableCreateRepository.updateMapping(
@@ -356,9 +306,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
             {
               isTeacher: item.isTeacher,
               isAttendence: item.isAttendence,
-              updatedBy
+              updatedBy,
             },
-            transaction
+            transaction,
           );
         }
       }
@@ -378,11 +328,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         const currentLoad = Number(facLoad[0].dataValues.currentLoad || 0);
         const newLoad = currentLoad + periodLength;
 
-        await updateFaculityLoadByEmployeeId(
-          item.employeeId,
-          { currentLoad: newLoad },
-          transaction
-        );
+        await updateFaculityLoadByEmployeeId(item.employeeId, { currentLoad: newLoad }, transaction);
 
         const newRow = {
           timeTableNameId: baseRow.timeTableNameId,
@@ -400,7 +346,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           isTeacher: item.isTeacher,
           isAttendence: item.isAttendence,
           createdBy,
-          updatedBy
+          updatedBy,
         };
 
         await timeTableCreateRepository.addtimeTableMapping(newRow, transaction);
@@ -409,13 +355,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
     await transaction.commit();
     return { success: true, message: "Teacher mapping updated successfully" };
-
   } catch (err) {
     await transaction.rollback();
     console.error("Error in updateSimpleTeacherMapping:", err);
     throw err;
   }
-};
+}
 
 export async function getTimeTableMappingDetail(universityId, instituteId, role) {
   const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, role);
@@ -426,8 +371,8 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
 
   // Helper: Parse "YYYY-MM-DD" to JS Date object
   function parseISODate(dateStr) {
-    if (typeof dateStr !== 'string') return null;
-    const parts = dateStr.split('-');
+    if (typeof dateStr !== "string") return null;
+    const parts = dateStr.split("-");
     if (parts.length !== 3) return null;
     const [year, month, day] = parts.map(Number);
     if (!year || !month || !day) return null;
@@ -447,7 +392,7 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
 
   // Helper: Get weekday name from date
   function getWeekdayName(date) {
-    return date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    return date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
   }
 
   const result = [];
@@ -486,26 +431,26 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
       let weekOff = entry?.weekOff;
 
       if (!Array.isArray(weekOff)) {
-        console.warn('Unexpected weekOff format:', weekOff);
+        console.warn("Unexpected weekOff format:", weekOff);
         weekOff = [];
       }
 
       for (let j = 0; j < weekOff.length; j++) {
         const day = weekOff[j];
-        if (typeof day === 'string') {
+        if (typeof day === "string") {
           weekOffDaysSet.add(day.toLowerCase());
         }
       }
     }
 
-    const workingDays = allDates.filter(date => !weekOffDaysSet.has(getWeekdayName(date)));
+    const workingDays = allDates.filter((date) => !weekOffDaysSet.has(getWeekdayName(date)));
 
     // Holidays
     let holidays = [];
     try {
       holidays = await getHolidayStartEndDate(startingDateStr, endingDateStr);
     } catch (e) {
-      console.error('Failed to get holidays:', e);
+      console.error("Failed to get holidays:", e);
       holidays = [];
     }
 
@@ -517,7 +462,7 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
 
         if (h?.date instanceof Date) {
           holidayDate = new Date(h.date.getFullYear(), h.date.getMonth(), h.date.getDate());
-        } else if (typeof h?.date === 'string') {
+        } else if (typeof h?.date === "string") {
           holidayDate = parseISODate(h.date);
         }
 
@@ -527,27 +472,27 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
       }
     }
 
-    const finalClassDays = workingDays.filter(date => !holidayDatesSet.has(date.getTime()));
+    const finalClassDays = workingDays.filter((date) => !holidayDatesSet.has(date.getTime()));
     item.totalClasses = finalClassDays.length;
 
     result.push(item);
   }
 
   return result;
-};
+}
 
-export async function getSingletimeTableMappingDetail(courseId,universityId){
-    return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId,universityId)
-};
+export async function getSingletimeTableMappingDetail(courseId, universityId) {
+  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
+}
 
 //---------------night
 
-export async function getTimeTableElective(courseId,  universityId, instituteId, role) {
+export async function getTimeTableElective(courseId, universityId, instituteId, role) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     Number(courseId),
     universityId,
     instituteId,
-    role
+    role,
   );
 
   //  Separate normal and elective
@@ -557,23 +502,19 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
   //     item.classSectionsId === Number(classSectionsId)
   // );
 
-  const elective = allData.filter(
-    item =>
-      item.timeTableType === "elective" &&
-      item.courseId === Number(courseId)
-  );
+  const elective = allData.filter((item) => item.timeTableType === "elective" && item.courseId === Number(courseId));
 
   // const combined = [...normal, ...elective];
-    const combined = [...elective];
+  const combined = [...elective];
 
   //  Format final output
-  const formatted = combined.map(item => {
+  const formatted = combined.map((item) => {
     const course = item.timeTableCourse || {};
     const classSection = item.timeTableClassSection || {};
 
     //  Build sectionRountine only for elective type
     const sectionRoutine = (item?.timeTablecreate || []).reduce((acc, curr) => {
-      let dayObj = acc.find(d => d.day === curr.day);
+      let dayObj = acc.find((d) => d.day === curr.day);
       if (!dayObj) {
         dayObj = { day: curr.day, period: [] };
         acc.push(dayObj);
@@ -608,9 +549,7 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
         : curr?.employeeDetails?.pickColor;
 
       //  Find or create the period within the day
-      let existPeriod = dayObj.period.find(
-        d => d.timeTableCreationId === curr?.timeTableCreationId
-      );
+      let existPeriod = dayObj.period.find((d) => d.timeTableCreationId === curr?.timeTableCreationId);
 
       //  Common mapping data
       const mappingEntry = {
@@ -619,18 +558,18 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
         employeeCode: employeeCode || "",
         pickColor: pickColor || "",
         employeeId: employeeId || null,
-        timeTableType:curr?.timeTableType,
+        timeTableType: curr?.timeTableType,
         subject: curr?.timeTableElective
           ? {
-            subjectId: curr?.timeTableElective?.electiveSubjectId,
-            Name: curr?.timeTableElective?.electiveSubjectName,
-            Code: curr?.timeTableElective?.electiveSubjectCode,
-          }
+              subjectId: curr?.timeTableElective?.electiveSubjectId,
+              Name: curr?.timeTableElective?.electiveSubjectName,
+              Code: curr?.timeTableElective?.electiveSubjectCode,
+            }
           : {
-            subjectId: subjectId,
-            Name: subject,
-            Code: subjectCode,
-          },
+              subjectId: subjectId,
+              Name: subject,
+              Code: subjectCode,
+            },
       };
 
       //  Add new or merge existing period
@@ -652,7 +591,6 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
       return acc;
     }, []);
 
-
     return {
       courseName: course.courseName || "",
       courseCode: course.courseCode || "",
@@ -668,7 +606,7 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
   });
 
   return { formatted };
-};
+}
 
 // export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
 //   const allData = await timeTableCreateRepository.getTimeTableCellData(
@@ -679,7 +617,7 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
 //     role
 //   );
 //   console.log(`>>>>>>>allData`,JSON.stringify(allData));
-  
+
 //   // 1. Separate normal and elective to get base metadata
 //   const normalItemBase = allData.find(
 //     item =>
@@ -736,7 +674,7 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
 //         employeeCode: teacherData?.employeeCode || "",
 //         pickColor: teacherData?.pickColor || "",
 //         employeeId: teacherData?.employeeId || null,
-//         isTeacher: curr?.isTeacher || null,        
+//         isTeacher: curr?.isTeacher || null,
 //         isAttendence: curr?.isAttendence ?? null,
 //         timeTableType, // Use the raw mapping type for the final grouping key
 //         subject: timeTableElective
@@ -780,7 +718,7 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
 //       mappingEntry,
 //       baseMetadata
 //     } = currentMapping;
-    
+
 //     // Key for top-level grouping is the internal mapping's timeTableType
 //     const finalType = mappingEntry.timeTableType;
 
@@ -790,10 +728,10 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
 //     if (!timeTableObj) {
 //       // Create a new base object using the appropriate metadata
 //       const sourceItem = finalType === "normal" ? normalItemBase : electiveItemBase || baseMetadata;
-      
+
 //       const course = sourceItem.timeTableCourse || baseMetadata.course || {};
 //       const classSection = sourceItem.timeTableClassSection || baseMetadata.classSection || {};
-      
+
 //       timeTableObj = {
 //         courseName: course.courseName || "",
 //         courseCode: course.courseCode || "",
@@ -850,26 +788,20 @@ export async function getTimeTableElective(courseId,  universityId, instituteId,
 //   return { formatted: finalAggregatedRoutines };
 // };
 
-// latest change 
+// latest change
 
-export async function getTimeTableCellData(
-  courseId,
-  classSectionsId,
-  universityId,
-  instituteId,
-  role
-) {
+export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     courseId,
     classSectionsId,
     universityId,
     instituteId,
-    role
+    role,
   );
 
   // STEP 1: Filter by classSectionsId (NOW multiple timetables possible)
-  const filteredBySection = allData.filter(
-    item => item.dataValues.timeTableType === "normal" ? item.classSectionsId === Number(classSectionsId): true
+  const filteredBySection = allData.filter((item) =>
+    item.dataValues.timeTableType === "normal" ? item.classSectionsId === Number(classSectionsId) : true,
   );
 
   // STEP 2: Group by timeTableNameId
@@ -889,13 +821,9 @@ export async function getTimeTableCellData(
   for (const timeTableNameId in groupedByTimeTableName) {
     const groupItems = groupedByTimeTableName[timeTableNameId];
 
-    const normalItemBase = groupItems.find(
-      item => item.timeTableType === "normal"
-    );
+    const normalItemBase = groupItems.find((item) => item.timeTableType === "normal");
 
-    const electiveItemBase = groupItems.find(
-      item => item.timeTableType === "elective"
-    );
+    const electiveItemBase = groupItems.find((item) => item.timeTableType === "elective");
 
     const allMappings = [];
     const itemsToProcess = [normalItemBase, electiveItemBase].filter(Boolean);
@@ -905,7 +833,7 @@ export async function getTimeTableCellData(
       const course = item.timeTableCourse || {};
       const classSection = item.timeTableClassSection || {};
 
-      (item?.timeTablecreate || []).forEach(curr => {
+      (item?.timeTablecreate || []).forEach((curr) => {
         const {
           day,
           isSameTeacher,
@@ -917,7 +845,7 @@ export async function getTimeTableCellData(
           employeeDetails,
           timeTableTeacherSubject,
           timeTableElective,
-          classRoom
+          classRoom,
         } = curr || {};
 
         let teacherData = null;
@@ -925,8 +853,7 @@ export async function getTimeTableCellData(
 
         if (isSameTeacher === true) {
           teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
-          subjectData =
-            timeTableTeacherSubject?.employeeSubject?.subjects || null;
+          subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
         } else {
           teacherData = employeeDetails || null;
           subjectData = timeTableSubject || null;
@@ -946,13 +873,13 @@ export async function getTimeTableCellData(
             ? {
                 subjectId: timeTableElective?.electiveSubjectId,
                 Name: timeTableElective?.electiveSubjectName,
-                Code: timeTableElective?.electiveSubjectCode
+                Code: timeTableElective?.electiveSubjectCode,
               }
             : {
                 subjectId: subjectData?.subjectId,
                 Name: subjectData?.subjectName,
-                Code: subjectData?.subjectCode
-              }
+                Code: subjectData?.subjectCode,
+              },
         };
 
         allMappings.push({
@@ -966,38 +893,26 @@ export async function getTimeTableCellData(
             courseId: item.courseId,
             classSectionsId: item.classSectionsId,
             startingDate: item.startingDate,
-            endingDate: item.endingDate
-          }
+            endingDate: item.endingDate,
+          },
         });
       });
     }
 
     // STEP 5: AGGREGATION (NO RESPONSE CHANGE)
     const aggregated = allMappings.reduce((acc, current) => {
-      const {
-        day,
-        timeTableCreationId,
-        periodDetails,
-        mappingEntry,
-        baseMetadata
-      } = current;
+      const { day, timeTableCreationId, periodDetails, mappingEntry, baseMetadata } = current;
 
       const finalType = mappingEntry.timeTableType;
 
-      let timeTableObj = acc.find(t => t.timeTableType === finalType);
+      let timeTableObj = acc.find((t) => t.timeTableType === finalType);
 
       if (!timeTableObj) {
-        const sourceItem =
-          finalType === "normal"
-            ? normalItemBase
-            : electiveItemBase || baseMetadata;
+        const sourceItem = finalType === "normal" ? normalItemBase : electiveItemBase || baseMetadata;
 
         const course = sourceItem?.timeTableCourse || baseMetadata.course || {};
 
-        const classSection =
-          sourceItem?.timeTableClassSection ||
-          baseMetadata.classSection ||
-          {};
+        const classSection = sourceItem?.timeTableClassSection || baseMetadata.classSection || {};
 
         timeTableObj = {
           courseName: course.courseName || "",
@@ -1007,38 +922,22 @@ export async function getTimeTableCellData(
           class: finalType !== "elective" ? classSection.class || "" : "",
           timeTableType: finalType,
           classSectionsId:
-            finalType !== "elective"
-              ? sourceItem?.classSectionsId ||
-                baseMetadata.classSectionsId ||
-                null
-              : null,
-          startingDate:
-            finalType !== "elective"
-              ? sourceItem?.startingDate ||
-                baseMetadata.startingDate ||
-                null
-              : null,
-          endingDate:
-            finalType !== "elective"
-              ? sourceItem?.endingDate ||
-                baseMetadata.endingDate ||
-                null
-              : null,
-          sectionRoutine: []
+            finalType !== "elective" ? sourceItem?.classSectionsId || baseMetadata.classSectionsId || null : null,
+          startingDate: finalType !== "elective" ? sourceItem?.startingDate || baseMetadata.startingDate || null : null,
+          endingDate: finalType !== "elective" ? sourceItem?.endingDate || baseMetadata.endingDate || null : null,
+          sectionRoutine: [],
         };
 
         acc.push(timeTableObj);
       }
 
-      let dayObj = timeTableObj.sectionRoutine.find(d => d.day === day);
+      let dayObj = timeTableObj.sectionRoutine.find((d) => d.day === day);
       if (!dayObj) {
         dayObj = { day, period: [] };
         timeTableObj.sectionRoutine.push(dayObj);
       }
 
-      let periodObj = dayObj.period.find(
-        p => p.timeTableCreationId === timeTableCreationId
-      );
+      let periodObj = dayObj.period.find((p) => p.timeTableCreationId === timeTableCreationId);
 
       if (!periodObj) {
         dayObj.period.push({
@@ -1049,13 +948,11 @@ export async function getTimeTableCellData(
           periodGap: periodDetails.periodGap,
           startTime: periodDetails.startTime,
           endTime: periodDetails.endTime,
-          mappingData: [mappingEntry]
+          mappingData: [mappingEntry],
         });
       } else {
         const exists = periodObj.mappingData.some(
-          m =>
-            m.employeeId === mappingEntry.employeeId &&
-            m.subject.subjectId === mappingEntry.subject.subjectId
+          (m) => m.employeeId === mappingEntry.employeeId && m.subject.subjectId === mappingEntry.subject.subjectId,
         );
 
         if (!exists) {
@@ -1070,7 +967,7 @@ export async function getTimeTableCellData(
   }
 
   return { formatted: finalResult };
-};
+}
 
 export async function publishTimeTableService(timeTableCreateId) {
   try {
@@ -1081,45 +978,41 @@ export async function publishTimeTableService(timeTableCreateId) {
     }
 
     return { message: "Time table published successfully" };
-
   } catch (error) {
     console.error("Error in publishTimeTableService:", error);
     throw error;
   }
-};
-
+}
 
 export async function getSubjectWithCount(classSectionsId) {
-
   const [subjectsData, timeTableData] = await Promise.all([
     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
-    timeTableCreateRepository.timeTableData(classSectionsId)
+    timeTableCreateRepository.timeTableData(classSectionsId),
   ]);
 
   //  Master subject list (same as before)
   const subjectsList =
-    subjectsData?.semesterDetail?.semestermapping?.map(s => ({
+    subjectsData?.semesterDetail?.semestermapping?.map((s) => ({
       subjectId: Number(s.subjectId),
       subject: s.subjects?.subjectName,
-      subjectCode: s.subjects?.subjectCode
+      subjectCode: s.subjects?.subjectCode,
     })) || [];
 
-  const validSubjectIds = new Set(subjectsList.map(s => s.subjectId));
+  const validSubjectIds = new Set(subjectsList.map((s) => s.subjectId));
 
   //  Result per timetable
   const finalResult = [];
 
   //  Loop each timetableCreate (A / B / C / D)
   for (const tt of timeTableData) {
-
     const countMap = {};
-    validSubjectIds.forEach(id => (countMap[id] = 0));
+    validSubjectIds.forEach((id) => (countMap[id] = 0));
 
     const countedSlots = new Set();
     const mappings = tt?.timeTablecreate || [];
 
     //  Count subjects INSIDE THIS timetable
-    mappings.forEach(t => {
+    mappings.forEach((t) => {
       let foundSubjectId = null;
 
       if (t.subjectId) {
@@ -1146,14 +1039,14 @@ export async function getSubjectWithCount(classSectionsId) {
     finalResult.push({
       timeTableNameId: tt.timeTableCreateName?.timeTableNameId,
       timeTableName: tt.timeTableCreateName?.name,
-      subjects: subjectsList.map(s => ({
+      subjects: subjectsList.map((s) => ({
         subjectId: s.subjectId,
         subject: s.subject,
         subjectCode: s.subjectCode,
-        count: countMap[s.subjectId] || 0
-      }))
+        count: countMap[s.subjectId] || 0,
+      })),
     });
   }
 
   return finalResult;
-};
+}

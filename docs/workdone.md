@@ -7,3 +7,13 @@
 ---
 
 1. elective time table.
+
+---
+
+1. Elective time table multiple instances.
+2. "Barcode" in basic info And "Excision Number" on place of "Barcode" in inventory management. [FE]
+3. Subject name not visible in mark attendance. [BE]
+4. column name changes in assign weightage. [FE]
+5. false badges on navbar. [FE]
+6. missing fee plan dropdown works on selecting filters.
+7. Adding another faculty in timetable is not working.

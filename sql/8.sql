@@ -308,3 +308,6 @@ SET semester_id = 85,
 WHERE class_sections_id = 202;
 
 SET SQL_SAFE_UPDATES = 1;
+
+
+delete from time_table_create where time_table_type = 'elective';

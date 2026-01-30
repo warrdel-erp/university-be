@@ -362,6 +362,15 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
+              include: [
+                {
+                  model: model.libraryFloorModel,
+                  as: "libraryFloor",
+                  attributes: {
+                    exclude: ["createdAt", "updatedAt", "deletedAt"],
+                  },
+                },
+              ],
             },
           ],
         },
