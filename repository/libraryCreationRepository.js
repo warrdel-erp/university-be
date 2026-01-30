@@ -362,15 +362,6 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
-              include: [
-                {
-                  model: model.libraryFloorModel,
-                  as: "floorDetails",
-                  attributes: {
-                    exclude: ["createdAt", "updatedAt", "deletedAt"],
-                  },
-                },
-              ],
             },
           ],
         },
@@ -392,6 +383,19 @@ export async function getAllIssuedBooks() {
           model: model.employeeModel,
           as: "employeeDetailsBook",
           attributes: ["employee_id", "employeeCode", "department", "employeeName"],
+        },
+        {
+          model: model.libraryAisleModel,
+          as: "aisleDetails",
+          include: [
+            {
+              model: model.libraryFloorModel,
+              as: "floor",
+              attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt"],
+              },
+            },
+          ],
         },
       ],
     });
