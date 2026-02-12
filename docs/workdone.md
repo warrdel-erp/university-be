@@ -17,3 +17,8 @@
 5. false badges on navbar. [FE]
 6. missing fee plan dropdown works on selecting filters.
 7. Adding another faculty in timetable is not working.
+
+---
+
+1. previous ER is done.
+2. working on restructuring.
