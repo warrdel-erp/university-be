@@ -12,3 +12,17 @@
 12. is there any boundaries of routine dates based on session or academic year?
 13. can a time table structure period can be changed if it is being used in any routine?
 14. explain teacher, hr module full.
+15. how leaves are working how to set leave balance. And what are policies.
+16. what is teacher attendance
+17. flow of dormitory. How it is working in software?
+18. Library is campus specific or institute?
+19. can Library have multiple floors, if yes then how it is working in software?
+20. what is library member, does all student by default can't take books.
+21. what is membership of teacher.
+22. if I'm not selecting any member type in "add member" of "Member Management", then why we are showing list.
+23. what is issue/return book.
+24. what is transport module?
+25. what is "Resource Management".
+26. what is "Fees Type" in Fee config and where it is used?
+27. what is "Less Planning"
+28. ER questions
