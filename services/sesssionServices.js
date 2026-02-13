@@ -1,8 +1,8 @@
 import sequelize from '../database/sequelizeConfig.js';
-import * as sessionCreationService  from "../repository/sessionRepository.js";
+import * as sessionCreationService from "../repository/sessionRepository.js";
 
 export async function addSession(sessionData, createdBy, updatedBy, universityId, instituteId) {
-  const transaction = await sequelize.transaction(); 
+  const transaction = await sequelize.transaction();
 
   try {
     sessionData.createdBy = createdBy;
@@ -25,7 +25,7 @@ export async function addSession(sessionData, createdBy, updatedBy, universityId
       await sessionCreationService.courseSectionMapping(mappingData, transaction);
     }
 
-    await transaction.commit(); 
+    await transaction.commit();
     return session;
 
   } catch (error) {
@@ -35,21 +35,21 @@ export async function addSession(sessionData, createdBy, updatedBy, universityId
   }
 }
 
-export async function getSessionDetails(universityId,instituteId,role,acedmicYearId) {
-    return await sessionCreationService.getSessionDetails(universityId,instituteId,role,acedmicYearId);
+export async function getSessionDetails(universityId, instituteId, role, acedmicYearId) {
+  return await sessionCreationService.getSessionDetails(universityId, instituteId, role, acedmicYearId);
 }
 
 export async function getSingleSessionDetails(sessionId) {
-    return await sessionCreationService.getSingleSessionDetails(sessionId);
+  return await sessionCreationService.getSingleSessionDetails(sessionId);
 }
 
-export async function updateSession(sessionId, sessionData, updatedBy) {    
-        sessionData.updatedBy = updatedBy;
-       return await sessionCreationService.updateSession(sessionId, sessionData);
+export async function updateSession(sessionId, sessionData, updatedBy) {
+  sessionData.updatedBy = updatedBy;
+  return await sessionCreationService.updateSession(sessionId, sessionData);
 }
 
 export async function deleteSession(sessionId) {
-    return await sessionCreationService.deleteSession(sessionId);
+  return await sessionCreationService.deleteSession(sessionId);
 };
 
 
@@ -84,10 +84,10 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
   }
 };
 
-export async function updateCouseSessionMapping(data,updatedBy,universityId,instituteId) {    
-        data.updatedBy = updatedBy;
-        data.instituteId= instituteId;
-        data.universityId= universityId;
-        const sessionCourseMappingId = data?.sessionCourseMappingId
-       return await sessionCreationService.updateCouseSessionMapping(sessionCourseMappingId, data);
+export async function updateCouseSessionMapping(data, updatedBy, universityId, instituteId) {
+  data.updatedBy = updatedBy;
+  data.instituteId = instituteId;
+  data.universityId = universityId;
+  const sessionCourseMappingId = data?.sessionCourseMappingId
+  return await sessionCreationService.updateCouseSessionMapping(sessionCourseMappingId, data);
 };

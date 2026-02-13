@@ -1,16 +1,12 @@
-import * as sessionCreation  from  "../services/sesssionServices.js";
+import * as sessionCreation from "../services/sesssionServices.js";
 
 export async function addSession(req, res) {
-    const {sessionName,startingDate,endingDate,classTillDate,acedmicYearId} = req.body
     const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
+
     try {
-        if(!(sessionName && startingDate && endingDate && classTillDate && acedmicYearId)){
-           return res.status(400).send('sessionName,startingDate,endingDate,acedmicYearId,classTillDate is required')
-        }
-        const session = await sessionCreation.addSession(req.body,createdBy,updatedBy,universityId,instituteId);
+        const session = await sessionCreation.addSession(req.body, createdBy, updatedBy, universityId, instituteId);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -22,8 +18,9 @@ export async function getAllSession(req, res) {
     const role = req.user.role;
     const universityId = req.user.universityId;
     const acedmicYearId = req.query.acedmicYearId
+
     try {
-        const session = await sessionCreation.getSessionDetails(universityId,instituteId,role,acedmicYearId);
+        const session = await sessionCreation.getSessionDetails(universityId, instituteId, role, acedmicYearId);
         res.status(200).json(session);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -47,13 +44,13 @@ export async function getSingleSessionDetails(req, res) {
 
 export async function updateSession(req, res) {
     try {
-        const {sessionId} = req.body
-        if(!(sessionId)){
+        const { sessionId } = req.body
+        if (!(sessionId)) {
             return res.status(400).send('SessionId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updatedSession = await sessionCreation.updateSession(sessionId, req.body,updatedBy);
-            res.status(200).json({message: "session update succesfully" ,updatedSession});
+        }
+        const updatedBy = req.user.userId;
+        const updatedSession = await sessionCreation.updateSession(sessionId, req.body, updatedBy);
+        res.status(200).json({ message: "session update succesfully", updatedSession });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -77,16 +74,16 @@ export async function deleteSession(req, res) {
 };
 
 export async function couseSessionMapping(req, res) {
-    const {sessionId} = req.body
+    const { sessionId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
     try {
-        if(!(sessionId)){
-           return res.status(400).send('sessionId is required')
+        if (!(sessionId)) {
+            return res.status(400).send('sessionId is required')
         }
-        const session = await sessionCreation.couseSessionMapping(req.body,createdBy,updatedBy,universityId,instituteId);
+        const session = await sessionCreation.couseSessionMapping(req.body, createdBy, updatedBy, universityId, instituteId);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -94,15 +91,15 @@ export async function couseSessionMapping(req, res) {
 };
 
 export async function updateCouseSessionMapping(req, res) {
-    const {sessionCourseMappingId} = req.body
+    const { sessionCourseMappingId } = req.body
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
     try {
-        if(!(sessionCourseMappingId)){
-           return res.status(400).send('sessionCourseMappingId is required')
+        if (!(sessionCourseMappingId)) {
+            return res.status(400).send('sessionCourseMappingId is required')
         }
-        const session = await sessionCreation.updateCouseSessionMapping(req.body,updatedBy,universityId,instituteId);
+        const session = await sessionCreation.updateCouseSessionMapping(req.body, updatedBy, universityId, instituteId);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
