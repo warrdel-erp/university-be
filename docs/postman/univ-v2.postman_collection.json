@@ -187,6 +187,73 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "course",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "course sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:id/sessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":id",
+                "sessions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
