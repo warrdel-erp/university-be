@@ -13,6 +13,7 @@ import download from "./router/downloadRoute.js";
 import codeMaster from "./router/codeMasterRoute.js";
 import campus from "./router/campusRoute.js";
 import institute from "./router/instituteRoute.js";
+import course from "./router/courseRoute.js";
 import user from "./router/auth/userRoute.js";
 import employee from "./router/employeeRoute.js";
 import teacher from "./router/teacherMappingRoute.js";
@@ -85,6 +86,7 @@ app.use(urlencoded({ extended: true }));
 
 app.use("/campus", campus);
 app.use("/institute", institute);
+app.use("/course", course);
 app.use("/session", session);
 
 app.use("/main", main);
