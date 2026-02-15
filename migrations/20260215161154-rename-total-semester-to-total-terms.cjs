@@ -3,10 +3,16 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.renameColumn('course', 'total_semester', 'total_terms');
+    const tableDefinition = await queryInterface.describeTable('course');
+    if (tableDefinition.total_semester) {
+      await queryInterface.renameColumn('course', 'total_semester', 'total_terms');
+    }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.renameColumn('course', 'total_terms', 'total_semester');
+    const tableDefinition = await queryInterface.describeTable('course');
+    if (tableDefinition.total_terms) {
+      await queryInterface.renameColumn('course', 'total_terms', 'total_semester');
+    }
   }
 };
