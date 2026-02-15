@@ -143,12 +143,18 @@
               "raw": ""
             },
             "url": {
-              "raw": "{{baseurl}}/campus",
+              "raw": "{{baseurl}}/institute?campusId=11",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "campus"
+                "institute"
+              ],
+              "query": [
+                {
+                  "key": "campusId",
+                  "value": "11"
+                }
               ]
             }
           },
@@ -207,12 +213,24 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/course",
+              "raw": "{{baseurl}}/course?campusId=11",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "course"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "campusId",
+                  "value": "11"
+                }
               ]
             }
           },
@@ -246,7 +264,45 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": ""
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "class Sections Grouped",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId=34&sessionId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "semesterWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "12"
                 }
               ]
             }
