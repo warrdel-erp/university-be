@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 export async function getCourseByCourseId(courseId) {
     try {
         const result = await model.courseModel.findOne({
-            attributes: ["universityId", "courseDuration", "isActive"],
+            attributes: ["universityId", "courseDuration", "isActive", "termType", "totalTerms"],
             where: {
                 courseId: courseId
             },
@@ -195,7 +195,6 @@ export async function getCourseByIdWithSessions(courseId, universityId, acedmicY
     try {
         return await model.courseModel.findOne({
             where: { courseId, universityId },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
                     model: model.sessionCouseMappingModel,
@@ -212,6 +211,11 @@ export async function getCourseByIdWithSessions(courseId, universityId, acedmicY
                                     model: model.classSectionModel,
                                     as: 'classSession',
                                     attributes: ["classSectionsId", "section"],
+                                },
+                                {
+                                    model: model.classModel,
+                                    as: 'classes',
+                                    attributes: ["classId", "term"],
                                 }
                             ]
                         }
@@ -221,6 +225,31 @@ export async function getCourseByIdWithSessions(courseId, universityId, acedmicY
         });
     } catch (error) {
         console.error("Error in Course Repository (getCourseByIdWithSessions):", error);
+        throw error;
+    }
+}
+
+/**
+ * Get class sections for a course and session
+ * @param {number} courseId 
+ * @param {number} sessionId 
+ * @returns {Promise<Array>}
+ */
+export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
+    try {
+        return await model.classSectionModel.findAll({
+            where: { courseId, sessionId },
+            include: [
+                {
+                    model: model.classModel,
+                    as: 'classGroup',
+                    attributes: ['term']
+                }
+            ],
+            attributes: ['classSectionsId', 'section']
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getClassSectionsByCourseAndSession):", error);
         throw error;
     }
 }

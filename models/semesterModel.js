@@ -64,7 +64,7 @@ export default sequelize.define(
         termType: {
             type: DataTypes.STRING,
             allowNull: false,
-            field:'term_type'
+            field: 'term_type'
         },
         name: {
             type: DataTypes.STRING,

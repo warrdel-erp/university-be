@@ -7,3 +7,4 @@
 ---
 
 1. affiliated University, specialization.
+2. remove semester table.

@@ -79,10 +79,20 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        isActive:{
-            type:DataTypes.BOOLEAN,
-            allowNull:false,
-            defaultValue:true
+        termType: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'term_type'
+        },
+        totalTerms: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'total_terms'
+        },
+        isActive: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true
         },
         createdAt: {
             type: DataTypes.DATE,

@@ -26,3 +26,12 @@
 26. what is "Fees Type" in Fee config and where it is used?
 27. what is "Less Planning"
 28. ER questions
+29. why global classSections are academic year specific.
+
+---
+
+## for Ram
+
+1. new API for classSections listing in add class Sections
+2. why we are sending sectionId during creation of classSections.
+3. send term in class creation instead of semesterId.

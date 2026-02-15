@@ -22,3 +22,9 @@
 
 1. previous ER is done.
 2. working on restructuring.
+
+---
+
+1. semester table remove from logic and manage it with course data.
+2. get classSections API as per semester.
+3. missing terms in course-session API.

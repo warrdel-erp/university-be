@@ -2,6 +2,7 @@ import * as sessionCreation from "../services/sesssionServices.js";
 
 export async function addSession(req, res) {
     const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
 

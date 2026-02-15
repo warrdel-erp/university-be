@@ -51,7 +51,7 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
+        },
         semesterId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -60,7 +60,11 @@ export default sequelize.define(
                 model: semesterModel,
                 key: 'semester_id'
             }
-        },       
+        },
+        term: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
         className: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -108,3 +112,6 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+
+

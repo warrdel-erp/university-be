@@ -47,13 +47,6 @@ export const getCourseSessions = async (req, res) => {
             });
         }
 
-        if (!courseId) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Course Id is required'
-            });
-        }
-
         const result = await courseService.getCourseWithSessions(courseId, universityId, acedmicYearId);
 
         if (!result) {
@@ -73,6 +66,28 @@ export const getCourseSessions = async (req, res) => {
             status: 'error',
             message: "Internal Server Error",
             error: error.message
+        });
+    }
+};
+/**
+ * Handle getting class sections grouped by term
+ */
+export const getClassSectionsGrouped = async (req, res) => {
+    try {
+        const { courseId, sessionId } = req.query;
+
+        const result = await courseService.getClassSectionsGroupedByTerm(courseId, sessionId);
+
+        return res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        console.error("Error in Get Class Sections Grouped Controller:", error);
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({
+            status: 'error',
+            message: error.message || "Internal Server Error"
         });
     }
 };

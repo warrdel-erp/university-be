@@ -18,8 +18,15 @@ const listCoursesSchema = z.object({
     path: ["instituteId"]
 });
 
+const classSectionsGroupedSchema = z.object({
+    courseId: z.string().regex(/^\d+$/, "Course Id must be a number").transform(val => parseInt(val)),
+    sessionId: z.string().regex(/^\d+$/, "Session Id must be a number").transform(val => parseInt(val)),
+});
+
 // Routes
 router.get("/", userAuth, validate({ query: listCoursesSchema }), courseController.listCourses);
+
+router.get("/semesterWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getClassSectionsGrouped);
 
 router.get("/:courseId/sessions", userAuth, validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 

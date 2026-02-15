@@ -10,7 +10,8 @@ const sessionSchema = z.object({
     startingDate: z.string({ required_error: "Starting date is required" }),
     endingDate: z.string({ required_error: "Ending date is required" }),
     classTillDate: z.string({ required_error: "Class till date is required" }),
-    acedmicYearId: z.number({ required_error: "Academic year id is required" })
+    acedmicYearId: z.number({ required_error: "Academic year id is required" }),
+    courseId: z.array(z.number()).optional()
 });
 
 router.post('/', userAuth, validate({ body: sessionSchema }), addSession);

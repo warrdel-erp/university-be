@@ -777,6 +777,9 @@ coModel.hasMany(coWeightageModel, { foreignKey: "co_id", as: "codetail" });
 classSectionModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "classSession" });
 sessionModel.hasMany(classSectionModel, { foreignKey: "session_id", as: "classSession" });
 
+classModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
+sessionModel.hasMany(classModel, { foreignKey: "session_id", as: "classes" });
+
 sessionModel.hasMany(sessionCouseMappingModel, { foreignKey: "sessionId", as: "courseMappings" });
 sessionCouseMappingModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "session" });
 
