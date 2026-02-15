@@ -80,10 +80,10 @@ export default sequelize.define(
             allowNull: false,
             field: 'course_duration'
         },
-        totalSemester: {
+        totalTerms: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'total_semester'
+            field: 'total_terms'
         },
         createdAt: {
             type: DataTypes.DATE,
