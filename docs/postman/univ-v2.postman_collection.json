@@ -310,6 +310,92 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "subject",
+      "item": [
+        {
+          "name": "get tiny",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject/tinyData?campusId=11&courseId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "tinyData"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "13",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "campusId",
+                  "value": "11",
+                  "type": "text"
+                },
+                {
+                  "key": "courseId",
+                  "value": null,
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
