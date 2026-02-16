@@ -275,7 +275,7 @@ export async function addClass(data) {
 // addClass and createClass function are same but addClass function add automatic according to semester
 //  but createClass function add section manually
 
-export async function createClass(data) {
+export async function createClassSections(data) {
     try {
         const result = await model.classSectionModel.create(data);
         return result;

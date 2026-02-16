@@ -243,7 +243,7 @@ export async function addClass(data, createdBy, universityId, instituteId) {
         const classId = classData.dataValues.classId
 
         for (const section of sections) {
-            const result = await mainRepository.createClass({
+            const result = await mainRepository.createClassSections({
                 ...section,
                 courseId,
                 universityId,
@@ -333,7 +333,7 @@ export async function createClass(data, createdBy, universityId, instituteId) {
         const { courseId, acedmicYearId, specializationId, section } = data;
 
         for (const sectionValue of section) {
-            const result = await mainRepository.createClass({
+            const result = await mainRepository.createClassSections({
                 courseId,
                 specializationId,
                 acedmicYearId,

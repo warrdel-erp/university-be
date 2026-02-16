@@ -54,7 +54,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'semester_id',
             references: {
                 model: semesterModel,
