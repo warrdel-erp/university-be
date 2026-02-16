@@ -7,4 +7,4 @@
 ---
 
 1. affiliated University, specialization.
-2. remove semester table.
+2. remove semester table API.

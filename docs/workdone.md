@@ -28,3 +28,5 @@
 1. semester table remove from logic and manage it with course data.
 2. get classSections API as per semester.
 3. missing terms in course-session API.
+4. subject tiny data API for for first page of master -> subject.
+5. main subject listing

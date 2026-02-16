@@ -765,6 +765,9 @@ courseModel.hasMany(poModel, { foreignKey: "course_id", as: "courseDetail" });
 subjectModel.belongsTo(courseModel, { foreignKey: "courseId", as: "courseInfo" });
 courseModel.hasMany(subjectModel, { foreignKey: "courseId", as: "subjectInfo" });
 
+subjectModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institutedSubject" });
+instituteModel.hasMany(subjectModel, { foreignKey: "instituteId", as: "institutedSubject" });
+
 semesterModel.hasMany(classSectionModel, { foreignKey: "semesterId", as: "classSections" });
 classSectionModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "semester" });
 

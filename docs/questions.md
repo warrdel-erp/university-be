@@ -27,11 +27,12 @@
 27. what is "Less Planning"
 28. ER questions
 29. why global classSections are academic year specific.
+30. If I've not selected Institute in masterData -> subjects. Then which course Belongs to which institute. and If i've clicked any course and then inside changed institute then what?
+31. can one subject be taught in multiple semester? (Because It is happening in current software)
 
 ---
 
 ## for Ram
 
-1. new API for classSections listing in add class Sections
-2. why we are sending sectionId during creation of classSections.
-3. send term in class creation instead of semesterId.
+1. subject tiny data API for for first page of master -> subject.
+2. main subject listing API

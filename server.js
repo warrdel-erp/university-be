@@ -75,6 +75,7 @@ import jobs from "./router/jobRoutes.js";
 import grade from "./router/gradeRoute.js";
 import credit from "./router/creditRoute.js";
 import evalution from "./router/evalutionRoute.js";
+import subjects from "./router/subjectRoute.js";
 
 // middleware
 app.use(fileUpload());
@@ -88,13 +89,14 @@ app.use("/campus", campus);
 app.use("/institute", institute);
 app.use("/course", course);
 app.use("/session", session);
+app.use("/subject", subjects);
+
 
 app.use("/main", main);
 app.use("/setting", setting);
 app.use("/student", student);
 app.use("/download", download);
 app.use("/codeMaster", codeMaster);
-
 app.use("/user", user);
 app.use("/employee", employee);
 app.use("/teacher", teacher);
