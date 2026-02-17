@@ -385,6 +385,43 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "add terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"subjectId\": 47,\n        \"term\": 4\n    },\n    {\n        \"subjectId\": 48,\n        \"term\": 4\n    }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subject/addTerms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "addTerms"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }
