@@ -17,6 +17,22 @@ export const listCourses = async (universityId, instituteId, campusId) => {
 };
 
 /**
+ * Get course list with associated subjects
+ * @param {number} universityId 
+ * @param {number} instituteId 
+ * @param {number} acedmicYearId 
+ * @returns {Promise<Array>}
+ */
+export const getCourseWithSubjects = async (universityId, instituteId, acedmicYearId) => {
+    try {
+        return await courseRepository.getCourseListWithSubjects(universityId, instituteId, acedmicYearId);
+    } catch (error) {
+        console.error('Error in Course Service (getCourseWithSubjects):', error);
+        throw error;
+    }
+};
+
+/**
  * Get course with its sessions
  * @param {number} courseId 
  * @param {number} universityId 

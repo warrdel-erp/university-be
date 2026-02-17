@@ -18,6 +18,11 @@ const listCoursesSchema = z.object({
     path: ["instituteId"]
 });
 
+const courseListWithSubjectsSchema = z.object({
+    instituteId: z.string().regex(/^\d+$/, "Institute Id must be a number").transform(val => parseInt(val)),
+    acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").transform(val => parseInt(val)),
+});
+
 const classSectionsGroupedSchema = z.object({
     courseId: z.string().regex(/^\d+$/, "Course Id must be a number").transform(val => parseInt(val)),
     sessionId: z.string().regex(/^\d+$/, "Session Id must be a number").transform(val => parseInt(val)),
@@ -25,6 +30,8 @@ const classSectionsGroupedSchema = z.object({
 
 // Routes
 router.get("/", userAuth, validate({ query: listCoursesSchema }), courseController.listCourses);
+
+router.get("/withSubjects", userAuth, validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
 router.get("/semesterWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getClassSectionsGrouped);
 

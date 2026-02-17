@@ -1,33 +1,13 @@
 import * as model from '../models/index.js';
 
-export async function getSubjectTiny(universityId, acedmicYearId, campusId, instituteId) {
+export async function getAllSubjects(universityId, acedmicYearId, campusId, instituteId, courseId) {
     try {
         const whereClause = {
             universityId,
             ...(acedmicYearId && { acedmicYearId }),
             ...(instituteId && { instituteId }),
             ...(campusId && { campusId }),
-        };
-
-        const result = await model.subjectModel.findAll({
-            attributes: ['subjectId', 'subjectCode'],
-            where: whereClause,
-            raw: true,
-        });
-        return result;
-    } catch (error) {
-        console.error("Error in get subject tiny data:", error);
-        throw error;
-    }
-};
-
-export async function getAllSubjects(universityId, acedmicYearId, campusId, instituteId) {
-    try {
-        const whereClause = {
-            universityId,
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(instituteId && { instituteId }),
-            ...(campusId && { campusId }),
+            ...(courseId && { courseId }),
         };
 
         const result = await model.subjectModel.findAll({

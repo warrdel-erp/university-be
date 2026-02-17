@@ -253,3 +253,38 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
         throw error;
     }
 }
+
+/**
+ * Get course list with associated subjects
+ * @param {number} universityId 
+ * @param {number} instituteId 
+ * @param {number} acedmicYearId 
+ * @returns {Promise<Array>}
+ */
+export async function getCourseListWithSubjects(universityId, instituteId, acedmicYearId) {
+    try {
+        const whereClause = {
+            universityId,
+            instituteId,
+        };
+
+        return await model.courseModel.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: model.subjectModel,
+                    as: 'subjectInfo',
+                    attributes: ['subjectId', 'subjectCode'],
+                    where: {
+                        acedmicYearId,
+                        instituteId,
+                    },
+                    required: true
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getCourseListWithSubjects):", error);
+        throw error;
+    }
+}

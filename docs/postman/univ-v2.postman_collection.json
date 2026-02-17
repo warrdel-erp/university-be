@@ -237,6 +237,44 @@
           "response": []
         },
         {
+          "name": "get with Subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/withSubjects?instituteId=12&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "withSubjects"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "course sessions",
           "request": {
             "auth": {
@@ -315,52 +353,6 @@
       "name": "subject",
       "item": [
         {
-          "name": "get tiny",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/subject/tinyData?campusId=11&courseId",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "subject",
-                "tinyData"
-              ],
-              "query": [
-                {
-                  "key": "instituteId",
-                  "value": "13",
-                  "type": "text",
-                  "disabled": true
-                },
-                {
-                  "key": "campusId",
-                  "value": "11",
-                  "type": "text"
-                },
-                {
-                  "key": "courseId",
-                  "value": null,
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "get",
           "request": {
             "auth": {
@@ -376,7 +368,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject",
+              "raw": "{{baseurl}}/subject?instituteId=12",
               "host": [
                 "{{baseurl}}"
               ],
@@ -387,8 +379,7 @@
                 {
                   "key": "instituteId",
                   "value": "12",
-                  "type": "text",
-                  "disabled": true
+                  "type": "text"
                 }
               ]
             }

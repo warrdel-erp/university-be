@@ -30,3 +30,5 @@
 3. missing terms in course-session API.
 4. subject tiny data API for for first page of master -> subject.
 5. main subject listing
+6. create a new API for course with subject listing.
+7. course filter in subject API

@@ -32,6 +32,37 @@ export const listCourses = async (req, res) => {
 };
 
 /**
+ * Handle getting course list with associated subjects
+ */
+export const getCourseWithSubjects = async (req, res) => {
+    try {
+        const universityId = req.user.universityId;
+        const { instituteId, acedmicYearId } = req.query;
+
+        if (!universityId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'University Id is missing from user session'
+            });
+        }
+
+        const result = await courseService.getCourseWithSubjects(universityId, instituteId, acedmicYearId);
+
+        return res.status(200).json({
+            status: 'success',
+            data: result
+        });
+    } catch (error) {
+        console.error("Error in Get Course With Subjects Controller:", error);
+        return res.status(500).json({
+            status: 'error',
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
+
+/**
  * Handle getting a single course with its sessions
  */
 export const getCourseSessions = async (req, res) => {
