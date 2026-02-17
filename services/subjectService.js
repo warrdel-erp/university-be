@@ -9,3 +9,12 @@ export async function getAllSubjects(universityId, acedmicYearId, campusId, inst
         throw error;
     }
 }
+
+export async function setSubjectTerms(termsArray) {
+    try {
+        return await subjectRepository.setSubjectTerms(termsArray);
+    } catch (error) {
+        console.error('Error in setSubjectTerms service:', error);
+        throw error;
+    }
+}

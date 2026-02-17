@@ -32,3 +32,5 @@
 5. main subject listing
 6. create a new API for course with subject listing.
 7. course filter in subject API
+8. change DB structure of subject term mapping.
+9. New API for subject term mapping. (now one subject can only belong to one term)

@@ -85,6 +85,11 @@ export default sequelize.define(
             allowNull: false,
             field: 'subject_type'
         },
+        term: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'term'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
