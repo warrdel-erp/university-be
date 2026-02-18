@@ -34,3 +34,5 @@
 7. course filter in subject API
 8. change DB structure of subject term mapping.
 9. New API for subject term mapping. (now one subject can only belong to one term)
+10. create Course API error resolve.
+11. API for terms used in masterData -> syllabus

@@ -25,15 +25,17 @@
 25. what is "Resource Management". [explained]
 26. If I've not selected Institute in masterData -> subjects. Then which course Belongs to which institute. and If i've clicked any course and then inside changed institute then what? [institute-and-academic-year-are-mandatory-in-navbar] [if-we-are-changing-any-dropdown-from-navbar-product-will-refresh]
 
-27. ER questions
-28. what is "Fees Type" in Fee config and where it is used?
-29. what is "Less Planning"
-30. why global classSections are academic year specific.
-31. can one subject be taught in multiple semester? (Because It is happening in current software)
+27. what is contact hours in add unit?
+28. ER questions
+29. what is "Fees Type" in Fee config and where it is used?
+30. what is "Less Planning"
+31. why global classSections are academic year specific.
+32. can one subject be taught in multiple semester? (Because It is happening in current software)
 
 ---
 
 ## for Ram
 
-1. subject tiny data API for for first page of master -> subject.
-2. main subject listing API
+1. API for terms used in masterData -> syllabus
+2. subject list for syllabus is already exists.
+3. where syllabus APIs are used?

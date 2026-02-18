@@ -75,6 +75,7 @@ import jobs from "./router/jobRoutes.js";
 import grade from "./router/gradeRoute.js";
 import credit from "./router/creditRoute.js";
 import evalution from "./router/evalutionRoute.js";
+import terms from "./router/termsRoute.js";
 import subjects from "./router/subjectRoute.js";
 
 // middleware
@@ -90,6 +91,8 @@ app.use("/institute", institute);
 app.use("/course", course);
 app.use("/session", session);
 app.use("/subject", subjects);
+app.use("/terms", terms);
+app.use("/syllabus", syllabus);
 
 
 app.use("/main", main);
@@ -136,7 +139,6 @@ app.use("/subAccount", subAccount); // this is department
 app.use("/department", department); // this is sub_account
 app.use("/staff", staff);
 app.use("/departmentStructure", departmentStructure);
-app.use("/syllabus", syllabus);
 app.use("/po", po);
 app.use("/co", co);
 app.use("/feePlan", feePlan);

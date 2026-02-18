@@ -187,6 +187,9 @@ classModel.hasMany(classSectionModel, { foreignKey: "class_id", as: "classGroup"
 classSectionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 acedmicYearModel.hasMany(classSectionModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 
+classSectionModel.belongsTo(sectionModel, { foreignKey: "section_id", as: "sectionDetail" });
+sectionModel.hasMany(classSectionModel, { foreignKey: "section_id", as: "sectionDetail" });
+
 courseModel.belongsTo(affiliatedIniversityModel, { foreignKey: "affiliated_university_id", as: "affiliated" });
 affiliatedIniversityModel.hasMany(courseModel, { foreignKey: "affiliated_university_id", as: "affiliated" });
 

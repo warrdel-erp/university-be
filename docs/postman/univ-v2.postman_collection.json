@@ -424,6 +424,49 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "term",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "withSubjectAndSection"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

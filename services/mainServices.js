@@ -150,7 +150,7 @@ export async function addCourse(data, createdBy, instituteId) {
                         name: `${termLabel} ${i}`,
                         semesterDuration: monthsPerTerm,
                         courseDuration: courseDuration,
-                        totalSemester: totalTerms,
+                        totalTerms,
                         createdBy,
                     }, transaction);
                 }
@@ -164,7 +164,7 @@ export async function addCourse(data, createdBy, instituteId) {
     } catch (error) {
         await transaction.rollback();
         console.error('Error adding courses:', error);
-        return { message: 'Error adding courses', error };
+        throw { message: 'Error adding courses', error };
     }
 };
 
