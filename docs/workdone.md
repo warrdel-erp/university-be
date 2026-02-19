@@ -36,3 +36,7 @@
 9. New API for subject term mapping. (now one subject can only belong to one term)
 10. create Course API error resolve.
 11. API for terms used in masterData -> syllabus
+
+12. some fields transferred from structure period to structure model.
+13. In /course/withSubjects show all courses even it does not have any subject.
+14. change table name timeTableMappingModel -> classScheduleModel

@@ -279,7 +279,7 @@ export async function getCourseListWithSubjects(universityId, instituteId, acedm
                         acedmicYearId,
                         instituteId,
                     },
-                    required: true
+                    required: false
                 }
             ]
         });

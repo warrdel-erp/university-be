@@ -298,12 +298,12 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                             ]
                         },
                         {
-                            model: model.timeTableMappingModel,
+                            model: model.classScheduleModel,
                             as: 'timeTableMappings',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                             include: [
                                 {
-                                    model: model.timeTableCreateModel,
+                                    model: model.timeTableRoutineModel,
                                     as: 'timeTablecreate',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },
@@ -313,7 +313,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },
                                 {
-                                    model: model.timeTableCreationModel,
+                                    model: model.timeTableStructurePeriodsModel,
                                     as: 'timeTablecreation',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },

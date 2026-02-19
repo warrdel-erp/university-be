@@ -6,10 +6,10 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import classSectionModel from "./classSectionModel.js";
 import users from "./userModel.js";
-import timeTableNameModel from "./timeTableNameModel.js";
+import timeTableStructureModel from "./timeTableStructureModel.js";
 
 export default sequelize.define(
-    'time_table_create',
+    'time_table_routine',
     {
         timeTableCreateId: {
             type: DataTypes.INTEGER,
@@ -22,7 +22,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_name_id',
             references: {
-                model: timeTableNameModel,
+                model: timeTableStructureModel,
                 key: 'time_table_name_id'
             }
         },
@@ -53,19 +53,19 @@ export default sequelize.define(
                 key: 'class_sections_id'
             }
         },
-        isPublish :{
+        isPublish: {
             type: DataTypes.BOOLEAN,
             allowNull: true,
             defaultValue: false,
-            field:'is_publish'
+            field: 'is_publish'
         },
         campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'campus_id',
             references: {
-                 model: campusModel,
-                 key: 'campus_id'
+                model: campusModel,
+                key: 'campus_id'
             }
         },
         instituteId: {
@@ -80,8 +80,8 @@ export default sequelize.define(
         timeTableType: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue :'normal',
-            field:'time_table_type'
+            defaultValue: 'normal',
+            field: 'time_table_type'
         },
         startingDate: {
             type: DataTypes.DATE,
@@ -130,7 +130,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'time_table_create',
+        tableName: 'time_table_routine',
         timestamps: true,
         paranoid: true
     }

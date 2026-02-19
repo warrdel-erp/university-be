@@ -1,9 +1,9 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import timeTableNameModel from "./timeTableNameModel.js";
-import timeTableCreateModel from "./timeTableCreateModel.js";
-import timeTableCreationModel from "./timeTableCreationModel.js";
+import timeTableStructureModel from "./timeTableStructureModel.js";
+import timeTableRoutineModel from "./timeTableRoutineModel.js";
+import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js";
 import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
 import employeeModel from "./employeeModel.js";
 import classRoomModel from "./classRoomModel.js";
@@ -11,7 +11,7 @@ import electiveSubjectModel from "./electiveSubjectModel.js";
 import subjectModel from "./subjectModel.js";
 
 export default sequelize.define(
-    'time_table_mapping',
+    'class_schedule_item',
     {
         timeTableMappingId: {
             type: DataTypes.INTEGER,
@@ -24,7 +24,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_name_id',
             references: {
-                model: timeTableNameModel,
+                model: timeTableStructureModel,
                 key: 'time_table_name_id'
             }
         },
@@ -33,7 +33,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_create_id',
             references: {
-                model: timeTableCreateModel,
+                model: timeTableRoutineModel,
                 key: 'time_table_create_id'
             }
         },
@@ -42,7 +42,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_creation_id',
             references: {
-                model: timeTableCreationModel,
+                model: timeTableStructurePeriodsModel,
                 key: 'time_table_creation_id'
             }
         },
@@ -91,37 +91,37 @@ export default sequelize.define(
                 key: 'class_room_section_id'
             }
         },
-        isSameTeacher:{
+        isSameTeacher: {
             type: DataTypes.BOOLEAN,
             allowNull: true,
             defaultValue: true,
             field: 'is_same_teacher'
         },
-        day:{
+        day: {
             type: DataTypes.STRING,
             allowNull: false,
         },
-        isTeacher:{
+        isTeacher: {
             type: DataTypes.STRING,
             allowNull: false,
-            field:'is_teacher',
-            defaultValue:'Primary'
+            field: 'is_teacher',
+            defaultValue: 'Primary'
         },
-        isAttendence:{
+        isAttendence: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
-            field:'is_Attendence',
-            defaultValue:true,
+            field: 'is_Attendence',
+            defaultValue: true,
         },
-        period:{
+        period: {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
         timeTableType: {
             type: DataTypes.STRING,
             allowNull: false,
-            defaultValue :'normal',
-            field:'time_table_type'
+            defaultValue: 'normal',
+            field: 'time_table_type'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -161,7 +161,7 @@ export default sequelize.define(
     },
 
     {
-        tableName: 'time_table_mapping',
+        tableName: 'class_schedule_item',
         timestamps: true,
         paranoid: true
     }

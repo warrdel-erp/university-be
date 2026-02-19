@@ -1,15 +1,11 @@
-import * as timeTableServices  from '../services/timeTableServices.js';
+import * as timeTableServices from '../services/timeTableServices.js';
 
-export const addTimeTable = async (req,res) => {
+export const addTimeTable = async (req, res) => {
     try {
         const data = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        // const {courseId} = req.body;
-        // if(!courseId){
-        //   return res.status(400).send('courseId is required')
-        // }
-        const result = await timeTableServices.addTimeTable(data,createdBy,updatedBy);
+        const result = await timeTableServices.addTimeTable(data, createdBy, updatedBy);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding all time table:", error);
@@ -17,7 +13,7 @@ export const addTimeTable = async (req,res) => {
     }
 };
 
-export const getTimeTableDetails = async (req,res) => {
+export const getTimeTableDetails = async (req, res) => {
     const universityId = req.user.universityId;
     try {
         const result = await timeTableServices.getTimeTableDetails(universityId);
@@ -28,23 +24,23 @@ export const getTimeTableDetails = async (req,res) => {
     }
 };
 
-export const getAllTimeTableName = async (req,res) => {
+export const getAllTimeTableName = async (req, res) => {
     const universityId = req.user.universityId;
-    let {courseId} = req.query
+    let { courseId } = req.query;
     try {
-        const result = await timeTableServices.getAllTimeTableName(universityId,courseId);
+        const result = await timeTableServices.getAllTimeTableName(universityId, courseId);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting time table strructure:", error);
+        console.error("Error in getting time table structure:", error);
         res.status(500).send("Internal Server Error");
     }
 };
 
-export const getSingleTimeTableDetails = async (req,res) => {
+export const getSingleTimeTableDetails = async (req, res) => {
     const universityId = req.user.universityId;
-    let {courseId} = req.query
+    let { courseId } = req.query;
     try {
-        const result = await timeTableServices.getSingleTimeTableDetails(courseId,universityId);
+        const result = await timeTableServices.getSingleTimeTableDetails(courseId, universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table:", error);
@@ -52,15 +48,14 @@ export const getSingleTimeTableDetails = async (req,res) => {
     }
 };
 
-// update time table 
-export const updateTimeTable = async (req,res) => {
-    const info = req.body;    
+// update time table
+export const updateTimeTable = async (req, res) => {
+    const info = req.body;
     try {
         for (const item of info) {
             const { timeTableCreationId } = item;
-
-            if (!(timeTableCreationId )) {
-                return res.status(400).send(" timeTableCreationId is required for each object.");
+            if (!timeTableCreationId) {
+                return res.status(400).send("timeTableCreationId is required for each object.");
             }
         }
         const result = await timeTableServices.updateTimeTable(req.body);
@@ -72,13 +67,12 @@ export const updateTimeTable = async (req,res) => {
 };
 
 // delete time table
-
-export const deleteTimeTable = async (req,res) => {
-    const {timeTableCreationId} = req.query;
+export const deleteTimeTable = async (req, res) => {
+    const { timeTableCreationId } = req.query;
     try {
-        if (!timeTableCreationId){
-            res.status(400).send("time Table Creation Id is required");
-        }else{
+        if (!timeTableCreationId) {
+            res.status(400).send("timeTableCreationId is required");
+        } else {
             const result = await timeTableServices.deleteTimeTable(timeTableCreationId);
             res.status(200).send(result);
         }

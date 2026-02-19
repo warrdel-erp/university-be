@@ -169,7 +169,8 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       throw new Error("Invalid timeTableCreationId");
     }
 
-    const { startTime, endTime, periodLength } = periodInfo;
+    const { startTime, endTime } = periodInfo;
+    const periodLength = periodInfo.timeTableName?.periodLength ?? 0;
 
     if (teacherSubjectMappingId) {
       teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
@@ -561,15 +562,15 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
         timeTableType: curr?.timeTableType,
         subject: curr?.timeTableElective
           ? {
-              subjectId: curr?.timeTableElective?.electiveSubjectId,
-              Name: curr?.timeTableElective?.electiveSubjectName,
-              Code: curr?.timeTableElective?.electiveSubjectCode,
-            }
+            subjectId: curr?.timeTableElective?.electiveSubjectId,
+            Name: curr?.timeTableElective?.electiveSubjectName,
+            Code: curr?.timeTableElective?.electiveSubjectCode,
+          }
           : {
-              subjectId: subjectId,
-              Name: subject,
-              Code: subjectCode,
-            },
+            subjectId: subjectId,
+            Name: subject,
+            Code: subjectCode,
+          },
       };
 
       //  Add new or merge existing period
@@ -871,15 +872,15 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
           classRoom,
           subject: timeTableElective
             ? {
-                subjectId: timeTableElective?.electiveSubjectId,
-                Name: timeTableElective?.electiveSubjectName,
-                Code: timeTableElective?.electiveSubjectCode,
-              }
+              subjectId: timeTableElective?.electiveSubjectId,
+              Name: timeTableElective?.electiveSubjectName,
+              Code: timeTableElective?.electiveSubjectCode,
+            }
             : {
-                subjectId: subjectData?.subjectId,
-                Name: subjectData?.subjectName,
-                Code: subjectData?.subjectCode,
-              },
+              subjectId: subjectData?.subjectId,
+              Name: subjectData?.subjectName,
+              Code: subjectData?.subjectCode,
+            },
         };
 
         allMappings.push({

@@ -10,3 +10,4 @@
 2. remove semester table API.
 3. copy control center even after creating new academic year.
 4. period can be added in time table structure even after creating time table structure automatically.
+5. change relation names.

@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
-import timeTableMapping from "./timeTableMappingModel.js";
+import timeTableMapping from "./classScheduleModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
@@ -65,18 +65,18 @@ export default sequelize.define(
             type: DataTypes.DATE,
             allowNull: true,
         },
-        notes:{
+        notes: {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        description:{
+        description: {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        attentenceStatus:{
+        attentenceStatus: {
             type: DataTypes.STRING,
             allowNull: true,
-            field:'attendance_status'
+            field: 'attendance_status'
         },
         createdBy: {
             type: DataTypes.INTEGER,

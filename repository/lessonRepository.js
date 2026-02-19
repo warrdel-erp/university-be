@@ -49,9 +49,9 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
         },
         {
-          model:model.employeeModel,
-          as:'employeeLesson',
-          attributes:["employeeId","campusId","instituteId","employeeCode","employeeName"],
+          model: model.employeeModel,
+          as: 'employeeLesson',
+          attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         }
       ]
     });
@@ -176,12 +176,12 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
           ]
         },
         {
-          model: model.timeTableMappingModel,
+          model: model.classScheduleModel,
           as: 'timeTableMapping',
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_create_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
           include: [
             {
-              model: model.timeTableCreateModel,
+              model: model.timeTableRoutineModel,
               as: 'timeTablecreate',
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "time_table_name_id", "course_id", "campus_id", "class_sections_id", "acedmic_year_id"] },
               include: [
@@ -193,7 +193,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               ],
             },
             {
-              model: model.timeTableCreationModel,
+              model: model.timeTableStructurePeriodsModel,
               as: "timeTablecreation",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] }
             },
@@ -203,16 +203,16 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"]
             },
             {
-              model:model.teacherSubjectMappingModel,
+              model: model.teacherSubjectMappingModel,
               as: 'timeTableTeacherSubject',
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updated","employee_id","class_subject_mapper_id"]},
-                include:[
-                  {
-                      model:model.employeeModel,
-                      as: 'teacherEmployeeData',
-                      attributes: ["employeeName","employeeCode","pickColor","employeeId"],
-                  },
-                ],
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated", "employee_id", "class_subject_mapper_id"] },
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: 'teacherEmployeeData',
+                  attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
+                },
+              ],
             }
           ]
         }
@@ -228,7 +228,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
 export async function updateMapping(lessonMappingId, data) {
   try {
     const [updatedRowsCount] = await model.lessonMappingModel.update(data, {
-      where: {lessonMappingId }
+      where: { lessonMappingId }
     });
 
     if (updatedRowsCount === 0) {
@@ -245,7 +245,7 @@ export async function updateMapping(lessonMappingId, data) {
 export async function updateLessionMapping(lessonMappingId, data, transaction) {
   try {
     const result = await model.lessonMappingModel.update(data, {
-      where: { lessonMappingId},
+      where: { lessonMappingId },
       transaction
     });
     return result;
@@ -258,7 +258,7 @@ export async function updateLessionMapping(lessonMappingId, data, transaction) {
 export async function updateSubTopic(subTopicId, data, transaction) {
   try {
     const result = await model.subTopicModel.update(data, {
-      where: {subTopicId },
+      where: { subTopicId },
       transaction
     });
     return result;
