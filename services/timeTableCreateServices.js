@@ -35,9 +35,9 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
     let result;
 
-    if (data.timeTableCreateId && data.previousDate) {
+    if (data.timeTableRoutineId && data.previousDate) {
       await timeTableCreateRepository.changeTimeTableCreate(
-        data.timeTableCreateId,
+        data.timeTableRoutineId,
         {
           endingDate: data.previousDate,
           updatedBy,
@@ -45,7 +45,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
         // transaction
       );
 
-      const { timeTableCreateId, previousDate, ...newCreateData } = data;
+      const { timeTableRoutineId, previousDate, ...newCreateData } = data;
 
       result = await timeTableCreateRepository.addTimeTableCreate(
         newCreateData,
@@ -114,7 +114,7 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionsId, 
         })) || [];
 
       return {
-        timeTableCreateId: item.timeTableCreateId,
+        timeTableRoutineId: item.timeTableRoutineId,
         timeTableType: item.timeTableType,
         name: item?.timeTableCreateName?.name,
         isPublish: item.isPublish,
@@ -161,7 +161,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   let teacherSubjectData = null;
 
   try {
-    const { timeTableCreateId, timeTableCreationId, employeeId, teacherSubjectMappingId, day } = data;
+    const { timeTableRoutineId, timeTableCreationId, employeeId, teacherSubjectMappingId, day } = data;
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(timeTableCreationId);
 
@@ -215,14 +215,14 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
-    const { timeTableCreateId, ...updateData } = body;
+    const { timeTableRoutineId, ...updateData } = body;
 
     const data = {
       ...updateData,
       updatedBy,
     };
 
-    const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableCreateId, data);
+    const result = await timeTableCreateRepository.changeTimeTableCreate(timeTableRoutineId, data);
 
     return result;
   } catch (error) {
@@ -299,7 +299,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
         }
 
-        const noChange = dbRow.isTeacher === item.isTeacher && dbRow.isAttendence === item.isAttendence;
+        const noChange = dbRow.isTeacher === item.isTeacher
+          && dbRow.isAttendence === item.isAttendence
+          && dbRow.isOverridingSyblingElectives === item.isOverridingSyblingElectives;
 
         if (!noChange) {
           await timeTableCreateRepository.updateMapping(
@@ -307,6 +309,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
             {
               isTeacher: item.isTeacher,
               isAttendence: item.isAttendence,
+              isOverridingSyblingElectives: item.isOverridingSyblingElectives,
               updatedBy,
             },
             transaction,
@@ -333,7 +336,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
         const newRow = {
           timeTableNameId: baseRow.timeTableNameId,
-          timeTableCreateId: baseRow.timeTableCreateId,
+          timeTableRoutineId: baseRow.timeTableRoutineId,
           timeTableCreationId: baseRow.timeTableCreationId,
           subjectId: item.subjectId,
           electiveSubjectId: item.electiveSubjectId,
@@ -346,6 +349,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           employeeId: item.employeeId,
           isTeacher: item.isTeacher,
           isAttendence: item.isAttendence,
+          isOverridingSyblingElectives: item.isOverridingSyblingElectives,
           createdBy,
           updatedBy,
         };
@@ -363,8 +367,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
   }
 }
 
-export async function getTimeTableMappingDetail(universityId, instituteId, role) {
-  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, role);
+export async function getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role) {
+  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role);
 
   if (!Array.isArray(rawResult) || rawResult.length === 0) {
     return [];
@@ -970,9 +974,9 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
   return { formatted: finalResult };
 }
 
-export async function publishTimeTableService(timeTableCreateId) {
+export async function publishTimeTableService(timeTableRoutineId) {
   try {
-    const result = await timeTableCreateRepository.publishTimeTableRepository(timeTableCreateId);
+    const result = await timeTableCreateRepository.publishTimeTableRepository(timeTableRoutineId);
 
     if (result[0] === 0) {
       throw new Error("Time table create ID not found");
@@ -1050,4 +1054,110 @@ export async function getSubjectWithCount(classSectionsId) {
   }
 
   return finalResult;
+}
+
+export async function getRoutineByClassSectionId(classSectionsId) {
+  try {
+    const { normalRoutines, electiveRoutines } = await timeTableCreateRepository.getRoutineByClassSectionIdRepository(classSectionsId);
+
+    if (!normalRoutines || !normalRoutines.length) return { routines: [] };
+
+    const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const formattedRoutines = normalRoutines.map(routine => {
+      const timeTableCreateName = routine.timeTableCreateName || {};
+      const periods = timeTableCreateName.timeTableName || [];
+      const normalScheduleItems = routine.timeTablecreate || [];
+
+      // Find elective routines that match this routine's timeTableNameId
+      const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
+      const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
+
+      const formattedPeriods = periods.map(period => {
+        const formattedDays = daysList.map(daysName => {
+          // Get items for this period and day (Normal)
+          const periodNormalItems = normalScheduleItems.filter(si =>
+            si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
+          );
+
+          // Get items for this period and day (Elective)
+          const periodElectiveItems = electiveScheduleItems.filter(si =>
+            si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
+          );
+
+          // Check if any normal item in this slot overrides electives
+          const isOverriding = periodNormalItems.some(item => item.isOverridingSyblingElectives === true);
+
+          const scheduleItems = [
+            ...periodNormalItems.map(item => {
+              const teacher = item.isSameTeacher
+                ? item.timeTableTeacherSubject?.teacherEmployeeData
+                : item.employeeDetails;
+              const subject = item.isSameTeacher
+                ? item.timeTableTeacherSubject?.employeeSubject?.subjects
+                : item.timeTableSubject;
+
+              return {
+                type: 'normal',
+                isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+                overrideCondition: ["override", "coexists"],
+                teacher: {
+                  name: teacher?.employeeName || "N/A"
+                },
+                subject: {
+                  name: subject?.subjectName || "N/A"
+                },
+                room: {
+                  name: item.classRoom?.roomNumber || "N/A"
+                }
+              };
+            }),
+            ...(isOverriding ? [] : periodElectiveItems.map(item => {
+              const teacher = item.isSameTeacher
+                ? item.timeTableTeacherSubject?.teacherEmployeeData
+                : item.employeeDetails;
+              const subject = item.timeTableElective; // Elective subject is in its own relation
+
+              return {
+                type: 'elective',
+                teacher: {
+                  name: teacher?.employeeName || "N/A"
+                },
+                subject: {
+                  name: subject?.electiveSubjectName || "N/A"
+                },
+                room: {
+                  name: item.classRoom?.roomNumber || "N/A"
+                }
+              };
+            }))
+          ];
+
+          return {
+            name: daysName,
+            scheduleItems: scheduleItems
+          };
+        });
+
+        return {
+          name: period.periodName,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          days: formattedDays
+        };
+      });
+
+      return {
+        name: timeTableCreateName.name || "N/A",
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        periods: formattedPeriods
+      };
+    });
+
+    return { routines: formattedRoutines };
+  } catch (error) {
+    console.error("Error in getRoutineByClassSectionId Service:", error);
+    throw error;
+  }
 }

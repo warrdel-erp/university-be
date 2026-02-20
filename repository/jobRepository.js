@@ -425,7 +425,7 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
 
       const lectures = await model.classScheduleModel.findAll({
         where: {
-          timeTableCreateId: table.timeTableCreateId,
+          timeTableRoutineId: table.timeTableRoutineId,
           day: dayName,
           ...(filters.employeeId && { employeeId: filters.employeeId })
         },

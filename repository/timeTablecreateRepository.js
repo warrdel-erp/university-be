@@ -341,14 +341,14 @@ export async function checkTeacherConflictRepository(employeeId, day, startTime,
   }
 };
 
-export async function changeTimeTableCreate(timeTableCreateId, data) {
+export async function changeTimeTableCreate(timeTableRoutineId, data) {
   try {
     const result = await model.timeTableRoutineModel.update(data, {
-      where: { timeTableCreateId }
+      where: { timeTableRoutineId }
     });
     return result;
   } catch (error) {
-    console.error(`Error updating time table create  ${timeTableCreateId}:`, error);
+    console.error(`Error updating time table create  ${timeTableRoutineId}:`, error);
     throw error;
   }
 };
@@ -390,9 +390,9 @@ export async function updateMapping(id, data, transaction) {
   }
 };
 
-export async function getTimeTableMappingDetail(universityId, instituteId, role) {
+export async function getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role) {
   const whereClause = {
-    ...(universityId && { universityId }),
+    universityId,
     ...(role === 'Head' && { instituteId }),
   };
   const whereClauseData = {
@@ -401,6 +401,9 @@ export async function getTimeTableMappingDetail(universityId, instituteId, role)
   try {
     const result = await model.classScheduleModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: {
+        ...(timeTableRoutineId && { timeTableRoutineId })
+      },
       include: [
         {
           model: model.teacherSubjectMappingModel,
@@ -528,7 +531,7 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
         {
           model: model.classScheduleModel,
           as: 'timeTablecreate',
-          attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy", "deletedAt", "teacher_subject_mapping_id", "time_table_create_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
+          attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy", "deletedAt", "teacher_subject_mapping_id", "time_table_routine_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
           include: [
             {
               model: model.timeTableStructurePeriodsModel,
@@ -868,11 +871,11 @@ export async function getStudentTimeTableRepository(classSectionsId, subjectIds)
   }
 };
 
-export async function publishTimeTableRepository(timeTableCreateId) {
+export async function publishTimeTableRepository(timeTableRoutineId) {
   try {
     const result = await model.timeTableRoutineModel.update(
       { isPublish: true },
-      { where: { timeTableCreateId } }
+      { where: { timeTableRoutineId } }
     );
 
     return result;
@@ -961,3 +964,136 @@ export async function timeTableData(classSectionsId) {
     throw error;
   }
 };
+
+export async function getRoutineByClassSectionIdRepository(classSectionsId) {
+  try {
+    // 1. Get all normal routines for this section
+    const normalRoutines = await model.timeTableRoutineModel.findAll({
+      where: {
+        classSectionsId: classSectionsId,
+        timeTableType: 'normal'
+      },
+      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType'],
+      include: [
+        {
+          model: model.timeTableStructureModel,
+          as: 'timeTableCreateName',
+          attributes: ['name', 'timeTableNameId'],
+          include: [
+            {
+              model: model.timeTableStructurePeriodsModel,
+              as: 'timeTableName',
+              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak', 'weekOff'],
+            }
+          ]
+        },
+        {
+          model: model.classScheduleModel,
+          as: 'timeTablecreate',
+          include: [
+            {
+              model: model.employeeModel,
+              as: 'employeeDetails',
+              attributes: ['employeeId', 'employeeName']
+            },
+            {
+              model: model.subjectModel,
+              as: 'timeTableSubject',
+              attributes: ['subjectId', 'subjectName']
+            },
+            {
+              model: model.classRoomModel,
+              as: 'classRoom',
+              attributes: ['classRoomSectionId', 'roomNumber']
+            },
+            {
+              model: model.teacherSubjectMappingModel,
+              as: 'timeTableTeacherSubject',
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: 'teacherEmployeeData',
+                  attributes: ['employeeId', 'employeeName']
+                },
+                {
+                  model: model.classSubjectMapperModel,
+                  as: 'employeeSubject',
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: 'subjects',
+                      attributes: ['subjectId', 'subjectName']
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!normalRoutines.length) return { normalRoutines: [], electiveRoutines: [] };
+
+    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
+
+    // 2. Get elective routines for the same structures
+    const electiveRoutines = await model.timeTableRoutineModel.findAll({
+      where: {
+        timeTableNameId: { [Op.in]: timeTableNameIds },
+        timeTableType: 'elective'
+      },
+      attributes: ['timeTableRoutineId', 'timeTableNameId', 'timeTableType'],
+      include: [
+        {
+          model: model.classScheduleModel,
+          as: 'timeTablecreate',
+          include: [
+            {
+              model: model.employeeModel,
+              as: 'employeeDetails',
+              attributes: ['employeeId', 'employeeName']
+            },
+            {
+              model: model.electiveSubjectModel,
+              as: 'timeTableElective',
+              attributes: ['electiveSubjectId', 'electiveSubjectName']
+            },
+            {
+              model: model.classRoomModel,
+              as: 'classRoom',
+              attributes: ['classRoomSectionId', 'roomNumber']
+            },
+            {
+              model: model.teacherSubjectMappingModel,
+              as: 'timeTableTeacherSubject',
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: 'teacherEmployeeData',
+                  attributes: ['employeeId', 'employeeName']
+                },
+                {
+                  model: model.classSubjectMapperModel,
+                  as: 'employeeSubject',
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: 'subjects',
+                      attributes: ['subjectId', 'subjectName']
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+    return { normalRoutines, electiveRoutines };
+  } catch (error) {
+    console.error("Error in getRoutineByClassSectionIdRepository:", error);
+    throw error;
+  }
+}

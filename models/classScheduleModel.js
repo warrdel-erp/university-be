@@ -28,13 +28,13 @@ export default sequelize.define(
                 key: 'time_table_name_id'
             }
         },
-        timeTableCreateId: {
+        timeTableRoutineId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'time_table_create_id',
+            field: 'time_table_routine_id',
             references: {
                 model: timeTableRoutineModel,
-                key: 'time_table_create_id'
+                key: 'time_table_routine_id'
             }
         },
         timeTableCreationId: {
@@ -122,6 +122,12 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: 'normal',
             field: 'time_table_type'
+        },
+        isOverridingSyblingElectives: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false,
+            field: 'is_overriding_sybling_electives'
         },
         createdAt: {
             type: DataTypes.DATE,

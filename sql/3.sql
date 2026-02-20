@@ -101,7 +101,7 @@ CREATE TABLE faculity_load (
 );
 
 CREATE TABLE time_table_create (
-    time_table_create_id INT AUTO_INCREMENT PRIMARY KEY,
+    time_table_routine_id INT AUTO_INCREMENT PRIMARY KEY,
     time_table_creation_id INT NOT NULL,
     teacher_subject_mapping_id INT NOT NULL,
     teacher_section_mapping_id INT NOT NULL,
@@ -248,7 +248,7 @@ CREATE TABLE attendance (
     attendance_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     class_sections_id INT NOT NULL,
-    time_table_create_id INT NOT NULL,
+    time_table_routine_id INT NOT NULL,
     date TIMESTAMP NULL,
     notes VARCHAR(255) NULL,
     description VARCHAR(255) NULL,
@@ -260,7 +260,7 @@ CREATE TABLE attendance (
     deleted_at DATETIME DEFAULT NULL,
     FOREIGN KEY (student_id) REFERENCES students(student_id),
     FOREIGN KEY (class_sections_id) REFERENCES class_sections(class_sections_id),
-    FOREIGN KEY (time_table_create_id) REFERENCES time_table_create(time_table_create_id),
+    FOREIGN KEY (time_table_routine_id) REFERENCES time_table_create(time_table_routine_id),
     FOREIGN KEY (created_by) REFERENCES users(user_id),
     FOREIGN KEY (updated_by) REFERENCES users(user_id)
 );

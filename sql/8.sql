@@ -311,3 +311,7 @@ SET SQL_SAFE_UPDATES = 1;
 
 
 delete from time_table_create where time_table_type = 'elective';
+
+
+
+

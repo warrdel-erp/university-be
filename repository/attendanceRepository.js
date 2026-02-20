@@ -43,7 +43,7 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
                 {
                     model: model.classScheduleModel,
                     as: 'timeTableMapping',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_create_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_routine_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
                     include: [
                         {
                             model: model.employeeModel,
@@ -231,14 +231,14 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
     }
 };
 
-export async function getTimetable(timeTableCreateId) {
+export async function getTimetable(timeTableRoutineId) {
     return await model.timeTableRoutineModel.findOne({
         where: {
-            timeTableCreateId,
+            timeTableRoutineId,
             deletedAt: null
         },
         attributes: [
-            "timeTableCreateId",
+            "timeTableRoutineId",
             "startingDate",
             "endingDate"
         ],

@@ -178,7 +178,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
         {
           model: model.classScheduleModel,
           as: 'timeTableMapping',
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_create_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_routine_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
           include: [
             {
               model: model.timeTableRoutineModel,

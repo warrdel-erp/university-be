@@ -86,9 +86,16 @@ export const getTimeTableMappingDetail = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.instituteId;
     const role = req.user.role;
+    const timeTableRoutineId = req.body.timeTableRoutineId;
 
+    if (!universityId) {
+        return res.status(400).json({
+            status: "error",
+            message: "University Id is missing from user session",
+        });
+    }
     try {
-        const result = await timeTableCreateServices.getTimeTableMappingDetail(universityId, instituteId, role);
+        const result = await timeTableCreateServices.getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table create:", error);
@@ -110,11 +117,11 @@ export const getSingletimeTableMappingDetail = async (req, res) => {
 
 // change time table 
 export const changeTimeTableCreate = async (req, res) => {
-    const { timeTableCreateId } = req.body
+    const { timeTableRoutineId } = req.body
     const updatedBy = req.user.userId;
     try {
-        if (!timeTableCreateId) {
-            return res.status(400).send("timeTableCreateId is required for each object.");
+        if (!timeTableRoutineId) {
+            return res.status(400).send("timeTableRoutineId is required for each object.");
         }
 
         const result = await timeTableCreateServices.changeTimeTableCreate(req.body, updatedBy);
@@ -166,14 +173,14 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
 // // update time table 
 // export const updateFaculityLoad = async (req,res) => {
 //     const info = req.body;   
-//     const {timeTableCreateId,employeeId}= req.body
+//     const {timeTableRoutineId,employeeId}= req.body
 //     const updatedBy = req.user.userId;
 //     try {
-//             if (!(timeTableCreateId && employeeId)) {
-//                 return res.status(400).send("Both timeTableCreateId and employeeId are required for each object.");
+//             if (!(timeTableRoutineId && employeeId)) {
+//                 return res.status(400).send("Both timeTableRoutineId and employeeId are required for each object.");
 //             }
 
-//         const result = await timeTableCreateServices.updateFaculityLoad(timeTableCreateId,req.body,updatedBy);
+//         const result = await timeTableCreateServices.updateFaculityLoad(timeTableRoutineId,req.body,updatedBy);
 //         res.status(200).send(result);
 //     } catch (error) {
 //         console.error(`Error in updating faculity load`, error);
@@ -234,13 +241,13 @@ export const getTimeTableElective = async (req, res) => {
 
 export const publishTimeTable = async (req, res) => {
     try {
-        const { timeTableCreateId } = req.query;
+        const { timeTableRoutineId } = req.query;
 
-        if (!timeTableCreateId) {
-            return res.status(400).send("timeTableCreateId is required");
+        if (!timeTableRoutineId) {
+            return res.status(400).send("timeTableRoutineId is required");
         }
 
-        const response = await timeTableCreateServices.publishTimeTableService(timeTableCreateId);
+        const response = await timeTableCreateServices.publishTimeTableService(timeTableRoutineId);
 
         res.status(200).send(response);
 
@@ -263,5 +270,19 @@ export const ClassSubjectCount = async (req, res) => {
 
     } catch (error) {
         res.status(500).send(error.message);
+    }
+};
+
+export const getRoutineByClassSectionId = async (req, res) => {
+    const { classSectionsId } = req.query;
+    if (!classSectionsId) {
+        return res.status(400).send("classSectionsId is required");
+    }
+    try {
+        const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionsId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting routine by class section id:", error);
+        res.status(500).send("Internal Server Error");
     }
 };

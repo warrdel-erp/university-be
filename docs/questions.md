@@ -31,11 +31,11 @@
 30. what is "Less Planning"
 31. why global classSections are academic year specific.
 32. can one subject be taught in multiple semester? (Because It is happening in current software)
+33. can we add multiple elective in one cell?
 
 ---
 
 ## for Ram
 
-1. API for terms used in masterData -> syllabus
-2. subject list for syllabus is already exists.
-3. where syllabus APIs are used?
+1. which API is used for time table schedule Data?
+2. how permissions are managed in product?

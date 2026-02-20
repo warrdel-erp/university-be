@@ -271,7 +271,7 @@ export async function getClassSpecific(universityId, headInstituteId, role, camp
 
 export async function addClassSubjectMapper(data, createdBy, instituteId) {
     try {
-        const { semesterId, subjectIds } = data;
+        const { subjectIds } = data;
 
         // const classSection = await mainRepository.getSectionByClassId(classId);
         // const classSectionIds = classSection.map(section => section.classSectionsId);
@@ -281,7 +281,6 @@ export async function addClassSubjectMapper(data, createdBy, instituteId) {
         // for (const sectionId of classSectionIds) {
         for (const subjectId of subjectIds) {
             entries.push({
-                semesterId,
                 // classSectionId: sectionId,
                 subjectId,
                 createdBy,

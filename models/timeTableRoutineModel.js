@@ -11,11 +11,11 @@ import timeTableStructureModel from "./timeTableStructureModel.js";
 export default sequelize.define(
     'time_table_routine',
     {
-        timeTableCreateId: {
+        timeTableRoutineId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'time_table_create_id'
+            field: 'time_table_routine_id'
         },
         timeTableNameId: {
             type: DataTypes.INTEGER,

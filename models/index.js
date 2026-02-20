@@ -518,8 +518,8 @@ teacherSubjectMappingModel.hasMany(classScheduleModel, {
   as: "timeTableTeacherSubject",
 });
 
-classScheduleModel.belongsTo(timeTableRoutineModel, { foreignKey: "time_table_create_id", as: "timeTablecreate" });
-timeTableRoutineModel.hasMany(classScheduleModel, { foreignKey: "time_table_create_id", as: "timeTablecreate" });
+classScheduleModel.belongsTo(timeTableRoutineModel, { foreignKey: "time_table_routine_id", as: "timeTablecreate" });
+timeTableRoutineModel.hasMany(classScheduleModel, { foreignKey: "time_table_routine_id", as: "timeTablecreate" });
 
 classScheduleModel.belongsTo(timeTableStructurePeriodsModel, {
   foreignKey: "time_table_creation_id",

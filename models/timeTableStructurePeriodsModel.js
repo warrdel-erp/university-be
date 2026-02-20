@@ -99,3 +99,6 @@ export default sequelize.define(
         paranoid: true
     },
 );
+
+
+
