@@ -467,6 +467,39 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "time table",
+      "item": [
+        {
+          "name": "get time table structure data",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutine"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
