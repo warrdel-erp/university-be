@@ -60,7 +60,10 @@ jobs:
             sudo docker rm university-erp-be || true
 
             # Run New Container
-            sudo docker run --env-file /home/support/envs/.be.env -d \
+            sudo docker run \
+              --network host \
+              --env-file /home/support/envs/.be.env \
+              -d \
               --name university-erp-be \
               --restart unless-stopped \
               -p 6002:6002 \
