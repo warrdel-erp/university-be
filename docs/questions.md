@@ -35,6 +35,14 @@
 
 ---
 
+## problems
+
+1. Sessions List is not as per institute.
+2. Campus list is some times show all campuses.
+3. institute Id is going same for all courses.
+
+---
+
 ## for Ram
 
 1. which API is used for time table schedule Data?
