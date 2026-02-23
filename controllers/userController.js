@@ -3,7 +3,6 @@ import * as userRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {
-  getEmployeeRolePermissionByUserId,
   getUserRolePermissionByUserId,
 } from "../repository/userRolePermissionRepository.js";
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
