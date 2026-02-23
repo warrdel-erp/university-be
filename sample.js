@@ -45,3 +45,74 @@ const data = {
         }
     ]
 }
+
+
+const data1 = {
+    "courseId": 1,
+    "courseName": "abx",
+    "classSectionsId": 1,
+    "classSectionsName": "abx",
+    "routines": [
+        {
+            "name": "new time table",
+            "startDate": "2025-07-18",
+            "endDate": "2025-07-31",
+            "timeTableRoutineId": 1,
+            "timeTableNameId": 1,
+            "periods": [
+                {
+                    "name": "Period1",
+                    "startTime": "09:00 am",
+                    "endTime": "09:30 am",
+                    "isBreak": false,
+                    "days": [
+                        {
+                            "name": "Monday",
+                            "scheduleItems": [
+                                {
+                                    "type": "normal",
+                                    "isOverridingSyblingElectives": false,
+                                    "overrideCondition": [
+                                        "override",
+                                        "coexists"
+                                    ],
+                                    "subject": {
+                                        "name": "check subject",
+                                        "subjectId": 1,
+                                        "subjectCode": "sub-01"
+                                    },
+                                    "teacher": [
+                                        {
+                                            "isTeacher": "Primary",
+                                            "isAttendence": true,
+                                            "pickColor": "#ff0000",
+                                            "employeeId": 1,
+                                            "employeeCode": "001",
+                                            "name": "Suki Tyson",
+                                            "room": {
+                                                "name": "102A",
+                                                "roomId": 1
+                                            }
+                                        },
+                                        {
+                                            "isTeacher": "secoundry",
+                                            "isAttendence": false,
+                                            "pickColor": "#ff0000",
+                                            "employeeId": 2,
+                                            "employeeCode": "002",
+                                            "name": "Suki sd",
+                                            "room": {
+                                                "name": "103A",
+                                                "roomId": 2
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

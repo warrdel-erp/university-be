@@ -1058,9 +1058,15 @@ export async function getSubjectWithCount(classSectionsId) {
 
 export async function getRoutineByClassSectionId(classSectionsId) {
   try {
-    const { normalRoutines, electiveRoutines } = await timeTableCreateRepository.getRoutineByClassSectionIdRepository(classSectionsId);
+    const [normalRoutines, classSection] = await Promise.all([
+      timeTableCreateRepository.getNormalRoutinesBySectionIdRepository(classSectionsId),
+      timeTableCreateRepository.getClassSectionWithCourseRepository(classSectionsId)
+    ]);
 
-    if (!normalRoutines || !normalRoutines.length) return { routines: [] };
+    if (!normalRoutines || !normalRoutines.length) return { routines: [], classSection };
+
+    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
+    const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
 
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -1155,7 +1161,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
       };
     });
 
-    return { routines: formattedRoutines };
+    return { routines: formattedRoutines, classSection };
   } catch (error) {
     console.error("Error in getRoutineByClassSectionId Service:", error);
     throw error;

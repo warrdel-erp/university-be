@@ -965,10 +965,9 @@ export async function timeTableData(classSectionsId) {
   }
 };
 
-export async function getRoutineByClassSectionIdRepository(classSectionsId) {
+export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
   try {
-    // 1. Get all normal routines for this section
-    const normalRoutines = await model.timeTableRoutineModel.findAll({
+    return await model.timeTableRoutineModel.findAll({
       where: {
         classSectionsId: classSectionsId,
         timeTableType: 'normal'
@@ -1032,13 +1031,15 @@ export async function getRoutineByClassSectionIdRepository(classSectionsId) {
         }
       ]
     });
+  } catch (error) {
+    console.error("Error in getNormalRoutinesBySectionIdRepository:", error);
+    throw error;
+  }
+}
 
-    if (!normalRoutines.length) return { normalRoutines: [], electiveRoutines: [] };
-
-    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
-
-    // 2. Get elective routines for the same structures
-    const electiveRoutines = await model.timeTableRoutineModel.findAll({
+export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds) {
+  try {
+    return await model.timeTableRoutineModel.findAll({
       where: {
         timeTableNameId: { [Op.in]: timeTableNameIds },
         timeTableType: 'elective'
@@ -1090,10 +1091,27 @@ export async function getRoutineByClassSectionIdRepository(classSectionsId) {
         }
       ]
     });
-
-    return { normalRoutines, electiveRoutines };
   } catch (error) {
-    console.error("Error in getRoutineByClassSectionIdRepository:", error);
+    console.error("Error in getElectiveRoutinesByTableNamesRepository:", error);
+    throw error;
+  }
+}
+
+export async function getClassSectionWithCourseRepository(classSectionsId) {
+  try {
+    return await model.classSectionModel.findOne({
+      where: { classSectionsId: classSectionsId },
+      attributes: ['classSectionsId', 'section'],
+      include: [
+        {
+          model: model.courseModel,
+          as: 'courseSection',
+          attributes: ['courseId', 'courseName', 'courseCode']
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in getClassSectionWithCourseRepository:", error);
     throw error;
   }
 }
