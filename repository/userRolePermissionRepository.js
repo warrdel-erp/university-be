@@ -205,12 +205,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                             ]
                                         }
                                     ]
-                                },
-                                {
-                                    model: model.attendanceModel,
-                                    as: 'studentAttendance',
-                                    distinct: true,
-                                    attributes: { exclude: excludeTimestamps },
                                 }
                             ]
                         }
@@ -230,6 +224,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
     try {
         const UserRolePermission = await model.userStudentEmployeeModel.findAll({
             attributes: ["userId"],
+            limit: 1,
             include: [
                 {
                     model: model.employeeModel,
@@ -287,13 +282,6 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                                     model: model.classSectionModel,
                                     as: 'employeeSection',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                    include: [
-                                        {
-                                            model: model.studentModel,
-                                            as: 'studentSections',
-                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                        }
-                                    ]
                                 }
                             ]
                         },
