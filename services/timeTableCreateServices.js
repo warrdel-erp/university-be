@@ -1094,50 +1094,62 @@ export async function getRoutineByClassSectionId(classSectionsId) {
           // Check if any normal item in this slot overrides electives
           const isOverriding = periodNormalItems.some(item => item.isOverridingSyblingElectives === true);
 
-          const scheduleItems = [
-            ...periodNormalItems.map(item => {
-              const teacher = item.isSameTeacher
-                ? item.timeTableTeacherSubject?.teacherEmployeeData
-                : item.employeeDetails;
-              const subject = item.isSameTeacher
-                ? item.timeTableTeacherSubject?.employeeSubject?.subjects
-                : item.timeTableSubject;
+          const scheduleItemsMap = [];
 
-              return {
+          periodNormalItems.forEach(item => {
+            const teacher = item.isSameTeacher
+              ? item.timeTableTeacherSubject?.teacherEmployeeData
+              : item.employeeDetails;
+            const subject = item.isSameTeacher
+              ? item.timeTableTeacherSubject?.employeeSubject?.subjects
+              : item.timeTableSubject;
+
+            const subjectName = subject?.subjectName || "N/A";
+            const subjectId = subject?.subjectId || null;
+            const roomName = item.classRoom?.roomNumber || "N/A";
+            const roomId = item.classRoom?.classRoomSectionId || null;
+
+            const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
+            if (existing) {
+              existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" });
+            } else {
+              scheduleItemsMap.push({
                 type: 'normal',
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
-                overrideCondition: ["override", "coexists"],
-                teacher: {
-                  name: teacher?.employeeName || "N/A"
-                },
-                subject: {
-                  name: subject?.subjectName || "N/A"
-                },
-                room: {
-                  name: item.classRoom?.roomNumber || "N/A"
-                }
-              };
-            }),
-            ...(isOverriding ? [] : periodElectiveItems.map(item => {
+                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" }],
+                subject: { subjectId: subjectId, name: subjectName },
+                room: { classRoomSectionId: roomId, name: roomName }
+              });
+            }
+          });
+
+          if (!isOverriding) {
+            periodElectiveItems.forEach(item => {
               const teacher = item.isSameTeacher
                 ? item.timeTableTeacherSubject?.teacherEmployeeData
                 : item.employeeDetails;
-              const subject = item.timeTableElective; // Elective subject is in its own relation
+              const subject = item.timeTableElective;
 
-              return {
-                type: 'elective',
-                teacher: {
-                  name: teacher?.employeeName || "N/A"
-                },
-                subject: {
-                  name: subject?.electiveSubjectName || "N/A"
-                },
-                room: {
-                  name: item.classRoom?.roomNumber || "N/A"
-                }
-              };
-            }))
-          ];
+              const subjectName = subject?.electiveSubjectName || "N/A";
+              const subjectId = subject?.electiveSubjectId || null;
+              const roomName = item.classRoom?.roomNumber || "N/A";
+              const roomId = item.classRoom?.classRoomSectionId || null;
+
+              const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
+              if (existing) {
+                existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" });
+              } else {
+                scheduleItemsMap.push({
+                  type: 'elective',
+                  teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" }],
+                  subject: { electiveSubjectId: subjectId, name: subjectName },
+                  room: { classRoomSectionId: roomId, name: roomName }
+                });
+              }
+            });
+          }
+
+          const scheduleItems = scheduleItemsMap;
 
           return {
             name: daysName,
@@ -1146,6 +1158,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
         });
 
         return {
+          timeTableCreationId: period.timeTableCreationId,
           name: period.periodName,
           startTime: period.startTime,
           endTime: period.endTime,
@@ -1154,6 +1167,8 @@ export async function getRoutineByClassSectionId(classSectionsId) {
       });
 
       return {
+        timeTableRoutineId: routine.timeTableRoutineId,
+        timeTableNameId: routine.timeTableNameId,
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,
         endDate: routine.endingDate,
