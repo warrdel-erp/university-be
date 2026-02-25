@@ -36,10 +36,12 @@ export async function getTermsData(courseId, sessionId) {
                 if (!termsMap[termNum]) {
                     termsMap[termNum] = {
                         termName: `${termType} ${termNum}`,
+                        term: termNum,
                         classSections: [],
                         subjects: []
                     };
                 }
+
                 delete subject.term;
                 termsMap[termNum].subjects.push(subject);
             }
@@ -52,6 +54,7 @@ export async function getTermsData(courseId, sessionId) {
                 if (!termsMap[termNum]) {
                     termsMap[termNum] = {
                         termName: `${termType} ${termNum}`,
+                        term: termNum,
                         classSections: [],
                         subjects: []
                     };
@@ -67,7 +70,7 @@ export async function getTermsData(courseId, sessionId) {
             .sort((a, b) => a - b)
             .map(termNum => termsMap[termNum]);
 
-        return result;
+        return { result, session, course };
     } catch (error) {
         console.error('Error in getTermsData service:', error);
         throw error;

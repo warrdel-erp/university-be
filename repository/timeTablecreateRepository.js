@@ -977,12 +977,12 @@ export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
         {
           model: model.timeTableStructureModel,
           as: 'timeTableCreateName',
-          attributes: ['name', 'timeTableNameId'],
+          attributes: ['name', 'timeTableNameId', 'weekOff'],
           include: [
             {
               model: model.timeTableStructurePeriodsModel,
               as: 'timeTableName',
-              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak', 'weekOff'],
+              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
             }
           ]
         },
@@ -993,7 +993,7 @@ export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
             {
               model: model.employeeModel,
               as: 'employeeDetails',
-              attributes: ['employeeId', 'employeeName']
+              attributes: ['employeeId', 'employeeName', "pickColor"]
             },
             {
               model: model.subjectModel,
@@ -1005,28 +1005,6 @@ export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
               as: 'classRoom',
               attributes: ['classRoomSectionId', 'roomNumber']
             },
-            {
-              model: model.teacherSubjectMappingModel,
-              as: 'timeTableTeacherSubject',
-              include: [
-                {
-                  model: model.employeeModel,
-                  as: 'teacherEmployeeData',
-                  attributes: ['employeeId', 'employeeName']
-                },
-                {
-                  model: model.classSubjectMapperModel,
-                  as: 'employeeSubject',
-                  include: [
-                    {
-                      model: model.subjectModel,
-                      as: 'subjects',
-                      attributes: ['subjectId', 'subjectName']
-                    }
-                  ]
-                }
-              ]
-            }
           ]
         }
       ]
@@ -1053,7 +1031,7 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
             {
               model: model.employeeModel,
               as: 'employeeDetails',
-              attributes: ['employeeId', 'employeeName']
+              attributes: ['employeeId', 'employeeName', "pickColor"]
             },
             {
               model: model.electiveSubjectModel,
@@ -1065,28 +1043,6 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
               as: 'classRoom',
               attributes: ['classRoomSectionId', 'roomNumber']
             },
-            {
-              model: model.teacherSubjectMappingModel,
-              as: 'timeTableTeacherSubject',
-              include: [
-                {
-                  model: model.employeeModel,
-                  as: 'teacherEmployeeData',
-                  attributes: ['employeeId', 'employeeName']
-                },
-                {
-                  model: model.classSubjectMapperModel,
-                  as: 'employeeSubject',
-                  include: [
-                    {
-                      model: model.subjectModel,
-                      as: 'subjects',
-                      attributes: ['subjectId', 'subjectName']
-                    }
-                  ]
-                }
-              ]
-            }
           ]
         }
       ]

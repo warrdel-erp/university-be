@@ -45,6 +45,11 @@ export default sequelize.define(
             allowNull: true,
             field: 'starting_time'
         },
+        weekOff: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'week_off'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
