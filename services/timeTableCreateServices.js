@@ -1131,12 +1131,12 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
             const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
             if (existing) {
-              existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" });
+              existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId });
             } else {
               scheduleItemsMap.push({
                 type: 'normal',
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
-                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", color: teacher?.pickColor }],
+                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", color: teacher?.pickColor, timeTableMappingId: item.timeTableMappingId }],
                 subject: { subjectId: subjectId, name: subjectName },
                 room: { classRoomSectionId: roomId, name: roomName }
               });
@@ -1155,11 +1155,11 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
               const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
               if (existing) {
-                existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" });
+                existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId });
               } else {
                 scheduleItemsMap.push({
                   type: 'elective',
-                  teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" }],
+                  teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId }],
                   subject: { electiveSubjectId: subjectId, name: subjectName },
                   room: { classRoomSectionId: roomId, name: roomName }
                 });
