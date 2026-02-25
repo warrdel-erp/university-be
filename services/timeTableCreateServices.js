@@ -1075,12 +1075,36 @@ export async function getRoutineByClassSectionId(classSectionsId) {
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
 
-      // Find elective routines that match this routine's timeTableNameId
       const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
       const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
 
+      let weekOffList = [];
+      try {
+        const weekOffRaw = timeTableCreateName.weekOff;
+        weekOffList = Array.isArray(weekOffRaw)
+          ? weekOffRaw
+          : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
+      } catch (e) {
+        weekOffList = [];
+      }
+      const weekOffLower = weekOffList.map(d => String(d).toLowerCase());
+
       const formattedPeriods = periods.map(period => {
         const formattedDays = daysList.map(daysName => {
+          if (weekOffLower.includes(daysName.toLowerCase())) {
+            return {
+              name: daysName,
+              isDayOff: true,
+            };
+          }
+
+          if (period.isBreak) {
+            return {
+              name: daysName,
+              isBreak: true,
+            };
+          }
+
           // Get items for this period and day (Normal)
           const periodNormalItems = normalScheduleItems.filter(si =>
             si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
@@ -1097,12 +1121,8 @@ export async function getRoutineByClassSectionId(classSectionsId) {
           const scheduleItemsMap = [];
 
           periodNormalItems.forEach(item => {
-            const teacher = item.isSameTeacher
-              ? item.timeTableTeacherSubject?.teacherEmployeeData
-              : item.employeeDetails;
-            const subject = item.isSameTeacher
-              ? item.timeTableTeacherSubject?.employeeSubject?.subjects
-              : item.timeTableSubject;
+            const teacher = item.employeeDetails;
+            const subject = item.timeTableSubject;
 
             const subjectName = subject?.subjectName || "N/A";
             const subjectId = subject?.subjectId || null;
@@ -1116,7 +1136,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
               scheduleItemsMap.push({
                 type: 'normal',
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
-                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A" }],
+                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", color: teacher?.pickColor }],
                 subject: { subjectId: subjectId, name: subjectName },
                 room: { classRoomSectionId: roomId, name: roomName }
               });
@@ -1125,9 +1145,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
           if (!isOverriding) {
             periodElectiveItems.forEach(item => {
-              const teacher = item.isSameTeacher
-                ? item.timeTableTeacherSubject?.teacherEmployeeData
-                : item.employeeDetails;
+              const teacher = item.employeeDetails;
               const subject = item.timeTableElective;
 
               const subjectName = subject?.electiveSubjectName || "N/A";

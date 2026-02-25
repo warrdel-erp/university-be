@@ -48,11 +48,6 @@ export default sequelize.define(
             allowNull: true,
             field: 'end_time'
         },
-        weekOff: {
-            type: DataTypes.JSON,
-            allowNull: false,
-            field: 'week_off'
-        },
         type: {
             type: DataTypes.STRING,
             allowNull: true
