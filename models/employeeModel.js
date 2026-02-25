@@ -15,6 +15,15 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'employee_id',
         },
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'user_id',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
+        },
         campusId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -73,7 +82,7 @@ export default sequelize.define(
         employmentType: {
             type: DataTypes.STRING,
             allowNull: true,
-            field:'employment_type'
+            field: 'employment_type'
         },
         employeeName: {
             type: DataTypes.STRING,

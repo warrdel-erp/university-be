@@ -130,6 +130,7 @@ import gradeCourseModel from "./gradeCourseModel.js";
 import gradePassFailModel from "./gradePassFailModel.js";
 import creditModel from "./creditModel.js";
 import evalutionModel from "./evalutionModel.js";
+import userPermissionModel from "./userPermissionModel.js";
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
 campusModel.hasMany(studentModel, { foreignKey: "campus_id", as: "campus" });
@@ -640,6 +641,9 @@ permissionModel.hasMany(userRolePermissionModel, { foreignKey: "permission_id", 
 
 userRolePermissionModel.belongsTo(userModel, { foreignKey: "user_id", as: "user" });
 userModel.hasMany(userRolePermissionModel, { foreignKey: "user_id", as: "user" });
+
+userPermissionModel.belongsTo(userModel, { foreignKey: "user_id", as: "user" });
+userModel.hasMany(userPermissionModel, { foreignKey: "user_id", as: "userPermissions" });
 
 // dormitory join
 addDormitoryModel.belongsTo(dormitoryListModel, { foreignKey: "add_dormitory_id", as: "dormitoryList" });
@@ -1225,4 +1229,5 @@ export {
   gradeScaleModel,
   creditModel,
   evalutionModel,
+  userPermissionModel,
 };

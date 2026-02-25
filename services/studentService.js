@@ -159,7 +159,10 @@ export async function addStudent(
     }
 
     //student register
-    await studentRegister(registerStudentData, transaction);
+    const userId = await studentRegister(registerStudentData, transaction);
+
+    // Update student with userId
+    await studentRepository.updateStudentDetails(studentId, { userId }, transaction);
 
     // student Invoice mapping
 
@@ -390,7 +393,10 @@ export async function importStudentData(excelData, data) {
         role,
         roleId,
       };
-      await studentRegister(registerStudentData, transaction);
+      const userId = await studentRegister(registerStudentData, transaction);
+
+      // Update student with userId
+      await studentRepository.updateStudentDetails(studentId, { userId }, transaction);
 
       // student Invoice mapping
       const feePlanId = result?.dataValues?.feePlanId;

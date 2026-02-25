@@ -487,13 +487,159 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutine",
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "timeTableCreate",
                 "getRoutine"
+              ],
+              "query": [
+                {
+                  "key": "classSectionsId",
+                  "value": "197"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "user permissions",
+      "item": [
+        {
+          "name": "assign permissions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/userPermission/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "userPermission",
+                "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get my permissions",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/userPermission/my",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "userPermission",
+                "my"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "item": [
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/user?page=1&limit=20&search=&instituteId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text"
+                }
               ]
             }
           },
