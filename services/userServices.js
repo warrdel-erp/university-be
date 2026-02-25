@@ -175,6 +175,7 @@ export async function adminRegisterStudentAndEmployee(info) {
 
       for (let i = 0; i < userIds.length; i++) {
         await registerRepository.adminUser({ userId: userIds[i], studentId: studentData[i].studentId }, transaction);
+        await registerRepository.updateStudent(studentData[i].studentId, { userId: userIds[i] }, transaction);
       }
 
       const roleAndPermission = await getPermissionByRole(roleId);
@@ -192,6 +193,7 @@ export async function adminRegisterStudentAndEmployee(info) {
 
       for (const { userId, employeeId } of userEmployeeMapping) {
         await registerRepository.adminUser({ userId, employeeId }, transaction);
+        await registerRepository.updateEmployee(employeeId, { userId }, transaction);
       }
 
       const roleAndPermission = await getPermissionByRole(roleId);
@@ -348,6 +350,7 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Save user role and permissions
     await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
 
+    return userId;
   } catch (error) {
     console.error('Error in student registration:', error);
     throw new Error('Failed to register student');
@@ -383,7 +386,9 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     const userId = results.dataValues.userId;
 
     // Associate user and student
-    await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+    if (employeeId) {
+      await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+    }
 
     // Get permissions by role
     const roleAndPermission = await getPermissionByRole(roleId);
@@ -392,9 +397,10 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     // Save user role and permissions
     await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
 
+    return userId;
   } catch (error) {
     console.error('Error in employee registration:', error);
-    throw new Error('Failed to register student');
+    throw new Error('Failed to register employee');
   }
 };
 
@@ -456,11 +462,7 @@ export const forgotSendLink = async (email) => {
     if (!user) throw new Error("User not found");
 
     const jwtSecret = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniversityERP";
-    const baseUrl = process.env.FRONTEND_URL;
-
-    if (!baseUrl) {
-      throw new Error("FRONTEND_URL is not configured in environment variables");
-    }
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     const token = jwt.sign({ email: user.email }, jwtSecret, { expiresIn: "5m" });
 
@@ -472,17 +474,23 @@ export const forgotSendLink = async (email) => {
       throw new Error("Failed to send email. Please check email address or SMTP credentials.");
     }
 
-    // const userId = user.dataValues.userId;
-    // const updatedUser = await registerRepository.updateUser(userId, token);
-
     return {
       email: user.email,
       messageId: emailResponse.messageId,
     };
 
   } catch (error) {
-    console.error("Error in userService.sendLink:", error);
-    throw new Error(error.message || "Internal Server Error in sendLink");
+    console.error("Error in userService.forgotSendLink:", error);
+    throw new Error(error.message || "Internal Server Error in forgotSendLink");
+  }
+};
+
+export const getAllUsers = async (universityId, instituteId, page = 1, limit = 10, search = "") => {
+  try {
+    return await registerRepository.getAllUsers(universityId, instituteId, page, limit, search);
+  } catch (error) {
+    console.error('Error in getAllUsers service:', error);
+    throw error;
   }
 };
 

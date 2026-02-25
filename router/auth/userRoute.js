@@ -1,8 +1,19 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getMyDetails } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
+import { z } from "zod";
+import { validate } from "../../utility/validation.js";
+
+const getAllUsersSchema = z.object({
+    instituteId: z.coerce.number(),
+    page: z.coerce.number(),
+    limit: z.coerce.number(),
+    search: z.string().optional()
+});
+
+// Endpoints -------------------------------
 
 // for first time register
 router.post('/register', register)
@@ -32,5 +43,9 @@ router.post("/forgotPassword", forgotPassword);
 
 router.patch("/forgotPassword", useAuth, forgotChangePassword);
 
+router.get("/", useAuth, validate({ query: getAllUsersSchema }), getAllUsers);
+
 router.get("/myDetails", useAuth, getMyDetails);
+
+
 export default router;

@@ -276,3 +276,58 @@ export async function getUserByUserId(userId) {
 
     return result;
 }
+export async function updateStudent(studentId, data, transaction) {
+    try {
+        const result = await model.studentModel.update(data, {
+            where: { studentId },
+            transaction
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error updating student ${studentId}:`, error);
+        throw error;
+    }
+}
+
+export async function updateEmployee(employeeId, data, transaction) {
+    try {
+        const result = await model.employeeModel.update(data, {
+            where: { employeeId },
+            transaction
+        });
+        return result;
+    } catch (error) {
+        console.error(`Error updating employee ${employeeId}:`, error);
+        throw error;
+    }
+}
+
+export async function getAllUsers(universityId, instituteId, page, limit, search) {
+    try {
+        const offset = (page - 1) * limit;
+        const whereCondition = {
+            universityId,
+            ...(instituteId && { instituteId }),
+            ...(search && {
+                [Op.or]: [
+                    { userName: { [Op.like]: `%${search}%` } },
+                    { email: { [Op.like]: `%${search}%` } },
+                    { phone: { [Op.like]: `%${search}%` } }
+                ]
+            })
+        };
+
+        const { count, rows } = await model.userModel.findAndCountAll({
+            where: whereCondition,
+            attributes: { exclude: ['password', 'dummyPassword', 'deletedAt'] },
+            offset: parseInt(offset),
+            limit: parseInt(limit),
+            order: [['createdAt', 'DESC']]
+        });
+
+        return { totalCount: count, users: rows };
+    } catch (error) {
+        console.error('Error in getAllUsers repository:', error);
+        throw error;
+    }
+}

@@ -335,3 +335,23 @@ export const getMyDetails = async (req, res) => {
     });
   }
 };
+export const getAllUsers = async (req, res) => {
+  try {
+    const { universityId } = req.user;
+    const { instituteId, page = 1, limit = 10, search = "" } = req.query;
+
+    const result = await userService.getAllUsers(universityId, instituteId, parseInt(page), parseInt(limit), search);
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in getAllUsers controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch users"
+    });
+  }
+};
