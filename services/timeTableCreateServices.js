@@ -299,7 +299,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           throw new Error(`Mapping ID ${item.timeTableMappingId} not found`);
         }
 
-        const noChange = dbRow.isTeacher === item.isTeacher
+        const noChange = dbRow.teacherType === item.teacherType
           && dbRow.isAttendence === item.isAttendence
           && dbRow.isOverridingSyblingElectives === item.isOverridingSyblingElectives;
 
@@ -307,7 +307,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           await timeTableCreateRepository.updateMapping(
             item.timeTableMappingId,
             {
-              isTeacher: item.isTeacher,
+              teacherType: item.teacherType,
               isAttendence: item.isAttendence,
               isOverridingSyblingElectives: item.isOverridingSyblingElectives,
               updatedBy,
@@ -347,7 +347,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           isSameTeacher: false,
           timeTableType: baseRow.timeTableType,
           employeeId: item.employeeId,
-          isTeacher: item.isTeacher,
+          teacherType: item.teacherType,
           isAttendence: item.isAttendence,
           isOverridingSyblingElectives: item.isOverridingSyblingElectives,
           createdBy,
@@ -870,7 +870,7 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
           employeeCode: teacherData?.employeeCode || "",
           pickColor: teacherData?.pickColor || "",
           employeeId: teacherData?.employeeId || null,
-          isTeacher: curr?.isTeacher || null,
+          teacherType: curr?.teacherType || null,
           isAttendence: curr?.isAttendence ?? null,
           timeTableType,
           classRoom,
@@ -1131,12 +1131,27 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
             const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
             if (existing) {
-              existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId });
+              existing.teachers.push({
+                employeeId: teacher?.employeeId || null,
+                name: teacher?.employeeName || "N/A",
+                timeTableMappingId: item.timeTableMappingId,
+                teacherType: item.teacherType,
+                isAttendence: item.isAttendence
+              });
             } else {
               scheduleItemsMap.push({
                 type: 'normal',
                 isOverridingSyblingElectives: item.isOverridingSyblingElectives,
-                teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", color: teacher?.pickColor, timeTableMappingId: item.timeTableMappingId }],
+                teachers: [
+                  {
+                    employeeId: teacher?.employeeId || null,
+                    name: teacher?.employeeName || "N/A",
+                    color: teacher?.pickColor,
+                    timeTableMappingId: item.timeTableMappingId,
+                    teacherType: item.teacherType,
+                    isAttendence: item.isAttendence
+                  }
+                ],
                 subject: { subjectId: subjectId, name: subjectName },
                 room: { classRoomSectionId: roomId, name: roomName }
               });
@@ -1155,11 +1170,23 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
               const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
               if (existing) {
-                existing.teachers.push({ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId });
+                existing.teachers.push({
+                  employeeId: teacher?.employeeId || null,
+                  name: teacher?.employeeName || "N/A",
+                  timeTableMappingId: item.timeTableMappingId,
+                  teacherType: item.teacherType,
+                  isAttendence: item.isAttendence
+                });
               } else {
                 scheduleItemsMap.push({
                   type: 'elective',
-                  teachers: [{ employeeId: teacher?.employeeId || null, name: teacher?.employeeName || "N/A", timeTableMappingId: item.timeTableMappingId }],
+                  teachers: [{
+                    employeeId: teacher?.employeeId || null,
+                    name: teacher?.employeeName || "N/A",
+                    timeTableMappingId: item.timeTableMappingId,
+                    teacherType: item.teacherType,
+                    isAttendence: item.isAttendence
+                  }],
                   subject: { electiveSubjectId: subjectId, name: subjectName },
                   room: { classRoomSectionId: roomId, name: roomName }
                 });
@@ -1186,6 +1213,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
       return {
         timeTableRoutineId: routine.timeTableRoutineId,
+        isPublished: routine.isPublish,
         timeTableNameId: routine.timeTableNameId,
         name: timeTableCreateName.name || "N/A",
         startDate: routine.startingDate,

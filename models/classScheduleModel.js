@@ -101,10 +101,10 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        isTeacher: {
+        teacherType: {
             type: DataTypes.STRING,
             allowNull: false,
-            field: 'is_teacher',
+            field: 'teacher_type',
             defaultValue: 'Primary'
         },
         isAttendence: {
