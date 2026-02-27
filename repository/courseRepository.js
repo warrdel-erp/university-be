@@ -54,6 +54,21 @@ export async function getCourseByAcedmicId(acedmicYearId) {
     }
 };
 
+export async function getAllCourseByInstituteId(instituteId) {
+    try {
+        const result = await model.courseModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                instituteId: instituteId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting course details By InstituteI:", error);
+        throw error;
+    }
+};
+
 export async function getCourseByName(courseName) {
     try {
         const result = await model.courseModel.findOne({
