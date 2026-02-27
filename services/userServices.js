@@ -252,17 +252,17 @@ export async function getAdminRegisterStudentAndEmployee(universityId, institute
   }
 };
 
-export async function emptyPassword(data, existingdata) {
+export async function emptyPassword(data, existingdata, transaction) {
   const { email, dummyPassword, status } = existingdata.dataValues;
   const updatedData = {
     password: '',
     status: 'inActive'
   };
-  return await registerRepository.changePassword(email, updatedData);
+  return await registerRepository.changePassword(email, updatedData, transaction);
 }
 
 
-export async function changePassword(info) {
+export async function changePassword(info, transaction) {
   let { email, password } = info;
   const newPassword = await bcrypt.hashSync(password, salt);
 
@@ -272,7 +272,7 @@ export async function changePassword(info) {
     status: 'active'
   };
 
-  return await registerRepository.changePassword(email, data);
+  return await registerRepository.changePassword(email, data, transaction);
 };
 
 export async function getUserRoleAndPermissionsByUserId(userId) {

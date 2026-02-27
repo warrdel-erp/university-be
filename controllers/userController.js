@@ -35,10 +35,8 @@ export const register = async (req, res) => {
 };
 
 // login
-
 export const login = async (req, res) => {
   try {
-    let result;
     let userData;
     let { email, password } = req.body;
     const existingEmail = await userRepository.findEmailByEmail(email);
@@ -57,31 +55,18 @@ export const login = async (req, res) => {
       return res.status(400).send("Incorrect password");
     }
 
-    //  const token = jwt.sign({ email: existingEmail.email }, process.env.SECRET_KEY,{ expiresIn: process.env.TOKEN_TIME });
-    if (existingEmail.dataValues.dummyPassword) {
-      result = await userService.emptyPassword(req.body, existingEmail);
-      userData = await userRepository.findEmailByEmail(email);
-    }
-
-    const userPermission = await getUserRolePermissionByUserId(existingEmail.dataValues.userId);
-    const employeePermission = await userService.getEmployeeRolePermissionUserId(existingEmail.dataValues.userId);
-    const role = await getHeadDetailsByEmail(email);
     // const employeePermission = await getEmployeeRolePermissionByUserId(existingEmail.dataValues.userId)
-    const token = jwt.sign(existingEmail.dataValues, "warrdelUniversityERPWarrdelUniversityERP", {
-      expiresIn: "12h",
+    const token = jwt.sign(existingEmail.dataValues, process.env.JWT_SECRET, {
+      expiresIn: process.env.TOKEN_TIME || undefined,
     });
 
     res.cookie("token", token);
+
     res.status(200).json({
       status: true,
       message: "User logged in successfully",
       token,
-      userPermission: role ? null : userPermission,
-      employeePermission,
-      result,
-      userData,
-      existingEmail,
-      role,
+      existingEmail: { dummyPassword: Boolean(existingEmail.dataValues?.dummyPassword) },
     });
   } catch (error) {
     console.error("Error during login:", error);
@@ -186,13 +171,20 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "Incorrect old password" });
     }
 
-    const updatedUser = await userService.changePassword({ email, password });
+    const transaction = await sequelize.transaction();
+
+    const updatedUser = await userService.changePassword({ email, password }, transaction);
+
+    await userService.emptyPassword(req.body, existingEmail, transaction);
+
+    await transaction.commit();
 
     return res.status(200).json({
       message: "Password changed successfully",
       data: updatedUser,
     });
   } catch (error) {
+    await transaction.rollback();
     console.error("Error during password change:", error);
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }

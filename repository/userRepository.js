@@ -161,10 +161,11 @@ export async function getAdminRegisterEmployee(universityId, instituteId, role) 
     }
 };
 
-export async function changePassword(email, data) {
+export async function changePassword(email, data, transaction) {
     try {
         const result = await model.userModel.update(data, {
-            where: { email }
+            where: { email },
+            transaction
         });
         return result;
     } catch (error) {
