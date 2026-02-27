@@ -351,3 +351,24 @@ export const getAllUsers = async (req, res) => {
 };
 
 
+
+export const getMyDetails = async (req, res) => {
+  try {
+
+    const userId = req.user.userId;
+
+    const userData = await userService.getMyDetails(userId);
+
+    return res.status(200).json({
+      status: true,
+      data: userData
+    });
+
+  } catch (error) {
+    console.error("Error in getMyDetails:", error);
+    return res.status(500).json({
+      status: false,
+      message: error.message
+    });
+  }
+};

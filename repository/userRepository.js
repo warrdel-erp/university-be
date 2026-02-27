@@ -332,3 +332,20 @@ export async function getAllUsers(universityId, instituteId, page, limit, search
         throw error;
     }
 }
+
+export async function getUserByUserId(userId) {
+
+    const result = await model.userModel.findOne({
+        where: { userId }
+    });
+
+    if (!result) return null;
+
+    const institute = await model.instituteModel.findOne({
+        where: { instituteId: result.instituteId }
+    });
+
+    result.dataValues.instituteName = institute?.instituteName || null;
+
+    return result;
+}
