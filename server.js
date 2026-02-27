@@ -79,6 +79,7 @@ import terms from "./router/termsRoute.js";
 import subjects from "./router/subjectRoute.js";
 import userPermission from "./router/userPermissionRoute.js";
 
+
 // middleware
 app.use(fileUpload());
 app.use(json());
@@ -94,7 +95,7 @@ app.use("/session", session);
 app.use("/subject", subjects);
 app.use("/terms", terms);
 app.use("/syllabus", syllabus);
-app.use("/userPermission", userPermission);
+app.use("/authorization", userPermission);
 
 
 app.use("/main", main);
