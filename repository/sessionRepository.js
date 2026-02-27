@@ -1,9 +1,9 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addSession(sessionData,transaction) {    
+export async function addSession(sessionData, transaction) {
     try {
-        const result = await model.sessionModel.create(sessionData,{transaction});
+        const result = await model.sessionModel.create(sessionData, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add Session :", error);
@@ -11,7 +11,7 @@ export async function addSession(sessionData,transaction) {
     }
 };
 
-export async function addBulkSession(sessionData) {    
+export async function addBulkSession(sessionData) {
     try {
         const result = await model.sessionModel.bulkCreate(sessionData);
 
@@ -22,9 +22,9 @@ export async function addBulkSession(sessionData) {
     }
 };
 
-export async function courseSectionMapping(sessionData,transaction) {    
+export async function courseSectionMapping(sessionData, transaction) {
     try {
-        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData,{transaction});
+        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
         return result;
     } catch (error) {
         console.error("Error in course Session :", error);
@@ -37,37 +37,37 @@ export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
         const result = await model.sessionCouseMappingModel.update(data, {
             where: { sessionCourseMappingId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating course session mapping for ${sessionCourseMappingId}:`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function getSessionDetails(universityId,instituteId,role,acedmicYearId) {
+export async function getSessionDetails(universityId, instituteId, role, acedmicYearId) {
     try {
         const session = await model.sessionModel.findAll({
-            where:{
-            ...(acedmicYearId && { acedmicYearId }),
-             ...(universityId && { universityId }),
-            ...(role === 'Head' && { instituteId })
+            where: {
+                ...(acedmicYearId && { acedmicYearId }),
+                ...(universityId && { universityId }),
+                ...(role === 'Head' && { instituteId })
             },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            include: [
                 {
-                    model:model.acedmicYearModel,
-                    as:'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    model: model.acedmicYearModel,
+                    as: 'sessionAcedmic',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
                 {
-                    model:model.sessionCouseMappingModel,
-                    as:"courseMappings",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include:[
+                    model: model.sessionCouseMappingModel,
+                    as: "courseMappings",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    include: [
                         {
-                            model:model.courseModel,
-                            as:'courses',
-                            attributes: ["courseName","courseCode"],
+                            model: model.courseModel,
+                            as: 'courses',
+                            attributes: ["courseName", "courseCode"],
                         }
                     ]
                 }
@@ -86,11 +86,11 @@ export async function getSingleSessionDetails(sessionId) {
         const Session = await model.sessionModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { sessionId },
-            include:[
+            include: [
                 {
-                    model:model.acedmicYearModel,
-                    as:'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
+                    model: model.acedmicYearModel,
+                    as: 'sessionAcedmic',
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 }
             ]
         });
@@ -116,19 +116,36 @@ export async function getSessionDetailsByAcedmic(acedmicYearId) {
     }
 }
 
+export async function getSessionByInstituteAndAcademicYear(instituteId, acedmicYearId) {
+    try {
+        const session = await model.sessionModel.findAll({
+            where: {
+                instituteId, acedmicYearId
+            },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        });
+
+        return session;
+    } catch (error) {
+        console.error('Error fetching Session details:', error);
+        throw error;
+    }
+}
+
+
 export async function updateSession(sessionId, sessionData) {
     try {
         const result = await model.sessionModel.update(sessionData, {
             where: { sessionId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating Session creation ${sessionId}:`, error);
-        throw error; 
+        throw error;
     }
 }
 
-export async function deleteSession(sessionId) {    
+export async function deleteSession(sessionId) {
     const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
     return deleted > 0;
 };
