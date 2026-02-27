@@ -1,7 +1,7 @@
 import * as registerRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from 'uuid';
-import { getStudentBySectionId, getCourseByCourseId,getEmployeeByemployeeId } from "../repository/courseRepository.js";
+import { getStudentBySectionId, getCourseByCourseId, getEmployeeByemployeeId } from "../repository/courseRepository.js";
 var salt = bcrypt.genSaltSync(10);
 import sequelize from '../database/sequelizeConfig.js';
 import { getPermissionByRole } from "../repository/rolePermissionMappingRepository.js";
@@ -14,7 +14,7 @@ import 'dotenv/config';
 //register
 
 export async function register(info) {
-  let { userName, password, phone, email, universityId ,role} = info;
+  let { userName, password, phone, email, universityId, role } = info;
   password = await bcrypt.hashSync(password, salt);
 
   const data = {
@@ -128,7 +128,7 @@ export async function adminRegisterStudentAndEmployee(info) {
   const course = await getCourseByCourseId(courseId);
   const section = await getStudentBySectionId(classSectionId);
   const employee = await getEmployeeByemployeeId(employeeId);
-  const salt = await bcrypt.genSalt(10); 
+  const salt = await bcrypt.genSalt(10);
 
   const createStudentData = (item) => {
     const dummyPassword = uuidv4();
@@ -180,7 +180,7 @@ export async function adminRegisterStudentAndEmployee(info) {
       const roleAndPermission = await getPermissionByRole(roleId);
       const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
       const data = { userIds, roleId, permissionId };
-      await dataSaveUerRolePermission(userIds,roleId,permissionId,transaction)
+      await dataSaveUerRolePermission(userIds, roleId, permissionId, transaction)
     } else if (role != 'Student') {
       results = await registerRepository.adminRegisterStudentAndEmployee(employeeData, transaction);
       const userIds = results.map(user => user.dataValues.userId);
@@ -197,7 +197,7 @@ export async function adminRegisterStudentAndEmployee(info) {
       const roleAndPermission = await getPermissionByRole(roleId);
       const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
       const data = { userIds, roleId, permissionId };
-      await dataSaveUerRolePermission(userIds,roleId,permissionId,transaction)
+      await dataSaveUerRolePermission(userIds, roleId, permissionId, transaction)
     } else {
       throw new Error('Invalid role');
     }
@@ -212,21 +212,21 @@ export async function adminRegisterStudentAndEmployee(info) {
 };
 
 
-export async function dataSaveUerRolePermission(userId, roleId, permissionIds,transaction) {
+export async function dataSaveUerRolePermission(userId, roleId, permissionIds, transaction) {
   const dataToSave = [];
 
   // userIds.forEach(userId => {
-    permissionIds.forEach(permissionId => {
-      dataToSave.push({
-        userId,
-        roleId,
-        permissionId,
-      });
+  permissionIds.forEach(permissionId => {
+    dataToSave.push({
+      userId,
+      roleId,
+      permissionId,
     });
+  });
   // });
 
   try {
-    await registerRepository.saveToUserRolePermission(dataToSave,transaction);
+    await registerRepository.saveToUserRolePermission(dataToSave, transaction);
     console.log('User role permission data saved successfully.');
   } catch (error) {
     console.error('Error saving user role permission data:', error);
@@ -235,25 +235,25 @@ export async function dataSaveUerRolePermission(userId, roleId, permissionIds,tr
 }
 
 
-export async function getAdminRegisterStudentAndEmployee(universityId,instituteId,role) {
+export async function getAdminRegisterStudentAndEmployee(universityId, instituteId, role) {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(universityId,instituteId,role),
-      registerRepository.getAdminRegisterEmployee(universityId,instituteId,role),
+      registerRepository.getAdminRegisterStudent(universityId, instituteId, role),
+      registerRepository.getAdminRegisterEmployee(universityId, instituteId, role),
     ]);
 
     return { students, employees };
-    
+
   } catch (error) {
     console.error('Error fetching students and employees:', error);
     throw new Error('Failed to fetch students and employees');
   }
 };
 
-export async function emptyPassword(data, existingdata) {  
+export async function emptyPassword(data, existingdata) {
   const { email, dummyPassword, status } = existingdata.dataValues;
   const updatedData = {
-    password:'',
+    password: '',
     status: 'inActive'
   };
   return await registerRepository.changePassword(email, updatedData);
@@ -261,16 +261,16 @@ export async function emptyPassword(data, existingdata) {
 
 
 export async function changePassword(info) {
-  let { email,password } = info;
+  let { email, password } = info;
   const newPassword = await bcrypt.hashSync(password, salt);
 
   const data = {
-    password:newPassword,
-    dummyPassword :'',
-    status:'active'
+    password: newPassword,
+    dummyPassword: '',
+    status: 'active'
   };
 
-  return await registerRepository.changePassword(email,data);
+  return await registerRepository.changePassword(email, data);
 };
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
@@ -317,10 +317,10 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
 export const studentRegister = async (registerStudentData, transaction) => {
   try {
     const { studentId, email, phoneNumber, scholarNumber, role, universityId, roleId } = registerStudentData;
-    
+
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    
+
     const data = {
       userName: scholarNumber,
       universityId: universityId,
@@ -332,37 +332,37 @@ export const studentRegister = async (registerStudentData, transaction) => {
       studentId: studentId,
       dummyPassword: dummyPassword,
     };
-    
+
     // Register the student and employee
     const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
-    
+
     const userId = results.dataValues.userId;
-    
+
     // Associate user and student
     await registerRepository.adminUser({ userId: userId, studentId: studentId }, transaction);
-    
+
     // Get permissions by role
     const roleAndPermission = await getPermissionByRole(roleId);
     const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-    
+
     // Save user role and permissions
     await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
-    
+
   } catch (error) {
     console.error('Error in student registration:', error);
-    throw new Error('Failed to register student'); 
+    throw new Error('Failed to register student');
   }
 };
 
 
-export const employeeRegister = async (employeePersonalDetail,employeeRegisterData, transaction) => {
+export const employeeRegister = async (employeePersonalDetail, employeeRegisterData, transaction) => {
   try {
 
-    const {personalEmail,mobileNumber} = employeePersonalDetail
-    const {universityId,roleId,employeeName,employeeId,instituteId} = employeeRegisterData
+    const { personalEmail, mobileNumber } = employeePersonalDetail
+    const { universityId, roleId, employeeName, employeeId, instituteId } = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    const roleName = await getSingleRoleDetails (roleId);
+    const roleName = await getSingleRoleDetails(roleId);
     const role = roleName?.dataValues?.role
     const data = {
       userName: employeeName,
@@ -374,27 +374,27 @@ export const employeeRegister = async (employeePersonalDetail,employeeRegisterDa
       role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
-      instituteId:instituteId,
+      instituteId: instituteId,
     };
-    
+
     // Register the student and employee
     const results = await registerRepository.adminRegisterStudentAndEmployee(data, transaction);
-    
+
     const userId = results.dataValues.userId;
-    
+
     // Associate user and student
     await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
-    
+
     // Get permissions by role
     const roleAndPermission = await getPermissionByRole(roleId);
     const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
-    
+
     // Save user role and permissions
     await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
-    
+
   } catch (error) {
     console.error('Error in employee registration:', error);
-    throw new Error('Failed to register student'); 
+    throw new Error('Failed to register student');
   }
 };
 
@@ -409,7 +409,7 @@ export async function changeStatus(userId) {
 
   } catch (error) {
     console.error(`Error changing status for user ${userId}:`, error);
-    throw error; 
+    throw error;
   }
 };
 
@@ -485,3 +485,22 @@ export const forgotSendLink = async (email) => {
     throw new Error(error.message || "Internal Server Error in sendLink");
   }
 };
+
+
+
+export async function getMyDetails(userId) {
+
+  const user = await registerRepository.getUserByUserId(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const userData = user.dataValues;
+
+  // 🔐 sensitive data remove
+  delete userData.password;
+  delete userData.dummyPassword;
+
+  return userData;
+}
