@@ -111,20 +111,6 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
 
             const termsMap = {};
 
-            // subjects.forEach(subject => {
-            //     if (!subject.term) return;
-
-            //     if (!termsMap[subject.term]) {
-            //         termsMap[subject.term] = {
-            //             termName: `${termType} ${subject.term}`,
-            //             subjects: [],
-            //             classSections: []
-            //         };
-            //     }
-
-            //     delete subject.term;
-            //     termsMap[subject.term].subjects.push(subject);
-            // });
 
             subjects.forEach(subject => {
 
@@ -136,7 +122,6 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                     termsMap[termNumber] = {
                         termName: `${termType} ${termNumber}`,
                         subjects: [],
-                        classSections: []
                     };
                 }
 
@@ -145,24 +130,28 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                 termsMap[termNumber].subjects.push(subject);
             });
 
-            finalResult.push({
-                courseId,
-                courseName: course.courseName,
-                terms: Object.values(termsMap).sort((a, b) =>
-                    parseInt(a.termName.split(" ")[1]) -
-                    parseInt(b.termName.split(" ")[1])
-                )
-            });
+
+            Object.keys(termsMap)
+                .sort((a, b) => Number(a) - Number(b))
+                .forEach(termKey => {
+
+                    const term = termsMap[termKey];
+
+                    finalResult.push({
+                        termName: term.termName,
+                        course: {
+                            courseId: course.courseId,
+                            courseName: course.courseName
+                        },
+                        subjects: term.subjects
+                    });
+                });
         }
 
         return finalResult;
-
-
 
     } catch (error) {
         console.error('Error in getTerms With SubjectService:', error);
         throw error;
     }
-
-    // return await getTermsWithSubjectRepo(instituteId, academicYearId);
 };
