@@ -143,6 +143,8 @@ export async function getAdminRegisterStudentAndEmployee(req, res) {
 // };
 
 export const changePassword = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
   try {
     const { email, oldPassword, password, confirmPassword } = req.body;
 
@@ -171,7 +173,6 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "Incorrect old password" });
     }
 
-    const transaction = await sequelize.transaction();
 
     const updatedUser = await userService.changePassword({ email, password }, transaction);
 
