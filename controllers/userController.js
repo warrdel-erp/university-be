@@ -6,6 +6,7 @@ import {
   getUserRolePermissionByUserId,
 } from "../repository/userRolePermissionRepository.js";
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 // register
 export const register = async (req, res) => {
