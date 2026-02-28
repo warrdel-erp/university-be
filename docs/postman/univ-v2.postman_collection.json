@@ -527,7 +527,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\"\n    ]\n}",
+              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_jn6uwbhx\",\n        \"perm_0k04cyu4\"\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -535,13 +535,89 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/userPermission/assign",
+              "raw": "{{baseurl}}/authorization/permissions/assign",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "userPermission",
+                "authorization",
+                "permissions",
                 "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "assign role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"role\": \"ADMIN\",\n    \"permissions\": [\n        \"perm_jn6uwbhx\",\n        \"perm_0k04cyu4\"\n    ]\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"role\": \"TEACHER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/role/remove",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "role",
+                "remove"
               ]
             }
           },
@@ -575,13 +651,55 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/userPermission/my",
+              "raw": "{{baseurl}}/authorization/my",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "userPermission",
+                "authorization",
                 "my"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by user Id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/getByUserId/:userId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "getByUserId",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "46"
+                }
               ]
             }
           },
