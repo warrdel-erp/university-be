@@ -320,7 +320,7 @@ export async function getAllUsers(universityId, instituteId, page, limit, search
 
         const { count, rows } = await model.userModel.findAndCountAll({
             where: whereCondition,
-            attributes: { exclude: ['password', 'dummyPassword', 'deletedAt'] },
+            attributes: { exclude: ['password', 'deletedAt'] },
             offset: parseInt(offset),
             limit: parseInt(limit),
             order: [['createdAt', 'DESC']]
