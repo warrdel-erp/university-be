@@ -177,7 +177,7 @@ export const changePassword = async (req, res) => {
 
     const updatedUser = await userService.changePassword({ email, password }, transaction);
 
-    await userService.emptyPassword(req.body, existingEmail, transaction);
+    await userService.emptyPassword(existingUser.dataValues?.email, transaction);
 
     await transaction.commit();
 

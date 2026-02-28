@@ -252,13 +252,8 @@ export async function getAdminRegisterStudentAndEmployee(universityId, institute
   }
 };
 
-export async function emptyPassword(data, existingdata, transaction) {
-  const { email, dummyPassword, status } = existingdata.dataValues;
-  const updatedData = {
-    password: '',
-    status: 'inActive'
-  };
-  return await registerRepository.changePassword(email, updatedData, transaction);
+export async function emptyPassword(email, transaction) {
+  return await registerRepository.changePassword(email, { dummyPassword: '' }, transaction);
 }
 
 
