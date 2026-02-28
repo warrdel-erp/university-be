@@ -1,20 +1,20 @@
 import jwt from "jsonwebtoken";
 import { findEmailByEmail } from "../repository/userRepository.js";
 import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
- 
+
 
 const SECRET_KEY = 'warrdelUniversityERPWarrdelUniversityERP';
 
 // export default async function useAuth(req, res, next) {
 
 //     const authHeader = req.headers.authorization;
-    
+
 //     if (!authHeader) {
 //         return res.status(401).json({ message: "Authorization header missing" });
 //     }
 
 //     const token = authHeader.split(" ")[1];
-    
+
 //     if (!token) {
 //         return res.status(401).json({ message: "Token missing" });
 //     }
@@ -83,10 +83,10 @@ export default async function useAuth(req, res, next) {
             userPermissions = permissions.map(permission => permission.permission); // User's permissions
         } else {
             role = "Admin"
-            userPermissions ="all"
+            userPermissions = "all"
         }
 
-        const accessRoute = req.originalUrl.split('?')[0].replace(/\/$/, ''); 
+        const accessRoute = req.originalUrl.split('?')[0].replace(/\/$/, '');
         const permissionType = req.method === 'GET' ? 'R/O' : 'R/W';
 
         // console.log(`>>>>>>>>>>>Access Route: ${accessRoute}`);

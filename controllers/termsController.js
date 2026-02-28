@@ -14,13 +14,9 @@ export async function getTermsData(req, res) {
 
 export const getTermsWithSubject = async (req, res, next) => {
     try {
-        console.log(req.query);
-        const { instituteId, acedmicYearId } = req.query;
-        console.warn("Query:", req.query);
-        console.log("acedemicYearId:", req.query.acedmicYearId);
-        const data = await termsService.getTermsWithSubjectService(instituteId, acedmicYearId);
-        console.log("data", data);
 
+        const { instituteId, acedmicYearId } = req.query;
+        const data = await termsService.getTermsWithSubjectService(instituteId, acedmicYearId);
         return res.status(200).json(data);
 
     } catch (error) {
