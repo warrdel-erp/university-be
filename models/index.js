@@ -680,9 +680,18 @@ examSetupModel.belongsTo(classRoomModel, { foreignKey: "roomId", as: "room" });
 examSetupModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 examSetupModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
 examSetupModel.belongsTo(examTypeModel, { foreignKey: "examTypeId", as: "examType" });
-``;
+
 examAttendanceModel.belongsTo(examSetupModel, { foreignKey: "examSetupId", as: "examSetup" });
 examAttendanceModel.belongsTo(studentModel, { foreignKey: "studentId", as: "students" });
+
+// semesterModel.belongsTo(courseModel, {foreignKey: "courseId",as: "course"});
+// courseModel.hasMany(semesterModel, {foreignKey: "courseId",as: "semesters"});
+
+// semesterModel.belongsTo(sessionModel, {foreignKey: "sessionId",as: "session"});
+// sessionModel.hasMany(semesterModel, {foreignKey: "sessionId",as: "semesters"});
+
+// semesterModel.hasMany(subjectModel, {foreignKey: "semesterId",as: "subjects"});
+// subjectModel.belongsTo(semesterModel, {foreignKey: "semesterId",as: "semester"});
 
 vehicleModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employee" });
 employeeModel.hasMany(vehicleModel, { foreignKey: "employeeId", as: "employee" });

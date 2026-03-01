@@ -1,4 +1,5 @@
 import * as termsService from '../services/termsService.js';
+import { getTermsWithSubjectService } from '../services/termsService.js';
 
 export async function getTermsData(req, res) {
     const { courseId, sessionId } = req.query;
@@ -10,3 +11,15 @@ export async function getTermsData(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+
+export const getTermsWithSubject = async (req, res, next) => {
+    try {
+
+        const { instituteId, acedmicYearId } = req.query;
+        const data = await termsService.getTermsWithSubjectService(instituteId, acedmicYearId);
+        return res.status(200).json(data);
+
+    } catch (error) {
+        next(error);
+    }
+};

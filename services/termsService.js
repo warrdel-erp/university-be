@@ -1,6 +1,7 @@
 import * as termsRepository from '../repository/termsRepository.js';
 import * as sessionRepository from '../repository/sessionRepository.js';
 import * as courseRepository from '../repository/courseRepository.js';
+import { getTermsWithSubjectRepo } from '../repository/termsRepository.js';
 
 export async function getTermsData(courseId, sessionId) {
     try {
@@ -13,6 +14,7 @@ export async function getTermsData(courseId, sessionId) {
         if (!session) {
             throw new Error('Session not found');
         }
+
         if (!course) {
             throw new Error('Course not found');
         }
@@ -76,3 +78,80 @@ export async function getTermsData(courseId, sessionId) {
         throw error;
     }
 }
+
+export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => {
+    try {
+
+        const [session, courses] = await Promise.all([
+            sessionRepository.getSessionByInstituteAndAcademicYear(instituteId, acedmicYearId),
+            courseRepository.getAllCourseByInstituteId(instituteId)
+        ]);
+
+        if (!session) {
+            throw new Error('Session not found');
+        }
+
+        if (!courses) {
+            throw new Error('Course not found');
+        }
+
+        const finalResult = [];
+
+        for (const course of courses) {
+
+            const courseId = course.courseId;
+            const termType = course.termType || 'Term';
+
+            const subjects =
+                await termsRepository.getSubjectsByCourseAndAcademicYearAndInstitute(
+                    courseId,
+                    acedmicYearId,
+                    instituteId
+                );
+
+            const termsMap = {};
+
+
+            subjects.forEach(subject => {
+
+                const termNumber = Number(subject.term);
+
+                if (!termNumber) return;  // skip invalid
+
+                if (!termsMap[termNumber]) {
+                    termsMap[termNumber] = {
+                        termName: `${termType} ${termNumber}`,
+                        subjects: [],
+                    };
+                }
+
+                delete subject.term;
+
+                termsMap[termNumber].subjects.push(subject);
+            });
+
+
+            Object.keys(termsMap)
+                .sort((a, b) => Number(a) - Number(b))
+                .forEach(termKey => {
+
+                    const term = termsMap[termKey];
+
+                    finalResult.push({
+                        termName: term.termName,
+                        course: {
+                            courseId: course.courseId,
+                            courseName: course.courseName
+                        },
+                        subjects: term.subjects
+                    });
+                });
+        }
+
+        return finalResult;
+
+    } catch (error) {
+        console.error('Error in getTerms With SubjectService:', error);
+        throw error;
+    }
+};
