@@ -465,6 +465,47 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "list with subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/list/withSubject?instituteId=12&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "list",
+                "withSubject"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -527,7 +568,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_jn6uwbhx\",\n        \"perm_0k04cyu4\"\n    ]\n}",
+              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_3pvhh7qk\",\n        \"perm_jn6uwbhx\",\n        \"perm_vmgy81qb\",\n        \"perm_r2hck7uz\",\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\",\n        \"perm_fv5i3pus\",\n        \"perm_vhu1w614\",\n        \"perm_3y99hc4v\",\n        \"perm_kpyrgn0u\",\n        \"perm_67enoryi\",\n        \"perm_1j3eob6w\",\n        \"perm_2q1uysz0\",\n        \"perm_vvvmvshc\",\n        \"perm_apwmfs4s\",\n        \"perm_mbtdzyk9\",\n        \"perm_lloet9pf\",\n        \"perm_fb6uz3on\",\n        \"perm_g8euk1wo\",\n        \"perm_zzn4930w\",\n        \"perm_1s0rvrdn\",\n        \"perm_g4j2vmqx\",\n        \"perm_lqv7imlo\",\n        \"perm_a3raniek\",\n        \"perm_uhy3pdu7\",\n        \"perm_lux49lih\",\n        \"perm_8bogy08q\",\n        \"perm_8ewmos7o\",\n        \"perm_pfbahaza\",\n        \"perm_xswo35s7\",\n        \"perm_llg0ziln\",\n        \"perm_3mgfza4i\",\n        \"perm_p0kc7xfx\",\n        \"perm_q0raarnh\",\n        \"perm_npz4elox\",\n        \"perm_cat7bpaz\",\n        \"perm_6jvxrldh\",\n        \"perm_d0adxu1h\",\n        \"perm_imi2a816\",\n        \"perm_9v4jf6w4\",\n        \"perm_6s6cpiz4\",\n        \"perm_ekn3wbkf\",\n        \"perm_cu17s07s\",\n        \"perm_acyzvir3\",\n        \"perm_ivou1dd2\",\n        \"perm_qq9mv2fo\",\n        \"perm_x1rh2q4g\",\n        \"perm_64gvrizb\",\n        \"perm_agfecd9i\",\n        \"perm_s2cbz5bl\",\n        \"perm_2aaom9pi\",\n        \"perm_m2a1vniq\",\n        \"perm_owmk2mbk\",\n        \"perm_p0nsudou\",\n        \"perm_t5jn428x\",\n        \"perm_av7xp5gj\",\n        \"perm_cdr8cffg\",\n        \"perm_ndgoqbu4\",\n        \"perm_rappiajj\",\n        \"perm_zd39u5kb\",\n        \"perm_r79elvp4\",\n        \"perm_l8aciket\",\n        \"perm_tmfsqxet\",\n        \"perm_8wkpw22t\",\n        \"perm_1f71a9au\",\n        \"perm_0ll19vv5\",\n        \"perm_d99qwi0v\",\n        \"perm_sinhstch\",\n        \"perm_n75h7bqq\",\n        \"perm_r120a1v3\",\n        \"perm_20gnlqri\",\n        \"perm_c85tikr4\",\n        \"perm_bpohlab1\",\n        \"perm_zr6ziwe7\",\n        \"perm_j40rqf7g\",\n        \"perm_p04ppbrx\",\n        \"perm_mfnubcs7\",\n        \"perm_5l8xdl05\",\n        \"perm_l9pqi54f\",\n        \"perm_ar7a6k6r\",\n        \"perm_xwzulhwl\",\n        \"perm_ubeutyom\",\n        \"perm_5xh3uoxy\",\n        \"perm_32zievwu\",\n        \"perm_d601jd2y\",\n        \"perm_2stin5ak\",\n        \"perm_1gvaxmr5\",\n        \"perm_9q6tr5wh\",\n        \"perm_8yhfo7tw\",\n        \"perm_ts7ptgqq\",\n        \"perm_szzb8rcn\",\n        \"perm_m5xvo8tj\",\n        \"perm_761g26ms\",\n        \"perm_qwynrtpg\",\n        \"perm_hy5bhccz\",\n        \"perm_no8bm1fp\",\n        \"perm_zn1lhuan\",\n        \"perm_g10t2u8c\",\n        \"perm_hwj2pup5\",\n        \"perm_d4dwysf8\",\n        \"perm_z8b2x4f9\",\n        \"perm_j7h3m5v1\",\n        \"perm_w1p9s4c2\",\n        \"perm_r2y8n6k0\",\n        \"perm_t5q3l7g4\",\n        \"perm_a9d4f1v2\",\n        \"perm_n7b8x3m5\",\n        \"perm_e2h6j9k1\",\n        \"perm_c4z5s8w3\",\n        \"perm_f1g7p9q2\",\n        \"perm_y3v6t8n4\",\n        \"perm_b5m2k7r9\",\n        \"perm_x8l1c4g6\"\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -764,6 +805,6 @@
           "response": []
         }
       ]
-    },
+    }
   ]
 }
