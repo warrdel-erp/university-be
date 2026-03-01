@@ -188,11 +188,11 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`);
     }
 
-    const facultyLoad = await getSingleFaculityLoadDetails(teacherId);
+    const facultyLoad = await getSingleFaculityLoadDetails(data.employeeId);
 
     const currentLoad = Number(facultyLoad?.[0]?.currentLoad || 0) + Number(periodLength || 0);
 
-    await updateFaculityLoadByEmployeeId(teacherId, { currentLoad }, transaction);
+    await updateFaculityLoadByEmployeeId(data.employeeId, { currentLoad }, transaction);
 
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
