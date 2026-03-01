@@ -172,18 +172,17 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     const { startTime, endTime } = periodInfo;
     const periodLength = periodInfo.timeTableName?.periodLength ?? 0;
 
-    if (teacherSubjectMappingId) {
-      teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
+    // if (teacherSubjectMappingId) {
+    //   teacherSubjectData = await getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId);
 
-      if (!teacherSubjectData?.[0]) throw new Error("Invalid teacherSubjectMappingId");
+    //   if (!teacherSubjectData?.[0]) throw new Error("Invalid teacherSubjectMappingId");
 
-      data.employeeId = teacherSubjectData[0].employeeId;
-    }
+    //   data.employeeId = teacherSubjectData[0].employeeId;
+    // }
 
-    const teacherId = data.employeeId;
-    if (!teacherId) throw new Error("employeeId is required");
+    // const teacherId = data.employeeId;
 
-    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(teacherId, day, startTime, endTime);
+    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(data.employeeId, day, startTime, endTime);
 
     if (conflict) {
       throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`);
@@ -1122,7 +1121,7 @@ export async function getRoutineByClassSectionId(classSectionsId) {
 
           periodNormalItems.forEach(item => {
             const teacher = item.employeeDetails;
-            const subject = item.timeTableSubject;
+            const subject = item?.timeTableSubject;
 
             const subjectName = subject?.subjectName || "N/A";
             const subjectId = subject?.subjectId || null;

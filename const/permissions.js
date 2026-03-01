@@ -36,7 +36,7 @@ export const PERMISSIONS = {
     ADD_PERMISSION: {
         value: "perm_1j3eob6w",
     },
-    HEADOFTHEINSTITUTION: {
+    HEAD_OF_THE_INSTITUTION: {
         value: "perm_2q1uysz0",
     },
     DEPARTMENT: {
@@ -102,7 +102,7 @@ export const PERMISSIONS = {
     EXAM_TIME_TABLE_CREATE: {
         value: "perm_q0raarnh",
     },
-    INTERNAL_ASSESMENT: {
+    INTERNAL_ASSESSMENT: {
         value: "perm_npz4elox",
     },
     EXAM_ROOM_ALLOCATE: {
@@ -299,5 +299,44 @@ export const PERMISSIONS = {
     },
     PAYROLL_BULK_PRINT: {
         value: "perm_d4dwysf8",
+    },
+    CALENDAR_VIEW_JOBS: {
+        value: "perm_z8b2x4f9",
+    },
+    CERTIFICATE_LIST: {
+        value: "perm_j7h3m5v1",
+    },
+    CLASS_ROOM: {
+        value: "perm_w1p9s4c2",
+    },
+    DORMITORY_ASSIGNMENT: {
+        value: "perm_r2y8n6k0",
+    },
+    DORMITORY_ROOM_TYPE: {
+        value: "perm_t5q3l7g4",
+    },
+    EMPLOYEE_ATTENDANCE: {
+        value: "perm_a9d4f1v2",
+    },
+    LIBRARY_CREATION: {
+        value: "perm_n7b8x3m5",
+    },
+    MISSING_STUDENT_FEE_PLAN: {
+        value: "perm_e2h6j9k1",
+    },
+    RETURN_BOOK: {
+        value: "perm_c4z5s8w3",
+    },
+    SCHEDULE_LIST: {
+        value: "perm_f1g7p9q2",
+    },
+    SHIFT_LIST: {
+        value: "perm_y3v6t8n4",
+    },
+    STUDENT_WISE_INCIDENT_LIST: {
+        value: "perm_b5m2k7r9",
+    },
+    TRANSPORT_ROUTE: {
+        value: "perm_x8l1c4g6",
     },
 };
