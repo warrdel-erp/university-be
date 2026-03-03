@@ -44,3 +44,7 @@
 16. change timeTableCreateId -> timeTableRoutineId
 17. new API for classSchedule.
 18. new key isOverridingSyblingElectives in classSchedule.
+
+---
+
+1. merge conflict with bhaskar.

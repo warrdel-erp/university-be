@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
-import timeTableMapping from "./classScheduleModel.js";
+import classScheduleModel from "./classScheduleModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
@@ -48,7 +48,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_mapping_id',
             references: {
-                model: timeTableMapping,
+                model: classScheduleModel,
                 key: 'time_table_mapping_id'
             }
         },
