@@ -73,7 +73,7 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        attentenceStatus: {
+        attendanceStatus: {
             type: DataTypes.STRING,
             allowNull: true,
             field: 'attendance_status'

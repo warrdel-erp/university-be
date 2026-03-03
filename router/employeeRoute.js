@@ -26,5 +26,4 @@ router.delete('/:id', userAuth, deleteEmployeeDetail);
 
 router.post('/import', userAuth, importEmployeeData);
 
-
-export default router;
+export default router; 

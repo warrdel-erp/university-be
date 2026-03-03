@@ -1071,3 +1071,106 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
     throw error;
   }
 }
+
+
+export async function getTodayClassScheduleForEmployee(
+  employeeId,
+  currentDate,
+  dayString
+) {
+  try {
+    const result = await model.classScheduleModel.findAll({
+      where: {
+        [Op.or]: [
+          { employeeId },
+        ],
+        day: dayString,
+      },
+      attributes: [
+        'timeTableMappingId',
+        [
+          Sequelize.literal(`(
+            SELECT COUNT(*) 
+            FROM attendance AS a 
+            WHERE a.time_table_mapping_id = class_schedule_item.time_table_mapping_id 
+              AND a.date BETWEEN '${currentDate} 00:00:00' AND '${currentDate} 23:59:59' 
+              AND a.attendance_status IN ('Present', 'PRESENT', 'present', 'P')
+          )`),
+          'attendance'
+        ]
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          attributes: ['timeTableRoutineId'],
+          where: {
+            is_publish: true,
+            startingDate: {
+              [Op.lte]: currentDate
+            },
+            endingDate: {
+              [Op.gte]: currentDate
+            }
+          },
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ['class', 'section']
+            }
+          ]
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ['periodName', 'startTime', 'endTime']
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "timeTableTeacherSubject",
+          attributes: ['teacherSubjectMappingId'],
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "employeeSubject",
+              attributes: ['classSubjectMapperId'],
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects",
+                  attributes: ['subjectName']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectName']
+        },
+        {
+          model: model.classRoomModel,
+          as: "classRoom",
+          attributes: ['roomNumber']
+        }
+      ]
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getTodayClassScheduleForEmployee:", error);
+    throw error;
+  }
+}
