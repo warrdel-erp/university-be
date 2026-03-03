@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getMyDetails } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 
 // for first time register
@@ -32,4 +32,5 @@ router.post("/forgotPassword", forgotPassword);
 
 router.patch("/forgotPassword", useAuth, forgotChangePassword);
 
+router.get("/myDetails", useAuth, getMyDetails);
 export default router;
