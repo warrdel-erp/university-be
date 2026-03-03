@@ -1111,6 +1111,27 @@ evalutionModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectEv
 employeeModel.hasMany(evalutionModel, { foreignKey: "employeeId", as: "evalutionsEmp" });
 evalutionModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employeeEvalution" });
 
+userModel.hasOne(employeeModel, {
+  foreignKey: "userId",
+  as: "employee"
+});
+
+employeeModel.belongsTo(userModel, {
+  foreignKey: "userId",
+  as: "user"
+});
+
+userModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "institute"
+});
+
+instituteModel.hasMany(userModel, {
+  foreignKey: "instituteId",
+  as: "users"
+});
+
+
 export {
   settingModel,
   universityModel,

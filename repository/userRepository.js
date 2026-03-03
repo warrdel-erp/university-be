@@ -261,22 +261,46 @@ export async function updateUser(userId, data) {
 };
 
 
+// export async function getUserByUserId(userId) {
+
+//     const result = await model.userModel.findOne({
+//         where: { userId }
+//     });
+
+//     if (!result) return null;
+
+//     const institute = await model.instituteModel.findOne({
+//         where: { instituteId: result.instituteId }
+//     });
+
+//     result.dataValues.instituteName = institute?.instituteName || null;
+
+//     return result;
+// }
+
 export async function getUserByUserId(userId) {
 
     const result = await model.userModel.findOne({
-        where: { userId }
+        where: { userId },
+        attributes: { exclude: ["password", "dummyPassword"] },
+        include: [
+            {
+                association: "employee",   // alias use karo (safe way)
+                required: false,
+                attributes: {
+                    exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"]
+                }
+            },
+            {
+                association: "institute",  // alias use karo
+                attributes: ["instituteId", "instituteName"]
+            }
+        ]
     });
-
-    if (!result) return null;
-
-    const institute = await model.instituteModel.findOne({
-        where: { instituteId: result.instituteId }
-    });
-
-    result.dataValues.instituteName = institute?.instituteName || null;
 
     return result;
 }
+
 export async function updateStudent(studentId, data, transaction) {
     try {
         const result = await model.studentModel.update(data, {
@@ -331,21 +355,4 @@ export async function getAllUsers(universityId, instituteId, page, limit, search
         console.error('Error in getAllUsers repository:', error);
         throw error;
     }
-}
-
-export async function getUserByUserId(userId) {
-
-    const result = await model.userModel.findOne({
-        where: { userId }
-    });
-
-    if (!result) return null;
-
-    const institute = await model.instituteModel.findOne({
-        where: { instituteId: result.instituteId }
-    });
-
-    result.dataValues.instituteName = institute?.instituteName || null;
-
-    return result;
 }
