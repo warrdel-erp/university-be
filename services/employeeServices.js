@@ -835,7 +835,3 @@ export async function getTeacherSubject(employeeId, universityId, instituteId, r
 export async function getSubjectEvalution(employeeId) {
   return await evaluationRepository.getTeacherSubjectEvalution(employeeId);
 }
-
-export async function getTodayClassSchedule(employeeId, currentDate, dayString) {
-  return await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString);
-}

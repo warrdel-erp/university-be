@@ -488,3 +488,22 @@ export const getAllUsers = async (universityId, instituteId, page = 1, limit = 1
     throw error;
   }
 };
+
+
+
+export async function getMyDetails(userId) {
+
+  const user = await registerRepository.getUserByUserId(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const userData = user.dataValues;
+
+  // 🔐 sensitive data remove
+  delete userData.password;
+  delete userData.dummyPassword;
+
+  return userData;
+}

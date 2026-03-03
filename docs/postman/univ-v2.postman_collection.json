@@ -805,35 +805,6 @@
           "response": []
         }
       ]
-    },
-    {
-      "name": "employee",
-      "item": [
-        {
-          "name": "today's schedule",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/todaySchedule?employeeId=26",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "todaySchedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "26"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
     }
   ]
 }
