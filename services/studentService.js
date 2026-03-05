@@ -1384,3 +1384,24 @@ function formatStudentTimetable(allData) {
 
   return { formatted };
 }
+
+
+
+export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
+
+  try {
+
+    const students = await studentRepository.getStudentsByClassSection(
+      classSectionId,
+      acedmicYearId,
+      universityId
+    );
+
+    return students;
+
+  } catch (error) {
+    console.error("Error in studentService:", error);
+    throw error;
+  }
+
+}

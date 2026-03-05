@@ -6,7 +6,7 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const addStudent = async (req, res) => {
     const file = req.files;
     const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber,roleId,classSectionsId,acedmicYearId,semesterId,sessionId} = req.body;
+    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber, roleId, classSectionsId, acedmicYearId, semesterId, sessionId } = req.body;
 
     try {
         // Check for required fields
@@ -38,7 +38,7 @@ export const addStudent = async (req, res) => {
 
         // Add the student
         const info = req.body;
-        const result = await studentService.addStudent(info, file,createdBy,universityId,roleId,acedmicYearId,classSectionsId,semesterId,sessionId);
+        const result = await studentService.addStudent(info, file, createdBy, universityId, roleId, acedmicYearId, classSectionsId, semesterId, sessionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in addStudent:", error);
@@ -52,13 +52,13 @@ export const getAllStudents = async (req, res) => {
     const instituteId = req.user.instituteId;
     const role = req.user.role;
     let { search, acedmicYearId, page, limit } = req.query;
-    
+
     search = search || 'all';
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
 
     try {
-        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit,instituteId,role);
+        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit, instituteId, role);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
@@ -68,14 +68,14 @@ export const getAllStudents = async (req, res) => {
 
 
 // 3. get single student details
-export const getSingleStudentDetail = async (req,res) => {
+export const getSingleStudentDetail = async (req, res) => {
     const universityId = req.user.universityId;
     const studentId = req.query.studentId;
     try {
-        if (!studentId){
+        if (!studentId) {
             res.status(400).send("studentId is required");
         }
-        const result = await studentService.getSingleStudentDetail(studentId,universityId);
+        const result = await studentService.getSingleStudentDetail(studentId, universityId);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting ${studentId} details , single student details:`, error);
@@ -87,47 +87,47 @@ export const getSingleStudentDetail = async (req,res) => {
 
 export const importStudentData = async (req, res) => {
     try {
-      const { campusId, instituteId, affiliatedUniversityId, acedmicYearId } = req.body;
-      const universityId = req.user.universityId;    
-      const createdBy = req.user.userId;
-      const data = { ...req.body, universityId, createdBy }; 
-  
-      if (!(campusId && instituteId && affiliatedUniversityId && acedmicYearId)) {
-        return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and acedmicYearId are required');
-      }
-  
-      const excelFile = req.files?.student;
-      if (!excelFile) {
-        return res.status(400).send('Excel file is required');
-      }
-  
-      const excelData = fileHandler.readExcelFile(excelFile.data);
-      if (!excelData) {
-        return res.status(400).send('Error reading the Excel file');
-      }
-  
-      const result = await studentService.importStudentData(excelData, data);
-      if (!result) {
-        return res.status(400).send('Error processing the Excel data');
-      }
-  
-      res.status(200).send({ message: 'Data imported successfully' });
+        const { campusId, instituteId, affiliatedUniversityId, acedmicYearId } = req.body;
+        const universityId = req.user.universityId;
+        const createdBy = req.user.userId;
+        const data = { ...req.body, universityId, createdBy };
+
+        if (!(campusId && instituteId && affiliatedUniversityId && acedmicYearId)) {
+            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and acedmicYearId are required');
+        }
+
+        const excelFile = req.files?.student;
+        if (!excelFile) {
+            return res.status(400).send('Excel file is required');
+        }
+
+        const excelData = fileHandler.readExcelFile(excelFile.data);
+        if (!excelData) {
+            return res.status(400).send('Error reading the Excel file');
+        }
+
+        const result = await studentService.importStudentData(excelData, data);
+        if (!result) {
+            return res.status(400).send('Error processing the Excel data');
+        }
+
+        res.status(200).send({ message: 'Data imported successfully' });
     } catch (error) {
-      console.error(error); 
-      res.status(500).send({ error: error.message || 'An unexpected error occurred' });
+        console.error(error);
+        res.status(500).send({ error: error.message || 'An unexpected error occurred' });
     }
 };
-  
+
 // update student 
-export const updateStudentDetails = async (req,res) => {
-    const {studentId,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId,courseId} = req.body;
+export const updateStudentDetails = async (req, res) => {
+    const { studentId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId } = req.body;
     const info = req.body;
-    const file = req.files;  
+    const file = req.files;
     try {
-        if (!(studentId && universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId )){
+        if (!(studentId && universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)) {
             res.status(400).send("student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
         }
-        const result = await studentService.updateStudentDetails(studentId, info,file);
+        const result = await studentService.updateStudentDetails(studentId, info, file);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in updating student Id ${studentId} and ${campusId}:`, error);
@@ -135,12 +135,12 @@ export const updateStudentDetails = async (req,res) => {
     }
 };
 
-export const deleteStudentDetail = async (req,res) => {
-    const {studentId} = req.params;
+export const deleteStudentDetail = async (req, res) => {
+    const { studentId } = req.params;
     try {
-        if (!studentId){
+        if (!studentId) {
             res.status(400).send("student Id is required");
-        }else{
+        } else {
             const result = await studentService.deleteStudentDetail(studentId);
             res.status(200).send(result);
         }
@@ -150,13 +150,13 @@ export const deleteStudentDetail = async (req,res) => {
     }
 };
 
-export const getEmptyEnrollNumber = async (req,res) => {
+export const getEmptyEnrollNumber = async (req, res) => {
     const universityId = req.user.universityId;
-    const {acedmicYearId} = req.query
+    const { acedmicYearId } = req.query
     const instituteId = req.user.instituteId;
     const role = req.user.role;
     try {
-        const result = await studentService.getEmptyEnrollNumber(universityId,acedmicYearId,instituteId,role);
+        const result = await studentService.getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -165,11 +165,11 @@ export const getEmptyEnrollNumber = async (req,res) => {
 };
 
 export const studentCourseMapping = async (req, res) => {
-    let { subjectId, studentId, courseId, semesterId} = req.body;
+    let { subjectId, studentId, courseId, semesterId } = req.body;
     const data = req.body
     try {
         // required fields
-        if (!( subjectId && studentId && courseId && semesterId)) {
+        if (!(subjectId && studentId && courseId && semesterId)) {
             return res.status(400).send(" subjectId, studentId, courseId, semesterId is required");
         }
 
@@ -184,12 +184,12 @@ export const studentCourseMapping = async (req, res) => {
 };
 
 export const classStudentMapping = async (req, res) => {
-    let { studentId, classSectionId} = req.body;
+    let { studentId, classSectionId } = req.body;
     const data = req.body
     const createdBy = req.user.userId;
     try {
         //  required fields
-        if (!( studentId && classSectionId)) {
+        if (!(studentId && classSectionId)) {
             return res.status(400).send(" studentId, classSectionId is required");
         }
 
@@ -204,13 +204,13 @@ export const classStudentMapping = async (req, res) => {
 
 export const getclassStudentMapping = async (req, res) => {
     const universityId = req.user.universityId;
-    const semesterId = req.query.semesterId || 0;   
-    const acedmicYearId = req.query.acedmicYearId 
+    const semesterId = req.query.semesterId || 0;
+    const acedmicYearId = req.query.acedmicYearId
     const instituteId = req.user.instituteId;
     const role = req.user.role;
-    
+
     try {
-        const result = await studentService.getclassStudentMapping(semesterId,universityId,acedmicYearId,instituteId,role);
+        const result = await studentService.getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);
@@ -219,16 +219,16 @@ export const getclassStudentMapping = async (req, res) => {
 };
 
 export const addElectiveSubject = async (req, res) => {
-    let { studentId, electiveSubjectId} = req.body;
+    let { studentId, electiveSubjectId } = req.body;
     const data = req.body
     const createdBy = req.user.userId;
     try {
         //  required fields
-        if (!( studentId && electiveSubjectId)) {
+        if (!(studentId && electiveSubjectId)) {
             return res.status(400).send(" electiveSubjectId, studentId is required");
         }
 
-        const result = await studentService.addElectiveSubject(data,createdBy);
+        const result = await studentService.addElectiveSubject(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in student add Elective Subject:", error);
@@ -237,7 +237,7 @@ export const addElectiveSubject = async (req, res) => {
 };
 
 export const promoteStudent = async (req, res) => {
-    const data = req.body;    
+    const data = req.body;
     try {
 
         if (Array.isArray(data)) {
@@ -262,42 +262,42 @@ export const promoteStudent = async (req, res) => {
 };
 
 export const getFeePlanId = async (req, res) => {
-  const { semesterId, acedmicYearId, courseId } = req.query;
-  const universityId = req.user.universityId;
+    const { semesterId, acedmicYearId, courseId } = req.query;
+    const universityId = req.user.universityId;
 
-  try {
-    const result = await studentService.getFeePlanId(semesterId,acedmicYearId,courseId,universityId);
+    try {
+        const result = await studentService.getFeePlanId(semesterId, acedmicYearId, courseId, universityId);
 
-    if (result && result.success === false) {
-      return res.status(400).json({
-        success: false,
-        message: result.message,
-      });
+        if (result && result.success === false) {
+            return res.status(400).json({
+                success: false,
+                message: result.message,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+
+    } catch (error) {
+        console.error("Error in getting fee plan by IDs:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message,
+        });
     }
-
-    return res.status(200).json({
-      success: true,
-      data: result,
-    });
-    
-  } catch (error) {
-    console.error("Error in getting fee plan by IDs:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-      error: error.message,
-    });
-  }
 };
 
-export const getEmptyFeeDetails = async (req,res) => {
+export const getEmptyFeeDetails = async (req, res) => {
     const universityId = req.user.universityId;
-    const {acedmicYearId} = req.query
+    const { acedmicYearId } = req.query
     const instituteId = req.user.instituteId;
     const role = req.user.role;
     try {
-        const result = await studentService.getEmptyFeeDetails(universityId,acedmicYearId,instituteId,role);
+        const result = await studentService.getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
@@ -305,12 +305,12 @@ export const getEmptyFeeDetails = async (req,res) => {
     }
 };
 
-export const getStudentSubject = async (req,res) => {
-    const {studentId} = req.params;
+export const getStudentSubject = async (req, res) => {
+    const { studentId } = req.params;
     try {
-        if (!studentId){
+        if (!studentId) {
             res.status(400).send("student Id is required");
-        }else{
+        } else {
             const result = await studentService.getStudentSubject(studentId);
             res.status(200).send(result);
         }
@@ -320,12 +320,12 @@ export const getStudentSubject = async (req,res) => {
     }
 };
 
-export const getFeeDetailsByStudentId = async (req,res) => {
-    const {studentId} = req.params;
+export const getFeeDetailsByStudentId = async (req, res) => {
+    const { studentId } = req.params;
     try {
-        if (!studentId){
+        if (!studentId) {
             res.status(400).send("student Id is required");
-        }else{
+        } else {
             const result = await studentService.getFeeDetailsByStudentId(studentId);
             res.status(200).send(result);
         }
@@ -352,19 +352,59 @@ export async function getBooksIssuedToStudent(req, res) {
 };
 
 export const getStudentTimeTable = async (req, res) => {
-  try {
-    const { studentId } = req.query;
+    try {
+        const { studentId } = req.query;
 
-    if (!studentId) {
-      return res.status(400).send("studentId is required");
+        if (!studentId) {
+            return res.status(400).send("studentId is required");
+        }
+
+        const result = await studentService.getStudentTimeTable(studentId);
+
+        return res.status(200).send(result);
+
+    } catch (error) {
+        console.error("Error in getStudentTimeTable:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+
+export const getStudentsByClassSection = async (req, res) => {
+
+    try {
+
+        const { classSectionId, acedmicYearId } = req.query;
+
+        const universityId = req.user.universityId;
+
+        if (!classSectionId || !acedmicYearId) {
+            return res.status(400).send({
+                success: false,
+                message: "classSectionId and acedmicYearId are required"
+            });
+        }
+
+        const students = await studentService.getStudentsByClassSection(
+            classSectionId,
+            acedmicYearId,
+            universityId
+        );
+
+        return res.status(200).send({
+            success: true,
+            data: students
+        });
+
+    } catch (error) {
+
+        console.error("Error fetching students:", error);
+
+        return res.status(500).send({
+            success: false,
+            message: "Internal Server Error"
+        });
+
     }
 
-    const result = await studentService.getStudentTimeTable(studentId);
-
-    return res.status(200).send(result);
-
-  } catch (error) {
-    console.error("Error in getStudentTimeTable:", error);
-    res.status(500).send("Internal Server Error");
-  }
 };
