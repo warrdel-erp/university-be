@@ -286,3 +286,17 @@ export const getRoutineByClassSectionId = async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
+export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
+    const { employeeId, acedmicYearId } = req.query;
+    if (!employeeId) {
+        return res.status(400).send("employeeId is required");
+    }
+    try {
+        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(employeeId, acedmicYearId);
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getting routine by teacher and academic year:", error);
+        res.status(500).send("Internal Server Error");
+    }
+};

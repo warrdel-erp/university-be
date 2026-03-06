@@ -217,13 +217,13 @@ export async function getSubjectEvalution(req, res) {
 
 export const getTodayClassSchedule = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { employeeId, date } = req.query;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
         }
 
-        const currentDate = new Date();
+        const currentDate = new Date(date);
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayString = days[currentDate.getDay()];
 

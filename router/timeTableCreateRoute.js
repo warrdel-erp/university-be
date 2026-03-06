@@ -3,10 +3,12 @@ const router = Router();
 import {
     addtimeTableCreate, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
-    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId
+    , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
 } from '../controllers/timeTableCreateController.js';
 
 router.get('/getRoutine', userAuth, getRoutineByClassSectionId);
+
+router.get('/getRoutineByTeacher', userAuth, getRoutineByTeacherAndAcademicYear);
 
 import userAuth from "../middleware/authUser.js"
 

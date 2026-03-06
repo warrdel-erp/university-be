@@ -1227,3 +1227,178 @@ export async function getRoutineByClassSectionId(classSectionsId) {
     throw error;
   }
 }
+
+export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYearId) {
+  try {
+    const normalRoutines = await timeTableCreateRepository.getRoutinesByTeacherIdRepository(employeeId, acedmicYearId);
+
+    if (!normalRoutines || !normalRoutines.length) return { routines: [] };
+
+    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
+    const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds, employeeId);
+
+    const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+    const formattedRoutines = normalRoutines.map(routine => {
+      const timeTableCreateName = routine.timeTableCreateName || {};
+      const periods = timeTableCreateName.timeTableName || [];
+      const normalScheduleItems = routine.timeTablecreate || [];
+      const classSection = routine.timeTableClassSection || {};
+
+      const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
+      const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
+
+      let weekOffList = [];
+      try {
+        const weekOffRaw = timeTableCreateName.weekOff;
+        weekOffList = Array.isArray(weekOffRaw)
+          ? weekOffRaw
+          : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
+      } catch (e) {
+        weekOffList = [];
+      }
+      const weekOffLower = weekOffList.map(d => String(d).toLowerCase());
+
+      const formattedPeriods = periods.map(period => {
+        const formattedDays = daysList.map(daysName => {
+          if (weekOffLower.includes(daysName.toLowerCase())) {
+            return {
+              name: daysName,
+              isDayOff: true,
+            };
+          }
+
+          if (period.isBreak) {
+            return {
+              name: daysName,
+              isBreak: true,
+            };
+          }
+
+          // Get items for this period and day (Normal)
+          const periodNormalItems = normalScheduleItems.filter(si =>
+            si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
+          );
+
+          // Get items for this period and day (Elective)
+          const periodElectiveItems = electiveScheduleItems.filter(si =>
+            si.timeTableCreationId === period.timeTableCreationId && si.day === daysName
+          );
+
+          // Check if any normal item in this slot overrides electives
+          const isOverriding = periodNormalItems.some(item => item.isOverridingSyblingElectives === true);
+
+          const scheduleItemsMap = [];
+
+          periodNormalItems.forEach(item => {
+            let teacher = item.employeeDetails;
+            let subject = item?.timeTableSubject;
+
+            if (item.timeTableTeacherSubject) {
+              teacher = item.timeTableTeacherSubject.teacherEmployeeData;
+              subject = item.timeTableTeacherSubject.employeeSubject?.subjects;
+            }
+
+            const subjectName = subject?.subjectName || "N/A";
+            const subjectId = subject?.subjectId || null;
+            const roomName = item.classRoom?.roomNumber || "N/A";
+            const roomId = item.classRoom?.classRoomSectionId || null;
+
+            const existing = scheduleItemsMap.find(si => si.type === 'normal' && si.subject.name === subjectName && si.room.name === roomName);
+            if (existing) {
+              existing.teachers.push({
+                employeeId: teacher?.employeeId || null,
+                name: teacher?.employeeName || "N/A",
+                timeTableMappingId: item.timeTableMappingId,
+                teacherType: item.teacherType,
+                isAttendence: item.isAttendence
+              });
+            } else {
+              scheduleItemsMap.push({
+                type: 'normal',
+                isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+                teachers: [
+                  {
+                    employeeId: teacher?.employeeId || null,
+                    name: teacher?.employeeName || "N/A",
+                    color: teacher?.pickColor,
+                    timeTableMappingId: item.timeTableMappingId,
+                    teacherType: item.teacherType,
+                    isAttendence: item.isAttendence
+                  }
+                ],
+                subject: { subjectId: subjectId, name: subjectName },
+                room: { classRoomSectionId: roomId, name: roomName }
+              });
+            }
+          });
+
+          if (!isOverriding) {
+            periodElectiveItems.forEach(item => {
+              const teacher = item.employeeDetails;
+              const subject = item.timeTableElective;
+
+              const subjectName = subject?.electiveSubjectName || "N/A";
+              const subjectId = subject?.electiveSubjectId || null;
+              const roomName = item.classRoom?.roomNumber || "N/A";
+              const roomId = item.classRoom?.classRoomSectionId || null;
+
+              const existing = scheduleItemsMap.find(si => si.type === 'elective' && si.subject.name === subjectName && si.room.name === roomName);
+              if (existing) {
+                existing.teachers.push({
+                  employeeId: teacher?.employeeId || null,
+                  name: teacher?.employeeName || "N/A",
+                  timeTableMappingId: item.timeTableMappingId,
+                  teacherType: item.teacherType,
+                  isAttendence: item.isAttendence
+                });
+              } else {
+                scheduleItemsMap.push({
+                  type: 'elective',
+                  teachers: [{
+                    employeeId: teacher?.employeeId || null,
+                    name: teacher?.employeeName || "N/A",
+                    timeTableMappingId: item.timeTableMappingId,
+                    teacherType: item.teacherType,
+                    isAttendence: item.isAttendence
+                  }],
+                  subject: { electiveSubjectId: subjectId, name: subjectName },
+                  room: { classRoomSectionId: roomId, name: roomName }
+                });
+              }
+            });
+          }
+
+          return {
+            name: daysName,
+            scheduleItems: scheduleItemsMap
+          };
+        });
+
+        return {
+          timeTableCreationId: period.timeTableCreationId,
+          name: period.periodName,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          days: formattedDays
+        };
+      });
+
+      return {
+        timeTableRoutineId: routine.timeTableRoutineId,
+        isPublished: routine.isPublish,
+        timeTableNameId: routine.timeTableNameId,
+        name: timeTableCreateName.name || "N/A",
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        classSection,
+        periods: formattedPeriods
+      };
+    });
+
+    return { routines: formattedRoutines };
+  } catch (error) {
+    console.error("Error in getRoutineByTeacherAndAcademicYear Service:", error);
+    throw error;
+  }
+}

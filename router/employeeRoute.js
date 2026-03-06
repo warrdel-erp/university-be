@@ -4,7 +4,7 @@ import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDe
 import userAuth from "../middleware/authUser.js"
 import { getTodayClassSchedule } from '../controllers/employeeController.js';
 
-router.get('/todaySchedule', userAuth, getTodayClassSchedule);
+router.get('/schedule', userAuth, getTodayClassSchedule);
 
 router.get('/evaluation', userAuth, getSubjectEvalution);
 

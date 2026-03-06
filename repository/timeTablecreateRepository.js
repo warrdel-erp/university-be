@@ -1015,7 +1015,7 @@ export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {
   }
 }
 
-export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds) {
+export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds, employeeId) {
   try {
     return await model.timeTableRoutineModel.findAll({
       where: {
@@ -1026,6 +1026,7 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
       include: [
         {
           model: model.classScheduleModel,
+          where: { employeeId },
           as: 'timeTablecreate',
           include: [
             {
@@ -1049,6 +1050,94 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
     });
   } catch (error) {
     console.error("Error in getElectiveRoutinesByTableNamesRepository:", error);
+    throw error;
+  }
+}
+
+export async function getRoutinesByTeacherIdRepository(employeeId, acedmicYearId) {
+  try {
+    const mappings = await model.classScheduleModel.findAll({
+      where: {
+
+        employeeId,
+
+      },
+      attributes: ['timeTableRoutineId']
+    });
+
+    const routineIds = [...new Set(mappings.map(m => m.timeTableRoutineId))];
+    if (!routineIds.length) return [];
+
+    return await model.timeTableRoutineModel.findAll({
+      where: {
+        timeTableRoutineId: { [Op.in]: routineIds },
+        ...(acedmicYearId && { acedmicYearId }),
+        timeTableType: 'normal'
+      },
+      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionsId'],
+      include: [
+        {
+          model: model.timeTableStructureModel,
+          as: 'timeTableCreateName',
+          attributes: ['name', 'timeTableNameId', 'weekOff'],
+          include: [
+            {
+              model: model.timeTableStructurePeriodsModel,
+              as: 'timeTableName',
+              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+            }
+          ]
+        },
+        {
+          model: model.classScheduleModel,
+          where: {
+            employeeId,
+          },
+          as: 'timeTablecreate',
+          include: [
+            {
+              model: model.employeeModel,
+              as: 'employeeDetails',
+              attributes: ['employeeId', 'employeeName', "pickColor"]
+            },
+            {
+              model: model.subjectModel,
+              as: 'timeTableSubject',
+              attributes: ['subjectId', 'subjectName']
+            },
+            {
+              model: model.classRoomModel,
+              as: 'classRoom',
+              attributes: ['classRoomSectionId', 'roomNumber']
+            },
+            {
+              model: model.teacherSubjectMappingModel,
+              as: 'timeTableTeacherSubject',
+              include: [
+                {
+                  model: model.employeeModel,
+                  as: 'teacherEmployeeData',
+                  attributes: ['employeeId', 'employeeName', "pickColor"]
+                },
+                {
+                  model: model.classSubjectMapperModel,
+                  as: 'employeeSubject',
+                  include: [{ model: model.subjectModel, as: 'subjects', attributes: ['subjectId', 'subjectName'] }]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.classSectionModel,
+          as: 'timeTableClassSection',
+          attributes: ['classSectionsId', 'section', 'class'],
+          include: [{ model: model.courseModel, as: 'courseSection', attributes: ['courseId', 'courseName', 'courseCode'] }]
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in getRoutinesByTeacherIdRepository:", error);
     throw error;
   }
 }
