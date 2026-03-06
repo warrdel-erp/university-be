@@ -1106,7 +1106,7 @@ export async function getTodayClassScheduleForEmployee(
           required: true,
           attributes: ['timeTableRoutineId'],
           where: {
-            is_publish: true,
+            // is_publish: true,
             startingDate: {
               [Op.lte]: currentDate
             },

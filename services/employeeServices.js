@@ -17,6 +17,8 @@ import * as employeeMetaDataRepository from '../repository/employeeMetaDataRepos
 import * as employeeFilesRepository from '../repository/employeeFilesRepository.js';
 import { uploadFile } from '../utility/awsServices.js';
 import { employeeRegister } from '../services/userServices.js'
+import * as registerRepository from "../repository/userRepository.js";
+import * as userRoleService from '../services/userRoleService.js';
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
@@ -66,23 +68,47 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
 
 
+    const roleDetails = await getSingleRoleDetails(roleId)
+    const roleName = roleDetails.dataValues.role
+    let finalRegisterRoleId = roleId;
+
+    if (roleName?.trim().toLowerCase() === 'admin') {
+      finalRegisterRoleId = 13;
+    }
+
+    const employeePersonalDetail = {
+      personalEmail: address?.officalEmailId || address?.officialEmailId,
+      mobileNumber: address?.mobileNumber
+    }
+
+    const employeeRegisterData = {
+      universityId,
+      roleId: finalRegisterRoleId,
+      employeeName: data.employeeName,
+      employeeId: null,
+      instituteId
+    }
+
+    const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
+
+    // Add user role entry 
+    if (data.role) {
+      const roleData = data.roleData
+      await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
+    }
+
     // Add employee 
     data.createdBy = createdBy
     data.roleId = roleId
+    data.userId = userId;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
-    const { campusId, instituteId, employeeName, employmentType } = employee.dataValues
-    // const {employeeName} = employee.dataValues
-    const roleDetails = await getSingleRoleDetails(roleId)
-    const roleName = roleDetails.dataValues.role
-    let employeeRegisterData;
 
-    if (roleName?.trim().toLowerCase() === 'admin') {
-      employeeRegisterData = { universityId, roleId: 13, employeeName, employeeId, instituteId }
-    } else {
-      employeeRegisterData = { universityId, roleId, employeeName, employeeId, instituteId }
-    }
+    // Associate user and employee
+    await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
+
+    const { campusId, instituteId, employeeName, employmentType } = employee.dataValues
 
 
     // image upload
@@ -105,7 +131,6 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
       ...address
     }, transaction);
     const { personalEmail, mobileNumber, officalMobileNumber, officalEmailId } = addressDetail.dataValues
-    const employeePersonalDetail = { personalEmail: officalEmailId, mobileNumber }
 
     // Add employee cor-address
     await employeeAddressRepository.addCorsAddress({
@@ -246,8 +271,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
         throw new Error('Invalid format for allDropDownData.');
       }
     }
-    const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
-    await employeeRepository.updateEmployee(employeeId, { userId }, transaction);
+
 
     if (roleName?.trim().toLowerCase() === 'admin') {
       const data = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber, alternateNumber: officalMobileNumber, registerEmail: officalEmailId, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' }
