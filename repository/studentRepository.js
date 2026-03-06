@@ -1043,54 +1043,194 @@ export async function getStudentDetailsRepository(studentId) {
         throw error;
     }
 }
-export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
+// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
+//     try {
+
+//         const students = await model.classStudentMapperModel.findAll({
+
+//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+
+//             where: {
+//                 acedmicYearId: acedmicYearId
+//             },
+
+//             include: [
+
+//                 {
+//                     model: model.userModel,
+//                     as: "userClassStudentMapper",
+//                     attributes: ["universityId", "userId"],
+//                     where: { universityId }
+//                 },
+
+//                 {
+//                     model: model.semesterModel,
+//                     as: "studentSection",
+//                     attributes: ["semesterId", "name"],
+
+//                     include: [
+//                         {
+//                             model: model.classSectionModel,
+//                             as: "classSections",
+//                             attributes: ["classSectionsId", "section"],
+//                             where: {
+//                                 classSectionsId: classSectionId
+//                             }
+//                         }
+//                     ]
+//                 },
+
+//                 {
+//                     model: model.studentModel,
+//                     as: "studentMapped",
+//                     attributes: [
+//                         "studentId",
+//                         "firstName",
+//                         "lastName",
+//                         "scholarNumber",
+//                         "email",
+//                         "mobileNumber"
+//                     ]
+//                 }
+
+//             ]
+
+//         });
+
+//         return students;
+
+//     } catch (error) {
+//         console.error("Error in getStudentsByClassSection:", error);
+//         throw error;
+//     }
+// }
+
+// repository/studentRepository.js
+
+
+// export async function getStudentsByClassSection(classSectionId, academicYearId) {
+
+//     try {
+
+//         const students = await model.studentModel.findAll({
+
+//             attributes: [
+//                 "studentId",
+//                 "firstName",
+//                 "lastName",
+//                 "scholarNumber",
+//                 "email",
+//                 "mobileNumber",
+//                 "classSectionsId",
+//                 "acedmicYearId"
+//             ],
+
+//             where: {
+//                 classSectionsId: classSectionId,
+//                 acedmicYearId: academicYearId
+//             }
+
+//         });
+
+//         return students;
+
+//     } catch (error) {
+//         console.error("Repository Error:", error);
+//         throw error;
+//     }
+
+// }
+
+// export async function getStudentsByClassSection(classSectionId, academicYearId) {
+
+//     try {
+
+//         const students = await model.studentModel.findAll({
+
+//             attributes: [
+//                 "studentId",
+//                 "firstName",
+//                 "lastName",
+//                 "scholarNumber",
+//                 "email",
+//                 "mobileNumber",
+//                 "classSectionsId",
+//                 "acedmicYearId"
+//             ],
+
+//             where: {
+//                 classSectionsId: classSectionId,
+//                 acedmicYearId: academicYearId
+//             },
+
+//             include: [
+//                 {
+//                     model: model.attendanceModel,
+//                     attributes: [
+//                         "attendanceStatus",
+//                         "notes",
+//                         "description",
+//                         "date"
+//                     ],
+//                     required: false // LEFT JOIN (important)
+//                 }
+//             ]
+
+//         });
+
+//         return students;
+
+//     } catch (error) {
+//         console.error("Repository Error:", error);
+//         throw error;
+//     }
+
+// }
+export async function getStudentsByClassSection(classSectionId, academicYearId) {
+
     try {
 
-        const students = await model.classStudentMapperModel.findAll({
+        const students = await model.studentModel.findAll({
 
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            attributes: [
+                "studentId",
+                "scholarNumber",
+                "enrollNumber",
+                "firstName",
+                "lastName",
+                "classSectionsId"
+            ],
 
             where: {
-                acedmicYearId: acedmicYearId
+                classSectionsId: classSectionId,
+                acedmicYearId: academicYearId
             },
 
             include: [
 
                 {
-                    model: model.userModel,
-                    as: "userClassStudentMapper",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
+                    model: model.classSectionModel,
+                    as: "studentSections",
+                    attributes: ["classSectionsId", "section"]
                 },
 
                 {
-                    model: model.semesterModel,
-                    as: "studentSection",
-                    attributes: ["semesterId", "name"],
-
-                    include: [
-                        {
-                            model: model.classSectionModel,
-                            as: "classSections",
-                            attributes: ["classSectionsId", "section"],
-                            where: {
-                                classSectionsId: classSectionId
-                            }
-                        }
-                    ]
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseName"]
                 },
 
                 {
-                    model: model.studentModel,
-                    as: "studentMapped",
+                    model: model.attendanceModel,
+                    as: "studentAttendance",   // ⭐ same alias
                     attributes: [
-                        "studentId",
-                        "firstName",
-                        "lastName",
-                        "scholarNumber",
-                        "email",
-                        "mobileNumber"
-                    ]
+                        "attendanceStatus",
+                        "notes",
+                        "description",
+                        "date",
+                        "timeTableMappingId"
+                    ],
+                    required: false
                 }
 
             ]
@@ -1100,7 +1240,8 @@ export async function getStudentsByClassSection(classSectionId, acedmicYearId, u
         return students;
 
     } catch (error) {
-        console.error("Error in getStudentsByClassSection:", error);
+        console.error("Repository Error:", error);
         throw error;
     }
+
 }

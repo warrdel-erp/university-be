@@ -370,41 +370,33 @@ export const getStudentTimeTable = async (req, res) => {
 };
 
 
-export const getStudentsByClassSection = async (req, res) => {
+
+export async function getStudentsByClassSection(req, res) {
 
     try {
 
-        const { classSectionId, acedmicYearId } = req.query;
-
-        const universityId = req.user.universityId;
-
-        if (!classSectionId || !acedmicYearId) {
-            return res.status(400).send({
-                success: false,
-                message: "classSectionId and acedmicYearId are required"
-            });
-        }
+        const { classSectionId, academicYearId } = req.query;
 
         const students = await studentService.getStudentsByClassSection(
             classSectionId,
-            acedmicYearId,
-            universityId
+            academicYearId
         );
 
-        return res.status(200).send({
+        return res.status(200).json({
             success: true,
+            count: students.length,
             data: students
         });
 
     } catch (error) {
 
-        console.error("Error fetching students:", error);
+        console.error("Controller Error:", error);
 
-        return res.status(500).send({
+        return res.status(500).json({
             success: false,
-            message: "Internal Server Error"
+            message: error.message
         });
 
     }
 
-};
+}

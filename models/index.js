@@ -187,6 +187,7 @@ semesterModel.hasMany(classSectionModel, { foreignKey: "semester_id", as: "semes
 classSectionModel.belongsTo(classModel, { foreignKey: "class_id", as: "classGroup" });
 classModel.hasMany(classSectionModel, { foreignKey: "class_id", as: "classGroup" });
 
+
 classSectionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 acedmicYearModel.hasMany(classSectionModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 
@@ -238,9 +239,12 @@ studentModel.hasMany(classStudentMapperModel, { foreignKey: "student_id", as: "s
 // class student mapper join to class section
 classStudentMapperModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "studentSection" });
 semesterModel.hasMany(classStudentMapperModel, { foreignKey: "semester_id", as: "studentSection" });
+semesterModel.belongsTo(classSectionModel, { foreignKey: "semester_id", as: "classSections" });
 
 classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: "semester_id", as: "studentSectionDetail" });
 classSectionModel.hasMany(classStudentMapperModel, { foreignKey: "semester_id", as: "studentSectionDetail" });
+
+
 
 //student join to there 2 more table
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: "student_id", as: "entranceDetails" });
@@ -575,6 +579,7 @@ classSectionModel.hasMany(attendanceModel, { foreignKey: "class_sections_id", as
 attendanceModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentAttendance" });
 studentModel.hasMany(attendanceModel, { foreignKey: "student_id", as: "studentAttendance" });
 
+
 attendanceModel.belongsTo(classScheduleModel, { foreignKey: "timeTableMappingId", as: "timeTableMapping" });
 classScheduleModel.hasMany(attendanceModel, { foreignKey: "timeTableMappingId", as: "attendances" });
 
@@ -790,7 +795,7 @@ courseModel.hasMany(subjectModel, { foreignKey: "courseId", as: "subjectInfo" })
 subjectModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institutedSubject" });
 instituteModel.hasMany(subjectModel, { foreignKey: "instituteId", as: "institutedSubject" });
 
-semesterModel.hasMany(classSectionModel, { foreignKey: "semesterId", as: "classSections" });
+// semesterModel.hasMany(classSectionModel, { foreignKey: "semesterId", as: "classSections" });
 classSectionModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "semester" });
 
 coModel.belongsTo(syllabusDetailsModel, { foreignKey: "syllabus_details_id", as: "cosyllabus" });
