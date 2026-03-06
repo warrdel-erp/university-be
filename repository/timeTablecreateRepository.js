@@ -1212,7 +1212,7 @@ export async function getTodayClassScheduleForEmployee(
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              attributes: ['class', 'section']
+              attributes: ['class', 'section', 'classSectionsId']
             }
           ]
         },
