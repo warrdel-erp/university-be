@@ -1026,7 +1026,7 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
       include: [
         {
           model: model.classScheduleModel,
-          where: { employeeId },
+          where: employeeId ? { employeeId } : {},
           as: 'timeTablecreate',
           include: [
             {
