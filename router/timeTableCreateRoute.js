@@ -1,4 +1,7 @@
 import { Router } from 'express'
+import { z } from "zod";
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
 const router = Router();
 import {
     addtimeTableCreate, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
@@ -6,11 +9,18 @@ import {
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
 } from '../controllers/timeTableCreateController.js';
 
-router.get('/getRoutine', userAuth, getRoutineByClassSectionId);
+const getRoutineSchema = z.object({
+    classSectionsId: z.string().regex(/^\d+$/, "classSectionsId must be a number").transform(val => parseInt(val))
+});
 
-router.get('/getRoutineByTeacher', userAuth, getRoutineByTeacherAndAcademicYear);
+const getRoutineByTeacherSchema = z.object({
+    employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
+    acedmicYearId: z.string().regex(/^\d+$/, "acedmicYearId must be a number").optional().transform(val => val ? parseInt(val) : undefined)
+});
 
-import userAuth from "../middleware/authUser.js"
+router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
+
+router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
 router.post('/', userAuth, addtimeTableCreate);
 
