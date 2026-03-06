@@ -513,7 +513,41 @@
       "name": "time table",
       "item": [
         {
-          "name": "get time table structure data",
+          "name": "get time table routine data",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutine"
+              ],
+              "query": [
+                {
+                  "key": "classSectionsId",
+                  "value": "197"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get time table routine by teacher",
           "request": {
             "auth": {
               "type": "bearer",
@@ -801,6 +835,58 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "employee",
+      "item": [
+        {
+          "name": "today's schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/todaySchedule?employeeId=50",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "todaySchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "50"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "New Request",
+          "request": {
+            "method": "GET",
+            "header": []
           },
           "response": []
         }
