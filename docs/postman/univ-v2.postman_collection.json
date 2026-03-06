@@ -562,18 +562,22 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
+              "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId=40&acedmicYearId=59",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "timeTableCreate",
-                "getRoutine"
+                "getRoutineByTeacher"
               ],
               "query": [
                 {
-                  "key": "classSectionsId",
-                  "value": "197"
+                  "key": "employeeId",
+                  "value": "40"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
                 }
               ]
             }
@@ -859,13 +863,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/todaySchedule?employeeId=49&date=2026-03-06",
+              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "todaySchedule"
+                "schedule"
               ],
               "query": [
                 {
@@ -874,8 +878,7 @@
                 },
                 {
                   "key": "date",
-                  "value": "2026-03-06",
-                  "type": "text"
+                  "value": "2026-03-06"
                 }
               ]
             }
@@ -888,10 +891,30 @@
       "name": "Students",
       "item": [
         {
-          "name": "New Request",
+          "name": "class section students",
           "request": {
             "method": "GET",
-            "header": []
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/classSectionStudents?classSectionId=204&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "classSectionStudents"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "204"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
           },
           "response": []
         }
