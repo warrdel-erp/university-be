@@ -1,5 +1,13 @@
+import { data } from '../const/resultStudents.js';
+import { parseCustomDate } from '../utility/dateFormat.js';
+
 export const addResultStudent = (data) => {
     return formateData(data)
+}
+
+export const getStudentResult = async (rollNo, dob) => {
+    const student = data.find(item => item.rollNo === rollNo && item.dob === dob);
+    return student;
 }
 
 
@@ -14,11 +22,10 @@ const formateData = (fileData) => {
             students[row["ROLL NO"]] = {
                 rollNo: row["ROLL NO"],
                 name: row["NAME"],
-                dob: row["DOB"].toISOString().split('T')[0]
+                dob: parseCustomDate(row["DOB"])
             }
 
             console.log(row["DOB"])
-
             currentRollNo = row["ROLL NO"]
             delete row["ROLL NO"]
             delete row["NAME"]
