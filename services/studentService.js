@@ -1418,10 +1418,12 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
     const firstStudent = students[0];
     const firstAttendance = firstStudent.studentAttendance?.[0];
 
+    const subjectName = firstAttendance?.timeTableMapping?.timeTableSubject?.subjectName || null;
+
     return {
 
       classSectionsId: firstStudent.classSectionsId,
-      subjectName: null,
+      subjectName: subjectName,
       courseName: firstStudent.course?.courseName || null,
       section: firstStudent.classSection?.section || null,
       timeTableMappingId: firstAttendance?.timeTableMappingId || timeTableMappingId,
