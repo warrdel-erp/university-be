@@ -78,7 +78,7 @@ import evalution from "./router/evalutionRoute.js";
 import terms from "./router/termsRoute.js";
 import subjects from "./router/subjectRoute.js";
 import userPermission from "./router/userPermissionRoute.js";
-
+import resultStudent from "./router/resultStudentRoutes.js";
 
 // middleware
 app.use(fileUpload());
@@ -96,6 +96,7 @@ app.use("/subject", subjects);
 app.use("/terms", terms);
 app.use("/syllabus", syllabus);
 app.use("/authorization", userPermission);
+app.use("/resultStudent", resultStudent);
 
 
 app.use("/main", main);

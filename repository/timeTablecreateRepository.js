@@ -1183,7 +1183,7 @@ export async function getTodayClassScheduleForEmployee(
             FROM attendance AS a 
             WHERE a.time_table_mapping_id = class_schedule_item.time_table_mapping_id 
               AND a.date BETWEEN '${currentDate} 00:00:00' AND '${currentDate} 23:59:59' 
-              AND a.attendance_status IN ('Present', 'PRESENT', 'present', 'P')
+              AND a.attendance_status IN ('Present')
           )`),
           'attendance'
         ]
@@ -1212,7 +1212,20 @@ export async function getTodayClassScheduleForEmployee(
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              attributes: ['class', 'section', 'classSectionsId']
+              attributes: [
+                'class',
+                'section',
+                'classSectionsId',
+                [
+                  Sequelize.literal(`(
+                    SELECT COUNT(*)
+                    FROM students AS s
+                    WHERE s.class_sections_id = \`timeTablecreate->timeTableClassSection\`.\`class_sections_id\`
+                    AND s.deleted_at IS NULL
+                  )`),
+                  'totalStudents'
+                ]
+              ]
             }
           ]
         },

@@ -848,7 +848,7 @@
       "name": "employee",
       "item": [
         {
-          "name": "today's schedule",
+          "name": "schedule",
           "request": {
             "auth": {
               "type": "bearer",
@@ -893,10 +893,20 @@
         {
           "name": "class section students",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/student/classSectionStudents?classSectionId=204&acedmicYearId=59",
+              "raw": "{{baseurl}}/student/classSectionStudents?classSectionId=204&academicYearId=59",
               "host": [
                 "{{baseurl}}"
               ],
@@ -910,7 +920,7 @@
                   "value": "204"
                 },
                 {
-                  "key": "acedmicYearId",
+                  "key": "academicYearId",
                   "value": "59"
                 }
               ]
