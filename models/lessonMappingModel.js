@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 import topicModel from "./topicModel.js";
-import timeTableMappingModel from "./timeTableMappingModel.js";
+import classScheduleModel from "./classScheduleModel.js";
 import universityModel from "./universityModel.js";
 
 export default sequelize.define(
@@ -47,7 +47,7 @@ export default sequelize.define(
             allowNull: false,
             field: 'time_table_mapping_id',
             references: {
-                model: timeTableMappingModel,
+                model: classScheduleModel,
                 key: 'time_table_mapping_id'
             }
         },
@@ -58,25 +58,25 @@ export default sequelize.define(
         completeDate: {
             type: DataTypes.DATE,
             allowNull: true,
-            field:'complete_date'
+            field: 'complete_date'
         },
-        note :{
-            type:DataTypes.STRING,
-            allowNull:true
+        note: {
+            type: DataTypes.STRING,
+            allowNull: true
         },
-        lectureUrl :{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'lecture_url'
+        lectureUrl: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'lecture_url'
         },
-        file:{
-            type:DataTypes.JSON,
-            allowNull:true
+        file: {
+            type: DataTypes.JSON,
+            allowNull: true
         },
-        status:{
-            type:DataTypes.STRING,
-            allowNull:false,
-            defaultValue:'inComplete',
+        status: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'inComplete',
         },
         createdBy: {
             type: DataTypes.INTEGER,

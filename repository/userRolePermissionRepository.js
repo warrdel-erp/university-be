@@ -196,8 +196,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                                         {
                                                             model: model.teacherSubjectMappingModel,
                                                             as: "employeeSubject",
-                                                            // distinct: true,
-                                                            // attributes: ["teacherSubjectMappingId", 'employeeId', 'classSubjectMapperId'],
                                                             attributes: { exclude: excludeTimestamps },
                                                         }
                                                     ]
@@ -205,12 +203,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                             ]
                                         }
                                     ]
-                                },
-                                {
-                                    model: model.attendanceModel,
-                                    as: 'studentAttendance',
-                                    distinct: true,
-                                    attributes: { exclude: excludeTimestamps },
                                 }
                             ]
                         }
@@ -230,6 +222,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
     try {
         const UserRolePermission = await model.userStudentEmployeeModel.findAll({
             attributes: ["userId"],
+            limit: 1,
             include: [
                 {
                     model: model.employeeModel,
@@ -287,23 +280,16 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                                     model: model.classSectionModel,
                                     as: 'employeeSection',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                    include: [
-                                        {
-                                            model: model.studentModel,
-                                            as: 'studentSections',
-                                            attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
-                                        }
-                                    ]
                                 }
                             ]
                         },
                         {
-                            model: model.timeTableMappingModel,
+                            model: model.classScheduleModel,
                             as: 'timeTableMappings',
                             attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                             include: [
                                 {
-                                    model: model.timeTableCreateModel,
+                                    model: model.timeTableRoutineModel,
                                     as: 'timeTablecreate',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },
@@ -313,7 +299,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },
                                 {
-                                    model: model.timeTableCreationModel,
+                                    model: model.timeTableStructurePeriodsModel,
                                     as: 'timeTablecreation',
                                     attributes: { exclude: ["createdAt", 'updatedAt', 'deletedAt'] },
                                 },

@@ -19,7 +19,7 @@ export async function getAllJobs(universityId, instituteId, role) {
         ...(role === "Head" && { instituteId }),
         deletedAt: null
       },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
           model: model.jobSettingModel,
@@ -34,7 +34,7 @@ export async function getAllJobs(universityId, instituteId, role) {
         {
           model: model.subAccountModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
+          attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"]
         },
         {
           model: model.subjectModel,
@@ -59,7 +59,7 @@ export async function getSingleJob(jobId) {
   try {
     return await model.jobModel.findOne({
       where: { jobId, deletedAt: null },
-      attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
           model: model.jobSettingModel,
@@ -74,7 +74,7 @@ export async function getSingleJob(jobId) {
         {
           model: model.subAccountModel,
           as: "departmentJobs",
-          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
+          attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"]
         },
         {
           model: model.subjectModel,
@@ -98,7 +98,7 @@ export async function getSingleJob(jobId) {
 export async function updateJob(jobId, data) {
   try {
     await model.jobModel.update(data, { where: { jobId } });
-    return await getSingleJob(jobId);  
+    return await getSingleJob(jobId);
   } catch (error) {
     console.error("Error in updateJob:", error);
     throw new Error("Unable to update job");
@@ -153,7 +153,7 @@ export async function getCalendarJobs(view, date, universityId, instituteId, rol
   }
 
   if (view === "weekly") {
-    const day = d.getDay(); 
+    const day = d.getDay();
     const monday = new Date(d);
     monday.setDate(d.getDate() - ((day + 6) % 7));
 
@@ -173,39 +173,39 @@ export async function getCalendarJobs(view, date, universityId, instituteId, rol
 
   return await model.jobModel.findAll({
     where: {
-          jobDate: { [Op.between]: [start, end] },
-          universityId,
-          ...(role === "Head" && { instituteId }),
-      },
+      jobDate: { [Op.between]: [start, end] },
+      universityId,
+      ...(role === "Head" && { instituteId }),
+    },
 
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      include: [
-        {
-          model: model.jobSettingModel,
-          as: "jobType",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-        },
-        {
-          model: model.employeeModel,
-          as: "facultyJobs",
-          attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
-        },
-        {
-          model: model.subAccountModel,
-          as: "departmentJobs",
-          attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
-        },
-        {
-          model: model.subjectModel,
-          as: "subjectJobs",
-          attributes: ["subjectName", "subjectCode", "subjectId"]
-        },
-        {
-          model: model.courseModel,
-          as: "courseJobs",
-          attributes: ["courseId", "courseName", "courseCode"]
-        }
-      ],
+    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    include: [
+      {
+        model: model.jobSettingModel,
+        as: "jobType",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+      },
+      {
+        model: model.employeeModel,
+        as: "facultyJobs",
+        attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
+      },
+      {
+        model: model.subAccountModel,
+        as: "departmentJobs",
+        attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"]
+      },
+      {
+        model: model.subjectModel,
+        as: "subjectJobs",
+        attributes: ["subjectName", "subjectCode", "subjectId"]
+      },
+      {
+        model: model.courseModel,
+        as: "courseJobs",
+        attributes: ["courseId", "courseName", "courseCode"]
+      }
+    ],
     order: [["jobDate", "ASC"], ["startTime", "ASC"]]
   });
 }
@@ -303,7 +303,7 @@ export async function getFilteredJobs(filters) {
       {
         model: model.subAccountModel,
         as: "departmentJobs",
-        attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
+        attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"]
       },
       {
         model: model.subjectModel,
@@ -313,7 +313,7 @@ export async function getFilteredJobs(filters) {
       {
         model: model.courseModel,
         as: "courseJobs",
-        attributes: ["courseId","courseName","courseCode"]
+        attributes: ["courseId", "courseName", "courseCode"]
       }
     ]
   });
@@ -369,7 +369,7 @@ export async function fetchJobs(filters, fromDate, toDate) {
   });
 
   return jobs.map(j => ({
-    jobId:j.jobId,
+    jobId: j.jobId,
     jobTitle: j.jobTitle,
     faculty: j.facultyJobs?.employeeName,
     date: j.jobDate,
@@ -395,7 +395,7 @@ function nextDate(d) {
 export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
   const today = new Date().toISOString().split("T")[0];
 
-  const tables = await model.timeTableCreateModel.findAll({
+  const tables = await model.timeTableRoutineModel.findAll({
     where: {
       isPublish: true,
       ...(fromDate && { endingDate: { [Op.gte]: fromDate } }),
@@ -406,7 +406,7 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
   const rows = [];
 
   for (const table of tables) {
-    const config = await model.timeTableCreationModel.findOne({
+    const config = await model.timeTableStructurePeriodsModel.findOne({
       where: { timeTableNameId: table.timeTableNameId }
     });
 
@@ -423,9 +423,9 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
       const dayName = getDayName(d);
       if (weekOff.includes(dayName)) continue;
 
-      const lectures = await model.timeTableMappingModel.findAll({
+      const lectures = await model.classScheduleModel.findAll({
         where: {
-          timeTableCreateId: table.timeTableCreateId,
+          timeTableRoutineId: table.timeTableRoutineId,
           day: dayName,
           ...(filters.employeeId && { employeeId: filters.employeeId })
         },

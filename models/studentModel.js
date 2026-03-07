@@ -6,7 +6,7 @@ import institute from './instituteModel.js';
 import affiliatedUniversity from './affiliatedUniversityModel.js';
 import course from './courseModel.js';
 import specialization from "./specializationModel.js";
-import { documentStatus, studentAdmissionStatus, studentStatus} from '../constant.js'; 
+import { documentStatus, studentAdmissionStatus, studentStatus } from '../constant.js';
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
@@ -23,6 +23,15 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'student_id'
+        },
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'user_id',
+            references: {
+                model: users,
+                key: 'user_id'
+            }
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -132,186 +141,186 @@ export default sequelize.define(
                 key: 'fee_plan_id'
             }
         },
-        scholarNumber:{
+        scholarNumber: {
             type: DataTypes.STRING(150),
             allowNull: false,
-            field:'scholar_number'
+            field: 'scholar_number'
         },
-        enrollNumber:{
+        enrollNumber: {
             type: DataTypes.STRING(50),
             allowNull: true,
-            field:'enroll_number',
+            field: 'enroll_number',
             // unique:true
         },
-        firstName:{
-            type:DataTypes.STRING(100),
+        firstName: {
+            type: DataTypes.STRING(100),
             allowNull: false,
-            field:'first_name'
+            field: 'first_name'
         },
-        middleName:{
+        middleName: {
             type: DataTypes.STRING(100),
             allowNull: true,
-            field:'middle_name',
+            field: 'middle_name',
         },
-        lastName:{
+        lastName: {
             type: DataTypes.STRING(100),
-            allowNull:true,
-            field:'last_name'
+            allowNull: true,
+            field: 'last_name'
         },
-        fatherName:{
+        fatherName: {
             type: DataTypes.STRING(150),
             allowNull: false,
-            field:'father_name'
+            field: 'father_name'
         },
-        annualIncome:{
-            type:DataTypes.FLOAT,
-            allowNull : true,
-            field:'annual_income'
+        annualIncome: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            field: 'annual_income'
         },
-        motherName:{
-            type:DataTypes.STRING(150),
-            allowNull : true,
-            field:'mother_name'
+        motherName: {
+            type: DataTypes.STRING(150),
+            allowNull: true,
+            field: 'mother_name'
         },
-        birthDate:{
-            type:DataTypes.DATE,
+        birthDate: {
+            type: DataTypes.DATE,
             allowNull: false,
-            field:'birth_date'
+            field: 'birth_date'
         },
-        admisssionDate:{
-            type:DataTypes.DATE,
+        admisssionDate: {
+            type: DataTypes.DATE,
             allowNull: true,
-            field:'admission_date'
+            field: 'admission_date'
         },
-        enrollDate:{
-            type:DataTypes.DATE,
+        enrollDate: {
+            type: DataTypes.DATE,
             allowNull: true,
-            field:'enroll_date'
+            field: 'enroll_date'
         },
-        studentAdmissionStatus:{
-			type:DataTypes.ENUM(...studentAdmissionStatus),
-			allowNull:true,
-            field:'student_admission_status'
-		},
-		currentClass:{
-			type:DataTypes.STRING,
-			allowNull:true,
-            field:'current_class'
-		},
-		studentPhoto:{
-			type:DataTypes.JSON,
-			allowNull:true,
-            field:'student_photo'
-		},
-        signature:{
-			type:DataTypes.JSON,
-			allowNull:true,
-		},
-        phoneNumber:{
-			type:DataTypes.STRING(50),
-			allowNull:false,
-            field:'phone_number'
-		},
-        mobileNumber:{
+        studentAdmissionStatus: {
+            type: DataTypes.ENUM(...studentAdmissionStatus),
+            allowNull: true,
+            field: 'student_admission_status'
+        },
+        currentClass: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'current_class'
+        },
+        studentPhoto: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'student_photo'
+        },
+        signature: {
+            type: DataTypes.JSON,
+            allowNull: true,
+        },
+        phoneNumber: {
+            type: DataTypes.STRING(50),
+            allowNull: false,
+            field: 'phone_number'
+        },
+        mobileNumber: {
             type: DataTypes.STRING(50),
             allowNull: true,
-            field:'mobile_number'
+            field: 'mobile_number'
         },
-        email:{
+        email: {
             type: DataTypes.STRING(100),
             allowNull: false,
         },
-        parentEmail:{
+        parentEmail: {
             type: DataTypes.STRING(100),
             allowNull: true,
-            field:'parent_email'
+            field: 'parent_email'
         },
-        parentNumber:{
+        parentNumber: {
             type: DataTypes.STRING(50),
             allowNull: true,
-            field:'parent_number'
+            field: 'parent_number'
         },
-        aadharNumber:{
+        aadharNumber: {
             type: DataTypes.STRING(100),
             allowNull: true,
-            field:'aadhar_number'
+            field: 'aadhar_number'
         },
-        panNumber:{
+        panNumber: {
             type: DataTypes.STRING(100),
             allowNull: true,
             field: 'pan_number'
         },
-        AdditionalNotes:{
+        AdditionalNotes: {
             type: DataTypes.TEXT,
             allowNull: true,
             field: 'additional_notes'
         },
-        bankName:{
+        bankName: {
             type: DataTypes.TEXT,
             allowNull: true,
             field: 'bank_name'
         },
-        accountNumber:{
+        accountNumber: {
             type: DataTypes.TEXT,
             allowNull: true,
             field: 'account_number'
         },
-        ifscCode:{
+        ifscCode: {
             type: DataTypes.TEXT,
             allowNull: true,
             field: 'ifsc_code'
         },
-        placeOfBirth:{
+        placeOfBirth: {
             type: DataTypes.TEXT,
             allowNull: true,
-            field:'place_of_birth'
+            field: 'place_of_birth'
         },
-        studentStatus:{
-            type:DataTypes.ENUM(...studentStatus),
-            allowNull:true,
-            field:'student_status'
+        studentStatus: {
+            type: DataTypes.ENUM(...studentStatus),
+            allowNull: true,
+            field: 'student_status'
         },
-        cancelDate:{
-            type:DataTypes.DATE,
-            allowNull:true,
-            field:'cancel_date'
+        cancelDate: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'cancel_date'
         },
-        cancelReason:{
-            type:DataTypes.TEXT,
-            allowNull:true,
-            field:'cancel_reason'
+        cancelReason: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: 'cancel_reason'
         },
-        generalRemark:{
-            type:DataTypes.TEXT,
-            allowNull:true,
-            field:'general_remark'
+        generalRemark: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: 'general_remark'
         },
-        preference:{
-            type:DataTypes.TEXT,
-            allowNull:true,
+        preference: {
+            type: DataTypes.TEXT,
+            allowNull: true,
         },
-        documentStatus:{
+        documentStatus: {
             type: DataTypes.ENUM(...documentStatus),
             allowNull: true,
             defaultValue: 'Pending Documents',
-            field:'document_status',
+            field: 'document_status',
         },
-        feeStatus:{
+        feeStatus: {
             type: DataTypes.BOOLEAN,
             allowNull: false,
             defaultValue: false,
-            field:'fee_status',
+            field: 'fee_status',
         },
-        pAddress:{
+        pAddress: {
             type: DataTypes.TEXT,
             allowNull: true,
-            field:'p_address'
+            field: 'p_address'
         },
-        pPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'p_pincode'
-		},
+        pPincode: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'p_pincode'
+        },
         pCountry: {
             type: DataTypes.STRING(100),
             allowNull: true,
@@ -327,20 +336,20 @@ export default sequelize.define(
             allowNull: true,
             field: 'p_city',
         },
-        contact:{
-            type:DataTypes.STRING(100),
-            allowNull:true
+        contact: {
+            type: DataTypes.STRING(100),
+            allowNull: true
         },
-        cAddress:{
+        cAddress: {
             type: DataTypes.TEXT,
             allowNull: true,
-            field:'c_address'
+            field: 'c_address'
         },
-        cPincode:{
-			type:DataTypes.INTEGER,
-			allowNull:true,
-            field:'c_pincode'
-		},
+        cPincode: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'c_pincode'
+        },
         cCountry: {
             type: DataTypes.STRING(100),
             allowNull: true,

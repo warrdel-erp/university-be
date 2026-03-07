@@ -384,6 +384,19 @@ export async function getAllIssuedBooks() {
           as: "employeeDetailsBook",
           attributes: ["employee_id", "employeeCode", "department", "employeeName"],
         },
+        {
+          model: model.libraryAisleModel,
+          as: "aisleDetails",
+          include: [
+            {
+              model: model.libraryFloorModel,
+              as: "floor",
+              attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt"],
+              },
+            },
+          ],
+        },
       ],
     });
 

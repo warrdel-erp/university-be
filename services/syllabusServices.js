@@ -1,74 +1,74 @@
 import sequelize from "../database/sequelizeConfig.js";
-import * as SyllabusCreationRepository  from "../repository/syllabusRepository.js";
+import * as SyllabusCreationRepository from "../repository/syllabusRepository.js";
 
 export async function addSyllabus(syllabusData, createdBy, updatedBy) {
-    const transaction = await sequelize.transaction();
-    try {
-        const allSyllabusResults = [];
+  const transaction = await sequelize.transaction();
+  try {
+    const allSyllabusResults = [];
 
-        const syllabus = await SyllabusCreationRepository.addSyllabus({
-            instituteId: syllabusData.instituteId,
-            acedmicYearId: syllabusData.acedmicYearId,
-            courseId: syllabusData.courseId,
-            sessionId:syllabusData.sessionId,
-            createdBy,
-            updatedBy
-        }, { transaction });
+    const syllabus = await SyllabusCreationRepository.addSyllabus({
+      instituteId: syllabusData.instituteId,
+      acedmicYearId: syllabusData.acedmicYearId,
+      courseId: syllabusData.courseId,
+      sessionId: syllabusData.sessionId,
+      createdBy,
+      updatedBy
+    }, { transaction });
 
-        const syllabusDetailsData = [];
+    const syllabusDetailsData = [];
 
-        syllabusData.subjects.forEach(subj => {
-            subj.term.forEach(termItem => {
-                syllabusDetailsData.push({
-                    syllabusId: syllabus.syllabusId,
-                    subjectId: subj.subjectId,
-                    subjectType: subj.subjectType,
-                    examSetupTypeId: termItem.examSetupTypeId,
-                    type: termItem.type,
-                    marks: termItem.marks,
-                    total: subj.total,   
-                    createdBy,
-                    updatedBy
-                });
-            });
+    syllabusData.subjects.forEach(subj => {
+      subj.term.forEach(termItem => {
+        syllabusDetailsData.push({
+          syllabusId: syllabus.syllabusId,
+          subjectId: subj.subjectId,
+          subjectType: subj.subjectType,
+          examSetupTypeId: termItem.examSetupTypeId,
+          type: termItem.type,
+          marks: termItem.marks,
+          total: subj.total,
+          createdBy,
+          updatedBy
         });
+      });
+    });
 
-        await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
-        allSyllabusResults.push(syllabus);
+    await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
+    allSyllabusResults.push(syllabus);
 
-        await transaction.commit();
-        return allSyllabusResults;
-    } catch (error) {
-        await transaction.rollback();
-        console.error('Error creating syllabus:', error);
-        throw error;
-    }
+    await transaction.commit();
+    return allSyllabusResults;
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error creating syllabus:', error);
+    throw error;
+  }
 };
 
-export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,role) {
-    return await SyllabusCreationRepository.getSyllabusDetails(universityId,acedmicYearId,instituteId,role);
+export async function getSyllabusDetails(universityId, acedmicYearId, instituteId, role) {
+  return await SyllabusCreationRepository.getSyllabusDetails(universityId, acedmicYearId, instituteId, role);
 };
 
-export async function getSingleSyllabusDetails(SyllabusId,universityId) {
-    return await SyllabusCreationRepository.getSingleSyllabusDetails(SyllabusId,universityId);
+export async function getSingleSyllabusDetails(SyllabusId, universityId) {
+  return await SyllabusCreationRepository.getSingleSyllabusDetails(SyllabusId, universityId);
 };
 
 export async function deleteSyllabus(SyllabusId) {
-    return await SyllabusCreationRepository.deleteSyllabus(SyllabusId);
+  return await SyllabusCreationRepository.deleteSyllabus(SyllabusId);
 };
 
-export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {    
+export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
 
-    syllabusData.updatedBy = updatedBy;
-    await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
+  syllabusData.updatedBy = updatedBy;
+  await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
 };
 
-export async function courseAllSubject(courseId,sessionId,universityId) {
-    return await SyllabusCreationRepository.courseAllSubject(courseId,sessionId,universityId);
+export async function courseAllSubject(courseId, sessionId, universityId) {
+  return await SyllabusCreationRepository.courseAllSubject(courseId, sessionId, universityId);
 };
 
 export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, instituteId) {
-  const { acedmicYearId, semesterId, subjectId, slab,sessionId } = data;
+  const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
   const syllabusUnits = slab.map((unit) => ({
     universityId,
     instituteId,
@@ -106,7 +106,7 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
     acedmicYearStart: unit.acedmicYearUnit?.startingDate || null,
     acedmicYearEnd: unit.acedmicYearUnit?.endingDate || null,
     semesterId: unit.semesterId,
-    name:unit.semesterUnit?.name,
+    name: unit.semesterUnit?.name,
     sessionId: unit.sessionId,
     sessionName: unit.sessionUnit?.sessionName || null,
     subjectId: unit.subjectId,
@@ -135,7 +135,7 @@ export async function semesterAllSubject(semesterId) {
       termType: semester.termType,
       durationMonths: semester.semesterDuration,
       courseDurationYears: semester.courseDuration,
-      totalSemesters: semester.totalSemester,
+      totalTerms: semester.totalTerms,
 
       subjects: semester.semestermapping.map((item) => {
         const subj = item.subjects;

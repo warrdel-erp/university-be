@@ -16,6 +16,15 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'subject_id'
         },
+        campusId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'campus_id',
+            references: {
+                model: 'campus',
+                key: 'campus_id'
+            }
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -75,6 +84,11 @@ export default sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
             field: 'subject_type'
+        },
+        term: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'term'
         },
         createdAt: {
             type: DataTypes.DATE,

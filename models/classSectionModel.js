@@ -75,7 +75,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'semester_id',
             references: {
                 model: semesterModel,
@@ -90,7 +90,7 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        },        
+        },
         section: {
             type: DataTypes.STRING,
             allowNull: true,

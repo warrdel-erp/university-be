@@ -296,7 +296,7 @@ ALTER TABLE attendance DROP FOREIGN KEY attendance_ibfk_3;
 DROP TABLE time_table_create;
 
 CREATE TABLE time_table_create (
-    time_table_create_id INT AUTO_INCREMENT PRIMARY KEY,
+    time_table_routine_id INT AUTO_INCREMENT PRIMARY KEY,
     time_table_name_id INT NOT NULL,
     course_id INT NOT NULL,
     acedmic_year_id INT NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE time_table_create (
 CREATE TABLE time_table_mapping (
   time_table_mapping_id INT AUTO_INCREMENT PRIMARY KEY,
   time_table_name_id INT NOT NULL,
-  time_table_create_id INT NOT NULL,
+  time_table_routine_id INT NOT NULL,
   time_table_creation_id INT NOT NULL,
   employee_id INT DEFAULT NULL,
   teacher_subject_mapping_id INT NOT NULL,
@@ -335,7 +335,7 @@ CREATE TABLE time_table_mapping (
   updated_by INT NOT NULL,
   deleted_at DATETIME DEFAULT NULL,
   FOREIGN KEY (time_table_name_id) REFERENCES time_table_name(time_table_name_id),
-  FOREIGN KEY (time_table_create_id) REFERENCES time_table_create(time_table_create_id),
+  FOREIGN KEY (time_table_routine_id) REFERENCES time_table_create(time_table_routine_id),
   FOREIGN KEY (time_table_creation_id) REFERENCES time_table_creation(time_table_creation_id),
   FOREIGN KEY (employee_id) REFERENCES employee(employee_id),
   FOREIGN KEY (teacher_subject_mapping_id) REFERENCES teacher_subject_mapping(teacher_subject_mapping_id),

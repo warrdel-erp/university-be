@@ -3,20 +3,20 @@ import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
-export async function getAllCollegesAndCourses(universityId,campusId,instituteId,acedmicYearId,role,headInstituteId) {
+export async function getAllCollegesAndCourses(universityId, campusId, instituteId, acedmicYearId, role, headInstituteId) {
     try {
-        const [ allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse,allSpecialization,allSubject ]= 
-        await Promise.all([
-            mainRepository.getAllUniversity(universityId),
-            mainRepository.getAllCampus(universityId,campusId),
-            mainRepository.getAllInstitute(universityId,instituteId,headInstituteId,role,campusId),
-            mainRepository.getAllAffiliatedUniversity(universityId,instituteId,headInstituteId,role),
-            mainRepository.getAllCourse(universityId,headInstituteId,role,instituteId,campusId),
-            mainRepository.getAllSpecialization(universityId,acedmicYearId,headInstituteId,role),
-            mainRepository.getAllSubject(universityId,acedmicYearId,headInstituteId,role,instituteId)
-        ]);
+        const [allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse, allSpecialization, allSubject] =
+            await Promise.all([
+                mainRepository.getAllUniversity(universityId),
+                mainRepository.getAllCampus(universityId, campusId),
+                mainRepository.getAllInstitute(universityId, instituteId, headInstituteId, role, campusId),
+                mainRepository.getAllAffiliatedUniversity(universityId, instituteId, headInstituteId, role),
+                mainRepository.getAllCourse(universityId, headInstituteId, role, instituteId, campusId),
+                mainRepository.getAllSpecialization(universityId, acedmicYearId, headInstituteId, role),
+                mainRepository.getAllSubject(universityId, acedmicYearId, headInstituteId, role, instituteId)
+            ]);
 
-    return {
+        return {
             allUniversity,
             allCampus,
             allInstitute,
@@ -31,12 +31,12 @@ export async function getAllCollegesAndCourses(universityId,campusId,instituteId
     }
 };
 
-export async function addCampus(data,createdBy) {
+export async function addCampus(data, createdBy) {
     const { universityId, campuses } = data;
     try {
         const createdCampuses = [];
         for (const campus of campuses) {
-            const campusData = { ...campus, universityId,createdBy };
+            const campusData = { ...campus, universityId, createdBy };
             const createdCampus = await mainRepository.addCampus(campusData);
             createdCampuses.push(createdCampus);
         }
@@ -47,7 +47,7 @@ export async function addCampus(data,createdBy) {
     }
 };
 
-export async function addInstitute(data,createdBy) {
+export async function addInstitute(data, createdBy) {
     const results = [];
     try {
         const { campusId, universityId, institutes } = data;
@@ -55,7 +55,7 @@ export async function addInstitute(data,createdBy) {
             const result = await mainRepository.addInstitute({
                 ...institute,
                 campusId,
-                universityId,createdBy
+                universityId, createdBy
             });
             results.push(result);
         }
@@ -67,7 +67,7 @@ export async function addInstitute(data,createdBy) {
 }
 
 
-export async function addAffiliatedUniversity(data,createdBy) {
+export async function addAffiliatedUniversity(data, createdBy) {
     const results = [];
     try {
         const { instituteId, universityId, affiliatedUniversities } = data;
@@ -76,7 +76,7 @@ export async function addAffiliatedUniversity(data,createdBy) {
             const result = await mainRepository.addAffiliatedUniversity({
                 ...affiliatedUniversity,
                 instituteId,
-                universityId,createdBy
+                universityId, createdBy
             });
             results.push(result);
         }
@@ -90,10 +90,10 @@ export async function addAffiliatedUniversity(data,createdBy) {
 export async function addCourse(data, createdBy, instituteId) {
     const results = [];
 
-    const transaction = await sequelize.transaction(); 
+    const transaction = await sequelize.transaction();
 
     try {
-        const { course_levelId, universityId, courses, affiliatedUniversityId, acedmicYearId,term } = data;
+        const { course_levelId, universityId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
 
         for (const course of courses) {
             // Add course
@@ -105,14 +105,14 @@ export async function addCourse(data, createdBy, instituteId) {
                 createdBy,
                 acedmicYearId,
                 instituteId,
-            }, transaction); 
+            }, transaction);
 
             const courseId = result?.dataValues?.courseId;
             results.push(result);
 
             // add terms
-            const { courseDuration } = course; 
-            
+            const { courseDuration } = course;
+
             if (courseId && term && courseDuration) {
                 let monthsPerTerm = 6;
                 let termLabel = '';
@@ -137,7 +137,7 @@ export async function addCourse(data, createdBy, instituteId) {
                         console.warn(`Unknown term type: ${term}`);
                         continue;
                 }
-                const totalTerms = Math.floor(courseDuration * 12/ monthsPerTerm);
+                const totalTerms = Math.floor(courseDuration * 12 / monthsPerTerm);
 
                 for (let i = 1; i <= totalTerms; i++) {
 
@@ -146,38 +146,38 @@ export async function addCourse(data, createdBy, instituteId) {
                         courseId,
                         acedmicYearId,
                         instituteId,
-                        termType:termLabel,
+                        termType: termLabel,
                         name: `${termLabel} ${i}`,
                         semesterDuration: monthsPerTerm,
                         courseDuration: courseDuration,
-                        totalSemester: totalTerms,
+                        totalTerms,
                         createdBy,
-                    }, transaction); 
+                    }, transaction);
                 }
             }
         }
 
-        await transaction.commit(); 
+        await transaction.commit();
 
         return results;
 
     } catch (error) {
-        await transaction.rollback(); 
+        await transaction.rollback();
         console.error('Error adding courses:', error);
-        return { message: 'Error adding courses', error };
+        throw { message: 'Error adding courses', error };
     }
 };
 
 export const changeCourseStatus = async (courseId) => {
-    const course = await getCourseByCourseId (courseId);
+    const course = await getCourseByCourseId(courseId);
     if (!course) {
         throw new Error('Course not found');
     }
 
     const newStatus = !course.dataValues.isActive;
-    
 
-    await changeCourseStatuss(courseId,{isActive: newStatus});
+
+    await changeCourseStatuss(courseId, { isActive: newStatus });
 
     return {
         message: `Course status updated successfully to`,
@@ -185,16 +185,16 @@ export const changeCourseStatus = async (courseId) => {
     };
 };
 
-export async function addSpecialization(data,createdBy,instituteId) {
+export async function addSpecialization(data, createdBy, instituteId) {
     const results = [];
     try {
-        const { course_Id, universityId, specializations,acedmicYearId } = data;
+        const { course_Id, universityId, specializations, acedmicYearId } = data;
 
         for (const specialization of specializations) {
             const result = await mainRepository.addSpecialization({
                 ...specialization,
                 course_Id,
-                universityId,createdBy,acedmicYearId,instituteId
+                universityId, createdBy, acedmicYearId, instituteId
             });
             results.push(result);
         }
@@ -205,17 +205,17 @@ export async function addSpecialization(data,createdBy,instituteId) {
     }
 };
 
-export async function addSubject(data,createdBy,instituteId) {
+export async function addSubject(data, createdBy, instituteId) {
     const results = [];
     try {
-        const { courseId, subjects,specializationId,universityId ,acedmicYearId} = data;
+        const { courseId, subjects, specializationId, universityId, acedmicYearId } = data;
 
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({
                 ...subject,
                 courseId,
                 specializationId,
-                universityId,createdBy,acedmicYearId,instituteId
+                universityId, createdBy, acedmicYearId, instituteId
             });
             results.push(result);
         }
@@ -226,32 +226,32 @@ export async function addSubject(data,createdBy,instituteId) {
     }
 };
 
-export async function updateSubject(data,updateBy,instituteId) {    
-        data.updateBy = updateBy;
-        data.instituteId= instituteId;
-        const subjectId = data?.subjectId
-       return await mainRepository.updateSubject(subjectId, data);
+export async function updateSubject(data, updateBy, instituteId) {
+    data.updateBy = updateBy;
+    data.instituteId = instituteId;
+    const subjectId = data?.subjectId
+    return await mainRepository.updateSubject(subjectId, data);
 };
 
-export async function addClass(data,createdBy,universityId,instituteId) {
+export async function addClass(data, createdBy, universityId, instituteId) {
     const results = [];
     try {
-        const { courseId, specializationId, acedmicYearId,className, sections,semesterId,sessionId } = data; 
-        const classObject = {courseId,className,universityId,updatedBy:createdBy,createdBy,instituteId,semesterId,sessionId }
-        
+        const { courseId, specializationId, acedmicYearId, className, sections, term, sessionId } = data;
+        const classObject = { courseId, className, universityId, updatedBy: createdBy, createdBy, instituteId, term, sessionId }
+
         const classData = await mainRepository.seprateAddClass(classObject)
         const classId = classData.dataValues.classId
-        
+
         for (const section of sections) {
-            const result = await mainRepository.createClass({
+            const result = await mainRepository.createClassSections({
                 ...section,
                 courseId,
                 universityId,
                 specializationId,
                 createdBy,
                 acedmicYearId,
-                classId,instituteId,semesterId,sessionId 
-            });            
+                classId, instituteId, term, sessionId
+            });
             results.push(result);
         }
         return results;
@@ -261,17 +261,17 @@ export async function addClass(data,createdBy,universityId,instituteId) {
     }
 };
 
-export async function getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role){
-    return await mainRepository.getClassDetails(classSectionId,universityId,acedmicYearId,instituteId,role)
+export async function getClassDetails(classSectionId, universityId, acedmicYearId, instituteId, role) {
+    return await mainRepository.getClassDetails(classSectionId, universityId, acedmicYearId, instituteId, role)
 };
 
-export async function getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId){
-    return await mainRepository.getClassSpecific(universityId,headInstituteId,role,campusId,instituteId,acedmicYearId,courseId,sessionId);
+export async function getClassSpecific(universityId, headInstituteId, role, campusId, instituteId, acedmicYearId, courseId, sessionId) {
+    return await mainRepository.getClassSpecific(universityId, headInstituteId, role, campusId, instituteId, acedmicYearId, courseId, sessionId);
 };
 
-export async function addClassSubjectMapper(data, createdBy,instituteId) {  
+export async function addClassSubjectMapper(data, createdBy, instituteId) {
     try {
-        const { semesterId, subjectIds } = data;
+        const { subjectIds } = data;
 
         // const classSection = await mainRepository.getSectionByClassId(classId);
         // const classSectionIds = classSection.map(section => section.classSectionsId);
@@ -279,15 +279,14 @@ export async function addClassSubjectMapper(data, createdBy,instituteId) {
         const entries = [];
 
         // for (const sectionId of classSectionIds) {
-            for (const subjectId of subjectIds) {
-                entries.push({
-                    semesterId,
-                    // classSectionId: sectionId,
-                    subjectId,
-                    createdBy,
-                    instituteId
-                });
-            }
+        for (const subjectId of subjectIds) {
+            entries.push({
+                // classSectionId: sectionId,
+                subjectId,
+                createdBy,
+                instituteId
+            });
+        }
         // }
 
         const result = await mainRepository.addClassSubjectMapper(entries);
@@ -299,19 +298,19 @@ export async function addClassSubjectMapper(data, createdBy,instituteId) {
 };
 
 
-export async function getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role){
-    return await mainRepository.getClassSubjectMapper(semesterId,universityId,acedmicYearId,instituteId,role)
+export async function getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role) {
+    return await mainRepository.getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role)
 };
 
-export async function addSemester(data,createdBy,universityId,instituteId){
-    const { semesterDuration,courseId,acedmicYearId} = data
+export async function addSemester(data, createdBy, universityId, instituteId) {
+    const { semesterDuration, courseId, acedmicYearId } = data
     const course = await getCourseByCourseId(courseId)
-    const courseDuration = course.dataValues.courseDuration    
-        const semesterData = {
+    const courseDuration = course.dataValues.courseDuration
+    const semesterData = {
         ...data,
-        totalSemester: courseDuration/semesterDuration,
+        totalSemester: courseDuration / semesterDuration,
         createdBy,
-        courseDuration:courseDuration,
+        courseDuration: courseDuration,
         universityId,
         acedmicYearId,
         instituteId,
@@ -319,28 +318,28 @@ export async function addSemester(data,createdBy,universityId,instituteId){
     return await mainRepository.addSemester(semesterData)
 };
 
-export async function getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role){
-    return await mainRepository.getSemester(courseId,specializationId,universityId,acedmicYearId,instituteId,role)
+export async function getSemester(courseId, specializationId, universityId, acedmicYearId, instituteId, role) {
+    return await mainRepository.getSemester(courseId, specializationId, universityId, acedmicYearId, instituteId, role)
 };
 
-export async function getSemesterById(semesterId){
+export async function getSemesterById(semesterId) {
     return await mainRepository.getSemesterById(semesterId)
 };
 
-export async function createClass(data, createdBy, universityId,instituteId) {
+export async function createClass(data, createdBy, universityId, instituteId) {
     const results = [];
     try {
         const { courseId, acedmicYearId, specializationId, section } = data;
 
         for (const sectionValue of section) {
-            const result = await mainRepository.createClass({
+            const result = await mainRepository.createClassSections({
                 courseId,
                 specializationId,
                 acedmicYearId,
                 universityId,
                 createdBy,
                 instituteId,
-                section: sectionValue 
+                section: sectionValue
             });
             results.push(result);
         }
@@ -351,7 +350,7 @@ export async function createClass(data, createdBy, universityId,instituteId) {
     }
 };
 
-export async function subjectExcel(excelData,courseId,acedmicYearId,specializationId,createdBy,universityId,instituteId) {
+export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy, universityId, instituteId) {
     try {
         const subjectCreationPromises = excelData.map(async (row) => {
             const subjectData = {
@@ -360,7 +359,7 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
-                subjectType :row.subjectType,
+                subjectType: row.subjectType,
                 createdBy,
                 universityId,
                 instituteId,
@@ -377,65 +376,65 @@ export async function subjectExcel(excelData,courseId,acedmicYearId,specializati
 };
 
 export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
-  const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+    const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
 
-  const response = {
-    student: result.student.map((s) => ({
-      studentId: s.studentId,
-      firstName: s.firstName,
-      lastName: s.lastName,
-      scholarNumber: s.scholarNumber,
-      email: s.email,
-      phoneNumber: s.phoneNumber,
-      semesterName: s.studentSemester?.name || null,
-      className: s.studentSections?.class || null,
-      sectionName: s.studentSections?.section || null,
-    })),
+    const response = {
+        student: result.student.map((s) => ({
+            studentId: s.studentId,
+            firstName: s.firstName,
+            lastName: s.lastName,
+            scholarNumber: s.scholarNumber,
+            email: s.email,
+            phoneNumber: s.phoneNumber,
+            semesterName: s.studentSemester?.name || null,
+            className: s.studentSections?.class || null,
+            sectionName: s.studentSections?.section || null,
+        })),
 
-    teacher: result.teacher.map((t) => ({
-      employeeId: t.employeeData?.employeeId,
-      employeeName: t.employeeData?.employeeName,
-      employeeCode: t.employeeData?.employeeCode,
-      department: t.employeeData?.department,
-      dateOfBirth: t.employeeData?.dateOfBirth,
-      subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
-        subjectName: sub.employeeSubject?.subjects?.subjectName,
-        subjectCode: sub.employeeSubject?.subjects?.subjectCode,
-        subjectType: sub.employeeSubject?.subjects?.subjectType,
-      })) || [],
-    })),
-  };
+        teacher: result.teacher.map((t) => ({
+            employeeId: t.employeeData?.employeeId,
+            employeeName: t.employeeData?.employeeName,
+            employeeCode: t.employeeData?.employeeCode,
+            department: t.employeeData?.department,
+            dateOfBirth: t.employeeData?.dateOfBirth,
+            subjects: t.employeeData?.teacherEmployeeData?.map((sub) => ({
+                subjectName: sub.employeeSubject?.subjects?.subjectName,
+                subjectCode: sub.employeeSubject?.subjects?.subjectCode,
+                subjectType: sub.employeeSubject?.subjects?.subjectType,
+            })) || [],
+        })),
+    };
 
-  return response;
+    return response;
 };
 
 export async function getMonthlyIncomeService() {
-  try {
-    const rows = await mainRepository.getMonthlyIncomeRepository();
+    try {
+        const rows = await mainRepository.getMonthlyIncomeRepository();
 
-    const labels = [];
-    const incomeData = [];
+        const labels = [];
+        const incomeData = [];
 
-    rows.forEach((row) => {
-      labels.push(row.dataValues.month);
-      incomeData.push(parseFloat(row.dataValues.totalIncome) || 0);
-    });
+        rows.forEach((row) => {
+            labels.push(row.dataValues.month);
+            incomeData.push(parseFloat(row.dataValues.totalIncome) || 0);
+        });
 
-    return {
-      labels,
-      datasets: [
-        {
-          type: "bar",
-          label: "Income",
-          data: incomeData,
-          backgroundColor: "rgba(75, 192, 192, 0.5)",
-          borderColor: "rgb(75, 192, 192)"
-        }
-      ]
-    };
+        return {
+            labels,
+            datasets: [
+                {
+                    type: "bar",
+                    label: "Income",
+                    data: incomeData,
+                    backgroundColor: "rgba(75, 192, 192, 0.5)",
+                    borderColor: "rgb(75, 192, 192)"
+                }
+            ]
+        };
 
-  } catch (error) {
-    console.error("Error in getMonthlyIncomeService:", error);
-    throw error;
-  }
+    } catch (error) {
+        console.error("Error in getMonthlyIncomeService:", error);
+        throw error;
+    }
 };

@@ -1,8 +1,8 @@
 import * as model from '../models/index.js'
 
-export async function addTimeTableName(data,transaction) {    
+export async function addTimeTableName(data, transaction) {
     try {
-        const result = await model.timeTableNameModel.create(data,{transaction});
+        const result = await model.timeTableStructureModel.create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in create time table name:", error);
@@ -10,10 +10,10 @@ export async function addTimeTableName(data,transaction) {
     }
 }
 
-export async function addTimeTable(data,transaction) {
-    const timeSlot = data.timeSlots.map(slot => ({...slot,weekOff: slot.weekOff }));    
+export async function addTimeTable(data, transaction) {
+    const timeSlot = data.timeSlots.map(slot => ({ ...slot, weekOff: slot.weekOff }));
     try {
-        const result = await model.timeTableCreationModel.bulkCreate(timeSlot,{transaction});
+        const result = await model.timeTableStructurePeriodsModel.bulkCreate(timeSlot, { transaction });
         return result;
     } catch (error) {
         console.error("Error in create time table:", error);
@@ -23,12 +23,12 @@ export async function addTimeTable(data,transaction) {
 
 export async function getTimeTableDetails() {
     try {
-        const result = await model.timeTableCreationModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
+        const result = await model.timeTableStructurePeriodsModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            include: [
                 {
-                    model:model.timeTableNameModel,
-                    as:'timeTableName',
+                    model: model.timeTableStructureModel,
+                    as: 'timeTableName',
                     attributes: ["name"],
                 }
             ]
@@ -40,12 +40,12 @@ export async function getTimeTableDetails() {
     };
 };
 
-export async function getSingleTimeTableDetails(courseId,universityId) {
+export async function getSingleTimeTableDetails(courseId, universityId) {
     try {
-        const result = await model.timeTableCreationModel.findAll({
+        const result = await model.timeTableStructurePeriodsModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where:{
-                courseId:courseId,
+            where: {
+                courseId: courseId,
             }
         });
         return result;
@@ -55,21 +55,18 @@ export async function getSingleTimeTableDetails(courseId,universityId) {
     };
 };
 
-export async function getAllTimeTableName(universityId,courseId) {
+export async function getAllTimeTableName(universityId, courseId) {
     try {
-        const result = await model.timeTableNameModel.findAll({
+        const result = await model.timeTableStructureModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where:{
-                // universityId:universityId,
+            where: {
+                courseId: courseId
             },
-            include:[
+            include: [
                 {
-                    model:model.timeTableCreationModel,
-                    as:'timeTableName',
+                    model: model.timeTableStructurePeriodsModel,
+                    as: 'timeTableName',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where:{
-                        courseId:courseId
-                    }
                 }
             ]
         });
@@ -80,12 +77,12 @@ export async function getAllTimeTableName(universityId,courseId) {
     };
 };
 
-export async function getSingleTimeTableById(timeTableCreationId,universityId) {
+export async function getSingleTimeTableById(timeTableCreationId, universityId) {
     try {
-        const result = await model.timeTableCreationModel.findAll({
+        const result = await model.timeTableStructurePeriodsModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where:{
-                timeTableCreationId:timeTableCreationId,
+            where: {
+                timeTableCreationId: timeTableCreationId,
             }
         });
         return result;
@@ -97,21 +94,21 @@ export async function getSingleTimeTableById(timeTableCreationId,universityId) {
 
 export async function updateTimeTable(timeTableCreationId, info) {
     try {
-        const result = await model.timeTableCreationModel.update(info, {
+        const result = await model.timeTableStructurePeriodsModel.update(info, {
             where: {
                 timeTableCreationId: timeTableCreationId
             }
         });
-     return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating time table ${timeTableCreationId} :`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function deleteTimeTable (timeTableCreationId) {
+export async function deleteTimeTable(timeTableCreationId) {
     try {
-        const result = await model.timeTableCreationModel.destroy({
+        const result = await model.timeTableStructurePeriodsModel.destroy({
             where: { timeTableCreationId },
             individualHooks: true
         });

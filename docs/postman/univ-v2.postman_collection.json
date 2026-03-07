@@ -1,0 +1,934 @@
+{
+  "info": {
+    "_postman_id": "6a1db60d-b138-4607-9072-e7b4b975bdd6",
+    "name": "univ-v2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "18684798"
+  },
+  "item": [
+    {
+      "name": "campus",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"campusName\": \"newCampus\",\n    \"campusCode\": \"fsdfs\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/campus",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "campus"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/campus",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "campus"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "institute",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"campusId\": 13,\n    \"instituteName\": \"sample name\",\n    \"instituteCode\": \"23432\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/institute",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "institute"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/institute?campusId=11",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "institute"
+              ],
+              "query": [
+                {
+                  "key": "campusId",
+                  "value": "11"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "sessions",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/session",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "course",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course?campusId=11",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "campusId",
+                  "value": "11"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get with Subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/withSubjects?instituteId=12&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "withSubjects"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "course sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:id/sessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":id",
+                "sessions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "class Sections Grouped",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId=34&sessionId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "semesterWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "12"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "subject",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject?instituteId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "add terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n        \"subjectId\": 47,\n        \"term\": 4\n    },\n    {\n        \"subjectId\": 48,\n        \"term\": 4\n    }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subject/addTerms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "addTerms"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "term",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "withSubjectAndSection"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list with subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/list/withSubject?instituteId=12&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "list",
+                "withSubject"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "time table",
+      "item": [
+        {
+          "name": "get time table routine data",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutine"
+              ],
+              "query": [
+                {
+                  "key": "classSectionsId",
+                  "value": "197"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get time table routine by teacher",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId=40&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutineByTeacher"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "40"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "user permissions",
+      "item": [
+        {
+          "name": "assign permissions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_3pvhh7qk\",\n        \"perm_jn6uwbhx\",\n        \"perm_vmgy81qb\",\n        \"perm_r2hck7uz\",\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\",\n        \"perm_fv5i3pus\",\n        \"perm_vhu1w614\",\n        \"perm_3y99hc4v\",\n        \"perm_kpyrgn0u\",\n        \"perm_67enoryi\",\n        \"perm_1j3eob6w\",\n        \"perm_2q1uysz0\",\n        \"perm_vvvmvshc\",\n        \"perm_apwmfs4s\",\n        \"perm_mbtdzyk9\",\n        \"perm_lloet9pf\",\n        \"perm_fb6uz3on\",\n        \"perm_g8euk1wo\",\n        \"perm_zzn4930w\",\n        \"perm_1s0rvrdn\",\n        \"perm_g4j2vmqx\",\n        \"perm_lqv7imlo\",\n        \"perm_a3raniek\",\n        \"perm_uhy3pdu7\",\n        \"perm_lux49lih\",\n        \"perm_8bogy08q\",\n        \"perm_8ewmos7o\",\n        \"perm_pfbahaza\",\n        \"perm_xswo35s7\",\n        \"perm_llg0ziln\",\n        \"perm_3mgfza4i\",\n        \"perm_p0kc7xfx\",\n        \"perm_q0raarnh\",\n        \"perm_npz4elox\",\n        \"perm_cat7bpaz\",\n        \"perm_6jvxrldh\",\n        \"perm_d0adxu1h\",\n        \"perm_imi2a816\",\n        \"perm_9v4jf6w4\",\n        \"perm_6s6cpiz4\",\n        \"perm_ekn3wbkf\",\n        \"perm_cu17s07s\",\n        \"perm_acyzvir3\",\n        \"perm_ivou1dd2\",\n        \"perm_qq9mv2fo\",\n        \"perm_x1rh2q4g\",\n        \"perm_64gvrizb\",\n        \"perm_agfecd9i\",\n        \"perm_s2cbz5bl\",\n        \"perm_2aaom9pi\",\n        \"perm_m2a1vniq\",\n        \"perm_owmk2mbk\",\n        \"perm_p0nsudou\",\n        \"perm_t5jn428x\",\n        \"perm_av7xp5gj\",\n        \"perm_cdr8cffg\",\n        \"perm_ndgoqbu4\",\n        \"perm_rappiajj\",\n        \"perm_zd39u5kb\",\n        \"perm_r79elvp4\",\n        \"perm_l8aciket\",\n        \"perm_tmfsqxet\",\n        \"perm_8wkpw22t\",\n        \"perm_1f71a9au\",\n        \"perm_0ll19vv5\",\n        \"perm_d99qwi0v\",\n        \"perm_sinhstch\",\n        \"perm_n75h7bqq\",\n        \"perm_r120a1v3\",\n        \"perm_20gnlqri\",\n        \"perm_c85tikr4\",\n        \"perm_bpohlab1\",\n        \"perm_zr6ziwe7\",\n        \"perm_j40rqf7g\",\n        \"perm_p04ppbrx\",\n        \"perm_mfnubcs7\",\n        \"perm_5l8xdl05\",\n        \"perm_l9pqi54f\",\n        \"perm_ar7a6k6r\",\n        \"perm_xwzulhwl\",\n        \"perm_ubeutyom\",\n        \"perm_5xh3uoxy\",\n        \"perm_32zievwu\",\n        \"perm_d601jd2y\",\n        \"perm_2stin5ak\",\n        \"perm_1gvaxmr5\",\n        \"perm_9q6tr5wh\",\n        \"perm_8yhfo7tw\",\n        \"perm_ts7ptgqq\",\n        \"perm_szzb8rcn\",\n        \"perm_m5xvo8tj\",\n        \"perm_761g26ms\",\n        \"perm_qwynrtpg\",\n        \"perm_hy5bhccz\",\n        \"perm_no8bm1fp\",\n        \"perm_zn1lhuan\",\n        \"perm_g10t2u8c\",\n        \"perm_hwj2pup5\",\n        \"perm_d4dwysf8\",\n        \"perm_z8b2x4f9\",\n        \"perm_j7h3m5v1\",\n        \"perm_w1p9s4c2\",\n        \"perm_r2y8n6k0\",\n        \"perm_t5q3l7g4\",\n        \"perm_a9d4f1v2\",\n        \"perm_n7b8x3m5\",\n        \"perm_e2h6j9k1\",\n        \"perm_c4z5s8w3\",\n        \"perm_f1g7p9q2\",\n        \"perm_y3v6t8n4\",\n        \"perm_b5m2k7r9\",\n        \"perm_x8l1c4g6\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/permissions/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "permissions",
+                "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "assign role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"role\": \"ADMIN\",\n    \"permissions\": [\n        \"perm_jn6uwbhx\",\n        \"perm_0k04cyu4\"\n    ]\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "assign"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete role",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": 46,\n    \"role\": \"TEACHER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/role/remove",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "role",
+                "remove"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get my permissions",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/my",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "my"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by user Id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/authorization/getByUserId/:userId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "authorization",
+                "getByUserId",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "46"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "user",
+      "item": [
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseurl}}/user?page=1&limit=20&search=&instituteId=12",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "instituteId",
+                  "value": "12",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "employee",
+      "item": [
+        {
+          "name": "schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-03-06"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "class section students",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/classSectionStudents?classSectionId=204&academicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "classSectionStudents"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "204"
+                },
+                {
+                  "key": "academicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

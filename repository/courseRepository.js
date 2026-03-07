@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 export async function getCourseByCourseId(courseId) {
     try {
         const result = await model.courseModel.findOne({
-            attributes: ["universityId","courseDuration","isActive"] ,
+            attributes: ["universityId", "courseDuration", "isActive", "termType", "totalTerms"],
             where: {
                 courseId: courseId
             },
@@ -16,7 +16,7 @@ export async function getCourseByCourseId(courseId) {
     }
 };
 
-export async function addBulkCourse(courseData) {    
+export async function addBulkCourse(courseData) {
     try {
         const result = await model.courseModel.bulkCreate(courseData);
 
@@ -54,6 +54,21 @@ export async function getCourseByAcedmicId(acedmicYearId) {
     }
 };
 
+export async function getAllCourseByInstituteId(instituteId) {
+    try {
+        const result = await model.courseModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                instituteId: instituteId
+            },
+        });
+        return result;
+    } catch (error) {
+        console.error("Error in getting course details By InstituteI:", error);
+        throw error;
+    }
+};
+
 export async function getCourseByName(courseName) {
     try {
         const result = await model.courseModel.findOne({
@@ -71,7 +86,7 @@ export async function getCourseByName(courseName) {
     }
 }
 
-export async function getClassByName(className,Section) {
+export async function getClassByName(className, Section) {
     try {
         const results = await model.classSectionModel.findAll({
             where: {
@@ -79,7 +94,7 @@ export async function getClassByName(className,Section) {
                     [Op.like]: `%${className}%`
                 }
             },
-        });        
+        });
 
         if (results.length === 0) {
             throw new Error('No class sections found for the given class name');
@@ -94,7 +109,7 @@ export async function getClassByName(className,Section) {
                 },
             });
 
-            if (section && section.sectionName === Section) { 
+            if (section && section.sectionName === Section) {
                 matchedClassSectionsIds.push({
                     classSectionsId: classSection.classSectionsId
                 });
@@ -104,12 +119,12 @@ export async function getClassByName(className,Section) {
         return matchedClassSectionsIds;
     } catch (error) {
         console.error("Error in getting course details by class name:", error);
-        throw error; 
+        throw error;
     }
 };
 
 export async function getStudentBySectionId(classSectionId) {
-    
+
     try {
         const result = await model.classStudentMapperModel.findAll({
             attributes: ["studentId"],
@@ -117,7 +132,7 @@ export async function getStudentBySectionId(classSectionId) {
                 {
                     model: model.studentModel,
                     as: "studentMapped",
-                    attributes:["scholarNumber","email","phoneNumber"]
+                    attributes: ["scholarNumber", "email", "phoneNumber"]
                 }
             ],
             where: {
@@ -134,12 +149,12 @@ export async function getStudentBySectionId(classSectionId) {
 export async function getEmployeeByemployeeId(employeeId) {
     try {
         const result = await model.employeeModel.findAll({
-            attributes:["employeeName"],
-            include:[
+            attributes: ["employeeName"],
+            include: [
                 {
-                    model:model.employeeAddressModel,
-                    as:'address',
-                    attributes:["phoneNumber","mobileNumber","personal_email","officalEmailId"]
+                    model: model.employeeAddressModel,
+                    as: 'address',
+                    attributes: ["phoneNumber", "mobileNumber", "personal_email", "officalEmailId"]
                 }
             ],
             where: {
@@ -152,3 +167,139 @@ export async function getEmployeeByemployeeId(employeeId) {
         throw error;
     }
 };
+
+/**
+ * Get all courses for a university
+ * @param {number} universityId 
+ * @param {number} [instituteId] 
+ * @param {number} [campusId]
+ * @returns {Promise<Array>}
+ */
+export async function getAllCourses(universityId, instituteId, campusId) {
+    try {
+        const whereClause = {
+            universityId,
+            ...(instituteId && { instituteId })
+        };
+
+        return await model.courseModel.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: model.instituteModel,
+                    as: 'instituted',
+                    attributes: ["instituteId", "instituteName", "instituteCode", "campusId"],
+                    where: campusId ? { campusId } : {},
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getAllCourses):", error);
+        throw error;
+    }
+}
+
+/**
+ * Get single course with its sessions
+ * @param {number} courseId 
+ * @param {number} universityId 
+ * @param {number} [acedmicYearId] 
+ * @returns {Promise<Object>}
+ */
+export async function getCourseByIdWithSessions(courseId, universityId, acedmicYearId) {
+    try {
+        return await model.courseModel.findOne({
+            where: { courseId, universityId },
+            include: [
+                {
+                    model: model.sessionCouseMappingModel,
+                    as: 'sessionCourseMappings',
+                    attributes: ["sessionCourseMappingId"],
+                    include: [
+                        {
+                            model: model.sessionModel,
+                            as: 'session',
+                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId"],
+                            where: acedmicYearId ? { acedmicYearId } : {},
+                            include: [
+                                {
+                                    model: model.classSectionModel,
+                                    as: 'classSession',
+                                    attributes: ["classSectionsId", "section"],
+                                },
+                                {
+                                    model: model.classModel,
+                                    as: 'classes',
+                                    attributes: ["classId", "term"],
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getCourseByIdWithSessions):", error);
+        throw error;
+    }
+}
+
+/**
+ * Get class sections for a course and session
+ * @param {number} courseId 
+ * @param {number} sessionId 
+ * @returns {Promise<Array>}
+ */
+export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
+    try {
+        return await model.classSectionModel.findAll({
+            where: { courseId, sessionId },
+            include: [
+                {
+                    model: model.classModel,
+                    as: 'classGroup',
+                    attributes: ['term']
+                }
+            ],
+            attributes: ['classSectionsId', 'section']
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getClassSectionsByCourseAndSession):", error);
+        throw error;
+    }
+}
+
+/**
+ * Get course list with associated subjects
+ * @param {number} universityId 
+ * @param {number} instituteId 
+ * @param {number} acedmicYearId 
+ * @returns {Promise<Array>}
+ */
+export async function getCourseListWithSubjects(universityId, instituteId, acedmicYearId) {
+    try {
+        const whereClause = {
+            universityId,
+            instituteId,
+        };
+
+        return await model.courseModel.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: model.subjectModel,
+                    as: 'subjectInfo',
+                    attributes: ['subjectId', 'subjectCode'],
+                    where: {
+                        acedmicYearId,
+                        instituteId,
+                    },
+                    required: false
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error in Course Repository (getCourseListWithSubjects):", error);
+        throw error;
+    }
+}

@@ -1,43 +1,45 @@
-import {addStudent ,getAllStudents ,getSingleStudentDetail,importStudentData,updateStudentDetails,deleteStudentDetail,getEmptyEnrollNumber,studentCourseMapping,classStudentMapping,addElectiveSubject,getclassStudentMapping,promoteStudent,getFeePlanId,getEmptyFeeDetails,getStudentSubject,getFeeDetailsByStudentId,getBooksIssuedToStudent,getStudentTimeTable} from "../controllers/studentController.js"
+import { addStudent, getAllStudents, getSingleStudentDetail, importStudentData, updateStudentDetails, deleteStudentDetail, getEmptyEnrollNumber, studentCourseMapping, classStudentMapping, addElectiveSubject, getclassStudentMapping, promoteStudent, getFeePlanId, getEmptyFeeDetails, getStudentSubject, getFeeDetailsByStudentId, getBooksIssuedToStudent, getStudentTimeTable, getStudentsByClassSection } from "../controllers/studentController.js"
 import userAuth from "../middleware/authUser.js"
 // router
-import {Router} from  'express'
-const router =  Router();
+import { Router } from 'express'
+const router = Router();
 
-router.post('/',userAuth , addStudent);
+router.post('/', userAuth, addStudent);
 
-router.get('/all',userAuth , getAllStudents);
+router.get('/all', userAuth, getAllStudents);
 
-router.get('/',userAuth , getSingleStudentDetail);
+router.get('/', userAuth, getSingleStudentDetail);
 
-router.post('/import',userAuth , importStudentData);
+router.post('/import', userAuth, importStudentData);
 
-router.patch('/:studentId',userAuth , updateStudentDetails);
+router.patch('/:studentId', userAuth, updateStudentDetails);
 
-router.delete('/:studentId',userAuth , deleteStudentDetail);
+router.delete('/:studentId', userAuth, deleteStudentDetail);
 
-router.get('/emptyEnrollNumber',userAuth , getEmptyEnrollNumber);
+router.get('/emptyEnrollNumber', userAuth, getEmptyEnrollNumber);
 
-router.post('/studentMapping',userAuth , studentCourseMapping);
+router.post('/studentMapping', userAuth, studentCourseMapping);
 
-router.post('/classStudentMapping',userAuth , classStudentMapping);
+router.post('/classStudentMapping', userAuth, classStudentMapping);
 
-router.get('/classStudentMapping',userAuth , getclassStudentMapping);
+router.get('/classStudentMapping', userAuth, getclassStudentMapping);
 
-router.post('/electiveSubject',userAuth , addElectiveSubject);
+router.post('/electiveSubject', userAuth, addElectiveSubject);
 
-router.post('/promoteStudent',userAuth , promoteStudent);
+router.post('/promoteStudent', userAuth, promoteStudent);
 
-router.get('/fee',userAuth , getFeePlanId);
+router.get('/fee', userAuth, getFeePlanId);
 
-router.get('/emptyfeeDetails',userAuth , getEmptyFeeDetails);
+router.get('/emptyfeeDetails', userAuth, getEmptyFeeDetails);
 
-router.get('/:studentId/studentSubject',userAuth , getStudentSubject);
+router.get('/:studentId/studentSubject', userAuth, getStudentSubject);
 
-router.get('/:studentId/feeDetails',userAuth,getFeeDetailsByStudentId);
+router.get('/:studentId/feeDetails', userAuth, getFeeDetailsByStudentId);
 
 router.get("/issuedBook", userAuth, getBooksIssuedToStudent);
 
 router.get("/studentTimetable", userAuth, getStudentTimeTable);
+
+router.get('/classSectionStudents', userAuth, getStudentsByClassSection);
 
 export default router;
