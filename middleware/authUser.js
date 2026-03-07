@@ -57,7 +57,7 @@ export default async function useAuth(req, res, next) {
 
     try {
         // Decode the token
-        const decoded = jwt.verify(token, SECRET_KEY);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const { email } = decoded;
 
         if (!email) {
