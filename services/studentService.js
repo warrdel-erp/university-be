@@ -1386,32 +1386,15 @@ function formatStudentTimetable(allData) {
 }
 
 
-
-// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
-
-//   try {
-
-//     const students = await studentRepository.getStudentsByClassSection(
-//       classSectionId,
-//       acedmicYearId,
-//       universityId
-//     );
-
-//     return students;
-
-//   } catch (error) {
-//     console.error("Error in studentService:", error);
-//     throw error;
-//   }
-
-// }
-export async function getStudentsByClassSection(classSectionId, academicYearId) {
+export async function getStudentsByClassSection(timeTableMappingId, academicYearId, date) {
+  console.log("hiuuuuu", timeTableMappingId, academicYearId, date);
 
   try {
 
     const students = await studentRepository.getStudentsByClassSection(
-      classSectionId,
-      academicYearId
+      timeTableMappingId,
+      academicYearId,
+      date
     );
 
     if (!students.length) return {};
@@ -1422,9 +1405,9 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
 
       return {
         studentId: student.studentId,
-        "scholarNo.": student.scholarNumber,
-        "enrollNo.": student.enrollNumber,
-        "studentName.": `${student.firstName} ${student.lastName}`,
+        "scholarNo": student.scholarNumber,
+        "enrollNo": student.enrollNumber,
+        "studentName": `${student.firstName} ${student.lastName}`,
         attendanceStatus: attendance?.attendanceStatus || null,
         notes: attendance?.notes || null,
         description: attendance?.description || null
@@ -1441,8 +1424,8 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
       subjectName: null,
       courseName: firstStudent.course?.courseName || null,
       section: firstStudent.classSection?.section || null,
-      timeTableMappingId: firstAttendance?.timeTableMappingId || null,
-      date: firstAttendance?.date || null,
+      timeTableMappingId: firstAttendance?.timeTableMappingId || timeTableMappingId,
+      date: firstAttendance?.date || date,
 
       attendance: attendanceData
 
@@ -1454,59 +1437,3 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
   }
 
 }
-// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
-
-//   try {
-
-//     const students = await studentRepository.getStudentsByClassSection(
-//       classSectionId,
-//       acedmicYearId,
-//       universityId
-//     );
-
-//     if (!students || students.length === 0) {
-//       return {
-//         classSectionsId: classSectionId,
-//         attendance: []
-//       };
-//     }
-
-//     const sectionName =
-//       students[0]?.studentSection?.classSections?.section || "";
-
-//     const response = {
-//       classSectionsId: classSectionId,
-//       subjectName: "", // timetable API se aayega
-//       courseName: "",  // agar course table join karoge
-//       section: sectionName,
-//       timeTableMappingId: null,
-//       date: new Date().toISOString().split("T")[0],
-
-//       attendance: students.map((item) => {
-
-//         const student = item.studentMapped;
-//         console.log("hhhhhh", student);
-
-
-
-//         return {
-//           studentId: student.studentId,
-//           scholarNo: student.scholarNumber,
-//           enrollNo: student.enrollNumber || "",
-//           studentName: `${student.firstName} ${student.lastName}`,
-//           attendanceStatus: "",
-//           notes: "",
-//           description: ""
-//         };
-
-//       })
-//     };
-
-//     return response;
-
-//   } catch (error) {
-//     console.error("Error in studentService:", error);
-//     throw error;
-//   }
-
-// }
