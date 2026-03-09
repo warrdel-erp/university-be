@@ -1398,12 +1398,26 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
         {
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
-          attributes: ['classSectionsId']
+          attributes: ['classSectionsId'],
+          include: [
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ['classSectionsId', 'section']
+            }
+          ]
         },
         {
           model: model.subjectModel,
           as: 'timeTableSubject',
-          attributes: ['subjectId', 'subjectName']
+          attributes: ['subjectId', 'subjectName'],
+          include: [
+            {
+              model: model.courseModel,
+              as: "courseInfo",
+              attributes: ['courseId', 'courseName', 'courseCode']
+            }
+          ]
         }
       ],
       raw: true,
