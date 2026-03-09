@@ -154,6 +154,7 @@ courseModel.hasMany(studentModel, { foreignKey: "course_id", as: "course" });
 
 studentModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "studentSections" });
 classSectionModel.hasMany(studentModel, { foreignKey: "class_sections_id", as: "studentSections" });
+classSectionModel.hasMany(studentModel, { foreignKey: "class_sections_id", as: "students" });
 
 studentModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "studentSemester" });
 semesterModel.hasMany(studentModel, { foreignKey: "semester_id", as: "studentSemester" });

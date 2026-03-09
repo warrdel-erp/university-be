@@ -17,6 +17,8 @@ import { getSemesterGroup } from "../utility/semesterGroup.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as model from '../models/index.js'
+
 
 export async function addStudent(
   info,
@@ -1386,67 +1388,86 @@ function formatStudentTimetable(allData) {
 }
 
 
-
-// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
-
-//   try {
-
-//     const students = await studentRepository.getStudentsByClassSection(
-//       classSectionId,
-//       acedmicYearId,
-//       universityId
-//     );
-
-//     return students;
-
-//   } catch (error) {
-//     console.error("Error in studentService:", error);
-//     throw error;
-//   }
-
-// }
-export async function getStudentsByClassSection(classSectionId, academicYearId) {
+export async function getStudentsByClassSection(timeTableMappingId, academicYearId, date) {
 
   try {
 
+    const classScheduleItem = await model.classScheduleModel.findByPk(timeTableMappingId, {
+      attributes: ['timeTableMappingId', 'day', 'timeTableType'],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          attributes: ['classSectionsId'],
+          include: [
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ['classSectionsId', 'section']
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: 'timeTableSubject',
+          attributes: ['subjectId', 'subjectName'],
+          include: [
+            {
+              model: model.courseModel,
+              as: "courseInfo",
+              attributes: ['courseId', 'courseName', 'courseCode']
+            }
+          ]
+        }
+      ],
+      raw: true,
+      nest: true
+    })
+
     const students = await studentRepository.getStudentsByClassSection(
-      classSectionId,
-      academicYearId
+      classScheduleItem?.timeTablecreate?.classSectionsId,
+      timeTableMappingId,
+      academicYearId,
+      date
     );
 
     if (!students.length) return {};
 
-    const attendanceData = students.map((student) => {
+    // const attendanceData = students.map((student) => {
 
-      const attendance = student.studentAttendance?.[0];  // ⭐ alias fix
+    //   const attendance = student.studentAttendance?.[0];  // ⭐ alias fix
 
-      return {
-        studentId: student.studentId,
-        "scholarNo.": student.scholarNumber,
-        "enrollNo.": student.enrollNumber,
-        "studentName.": `${student.firstName} ${student.lastName}`,
-        attendanceStatus: attendance?.attendanceStatus || null,
-        notes: attendance?.notes || null,
-        description: attendance?.description || null
-      };
+    //   return {
+    //     studentId: student.studentId,
+    //     "scholarNo": student.scholarNumber,
+    //     "enrollNo": student.enrollNumber,
+    //     "studentName": `${student.firstName} ${student.lastName}`,
+    //     attendanceStatus: attendance?.attendanceStatus || null,
+    //     notes: attendance?.notes || null,
+    //     description: attendance?.description || null
+    //   };
 
-    });
+    // });
 
-    const firstStudent = students[0];
-    const firstAttendance = firstStudent.studentAttendance?.[0];
+    // const firstStudent = students[0];
+    // const firstAttendance = firstStudent.studentAttendance?.[0];
 
-    return {
+    // const subjectName = firstAttendance?.timeTableMapping?.timeTableSubject?.subjectName || null;
 
-      classSectionsId: firstStudent.classSectionsId,
-      subjectName: null,
-      courseName: firstStudent.course?.courseName || null,
-      section: firstStudent.classSection?.section || null,
-      timeTableMappingId: firstAttendance?.timeTableMappingId || null,
-      date: firstAttendance?.date || null,
+    // return {
 
-      attendance: attendanceData
+    //   classSectionsId: firstStudent.classSectionsId,
+    //   subjectName: subjectName,
+    //   courseName: firstStudent.course?.courseName || null,
+    //   section: firstStudent.classSection?.section || null,
+    //   timeTableMappingId: firstAttendance?.timeTableMappingId || timeTableMappingId,
+    //   date: firstAttendance?.date || date,
 
-    };
+    //   attendance: attendanceData
+
+    // };
+
+    return { students, classScheduleItem }
 
   } catch (error) {
     console.error("Service Error:", error);
@@ -1454,59 +1475,3 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
   }
 
 }
-// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
-
-//   try {
-
-//     const students = await studentRepository.getStudentsByClassSection(
-//       classSectionId,
-//       acedmicYearId,
-//       universityId
-//     );
-
-//     if (!students || students.length === 0) {
-//       return {
-//         classSectionsId: classSectionId,
-//         attendance: []
-//       };
-//     }
-
-//     const sectionName =
-//       students[0]?.studentSection?.classSections?.section || "";
-
-//     const response = {
-//       classSectionsId: classSectionId,
-//       subjectName: "", // timetable API se aayega
-//       courseName: "",  // agar course table join karoge
-//       section: sectionName,
-//       timeTableMappingId: null,
-//       date: new Date().toISOString().split("T")[0],
-
-//       attendance: students.map((item) => {
-
-//         const student = item.studentMapped;
-//         console.log("hhhhhh", student);
-
-
-
-//         return {
-//           studentId: student.studentId,
-//           scholarNo: student.scholarNumber,
-//           enrollNo: student.enrollNumber || "",
-//           studentName: `${student.firstName} ${student.lastName}`,
-//           attendanceStatus: "",
-//           notes: "",
-//           description: ""
-//         };
-
-//       })
-//     };
-
-//     return response;
-
-//   } catch (error) {
-//     console.error("Error in studentService:", error);
-//     throw error;
-//   }
-
-// }

@@ -1,5 +1,5 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 
 export async function addStudent(data, transaction) {
     try {
@@ -1043,150 +1043,8 @@ export async function getStudentDetailsRepository(studentId) {
         throw error;
     }
 }
-// export async function getStudentsByClassSection(classSectionId, acedmicYearId, universityId) {
-//     try {
 
-//         const students = await model.classStudentMapperModel.findAll({
-
-//             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-
-//             where: {
-//                 acedmicYearId: acedmicYearId
-//             },
-
-//             include: [
-
-//                 {
-//                     model: model.userModel,
-//                     as: "userClassStudentMapper",
-//                     attributes: ["universityId", "userId"],
-//                     where: { universityId }
-//                 },
-
-//                 {
-//                     model: model.semesterModel,
-//                     as: "studentSection",
-//                     attributes: ["semesterId", "name"],
-
-//                     include: [
-//                         {
-//                             model: model.classSectionModel,
-//                             as: "classSections",
-//                             attributes: ["classSectionsId", "section"],
-//                             where: {
-//                                 classSectionsId: classSectionId
-//                             }
-//                         }
-//                     ]
-//                 },
-
-//                 {
-//                     model: model.studentModel,
-//                     as: "studentMapped",
-//                     attributes: [
-//                         "studentId",
-//                         "firstName",
-//                         "lastName",
-//                         "scholarNumber",
-//                         "email",
-//                         "mobileNumber"
-//                     ]
-//                 }
-
-//             ]
-
-//         });
-
-//         return students;
-
-//     } catch (error) {
-//         console.error("Error in getStudentsByClassSection:", error);
-//         throw error;
-//     }
-// }
-
-// repository/studentRepository.js
-
-
-// export async function getStudentsByClassSection(classSectionId, academicYearId) {
-
-//     try {
-
-//         const students = await model.studentModel.findAll({
-
-//             attributes: [
-//                 "studentId",
-//                 "firstName",
-//                 "lastName",
-//                 "scholarNumber",
-//                 "email",
-//                 "mobileNumber",
-//                 "classSectionsId",
-//                 "acedmicYearId"
-//             ],
-
-//             where: {
-//                 classSectionsId: classSectionId,
-//                 acedmicYearId: academicYearId
-//             }
-
-//         });
-
-//         return students;
-
-//     } catch (error) {
-//         console.error("Repository Error:", error);
-//         throw error;
-//     }
-
-// }
-
-// export async function getStudentsByClassSection(classSectionId, academicYearId) {
-
-//     try {
-
-//         const students = await model.studentModel.findAll({
-
-//             attributes: [
-//                 "studentId",
-//                 "firstName",
-//                 "lastName",
-//                 "scholarNumber",
-//                 "email",
-//                 "mobileNumber",
-//                 "classSectionsId",
-//                 "acedmicYearId"
-//             ],
-
-//             where: {
-//                 classSectionsId: classSectionId,
-//                 acedmicYearId: academicYearId
-//             },
-
-//             include: [
-//                 {
-//                     model: model.attendanceModel,
-//                     attributes: [
-//                         "attendanceStatus",
-//                         "notes",
-//                         "description",
-//                         "date"
-//                     ],
-//                     required: false // LEFT JOIN (important)
-//                 }
-//             ]
-
-//         });
-
-//         return students;
-
-//     } catch (error) {
-//         console.error("Repository Error:", error);
-//         throw error;
-//     }
-
-// }
-export async function getStudentsByClassSection(classSectionId, academicYearId) {
+export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, academicYearId, date) {
 
     try {
 
@@ -1202,7 +1060,7 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
             ],
 
             where: {
-                classSectionsId: classSectionId,
+                classSectionsId,
                 acedmicYearId: academicYearId
             },
 
@@ -1222,7 +1080,8 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
 
                 {
                     model: model.attendanceModel,
-                    as: "studentAttendance",   // ⭐ same alias
+                    as: "studentAttendance",
+
                     attributes: [
                         "attendanceStatus",
                         "notes",
@@ -1230,8 +1089,30 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
                         "date",
                         "timeTableMappingId"
                     ],
-                    required: false
-                }
+
+                    where: {
+                        timeTableMappingId: timeTableMappingId,
+                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)]
+                    },
+
+                    required: false,
+
+                    include: [
+                        {
+                            model: model.classScheduleModel,
+                            as: "timeTableMapping",
+                            attributes: ["timeTableMappingId", "subject_id"],
+
+                            include: [
+                                {
+                                    model: model.subjectModel,
+                                    as: "timeTableSubject",
+                                    attributes: ["subject_id", "subjectName"]
+                                }
+                            ]
+                        }
+                    ]
+                },
 
             ]
 
@@ -1245,3 +1126,5 @@ export async function getStudentsByClassSection(classSectionId, academicYearId) 
     }
 
 }
+
+
