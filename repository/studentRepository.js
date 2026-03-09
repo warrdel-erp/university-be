@@ -1,5 +1,5 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 
 export async function addStudent(data, transaction) {
     try {
@@ -1044,7 +1044,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(timeTableMappingId, academicYearId, date) {
+export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, academicYearId, date) {
 
     try {
 
@@ -1060,6 +1060,7 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
             ],
 
             where: {
+                classSectionsId,
                 acedmicYearId: academicYearId
             },
 
@@ -1091,10 +1092,11 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
 
                     where: {
                         timeTableMappingId: timeTableMappingId,
-                        date: date
+                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)]
                     },
 
-                    required: true,
+                    required: false,
+
                     include: [
                         {
                             model: model.classScheduleModel,
@@ -1124,3 +1126,5 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
     }
 
 }
+
+

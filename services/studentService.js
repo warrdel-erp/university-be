@@ -17,6 +17,8 @@ import { getSemesterGroup } from "../utility/semesterGroup.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as model from '../models/index.js'
+
 
 export async function addStudent(
   info,
@@ -1387,11 +1389,29 @@ function formatStudentTimetable(allData) {
 
 
 export async function getStudentsByClassSection(timeTableMappingId, academicYearId, date) {
-  console.log("hiuuuuu", timeTableMappingId, academicYearId, date);
 
   try {
 
+    const classScheduleItem = await model.classScheduleModel.findByPk(timeTableMappingId, {
+      attributes: ['timeTableMappingId', 'day', 'timeTableType'],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          attributes: ['classSectionsId']
+        },
+        {
+          model: model.subjectModel,
+          as: 'timeTableSubject',
+          attributes: ['subjectId', 'subjectName']
+        }
+      ],
+      raw: true,
+      nest: true
+    })
+
     const students = await studentRepository.getStudentsByClassSection(
+      classScheduleItem?.timeTablecreate?.classSectionsId,
       timeTableMappingId,
       academicYearId,
       date
@@ -1399,39 +1419,41 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
 
     if (!students.length) return {};
 
-    const attendanceData = students.map((student) => {
+    // const attendanceData = students.map((student) => {
 
-      const attendance = student.studentAttendance?.[0];  // ⭐ alias fix
+    //   const attendance = student.studentAttendance?.[0];  // ⭐ alias fix
 
-      return {
-        studentId: student.studentId,
-        "scholarNo": student.scholarNumber,
-        "enrollNo": student.enrollNumber,
-        "studentName": `${student.firstName} ${student.lastName}`,
-        attendanceStatus: attendance?.attendanceStatus || null,
-        notes: attendance?.notes || null,
-        description: attendance?.description || null
-      };
+    //   return {
+    //     studentId: student.studentId,
+    //     "scholarNo": student.scholarNumber,
+    //     "enrollNo": student.enrollNumber,
+    //     "studentName": `${student.firstName} ${student.lastName}`,
+    //     attendanceStatus: attendance?.attendanceStatus || null,
+    //     notes: attendance?.notes || null,
+    //     description: attendance?.description || null
+    //   };
 
-    });
+    // });
 
-    const firstStudent = students[0];
-    const firstAttendance = firstStudent.studentAttendance?.[0];
+    // const firstStudent = students[0];
+    // const firstAttendance = firstStudent.studentAttendance?.[0];
 
-    const subjectName = firstAttendance?.timeTableMapping?.timeTableSubject?.subjectName || null;
+    // const subjectName = firstAttendance?.timeTableMapping?.timeTableSubject?.subjectName || null;
 
-    return {
+    // return {
 
-      classSectionsId: firstStudent.classSectionsId,
-      subjectName: subjectName,
-      courseName: firstStudent.course?.courseName || null,
-      section: firstStudent.classSection?.section || null,
-      timeTableMappingId: firstAttendance?.timeTableMappingId || timeTableMappingId,
-      date: firstAttendance?.date || date,
+    //   classSectionsId: firstStudent.classSectionsId,
+    //   subjectName: subjectName,
+    //   courseName: firstStudent.course?.courseName || null,
+    //   section: firstStudent.classSection?.section || null,
+    //   timeTableMappingId: firstAttendance?.timeTableMappingId || timeTableMappingId,
+    //   date: firstAttendance?.date || date,
 
-      attendance: attendanceData
+    //   attendance: attendanceData
 
-    };
+    // };
+
+    return { students, classScheduleItem }
 
   } catch (error) {
     console.error("Service Error:", error);
