@@ -597,7 +597,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjM0LCJ1bml2ZXJzaXR5SWQiOjMsImluc3RpdHV0ZUlkIjo4LCJ1c2VyTmFtZSI6Ik5pbWl0IFNoYXJtYSIsInVuaXF1ZUlkIjoiN2YyNDUyNjItNzdkNi00MjAzLTg5ODMtZjFjOWIxODM1ZTA2IiwicGFzc3dvcmQiOiIkMmEkMTAkaWt4OHk4WE5QaFlFT0dWaGFlU3pGT21IS1VBdll3Q0hsRmJBby5jZVhleDMya1pxUTZheDYiLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6IjEyMy00NTYtNzg5MCIsImVtYWlsIjoiYWttQGFheW9qYW4uZWR1LmluIiwicm9sZSI6IkFkbWluIiwiY3JlYXRlZEF0IjoiMjAyNS0wNi0yNlQxMDo0NTozMS4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNS0wNi0yNlQxMToxMDoyNC4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJpbnN0aXR1dGVOYW1lIjoiVGVzdCBJbnN0aXR1dGUiLCJpYXQiOjE3NzI4NzA3OTgsImV4cCI6MTc3Mjk1NzE5OH0.A2On1s8dBDW43lQt2J-h8_4GQOq_ycrztCvw-i68VMg",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImluc3RpdHV0ZUlkIjoxMiwidXNlck5hbWUiOiJBYWRpIEtpcmFuIE1haGFqYW5pIiwidW5pcXVlSWQiOiI4M2ZiOWI3ZS01OGIzLTQyOGYtOGE3NS1jNGI1ZTY5ODkxZDMiLCJwYXNzd29yZCI6IiQyYSQxMCRFczJpZXR3Wm9BQTR4U0ZwSmxmM0ZlLkJkdXgyLmp1bUdwVDJmWlBLWGhxLm01cUdnYWhCTyIsImR1bW15UGFzc3dvcmQiOm51bGwsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwicm9sZSI6IkFkbWluIiwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNS0wOC0xOFQwNzozMDoyMy4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzcyODczMjcxLCJleHAiOjE3NzI5NTk2NzF9.c-vxXsfe_vP2MBDsTkTyhXI025NcHqc5Fgt-WDQ5BoY",
                   "type": "string"
                 }
               ]
@@ -606,7 +606,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"userId\": 34,\n    \"permissions\": [\n        \"perm_3pvhh7qk\",\n        \"perm_jn6uwbhx\",\n        \"perm_vmgy81qb\",\n        \"perm_r2hck7uz\",\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\",\n        \"perm_fv5i3pus\",\n        \"perm_vhu1w614\",\n        \"perm_3y99hc4v\",\n        \"perm_kpyrgn0u\",\n        \"perm_67enoryi\",\n        \"perm_1j3eob6w\",\n        \"perm_2q1uysz0\",\n        \"perm_vvvmvshc\",\n        \"perm_apwmfs4s\",\n        \"perm_mbtdzyk9\",\n        \"perm_lloet9pf\",\n        \"perm_fb6uz3on\",\n        \"perm_g8euk1wo\",\n        \"perm_zzn4930w\",\n        \"perm_1s0rvrdn\",\n        \"perm_g4j2vmqx\",\n        \"perm_lqv7imlo\",\n        \"perm_a3raniek\",\n        \"perm_uhy3pdu7\",\n        \"perm_lux49lih\",\n        \"perm_8bogy08q\",\n        \"perm_8ewmos7o\",\n        \"perm_pfbahaza\",\n        \"perm_xswo35s7\",\n        \"perm_llg0ziln\",\n        \"perm_3mgfza4i\",\n        \"perm_p0kc7xfx\",\n        \"perm_q0raarnh\",\n        \"perm_npz4elox\",\n        \"perm_cat7bpaz\",\n        \"perm_6jvxrldh\",\n        \"perm_d0adxu1h\",\n        \"perm_imi2a816\",\n        \"perm_9v4jf6w4\",\n        \"perm_6s6cpiz4\",\n        \"perm_ekn3wbkf\",\n        \"perm_cu17s07s\",\n        \"perm_acyzvir3\",\n        \"perm_ivou1dd2\",\n        \"perm_qq9mv2fo\",\n        \"perm_x1rh2q4g\",\n        \"perm_64gvrizb\",\n        \"perm_agfecd9i\",\n        \"perm_s2cbz5bl\",\n        \"perm_2aaom9pi\",\n        \"perm_m2a1vniq\",\n        \"perm_owmk2mbk\",\n        \"perm_p0nsudou\",\n        \"perm_t5jn428x\",\n        \"perm_av7xp5gj\",\n        \"perm_cdr8cffg\",\n        \"perm_ndgoqbu4\",\n        \"perm_rappiajj\",\n        \"perm_zd39u5kb\",\n        \"perm_r79elvp4\",\n        \"perm_l8aciket\",\n        \"perm_tmfsqxet\",\n        \"perm_8wkpw22t\",\n        \"perm_1f71a9au\",\n        \"perm_0ll19vv5\",\n        \"perm_d99qwi0v\",\n        \"perm_sinhstch\",\n        \"perm_n75h7bqq\",\n        \"perm_r120a1v3\",\n        \"perm_20gnlqri\",\n        \"perm_c85tikr4\",\n        \"perm_bpohlab1\",\n        \"perm_zr6ziwe7\",\n        \"perm_j40rqf7g\",\n        \"perm_p04ppbrx\",\n        \"perm_mfnubcs7\",\n        \"perm_5l8xdl05\",\n        \"perm_l9pqi54f\",\n        \"perm_ar7a6k6r\",\n        \"perm_xwzulhwl\",\n        \"perm_ubeutyom\",\n        \"perm_5xh3uoxy\",\n        \"perm_32zievwu\",\n        \"perm_d601jd2y\",\n        \"perm_2stin5ak\",\n        \"perm_1gvaxmr5\",\n        \"perm_9q6tr5wh\",\n        \"perm_8yhfo7tw\",\n        \"perm_ts7ptgqq\",\n        \"perm_szzb8rcn\",\n        \"perm_m5xvo8tj\",\n        \"perm_761g26ms\",\n        \"perm_qwynrtpg\",\n        \"perm_hy5bhccz\",\n        \"perm_no8bm1fp\",\n        \"perm_zn1lhuan\",\n        \"perm_g10t2u8c\",\n        \"perm_hwj2pup5\",\n        \"perm_d4dwysf8\",\n        \"perm_z8b2x4f9\",\n        \"perm_j7h3m5v1\",\n        \"perm_w1p9s4c2\",\n        \"perm_r2y8n6k0\",\n        \"perm_t5q3l7g4\",\n        \"perm_a9d4f1v2\",\n        \"perm_n7b8x3m5\",\n        \"perm_e2h6j9k1\",\n        \"perm_c4z5s8w3\",\n        \"perm_f1g7p9q2\",\n        \"perm_y3v6t8n4\",\n        \"perm_b5m2k7r9\",\n        \"perm_x8l1c4g6\"\n    ]\n}",
+              "raw": "{\n    \"userId\": 46,\n    \"permissions\": [\n        \"perm_3pvhh7qk\",\n        \"perm_jn6uwbhx\",\n        \"perm_vmgy81qb\",\n        \"perm_r2hck7uz\",\n        \"perm_ciov2yos\",\n        \"perm_0k04cyu4\",\n        \"perm_fv5i3pus\",\n        \"perm_vhu1w614\",\n        \"perm_3y99hc4v\",\n        \"perm_kpyrgn0u\",\n        \"perm_67enoryi\",\n        \"perm_1j3eob6w\",\n        \"perm_2q1uysz0\",\n        \"perm_vvvmvshc\",\n        \"perm_apwmfs4s\",\n        \"perm_mbtdzyk9\",\n        \"perm_lloet9pf\",\n        \"perm_fb6uz3on\",\n        \"perm_g8euk1wo\",\n        \"perm_zzn4930w\",\n        \"perm_1s0rvrdn\",\n        \"perm_g4j2vmqx\",\n        \"perm_lqv7imlo\",\n        \"perm_a3raniek\",\n        \"perm_uhy3pdu7\",\n        \"perm_lux49lih\",\n        \"perm_8bogy08q\",\n        \"perm_8ewmos7o\",\n        \"perm_pfbahaza\",\n        \"perm_xswo35s7\",\n        \"perm_llg0ziln\",\n        \"perm_3mgfza4i\",\n        \"perm_p0kc7xfx\",\n        \"perm_q0raarnh\",\n        \"perm_npz4elox\",\n        \"perm_cat7bpaz\",\n        \"perm_6jvxrldh\",\n        \"perm_d0adxu1h\",\n        \"perm_imi2a816\",\n        \"perm_9v4jf6w4\",\n        \"perm_6s6cpiz4\",\n        \"perm_ekn3wbkf\",\n        \"perm_cu17s07s\",\n        \"perm_acyzvir3\",\n        \"perm_ivou1dd2\",\n        \"perm_qq9mv2fo\",\n        \"perm_x1rh2q4g\",\n        \"perm_64gvrizb\",\n        \"perm_agfecd9i\",\n        \"perm_s2cbz5bl\",\n        \"perm_2aaom9pi\",\n        \"perm_m2a1vniq\",\n        \"perm_owmk2mbk\",\n        \"perm_p0nsudou\",\n        \"perm_t5jn428x\",\n        \"perm_av7xp5gj\",\n        \"perm_cdr8cffg\",\n        \"perm_ndgoqbu4\",\n        \"perm_rappiajj\",\n        \"perm_zd39u5kb\",\n        \"perm_r79elvp4\",\n        \"perm_l8aciket\",\n        \"perm_tmfsqxet\",\n        \"perm_8wkpw22t\",\n        \"perm_1f71a9au\",\n        \"perm_0ll19vv5\",\n        \"perm_d99qwi0v\",\n        \"perm_sinhstch\",\n        \"perm_n75h7bqq\",\n        \"perm_r120a1v3\",\n        \"perm_20gnlqri\",\n        \"perm_c85tikr4\",\n        \"perm_bpohlab1\",\n        \"perm_zr6ziwe7\",\n        \"perm_j40rqf7g\",\n        \"perm_p04ppbrx\",\n        \"perm_mfnubcs7\",\n        \"perm_5l8xdl05\",\n        \"perm_l9pqi54f\",\n        \"perm_ar7a6k6r\",\n        \"perm_xwzulhwl\",\n        \"perm_ubeutyom\",\n        \"perm_5xh3uoxy\",\n        \"perm_32zievwu\",\n        \"perm_d601jd2y\",\n        \"perm_2stin5ak\",\n        \"perm_1gvaxmr5\",\n        \"perm_9q6tr5wh\",\n        \"perm_8yhfo7tw\",\n        \"perm_ts7ptgqq\",\n        \"perm_szzb8rcn\",\n        \"perm_m5xvo8tj\",\n        \"perm_761g26ms\",\n        \"perm_qwynrtpg\",\n        \"perm_hy5bhccz\",\n        \"perm_no8bm1fp\",\n        \"perm_zn1lhuan\",\n        \"perm_g10t2u8c\",\n        \"perm_hwj2pup5\",\n        \"perm_d4dwysf8\",\n        \"perm_z8b2x4f9\",\n        \"perm_j7h3m5v1\",\n        \"perm_w1p9s4c2\",\n        \"perm_r2y8n6k0\",\n        \"perm_t5q3l7g4\",\n        \"perm_a9d4f1v2\",\n        \"perm_n7b8x3m5\",\n        \"perm_e2h6j9k1\",\n        \"perm_c4z5s8w3\",\n        \"perm_f1g7p9q2\",\n        \"perm_y3v6t8n4\",\n        \"perm_b5m2k7r9\",\n        \"perm_x8l1c4g6\"\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -614,11 +614,11 @@
               }
             },
             "url": {
-              "raw": "https://bestage.hiveerp.com/authorization/permissions/assign",
+              "raw": "https://besso.erpedvantage.com/authorization/permissions/assign",
               "protocol": "https",
               "host": [
-                "bestage",
-                "hiveerp",
+                "besso",
+                "erpedvantage",
                 "com"
               ],
               "path": [
@@ -909,7 +909,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/student/classSectionStudents?classSectionId=204&academicYearId=59",
+              "raw": "{{baseurl}}/student/classSectionStudents?timeTableMappingId=79&academicYearId=59&date=2026-03-09",
               "host": [
                 "{{baseurl}}"
               ],
@@ -919,12 +919,17 @@
               ],
               "query": [
                 {
-                  "key": "classSectionId",
-                  "value": "204"
+                  "key": "timeTableMappingId",
+                  "value": "79"
                 },
                 {
                   "key": "academicYearId",
                   "value": "59"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-03-09",
+                  "type": "text"
                 }
               ]
             }
@@ -958,7 +963,7 @@
                   "key": "students",
                   "type": "file",
                   "uuid": "e8e5b1d3-7751-4820-99c1-5913ac8d169b",
-                  "src": "/Users/jitin/Library/Mobile Documents/com~apple~Numbers/Documents/mark feeding FOR B.Des.-FOR WEBSITE -06 Mar 2026 2.xls.numbers"
+                  "src": "/Users/jitin/Downloads/Mark Feeding FOR ARCH-For Website-07 March 2026.xlsx"
                 }
               ]
             },
