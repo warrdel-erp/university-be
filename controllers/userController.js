@@ -7,6 +7,7 @@ import {
 } from "../repository/userRolePermissionRepository.js";
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import * as userRoleRepository from "../repository/userRoleRepository.js";
 
 // register
 export const register = async (req, res) => {
@@ -346,6 +347,36 @@ export const getAllUsers = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to fetch users"
+    });
+  }
+};
+
+export const saveUserDefaults = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { defaultRole } = req.body;
+
+    if (defaultRole) {
+      const hasRole = await userRoleRepository.checkUserRoleExists(userId, defaultRole);
+      if (!hasRole) {
+        return res.status(400).json({
+          success: false,
+          message: `User does not have the specified role: ${defaultRole}`
+        });
+      }
+    }
+
+    const result = await userService.saveUserDefaults(userId, req.body);
+    res.status(200).json({
+      success: true,
+      message: "User defaults saved successfully",
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in saveUserDefaults controller:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to save user defaults"
     });
   }
 };

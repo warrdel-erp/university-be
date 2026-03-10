@@ -1128,12 +1128,12 @@ employeeModel.belongsTo(userModel, {
 });
 
 userModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
+  foreignKey: "defaultInstituteId",
   as: "institute"
 });
 
 instituteModel.hasMany(userModel, {
-  foreignKey: "instituteId",
+  foreignKey: "defaultInstituteId",
   as: "users"
 });
 
