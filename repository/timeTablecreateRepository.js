@@ -1165,7 +1165,8 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
 export async function getTodayClassScheduleForEmployee(
   employeeId,
   currentDate,
-  dayString
+  dayString,
+  sessionId
 ) {
   try {
     const result = await model.classScheduleModel.findAll({
@@ -1212,6 +1213,10 @@ export async function getTodayClassScheduleForEmployee(
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
+              required: sessionId ? true : false,
+              where: {
+                ...(sessionId && { sessionId })
+              },
               attributes: [
                 'class',
                 'section',

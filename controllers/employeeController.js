@@ -217,7 +217,7 @@ export async function getSubjectEvalution(req, res) {
 
 export const getTodayClassSchedule = async (req, res) => {
     try {
-        const { employeeId, date } = req.query;
+        const { employeeId, date, sessionId } = req.query;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
@@ -233,7 +233,8 @@ export const getTodayClassSchedule = async (req, res) => {
         const result = await employee.getTodayClassSchedule(
             employeeId,
             formattedDate,
-            dayString
+            dayString,
+            sessionId
         );
 
         res.status(200).send({ success: true, result });
