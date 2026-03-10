@@ -13,6 +13,21 @@ export async function addAttendance(attendanceRecords) {
     }
 };
 
+export async function checkAttendanceExists(timeTableMappingId, date) {
+    try {
+        const count = await model.attendanceModel.count({
+            where: {
+                timeTableMappingId,
+                date: { [Op.eq]: fn("DATE", date) }
+            }
+        });
+        return count > 0;
+    } catch (error) {
+        console.error("Error checking attendance existence:", error);
+        throw error;
+    }
+};
+
 export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
     const whereClause = {
         ...(universityId && { universityId }),

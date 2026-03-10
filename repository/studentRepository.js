@@ -1083,6 +1083,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
                     as: "studentAttendance",
 
                     attributes: [
+                        "attendanceId",
                         "attendanceStatus",
                         "notes",
                         "description",
@@ -1097,21 +1098,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
 
                     required: false,
 
-                    include: [
-                        {
-                            model: model.classScheduleModel,
-                            as: "timeTableMapping",
-                            attributes: ["timeTableMappingId", "subject_id"],
 
-                            include: [
-                                {
-                                    model: model.subjectModel,
-                                    as: "timeTableSubject",
-                                    attributes: ["subject_id", "subjectName"]
-                                }
-                            ]
-                        }
-                    ]
                 },
 
             ]

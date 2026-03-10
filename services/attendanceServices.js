@@ -1,24 +1,28 @@
-import * as attendanceService  from "../repository/attendanceRepository.js";
+import * as attendanceService from "../repository/attendanceRepository.js";
 import moment from "moment";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
-    
-    try {
-        const attendanceRecords = attendanceData.attendance.map(attendance => ({
-            ...attendance,
-            classSectionsId: attendanceData.classSectionsId,
-            timeTableMappingId: attendanceData.timeTableMappingId,
-            date :attendanceData.date,
-            createdBy,
-            updatedBy,
-        }));
-
-        const addedAttendance = await attendanceService.addAttendance(attendanceRecords);
-        return addedAttendance;
-    } catch (error) {
-        console.error('Error adding Attendance:', error);
-        throw new Error('Unable to add Attendance');
+  try {
+    const isExists = await attendanceService.checkAttendanceExists(attendanceData.timeTableMappingId, attendanceData.date);
+    if (isExists) {
+      throw new Error(`Attendance already marked for this date and period`);
     }
+
+    const attendanceRecords = attendanceData.attendance.map(attendance => ({
+      ...attendance,
+      classSectionsId: attendanceData.classSectionsId,
+      timeTableMappingId: attendanceData.timeTableMappingId,
+      date: attendanceData.date,
+      createdBy,
+      updatedBy,
+    }));
+
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords);
+    return addedAttendance;
+  } catch (error) {
+    console.error('Error adding Attendance:', error);
+    throw error;
+  }
 };
 
 export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
@@ -71,9 +75,9 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
       fullName: [studentAttendance?.firstName, studentAttendance?.middleName, studentAttendance?.lastName]
         .filter(Boolean)
         .join(" "),
-      firstName:studentAttendance?.firstName,
-      middleName:studentAttendance?.middleName,
-      lastName:studentAttendance?.lastName,
+      firstName: studentAttendance?.firstName,
+      middleName: studentAttendance?.middleName,
+      lastName: studentAttendance?.lastName,
       attentenceStatus,
       date: recordDate,
       description,
@@ -86,17 +90,15 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
   };
 }
 
-export async function updateAttendance(attendanceId, record, updatedBy) {    
-    try {
-        
-       
-        record.updatedBy = updatedBy;
-        const result = await attendanceService.updateAttendance(attendanceId, record);
-        return result;
-    } catch (error) {
-        console.error(`Error updating Attendance:`, error);
-        throw error;
-    }
+export async function updateAttendance(attendanceId, record, updatedBy) {
+  try {
+    record.updatedBy = updatedBy;
+    const result = await attendanceService.updateAttendance(attendanceId, record);
+    return result;
+  } catch (error) {
+    console.error(`Error updating Attendance:`, error);
+    throw error;
+  }
 };
 
 /* ----------------  Parse student string ---------------- */
@@ -172,11 +174,11 @@ export async function importAttendanceData(excelData, commonData) {
       for (const dateCol of dateColumns) {
         const status = String(row[dateCol]).trim();
 
-        if (!status) continue; 
+        if (!status) continue;
 
         if (status.toLowerCase() === 'undefined') {
-             console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
-            continue; 
+          console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
+          continue;
         }
 
         const date = parseExcelDate(dateCol);
@@ -213,53 +215,53 @@ export async function importAttendanceData(excelData, commonData) {
 };
 
 
-export async function getAttendanceByDate(date, classSectionsId,employeeId) {
-    const data = await attendanceService.getAttendanceByDate(date, classSectionsId,employeeId);
+export async function getAttendanceByDate(date, classSectionsId, employeeId) {
+  const data = await attendanceService.getAttendanceByDate(date, classSectionsId, employeeId);
 
-    const { attendanceDetails = [], subjectDetail = {} } = data;
+  const { attendanceDetails = [], subjectDetail = {} } = data;
 
-    const grouped = {};
+  const grouped = {};
 
-    attendanceDetails.forEach(att => {
-        const classAtt = att.classAttendance;
-        if (!classAtt) return;
+  attendanceDetails.forEach(att => {
+    const classAtt = att.classAttendance;
+    if (!classAtt) return;
 
-        const courseName = classAtt.courseSection?.courseName || '';
-        const className = classAtt.class || '';
-        const sectionName = classAtt.section || '';
-        const dateStr = att.date?.toISOString().split('T')[0] || '';
+    const courseName = classAtt.courseSection?.courseName || '';
+    const className = classAtt.class || '';
+    const sectionName = classAtt.section || '';
+    const dateStr = att.date?.toISOString().split('T')[0] || '';
 
-        //  Subject comes from subjectDetail, not courseSection
-        const subjectName = subjectDetail?.employeeSubject?.subjects?.subjectName || '';
-        
-        const key = `${courseName}-${className}-${sectionName}-${subjectName}-${dateStr}`;
+    //  Subject comes from subjectDetail, not courseSection
+    const subjectName = subjectDetail?.employeeSubject?.subjects?.subjectName || '';
 
-        if (!grouped[key]) {
-            grouped[key] = {
-                course: courseName,
-                class: className,
-                section: sectionName,
-                subject: subjectName,
-                date: dateStr,
-                students: []
-            };
-        }
+    const key = `${courseName}-${className}-${sectionName}-${subjectName}-${dateStr}`;
 
-        // Add student
-        grouped[key].students.push({
-            attendanceId : att.attendanceId,
-            firstName: att.studentAttendance?.firstName || '',
-            scholarNumber: att.studentAttendance?.scholarNumber || '',
-            enrollNumber: att.studentAttendance?.enrollNumber || '',
-            attentenceStatus: att.attentenceStatus || '',
-            notes: att.notes || ''
-        });
+    if (!grouped[key]) {
+      grouped[key] = {
+        course: courseName,
+        class: className,
+        section: sectionName,
+        subject: subjectName,
+        date: dateStr,
+        students: []
+      };
+    }
+
+    // Add student
+    grouped[key].students.push({
+      attendanceId: att.attendanceId,
+      firstName: att.studentAttendance?.firstName || '',
+      scholarNumber: att.studentAttendance?.scholarNumber || '',
+      enrollNumber: att.studentAttendance?.enrollNumber || '',
+      attentenceStatus: att.attentenceStatus || '',
+      notes: att.notes || ''
     });
+  });
 
-    return {
-        // originalData: data,
-        groupedData: Object.values(grouped)
-    };
+  return {
+    // originalData: data,
+    groupedData: Object.values(grouped)
+  };
 };
 
 // export async function getPreviousClasses(employeeId, req) {
@@ -300,7 +302,7 @@ export async function getAttendanceByDate(date, classSectionsId,employeeId) {
 //   // This handles if weekOff is an Object, Array, or Null
 //   const rawWeekOff = mappings[0]?.timeTablecreation?.weekOff || [];
 //   console.log(`>>>>>>>rawWeekOff>>>`,JSON.stringify(rawWeekOff));
-  
+
 //   const weekOffArray = Array.isArray(rawWeekOff) 
 //     ? rawWeekOff 
 //     : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
@@ -410,8 +412,8 @@ export async function getPreviousClasses(employeeId, req) {
 
   // Improved Week Off handling to match property names in your includes
   const rawWeekOff = config?.weekOff || [];
-  const weekOffArray = Array.isArray(rawWeekOff) 
-    ? rawWeekOff 
+  const weekOffArray = Array.isArray(rawWeekOff)
+    ? rawWeekOff
     : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
   const weekOff = weekOffArray.map(d => String(d).toLowerCase());
 
@@ -422,7 +424,7 @@ export async function getPreviousClasses(employeeId, req) {
   )) || {};
 
   const studentCountCache = {};
-  const flatData = []; 
+  const flatData = [];
 
   for (const map of mappings) {
     let date = startDate.clone();
@@ -448,9 +450,9 @@ export async function getPreviousClasses(employeeId, req) {
           day: dayName,
           period: map.period,
           // Check primary subject mapping first, then check teacher-subject mapping
-          subject: map.timeTableSubject?.subjectName || 
-                   map.timeTableTeacherSubject?.subject?.subjectName || 
-                   "N/A",
+          subject: map.timeTableSubject?.subjectName ||
+            map.timeTableTeacherSubject?.subject?.subjectName ||
+            "N/A",
           class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
           section: map.timeTablecreate?.timeTableClassSection?.section || null,
           classSectionsId: sectionId,
