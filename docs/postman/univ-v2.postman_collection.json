@@ -844,6 +844,43 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "get all Copy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"defaultInstituteId\": 1,\n    \"defaultRole\": \"ADMIN\",\n    \"defaultAcademicYearId\": 59\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user/saveUserDefaults",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "saveUserDefaults"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -852,6 +889,44 @@
       "item": [
         {
           "name": "schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-03-06"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "courses",
           "request": {
             "auth": {
               "type": "bearer",
@@ -963,7 +1038,7 @@
                   "key": "students",
                   "type": "file",
                   "uuid": "e8e5b1d3-7751-4820-99c1-5913ac8d169b",
-                  "src": "/Users/jitin/Downloads/Mark Feeding FOR ARCH-For Website-07 March 2026.xlsx"
+                  "src": "/Users/jitin/Downloads/mark feeding FOR B.Des.-FOR WEBSITE -09 Mar 2026.xlsx"
                 }
               ]
             },
