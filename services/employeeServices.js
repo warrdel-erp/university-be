@@ -861,6 +861,10 @@ export async function getSubjectEvalution(employeeId) {
 }
 
 
-export async function getTodayClassSchedule(employeeId, currentDate, dayString) {
-  return await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString);
+export async function getTodayClassSchedule(employeeId, currentDate, dayString, sessionId) {
+  return await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString, sessionId);
+}
+
+export async function getTeacherCourses(employeeId, acedmicYearId) {
+  return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
 }

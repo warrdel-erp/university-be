@@ -372,7 +372,7 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
       role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
-      instituteId: instituteId,
+      defaultInstituteId: instituteId,
     };
 
     // Register the student and employee
@@ -506,4 +506,13 @@ export async function getMyDetails(userId) {
   delete userData.dummyPassword;
 
   return userData;
+}
+
+export async function saveUserDefaults(userId, data) {
+  try {
+    return await registerRepository.updateUser(userId, data);
+  } catch (error) {
+    console.error('Error in saveUserDefaults service:', error);
+    throw error;
+  }
 }

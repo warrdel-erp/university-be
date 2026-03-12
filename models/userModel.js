@@ -21,14 +21,20 @@ export default sequelize.define(
                 key: 'university_id'
             }
         },
-        instituteId: {
+        defaultInstituteId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'institute_id',
-            // references: {
-            //     model: 'institute',
-            //     key: 'institute_id'
-            // }
+            field: 'default_institute_id',
+        },
+        defaultRole: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'default_role'
+        },
+        defaultAcademicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'default_academic_year_id'
         },
         userName: {
             type: DataTypes.STRING,

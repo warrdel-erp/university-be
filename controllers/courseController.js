@@ -68,8 +68,9 @@ export const getCourseWithSubjects = async (req, res) => {
 export const getCourseSessions = async (req, res) => {
     try {
         const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
         const courseId = req.params.courseId;
-        const { acedmicYearId } = req.query;
 
         if (!universityId) {
             return res.status(400).json({

@@ -283,7 +283,7 @@ export const getRoutineByClassSectionId = async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting routine by class section id:", error);
-        res.status(500).send("Internal Server Error");
+        res.status(500).send({ message: "Internal Server Error", error });
     }
 };
 
