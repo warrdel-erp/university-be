@@ -24,7 +24,7 @@ export async function findEmailByEmail(email) {
         return null;
     }
 
-    const instituteId = result.dataValues.instituteId;
+    const instituteId = result.dataValues.defaultInstituteId;
 
     const institute = await model.instituteModel.findOne({
         where: {
@@ -332,7 +332,7 @@ export async function getAllUsers(universityId, instituteId, page, limit, search
         const offset = (page - 1) * limit;
         const whereCondition = {
             universityId,
-            ...(instituteId && { instituteId }),
+            ...(instituteId && { defaultInstituteId: instituteId }),
             ...(search && {
                 [Op.or]: [
                     { userName: { [Op.like]: `%${search}%` } },

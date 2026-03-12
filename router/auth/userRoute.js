@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
@@ -11,6 +11,18 @@ const getAllUsersSchema = z.object({
     page: z.coerce.number(),
     limit: z.coerce.number(),
     search: z.string().optional()
+});
+
+const saveUserDefaultsSchema = z.object({
+    defaultInstituteId: z.number({
+        required_error: "defaultInstituteId is required"
+    }),
+    defaultRole: z.string({
+        required_error: "defaultRole is required"
+    }).min(1, "defaultRole cannot be empty"),
+    defaultAcademicYearId: z.number({
+        required_error: "defaultAcademicYearId is required"
+    })
 });
 
 // Endpoints -------------------------------
@@ -47,5 +59,6 @@ router.get("/", useAuth, validate({ query: getAllUsersSchema }), getAllUsers);
 
 router.get("/myDetails", useAuth, getMyDetails);
 
+router.put("/saveUserDefaults", useAuth, validate({ body: saveUserDefaultsSchema }), saveUserDefaults);
 
 export default router;
