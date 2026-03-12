@@ -1083,6 +1083,10 @@ export async function getRoutineByClassSectionId(classSectionsId) {
         weekOffList = Array.isArray(weekOffRaw)
           ? weekOffRaw
           : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
+
+        if (typeof weekOffList === 'string') {
+          weekOffList = JSON.parse(weekOffList);
+        }
       } catch (e) {
         weekOffList = [];
       }
@@ -1254,6 +1258,10 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYear
         weekOffList = Array.isArray(weekOffRaw)
           ? weekOffRaw
           : (typeof weekOffRaw === 'string' ? JSON.parse(weekOffRaw) : []);
+
+        if (typeof weekOffList === 'string') {
+          weekOffList = JSON.parse(weekOffList);
+        }
       } catch (e) {
         weekOffList = [];
       }
