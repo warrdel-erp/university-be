@@ -1,18 +1,18 @@
-import * as notice  from  "../services/noticeServices.js";
+import * as notice from "../services/noticeServices.js";
 
-export async function addNotice(req, res) {        
-    const {acedmicYearId,title} = req.body
+export async function addNotice(req, res) {
+    const { acedmicYearId, title } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const role = req.user.role;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
-        if(!(acedmicYearId && title)){
-           return res.status(400).send('acedmicYearId,title is required')
+        if (!(acedmicYearId && title)) {
+            return res.status(400).send('acedmicYearId,title is required')
         }
-        const noticeData = await notice.addNotice(req.body,createdBy,updatedBy,role,universityId,instituteId);
-            res.status(201).json({ message: "Data added successfully", noticeData });
+        const noticeData = await notice.addNotice(req.body, createdBy, updatedBy, role, universityId, instituteId);
+        res.status(201).json({ message: "Data added successfully", noticeData });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -20,11 +20,11 @@ export async function addNotice(req, res) {
 
 export async function getAllStudentNotice(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
-    const role = req.user.role;    
-    const {acedmicYearId} = req.query
+    const instituteId = req.user.defaultInstituteId;
+    const role = req.user.role;
+    const { acedmicYearId } = req.query
     try {
-        const notices = await notice.getAllStudentNotice(universityId,acedmicYearId,instituteId,role);
+        const notices = await notice.getAllStudentNotice(universityId, acedmicYearId, instituteId, role);
         res.status(200).json(notices);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -33,12 +33,12 @@ export async function getAllStudentNotice(req, res) {
 
 export async function getAllEmployeeNotice(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const createdBy = req.user.userId;
-    const role = req.user.role;    
-    const {acedmicYearId} = req.query
+    const role = req.user.role;
+    const { acedmicYearId } = req.query
     try {
-        const notices = await notice.getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy);
+        const notices = await notice.getAllEmployeeNotice(universityId, acedmicYearId, instituteId, role, createdBy);
         res.status(200).json(notices);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -47,13 +47,13 @@ export async function getAllEmployeeNotice(req, res) {
 
 export async function updateNotice(req, res) {
     try {
-        const {noticeId} = req.body
-        if(!(noticeId)){
+        const { noticeId } = req.body
+        if (!(noticeId)) {
             return res.status(400).send('noticeId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updatednotice = await notice.updateNotice(noticeId, req.body,updatedBy);
-            res.status(200).json({message: "notice update succesfully" ,updatednotice});
+        }
+        const updatedBy = req.user.userId;
+        const updatednotice = await notice.updateNotice(noticeId, req.body, updatedBy);
+        res.status(200).json({ message: "notice update succesfully", updatednotice });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

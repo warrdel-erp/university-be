@@ -97,7 +97,7 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
 
 export async function getAdminRegisterStudentAndEmployee(req, res) {
   const universityId = req.user.universityId;
-  const instituteId = req.user.instituteId;
+  const instituteId = req.user.defaultInstituteId;
   const role = req.user.role;
   try {
     const user = await userService.getAdminRegisterStudentAndEmployee(universityId, instituteId, role);

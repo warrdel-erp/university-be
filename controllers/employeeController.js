@@ -21,7 +21,7 @@ export const addEmployee = async (req, res) => {
 
 export const getAllEmployee = async (req, res) => {
     const universityId = req.user.universityId;
-    const headInstituteId = req.user.instituteId;
+    const headInstituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { campusId, instituteId, acedmicYearId } = req.query
     try {
@@ -155,7 +155,7 @@ export const getTeacherTimeTable = async (req, res) => {
         }
 
         const universityId = req.user.universityId;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const role = req.user.role;
 
         const result = await employee.getTeacherTimeTable(
@@ -182,7 +182,7 @@ export const getTeacherSubject = async (req, res) => {
         }
 
         const universityId = req.user.universityId;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const role = req.user.role;
 
         const result = await employee.getTeacherSubject(

@@ -5,7 +5,7 @@ export async function addCo(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(acedmicYearId && syllabusDetailsId && subjectId)) {
             return res.status(400).send('acedmicYearId,syllabusDetailsId and subjectId is required')
@@ -19,7 +19,7 @@ export async function addCo(req, res) {
 
 export async function getAllCo(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
@@ -81,7 +81,7 @@ export async function addCoWeightage(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(acedmicYearId && coId && term)) {
             return res.status(400).send('acedmicYearId,coId and term is required')
@@ -95,7 +95,7 @@ export async function addCoWeightage(req, res) {
 
 export async function getAllCoWeightage(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { acedmicYearId } = req.query
     try {

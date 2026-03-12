@@ -4,7 +4,7 @@ export async function addPolicy(req, res) {
   const requiredFields = ["policyName", "totalLeavesPerYear"];
   const data = {
     universityId: req.user.universityId,
-    instituteId: req.user.instituteId,
+    instituteId: req.user.defaultInstituteId,
     createdBy: req.user.userId,
     updatedBy: req.user.userId,
     ...req.body
@@ -24,7 +24,7 @@ export async function addPolicy(req, res) {
 
 export async function getAllPolicies(req, res) {
   try {
-    const policies = await service.getPolicies(req.user.universityId, req.user.instituteId);
+    const policies = await service.getPolicies(req.user.universityId, req.user.defaultInstituteId);
     res.status(200).json(policies);
   } catch (err) {
     res.status(500).json({ error: err.message });

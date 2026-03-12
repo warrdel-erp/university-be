@@ -19,7 +19,7 @@ export async function addLesson(req, res) {
 
 export async function getAllLesson(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
@@ -50,7 +50,7 @@ export async function addTopice(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(name && lessonId)) {
             return res.status(400).send('name and lessionId is required')
@@ -67,7 +67,7 @@ export async function addMapping(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(topicId && timeTableMappingId && date)) {
             return res.status(400).send('topiceId,timeTableMappingId and date is required')
@@ -81,7 +81,7 @@ export async function addMapping(req, res) {
 
 export async function getMapping(req, res) {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
