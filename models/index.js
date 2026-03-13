@@ -132,6 +132,8 @@ import creditModel from "./creditModel.js";
 import evalutionModel from "./evalutionModel.js";
 import userPermissionModel from "./userPermissionModel.js";
 import userRoleModel from "./userRoleModel.js";
+import questionPaperModel from "./questionPaperModel.js";
+
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -663,6 +665,13 @@ dormitoryListModel.hasMany(addDormitoryModel, { foreignKey: "add_dormitory_id", 
 
 addDormitoryModel.belongsTo(roomTypeModel, { foreignKey: "add_dormitory_id", as: "roomType" });
 roomTypeModel.hasMany(addDormitoryModel, { foreignKey: "add_dormitory_id", as: "roomType" });
+
+questionPaperModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+userModel.hasMany(questionPaperModel, { foreignKey: "createdBy", as: "createdQuestionPapers" });
+
+questionPaperModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
+userModel.hasMany(questionPaperModel, { foreignKey: "updatedBy", as: "updatedQuestionPapers" });
+
 
 // Associations
 
@@ -1273,5 +1282,5 @@ export {
   evalutionModel,
   userPermissionModel,
   userRoleModel,
-
+  questionPaperModel,
 };
