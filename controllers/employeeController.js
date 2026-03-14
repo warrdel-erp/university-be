@@ -265,3 +265,61 @@ export const getTeacherCourses = async (req, res) => {
         res.status(500).send({ message: "Internal Server Error", success: false });
     }
 };
+
+export const getPastClassSchedules = async (req, res) => {
+    try {
+        const { employeeId, date } = req.query;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        if (!employeeId) {
+            return res.status(400).send("employeeId is required");
+        }
+
+        if (!acedmicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
+        }
+
+        const currentDate = date ? new Date(date) : new Date();
+        const formattedDate = currentDate.toISOString().split('T')[0];
+
+        const result = await employee.getPastClassSchedules(
+            employeeId,
+            acedmicYearId,
+            formattedDate
+        );
+
+        res.status(200).send({ success: true, result });
+    } catch (error) {
+        console.error("Error in getPastClassSchedules:", error);
+        res.status(500).send({ message: "Internal Server Error", success: false });
+    }
+};
+
+export const getUpcomingClassSchedules = async (req, res) => {
+    try {
+        const { employeeId, date } = req.query;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        if (!employeeId) {
+            return res.status(400).send("employeeId is required");
+        }
+
+        if (!acedmicYearId) {
+            return res.status(400).send("academicYearId not found in user session");
+        }
+
+        const currentDate = date ? new Date(date) : new Date();
+        const formattedDate = currentDate.toISOString().split('T')[0];
+
+        const result = await employee.getUpcomingClassSchedules(
+            employeeId,
+            acedmicYearId,
+            formattedDate
+        );
+
+        res.status(200).send({ success: true, result });
+    } catch (error) {
+        console.error("Error in getUpcomingClassSchedules:", error);
+        res.status(500).send({ message: "Internal Server Error", success: false });
+    }
+};

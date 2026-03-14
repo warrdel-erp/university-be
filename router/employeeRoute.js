@@ -2,9 +2,13 @@ import { Router } from 'express';
 const router = Router();
 import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
-import { getTodayClassSchedule } from '../controllers/employeeController.js';
+import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules } from '../controllers/employeeController.js';
 
 router.get('/schedule', userAuth, getTodayClassSchedule);
+
+router.get('/pastSchedule', userAuth, getPastClassSchedules);
+
+router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);
 

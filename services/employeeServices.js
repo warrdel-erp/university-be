@@ -868,3 +868,104 @@ export async function getTodayClassSchedule(employeeId, currentDate, dayString, 
 export async function getTeacherCourses(employeeId, acedmicYearId) {
   return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
 }
+
+export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString) {
+  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+
+  const daysOfWeek = {
+    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+    'Thursday': 4, 'Friday': 5, 'Saturday': 6
+  };
+
+  const limitDate = new Date(currentDateString);
+  limitDate.setHours(0, 0, 0, 0);
+
+  const pastClasses = [];
+
+  for (const schedule of rawSchedules) {
+    const routine = schedule.timeTablecreate;
+    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+
+    const start = new Date(routine.startingDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(routine.endingDate);
+    end.setHours(0, 0, 0, 0);
+
+    const targetDay = daysOfWeek[schedule.day];
+    if (targetDay === undefined) continue;
+
+    let current = new Date(start);
+    while (current.getDay() !== targetDay) {
+      current.setDate(current.getDate() + 1);
+    }
+
+    while (current <= end && current < limitDate) {
+      const classInstance = JSON.parse(JSON.stringify(schedule));
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+
+      classInstance.date = `${year}-${month}-${day}`;
+      pastClasses.push(classInstance);
+
+      current.setDate(current.getDate() + 7);
+    }
+  }
+
+  // Sort by date descending
+  pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  return pastClasses;
+}
+
+export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString) {
+  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+
+  const daysOfWeek = {
+    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+    'Thursday': 4, 'Friday': 5, 'Saturday': 6
+  };
+
+  const limitDate = new Date(currentDateString);
+  limitDate.setHours(0, 0, 0, 0);
+
+  const upcomingClasses = [];
+
+  for (const schedule of rawSchedules) {
+    const routine = schedule.timeTablecreate;
+    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+
+    const start = new Date(routine.startingDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(routine.endingDate);
+    end.setHours(0, 0, 0, 0);
+
+    const targetDay = daysOfWeek[schedule.day];
+    if (targetDay === undefined) continue;
+
+    let current = new Date(start);
+    while (current.getDay() !== targetDay) {
+      current.setDate(current.getDate() + 1);
+    }
+
+    while (current <= end) {
+      if (current >= limitDate) {
+        const classInstance = JSON.parse(JSON.stringify(schedule));
+        const year = current.getFullYear();
+        const month = String(current.getMonth() + 1).padStart(2, '0');
+        const day = String(current.getDate()).padStart(2, '0');
+
+        classInstance.date = `${year}-${month}-${day}`;
+        upcomingClasses.push(classInstance);
+      }
+      current.setDate(current.getDate() + 7);
+    }
+  }
+
+  // Sort by date ascending for upcoming classes
+  upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return upcomingClasses;
+}

@@ -1281,3 +1281,195 @@ export async function getTodayClassScheduleForEmployee(
     throw error;
   }
 }
+
+export async function getPastClassSchedulesForEmployee(
+  employeeId,
+  acedmicYearId,
+  currentDate
+) {
+  try {
+    const result = await model.classScheduleModel.findAll({
+      raw: true,
+      nest: true,
+      where: {
+        employeeId,
+      },
+      attributes: [
+        'timeTableMappingId',
+        'timeTableType',
+        'day',
+        'period',
+        'isAttendence'
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          where: {
+            acedmicYearId,
+            startingDate: {
+              [Op.lt]: currentDate
+            }
+          },
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: [
+                'class',
+                'section',
+                'classSectionsId'
+              ]
+            }
+          ]
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ['periodName', 'startTime', 'endTime']
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "timeTableTeacherSubject",
+          attributes: ['teacherSubjectMappingId'],
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "employeeSubject",
+              attributes: ['classSubjectMapperId'],
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects",
+                  attributes: ['subjectName']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectName']
+        },
+        {
+          model: model.classRoomModel,
+          as: "classRoom",
+          attributes: ['roomNumber']
+        }
+      ],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getPastClassSchedulesForEmployee:", error);
+    throw error;
+  }
+}
+
+export async function getUpcomingClassSchedulesForEmployee(
+  employeeId,
+  acedmicYearId,
+  currentDate
+) {
+  try {
+    const result = await model.classScheduleModel.findAll({
+      raw: true,
+      nest: true,
+      where: {
+        employeeId,
+      },
+      attributes: [
+        'timeTableMappingId',
+        'timeTableType',
+        'day',
+        'period',
+        'isAttendence'
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          where: {
+            acedmicYearId,
+            endingDate: {
+              [Op.gte]: currentDate
+            }
+          },
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: [
+                'class',
+                'section',
+                'classSectionsId'
+              ]
+            }
+          ]
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ['periodName', 'startTime', 'endTime']
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "timeTableTeacherSubject",
+          attributes: ['teacherSubjectMappingId'],
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "employeeSubject",
+              attributes: ['classSubjectMapperId'],
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects",
+                  attributes: ['subjectName']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectName']
+        },
+        {
+          model: model.classRoomModel,
+          as: "classRoom",
+          attributes: ['roomNumber']
+        }
+      ],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getUpcomingClassSchedulesForEmployee:", error);
+    throw error;
+  }
+}
