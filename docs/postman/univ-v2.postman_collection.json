@@ -941,7 +941,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=49",
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45",
               "host": [
                 "{{baseurl}}"
               ],
@@ -952,7 +952,7 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "49"
+                  "value": "45"
                 }
               ]
             }
@@ -975,13 +975,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=49",
+              "raw": "{{baseurl}}/employee/upcomingSchedule?employeeId=49",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "pastSchedule"
+                "upcomingSchedule"
               ],
               "query": [
                 {
@@ -1357,6 +1357,28 @@
               "path": [
                 "questionPaper",
                 "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "class section",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/classSection",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classSection"
               ]
             }
           },

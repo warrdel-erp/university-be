@@ -339,3 +339,20 @@ export async function getMonthlyIncome(req, res) {
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
+export const getClassSectionsByFilter = async (req, res) => {
+    try {
+        const { sessionId, courseId } = req.query;
+        if (!sessionId || !courseId) {
+            return res.status(400).send("sessionId and courseId are required");
+        }
+        const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        const result = await mainServices.getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getClassSectionsByFilter Details:", error);
+        return res.status(500).send({ message: error.message });
+    }
+};

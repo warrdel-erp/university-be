@@ -438,3 +438,7 @@ export async function getMonthlyIncomeService() {
         throw error;
     }
 };
+
+export async function getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId) {
+    return await mainRepository.getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId);
+};

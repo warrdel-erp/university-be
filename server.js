@@ -80,7 +80,7 @@ import subjects from "./router/subjectRoute.js";
 import userPermission from "./router/userPermissionRoute.js";
 import resultStudent from "./router/resultStudentRoutes.js";
 import questionPaper from "./router/questionPaperRoute.js";
-
+import classSection from "./router/classSectionRoute.js";
 
 // middleware
 app.use(fileUpload());
@@ -100,6 +100,7 @@ app.use("/syllabus", syllabus);
 app.use("/authorization", userPermission);
 app.use("/resultStudent", resultStudent);
 app.use("/questionPaper", questionPaper);
+app.use("/classSections", classSection);
 
 
 app.use("/main", main);
@@ -166,7 +167,6 @@ app.use("/jobs", jobs);
 app.use("/grade", grade);
 app.use("/credit", credit);
 app.use("/evalution", evalution);
-
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
