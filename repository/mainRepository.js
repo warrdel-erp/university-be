@@ -809,7 +809,14 @@ export async function getClassSectionsByFilter(sessionId, courseId, universityId
                     sessionId,
                     courseId,
                     acedmicYearId
-                }
+                },
+                include: [
+                    {
+                        model: model.timeTableRoutineModel,
+                        as: "timeTableClassSection",
+                        attributes: ['timeTableRoutineId', 'endingDate', 'startingDate']
+                    }
+                ]
             })
         ]);
 
