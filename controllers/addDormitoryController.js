@@ -17,7 +17,7 @@ export async function addDormitoryRoom(req, res) {
 
 export async function getAllDormitoryRoom(req, res) {
     const role = req.user.role;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const universityId = req.user.universityId;
     const { acedmicYearId } = req.query;
     try {

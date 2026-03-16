@@ -84,7 +84,7 @@ export const addtimeTableMapping = async (req, res) => {
 
 export const getTimeTableMappingDetail = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const timeTableRoutineId = req.body.timeTableRoutineId;
 
@@ -207,7 +207,7 @@ export const deletetimeTableMapping = async (req, res) => {
 
 export const getTimeTableCellData = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { courseId, classSectionsId } = req.query
     if (!(courseId)) {
@@ -224,7 +224,7 @@ export const getTimeTableCellData = async (req, res) => {
 
 export const getTimeTableElective = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const { courseId } = req.query
     if (!(courseId)) {

@@ -4,7 +4,7 @@ export async function addRequest(req, res) {
   const requiredFields = ["employeeId", "policyId", "startDate", "endDate", "totalDays"];
   const data = {
     universityId: req.user.universityId,
-    instituteId: req.user.instituteId,
+    instituteId: req.user.defaultInstituteId,
     ...req.body
   };
 
@@ -22,11 +22,11 @@ export async function addRequest(req, res) {
 
 export async function getAllRequests(req, res) {
   try {
-    const {employeeId} = req.query
+    const { employeeId } = req.query
     const requests = await service.getRequests(
       req.user.universityId,
-      req.user.instituteId,
-      req.user.role,employeeId
+      req.user.defaultInstituteId,
+      req.user.role, employeeId
     );
     res.status(200).json(requests);
   } catch (err) {
@@ -48,7 +48,7 @@ export async function updateRequestStatus(req, res) {
   try {
     const { requestId, status, reviewerId } = req.body;
     if (!requestId || !status) return res.status(400).json({ message: "requestId and status are required" });
-    
+
     const updated = await service.updateRequestStatus(requestId, status, reviewerId);
     res.status(200).json({ message: "Request status updated", updated });
   } catch (err) {

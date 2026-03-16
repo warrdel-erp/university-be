@@ -5,43 +5,43 @@ import {
     updateAssignVehicle as updateAssignVehicleService,
     deleteAssignVehicle as deleteAssignVehicleService
 } from '../services/assignVehicleServices.js';
- 
+
 export const addAssignVehicle = async (req, res) => {
     try {
         const { transportRouteId, vehicleId } = req.body;
- 
+
         if (!transportRouteId || !vehicleId) {
             return res.status(400).json({ message: "transportRouteId and vehicleId are required" });
         }
- 
+
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
 
         const assignVehicleData = { ...req.body, createdBy, updatedBy };
- 
+
         const vehicle = await addAssignVehicleService(assignVehicleData);
 
-       
+
         res.status(201).json({ success: true, data: vehicle });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
- 
+
 export const getAssignVehicle = async (req, res) => {
     try {
         const universityId = req.user.universityId;
-        const role = req.user.role;    
-        const instituteId = req.user.instituteId;
+        const role = req.user.role;
+        const instituteId = req.user.defaultInstituteId;
         const { acedmicYearId } = req.query;
-        const vehicles = await getAssignVehicleService(universityId,acedmicYearId,role,instituteId);
+        const vehicles = await getAssignVehicleService(universityId, acedmicYearId, role, instituteId);
         res.status(200).json(vehicles);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
- 
+
 export const getSingleAssignVehicle = async (req, res) => {
     try {
         const universityId = req.user.universityId;
@@ -52,7 +52,7 @@ export const getSingleAssignVehicle = async (req, res) => {
         res.status(404).json({ success: false, message: error.message });
     }
 };
- 
+
 export const updateAssignVehicle = async (req, res) => {
     try {
         const { assignVehicleId } = req.body;
@@ -64,7 +64,7 @@ export const updateAssignVehicle = async (req, res) => {
     }
 };
 
- 
+
 export const deleteAssignVehicle = async (req, res) => {
     try {
         const { assignVehicleId } = req.query;

@@ -1,14 +1,14 @@
 import * as jobSettingsService from "../services/jobSettingsService.js";
 
-export async function addJobType(req, res) {  
-  try {    
+export async function addJobType(req, res) {
+  try {
     const data = {
-    universityId: req.user.universityId,
-    instituteId: req.user.instituteId,
-    createdBy: req.user.userId,
-    updatedBy: req.user.userId,
-    ...req.body
-  };
+      universityId: req.user.universityId,
+      instituteId: req.user.defaultInstituteId,
+      createdBy: req.user.userId,
+      updatedBy: req.user.userId,
+      ...req.body
+    };
     const result = await jobSettingsService.addJobType(data);
     return res.status(201).json({
       success: true,
@@ -23,10 +23,10 @@ export async function addJobType(req, res) {
 
 export async function getAllJobTypes(req, res) {
   try {
-    const universityId= req.user.universityId;
-    const instituteId=req.user.instituteId;
-    const role = req.user.role; 
-    const result = await jobSettingsService.getAllJobTypes(universityId,instituteId,role);
+    const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
+    const role = req.user.role;
+    const result = await jobSettingsService.getAllJobTypes(universityId, instituteId, role);
     return res.status(200).json({ success: true, data: result });
   } catch (error) {
     console.error("Error in getAllJobTypes:", error.message);

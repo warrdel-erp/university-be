@@ -43,7 +43,6 @@
 
 ---
 
-## for Ram
+new
 
-1. which API is used for time table schedule Data?
-2. how permissions are managed in product?
+1. in course Master list if I click button of any it is showing me fixed day inside table but as per outer table data it could be multiple days.

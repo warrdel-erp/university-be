@@ -791,3 +791,42 @@ export async function getMonthlyIncomeRepository() {
         throw error;
     }
 };
+
+export async function getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId) {
+    try {
+        const [course, session, classSections] = await Promise.all([
+            model.courseModel.findOne({
+                attributes: ['courseId', "courseName"],
+                where: { courseId, universityId }
+            }),
+            model.sessionModel.findOne({
+                attributes: ["sessionId", "sessionName"],
+                where: { sessionId, universityId, acedmicYearId }
+            }),
+            model.classSectionModel.findAll({
+                attributes: ['classSectionsId', "section"],
+                where: {
+                    sessionId,
+                    courseId,
+                    acedmicYearId
+                },
+                include: [
+                    {
+                        model: model.timeTableRoutineModel,
+                        as: "timeTableClassSection",
+                        attributes: ['timeTableRoutineId', 'endingDate', 'startingDate']
+                    }
+                ]
+            })
+        ]);
+
+        return {
+            course,
+            session,
+            classSections
+        };
+    } catch (error) {
+        console.error("Error in getClassSectionsByFilter:", error);
+        throw error;
+    }
+};

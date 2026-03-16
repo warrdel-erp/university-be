@@ -4,7 +4,7 @@ export async function addSession(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
 
     try {
         const session = await sessionCreation.addSession(req.body, createdBy, updatedBy, universityId, instituteId);
@@ -15,7 +15,7 @@ export async function addSession(req, res) {
 };
 
 export async function getAllSession(req, res) {
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     const universityId = req.user.universityId;
     const acedmicYearId = req.query.acedmicYearId
@@ -79,7 +79,7 @@ export async function couseSessionMapping(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(sessionId)) {
             return res.status(400).send('sessionId is required')
@@ -95,7 +95,7 @@ export async function updateCouseSessionMapping(req, res) {
     const { sessionCourseMappingId } = req.body
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(sessionCourseMappingId)) {
             return res.status(400).send('sessionCourseMappingId is required')

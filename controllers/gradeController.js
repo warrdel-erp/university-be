@@ -4,7 +4,7 @@ export async function addGradeScheme(req, res) {
   try {
     const data = {
       universityId: req.user.universityId,
-      instituteId: req.user.instituteId,
+      instituteId: req.user.defaultInstituteId,
       createdBy: req.user.userId,
       updatedBy: req.user.userId,
       ...req.body
@@ -55,8 +55,8 @@ export async function updateGradeScheme(req, res) {
 
     const data = {
       ...req.body,
-      createdBy: req.user.userId,   
-      updatedBy: req.user.userId  
+      createdBy: req.user.userId,
+      updatedBy: req.user.userId
     };
     const result = await gradeSchemeService.updateGradeScheme(
       req.params.id,
