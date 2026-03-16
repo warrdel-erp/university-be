@@ -969,3 +969,7 @@ export async function getUpcomingClassSchedules(employeeId, acedmicYearId, curre
 
   return upcomingClasses;
 }
+
+export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
+  return await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+}
