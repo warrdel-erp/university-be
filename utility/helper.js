@@ -49,3 +49,31 @@
     return null;
   }
 };
+
+export function countWeekdayInRange(startDateStr, endDateStr, dayOfWeekStr) {
+  const daysOfWeek = {
+    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+    'Thursday': 4, 'Friday': 5, 'Saturday': 6
+  };
+  const targetDay = daysOfWeek[dayOfWeekStr];
+  if (targetDay === undefined) return 0;
+
+  const start = new Date(startDateStr);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDateStr);
+  end.setHours(0, 0, 0, 0);
+
+  if (start > end) return 0;
+
+  let current = new Date(start);
+  while (current.getDay() !== targetDay && current <= end) {
+    current.setDate(current.getDate() + 1);
+  }
+
+  if (current > end) return 0;
+
+  const diffTime = end.getTime() - current.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7) + 1;
+}

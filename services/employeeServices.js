@@ -25,6 +25,7 @@ import * as timeTableCreateRepository from '../repository/timeTablecreateReposit
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
+import { countWeekdayInRange } from '../utility/helper.js';
 import moment from 'moment';
 
 async function generateEmployeeNumber(campusId, instituteId) {
@@ -970,6 +971,68 @@ export async function getUpcomingClassSchedules(employeeId, acedmicYearId, curre
   return upcomingClasses;
 }
 
+function extractSubjectDetails(schedule) {
+  if (schedule.timeTableSubject) {
+    return { subjectId: schedule.timeTableSubject.subjectId, subjectName: schedule.timeTableSubject.subjectName };
+  } else if (schedule.timeTableElective) {
+    return { subjectId: schedule.timeTableElective.electiveSubjectId, subjectName: schedule.timeTableElective.electiveSubjectName };
+  }
+  return null;
+}
+
+function processScheduleCombinations(schedules) {
+  const uniqueCombinationsMap = new Map();
+
+  for (const schedule of schedules) {
+    if (!schedule.timeTablecreate || !schedule.timeTablecreate.timeTableClassSection) continue;
+
+    const classSection = schedule.timeTablecreate.timeTableClassSection;
+    const course = schedule.timeTablecreate.timeTableCourse;
+
+    const subject = extractSubjectDetails(schedule);
+    if (!subject) continue;
+
+    const key = `${classSection.classSectionsId}_${subject.subjectId}`;
+    if (!uniqueCombinationsMap.has(key)) {
+      uniqueCombinationsMap.set(key, {
+        courseId: course?.courseId,
+        courseName: course?.courseName,
+        classSectionsId: classSection.classSectionsId,
+        class: classSection.class,
+        section: classSection.section,
+        subjectId: subject.subjectId,
+        subjectName: subject.subjectName,
+        totalClasses: 0
+      });
+    }
+
+    const entry = uniqueCombinationsMap.get(key);
+    const startDateStr = schedule.timeTablecreate.startingDate;
+    const endDateStr = schedule.timeTablecreate.endingDate;
+    const dayStr = schedule.day;
+
+    if (startDateStr && endDateStr && dayStr) {
+      entry.totalClasses += countWeekdayInRange(startDateStr, endDateStr, dayStr);
+    }
+  }
+
+  return Array.from(uniqueCombinationsMap.values());
+}
+
+function getEmployeeDetails(schedules) {
+  return schedules.length > 0 && schedules[0].employeeDetails
+    ? {
+        employeeId: schedules[0].employeeDetails.employeeId,
+        employeeName: schedules[0].employeeDetails.employeeName
+      }
+    : null;
+}
+
 export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
-  return await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+
+  return {
+    employeeDetails: getEmployeeDetails(schedules),
+    combinations: processScheduleCombinations(schedules)
+  };
 }
