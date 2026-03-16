@@ -4,7 +4,7 @@ import * as fileHandler from '../utility/fileHandler.js';
 export const getAllCollegesAndCourses = async (req, res) => {
     const universityId = req.user.universityId;
     const role = req.user.role;
-    const headInstituteId = req.user.instituteId;
+    const headInstituteId = req.user.defaultInstituteId;
 
     try {
         const campusId = req.query.campusId;
@@ -74,7 +74,7 @@ export const addCourse = async (req, res) => {
         const { course_levelId, affiliatedUniversityId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const universityId = req.user.universityId;
 
         if (!(universityId && course_levelId && affiliatedUniversityId && instituteId)) {
@@ -107,7 +107,7 @@ export const addSpecialization = async (req, res) => {
         const { universityId, course_Id, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(universityId && course_Id && acedmicYearId && instituteId)) {
             return res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
         }
@@ -124,7 +124,7 @@ export const addSubject = async (req, res) => {
         const { courseId, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const universityId = req.user.universityId;
 
         if (!(courseId && universityId && acedmicYearId && instituteId)) {
@@ -143,7 +143,7 @@ export const updateSubject = async (req, res) => {
         const updateBy = req.user.userId;
         const { subjectId } = req.body;
         const data = req.body;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(subjectId)) {
             return res.status(400).send('subjectId is required')
         }
@@ -160,7 +160,7 @@ export const addClass = async (req, res) => {
         const { courseId, specializationId } = req.body;
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const data = req.body
         if (!(courseId || specializationId)) {
             return res.status(400).send('specializationId Or course Id is required')
@@ -180,7 +180,7 @@ export const getClass = async (req, res) => {
         const classSectionId = classSectionIds || 0;
         const universityId = req.user.universityId;
         const role = req.user.role;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const result = await mainServices.getClassDetails(classSectionId, universityId, acedmicYearId, instituteId, role);
         return res.status(200).send(result);
     } catch (error) {
@@ -194,7 +194,7 @@ export const getClassSpecific = async (req, res) => {
         const { campusId, instituteId, acedmicYearId, courseId, sessionId } = req.query
         const universityId = req.user.universityId;
         const role = req.user.role;
-        const headInstituteId = req.user.instituteId;
+        const headInstituteId = req.user.defaultInstituteId;
         const result = await mainServices.getClassSpecific(universityId, headInstituteId, role, campusId, instituteId, acedmicYearId, courseId, sessionId);
         return res.status(200).send(result);
     } catch (error) {
@@ -209,7 +209,7 @@ export const addClassSubjectMapper = async (req, res) => {
         const { semesterId } = req.body
         const createdBy = req.user.userId;
         const data = req.body;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(semesterId && instituteId)) {
             return res.status(400).send('semesterId and instituteId is required')
         }
@@ -227,7 +227,7 @@ export const getClassSubjectMapper = async (req, res) => {
         const acedmicYearId = req.query.acedmicYearId
         const universityId = req.user.universityId;
         const role = req.user.role;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const result = await mainServices.getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role);
         return res.status(200).send(result);
     } catch (error) {
@@ -242,7 +242,7 @@ export const addSemester = async (req, res) => {
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(universityId && courseId && acedmicYearId && instituteId)) {
             return res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
         }
@@ -261,7 +261,7 @@ export const getSemester = async (req, res) => {
         const specializationId = req.query.specializationId;
         const universityId = req.user.universityId;
         const role = req.user.role;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         const result = await mainServices.getSemester(courseId, specializationId, universityId, acedmicYearId, instituteId, role);
         return res.status(200).send(result);
     } catch (error) {
@@ -276,7 +276,7 @@ export const createClass = async (req, res) => {
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(acedmicYearId && courseId && instituteId)) {
             return res.status(400).send('acedmicYearId ,instituteId and courseId is required')
         }
@@ -294,7 +294,7 @@ export const subjectExcel = async (req, res) => {
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const data = req.body;
-        const instituteId = req.user.instituteId;
+        const instituteId = req.user.defaultInstituteId;
         if (!(courseId && instituteId && acedmicYearId)) {
             return res.status(400).send('acedmicYearId, courseId and instituteId is required')
         }
@@ -321,7 +321,7 @@ export const getClassRecord = async (req, res) => {
         const classSectionId = req.query.classSectionId
         // const universityId = req.user.universityId;
         // const role = req.user.role;    
-        // const instituteId = req.user.instituteId;
+        // const instituteId = req.user.defaultInstituteId;
         const result = await mainServices.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
         return res.status(200).send(result);
     } catch (error) {
@@ -337,5 +337,22 @@ export async function getMonthlyIncome(req, res) {
     } catch (error) {
         console.error("Error in getMonthlyIncome:", error);
         res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+export const getClassSectionsByFilter = async (req, res) => {
+    try {
+        const { sessionId, courseId } = req.query;
+        if (!sessionId || !courseId) {
+            return res.status(400).send("sessionId and courseId are required");
+        }
+        const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        const result = await mainServices.getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in getClassSectionsByFilter Details:", error);
+        return res.status(500).send({ message: error.message });
     }
 };

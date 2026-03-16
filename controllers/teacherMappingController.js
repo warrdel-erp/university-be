@@ -1,17 +1,17 @@
 import * as teacherMapping from '../services/teacherMappingServices.js'
 
 export const teacherSubjectMapping = async (req, res) => {
-    let { employeeId, classSubjectMapperId} = req.body;
+    let { employeeId, classSubjectMapperId } = req.body;
     const data = req.body
     const createdBy = req.user.userId;
     try {
         // required fields
-        if (!( employeeId && classSubjectMapperId )) {
+        if (!(employeeId && classSubjectMapperId)) {
             return res.status(400).send("employeeId, classSubjectMapperId is required");
         }
 
         // Add the teacher subject mapping
-        const result = await teacherMapping.teacherSubjectMappingService(data,createdBy);
+        const result = await teacherMapping.teacherSubjectMappingService(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in teacher subject mapping:", error);
@@ -20,16 +20,16 @@ export const teacherSubjectMapping = async (req, res) => {
 };
 
 export const teacherSectionMapping = async (req, res) => {
-    let { employeeId, classSectionsId} = req.body;
+    let { employeeId, classSectionsId } = req.body;
     const createdBy = req.user.userId;
     const data = req.body
     try {
         //  required fields
-        if (!( employeeId && classSectionsId)) {
+        if (!(employeeId && classSectionsId)) {
             return res.status(400).send(" employeeId, classSectionsId is required");
         }
 
-        const result = await teacherMapping.teacherSectionMappingService(data,createdBy);
+        const result = await teacherMapping.teacherSectionMappingService(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in teacher Section Mapping:", error);
@@ -37,14 +37,14 @@ export const teacherSectionMapping = async (req, res) => {
     }
 };
 
-export const getTeacherSubjectMapping = async (req,res) => {
+export const getTeacherSubjectMapping = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
-    let {employeeId,acedmicYearId} = req.query
-    employeeId = employeeId || 0 
+    let { employeeId, acedmicYearId } = req.query
+    employeeId = employeeId || 0
     try {
-        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId,instituteId,role);
+        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Subject Mapping:", error);
@@ -52,14 +52,14 @@ export const getTeacherSubjectMapping = async (req,res) => {
     }
 };
 
-export const getTeacherSectionMapping = async (req,res) => {
+export const getTeacherSectionMapping = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
-    let {employeeId,acedmicYearId} = req.query
-    employeeId = employeeId || 0 
+    let { employeeId, acedmicYearId } = req.query
+    employeeId = employeeId || 0
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(employeeId,universityId,acedmicYearId,instituteId,role);
+        const result = await teacherMapping.getTeacherSectionMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting Teacher Section Mapping:", error);
@@ -86,16 +86,16 @@ export const updateTeacherSubjectMapping = async (req, res) => {
 };
 
 export const updateTeacherSectionMapping = async (req, res) => {
-    let { employeeId, classSectionsId,teacherSectionMappingId} = req.body;
+    let { employeeId, classSectionsId, teacherSectionMappingId } = req.body;
     const createdBy = req.user.userId;
     const data = req.body
     try {
         //  required fields
-        if (!( employeeId && classSectionsId && teacherSectionMappingId)) {
+        if (!(employeeId && classSectionsId && teacherSectionMappingId)) {
             return res.status(400).send(" employeeId, classSectionsId and teacherSectionMappingId is required");
         }
 
-        const result = await teacherMapping.updateTeacherSectionMapping(data,teacherSectionMappingId);
+        const result = await teacherMapping.updateTeacherSectionMapping(data, teacherSectionMappingId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in updating teacher Section Mapping:", error);
@@ -103,12 +103,12 @@ export const updateTeacherSectionMapping = async (req, res) => {
     }
 }
 
-export const deleteTeacherSectionMapping = async (req,res) => {
-    const {teacherSectionMappingId} = req.params;
+export const deleteTeacherSectionMapping = async (req, res) => {
+    const { teacherSectionMappingId } = req.params;
     try {
-        if (!teacherSectionMappingId){
+        if (!teacherSectionMappingId) {
             res.status(400).send("teacherSectionMappingId is required");
-        }else{
+        } else {
             const result = await teacherMapping.deleteTeacherSectionMapping(teacherSectionMappingId);
             res.status(200).send(result);
         }
@@ -118,12 +118,12 @@ export const deleteTeacherSectionMapping = async (req,res) => {
     }
 };
 
-export const deleteTeacherSubjectMapping = async (req,res) => {
-    const {teacherSubjectMappingId} = req.params;
+export const deleteTeacherSubjectMapping = async (req, res) => {
+    const { teacherSubjectMappingId } = req.params;
     try {
-        if (!teacherSubjectMappingId){
+        if (!teacherSubjectMappingId) {
             res.status(400).send("teacherSubjectMappingId is required");
-        }else{
+        } else {
             const result = await teacherMapping.deleteTeacherSubjectMapping(teacherSubjectMappingId);
             res.status(200).send(result);
         }

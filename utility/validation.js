@@ -15,8 +15,13 @@ export const validate = (schemas) => (req, res, next) => {
 
     // Otherwise, validate specified parts
     if (schemas.body) {
+      console.log("Validating body with schema:", typeof schemas.body);
+      if (schemas.body && typeof schemas.body.parse !== 'function') {
+         console.log("schemas.body.parse is not a function!");
+      }
       req.body = schemas.body.parse(req.body);
     }
+
     if (schemas.query) {
       req.query = schemas.query.parse(req.query);
     }
@@ -26,6 +31,8 @@ export const validate = (schemas) => (req, res, next) => {
 
     next();
   } catch (error) {
+
+    console.log(error)
     if (error instanceof z.ZodError) {
       let issues = [];
       try {

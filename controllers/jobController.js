@@ -12,7 +12,7 @@ export async function addJob(req, res) {
 
     const data = {
       universityId: req.user.universityId,
-      instituteId: req.user.instituteId,
+      instituteId: req.user.defaultInstituteId,
       createdBy: req.user.userId,
       updatedBy: req.user.userId,
       ...req.body
@@ -35,7 +35,7 @@ export async function getAllJobs(req, res) {
   try {
     const data = await jobService.getAllJobs(
       req.user.universityId,
-      req.user.instituteId,
+      req.user.defaultInstituteId,
       req.user.role
     );
 
@@ -101,7 +101,7 @@ export async function getCalendarView(req, res) {
       view,
       date,
       universityId: req.user.universityId,
-      instituteId: req.user.instituteId,
+      instituteId: req.user.defaultInstituteId,
       role: req.user.role
     });
 
@@ -167,7 +167,7 @@ export async function getFilteredJobs(req, res) {
       page,
       limit,
       universityId: req.user.universityId,
-      instituteId: req.user.instituteId,
+      instituteId: req.user.defaultInstituteId,
       role: req.user.role
     };
 
@@ -189,7 +189,7 @@ export async function getScheduleList(req, res) {
     const result = await jobService.getScheduleData({
       ...req.query,
       universityId: req.user.universityId,
-      instituteId: req.user.instituteId
+      instituteId: req.user.defaultInstituteId
     });
 
     return res.json({ success: true, ...result });

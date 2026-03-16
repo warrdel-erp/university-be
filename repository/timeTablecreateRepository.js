@@ -1196,7 +1196,7 @@ export async function getTodayClassScheduleForEmployee(
           required: true,
           attributes: ['timeTableRoutineId'],
           where: {
-            // is_publish: true,
+            is_publish: true,
             startingDate: {
               [Op.lte]: currentDate
             },
@@ -1278,6 +1278,296 @@ export async function getTodayClassScheduleForEmployee(
     return result;
   } catch (error) {
     console.error("Error in getTodayClassScheduleForEmployee:", error);
+    throw error;
+  }
+}
+
+export async function getPastClassSchedulesForEmployee(
+  employeeId,
+  acedmicYearId,
+  currentDate
+) {
+  try {
+    const result = await model.classScheduleModel.findAll({
+      raw: true,
+      nest: true,
+      where: {
+        employeeId,
+      },
+      attributes: [
+        'timeTableMappingId',
+        'timeTableType',
+        'day',
+        'period',
+        'isAttendence'
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          where: {
+            is_publish: true,
+            acedmicYearId,
+            startingDate: {
+              [Op.lt]: currentDate
+            }
+          },
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: [
+                'class',
+                'section',
+                'classSectionsId'
+              ]
+            }
+          ]
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ['periodName', 'startTime', 'endTime']
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "timeTableTeacherSubject",
+          attributes: ['teacherSubjectMappingId'],
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "employeeSubject",
+              attributes: ['classSubjectMapperId'],
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects",
+                  attributes: ['subjectName']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectName']
+        },
+        {
+          model: model.classRoomModel,
+          as: "classRoom",
+          attributes: ['roomNumber']
+        }
+      ],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getPastClassSchedulesForEmployee:", error);
+    throw error;
+  }
+}
+
+export async function getUpcomingClassSchedulesForEmployee(
+  employeeId,
+  acedmicYearId,
+  currentDate
+) {
+  try {
+    const result = await model.classScheduleModel.findAll({
+      raw: true,
+      nest: true,
+      where: {
+        employeeId,
+      },
+      attributes: [
+        'timeTableMappingId',
+        'timeTableType',
+        'day',
+        'period',
+        'isAttendence'
+      ],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+          where: {
+            is_publish: true,
+            acedmicYearId,
+            endingDate: {
+              [Op.gte]: currentDate
+            }
+          },
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: [
+                'class',
+                'section',
+                'classSectionsId'
+              ]
+            }
+          ]
+        },
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ['periodName', 'startTime', 'endTime']
+        },
+        {
+          model: model.teacherSubjectMappingModel,
+          as: "timeTableTeacherSubject",
+          attributes: ['teacherSubjectMappingId'],
+          include: [
+            {
+              model: model.classSubjectMapperModel,
+              as: "employeeSubject",
+              attributes: ['classSubjectMapperId'],
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subjects",
+                  attributes: ['subjectName']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectName']
+        },
+        {
+          model: model.classRoomModel,
+          as: "classRoom",
+          attributes: ['roomNumber']
+        }
+      ],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error in getUpcomingClassSchedulesForEmployee:", error);
+    throw error;
+  }
+}
+
+export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId) {
+  try {
+    const schedules = await model.classScheduleModel.findAll({
+      where: {
+        employeeId,
+      },
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          required: true,
+          where: acedmicYearId ? { acedmicYearId } : {},
+          include: [
+            {
+              model: model.courseModel,
+              as: "timeTableCourse",
+              attributes: ['courseName', 'courseId']
+            },
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ['class', 'section', 'classSectionsId']
+            }
+          ]
+        },
+        {
+          model: model.subjectModel,
+          as: "timeTableSubject",
+          attributes: ['subjectId', 'subjectName']
+        },
+        {
+          model: model.electiveSubjectModel,
+          as: "timeTableElective",
+          attributes: ['electiveSubjectId', 'electiveSubjectName']
+        },
+        {
+          model: model.employeeModel,
+          as: "employeeDetails",
+          attributes: ['employeeId', 'employeeName']
+        }
+      ]
+    });
+
+    const uniqueCombinations = [];
+    const seen = new Set();
+
+    for (const schedule of schedules) {
+      if (!schedule.timeTablecreate || !schedule.timeTablecreate.timeTableClassSection) {
+        continue;
+      }
+
+      const classSection = schedule.timeTablecreate.timeTableClassSection;
+      const course = schedule.timeTablecreate.timeTableCourse;
+      
+      let subject = null;
+
+      if (schedule.timeTableSubject) {
+        subject = { subjectId: schedule.timeTableSubject.subjectId, subjectName: schedule.timeTableSubject.subjectName };
+      } else if (schedule.timeTableElective) {
+        subject = { subjectId: schedule.timeTableElective.electiveSubjectId, subjectName: schedule.timeTableElective.electiveSubjectName };
+      }
+
+      if (subject) {
+        const key = `${classSection.classSectionsId}_${subject.subjectId}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueCombinations.push({
+            courseId: course?.courseId,
+            courseName: course?.courseName,
+            classSectionsId: classSection.classSectionsId,
+            class: classSection.class,
+            section: classSection.section,
+            subjectId: subject.subjectId,
+            subjectName: subject.subjectName
+          });
+        }
+      }
+    }
+
+    const employeeDetails = schedules.length > 0 && schedules[0].employeeDetails
+      ? {
+          employeeId: schedules[0].employeeDetails.employeeId,
+          employeeName: schedules[0].employeeDetails.employeeName
+        }
+      : null;
+
+    return {
+      employeeDetails,
+      combinations: uniqueCombinations
+    };
+  } catch (error) {
+    console.error("Error in getUniqueClassSectionSubjectsForEmployee:", error);
     throw error;
   }
 }

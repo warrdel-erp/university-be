@@ -846,7 +846,7 @@
           "response": []
         },
         {
-          "name": "get all Copy",
+          "name": "save user defaults",
           "request": {
             "auth": {
               "type": "bearer",
@@ -926,6 +926,74 @@
           "response": []
         },
         {
+          "name": "schedule past",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "pastSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "45"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "schedule upcoming",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/upcomingSchedule?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "upcomingSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "courses",
           "request": {
             "auth": {
@@ -941,13 +1009,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
+              "raw": "{{baseurl}}/employee/courses?employeeId=49&acedmicYearId=59",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "schedule"
+                "courses"
               ],
               "query": [
                 {
@@ -955,8 +1023,8 @@
                   "value": "49"
                 },
                 {
-                  "key": "date",
-                  "value": "2026-03-06"
+                  "key": "acedmicYearId",
+                  "value": "59"
                 }
               ]
             }
@@ -1096,6 +1164,221 @@
                   "value": "2007-01-19",
                   "type": "text"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question paper",
+      "item": [
+        {
+          "name": "add",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"questionPaper\": {\n        \"name\": \"any json\"\n    }\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": 1,\n    \"questionPaper\": {\n        \"nameNew\": \"123123\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "class section",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/classSection",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classSection"
               ]
             }
           },

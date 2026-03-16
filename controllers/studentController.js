@@ -49,7 +49,7 @@ export const addStudent = async (req, res) => {
 // 2. get all student
 export const getAllStudents = async (req, res) => {
     const universityId = req.user.universityId;
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     let { search, acedmicYearId, page, limit } = req.query;
 
@@ -153,7 +153,7 @@ export const deleteStudentDetail = async (req, res) => {
 export const getEmptyEnrollNumber = async (req, res) => {
     const universityId = req.user.universityId;
     const { acedmicYearId } = req.query
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     try {
         const result = await studentService.getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role);
@@ -206,7 +206,7 @@ export const getclassStudentMapping = async (req, res) => {
     const universityId = req.user.universityId;
     const semesterId = req.query.semesterId || 0;
     const acedmicYearId = req.query.acedmicYearId
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
 
     try {
@@ -294,7 +294,7 @@ export const getFeePlanId = async (req, res) => {
 export const getEmptyFeeDetails = async (req, res) => {
     const universityId = req.user.universityId;
     const { acedmicYearId } = req.query
-    const instituteId = req.user.instituteId;
+    const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
     try {
         const result = await studentService.getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role);
