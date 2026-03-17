@@ -376,3 +376,106 @@ export async function getTeacherMappings(employeeId) {
         ]
     });
 };
+
+export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
+    try {
+        const studentsWithAttendance = await model.studentModel.findAll({
+            where: { classSectionsId: classSectionsId, deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+            include: [
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: ['attendanceId', 'date', 'attendanceStatus'],
+                    include: [
+                        {
+                            model: model.classScheduleModel,
+                            as: 'timeTableMapping',
+                            required: true,
+                            where: {
+                                employeeId: employeeId,
+                                subjectId: subjectId
+                            },
+                            attributes: ['timeTableMappingId'],
+                            include: [
+                                {
+                                    model: model.timeTableStructurePeriodsModel,
+                                    as: 'timeTablecreation',
+                                    attributes: ['timeTableCreationId', 'periodName'],
+                                    where: {
+                                        isBreak: false
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return studentsWithAttendance;
+    } catch (error) {
+        console.error("Error in getStudentAttendanceReport:", error);
+        throw error;
+    }
+};
+
+export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId, employeeId) {
+    try {
+        const scheduleItems = await model.classScheduleModel.findAll({
+            where: {
+
+                subjectId: subjectId,
+                employeeId: employeeId,
+                deletedAt: null
+            },
+            include: [
+                {
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTablecreate',
+                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+                    required: true,
+                    where: { classSectionsId }
+                },
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: 'timeTablecreation',
+                    attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+                    required: true
+                }
+            ]
+        });
+        return scheduleItems;
+    } catch (error) {
+        console.error("Error in getEmployeeScheduleWithRoutine:", error);
+        throw error;
+    }
+}
+
+export async function getStudentsBatchAttendance(classSectionsId, filters) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: { classSectionsId, deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+            include: [
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableMappingId'],
+                    where: {
+                        [Op.and]: filters.map(f => ({
+                            date: { [Op.eq]: fn("DATE", f.date) },
+                            timeTableMappingId: f.timeTableMappingId
+                        }))
+                    }
+                }
+            ]
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsBatchAttendance:", error);
+        throw error;
+    }
+}

@@ -1,5 +1,7 @@
 import * as employee from '../services/employeeServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
+import * as AttendanceCreation from "../services/attendanceServices.js";
+import { SuccessResponse } from "../utility/response.js";
 
 export const addEmployee = async (req, res) => {
     const universityId = req.user.universityId;
@@ -346,5 +348,22 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
     } catch (error) {
         console.error("Error in getUniqueClassSectionSubjects:", error);
         res.status(500).send({ message: "Internal Server Error", success: false });
+    }
+};
+
+export async function getEmployeeClassDates(req, res) {
+    try {
+        const { classSectionId, subjectId, employeeId } = req.query;
+
+        const data = await AttendanceCreation.getEmployeeClassDates(
+            classSectionId,
+            subjectId,
+            employeeId
+        );
+
+        return SuccessResponse(res, 200, "Employee Class Dates Fetched Successfully", data);
+    } catch (error) {
+        console.error("Controller Error:", error);
+        ErrorResponse(res, 500, "Internal Server Error");
     }
 };

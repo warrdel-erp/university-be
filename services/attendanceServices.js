@@ -1,5 +1,6 @@
 import * as attendanceService from "../repository/attendanceRepository.js";
 import moment from "moment";
+import * as helper from "../utility/helper.js";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   try {
@@ -477,3 +478,73 @@ export async function getPreviousClasses(employeeId, req) {
     data: flatData
   };
 };
+
+export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
+  const students = await attendanceService.getStudentAttendanceReport(classSectionsId, subjectId, employeeId);
+
+  return students;
+
+};
+
+export async function getEmployeeClassDates(classSectionId, subjectId, employeeId) {
+  const scheduleItems = await attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId);
+
+  const dateMap = {};
+
+  for (const item of scheduleItems) {
+    const routine = item.timeTablecreate;
+    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+
+    const targetDay = item.day.toLowerCase();
+    const specificDates = helper.getDatesForDayInRange(routine.startingDate, routine.endingDate, targetDay);
+
+    specificDates.forEach(date => {
+      const dateKey = date.toISOString().split('T')[0];
+      if (!dateMap[dateKey]) {
+        dateMap[dateKey] = {
+          date: dateKey,
+          day: item.day,
+          timeTableRoutineId: routine.timeTableRoutineId,
+          periods: []
+        };
+      }
+      dateMap[dateKey].periods.push({
+        timeTableMappingId: item.timeTableMappingId,
+        timeTableCreationId: item.timeTablecreation?.timeTableCreationId,
+        periodName: item.timeTablecreation?.periodName,
+        startTime: item.timeTablecreation?.startTime,
+        endTime: item.timeTablecreation?.endTime
+      });
+    });
+  }
+
+  // Convert map to array and sort
+  const result = Object.values(dateMap).map(dayData => {
+    // Sort periods within the day by start time
+    dayData.periods.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    return dayData;
+  });
+
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function getStudentsBatchAttendance(classSectionsId, filters) {
+  const students = await attendanceService.getStudentsBatchAttendance(classSectionsId, filters);
+
+  return students
+  // return students.map(student => {
+  //   const studentObj = student.get({ plain: true });
+  //   const attendances = (studentObj.studentAttendance || []).map(att => ({
+  //     attendanceId: att.attendanceId,
+  //     date: att.date ? moment(att.date).format("YYYY-MM-DD") : null,
+  //     attendanceStatus: att.attendanceStatus,
+  //     timeTableMappingId: att.timeTableMappingId
+  //   }));
+
+  //   delete studentObj.studentAttendance;
+  //   return {
+  //     ...studentObj,
+  //     attendances
+  //   };
+  // });
+}

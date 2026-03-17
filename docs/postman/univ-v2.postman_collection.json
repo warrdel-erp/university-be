@@ -1030,6 +1030,40 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "unique ClassSection Subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/uniqueClassSectionSubjects?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "uniqueClassSectionSubjects"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1370,15 +1404,35 @@
         {
           "name": "get",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/classSection",
+              "raw": "{{baseurl}}/classSections?sessionId=6&courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
-                "classSection"
+                "classSections"
+              ],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
               ]
             }
           },
