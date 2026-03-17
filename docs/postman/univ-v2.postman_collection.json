@@ -1545,7 +1545,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\":[\n        {\n            \"date\": \"2026-03-11\",\n              \"timeTableMappingId\": 64\n        }\n    ] \n}",
+              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\":[\n        {\n            \"date\": \"2026-03-11\",\n            \"timeTableMappingId\": 64\n        }\n    ] \n}",
               "options": {
                 "raw": {
                   "language": "json"
