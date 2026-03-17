@@ -87,13 +87,13 @@ export async function addAffiliatedUniversity(data, createdBy) {
     }
 };
 
-export async function addCourse(data, createdBy, instituteId) {
+export async function addCourse(data, createdBy, instituteId, universityId) {
     const results = [];
 
     const transaction = await sequelize.transaction();
 
     try {
-        const { course_levelId, universityId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
+        const { course_levelId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
 
         for (const course of courses) {
             // Add course

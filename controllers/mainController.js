@@ -80,7 +80,7 @@ export const addCourse = async (req, res) => {
         if (!(universityId && course_levelId && affiliatedUniversityId && instituteId)) {
             return res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
         }
-        const result = await mainServices.addCourse(data, createdBy, instituteId);
+        const result = await mainServices.addCourse(data, createdBy, instituteId, universityId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Course:", error);
