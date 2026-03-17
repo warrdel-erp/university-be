@@ -1064,6 +1064,48 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "class dates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "classDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "195"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "52"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1433,6 +1475,92 @@
                   "key": "courseId",
                   "value": "34"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "attendance",
+      "item": [
+        {
+          "name": "student attendance bulk",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/studentAttendance/bulk?classSectionId=195&subjectId=52&employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "studentAttendance",
+                "bulk"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "195"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "52"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "student attendance batch (simple)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\":[\n        {\n            \"date\": \"2026-03-11\",\n              \"timeTableMappingId\": 64\n        }\n    ] \n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/getStudentAttendance/batch",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "getStudentAttendance",
+                "batch"
               ]
             }
           },
