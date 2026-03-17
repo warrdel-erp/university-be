@@ -28,7 +28,7 @@ router.patch('/', userAuth, updateAttendance);
 // @deprecated
 router.post('/import', userAuth, importAttendance);
 
-router.post('/excel-import', userAuth, importBulkAttendance);
+router.post('/excelImport', userAuth, importBulkAttendance);
 
 router.get('/byDate', userAuth, getAttendanceByDate);
 
