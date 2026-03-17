@@ -3,9 +3,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js'
 import moment from "moment";
 
-export async function addAttendance(attendanceRecords) {
+export async function addAttendance(attendanceRecords, options = {}) {
     try {
-        const result = await model.attendanceModel.bulkCreate(attendanceRecords);
+        const result = await model.attendanceModel.bulkCreate(attendanceRecords, options);
         return result;
     } catch (error) {
         console.error("Error in adding attendance:", error);
@@ -476,6 +476,39 @@ export async function getStudentsBatchAttendance(classSectionsId, filters) {
         return students;
     } catch (error) {
         console.error("Error in getStudentsBatchAttendance:", error);
+        throw error;
+    }
+}
+
+export async function getStudentsByScholarNumbers(scholarNumbers, instituteId) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: {
+                scholarNumber: { [Op.in]: scholarNumbers },
+                instituteId,
+                deletedAt: null
+            },
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsByScholarNumbers:", error);
+        throw error;
+    }
+}
+export async function getStudentsByIds(studentIds, instituteId) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: {
+                studentId: { [Op.in]: studentIds },
+                instituteId,
+                deletedAt: null
+            },
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsByIds:", error);
         throw error;
     }
 }

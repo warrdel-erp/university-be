@@ -1,6 +1,8 @@
 import * as attendanceService from "../repository/attendanceRepository.js";
 import moment from "moment";
 import * as helper from "../utility/helper.js";
+import xlsx from 'xlsx';
+import sequelize from "../database/sequelizeConfig.js";
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   try {
@@ -126,9 +128,17 @@ function parseStudentString(studentString) {
 /* ----------------  Parse date column correctly ---------------- */
 function parseExcelDate(dateString) {
   try {
-    const parsed = moment(dateString, "D MMMM YYYY", true);
+    if (!dateString) return null;
+
+    // Handle numeric Excel dates
+    if (typeof dateString === 'number') {
+      const date = xlsx.SSF.parse_date_code(dateString);
+      return moment(new Date(date.y, date.m - 1, date.d)).format("YYYY-MM-DD");
+    }
+
+    const parsed = moment(dateString, ["D MMMM YYYY", "YYYY-MM-DD", "DD-MM-YYYY"], true);
     if (!parsed.isValid()) return null;
-    return parsed.format("YYYY-MM-DD"); //remove timee
+    return parsed.format("YYYY-MM-DD");
   } catch {
     return null;
   }
@@ -532,19 +542,146 @@ export async function getStudentsBatchAttendance(classSectionsId, filters) {
   const students = await attendanceService.getStudentsBatchAttendance(classSectionsId, filters);
 
   return students
-  // return students.map(student => {
-  //   const studentObj = student.get({ plain: true });
-  //   const attendances = (studentObj.studentAttendance || []).map(att => ({
-  //     attendanceId: att.attendanceId,
-  //     date: att.date ? moment(att.date).format("YYYY-MM-DD") : null,
-  //     attendanceStatus: att.attendanceStatus,
-  //     timeTableMappingId: att.timeTableMappingId
-  //   }));
+}
 
-  //   delete studentObj.studentAttendance;
-  //   return {
-  //     ...studentObj,
-  //     attendances
-  //   };
-  // });
+/* ----------------  Extract Student ID from Name ---------------- */
+function extractStudentIdFromName(nameStr) {
+  if (!nameStr) return null;
+  // Format: "12---Raven"
+  if (nameStr.includes("---")) {
+    const parts = nameStr.split("---");
+    const id = parseInt(parts[0].trim());
+    return isNaN(id) ? null : id;
+  }
+  return null;
+}
+
+/* ----------------  Parse Header to Column Mappings ---------------- */
+function parseAttendanceExcelHeaders(header1, header2) {
+  const colMappings = [];
+  // Standard columns: 0 (Name), 1 (Scholar No) - Attendance starts from column 2
+  for (let i = 2; i < header2.length; i++) {
+    const periodCell = header2[i];
+    if (!periodCell || (typeof periodCell !== 'string') || !periodCell.includes("---")) continue;
+
+    const mappingIdStr = periodCell.split("---")[1].trim();
+    const timeTableMappingId = parseInt(mappingIdStr);
+    if (isNaN(timeTableMappingId)) continue;
+
+    let dateStr = null;
+    for (let j = i; j >= 2; j--) {
+      if (header1[j]) {
+        dateStr = header1[j];
+        break;
+      }
+    }
+
+    if (!dateStr) throw new Error(`Date missing for column ${i + 1} (${periodCell})`);
+
+    const date = parseExcelDate(dateStr);
+    if (!date) throw new Error(`Invalid date format in header at column ${i + 1}: ${dateStr}`);
+
+    colMappings.push({ colIndex: i, date, timeTableMappingId });
+  }
+  return colMappings;
+}
+
+/* ----------------  Parse Body rows to raw Entries ---------------- */
+function parseAttendanceExcelRows(dataRows, colMappings) {
+  const studentIds = new Set();
+  const rawEntries = [];
+
+  for (let r = 0; r < dataRows.length; r++) {
+    const row = dataRows[r];
+    const nameStr = row[0]?.toString().trim();
+    if (!nameStr) continue;
+
+    const studentId = extractStudentIdFromName(nameStr);
+    if (!studentId) continue;
+
+    studentIds.add(studentId);
+
+    for (const mapping of colMappings) {
+      const statusVal = row[mapping.colIndex];
+      if (statusVal === undefined || statusVal === null || statusVal === '') continue;
+
+      rawEntries.push({
+        studentId,
+        studentName: nameStr,
+        date: mapping.date,
+        timeTableMappingId: mapping.timeTableMappingId,
+        attentenceStatus: statusVal.toString().trim(),
+        rowIndex: r + 3
+      });
+    }
+  }
+  return { studentIds: Array.from(studentIds), rawEntries };
+}
+
+/* ----------------  Validate and Batch Prepare Records ---------------- */
+async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData) {
+  const studentRecords = await attendanceService.getStudentsByIds(studentIds, commonData.instituteId);
+  const studentMap = new Map();
+  studentRecords.forEach(s => studentMap.set(s.studentId, s));
+
+  const finalRecords = [];
+  for (const entry of rawEntries) {
+    const student = studentMap.get(entry.studentId);
+    if (!student) {
+      throw new Error(`Row ${entry.rowIndex}: Student with ID ${entry.studentId} not found in this institute.`);
+    }
+
+    const attendanceEntry = {
+      studentId: entry.studentId,
+      classSectionsId: student.classSectionsId,
+      timeTableMappingId: entry.timeTableMappingId,
+      date: entry.date,
+      attentenceStatus: entry.attentenceStatus,
+      ...commonData,
+    };
+
+    const error = validateAttendanceRow(attendanceEntry);
+    if (error) throw new Error(`Row ${entry.rowIndex} (Student ID ${entry.studentId}): ${error}`);
+
+    const isExists = await attendanceService.checkAttendanceExists(attendanceEntry.timeTableMappingId, attendanceEntry.date);
+    if (isExists) {
+      throw new Error(`Row ${entry.rowIndex}: Attendance already marked for Student ID ${entry.studentId} on ${entry.date} for mapping ${entry.timeTableMappingId}`);
+    }
+
+    finalRecords.push(attendanceEntry);
+  }
+  return finalRecords;
+}
+
+export async function importBulkAttendanceData(fileBuffer, commonData) {
+  const t = await sequelize.transaction();
+  try {
+    const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+
+    if (rows.length < 3) throw new Error("Invalid Excel format: At least 3 rows required.");
+
+    const colMappings = parseAttendanceExcelHeaders(rows[0], rows[1]);
+    if (colMappings.length === 0) throw new Error("No valid attendance periods found in Excel header.");
+
+    const { studentIds, rawEntries } = parseAttendanceExcelRows(rows.slice(2), colMappings);
+    if (rawEntries.length === 0) throw new Error("No attendance data found in the Excel sheet.");
+
+    const finalRecords = await prepareFinalAttendanceRecords(rawEntries, studentIds, commonData);
+
+    if (finalRecords.length > 0) {
+      await attendanceService.addAttendance(finalRecords, { transaction: t });
+    }
+
+    await t.commit();
+    return {
+      success: true,
+      message: `Bulk attendance imported successfully. Total entries: ${finalRecords.length}`,
+    };
+  } catch (error) {
+    if (t) await t.rollback();
+    console.error("Error in importBulkAttendanceData:", error.message);
+    return { success: false, error: error.message };
+  }
 }

@@ -88,6 +88,39 @@ export const importAttendance = async (req, res) => {
   }
 };
 
+export const importBulkAttendance = async (req, res) => {
+  try {
+    const universityId = req.user.universityId;
+    const createdBy = req.user.userId;
+    const instituteId = req.user.defaultInstituteId;
+    const updatedBy = req.user.userId;
+
+    const data = { universityId, createdBy, instituteId, updatedBy };
+
+    if (!(universityId && instituteId)) {
+      return res.status(400).json({ error: 'universityId, instituteId are required' });
+    }
+
+    const excelFile = req.files?.attendance;
+    if (!excelFile) {
+      return res.status(400).json({ error: 'Excel file is required' });
+    }
+
+    // Pass the buffer instead of relying on fileHandler.readExcelFile which might return a too simplified JSON
+    const result = await AttendanceCreation.importBulkAttendanceData(excelFile.data, data);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.status(200).json({ message: result.message });
+
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message || 'An unexpected error occurred' });
+  }
+};
+
 export async function getAttendanceByDate(req, res) {
   const { date, classSectionsId, employeeId } = req.query;
 

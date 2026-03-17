@@ -101,6 +101,7 @@ app.use("/authorization", userPermission);
 app.use("/resultStudent", resultStudent);
 app.use("/questionPaper", questionPaper);
 app.use("/classSections", classSection);
+app.use("/attendance", attendance);
 
 
 app.use("/main", main);
@@ -117,7 +118,6 @@ app.use("/timeTable", timeTable);
 app.use("/faculityLoad", faculityLoad);
 app.use("/timeTableCreate", timeTableCreate);
 app.use("/libraryMember", libraryMember);
-app.use("/attendance", attendance);
 app.use("/classRoom", classRoom);
 app.use("/feeGroup", feeGroup);
 app.use("/feeType", feeType);
