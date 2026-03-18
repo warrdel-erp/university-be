@@ -465,7 +465,7 @@ export async function getStudentsBatchAttendance(classSectionsId, filters) {
                     required: false,
                     attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableMappingId'],
                     where: {
-                        [Op.and]: filters.map(f => ({
+                        [Op.or]: filters.map(f => ({
                             date: { [Op.eq]: fn("DATE", f.date) },
                             timeTableMappingId: f.timeTableMappingId
                         }))

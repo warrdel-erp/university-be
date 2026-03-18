@@ -34,6 +34,10 @@ router.get('/byDate', userAuth, getAttendanceByDate);
 
 router.get("/previous-classes/:employeeId", userAuth, getPreviousClasses);
 
+
+/**
+ * @deprecated 
+ */
 router.get("/studentAttendance/bulk", userAuth, validate({ query: studentAttendanceReportSchema }), getStudentAttendanceReport);
 
 router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAttendanceSchema }), getStudentsBatchAttendance);

@@ -4,6 +4,14 @@ import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
 
+export const ATTENDANCE_STATUS = [
+  "Present",
+  "Late",
+  "Absent",
+  "Medical",
+  "Duty Leave"
+];
+
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   try {
     const isExists = await attendanceService.checkAttendanceExists(attendanceData.timeTableMappingId, attendanceData.date);
@@ -38,7 +46,7 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
       classAttendance,
       studentAttendance,
       studentId,
-      attentenceStatus,
+      attendanceStatus,
       date,
       description,
       notes
@@ -81,7 +89,7 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
       firstName: studentAttendance?.firstName,
       middleName: studentAttendance?.middleName,
       lastName: studentAttendance?.lastName,
-      attentenceStatus,
+      attendanceStatus,
       date: recordDate,
       description,
       notes
@@ -154,7 +162,7 @@ function validateAttendanceRow(attendance) {
     "universityId",
     "createdBy",
     "updatedBy",
-    "attentenceStatus",
+    "attendanceStatus",
     "date",
   ];
 
@@ -200,7 +208,7 @@ export async function importAttendanceData(excelData, commonData) {
           classSectionsId: parsedStudent.classSectionsId,
           timeTableMappingId: parsedStudent.timeTableMappingId,
           date,
-          attentenceStatus: status,
+          attendanceStatus: status,
           ...commonData,
         };
 
@@ -264,7 +272,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
       firstName: att.studentAttendance?.firstName || '',
       scholarNumber: att.studentAttendance?.scholarNumber || '',
       enrollNumber: att.studentAttendance?.enrollNumber || '',
-      attentenceStatus: att.attentenceStatus || '',
+      attendanceStatus: att.attendanceStatus || '',
       notes: att.notes || ''
     });
   });
@@ -603,14 +611,22 @@ function parseAttendanceExcelRows(dataRows, colMappings) {
 
     for (const mapping of colMappings) {
       const statusVal = row[mapping.colIndex];
-      if (statusVal === undefined || statusVal === null || statusVal === '') continue;
+
+      if (statusVal === undefined || statusVal === null || statusVal === '') {
+        throw new Error(`Row ${r + 3}: Attendance status is missing for Student ${nameStr} at column ${mapping.colIndex + 1}. Whether fill it or remove column`);
+      }
+
+      const status = statusVal.toString().trim();
+      if (!ATTENDANCE_STATUS.includes(status)) {
+        throw new Error(`Row ${r + 3}: Invalid status '${status}' for Student ${nameStr}. Allowed values: ${ATTENDANCE_STATUS.join(", ")}`);
+      }
 
       rawEntries.push({
         studentId,
         studentName: nameStr,
         date: mapping.date,
         timeTableMappingId: mapping.timeTableMappingId,
-        attentenceStatus: statusVal.toString().trim(),
+        attendanceStatus: status,
         rowIndex: r + 3
       });
     }
@@ -636,7 +652,7 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
       classSectionsId: student.classSectionsId,
       timeTableMappingId: entry.timeTableMappingId,
       date: entry.date,
-      attentenceStatus: entry.attentenceStatus,
+      attendanceStatus: entry.attendanceStatus,
       ...commonData,
     };
 
