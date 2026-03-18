@@ -192,3 +192,20 @@ export async function getStudentsBatchAttendance(req, res) {
     ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
   }
 };
+
+export async function getEmployeeClassDates(req, res) {
+  try {
+    const { classSectionId, subjectId, employeeId } = req.query;
+
+    const data = await AttendanceCreation.getEmployeeClassDates(
+      classSectionId,
+      subjectId,
+      employeeId
+    );
+
+    return SuccessResponse(res, 200, "Employee Class Dates Fetched Successfully", data);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
+  }
+};

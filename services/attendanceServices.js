@@ -505,7 +505,10 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
 };
 
 export async function getEmployeeClassDates(classSectionId, subjectId, employeeId) {
-  const scheduleItems = await attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId);
+  const [scheduleItems, details] = await Promise.all([
+    attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId),
+    attendanceService.getDetailsByIds(classSectionId, subjectId, employeeId)
+  ]);
 
   const dateMap = {};
 
@@ -537,13 +540,16 @@ export async function getEmployeeClassDates(classSectionId, subjectId, employeeI
   }
 
   // Convert map to array and sort
-  const result = Object.values(dateMap).map(dayData => {
+  const dates = Object.values(dateMap).map(dayData => {
     // Sort periods within the day by start time
     dayData.periods.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
     return dayData;
-  });
+  }).sort((a, b) => a.date.localeCompare(b.date));
 
-  return result.sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    details,
+    dates
+  };
 }
 
 export async function getStudentsBatchAttendance(classSectionsId, filters) {

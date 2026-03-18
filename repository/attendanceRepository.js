@@ -512,3 +512,31 @@ export async function getStudentsByIds(studentIds, instituteId) {
         throw error;
     }
 }
+
+export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
+    try {
+        const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
+            model.classSectionModel.findOne({
+                where: { classSectionsId, deletedAt: null },
+                attributes: ['class', 'section']
+            }),
+            model.subjectModel.findOne({
+                where: { subjectId, deletedAt: null },
+                attributes: ['subjectName', 'subjectCode']
+            }),
+            model.employeeModel.findOne({
+                where: { employeeId, deletedAt: null },
+                attributes: ['employeeName', 'employeeCode']
+            })
+        ]);
+
+        return {
+            sectionDetails,
+            subjectDetails,
+            employeeDetails
+        };
+    } catch (error) {
+        console.error("Error in getDetailsByIds:", error);
+        throw error;
+    }
+}

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from "zod";
 const router = Router();
-import { addAttendance, getAttendanceDetails, updateAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousClasses, getStudentAttendanceReport, getStudentsBatchAttendance } from "../controllers/attendanceController.js";
+import { addAttendance, getAttendanceDetails, updateAttendance, importAttendance, importBulkAttendance, getAttendanceByDate, getPreviousClasses, getStudentAttendanceReport, getStudentsBatchAttendance, getEmployeeClassDates } from "../controllers/attendanceController.js";
 import userAuth from "../middleware/authUser.js"
 import { validate } from "../utility/validation.js";
 
@@ -41,5 +41,7 @@ router.get("/previous-classes/:employeeId", userAuth, getPreviousClasses);
 router.get("/studentAttendance/bulk", userAuth, validate({ query: studentAttendanceReportSchema }), getStudentAttendanceReport);
 
 router.post('/getStudentAttendance/batch', userAuth, validate({ body: batchAttendanceSchema }), getStudentsBatchAttendance);
+
+router.get('/classDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeClassDates);
 
 export default router;
