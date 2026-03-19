@@ -1,4 +1,5 @@
 import * as lesson from "../services/lessonServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addLesson(req, res) {
     const { name, subjectId, acedmicYearId, sessionId } = req.body
@@ -140,5 +141,22 @@ export async function getEmployeeSubjectAndLesson(req, res) {
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+export async function getSimpleLessonList(req, res) {
+    const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
+    const filters = req.query;
+    try {
+        const whereClause = {
+            ...filters,
+            universityId,
+            instituteId
+        };
+        const lessons = await lesson.getSimpleLessonList(whereClause);
+        return SuccessResponse(res, 200, "Lessons fetched successfully", lessons);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
     }
 };

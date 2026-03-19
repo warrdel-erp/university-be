@@ -1123,23 +1123,15 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/employee/classCounts?employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "classDates"
+                "classCounts"
               ],
               "query": [
-                {
-                  "key": "classSectionId",
-                  "value": "195"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "52"
-                },
                 {
                   "key": "employeeId",
                   "value": "41"
@@ -1603,6 +1595,56 @@
                 "attendance",
                 "getStudentAttendance",
                 "batch"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "lesson",
+      "item": [
+        {
+          "name": "get simple lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/simple?employeeId=41&subjectId=54&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "simple"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "41",
+                  "type": "text"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "54",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "type": "text"
+                }
               ]
             }
           },
