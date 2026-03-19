@@ -3,9 +3,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js'
 import moment from "moment";
 
-export async function addAttendance(attendanceRecords) {
+export async function addAttendance(attendanceRecords, options = {}) {
     try {
-        const result = await model.attendanceModel.bulkCreate(attendanceRecords);
+        const result = await model.attendanceModel.bulkCreate(attendanceRecords, options);
         return result;
     } catch (error) {
         console.error("Error in adding attendance:", error);
@@ -376,3 +376,167 @@ export async function getTeacherMappings(employeeId) {
         ]
     });
 };
+
+export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
+    try {
+        const studentsWithAttendance = await model.studentModel.findAll({
+            where: { classSectionsId: classSectionsId, deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+            include: [
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: ['attendanceId', 'date', 'attendanceStatus'],
+                    include: [
+                        {
+                            model: model.classScheduleModel,
+                            as: 'timeTableMapping',
+                            required: true,
+                            where: {
+                                employeeId: employeeId,
+                                subjectId: subjectId
+                            },
+                            attributes: ['timeTableMappingId'],
+                            include: [
+                                {
+                                    model: model.timeTableStructurePeriodsModel,
+                                    as: 'timeTablecreation',
+                                    attributes: ['timeTableCreationId', 'periodName'],
+                                    where: {
+                                        isBreak: false
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return studentsWithAttendance;
+    } catch (error) {
+        console.error("Error in getStudentAttendanceReport:", error);
+        throw error;
+    }
+};
+
+export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId, employeeId) {
+    try {
+        const scheduleItems = await model.classScheduleModel.findAll({
+            where: {
+
+                subjectId: subjectId,
+                employeeId: employeeId,
+                deletedAt: null
+            },
+            include: [
+                {
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTablecreate',
+                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+                    required: true,
+                    where: { classSectionsId }
+                },
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: 'timeTablecreation',
+                    attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
+                    required: true
+                }
+            ]
+        });
+        return scheduleItems;
+    } catch (error) {
+        console.error("Error in getEmployeeScheduleWithRoutine:", error);
+        throw error;
+    }
+}
+
+export async function getStudentsBatchAttendance(classSectionsId, filters) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: { classSectionsId, deletedAt: null },
+            attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
+            include: [
+                {
+                    model: model.attendanceModel,
+                    as: 'studentAttendance',
+                    required: false,
+                    attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableMappingId'],
+                    where: {
+                        [Op.or]: filters.map(f => ({
+                            date: { [Op.eq]: fn("DATE", f.date) },
+                            timeTableMappingId: f.timeTableMappingId
+                        }))
+                    }
+                }
+            ]
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsBatchAttendance:", error);
+        throw error;
+    }
+}
+
+export async function getStudentsByScholarNumbers(scholarNumbers, instituteId) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: {
+                scholarNumber: { [Op.in]: scholarNumbers },
+                instituteId,
+                deletedAt: null
+            },
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsByScholarNumbers:", error);
+        throw error;
+    }
+}
+export async function getStudentsByIds(studentIds, instituteId) {
+    try {
+        const students = await model.studentModel.findAll({
+            where: {
+                studentId: { [Op.in]: studentIds },
+                instituteId,
+                deletedAt: null
+            },
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+        });
+        return students;
+    } catch (error) {
+        console.error("Error in getStudentsByIds:", error);
+        throw error;
+    }
+}
+
+export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
+    try {
+        const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
+            model.classSectionModel.findOne({
+                where: { classSectionsId, deletedAt: null },
+                attributes: ['class', 'section']
+            }),
+            model.subjectModel.findOne({
+                where: { subjectId, deletedAt: null },
+                attributes: ['subjectName', 'subjectCode']
+            }),
+            model.employeeModel.findOne({
+                where: { employeeId, deletedAt: null },
+                attributes: ['employeeName', 'employeeCode']
+            })
+        ]);
+
+        return {
+            sectionDetails,
+            subjectDetails,
+            employeeDetails
+        };
+    } catch (error) {
+        console.error("Error in getDetailsByIds:", error);
+        throw error;
+    }
+}

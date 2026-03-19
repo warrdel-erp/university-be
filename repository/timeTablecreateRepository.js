@@ -1519,55 +1519,33 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acedm
       ]
     });
 
-    const uniqueCombinations = [];
-    const seen = new Set();
-
-    for (const schedule of schedules) {
-      if (!schedule.timeTablecreate || !schedule.timeTablecreate.timeTableClassSection) {
-        continue;
-      }
-
-      const classSection = schedule.timeTablecreate.timeTableClassSection;
-      const course = schedule.timeTablecreate.timeTableCourse;
-      
-      let subject = null;
-
-      if (schedule.timeTableSubject) {
-        subject = { subjectId: schedule.timeTableSubject.subjectId, subjectName: schedule.timeTableSubject.subjectName };
-      } else if (schedule.timeTableElective) {
-        subject = { subjectId: schedule.timeTableElective.electiveSubjectId, subjectName: schedule.timeTableElective.electiveSubjectName };
-      }
-
-      if (subject) {
-        const key = `${classSection.classSectionsId}_${subject.subjectId}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueCombinations.push({
-            courseId: course?.courseId,
-            courseName: course?.courseName,
-            classSectionsId: classSection.classSectionsId,
-            class: classSection.class,
-            section: classSection.section,
-            subjectId: subject.subjectId,
-            subjectName: subject.subjectName
-          });
-        }
-      }
-    }
-
-    const employeeDetails = schedules.length > 0 && schedules[0].employeeDetails
-      ? {
-          employeeId: schedules[0].employeeDetails.employeeId,
-          employeeName: schedules[0].employeeDetails.employeeName
-        }
-      : null;
-
-    return {
-      employeeDetails,
-      combinations: uniqueCombinations
-    };
+    return schedules;
   } catch (error) {
     console.error("Error in getUniqueClassSectionSubjectsForEmployee:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeRecurringSchedules(employeeId, acedmicYearId) {
+  try {
+    return await model.classScheduleModel.findAll({
+      where: { employeeId },
+      attributes: ['day'],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: 'timeTablecreate',
+          required: true,
+          attributes: ['startingDate', 'endingDate'],
+          where: {
+            is_publish: true,
+            acedmicYearId
+          }
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in getEmployeeRecurringSchedules:", error);
     throw error;
   }
 }

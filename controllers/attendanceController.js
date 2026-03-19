@@ -1,5 +1,6 @@
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
+import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 
 export async function addAttendance(req, res) {
   const { classSectionsId, timeTableMappingId } = req.body
@@ -87,6 +88,39 @@ export const importAttendance = async (req, res) => {
   }
 };
 
+export const importBulkAttendance = async (req, res) => {
+  try {
+    const universityId = req.user.universityId;
+    const createdBy = req.user.userId;
+    const instituteId = req.user.defaultInstituteId;
+    const updatedBy = req.user.userId;
+
+    const data = { universityId, createdBy, instituteId, updatedBy };
+
+    if (!(universityId && instituteId)) {
+      return res.status(400).json({ error: 'universityId, instituteId are required' });
+    }
+
+    const excelFile = req.files?.attendance;
+    if (!excelFile) {
+      return res.status(400).json({ error: 'Excel file is required' });
+    }
+
+    // Pass the buffer instead of relying on fileHandler.readExcelFile which might return a too simplified JSON
+    const result = await AttendanceCreation.importBulkAttendanceData(excelFile.data, data);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.status(200).json({ message: result.message });
+
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message || 'An unexpected error occurred' });
+  }
+};
+
 export async function getAttendanceByDate(req, res) {
   const { date, classSectionsId, employeeId } = req.query;
 
@@ -123,5 +157,55 @@ export async function getPreviousClasses(req, res) {
     return res.status(200).json(data);
   } catch (err) {
     return res.status(400).json({ message: err.message });
+  }
+};
+
+export async function getStudentAttendanceReport(req, res) {
+  try {
+    const { classSectionId, subjectId, employeeId } = req.query;
+
+    const data = await AttendanceCreation.getStudentAttendanceReport(
+      classSectionId,
+      subjectId,
+      employeeId
+    );
+
+    return SuccessResponse(res, 200, "Attendance Report Fetched Successfully", data);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res.status(500).json({ error: error.message || 'An unexpected error occurred' });
+  }
+};
+
+export async function getStudentsBatchAttendance(req, res) {
+  try {
+    const { classSectionId, filters } = req.body;
+
+    const data = await AttendanceCreation.getStudentsBatchAttendance(
+      classSectionId,
+      filters
+    );
+
+    return SuccessResponse(res, 200, "Student Batch Attendance Fetched Successfully", data);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
+  }
+};
+
+export async function getEmployeeClassDates(req, res) {
+  try {
+    const { classSectionId, subjectId, employeeId } = req.query;
+
+    const data = await AttendanceCreation.getEmployeeClassDates(
+      classSectionId,
+      subjectId,
+      employeeId
+    );
+
+    return SuccessResponse(res, 200, "Employee Class Dates Fetched Successfully", data);
+  } catch (error) {
+    console.error("Controller Error:", error);
+    ErrorResponse(res, 500, error.message || 'An unexpected error occurred');
   }
 };
