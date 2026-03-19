@@ -1022,9 +1022,9 @@ function processScheduleCombinations(schedules) {
 function getEmployeeDetails(schedules) {
   return schedules.length > 0 && schedules[0].employeeDetails
     ? {
-        employeeId: schedules[0].employeeDetails.employeeId,
-        employeeName: schedules[0].employeeDetails.employeeName
-      }
+      employeeId: schedules[0].employeeDetails.employeeId,
+      employeeName: schedules[0].employeeDetails.employeeName
+    }
     : null;
 }
 
@@ -1034,5 +1034,52 @@ export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
   return {
     employeeDetails: getEmployeeDetails(schedules),
     combinations: processScheduleCombinations(schedules)
+  };
+}
+
+export async function getClassCounts(employeeId, acedmicYearId, currentDateString) {
+  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, acedmicYearId);
+  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+
+  const referenceDate = new Date(currentDateString);
+  referenceDate.setHours(0, 0, 0, 0);
+
+  let pastCount = 0;
+  let upcomingCount = 0;
+
+  for (const schedule of recurringSchedules) {
+    const routine = schedule.timeTablecreate;
+    if (!routine || !routine.startingDate || !routine.endingDate) continue;
+
+    const start = new Date(routine.startingDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(routine.endingDate);
+    end.setHours(0, 0, 0, 0);
+    const dayName = schedule.day;
+
+    if (start < referenceDate) {
+      const pastEndLimit = new Date(referenceDate);
+      pastEndLimit.setDate(pastEndLimit.getDate() - 1);
+      const effectivePastEnd = end < pastEndLimit ? end : pastEndLimit;
+      if (start <= effectivePastEnd) {
+        pastCount += countWeekdayInRange(start, effectivePastEnd, dayName);
+      }
+    }
+
+    if (end >= referenceDate) {
+      const upcomingStartLimit = start > referenceDate ? start : referenceDate;
+      if (upcomingStartLimit <= end) {
+        upcomingCount += countWeekdayInRange(upcomingStartLimit, end, dayName);
+      }
+    }
+  }
+
+  const combinations = processScheduleCombinations(allSchedules);
+  const uniqueSubjects = new Set(combinations.map(c => c.subjectId));
+
+  return {
+    pastCount,
+    upcomingCount,
+    uniqueSubjectsCount: uniqueSubjects.size
   };
 }

@@ -1525,3 +1525,27 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acedm
     throw error;
   }
 }
+
+export async function getEmployeeRecurringSchedules(employeeId, acedmicYearId) {
+  try {
+    return await model.classScheduleModel.findAll({
+      where: { employeeId },
+      attributes: ['day'],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: 'timeTablecreate',
+          required: true,
+          attributes: ['startingDate', 'endingDate'],
+          where: {
+            is_publish: true,
+            acedmicYearId
+          }
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in getEmployeeRecurringSchedules:", error);
+    throw error;
+  }
+}

@@ -3,7 +3,7 @@ import { z } from "zod";
 const router = Router();
 import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeClassDates } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
-import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects } from '../controllers/employeeController.js';
+import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getClassCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
 const studentAttendanceReportSchema = z.object({
@@ -17,6 +17,8 @@ router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubject
 router.get('/schedule', userAuth, getTodayClassSchedule);
 
 router.get('/classDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeClassDates);
+
+router.get('/classCounts', userAuth, getClassCounts);
 
 router.get('/pastSchedule', userAuth, getPastClassSchedules);
 
