@@ -1106,6 +1106,48 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "class dates Copy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "classDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "195"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "52"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1545,7 +1587,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\":[\n        {\n            \"date\": \"2026-03-11\",\n            \"timeTableMappingId\": 64\n        }\n    ] \n}",
+              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\": [\n        {\n            \"date\": \"2025-07-08\",\n            \"timeTableMappingId\": 64,\n            \"periodName\": \"Period2\"\n        },\n        {\n            \"date\": \"2025-07-08\",\n            \"timeTableMappingId\": 65,\n            \"periodName\": \"Period3\"\n        }\n    ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
