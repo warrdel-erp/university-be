@@ -74,8 +74,8 @@ export default sequelize.define(
             allowNull: true,
         },
         attendanceStatus: {
-            type: DataTypes.STRING,
-            allowNull: true,
+            type: DataTypes.ENUM("Present", "Late", "Absent", "Medical", "Duty Leave"),
+            allowNull: false,
             field: 'attendance_status'
         },
         createdBy: {

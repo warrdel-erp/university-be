@@ -49,3 +49,60 @@
     return null;
   }
 };
+
+export function countWeekdayInRange(startDateStr, endDateStr, dayOfWeekStr) {
+  const daysOfWeek = {
+    'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+    'Thursday': 4, 'Friday': 5, 'Saturday': 6
+  };
+  const targetDay = daysOfWeek[dayOfWeekStr];
+  if (targetDay === undefined) return 0;
+
+  const start = new Date(startDateStr);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDateStr);
+  end.setHours(0, 0, 0, 0);
+
+  if (start > end) return 0;
+
+  let current = new Date(start);
+  while (current.getDay() !== targetDay && current <= end) {
+    current.setDate(current.getDate() + 1);
+  }
+
+  if (current > end) return 0;
+
+  const diffTime = end.getTime() - current.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7) + 1;
+}
+
+export function getDatesForDayInRange(startDate, endDate, targetDay) {
+  const dates = [];
+  const daysOfWeek = {
+    'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+    'thursday': 4, 'friday': 5, 'saturday': 6
+  };
+  
+  const targetDayNum = daysOfWeek[targetDay.toLowerCase()];
+  if (targetDayNum === undefined) return [];
+
+  let current = new Date(startDate);
+  current.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  // Move to first occurrence of target day
+  while (current <= end && current.getDay() !== targetDayNum) {
+    current.setDate(current.getDate() + 1);
+  }
+
+  // Collect all occurrences
+  while (current <= end) {
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 7);
+  }
+
+  return dates;
+}

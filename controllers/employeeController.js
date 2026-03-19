@@ -1,5 +1,7 @@
 import * as employee from '../services/employeeServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
+import * as AttendanceCreation from "../services/attendanceServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export const addEmployee = async (req, res) => {
     const universityId = req.user.universityId;
@@ -324,6 +326,40 @@ export const getUpcomingClassSchedules = async (req, res) => {
     }
 };
 
+export const getClassCounts = async (req, res) => {
+    try {
+        const { employeeId, date } = req.query;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        if (!employeeId) {
+            return ErrorResponse(res, 400, "employeeId is required");
+        }
+
+        if (!acedmicYearId) {
+            return ErrorResponse(res, 400, "academicYearId not found in user session");
+        }
+
+        const currentDate = date ? new Date(date) : new Date();
+        const formattedDate = currentDate.toISOString().split('T')[0];
+
+        const { pastCount, upcomingCount, uniqueCombinationsCount, uniqueSubjectsCount } = await employee.getClassCounts(
+            employeeId,
+            acedmicYearId,
+            formattedDate
+        );
+
+        return SuccessResponse(res, 200, "Class counts fetched successfully", {
+            pastClassesCount: pastCount,
+            upcomingClassesCount: upcomingCount,
+            uniqueCombinationsCount,
+            uniqueSubjectsCount
+        });
+    } catch (error) {
+        console.error("Error in getClassCounts:", error);
+        return ErrorResponse(res, 500, "Internal Server Error");
+    }
+};
+
 export const getUniqueClassSectionSubjects = async (req, res) => {
     try {
         const { employeeId } = req.query;
@@ -346,5 +382,22 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
     } catch (error) {
         console.error("Error in getUniqueClassSectionSubjects:", error);
         res.status(500).send({ message: "Internal Server Error", success: false });
+    }
+};
+
+export async function getEmployeeClassDates(req, res) {
+    try {
+        const { classSectionId, subjectId, employeeId } = req.query;
+
+        const data = await AttendanceCreation.getEmployeeClassDates(
+            classSectionId,
+            subjectId,
+            employeeId
+        );
+
+        return SuccessResponse(res, 200, "Employee Class Dates Fetched Successfully", data);
+    } catch (error) {
+        console.error("Controller Error:", error);
+        return ErrorResponse(res, 500, "Internal Server Error");
     }
 };
