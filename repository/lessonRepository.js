@@ -414,3 +414,16 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
     throw error;
   }
 };
+
+export async function getSimpleLessonList(whereClause) {
+  try {
+    const lessons = await model.lessonModel.findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: whereClause,
+    });
+    return lessons;
+  } catch (error) {
+    console.error('Error fetching simple lesson list:', error);
+    throw error;
+  }
+};

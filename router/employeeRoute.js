@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from "zod";
 const router = Router();
-import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeClassDates } from '../controllers/employeeController.js';
+import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeClassDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
 import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getClassCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
@@ -25,6 +25,8 @@ router.get('/pastSchedule', userAuth, getPastClassSchedules);
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);
+
+router.get('/coursesFromSchedule', userAuth, getTeacherSubjectsFromSchedule);
 
 router.get('/evaluation', userAuth, getSubjectEvalution);
 

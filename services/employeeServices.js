@@ -870,6 +870,10 @@ export async function getTeacherCourses(employeeId, acedmicYearId) {
   return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
 }
 
+export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
+  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+}
+
 export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString) {
   const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
 
