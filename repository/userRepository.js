@@ -12,6 +12,7 @@ export async function adminUser(data, transaction) {
 };
 
 export async function findEmailByEmail(email) {
+    console.log("email", email)
     const result = await model.userModel.findOne({
         where: {
             email: {
@@ -19,6 +20,8 @@ export async function findEmailByEmail(email) {
             }
         }
     });
+
+    console.log("result", result)
 
     if (!result) {
         return null;

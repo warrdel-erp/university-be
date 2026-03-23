@@ -133,6 +133,8 @@ import evalutionModel from "./evalutionModel.js";
 import userPermissionModel from "./userPermissionModel.js";
 import userRoleModel from "./userRoleModel.js";
 import questionPaperModel from "./questionPaperModel.js";
+import questionBankModel from "./questionBankModel.js";
+
 
 
 
@@ -671,6 +673,15 @@ userModel.hasMany(questionPaperModel, { foreignKey: "createdBy", as: "createdQue
 
 questionPaperModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
 userModel.hasMany(questionPaperModel, { foreignKey: "updatedBy", as: "updatedQuestionPapers" });
+
+questionBankModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+universityModel.hasMany(questionBankModel, { foreignKey: "universityId", as: "universityQuestions" });
+
+questionBankModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+userModel.hasMany(questionBankModel, { foreignKey: "createdBy", as: "createdQuestions" });
+
+questionBankModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
+userModel.hasMany(questionBankModel, { foreignKey: "updatedBy", as: "updatedQuestions" });
 
 
 // Associations
@@ -1283,4 +1294,5 @@ export {
   userPermissionModel,
   userRoleModel,
   questionPaperModel,
+  questionBankModel,
 };

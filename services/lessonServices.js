@@ -255,3 +255,7 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
 
     return filteredData;
 }
+
+export async function getSimpleLessonList(whereClause) {
+    return await lesson.getSimpleLessonList(whereClause);
+}

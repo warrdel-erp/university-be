@@ -1123,23 +1123,15 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/employee/classCounts?employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "classDates"
+                "classCounts"
               ],
               "query": [
-                {
-                  "key": "classSectionId",
-                  "value": "195"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "52"
-                },
                 {
                   "key": "employeeId",
                   "value": "41"
@@ -1191,6 +1183,39 @@
                   "key": "date",
                   "value": "2026-03-09",
                   "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "students",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student?studentId=1660",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "1660"
                 }
               ]
             }
@@ -1603,6 +1628,261 @@
                 "attendance",
                 "getStudentAttendance",
                 "batch"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "lesson",
+      "item": [
+        {
+          "name": "get simple lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/simple?employeeId=41&subjectId=54&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "simple"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "41",
+                  "type": "text"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "54",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question bank",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\":2, \n    \"type\": \"a\",\n    \"difficulty\": \"fffffffff\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
               ]
             }
           },

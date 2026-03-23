@@ -80,6 +80,7 @@ import subjects from "./router/subjectRoute.js";
 import userPermission from "./router/userPermissionRoute.js";
 import resultStudent from "./router/resultStudentRoutes.js";
 import questionPaper from "./router/questionPaperRoute.js";
+import questionBank from "./router/questionBankRoute.js";
 import classSection from "./router/classSectionRoute.js";
 
 // middleware
@@ -100,6 +101,7 @@ app.use("/syllabus", syllabus);
 app.use("/authorization", userPermission);
 app.use("/resultStudent", resultStudent);
 app.use("/questionPaper", questionPaper);
+app.use("/questionBank", questionBank);
 app.use("/classSections", classSection);
 app.use("/attendance", attendance);
 

@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js'
 
 export async function addEmployee(data, transaction) {
@@ -503,3 +503,119 @@ export async function getTeacherCourses(employeeId, acedmicYearId) {
         throw error;
     }
 };
+
+export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
+    try {
+        const result = await model.classScheduleModel.findAll({
+            where: {
+                [Op.or]: [
+                    { employeeId },
+                    Sequelize.literal(`
+                      EXISTS (
+                        SELECT 1
+                        FROM teacher_subject_mapping tsm
+                        WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
+                        AND tsm.employee_id = ${employeeId}
+                      )
+                    `)
+                ]
+            },
+            include: [
+                {
+                    model: model.timeTableRoutineModel,
+                    as: "timeTablecreate",
+                    required: true,
+                    where: acedmicYearId ? { acedmicYearId } : {},
+                },
+                {
+                    model: model.subjectModel,
+                    as: "timeTableSubject",
+                    required: false,
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: "courseInfo",
+                            attributes: ["courseId", "courseName", "courseCode"]
+                        }
+                    ]
+                },
+                {
+                    model: model.electiveSubjectModel,
+                    as: "timeTableElective",
+                    required: false,
+                },
+                {
+                    model: model.teacherSubjectMappingModel,
+                    as: "timeTableTeacherSubject",
+                    required: false,
+                    include: [
+                        {
+                            model: model.classSubjectMapperModel,
+                            as: 'employeeSubject',
+                            include: [
+                                {
+                                    model: model.subjectModel,
+                                    as: "subjects",
+                                    include: [
+                                        {
+                                            model: model.courseModel,
+                                            as: "courseInfo",
+                                            attributes: ["courseId", "courseName", "courseCode"]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        const coursesMap = new Map();
+        const subjectsMap = new Map();
+
+        result.forEach(item => {
+            let subject = null;
+            let course = null;
+
+            if (item.timeTableSubject) {
+                subject = {
+                    subjectId: item.timeTableSubject.subjectId,
+                    subjectName: item.timeTableSubject.subjectName,
+                    subjectCode: item.timeTableSubject.subjectCode,
+                };
+                course = item.timeTableSubject.courseInfo;
+            } else if (item.timeTableElective) {
+                subject = {
+                    subjectId: item.timeTableElective.electiveSubjectId,
+                    subjectName: item.timeTableElective.electiveSubjectName,
+                    subjectCode: item.timeTableElective.electiveSubjectCode,
+                };
+            } else if (item.timeTableTeacherSubject?.employeeSubject?.subjects) {
+                const sub = item.timeTableTeacherSubject.employeeSubject.subjects;
+                subject = {
+                    subjectId: sub.subjectId,
+                    subjectName: sub.subjectName,
+                    subjectCode: sub.subjectCode,
+                };
+                course = sub.courseInfo;
+            }
+
+            if (subject && !subjectsMap.has(subject.subjectId)) {
+                subjectsMap.set(subject.subjectId, subject);
+            }
+
+            if (course && !coursesMap.has(course.courseId)) {
+                coursesMap.set(course.courseId, course);
+            }
+        });
+
+        return {
+            courses: Array.from(coursesMap.values()),
+            subjects: Array.from(subjectsMap.values())
+        };
+    } catch (error) {
+        console.error("Error in getTeacherSubjectsFromSchedule repository:", error);
+        throw error;
+    }
+}
