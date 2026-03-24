@@ -678,6 +678,9 @@ userModel.hasMany(questionPaperModel, { foreignKey: "updatedBy", as: "updatedQue
 questionBankModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
 universityModel.hasMany(questionBankModel, { foreignKey: "universityId", as: "universityQuestions" });
 
+questionBankModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
+subjectModel.hasMany(questionBankModel, { foreignKey: "subjectId", as: "questions" });
+
 questionBankModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
 userModel.hasMany(questionBankModel, { foreignKey: "createdBy", as: "createdQuestions" });
 

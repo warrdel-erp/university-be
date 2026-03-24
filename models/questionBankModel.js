@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
 import users from "./userModel.js";
+import subject from "./subjectModel.js";
 
 export default sequelize.define(
     'questionBank',
@@ -41,6 +42,21 @@ export default sequelize.define(
             type: DataTypes.TEXT,
             allowNull: false,
             field: 'answer'
+        },
+        subjectId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_id',
+            references: {
+                model: subject,
+                key: 'subject_id'
+            }
+        },
+        status: {
+            type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
+            allowNull: false,
+            defaultValue: 'Pending',
+            field: 'status'
         },
         universityId: {
             type: DataTypes.INTEGER,
