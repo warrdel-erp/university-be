@@ -41,15 +41,24 @@ export default sequelize.define(
                 key: 'exam_setup_type_id'
             }
         },
-        examDate:{
-            type:DataTypes.DATEONLY,
-            allowNull:false,
-            field:'exam_date'
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: 'acedmic_year',
+                key: 'acedmic_year_id'
+            }
         },
-        examTime:{
-            type:DataTypes.TIME,
-            allowNull:false,
-            field:'exam_time'
+        examDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: false,
+            field: 'exam_date'
+        },
+        examTime: {
+            type: DataTypes.TIME,
+            allowNull: false,
+            field: 'exam_time'
         },
         type: {
             type: DataTypes.STRING,

@@ -134,6 +134,7 @@ import userPermissionModel from "./userPermissionModel.js";
 import userRoleModel from "./userRoleModel.js";
 import questionPaperModel from "./questionPaperModel.js";
 import questionBankModel from "./questionBankModel.js";
+import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 
 
 
@@ -1006,6 +1007,9 @@ subjectModel.hasMany(examScheduleModel, { foreignKey: "subject_id", as: "schedul
 examSetupTypeModel.hasMany(examScheduleModel, { foreignKey: "examSetupTypeId", as: "examSchedulesTypes" });
 examScheduleModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "examSetupTypeSchedule" });
 
+examScheduleModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYearSchedule" });
+acedmicYearModel.hasMany(examScheduleModel, { foreignKey: "acedmicYearId", as: "academicYearSchedule" });
+
 examSetupTypeModel.hasMany(syllabusDetailsModel, { foreignKey: "exam_setup_type_id", as: "syllabusDetailsExam" });
 syllabusDetailsModel.belongsTo(examSetupTypeModel, { foreignKey: "exam_setup_type_id", as: "examSetupTypeSyllabus" });
 
@@ -1157,6 +1161,15 @@ instituteModel.hasMany(userModel, {
   as: "users"
 });
 
+teacherExamAssignmentModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
+examScheduleModel.hasMany(teacherExamAssignmentModel, { foreignKey: "examScheduleId", as: "teacherAssignments" });
+
+teacherExamAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYear" });
+acedmicYearModel.hasMany(teacherExamAssignmentModel, { foreignKey: "acedmicYearId", as: "examAssignmentsYear" });
+
+teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "teacherEmployee" });
+employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as: "examAssignments" });
+
 
 export {
   settingModel,
@@ -1295,4 +1308,5 @@ export {
   userRoleModel,
   questionPaperModel,
   questionBankModel,
+  teacherExamAssignmentModel,
 };
