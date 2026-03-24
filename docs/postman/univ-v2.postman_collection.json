@@ -1032,6 +1032,84 @@
           "response": []
         },
         {
+          "name": "courses from schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/coursesFromSchedule?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "coursesFromSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "courses from schedule Copy",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/coursesFromSchedule?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "coursesFromSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "unique ClassSection Subjects",
           "request": {
             "auth": {
@@ -1826,7 +1904,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"id\":2, \n    \"type\": \"a\",\n    \"difficulty\": \"fffffffff\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "raw": "{\n    \"id\":2, \n    \"type\": \"a\",\n    \"difficulty\": \"fffffffff\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n} \n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1876,6 +1954,135 @@
               ],
               "path": [
                 "questionBank",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "teacher exam assignment",
+      "item": [
+        {
+          "name": "assign",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n   \"examScheduleId\": 1,\n   \"employeeId\": 27\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacherExamAssignment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacherExamAssignment"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacherExamAssignment?employeeId=27",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacherExamAssignment"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "27"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacherExamAssignment/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacherExamAssignment",
                 ":id"
               ],
               "variable": [
