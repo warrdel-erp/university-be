@@ -1171,6 +1171,9 @@ teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", 
 employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as: "examAssignments" });
 
 
+questionPaperModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
+examScheduleModel.hasMany(questionPaperModel, { foreignKey: "examScheduleId", as: "questionPapers" });
+
 export {
   settingModel,
   universityModel,

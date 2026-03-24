@@ -10,14 +10,21 @@ export async function addQuestion(questionData) {
     }
 }
 
-export async function getQuestions(universityId) {
+export async function getQuestions(universityId, filters = {}, pagination = {}) {
     try {
-        const whereClause = {};
-        if (universityId) {
-            whereClause.universityId = universityId;
-        }
+        const { type, difficulty, bloom, marks, createdBy } = filters;
+        const { limit, offset } = pagination;
 
-        const result = await model.questionBankModel.findAll({
+        const whereClause = {
+            ...(universityId && { universityId }),
+            ...(type && { type }),
+            ...(difficulty && { difficulty }),
+            ...(bloom && { bloom }),
+            ...(createdBy && { createdBy }),
+            ...(marks && { marks: parseInt(marks, 10) }),
+        };
+
+        const { count, rows } = await model.questionBankModel.findAndCountAll({
             where: whereClause,
             include: [
                 {
@@ -31,10 +38,14 @@ export async function getQuestions(universityId) {
                     attributes: ["university_id", "universityName"],
                 }
             ],
+            limit: limit ? parseInt(limit, 10) : undefined,
+            offset: offset ? parseInt(offset, 10) : undefined,
+            order: [['createdAt', 'DESC']]
         });
-        return result;
+
+        return { total: count, questions: rows };
     } catch (error) {
-        console.error("Error fetching questions from bank:", error);
+        console.error("Error fetching questions from bank:", error.message);
         throw error;
     }
 }

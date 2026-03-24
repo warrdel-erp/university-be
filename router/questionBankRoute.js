@@ -20,6 +20,16 @@ const createQuestionSchema = z.object({
     Answer: z.string({ required_error: "Answer is required" }),
 });
 
+const getAllQuestionsQuerySchema = z.object({
+    page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
+    limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
+    type: z.string().optional(),
+    difficulty: z.string().optional(),
+    bloom: z.string().optional(),
+    marks: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
+    createdBy: z.coerce.number().optional(),
+});
+
 const updateQuestionSchema = z.object({
     id: z.number({ required_error: "id is required" }),
     type: z.string().optional(),
@@ -33,7 +43,7 @@ const updateQuestionSchema = z.object({
 
 router.post("/", userAuth, validate({ body: createQuestionSchema }), addQuestion);
 
-router.get("/", userAuth, getAllQuestions);
+router.get("/", userAuth, validate({ query: getAllQuestionsQuerySchema }), getAllQuestions);
 
 router.get("/:id", userAuth, getSingleQuestion);
 

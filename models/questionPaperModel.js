@@ -11,6 +11,15 @@ const questionPaperModel = sequelize.define(
             autoIncrement: true,
             field: "id",
         },
+        examScheduleId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: "exam_schedule_id",
+            references: {
+                model: 'exam_schedule',
+                key: "exam_schedule_id",
+            },
+        },
 
         questionPaper: {
             type: DataTypes.JSON,

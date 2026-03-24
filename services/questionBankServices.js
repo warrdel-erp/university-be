@@ -8,8 +8,8 @@ export async function addQuestion(questionData, createdBy, updatedBy, university
     return result;
 }
 
-export async function getQuestions(universityId) {
-    return await questionBankRepository.getQuestions(universityId);
+export async function getQuestions(universityId, filters, pagination) {
+    return await questionBankRepository.getQuestions(universityId, filters, pagination);
 }
 
 export async function getSingleQuestion(id) {

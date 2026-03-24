@@ -1,4 +1,5 @@
 import * as questionPaperServices from "../services/questionPaperServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addQuestionPaper(req, res) {
     const createdBy = req.user.userId;
@@ -7,18 +8,28 @@ export async function addQuestionPaper(req, res) {
     try {
         const result = await questionPaperServices.addQuestionPaper(req.body, createdBy, updatedBy);
 
-        res.status(201).json({ message: "Question paper created successfully", result });
+        return SuccessResponse(res, 201, "Question paper created successfully", result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
 export async function getAllQuestionPapers(req, res) {
+    const { page = 1, limit = 10, examScheduleId, createdBy } = req.query;
+    const offset = (page - 1) * limit;
+
     try {
-        const result = await questionPaperServices.getQuestionPapers();
-        res.status(200).json({ result, success: true });
+        const result = await questionPaperServices.getQuestionPapers(
+            { examScheduleId, createdBy },
+            { limit, offset }
+        );
+        return SuccessResponse(res, 200, "Question papers fetched successfully", result.questionPapers, {
+            total: result.total,
+            limit: parseInt(limit, 10),
+            page: parseInt(page, 10)
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message, success: false });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -29,12 +40,12 @@ export async function getSingleQuestionPaper(req, res) {
         const result = await questionPaperServices.getSingleQuestionPaper(id);
 
         if (result) {
-            res.status(200).json({ data: result, success: true });
+            return SuccessResponse(res, 200, "Question paper fetched successfully", result);
         } else {
-            res.status(404).json({ message: "Question paper not found" });
+            return ErrorResponse(res, 404, "Question paper not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -45,9 +56,9 @@ export async function updateQuestionPaper(req, res) {
 
         const result = await questionPaperServices.updateQuestionPaper(id, req.body, updatedBy);
 
-        res.status(200).json({ message: "Question paper updated successfully", result });
+        return SuccessResponse(res, 200, "Question paper updated successfully", result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -55,16 +66,16 @@ export async function deleteQuestionPaper(req, res) {
     try {
         const { id } = req.params;
         if (!id) {
-            return res.status(400).json({ message: "id is required" });
+            return ErrorResponse(res, 400, "id is required");
         }
         const deleted = await questionPaperServices.deleteQuestionPaper(id);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for question paper ID ${id}` });
+            return SuccessResponse(res, 200, `Delete successful for question paper ID ${id}`);
         } else {
-            res.status(404).json({ message: "Question paper not found" });
+            return ErrorResponse(res, 404, "Question paper not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 

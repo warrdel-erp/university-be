@@ -16,9 +16,21 @@ export async function addQuestion(req, res) {
 
 export async function getAllQuestions(req, res) {
     const universityId = req.user.universityId;
+    const { page = 1, limit = 10, type, difficulty, bloom, marks, createdBy } = req.query;
+    const offset = (page - 1) * limit;
+
     try {
-        const result = await questionBankServices.getQuestions(universityId);
-        return SuccessResponse(res, 200, "Questions fetched successfully", result);
+        const result = await questionBankServices.getQuestions(
+            universityId,
+            { type, difficulty, bloom, marks, createdBy },
+            { limit, offset }
+        );
+
+        return SuccessResponse(res, 200, "Questions fetched successfully", result.questions, {
+            total: result.total,
+            limit: parseInt(limit, 10),
+            page: parseInt(page, 10)
+        });
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
