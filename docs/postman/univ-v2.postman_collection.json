@@ -1459,12 +1459,24 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionPaper",
+              "raw": "{{baseurl}}/questionPaper?createdBy=46&examScheduleId=2",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "questionPaper"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46",
+                  "type": "text"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "2",
+                  "type": "text"
+                }
               ]
             }
           },
@@ -1803,6 +1815,80 @@
           "response": []
         },
         {
+          "name": "bulk approve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n   \"ids\": [2, 4, 5]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/bulkApprove",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "bulkApprove"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "bulk reject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n   \"ids\": [2, 4, 5]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/bulkReject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "bulkReject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "get all",
           "protocolProfileBehavior": {
             "disableBodyPruning": true
@@ -1830,12 +1916,64 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionBank",
+              "raw": "{{baseurl}}/questionBank?createdBy=46",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "questionBank"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "count",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/count?createdBy=46",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "count"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46"
+                }
               ]
             }
           },
