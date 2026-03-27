@@ -1,70 +1,43 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import university from "./universityModel.js";
 import users from "./userModel.js";
-import subject from "./subjectModel.js";
+import examScheduleModel from "./examScheduleModel.js";
+import employeeModel from "./employeeModel.js";
 
 export default sequelize.define(
-    'questionBank',
+    'teacher_exam_assignment',
     {
-        id: {
+        teacherExamAssignmentId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'id'
+            field: 'teacher_exam_assignment_id'
         },
-        type: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'type'
-        },
-        difficulty: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'difficulty'
-        },
-        bloom: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'bloom'
-        },
-        marks: {
+        acedmicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'marks'
-        },
-        question: {
-            type: DataTypes.TEXT,
-            allowNull: false,
-            field: 'question'
-        },
-        Answer: {
-            type: DataTypes.TEXT,
-            allowNull: false,
-            field: 'answer'
-        },
-        subjectId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'subject_id',
+            field: 'acedmic_year_id',
             references: {
-                model: subject,
-                key: 'subject_id'
+                model: 'acedmic_year',
+                key: 'acedmic_year_id'
             }
         },
-        status: {
-            type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
-            allowNull: false,
-            defaultValue: 'Pending',
-            field: 'status'
-        },
-        universityId: {
+        examScheduleId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'university_id',
+            field: 'exam_schedule_id',
             references: {
-                model: university,
-                key: 'university_id'
+                model: examScheduleModel,
+                key: 'exam_schedule_id'
+            }
+        },
+        employeeId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'employee_id',
+            references: {
+                model: employeeModel,
+                key: 'employee_id'
             }
         },
         createdBy: {
@@ -96,10 +69,10 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
+        }
     },
     {
-        tableName: 'question_bank',
+        tableName: 'teacher_exam_assignment',
         timestamps: true,
         paranoid: false
     }

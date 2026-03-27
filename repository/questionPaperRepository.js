@@ -10,9 +10,18 @@ export async function addQuestionPaper(questionPaperData) {
     }
 }
 
-export async function getQuestionPapers() {
+export async function getQuestionPapers(filters = {}, pagination = {}) {
     try {
-        const result = await model.questionPaperModel.findAll({
+        const { examScheduleId, createdBy } = filters;
+        const { limit, offset } = pagination;
+
+        const whereClause = {
+            ...(examScheduleId && { examScheduleId }),
+            ...(createdBy && { createdBy }),
+        };
+
+        const { count, rows } = await model.questionPaperModel.findAndCountAll({
+            where: whereClause,
             attributes: {
                 exclude: ["deletedAt"]
             },
@@ -21,12 +30,19 @@ export async function getQuestionPapers() {
                     model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
+                },
+                {
+                    model: model.examScheduleModel,
+                    as: "examSchedule",
                 }
             ],
+            limit: limit ? parseInt(limit, 10) : undefined,
+            offset: offset ? parseInt(offset, 10) : undefined,
+            order: [['createdAt', 'DESC']]
         });
-        return result;
+        return { total: count, questionPapers: rows };
     } catch (error) {
-        console.error("Error fetching question papers:", error);
+        console.error("Error fetching question papers:", error.message);
         throw error;
     }
 }

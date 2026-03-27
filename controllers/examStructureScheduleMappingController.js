@@ -81,11 +81,20 @@ export async function addExamSchedule(req, res) {
   const { examSetupTypeId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
+
+  // Use acedmicYearId from body or fallback to user's defaultAcademicYearId
+  const acedmicYearId = req.user.defaultAcademicYearId;
+
   try {
     if (!(examSetupTypeId)) {
       return res.status(400).send("examSetupTypeId Required fields are missing");
     }
-    const examSchedule = await examStructureScheduleServices.addExamSchedule(req.body, createdBy, updatedBy);
+
+    const examSchedule = await examStructureScheduleServices.addExamSchedule(
+      { ...req.body, acedmicYearId: acedmicYearId },
+      createdBy,
+      updatedBy
+    );
     res.status(201).json({ message: "Exam schedule created successfully", examSchedule });
   } catch (error) {
     res.status(500).json({ error: error.message });
