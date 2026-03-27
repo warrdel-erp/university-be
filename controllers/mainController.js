@@ -130,7 +130,7 @@ export const addSubject = async (req, res) => {
         if (!(courseId && universityId && acedmicYearId && instituteId)) {
             return res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
         }
-        const result = await mainServices.addSubject(data, createdBy, instituteId);
+        const result = await mainServices.addSubject(data, createdBy, instituteId, universityId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);

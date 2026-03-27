@@ -8,8 +8,20 @@ export async function addQuestion(questionData, createdBy, updatedBy, university
     return result;
 }
 
-export async function getQuestions(universityId) {
-    return await questionBankRepository.getQuestions(universityId);
+export async function getQuestions(universityId, filters, pagination) {
+    return await questionBankRepository.getQuestions(universityId, filters, pagination);
+}
+
+export async function countQuestions(universityId, filters) {
+    return await questionBankRepository.countQuestions(universityId, filters);
+}
+
+export async function bulkApproveQuestions(ids, updatedBy, universityId) {
+    return await questionBankRepository.bulkUpdateStatus(ids, 'Approved', updatedBy, universityId);
+}
+
+export async function bulkRejectQuestions(ids, updatedBy, universityId) {
+    return await questionBankRepository.bulkUpdateStatus(ids, 'Rejected', updatedBy, universityId);
 }
 
 export async function getSingleQuestion(id) {

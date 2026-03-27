@@ -82,6 +82,7 @@ import resultStudent from "./router/resultStudentRoutes.js";
 import questionPaper from "./router/questionPaperRoute.js";
 import questionBank from "./router/questionBankRoute.js";
 import classSection from "./router/classSectionRoute.js";
+import teacherExamAssignment from "./router/teacherExamAssignmentRoute.js";
 
 // middleware
 app.use(fileUpload());
@@ -104,6 +105,7 @@ app.use("/questionPaper", questionPaper);
 app.use("/questionBank", questionBank);
 app.use("/classSections", classSection);
 app.use("/attendance", attendance);
+app.use("/teacherExamAssignment", teacherExamAssignment);
 
 
 app.use("/main", main);

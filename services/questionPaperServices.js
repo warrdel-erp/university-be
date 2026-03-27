@@ -7,8 +7,8 @@ export async function addQuestionPaper(questionPaperData, createdBy, updatedBy) 
     return result;
 }
 
-export async function getQuestionPapers() {
-    return await questionPaperRepository.getQuestionPapers();
+export async function getQuestionPapers(filters, pagination) {
+    return await questionPaperRepository.getQuestionPapers(filters, pagination);
 }
 
 export async function getSingleQuestionPaper(id) {

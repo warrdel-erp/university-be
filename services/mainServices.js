@@ -205,10 +205,10 @@ export async function addSpecialization(data, createdBy, instituteId) {
     }
 };
 
-export async function addSubject(data, createdBy, instituteId) {
+export async function addSubject(data, createdBy, instituteId, universityId) {
     const results = [];
     try {
-        const { courseId, subjects, specializationId, universityId, acedmicYearId } = data;
+        const { courseId, subjects, specializationId, acedmicYearId } = data;
 
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({

@@ -80,14 +80,22 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
     });
 };
 
-export async function updateExamSchedule(examScheduleId,data) {
+export async function updateExamSchedule(examScheduleId, data) {
     try {
+        if (!data.acedmicYearId && data.subjectId) {
+            const subject = await model.subjectModel.findByPk(data.subjectId, {
+                attributes: ['acedmicYearId']
+            });
+            if (subject) {
+                data.acedmicYearId = subject.acedmicYearId;
+            }
+        }
         const result = await model.examScheduleModel.update(data, {
             where: { examScheduleId },
         });
         return result;
     } catch (error) {
-        console.error("Error updating exam Schedule:", error);
+        console.error("Error updating exam Schedule:", error.message);
         throw error;
     }
 };
@@ -116,10 +124,18 @@ export async function publishExamSchedule(examSetupTypeId,data) {
 
 export async function addExamSchedule(examDetail) {
     try {
+        if (!examDetail.acedmicYearId && examDetail.subjectId) {
+            const subject = await model.subjectModel.findByPk(examDetail.subjectId, {
+                attributes: ['acedmicYearId']
+            });
+            if (subject) {
+                examDetail.acedmicYearId = subject.acedmicYearId;
+            }
+        }
         const result = await model.examScheduleModel.create(examDetail);
         return result;
     } catch (error) {
-        console.error("Error adding exam schedule:", error);
+        console.error("Error adding exam schedule:", error.message);
         throw error;
     }
 };
