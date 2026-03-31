@@ -43,6 +43,11 @@ export default sequelize.define(
             allowNull: false,
             field: 'answer'
         },
+        content: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: 'content'
+        },
         subjectId: {
             type: DataTypes.INTEGER,
             allowNull: true,
