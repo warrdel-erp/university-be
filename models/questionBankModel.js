@@ -14,7 +14,7 @@ export default sequelize.define(
             field: 'id'
         },
         type: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM('mcq', 'theory', 'theoryChoice'),
             allowNull: false,
             field: 'type'
         },
