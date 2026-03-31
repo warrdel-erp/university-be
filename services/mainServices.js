@@ -96,24 +96,11 @@ export async function addCourse(data, createdBy, instituteId, universityId) {
         const { course_levelId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
 
         for (const course of courses) {
-            // Add course
-            const result = await mainRepository.addCourse({
-                ...course,
-                course_levelId,
-                universityId,
-                affiliatedUniversityId,
-                createdBy,
-                acedmicYearId,
-                instituteId,
-            }, transaction);
-
-            const courseId = result?.dataValues?.courseId;
-            results.push(result);
 
             // add terms
             const { courseDuration } = course;
 
-            if (courseId && term && courseDuration) {
+            if (term && courseDuration) {
                 let monthsPerTerm = 6;
                 let termLabel = '';
                 switch (term.toLowerCase()) {
@@ -139,21 +126,39 @@ export async function addCourse(data, createdBy, instituteId, universityId) {
                 }
                 const totalTerms = Math.floor(courseDuration * 12 / monthsPerTerm);
 
-                for (let i = 1; i <= totalTerms; i++) {
 
-                    await mainRepository.addSemester({
-                        universityId,
-                        courseId,
-                        acedmicYearId,
-                        instituteId,
-                        termType: termLabel,
-                        name: `${termLabel} ${i}`,
-                        semesterDuration: monthsPerTerm,
-                        courseDuration: courseDuration,
-                        totalTerms,
-                        createdBy,
-                    }, transaction);
-                }
+                // Add course
+                const result = await mainRepository.addCourse({
+                    ...course,
+                    course_levelId,
+                    universityId,
+                    affiliatedUniversityId,
+                    createdBy,
+                    acedmicYearId,
+                    instituteId,
+                    totalTerms,
+                    termType: termLabel
+                }, transaction);
+
+
+                results.push(result)
+                // for (let i = 1; i <= totalTerms; i++) {
+
+                //     await mainRepository.addSemester({
+                //         universityId,
+                //         courseId,
+                //         acedmicYearId,
+                //         instituteId,
+                //         termType: termLabel,
+                //         name: `${termLabel} ${i}`,
+                //         semesterDuration: monthsPerTerm,
+                //         courseDuration: courseDuration,
+                //         totalTerms,
+                //         createdBy,
+                //     }, transaction);
+                // }
+            } else {
+                throw new Error("Term and Course Duration is required")
             }
         }
 
