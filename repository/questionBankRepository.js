@@ -1,4 +1,6 @@
 import * as model from "../models/index.js";
+import { questionStatus } from "../constant.js";
+
 
 export async function addQuestion(questionData) {
     try {
@@ -61,21 +63,25 @@ export async function countQuestions(universityId, filters = {}) {
     try {
         const { type, difficulty, bloom, marks, createdBy, subjectId, status } = filters;
 
-        const whereClause = {
+        const baseWhereClause = {
             ...(universityId && { universityId }),
             ...(subjectId && { subjectId }),
             ...(type && { type }),
             ...(difficulty && { difficulty }),
             ...(bloom && { bloom }),
             ...(createdBy && { createdBy }),
-            ...(status && { status }),
             ...(marks && { marks: parseInt(marks, 10) }),
         };
 
-        const result = await model.questionBankModel.count({
-            where: whereClause
+        const total = await model.questionBankModel.count({
+            where: baseWhereClause
         });
-        return result;
+
+        const approved = await model.questionBankModel.count({
+            where: { ...baseWhereClause, status: questionStatus[1] } // 'Approved'
+        });
+
+        return { total, approved };
     } catch (error) {
         console.error("Error counting questions in bank:", error.message);
         throw error;

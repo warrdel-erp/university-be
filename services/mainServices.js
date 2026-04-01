@@ -241,7 +241,21 @@ export async function updateSubject(data, updateBy, instituteId) {
 export async function addClass(data, createdBy, universityId, instituteId) {
     const results = [];
     try {
+        if (!data) throw new Error('Data is required');
+        if (!createdBy) throw new Error('CreatedBy is required');
+        if (!universityId) throw new Error('UniversityId is required');
+        if (!instituteId) throw new Error('InstituteId is required');
+
         const { courseId, specializationId, acedmicYearId, className, sections, term, sessionId } = data;
+
+        if (!courseId) throw new Error('CourseId is required');
+        if (!specializationId) throw new Error('SpecializationId is required');
+        if (!acedmicYearId) throw new Error('AcedmicYearId is required');
+        if (!className) throw new Error('ClassName is required');
+        if (!sections || !Array.isArray(sections) || sections.length === 0) throw new Error('Sections are required and must be a non-empty array');
+        if (!term) throw new Error('Term is required');
+        if (!sessionId) throw new Error('SessionId is required');
+
         const classObject = { courseId, className, universityId, updatedBy: createdBy, createdBy, instituteId, term, sessionId }
 
         const classData = await mainRepository.seprateAddClass(classObject)
@@ -262,7 +276,7 @@ export async function addClass(data, createdBy, universityId, instituteId) {
         return results;
     } catch (error) {
         console.error('Error adding class:', error);
-        return { message: 'Error adding class', error };
+        return { message: error.message || 'Error adding class', error };
     }
 };
 

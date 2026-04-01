@@ -135,6 +135,7 @@ import userRoleModel from "./userRoleModel.js";
 import questionPaperModel from "./questionPaperModel.js";
 import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
+import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 
 
 
@@ -1177,6 +1178,19 @@ employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as
 questionPaperModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
 examScheduleModel.hasMany(questionPaperModel, { foreignKey: "examScheduleId", as: "questionPapers" });
 
+// questionPaperBlueprint Associations
+questionPaperBlueprintModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
+subjectModel.hasMany(questionPaperBlueprintModel, { foreignKey: "subjectId", as: "blueprints" });
+
+questionPaperBlueprintModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+universityModel.hasMany(questionPaperBlueprintModel, { foreignKey: "universityId", as: "universityBlueprints" });
+
+questionPaperBlueprintModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "createdBy", as: "createdBlueprints" });
+
+questionPaperBlueprintModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
+userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "updatedBy", as: "updatedBlueprints" });
+
 export {
   settingModel,
   universityModel,
@@ -1315,4 +1329,5 @@ export {
   questionPaperModel,
   questionBankModel,
   teacherExamAssignmentModel,
+  questionPaperBlueprintModel,
 };
