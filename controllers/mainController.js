@@ -210,7 +210,7 @@ export const addClassSubjectMapper = async (req, res) => {
         const data = req.body;
         const instituteId = req.user.defaultInstituteId;
         if (!(instituteId)) {
-            return res.status(400).send('semesterId and instituteId is required')
+            return res.status(400).send('instituteId is required')
         }
         const result = await mainServices.addClassSubjectMapper(data, createdBy, instituteId);
         return res.status(200).send(result);
