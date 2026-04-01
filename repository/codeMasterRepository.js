@@ -22,61 +22,43 @@ export async function addEmployeeCode(data) {
     }
 };
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId,universityId) {
-    let result;
+export async function getEmployeeCodesTypes(employeeCodeMasterId, universityId, key) {
     try {
-        if (employeeCodeMasterId !== 0) {
-            result = await model.employeeCodeMaster.findAll({
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                include: [
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codes",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterId","employee_code_master_id"] },
-                        include:[
-                            {
-                                model:model.userModel,
-                                as:"userEmployeeCodeType",
-                                attributes:["universityId","userId"],
-                                where: {
-                                    universityId:universityId
-                                },
-                            },
-                        ],
-                    },
-                ],
-                where: {
-                    employeeCodeMasterId:employeeCodeMasterId
+        const queryOptions = {
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include: [
+                {
+                    model: model.employeeCodeMasterType,
+                    as: "codes",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterId", "employee_code_master_id"] },
+                    include: [
+                        {
+                            model: model.userModel,
+                            as: "userEmployeeCodeType",
+                            attributes: ["universityId", "userId"],
+                            where: { universityId: universityId },
+                        },
+                    ],
                 },
-            });
-        } else {
-            result = await model.employeeCodeMaster.findAll({
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                include: [
-                    {
-                        model: model.employeeCodeMasterType,
-                        as: "codes",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","employeeCodeMasterId","employee_code_master_id"] },
-                        include:[
-                            {
-                                model:model.userModel,
-                                as:"userEmployeeCodeType",
-                                attributes:["universityId","userId"],
-                                where: {
-                                    universityId:universityId
-                                },
-                            },
-                        ],
-                    },
-                ],
-            });
+            ],
+            where: {}
         };
+
+        if (employeeCodeMasterId && Number(employeeCodeMasterId) !== 0) {
+            queryOptions.where.employeeCodeMasterId = employeeCodeMasterId;
+        }
+
+        if (key) {
+            queryOptions.where.codeMasterType = key;
+        }
+
+        const result = await model.employeeCodeMaster.findAll(queryOptions);
         return result;
     } catch (error) {
-        console.error(`Error in getting employee code and types${employeeCodeMasterId}:`, error);
+        console.error(`Error in getting employee code and types for Id ${employeeCodeMasterId} or key ${key}:`, error);
         throw error;
-    };
-};
+    }
+}
 
 export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
     try {
