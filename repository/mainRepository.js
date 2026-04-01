@@ -434,7 +434,7 @@ export async function getClassSpecific(universityId, headInstituteId, role, camp
                                                     model: model.classSubjectMapperModel,
                                                     as: "semestermapping",
                                                     required: false,
-                                                    attributes: ["classSubjectMapperId", "subjectId", "semesterId",],
+                                                    attributes: ["classSubjectMapperId", "subjectId",],
                                                     include: [
                                                         {
                                                             model: model.subjectModel,
@@ -611,7 +611,6 @@ export async function getClassSubjectMapper(semesterId, universityId, acedmicYea
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
             where: {
-                ...(semesterId && { semesterId }),
                 ...(role === 'Head' && { instituteId }),
             },
             include: [

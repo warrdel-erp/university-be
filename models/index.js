@@ -231,9 +231,7 @@ specializationModel.hasMany(semesterModel, { foreignKey: "specialization_id", as
 classSectionModel.belongsTo(specializationModel, { foreignKey: "specialization_id", as: "specializationSectionAdd" });
 specializationModel.hasMany(classSectionModel, { foreignKey: "specialization_id", as: "specializationSectionAdd" });
 
-// class subject mapper join to class section
-classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "semestermapping" });
-semesterModel.hasMany(classSubjectMapperModel, { foreignKey: "semester_id", as: "semestermapping" });
+
 
 // class section join to subject
 classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjects" });
@@ -411,8 +409,7 @@ teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, {
   as: "employeeSubject",
 });
 
-semesterModel.hasMany(classSubjectMapperModel, { foreignKey: "semesterId", as: "employeeClassSection" });
-classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "employeeClassSection" });
+
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: "employee_id", as: "employeeData" });
