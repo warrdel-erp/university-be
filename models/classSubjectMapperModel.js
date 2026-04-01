@@ -4,6 +4,7 @@ import subject from "./subjectModel.js";
 // import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
+import semester from "./semesterModel.js";
 
 export default sequelize.define(
     'class_subject_mapper',
@@ -23,6 +24,15 @@ export default sequelize.define(
                 key: 'subject_id'
             }
         },
+        semesterId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'semester_id',
+            references: {
+                model: semester,
+                key: 'semester_id'
+            }
+        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -31,7 +41,7 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
