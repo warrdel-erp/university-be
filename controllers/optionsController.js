@@ -1,0 +1,53 @@
+import * as optionsServices from '../services/optionsServices.js';
+import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+
+export const getAffiliatedUniversityOptions = async (req, res) => {
+    try {
+        const instituteId = req.user.defaultInstituteId;
+        const result = await optionsServices.getAffiliatedUniversityOptions(instituteId);
+        return SuccessResponse(res, 200, "Affiliated university options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getAffiliatedUniversityOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getCourseOptions = async (req, res) => {
+    try {
+        const universityId = req.user.universityId;
+        const instituteId = req.user.defaultInstituteId;
+        const result = await optionsServices.getCourseOptions(universityId, instituteId);
+        return SuccessResponse(res, 200, "Course options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getCourseOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getTermOptions = async (req, res) => {
+    try {
+        const { courseId } = req.query;
+        if (!courseId) {
+            return ErrorResponse(res, 400, "Course ID is required");
+        }
+        const result = await optionsServices.getTermOptions(courseId);
+        return SuccessResponse(res, 200, "Term options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getTermOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getClassSectionOptions = async (req, res) => {
+    try {
+        const { courseId, term } = req.query;
+        if (!courseId || !term) {
+            return ErrorResponse(res, 400, "Course ID and term (number) are required");
+        }
+        const result = await optionsServices.getClassSectionOptions(courseId, term);
+        return SuccessResponse(res, 200, "Class section options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getClassSectionOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
