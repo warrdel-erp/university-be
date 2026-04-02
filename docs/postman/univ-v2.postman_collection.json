@@ -2696,8 +2696,7 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "34",
-                  "type": "text"
+                  "value": "34"
                 }
               ]
             }
@@ -2720,13 +2719,53 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/options/classSections",
+              "raw": "{{baseurl}}/options/classSections?courseId=34&term=1",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "options",
                 "classSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "type": "text"
+                },
+                {
+                  "key": "term",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "specialization",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/specializations",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "specializations"
               ]
             }
           },
@@ -2740,16 +2779,33 @@
         {
           "name": "get",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/codeMaster/getCodesTypes",
+              "raw": "{{baseurl}}/codeMaster/getCodesTypes?key=Designation",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "codeMaster",
                 "getCodesTypes"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "Designation",
+                  "type": "text"
+                }
               ]
             }
           },
