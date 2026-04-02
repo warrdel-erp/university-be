@@ -87,6 +87,7 @@ const updateQuestionPaperSchema = z.object({
 const generateQuestionPaperSchema = z.object({
     blueprintId: z.number({ required_error: "blueprintId is required" }),
     examScheduleId: z.number({ required_error: "examScheduleId is required" }),
+    numberOfPapers: z.number().int().min(1).max(50).optional().default(1),
 });
 
 router.post("/", userAuth, validate({ body: createQuestionPaperSchema }), addQuestionPaper);

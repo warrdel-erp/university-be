@@ -25,7 +25,7 @@ export async function deleteQuestionPaper(id) {
     return await questionPaperRepository.deleteQuestionPaper(id);
 }
 
-export async function generateQuestionPaper(blueprintId, examScheduleId, createdBy, updatedBy, universityId) {
+export async function generateQuestionPaper(blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy, universityId) {
     try {
         // 1. Fetch blueprint
         const blueprintRecord = await questionPaperBlueprintRepository.getBlueprintById(blueprintId, universityId);
@@ -40,47 +40,53 @@ export async function generateQuestionPaper(blueprintId, examScheduleId, created
             throw new Error(`Exam schedule with id ${examScheduleId} not found`);
         }
 
-        // 3. For each section, select questions
-        const generatedPaper = [];
-        for (const section of blueprintSections) {
-            const { typeOfQuestions, totalQuestions, marksPerQuestion, sectionName } = section;
+        const generatedPapers = [];
 
-            // Randomly fetch approved questions from bank
-            const questions = await questionBankRepository.getRandomQuestions(
-                universityId,
-                blueprintRecord.subjectId,
-                typeOfQuestions,
-                marksPerQuestion,
-                totalQuestions
-            );
+        // Loop for the requested number of papers
+        for (let i = 0; i < numberOfPapers; i++) {
+            // 3. For each section, select questions
+            const generatedPaper = [];
+            for (const section of blueprintSections) {
+                const { typeOfQuestions, totalQuestions, marksPerQuestion, sectionName } = section;
+                
+                // Randomly fetch approved questions from bank
+                const questions = await questionBankRepository.getRandomQuestions(
+                    universityId, 
+                    blueprintRecord.subjectId, 
+                    typeOfQuestions, 
+                    marksPerQuestion, 
+                    totalQuestions
+                );
 
-            if (questions.length < totalQuestions) {
-                throw new Error(`Not enough approved questions found for section ${sectionName}. Expected ${totalQuestions}, got ${questions.length}`);
+                if (questions.length < totalQuestions) {
+                    throw new Error(`Not enough approved questions found for section ${sectionName}. Expected ${totalQuestions}, got ${questions.length}`);
+                }
+
+                generatedPaper.push({
+                    sectionName,
+                    typeOfQuestions,
+                    marksPerQuestion,
+                    questions: questions, // Full objects
+                });
             }
 
-            generatedPaper.push({
-                sectionName,
-                typeOfQuestions,
-                marksPerQuestion,
-                questions: questions, // Full objects
-            });
+            // 4. Create question paper data object
+            const questionPaperData = {
+                examScheduleId,
+                blueprintId,
+                questionPaper: generatedPaper,
+                createdBy,
+                updatedBy
+            };
+
+            const result = await questionPaperRepository.addQuestionPaper(questionPaperData);
+            generatedPapers.push(result);
         }
 
-        // 4. Create question paper in DB
-        const questionPaperData = {
-            examScheduleId,
-            blueprintId,
-            questionPaper: generatedPaper,
-            createdBy,
-            updatedBy
-        };
-
-        const result = await questionPaperRepository.addQuestionPaper(questionPaperData);
-        return result;
+        return generatedPapers;
 
     } catch (error) {
         console.error("Error in generateQuestionPaper service:", error);
         throw error;
     }
 }
-

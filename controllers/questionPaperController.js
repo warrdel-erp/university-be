@@ -81,7 +81,7 @@ export async function deleteQuestionPaper(req, res) {
 
 export async function generateQuestionPaper(req, res) {
     try {
-        const { blueprintId, examScheduleId } = req.body;
+        const { blueprintId, examScheduleId, numberOfPapers = 1 } = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
         const universityId = req.user.universityId;
@@ -93,12 +93,13 @@ export async function generateQuestionPaper(req, res) {
         const result = await questionPaperServices.generateQuestionPaper(
             blueprintId,
             examScheduleId,
+            numberOfPapers,
             createdBy,
             updatedBy,
             universityId
         );
 
-        return SuccessResponse(res, 201, "Question paper generated successfully", result);
+        return SuccessResponse(res, 201, `${numberOfPapers} Question paper(s) generated successfully`, result);
     } catch (error) {
         console.error("Generate Question Paper Error:", error);
         return ErrorResponse(res, 500, error.message);
