@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import { questionStatus } from "../constant.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 
 export async function addQuestion(questionData) {
@@ -154,6 +155,29 @@ export async function deleteQuestion(id) {
         return deleted > 0;
     } catch (error) {
         console.error("Error deleting question from bank:", error);
+        throw error;
+    }
+}
+
+export async function getRandomQuestions(universityId, subjectId, type, marks, limit) {
+    try {
+        const whereClause = {
+            universityId,
+            subjectId,
+            type,
+            marks: parseInt(marks, 10),
+            status: questionStatus[1] // 'Approved'
+        };
+
+        const rows = await model.questionBankModel.findAll({
+            where: whereClause,
+            order: sequelize.random(),
+            limit: limit ? parseInt(limit, 10) : undefined,
+        });
+
+        return rows;
+    } catch (error) {
+        console.error("Error fetching random questions from bank:", error.message);
         throw error;
     }
 }

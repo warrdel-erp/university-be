@@ -10,7 +10,6 @@ import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { questionTypes } from "../constant.js";
 
-
 // Validation for adding blueprint
 const blueprintItemSchema = z.object({
     sectionName: z.string({ required_error: "sectionName is required" }),

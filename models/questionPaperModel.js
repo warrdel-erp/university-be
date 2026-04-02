@@ -20,6 +20,15 @@ const questionPaperModel = sequelize.define(
                 key: "exam_schedule_id",
             },
         },
+        blueprintId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: "blueprint_id",
+            references: {
+                model: 'question_paper_blueprint',
+                key: "id",
+            },
+        },
 
         questionPaper: {
             type: DataTypes.JSON,

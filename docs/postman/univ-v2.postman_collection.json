@@ -1432,6 +1432,43 @@
           "response": []
         },
         {
+          "name": "generate automatically",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "generate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "get all",
           "protocolProfileBehavior": {
             "disableBodyPruning": true
@@ -2805,6 +2842,54 @@
                   "key": "key",
                   "value": "Designation",
                   "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question paper bluprint",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaperBlueprint"
+              ],
+              "query": [
+                {
+                  "key": "subjectId",
+                  "value": "12",
+                  "disabled": true
                 }
               ]
             }

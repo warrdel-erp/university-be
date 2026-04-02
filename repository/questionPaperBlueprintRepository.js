@@ -71,3 +71,21 @@ export async function deleteBlueprint(id, universityId) {
         throw error;
     }
 }
+
+/**
+ * Get blueprint by id
+ * @param {number} id - The blueprint ID
+ * @param {number} universityId - The university ID
+ * @returns {Promise<Object>} - The blueprint
+ */
+export async function getBlueprintById(id, universityId) {
+    try {
+        const result = await model.questionPaperBlueprintModel.findOne({
+            where: { id, universityId }
+        });
+        return result;
+    } catch (error) {
+        console.error("Error fetching blueprint by id:", error);
+        throw error;
+    }
+}
