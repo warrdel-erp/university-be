@@ -81,16 +81,17 @@ export async function deleteQuestionPaper(req, res) {
 
 export async function generateQuestionPaper(req, res) {
     try {
-        const { blueprintId, examScheduleId, numberOfPapers = 1 } = req.body;
+        const { name, blueprintId, examScheduleId, numberOfPapers = 1 } = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
         const universityId = req.user.universityId;
 
-        if (!blueprintId || !examScheduleId) {
-            return ErrorResponse(res, 400, "blueprintId and examScheduleId are required");
+        if (!name || !blueprintId || !examScheduleId) {
+            return ErrorResponse(res, 400, "name, blueprintId and examScheduleId are required");
         }
 
         const result = await questionPaperServices.generateQuestionPaper(
+            name,
             blueprintId,
             examScheduleId,
             numberOfPapers,

@@ -25,7 +25,7 @@ export async function deleteQuestionPaper(id) {
     return await questionPaperRepository.deleteQuestionPaper(id);
 }
 
-export async function generateQuestionPaper(blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy, universityId) {
+export async function generateQuestionPaper(name, blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy, universityId) {
     try {
         // 1. Fetch blueprint
         const blueprintRecord = await questionPaperBlueprintRepository.getBlueprintById(blueprintId, universityId);
@@ -71,7 +71,10 @@ export async function generateQuestionPaper(blueprintId, examScheduleId, numberO
             }
 
             // 4. Create question paper data object
+            const currentName = numberOfPapers > 1 ? `${name} - Version ${i + 1}` : name;
+            
             const questionPaperData = {
+                name: currentName,
                 examScheduleId,
                 blueprintId,
                 questionPaper: generatedPaper,

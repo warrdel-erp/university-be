@@ -11,6 +11,11 @@ const questionPaperModel = sequelize.define(
             autoIncrement: true,
             field: "id",
         },
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: "name",
+        },
         examScheduleId: {
             type: DataTypes.INTEGER,
             allowNull: false,

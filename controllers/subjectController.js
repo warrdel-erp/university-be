@@ -2,13 +2,16 @@ import * as subjectService from '../services/subjectService.js';
 
 export const getAllSubjects = async (req, res) => {
     const universityId = req.user.universityId;
-    try {
-        const { acedmicYearId, campusId, instituteId, courseId } = req.query;
+    const instituteId = req.user.defaultInstituteId;
 
+    try {
         if (!universityId) {
             return res.status(400).send('University Id is required');
         }
-        const result = await subjectService.getAllSubjects(universityId, acedmicYearId, campusId, instituteId, courseId);
+
+        const filter = { ...req.query, universityId, instituteId };
+
+        const result = await subjectService.getAllSubjects(filter);
         return res.status(200).send({ data: result, success: true });
     } catch (error) {
         console.error("Error in getAllSubjects controller:", error);
