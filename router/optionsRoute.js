@@ -11,4 +11,6 @@ router.get('/courseTerms', userAuth, optionsController.getTermOptions);
 
 router.get('/classSections', userAuth, optionsController.getClassSectionOptions);
 
+router.get('/specializations', userAuth, optionsController.getSpecializationOptions);
+
 export default router;

@@ -51,3 +51,16 @@ export const getClassSectionOptions = async (req, res) => {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
+
+export const getSpecializationOptions = async (req, res) => {
+    try {
+        const { courseId } = req.query;
+        const instituteId = req.user.defaultInstituteId;
+        const universityId = req.user.universityId;
+        const result = await optionsServices.getSpecializationOptions(courseId, instituteId, universityId);
+        return SuccessResponse(res, 200, "Specialization options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getSpecializationOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};

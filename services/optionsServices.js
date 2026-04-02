@@ -26,3 +26,7 @@ export async function getTermOptions(courseId) {
 export async function getClassSectionOptions(courseId, term) {
     return await optionsRepository.getClassSectionOptions(courseId, term);
 }
+
+export async function getSpecializationOptions(courseId, instituteId, universityId) {
+    return await optionsRepository.getSpecializationOptions(courseId, instituteId, universityId);
+}

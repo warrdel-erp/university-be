@@ -41,3 +41,14 @@ export async function getClassSectionOptions(courseId, term) {
         }
     });
 }
+
+export async function getSpecializationOptions(courseId, instituteId, universityId) {
+    return await model.specializationModel.findAll({
+        attributes: [['specialization_name', 'label'], ['specialization_id', 'value']],
+        where: {
+            ...(courseId && { course_Id: courseId }),
+            ...(instituteId && { instituteId: instituteId }),
+            ...(universityId && { universityId: universityId }),
+        }
+    });
+}
