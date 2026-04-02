@@ -368,7 +368,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject?instituteId=12",
+              "raw": "{{baseurl}}/subject?term=4&courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -379,6 +379,16 @@
                 {
                   "key": "instituteId",
                   "value": "12",
+                  "disabled": true
+                },
+                {
+                  "key": "term",
+                  "value": "4",
+                  "type": "text"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34",
                   "type": "text"
                 }
               ]
@@ -1448,7 +1458,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1\n}",
+              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
