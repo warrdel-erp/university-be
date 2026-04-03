@@ -1,6 +1,6 @@
 import * as DormitoryListCreationService from "../repository/dormitoryListRepository.js";
 
-export async function addDormitoryList(dormitoryListData, createdBy, updatedBy, instituteId) {
+export async function addDormitoryList(dormitoryListData, createdBy, updatedBy, instituteId, universityId) {
     dormitoryListData.createdBy = createdBy;
     dormitoryListData.updatedBy = updatedBy;
     dormitoryListData.instituteId = instituteId;
