@@ -120,10 +120,14 @@ export async function addSyllabusUnit(req, res) {
 export async function syllabusUnitGet(req, res) {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
+    const acedmicYearId = req.user.defaultAcademicYearId
+
     const role = req.user.role;
-    const { acedmicYearId } = req.query
+
+    const filters = req.query
+
     try {
-        const syllabus = await syllabusCreation.syllabusUnitGet(universityId, acedmicYearId, instituteId, role);
+        const syllabus = await syllabusCreation.syllabusUnitGet(universityId, acedmicYearId, instituteId, role, filters);
         res.status(200).json(syllabus);
     } catch (error) {
         res.status(500).json({ error: error.message });

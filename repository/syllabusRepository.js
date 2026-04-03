@@ -1,7 +1,7 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
-export async function addSyllabus(syllabusData) {   
+export async function addSyllabus(syllabusData) {
     try {
         const result = await model.syllabusModel.create(syllabusData);
         return result;
@@ -11,7 +11,7 @@ export async function addSyllabus(syllabusData) {
     }
 };
 
-export async function addSyllabusDetails(syllabusData) {   
+export async function addSyllabusDetails(syllabusData) {
     try {
         const result = await model.syllabusDetailsModel.bulkCreate(syllabusData);
         return result;
@@ -21,39 +21,39 @@ export async function addSyllabusDetails(syllabusData) {
     }
 };
 
-export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,role) {
+export async function getSyllabusDetails(universityId, acedmicYearId, instituteId, role) {
     try {
         const Syllabus = await model.syllabusModel.findAll({
             where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId })
-                    },
-            attributes: { 
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                ...(acedmicYearId && { acedmicYearId }),
+                ...(role === 'Head' && { instituteId })
+            },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
             },
             include: [
                 {
                     model: model.instituteModel,
-                    as: 'syllabusInstitute',  
-                    attributes: ["instituteName", "instituteCode"] ,
-                    include:[
+                    as: 'syllabusInstitute',
+                    attributes: ["instituteName", "instituteCode"],
+                    include: [
                         {
-                            model:model.campusModel,
-                            as:'campues',
-                            attributes: ["campusName", "campusCode"] ,
+                            model: model.campusModel,
+                            as: 'campues',
+                            attributes: ["campusName", "campusCode"],
                         }
                     ]
-                    
+
                 },
                 {
                     model: model.acedmicYearModel,
-                    as: 'syllabusAcedmicYear',  
-                    attributes:  ["yearTitle", "startingDate", "endingDate"] 
+                    as: 'syllabusAcedmicYear',
+                    attributes: ["yearTitle", "startingDate", "endingDate"]
                 },
                 {
-                    model:model.courseModel,
-                    as:'syllabusCourse',
-                    attributes:["courseName","courseCode"]
+                    model: model.courseModel,
+                    as: 'syllabusCourse',
+                    attributes: ["courseName", "courseCode"]
                 },
                 // {
                 //     model:model.courseModel,
@@ -69,9 +69,9 @@ export async function getSyllabusDetails(universityId,acedmicYearId,instituteId,
                 // },
                 {
                     model: model.syllabusDetailsModel,
-                    as: 'syllabusDetails',  
-                    attributes: { 
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                    as: 'syllabusDetails',
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
                     }
                 },
             ]
@@ -108,37 +108,37 @@ export async function updateSyllabus(SyllabusId, syllabusData) {
         const result = await model.syllabusModel.update(syllabusData, {
             where: { SyllabusId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating Syllabus creation ${SyllabusId}:`, error);
-        throw error; 
+        throw error;
     }
 };
 
-export async function courseAllSubject(courseId,sessionId,universityId) {
+export async function courseAllSubject(courseId, sessionId, universityId) {
     try {
         const Syllabus = await model.syllabusModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","institute_id","acedmic_year_id","course_id"] },
-            where: { courseId,sessionId},
-            include:[
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "institute_id", "acedmic_year_id", "course_id"] },
+            where: { courseId, sessionId },
+            include: [
                 {
-                    model:model.courseModel,
-                    as:'syllabusCourse',
-                    attributes:["courseName","courseCode"],
-                    where:{universityId}
+                    model: model.courseModel,
+                    as: 'syllabusCourse',
+                    attributes: ["courseName", "courseCode"],
+                    where: { universityId }
                 },
                 {
                     model: model.syllabusDetailsModel,
-                    as: 'syllabusDetails',  
-                    attributes: { 
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","syllabus_id","subject_id"] 
+                    as: 'syllabusDetails',
+                    attributes: {
+                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "syllabus_id", "subject_id"]
                     },
-                    include:[
+                    include: [
                         {
-                            model:model.subjectModel,
-                            as:'syllabusSubject',
-                            attributes: { 
-                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
+                            model: model.subjectModel,
+                            as: 'syllabusSubject',
+                            attributes: {
+                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
                             },
                             // include:[
                             //     {
@@ -159,7 +159,7 @@ export async function courseAllSubject(courseId,sessionId,universityId) {
     }
 };
 
-export async function addSyllabusUnit(syllabusData) {   
+export async function addSyllabusUnit(syllabusData) {
     try {
         const result = await model.syllabusUnitModel.bulkCreate(syllabusData);
         return result;
@@ -169,7 +169,7 @@ export async function addSyllabusUnit(syllabusData) {
     }
 };
 
-export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role) {
+export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role, filters) {
     try {
         const excludedFields = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -178,6 +178,7 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
                 ...(acedmicYearId && { acedmicYearId }),
                 ...(role === 'Head' && { instituteId }),
                 ...(universityId && { universityId }),
+                ...filters
             },
             attributes: { exclude: excludedFields },
             include: [
@@ -220,31 +221,31 @@ export async function semesterAllSubject(semesterId) {
     try {
         const Syllabus = await model.semesterModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: {semesterId},
-            include:[
+            where: { semesterId },
+            include: [
                 {
                     model: model.classSubjectMapperModel,
                     as: "semestermapping",
-                    attributes: ["classSubjectMapperId","subjectId","semesterId",],
+                    attributes: ["classSubjectMapperId", "subjectId", "semesterId",],
                     include: [
                         {
                             model: model.subjectModel,
                             as: "subjects",
-                            attributes: [ "subjectId", "subjectName", "subjectCode", "subjectType"],
-                            include:[
+                            attributes: ["subjectId", "subjectName", "subjectCode", "subjectType"],
+                            include: [
                                 {
-                                    model:model.syllabusDetailsModel,
-                                    as:'syllabusSubject',
+                                    model: model.syllabusDetailsModel,
+                                    as: 'syllabusSubject',
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                    include:[
+                                    include: [
                                         {
-                                            model:model.examSetupTypeModel,
-                                            as:'examSetupTypeSyllabus',
+                                            model: model.examSetupTypeModel,
+                                            as: 'examSetupTypeSyllabus',
                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                            include:[
+                                            include: [
                                                 {
-                                                    model:model.examStructureModel,
-                                                    as:'examStructure',
+                                                    model: model.examStructureModel,
+                                                    as: 'examStructure',
                                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                                                 }
                                             ]
