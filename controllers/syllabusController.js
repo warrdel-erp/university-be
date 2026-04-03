@@ -97,14 +97,14 @@ export async function courseAllSubject(req, res) {
 };
 
 export async function addSyllabusUnit(req, res) {
-    const { semesterId, subjectId, acedmicYearId, sessionId } = req.body
+    const { subjectId, acedmicYearId, sessionId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
     try {
-        if (!(semesterId && subjectId && acedmicYearId && sessionId)) {
-            return res.status(400).send('semesterId,sessionId,subjectId and acedmicYearId is required')
+        if (!(subjectId && acedmicYearId && sessionId)) {
+            return res.status(400).send('sessionId,subjectId and acedmicYearId is required')
         }
         const Syllabus = await syllabusCreation.addSyllabusUnit(req.body, createdBy, updatedBy, universityId, instituteId);
         if (Syllabus) {
