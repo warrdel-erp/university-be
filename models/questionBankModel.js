@@ -52,7 +52,7 @@ export default sequelize.define(
         },
         subjectId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'subject_id',
             references: {
                 model: subject,

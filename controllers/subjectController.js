@@ -3,13 +3,14 @@ import * as subjectService from '../services/subjectService.js';
 export const getAllSubjects = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
+    const acedmicYearId = req.user.acedmicYearId;
 
     try {
         if (!universityId) {
             return res.status(400).send('University Id is required');
         }
 
-        const filter = { ...req.query, universityId, instituteId };
+        const filter = { ...req.query, universityId, instituteId, acedmicYearId };
 
         const result = await subjectService.getAllSubjects(filter);
         return res.status(200).send({ data: result, success: true });

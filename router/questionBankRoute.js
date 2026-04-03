@@ -44,7 +44,7 @@ const baseQuestionSchema = z.object({
     marks: z.number({ required_error: "marks is required" }),
     question: z.string({ required_error: "question is required" }),
     Answer: z.string({ required_error: "Answer is required" }),
-    subjectId: z.number().optional(),
+    subjectId: z.number(),
 });
 
 const createQuestionSchema = z.discriminatedUnion("type", [
