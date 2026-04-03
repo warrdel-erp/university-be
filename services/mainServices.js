@@ -246,10 +246,9 @@ export async function addClass(data, createdBy, universityId, instituteId) {
         if (!universityId) throw new Error('UniversityId is required');
         if (!instituteId) throw new Error('InstituteId is required');
 
-        const { courseId, specializationId, acedmicYearId, className, sections, term, sessionId } = data;
+        const { courseId, acedmicYearId, className, sections, term, sessionId } = data;
 
         if (!courseId) throw new Error('CourseId is required');
-        if (!specializationId) throw new Error('SpecializationId is required');
         if (!acedmicYearId) throw new Error('AcedmicYearId is required');
         if (!className) throw new Error('ClassName is required');
         if (!sections || !Array.isArray(sections) || sections.length === 0) throw new Error('Sections are required and must be a non-empty array');
@@ -266,7 +265,6 @@ export async function addClass(data, createdBy, universityId, instituteId) {
                 ...section,
                 courseId,
                 universityId,
-                specializationId,
                 createdBy,
                 acedmicYearId,
                 classId, instituteId, term, sessionId
