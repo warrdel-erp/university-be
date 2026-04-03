@@ -5,11 +5,12 @@ export async function addDormitoryList(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
     try {
         if (!(dormitoryName && type && address && intake && acedmicYearId)) {
             return res.status(400).send('dormitoryName,type,address,intake and acedmicYearId is required')
         }
-        const DormitoryList = await DormitoryListCreation.addDormitoryList(req.body, createdBy, updatedBy, instituteId);
+        const DormitoryList = await DormitoryListCreation.addDormitoryList(req.body, createdBy, updatedBy, instituteId, universityId);
         res.status(201).json({ message: "Data added successfully", DormitoryList });
     } catch (error) {
         res.status(500).json({ error: error.message });

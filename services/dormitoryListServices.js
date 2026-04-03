@@ -1,15 +1,17 @@
 import * as DormitoryListCreationService from "../repository/dormitoryListRepository.js";
 
-export async function addDormitoryList(dormitoryListData, createdBy, updatedBy,instituteId) {
+export async function addDormitoryList(dormitoryListData, createdBy, updatedBy, instituteId) {
     dormitoryListData.createdBy = createdBy;
     dormitoryListData.updatedBy = updatedBy;
-    dormitoryListData.instituteId=instituteId
+    dormitoryListData.instituteId = instituteId;
+    dormitoryListData.universityId = universityId;
+
     const DormitoryList = await DormitoryListCreationService.addDormitoryList(dormitoryListData);
     return DormitoryList;
 }
 
-export async function getDormitoryListDetails(universityId,acedmicYearId,role,instituteId) {
-    return await DormitoryListCreationService.getDormitoryListDetails(universityId,acedmicYearId,role,instituteId);
+export async function getDormitoryListDetails(universityId, acedmicYearId, role, instituteId) {
+    return await DormitoryListCreationService.getDormitoryListDetails(universityId, acedmicYearId, role, instituteId);
 }
 
 export async function getSingleDormitoryListDetails(dormitoryListId, universityId) {
