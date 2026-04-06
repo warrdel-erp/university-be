@@ -56,7 +56,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const address = data.address ? JSON.parse(data.address) : null;
     const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
     const office = data.office ? JSON.parse(data.office) : null;
-    // const role = data.roles ? JSON.parse(data.roles) : null;
+    const roleData = data.roleData ? JSON.parse(data.roleData) : null;
     const skills = data.skill ? JSON.parse(data.skill) : [];
     const documents = data.documents ? JSON.parse(data.documents) : [];
     const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
@@ -93,8 +93,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
     // Add user role entry 
-    if (data.roleData) {
-      const roleData = data.roleData
+    if (roleData) {
       await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
     } else {
       throw new Error("Role data is required")
