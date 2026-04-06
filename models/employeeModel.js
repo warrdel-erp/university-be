@@ -44,7 +44,7 @@ export default sequelize.define(
         },
         roleId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'role_id',
             references: {
                 model: role,

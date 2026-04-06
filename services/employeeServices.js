@@ -101,8 +101,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 
     // Add employee 
     data.createdBy = createdBy
-    data.roleId = roleId
     data.userId = userId;
+    data.roleId = null;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
@@ -275,7 +275,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     }
 
 
-    if (roleName?.trim().toLowerCase() === 'admin') {
+    if (roleData?.role?.trim().toLowerCase() === 'admin') {
       const data = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber, alternateNumber: officalMobileNumber, registerEmail: officalEmailId, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' }
       await addHead(data, transaction)
     }
