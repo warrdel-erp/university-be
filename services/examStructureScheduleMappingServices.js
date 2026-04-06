@@ -174,3 +174,7 @@ export async function getExamDetailByStudentId(studentId) {
 
   return studentInfo;
 };
+
+export async function getExamScheduleById(examScheduleId) {
+    return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
+}
