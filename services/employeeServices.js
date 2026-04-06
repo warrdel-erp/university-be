@@ -69,13 +69,13 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
 
 
-    const roleDetails = await getSingleRoleDetails(roleId)
-    const roleName = roleDetails.dataValues.role
-    let finalRegisterRoleId = roleId;
+    // const roleDetails = await getSingleRoleDetails(roleId)
+    // const roleName = roleDetails.dataValues.role
+    // let finalRegisterRoleId = roleId;
 
-    if (roleName?.trim().toLowerCase() === 'admin') {
-      finalRegisterRoleId = 13;
-    }
+    // if (roleName?.trim().toLowerCase() === 'admin') {
+    //   finalRegisterRoleId = 13;
+    // }
 
     const employeePersonalDetail = {
       personalEmail: address?.officalEmailId || address?.officialEmailId,
@@ -84,7 +84,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 
     const employeeRegisterData = {
       universityId,
-      roleId: finalRegisterRoleId,
+      // roleId: finalRegisterRoleId,
       employeeName: data.employeeName,
       employeeId: null,
       instituteId
@@ -93,9 +93,11 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
     // Add user role entry 
-    if (data.role) {
+    if (data.roleData) {
       const roleData = data.roleData
       await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
+    } else {
+      throw new Error("Role data is required")
     }
 
     // Add employee 
@@ -109,7 +111,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     // Associate user and employee
     await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
 
-    const { campusId, instituteId, employeeName, employmentType } = employee.dataValues
+    const { campusId, employeeName, employmentType } = employee.dataValues
 
 
     // image upload
