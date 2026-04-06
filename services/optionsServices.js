@@ -30,3 +30,8 @@ export async function getClassSectionOptions(courseId, term) {
 export async function getSpecializationOptions(courseId, instituteId, universityId) {
     return await optionsRepository.getSpecializationOptions(courseId, instituteId, universityId);
 }
+
+export async function getSubjectOptions(courseId, term, universityId, acedmicYearId) {
+    return await optionsRepository.getSubjectOptions(courseId, term, universityId, acedmicYearId);
+}
+

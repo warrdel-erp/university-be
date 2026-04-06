@@ -1152,7 +1152,13 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
           model: model.courseModel,
           as: 'courseSection',
           attributes: ['courseId', 'courseName', 'courseCode']
+        },
+        {
+          model: model.classModel,
+          as: 'classGroup',
+          attributes: ['classId', 'className', 'term']
         }
+
       ]
     });
   } catch (error) {

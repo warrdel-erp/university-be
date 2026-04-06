@@ -14,6 +14,7 @@ const setSubjectTermsSchema = z.array(z.object({
 const getAllSubjectsQuerySchema = z.object({}).catchall(z.any());
 
 router.get('/', userAuth, validate({ query: getAllSubjectsQuerySchema }), getAllSubjects);
+
 router.post('/addTerms', userAuth, validate({ body: setSubjectTermsSchema }), setSubjectTerms);
 
 export default router;

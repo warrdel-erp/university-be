@@ -13,4 +13,7 @@ router.get('/classSections', userAuth, optionsController.getClassSectionOptions)
 
 router.get('/specializations', userAuth, optionsController.getSpecializationOptions);
 
+router.get('/subjects', userAuth, optionsController.getSubjectOptions);
+
 export default router;
+
