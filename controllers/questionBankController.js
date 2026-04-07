@@ -46,7 +46,7 @@ export async function countQuestions(req, res) {
             { type, difficulty, bloom, marks, createdBy, subjectId, status }
         );
 
-        return SuccessResponse(res, 200, "Question count fetched successfully", { count: result });
+        return SuccessResponse(res, 200, "Question count fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }

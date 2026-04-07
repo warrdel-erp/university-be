@@ -135,6 +135,7 @@ import userRoleModel from "./userRoleModel.js";
 import questionPaperModel from "./questionPaperModel.js";
 import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
+import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 
 
 
@@ -675,6 +676,9 @@ userModel.hasMany(questionPaperModel, { foreignKey: "createdBy", as: "createdQue
 questionPaperModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
 userModel.hasMany(questionPaperModel, { foreignKey: "updatedBy", as: "updatedQuestionPapers" });
 
+questionPaperModel.belongsTo(questionPaperBlueprintModel, { foreignKey: "blueprintId", as: "blueprint" });
+questionPaperBlueprintModel.hasMany(questionPaperModel, { foreignKey: "blueprintId", as: "questionPapers" });
+
 questionBankModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
 universityModel.hasMany(questionBankModel, { foreignKey: "universityId", as: "universityQuestions" });
 
@@ -1177,6 +1181,19 @@ employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as
 questionPaperModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
 examScheduleModel.hasMany(questionPaperModel, { foreignKey: "examScheduleId", as: "questionPapers" });
 
+// questionPaperBlueprint Associations
+questionPaperBlueprintModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
+subjectModel.hasMany(questionPaperBlueprintModel, { foreignKey: "subjectId", as: "blueprints" });
+
+questionPaperBlueprintModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+universityModel.hasMany(questionPaperBlueprintModel, { foreignKey: "universityId", as: "universityBlueprints" });
+
+questionPaperBlueprintModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "createdBy", as: "createdBlueprints" });
+
+questionPaperBlueprintModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
+userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "updatedBy", as: "updatedBlueprints" });
+
 export {
   settingModel,
   universityModel,
@@ -1315,4 +1332,5 @@ export {
   questionPaperModel,
   questionBankModel,
   teacherExamAssignmentModel,
+  questionPaperBlueprintModel,
 };

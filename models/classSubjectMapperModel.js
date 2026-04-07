@@ -41,7 +41,7 @@ export default sequelize.define(
                 model: instituteModel,
                 key: 'institute_id'
             }
-        }, 
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 export async function addQuestionPaper(questionPaperData) {
     try {
@@ -85,6 +86,15 @@ export async function deleteQuestionPaper(id) {
         return deleted > 0;
     } catch (error) {
         console.error("Error deleting question paper:", error);
+        throw error;
+    }
+}
+
+export async function getExamScheduleById(id) {
+    try {
+        return await model.examScheduleModel.findByPk(id);
+    } catch (error) {
+        console.error("Error fetching exam schedule:", error);
         throw error;
     }
 }

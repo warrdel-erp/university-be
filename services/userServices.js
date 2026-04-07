@@ -360,8 +360,8 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     const { universityId, roleId, employeeName, employeeId, instituteId } = employeeRegisterData
     const dummyPassword = uuidv4();
     const password = bcrypt.hashSync(dummyPassword, salt);
-    const roleName = await getSingleRoleDetails(roleId);
-    const role = roleName?.dataValues?.role
+    // const roleName = await getSingleRoleDetails(roleId);
+    // const role = roleName?.dataValues?.role
     const data = {
       userName: employeeName,
       universityId: universityId,
@@ -369,7 +369,7 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
       phone: mobileNumber || null,
       email: personalEmail || null,
       uniqueId: dummyPassword,
-      role,
+      // role,
       employeeId: employeeId,
       dummyPassword: dummyPassword,
       defaultInstituteId: instituteId,
@@ -386,11 +386,11 @@ export const employeeRegister = async (employeePersonalDetail, employeeRegisterD
     }
 
     // Get permissions by role
-    const roleAndPermission = await getPermissionByRole(roleId);
-    const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
+    // const roleAndPermission = await getPermissionByRole(roleId);
+    // const permissionId = roleAndPermission.map(permission => permission.dataValues.permission_id);
 
     // Save user role and permissions
-    await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
+    // await dataSaveUerRolePermission(userId, roleId, permissionId, transaction);
 
     return userId;
   } catch (error) {

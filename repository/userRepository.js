@@ -293,7 +293,7 @@ export async function getUserByUserId(userId) {
             },
             {
                 association: "institute",  // alias use karo
-                attributes: ["instituteId", "instituteName"]
+                attributes: ["instituteId", "instituteName", "campusId"]
             }
         ]
     });

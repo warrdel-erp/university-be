@@ -77,3 +77,9 @@ export const Document = ['10th','12th','Graduation','Post Graduation']
 export const nomineeRelation = ['Aunt','Brother','Father','Mother','Sister','Uncle']
 
 export const itCategory = ['INCOME TAX']
+export const questionStatus = ['Pending', 'Approved', 'Rejected'];
+export const questionTypes = {
+    MCQ: 'mcq',
+    THEORY: 'theory',
+    THEORY_CHOICE: 'theoryChoice'
+};

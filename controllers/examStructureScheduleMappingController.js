@@ -1,4 +1,6 @@
 import * as examStructureScheduleServices from "../services/examStructureScheduleMappingServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+
 
 export async function addExamStructureSchedule(req, res) {
   const { acedmicYearId, sessionId } = req.body;
@@ -17,6 +19,8 @@ export async function addExamStructureSchedule(req, res) {
   }
 };
 
+
+
 export async function getAllExamStructureSchedule(req, res) {
   const universityId = req.user.universityId;
   const { acedmicYearId } = req.query
@@ -32,6 +36,8 @@ export async function getAllExamStructureSchedule(req, res) {
   }
 }
 
+
+
 export async function publishExamSchedule(req, res) {
   try {
     const examDetails = await examStructureScheduleServices.publishExamSchedule(req.body);
@@ -46,6 +52,8 @@ export async function publishExamSchedule(req, res) {
   }
 };
 
+
+
 export async function updateExamSchedule(req, res) {
   try {
     const { examScheduleId } = req.body;
@@ -59,6 +67,8 @@ export async function updateExamSchedule(req, res) {
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export async function deleteExamSchedule(req, res) {
   try {
@@ -76,6 +86,8 @@ export async function deleteExamSchedule(req, res) {
     res.status(500).json({ error: error.message });
   }
 };
+
+
 
 export async function addExamSchedule(req, res) {
   const { examSetupTypeId } = req.body;
@@ -101,6 +113,8 @@ export async function addExamSchedule(req, res) {
   }
 };
 
+
+
 export async function getDetailByExamType(req, res) {
   const universityId = req.user.universityId;
 
@@ -123,6 +137,8 @@ export async function getDetailByExamType(req, res) {
   }
 };
 
+
+
 export async function getExamDetailByStudentId(req, res) {
 
   try {
@@ -142,3 +158,23 @@ export async function getExamDetailByStudentId(req, res) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+
+
+export async function getExamScheduleById(req, res) {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return ErrorResponse(res, 400, "examScheduleId is required");
+    }
+    const result = await examStructureScheduleServices.getExamScheduleById(id);
+    if (result) {
+      return SuccessResponse(res, 200, "Exam schedule details fetched successfully", result);
+    } else {
+      return ErrorResponse(res, 404, "Exam schedule not found");
+    }
+  } catch (error) {
+    console.error("Error in getExamScheduleById controller:", error);
+    return ErrorResponse(res, 500, error.message);
+  }
+}

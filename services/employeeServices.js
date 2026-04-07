@@ -56,7 +56,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const address = data.address ? JSON.parse(data.address) : null;
     const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
     const office = data.office ? JSON.parse(data.office) : null;
-    // const role = data.roles ? JSON.parse(data.roles) : null;
+    const roleData = data.roleData ? JSON.parse(data.roleData) : null;
     const skills = data.skill ? JSON.parse(data.skill) : [];
     const documents = data.documents ? JSON.parse(data.documents) : [];
     const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
@@ -69,13 +69,13 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
 
 
-    const roleDetails = await getSingleRoleDetails(roleId)
-    const roleName = roleDetails.dataValues.role
-    let finalRegisterRoleId = roleId;
+    // const roleDetails = await getSingleRoleDetails(roleId)
+    // const roleName = roleDetails.dataValues.role
+    // let finalRegisterRoleId = roleId;
 
-    if (roleName?.trim().toLowerCase() === 'admin') {
-      finalRegisterRoleId = 13;
-    }
+    // if (roleName?.trim().toLowerCase() === 'admin') {
+    //   finalRegisterRoleId = 13;
+    // }
 
     const employeePersonalDetail = {
       personalEmail: address?.officalEmailId || address?.officialEmailId,
@@ -84,7 +84,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 
     const employeeRegisterData = {
       universityId,
-      roleId: finalRegisterRoleId,
+      // roleId: finalRegisterRoleId,
       employeeName: data.employeeName,
       employeeId: null,
       instituteId
@@ -93,15 +93,16 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
 
     // Add user role entry 
-    if (data.role) {
-      const roleData = data.roleData
+    if (roleData) {
       await userRoleService.assignRoleToUser(userId, roleData.role, roleData.permissions, transaction);
+    } else {
+      throw new Error("Role data is required")
     }
 
     // Add employee 
     data.createdBy = createdBy
-    data.roleId = roleId
     data.userId = userId;
+    data.roleId = null;
     data.employeeCode = await generateEmployeeNumber(data.campusId, data.instituteId)
     const employee = await employeeRepository.addEmployee(data, transaction);
     const employeeId = employee.dataValues.employeeId;
@@ -109,7 +110,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     // Associate user and employee
     await registerRepository.adminUser({ userId: userId, employeeId: employeeId }, transaction);
 
-    const { campusId, instituteId, employeeName, employmentType } = employee.dataValues
+    const { campusId, employeeName, employmentType } = employee.dataValues
 
 
     // image upload
@@ -274,7 +275,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     }
 
 
-    if (roleName?.trim().toLowerCase() === 'admin') {
+    if (roleData?.role?.trim().toLowerCase() === 'admin') {
       const data = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber, alternateNumber: officalMobileNumber, registerEmail: officalEmailId, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' }
       await addHead(data, transaction)
     }
