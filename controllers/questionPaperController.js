@@ -79,3 +79,31 @@ export async function deleteQuestionPaper(req, res) {
     }
 }
 
+export async function generateQuestionPaper(req, res) {
+    try {
+        const { name, blueprintId, examScheduleId, numberOfPapers = 1 } = req.body;
+        const createdBy = req.user.userId;
+        const updatedBy = req.user.userId;
+        const universityId = req.user.universityId;
+
+        if (!name || !blueprintId || !examScheduleId) {
+            return ErrorResponse(res, 400, "name, blueprintId and examScheduleId are required");
+        }
+
+        const result = await questionPaperServices.generateQuestionPaper(
+            name,
+            blueprintId,
+            examScheduleId,
+            numberOfPapers,
+            createdBy,
+            updatedBy,
+            universityId
+        );
+
+        return SuccessResponse(res, 201, `${numberOfPapers} Question paper(s) generated successfully`, result);
+    } catch (error) {
+        console.error("Generate Question Paper Error:", error);
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+

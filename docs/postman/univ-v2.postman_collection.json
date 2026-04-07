@@ -368,7 +368,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject?instituteId=12",
+              "raw": "{{baseurl}}/subject?term=4&courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -379,6 +379,16 @@
                 {
                   "key": "instituteId",
                   "value": "12",
+                  "disabled": true
+                },
+                {
+                  "key": "term",
+                  "value": "4",
+                  "type": "text"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34",
                   "type": "text"
                 }
               ]
@@ -1299,6 +1309,48 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "fee",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/fee?courseId=34&semesterId=1&acedmicYearId=59",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "fee"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "semesterId",
+                  "value": "1"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1426,6 +1478,43 @@
               ],
               "path": [
                 "questionPaper"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "generate automatically",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "generate"
               ]
             }
           },
@@ -1795,7 +1884,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\",\n    \"content\": {\n        \"options\" : [\n            {\n                \"value\": \"option a\"\n            },\n            {\n                \"value\": \"option b\"\n            }\n        ]\n    }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1809,6 +1898,337 @@
               ],
               "path": [
                 "questionBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "bulk approve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n   \"ids\": [2, 4, 5]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/bulkApprove",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "bulkApprove"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "bulk reject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n   \"ids\": [2, 4, 5]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/bulkReject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "bulkReject"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank?createdBy=46",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "count",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/count?createdBy=46",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                "count"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\":2, \n    \"type\": \"a\",\n    \"difficulty\": \"fffffffff\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n} \n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionBank/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionBank",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question paper blueprint",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 1,\n  \"blueprint\": [\n    {\n      \"sectionName\": \"Section A: Multiple Choice Questions\",\n      \"typeOfQuestions\": \"mcq\",\n      \"totalQuestions\": 10,\n      \"marksPerQuestion\": 1\n    },\n    {\n      \"sectionName\": \"Section B: Theoretical Concepts\",\n      \"typeOfQuestions\": \"theory\",\n      \"totalQuestions\": 5,\n      \"marksPerQuestion\": 4\n    },\n    {\n      \"sectionName\": \"Section C: Advanced Case Studies\",\n      \"typeOfQuestions\": \"theoryChoice\",\n      \"totalQuestions\": 2,\n      \"marksPerQuestion\": 10\n    }\n  ]\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaperBlueprint"
               ]
             }
           },
@@ -2221,6 +2641,451 @@
               ],
               "path": [
                 "teacherExamAssignment",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam schedule",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/examScheduleMapping?acedmicYearId=59&examSetupTypeId=8",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "examScheduleMapping"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "59"
+                },
+                {
+                  "key": "examSetupTypeId",
+                  "value": "8"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/getScheduleById/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "getScheduleById",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "options",
+      "item": [
+        {
+          "name": "affiliated university",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/affiliatedUniversity",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "affiliatedUniversity"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "courses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/courses",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "course terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/courseTerms?courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "courseTerms"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "class sections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/classSections?courseId=34&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "classSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "type": "text"
+                },
+                {
+                  "key": "term",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "specialization",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/specializations",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "specializations"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/subjects?term=1&courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "subjects"
+              ],
+              "query": [
+                {
+                  "key": "term",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "code master",
+      "item": [
+        {
+          "name": "get",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/codeMaster/getCodesTypes?key=Designation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "codeMaster",
+                "getCodesTypes"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "Designation",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "question paper bluprint",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaperBlueprint"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaperBlueprint"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaperBlueprint/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaperBlueprint",
                 ":id"
               ],
               "variable": [

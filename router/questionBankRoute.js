@@ -13,27 +13,56 @@ import {
 } from "../controllers/questionBankController.js";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { questionStatus, questionTypes } from "../constant.js";
 
-const createQuestionSchema = z.object({
-    type: z.string({ required_error: "type is required" }),
+const mcqSchema = z.object({
+    type: z.literal(questionTypes.MCQ),
+    content: z.object({
+        options: z.array(z.string()).min(2, "MCQ must have at least 2 options"),
+    }),
+});
+
+const theorySchema = z.object({
+    type: z.literal(questionTypes.THEORY),
+    content: z.union([z.null(), z.object({}).optional()]),
+});
+
+const theoryChoiceSchema = z.object({
+    type: z.literal(questionTypes.THEORY_CHOICE),
+    content: z.object({
+        options: z.array(z.object({
+            question: z.string(),
+            Answer: z.string(),
+        })).min(1, "At least one optional question is required"),
+        mandatoryCount: z.number().min(1, "Mandatory count must be at least 1"),
+    }),
+});
+
+const baseQuestionSchema = z.object({
     difficulty: z.string({ required_error: "difficulty is required" }),
     bloom: z.string({ required_error: "bloom is required" }),
     marks: z.number({ required_error: "marks is required" }),
     question: z.string({ required_error: "question is required" }),
     Answer: z.string({ required_error: "Answer is required" }),
-    subjectId: z.number().optional(),
+    subjectId: z.number(),
 });
+
+const createQuestionSchema = z.discriminatedUnion("type", [
+    baseQuestionSchema.merge(mcqSchema),
+    baseQuestionSchema.merge(theorySchema),
+    baseQuestionSchema.merge(theoryChoiceSchema),
+]);
 
 const getAllQuestionsQuerySchema = z.object({
     page: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("1"),
     limit: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional().default("10"),
-    type: z.string().optional(),
+    type: z.enum(Object.values(questionTypes)).optional(),
     difficulty: z.string().optional(),
     bloom: z.string().optional(),
     marks: z.string().regex(/^\d+$/).transform(val => parseInt(val)).optional(),
     createdBy: z.coerce.number().optional(),
     subjectId: z.coerce.number().optional(),
-    status: z.enum(['Pending', 'Approved', 'Rejected']).optional(),
+    status: z.enum(questionStatus).optional(),
 });
 
 const bulkActionSchema = z.object({
@@ -42,14 +71,30 @@ const bulkActionSchema = z.object({
 
 const updateQuestionSchema = z.object({
     id: z.number({ required_error: "id is required" }),
-    type: z.string().optional(),
     difficulty: z.string().optional(),
     bloom: z.string().optional(),
     marks: z.number().optional(),
     question: z.string().optional(),
     Answer: z.string().optional(),
     subjectId: z.number().optional(),
-});
+}).and(z.union([
+    z.object({
+        type: z.literal(questionTypes.MCQ),
+        content: mcqSchema.shape.content
+    }),
+    z.object({
+        type: z.literal(questionTypes.THEORY),
+        content: theorySchema.shape.content
+    }),
+    z.object({
+        type: z.literal(questionTypes.THEORY_CHOICE),
+        content: theoryChoiceSchema.shape.content
+    }),
+    z.object({
+        type: z.undefined(),
+        content: z.any().optional()
+    })
+]).optional());
 
 
 router.post("/", userAuth, validate({ body: createQuestionSchema }), addQuestion);

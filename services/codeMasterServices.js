@@ -9,9 +9,9 @@ export async function addEmployeeCode(data,createdBy){
     return await codeMasterRepository.addEmployeeCode(data)
 };
 
-export async function getEmployeeCodesTypes(employeeCodeMasterId,universityId){
-    return await codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId,universityId)
-};
+export async function getEmployeeCodesTypes(employeeCodeMasterId, universityId, key) {
+    return await codeMasterRepository.getEmployeeCodesTypes(employeeCodeMasterId, universityId, key);
+}
 
 export async function updateCodeMasterType(employeeCodeMasterTypeId,info){
     return await codeMasterRepository.updateCodeMasterType(employeeCodeMasterTypeId,info)

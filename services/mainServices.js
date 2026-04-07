@@ -96,24 +96,11 @@ export async function addCourse(data, createdBy, instituteId, universityId) {
         const { course_levelId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
 
         for (const course of courses) {
-            // Add course
-            const result = await mainRepository.addCourse({
-                ...course,
-                course_levelId,
-                universityId,
-                affiliatedUniversityId,
-                createdBy,
-                acedmicYearId,
-                instituteId,
-            }, transaction);
-
-            const courseId = result?.dataValues?.courseId;
-            results.push(result);
 
             // add terms
             const { courseDuration } = course;
 
-            if (courseId && term && courseDuration) {
+            if (term && courseDuration) {
                 let monthsPerTerm = 6;
                 let termLabel = '';
                 switch (term.toLowerCase()) {
@@ -139,21 +126,39 @@ export async function addCourse(data, createdBy, instituteId, universityId) {
                 }
                 const totalTerms = Math.floor(courseDuration * 12 / monthsPerTerm);
 
-                for (let i = 1; i <= totalTerms; i++) {
 
-                    await mainRepository.addSemester({
-                        universityId,
-                        courseId,
-                        acedmicYearId,
-                        instituteId,
-                        termType: termLabel,
-                        name: `${termLabel} ${i}`,
-                        semesterDuration: monthsPerTerm,
-                        courseDuration: courseDuration,
-                        totalTerms,
-                        createdBy,
-                    }, transaction);
-                }
+                // Add course
+                const result = await mainRepository.addCourse({
+                    ...course,
+                    course_levelId,
+                    universityId,
+                    affiliatedUniversityId,
+                    createdBy,
+                    acedmicYearId,
+                    instituteId,
+                    totalTerms,
+                    termType: termLabel
+                }, transaction);
+
+
+                results.push(result)
+                // for (let i = 1; i <= totalTerms; i++) {
+
+                //     await mainRepository.addSemester({
+                //         universityId,
+                //         courseId,
+                //         acedmicYearId,
+                //         instituteId,
+                //         termType: termLabel,
+                //         name: `${termLabel} ${i}`,
+                //         semesterDuration: monthsPerTerm,
+                //         courseDuration: courseDuration,
+                //         totalTerms,
+                //         createdBy,
+                //     }, transaction);
+                // }
+            } else {
+                throw new Error("Term and Course Duration is required")
             }
         }
 
@@ -236,7 +241,20 @@ export async function updateSubject(data, updateBy, instituteId) {
 export async function addClass(data, createdBy, universityId, instituteId) {
     const results = [];
     try {
-        const { courseId, specializationId, acedmicYearId, className, sections, term, sessionId } = data;
+        if (!data) throw new Error('Data is required');
+        if (!createdBy) throw new Error('CreatedBy is required');
+        if (!universityId) throw new Error('UniversityId is required');
+        if (!instituteId) throw new Error('InstituteId is required');
+
+        const { courseId, acedmicYearId, className, sections, term, sessionId } = data;
+
+        if (!courseId) throw new Error('CourseId is required');
+        if (!acedmicYearId) throw new Error('AcedmicYearId is required');
+        if (!className) throw new Error('ClassName is required');
+        if (!sections || !Array.isArray(sections) || sections.length === 0) throw new Error('Sections are required and must be a non-empty array');
+        if (!term) throw new Error('Term is required');
+        if (!sessionId) throw new Error('SessionId is required');
+
         const classObject = { courseId, className, universityId, updatedBy: createdBy, createdBy, instituteId, term, sessionId }
 
         const classData = await mainRepository.seprateAddClass(classObject)
@@ -247,7 +265,6 @@ export async function addClass(data, createdBy, universityId, instituteId) {
                 ...section,
                 courseId,
                 universityId,
-                specializationId,
                 createdBy,
                 acedmicYearId,
                 classId, instituteId, term, sessionId
@@ -257,7 +274,7 @@ export async function addClass(data, createdBy, universityId, instituteId) {
         return results;
     } catch (error) {
         console.error('Error adding class:', error);
-        return { message: 'Error adding class', error };
+        return { message: error.message || 'Error adding class', error };
     }
 };
 

@@ -1,9 +1,9 @@
 import * as subjectRepository from '../repository/subjectRepository.js';
 
 
-export async function getAllSubjects(universityId, acedmicYearId, campusId, instituteId, courseId) {
+export async function getAllSubjects(filter) {
     try {
-        return await subjectRepository.getAllSubjects(universityId, acedmicYearId, campusId, instituteId, courseId);
+        return await subjectRepository.getAllSubjects(filter);
     } catch (error) {
         console.error('Error in getAllSubjects service:', error);
         throw error;

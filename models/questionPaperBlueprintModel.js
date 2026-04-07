@@ -1,54 +1,17 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import subject from "./subjectModel.js";
 import university from "./universityModel.js";
 import users from "./userModel.js";
-import subject from "./subjectModel.js";
-import { questionStatus, questionTypes } from "../constant.js";
-
 
 export default sequelize.define(
-    'questionBank',
+    'questionPaperBlueprint',
     {
         id: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
             field: 'id'
-        },
-        type: {
-            type: DataTypes.ENUM(...Object.values(questionTypes)),
-            allowNull: false,
-            field: 'type'
-        },
-        difficulty: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'difficulty'
-        },
-        bloom: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'bloom'
-        },
-        marks: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'marks'
-        },
-        question: {
-            type: DataTypes.TEXT,
-            allowNull: false,
-            field: 'question'
-        },
-        Answer: {
-            type: DataTypes.TEXT,
-            allowNull: false,
-            field: 'answer'
-        },
-        content: {
-            type: DataTypes.JSON,
-            allowNull: true,
-            field: 'content'
         },
         subjectId: {
             type: DataTypes.INTEGER,
@@ -59,11 +22,10 @@ export default sequelize.define(
                 key: 'subject_id'
             }
         },
-        status: {
-            type: DataTypes.ENUM(...questionStatus),
+        blueprint: {
+            type: DataTypes.JSON,
             allowNull: false,
-            defaultValue: questionStatus[0],
-            field: 'status'
+            field: 'blueprint'
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -106,7 +68,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'question_bank',
+        tableName: 'question_paper_blueprint',
         timestamps: true,
         paranoid: false
     }

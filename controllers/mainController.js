@@ -157,13 +157,13 @@ export const updateSubject = async (req, res) => {
 
 export const addClass = async (req, res) => {
     try {
-        const { courseId, specializationId } = req.body;
+        const { courseId } = req.body;
         const createdBy = req.user.userId;
         const universityId = req.user.universityId;
         const instituteId = req.user.defaultInstituteId;
         const data = req.body
-        if (!(courseId || specializationId)) {
-            return res.status(400).send('specializationId Or course Id is required')
+        if (!(courseId)) {
+            return res.status(400).send('course Id is required')
         }
         const result = await mainServices.addClass(data, createdBy, universityId, instituteId);
         return res.status(200).send(result);
@@ -206,12 +206,11 @@ export const getClassSpecific = async (req, res) => {
 export const addClassSubjectMapper = async (req, res) => {
     try {
         // const {classId} = req.body;
-        const { semesterId } = req.body
         const createdBy = req.user.userId;
         const data = req.body;
         const instituteId = req.user.defaultInstituteId;
-        if (!(semesterId && instituteId)) {
-            return res.status(400).send('semesterId and instituteId is required')
+        if (!(instituteId)) {
+            return res.status(400).send('instituteId is required')
         }
         const result = await mainServices.addClassSubjectMapper(data, createdBy, instituteId);
         return res.status(200).send(result);

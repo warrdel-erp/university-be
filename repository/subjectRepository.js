@@ -2,18 +2,10 @@ import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 
-export async function getAllSubjects(universityId, acedmicYearId, campusId, instituteId, courseId) {
+export async function getAllSubjects(filter) {
     try {
-        const whereClause = {
-            universityId,
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(instituteId && { instituteId }),
-            ...(campusId && { campusId }),
-            ...(courseId && { courseId }),
-        };
-
         const result = await model.subjectModel.findAll({
-            where: whereClause,
+            where: filter,
             include: [
                 {
                     model: model.courseModel,

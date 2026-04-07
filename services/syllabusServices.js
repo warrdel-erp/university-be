@@ -87,12 +87,13 @@ export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, 
   return await SyllabusCreationRepository.addSyllabusUnit(syllabusUnits);
 };
 
-export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role) {
+export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role, filters) {
   const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(
     universityId,
     acedmicYearId,
     instituteId,
-    role
+    role,
+    filters
   );
 
   return syllabusUnits.map(unit => ({

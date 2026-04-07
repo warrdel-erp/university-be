@@ -27,7 +27,7 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(courseId, a
   try {
     const subjects = await model.subjectModel.findAll({
       where: { courseId, acedmicYearId, instituteId },
-      attributes: ['subjectId', 'subjectName', 'term'],
+      attributes: ['subjectId', 'subjectName', 'term', "subjectCode"],
       raw: true,
       nest: true
     });
