@@ -1,5 +1,5 @@
 import * as model from '../models/index.js';
-
+import { ROLES } from '../const/roles.js';
 export async function getAffiliatedUniversityOptions(instituteId) {
     return await model.affiliatedIniversityModel.findAll({
         attributes: [['affiliated_university_name', 'label'], ['affiliated_university_id', 'value']],
@@ -61,6 +61,31 @@ export async function getSubjectOptions(courseId, term, universityId, acedmicYea
             ...(term && { term }),
             ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
+        }
+    });
+}
+
+export async function getTeacherOptions(instituteId, campusId) {
+    return await model.employeeModel.findAll({
+        attributes: [['employee_name', 'label'], ['employee_id', 'value']],
+        include: [{
+            model: model.userModel,
+            as: 'user',
+            attributes: [],
+            required: true,
+            include: [{
+                model: model.userRoleModel,
+                as: 'userRoles',
+                attributes: [],
+                where: {
+                    role: ROLES.TEACHER
+                },
+                required: true
+            }]
+        }],
+        where: {
+            ...(instituteId && { instituteId }),
+            ...(campusId && { campusId }),
         }
     });
 }

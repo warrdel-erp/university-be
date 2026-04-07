@@ -15,5 +15,6 @@ router.get('/specializations', userAuth, optionsController.getSpecializationOpti
 
 router.get('/subjects', userAuth, optionsController.getSubjectOptions);
 
-export default router;
+router.get('/teachers', userAuth, optionsController.getTeacherOptions);
 
+export default router;

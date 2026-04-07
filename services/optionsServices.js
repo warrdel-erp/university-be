@@ -35,3 +35,7 @@ export async function getSubjectOptions(courseId, term, universityId, acedmicYea
     return await optionsRepository.getSubjectOptions(courseId, term, universityId, acedmicYearId);
 }
 
+export async function getTeacherOptions(instituteId, campusId) {
+    return await optionsRepository.getTeacherOptions(instituteId, campusId);
+}
+
