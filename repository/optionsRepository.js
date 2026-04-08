@@ -90,3 +90,12 @@ export async function getTeacherOptions(instituteId, campusId) {
     });
 }
 
+export async function getFeePlanOptions(filters) {
+    return await model.feePlanModel.findAll({
+        attributes: [['name', 'label'], ['fee_plan_id', 'value']],
+        where: filters
+    });
+}
+
+
+

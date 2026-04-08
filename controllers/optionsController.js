@@ -91,3 +91,21 @@ export const getTeacherOptions = async (req, res) => {
     }
 };
 
+export const getFeePlanOptions = async (req, res) => {
+    try {
+        const filters = {
+            ...req.query,
+            instituteId: req.user.defaultInstituteId,
+            acedmicYearId: req.user.defaultAcademicYearId
+        };
+
+        const result = await optionsServices.getFeePlanOptions(filters);
+        return SuccessResponse(res, 200, "Fee plan options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getFeePlanOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+
+

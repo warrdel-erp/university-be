@@ -39,3 +39,9 @@ export async function getTeacherOptions(instituteId, campusId) {
     return await optionsRepository.getTeacherOptions(instituteId, campusId);
 }
 
+export async function getFeePlanOptions(filters) {
+    return await optionsRepository.getFeePlanOptions(filters);
+}
+
+
+
