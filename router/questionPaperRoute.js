@@ -69,7 +69,6 @@ const createQuestionPaperSchema = z.object({
     name: z.string({ required_error: "name is required" }),
     questionPaper: z.array(questionPaperSectionSchema).min(1, "Question paper must have at least one section"),
     examScheduleId: z.number({ required_error: "examScheduleId is required" }),
-    blueprintId: z.number().optional(),
 });
 
 const getAllQuestionPapersQuerySchema = z.object({
@@ -83,7 +82,6 @@ const updateQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
     name: z.string().optional(),
     questionPaper: z.array(questionPaperSectionSchema).min(1, "Question paper must have at least one section").optional(),
-    blueprintId: z.number().optional(),
 });
 
 const generateQuestionPaperSchema = z.object({

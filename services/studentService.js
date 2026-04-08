@@ -66,6 +66,8 @@ export async function addStudent(
     info.email = info.email.toLowerCase();
     info.createdBy = createdBy;
 
+    delete info.semesterId;
+
     // Save student information
     const student = await studentRepository.addStudent(info, transaction);
     const studentId = student.dataValues.studentId;
