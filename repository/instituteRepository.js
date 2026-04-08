@@ -1,4 +1,5 @@
 import instituteModel from "../models/instituteModel.js";
+import campusModel from "../models/campusModel.js";
 
 /**
  * Create a new institute
@@ -29,6 +30,12 @@ export async function getInstitutes(universityId, campusId) {
     };
     const result = await instituteModel.findAll({
       where: whereClause,
+      include: [
+        {
+          model: campusModel,
+          as: "campues"
+        }
+      ]
     });
     return result;
   } catch (error) {
