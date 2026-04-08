@@ -1464,7 +1464,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"questionPaper\": {\n        \"name\": \"any json\"\n    }\n\n}",
+              "raw": "{\n \n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1500,7 +1500,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}",
+              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1884,7 +1884,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\",\n    \"content\": {\n        \"options\" : [\n            {\n                \"value\": \"option a\"\n            },\n            {\n                \"value\": \"option b\"\n            }\n        ]\n    }\n}",
+              "raw": "{\n    \"type\": \"theory\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\",\n    \"subjectId\": 47,\n    \"content\": null\n} ",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1997,7 +1997,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "raw": "",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2936,7 +2936,7 @@
           "response": []
         },
         {
-          "name": "subjects Copy",
+          "name": "teachers",
           "request": {
             "auth": {
               "type": "bearer",
@@ -2958,6 +2958,44 @@
               "path": [
                 "options",
                 "teachers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "fee plans",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/feePlans?courseId=34&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "feePlans"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
               ]
             }
           },
@@ -3072,12 +3110,19 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "raw": "{{baseurl}}/questionPaperBlueprint?createdBy=46",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "questionPaperBlueprint"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46",
+                  "type": "text"
+                }
               ]
             }
           },
