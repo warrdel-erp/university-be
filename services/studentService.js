@@ -86,7 +86,7 @@ export async function addStudent(
       roleId,
     };
 
-    const data = { studentId, acedmicYearId, createdBy, semesterId, sessionId };
+    const data = { studentId, acedmicYearId, createdBy, sessionId };
     const result = await studentRepository.classStudentMapping(data, transaction);
     //  entranceDetails
     let entranceDetails = [];
@@ -172,6 +172,7 @@ export async function addStudent(
 
     const InvoiceData = { studentId, feePlanId, universityId, createdBy, updatedBy: createdBy };
     const getInvoice = await findByPlanId(feePlanId);
+
     const dataToInsert = getInvoice.map((invoice) => ({
       studentId,
       universityId,
@@ -181,6 +182,7 @@ export async function addStudent(
       createdBy,
       updatedBy: createdBy,
     }));
+
     await studentRepository.addStudentInvoiceMapper(dataToInsert, transaction);
 
     await transaction.commit();

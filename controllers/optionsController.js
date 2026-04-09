@@ -107,5 +107,21 @@ export const getFeePlanOptions = async (req, res) => {
     }
 };
 
+export const getTopicOptions = async (req, res) => {
+    try {
+        const filters = {
+            ...req.query,
+            instituteId: req.user.defaultInstituteId,
+            universityId: req.user.universityId
+        };
+
+        const result = await optionsServices.getTopicOptions(filters);
+        return SuccessResponse(res, 200, "Topic options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getTopicOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
 
 

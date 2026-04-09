@@ -97,5 +97,12 @@ export async function getFeePlanOptions(filters) {
     });
 }
 
+export async function getTopicOptions(filters) {
+    return await model.topicModel.findAll({
+        attributes: [['name', 'label'], ['topic_id', 'value']],
+        where: filters
+    });
+}
+
 
 

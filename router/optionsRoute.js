@@ -19,5 +19,6 @@ router.get('/teachers', userAuth, optionsController.getTeacherOptions);
 
 router.get('/feePlans', userAuth, optionsController.getFeePlanOptions);
 
+router.get('/topics', userAuth, optionsController.getTopicOptions);
 
 export default router;

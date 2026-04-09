@@ -3001,6 +3001,40 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "topics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/topics?lessonId=4",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "topics"
+              ],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },

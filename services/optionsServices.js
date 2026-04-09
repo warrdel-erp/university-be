@@ -43,5 +43,9 @@ export async function getFeePlanOptions(filters) {
     return await optionsRepository.getFeePlanOptions(filters);
 }
 
+export async function getTopicOptions(filters) {
+    return await optionsRepository.getTopicOptions(filters);
+}
+
 
 
