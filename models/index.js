@@ -136,6 +136,8 @@ import questionPaperModel from "./questionPaperModel.js";
 import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
+import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
+
 
 
 
@@ -1011,8 +1013,7 @@ examStructureScheduleMappingModel.belongsTo(sessionModel, { foreignKey: "session
 examScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjectSchedule" });
 subjectModel.hasMany(examScheduleModel, { foreignKey: "subject_id", as: "scheduleSubject" });
 
-examSetupTypeModel.hasMany(examScheduleModel, { foreignKey: "examSetupTypeId", as: "examSchedulesTypes" });
-examScheduleModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "examSetupTypeSchedule" });
+
 
 examScheduleModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYearSchedule" });
 acedmicYearModel.hasMany(examScheduleModel, { foreignKey: "acedmicYearId", as: "academicYearSchedule" });
@@ -1194,6 +1195,28 @@ userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "createdBy", as: "c
 questionPaperBlueprintModel.belongsTo(userModel, { foreignKey: "updatedBy", as: "updater" });
 userModel.hasMany(questionPaperBlueprintModel, { foreignKey: "updatedBy", as: "updatedBlueprints" });
 
+
+examSetupTypeTermModel.belongsTo(examSetupTypeModel, { foreignKey: 'examSetupTypeId', as: 'examSetupType' });
+examSetupTypeModel.hasMany(examSetupTypeTermModel, { foreignKey: 'examSetupTypeId', as: 'examSetupTypeTerms' });
+
+examSetupTypeTermModel.belongsTo(acedmicYearModel, { foreignKey: 'acedmicYearId', as: 'acedmicYear' });
+acedmicYearModel.hasMany(examSetupTypeTermModel, { foreignKey: 'acedmicYearId', as: 'examSetupTypeTerms' });
+
+examSetupTypeTermModel.belongsTo(instituteModel, { foreignKey: 'instituteId', as: 'institute' });
+instituteModel.hasMany(examSetupTypeTermModel, { foreignKey: 'instituteId', as: 'examSetupTypeTerms' });
+
+examSetupTypeTermModel.belongsTo(universityModel, { foreignKey: 'universityId', as: 'university' });
+universityModel.hasMany(examSetupTypeTermModel, { foreignKey: 'universityId', as: 'examSetupTypeTerms' });
+
+examSetupTypeTermModel.belongsTo(courseModel, { foreignKey: 'courseId', as: 'course' });
+courseModel.hasMany(examSetupTypeTermModel, { foreignKey: 'courseId', as: 'examSetupTypeTerms' });
+
+examSetupTypeTermModel.belongsTo(userModel, { foreignKey: 'createdBy', as: 'creator' });
+examSetupTypeTermModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'updater' });
+
+examScheduleModel.belongsTo(examSetupTypeTermModel, { foreignKey: 'examSetupTypeTermId', as: 'examSetupTypeTerm' });
+examSetupTypeTermModel.hasMany(examScheduleModel, { foreignKey: 'examSetupTypeTermId', as: 'examSchedules' });
+
 export {
   settingModel,
   universityModel,
@@ -1333,4 +1356,5 @@ export {
   questionBankModel,
   teacherExamAssignmentModel,
   questionPaperBlueprintModel,
+  examSetupTypeTermModel,
 };

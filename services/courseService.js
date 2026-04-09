@@ -119,3 +119,35 @@ export const getClassSectionsGroupedByTerm = async (courseId, sessionId) => {
         throw error;
     }
 };
+
+/**
+ * Get term options for a course
+ * @param {number} courseId 
+ * @returns {Promise<Array>}
+ */
+export const getTermOptionsByCourse = async (courseId) => {
+    try {
+        const course = await courseRepository.getCourseByCourseId(courseId);
+        if (!course) {
+            const error = new Error('Course not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const termType = course.termType || 'Term';
+        const totalTerms = course.totalTerms || 0;
+
+        const terms = [];
+        for (let i = 1; i <= totalTerms; i++) {
+            terms.push({
+                termName: `${termType} ${i}`,
+                term: i
+            });
+        }
+
+        return terms;
+    } catch (error) {
+        console.error('Error in Course Service (getTermOptionsByCourse):', error);
+        throw error;
+    }
+};

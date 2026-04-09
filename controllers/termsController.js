@@ -1,5 +1,4 @@
 import * as termsService from '../services/termsService.js';
-import { getTermsWithSubjectService } from '../services/termsService.js';
 
 export async function getTermsData(req, res) {
     const { courseId, sessionId } = req.query;
@@ -23,3 +22,16 @@ export const getTermsWithSubject = async (req, res, next) => {
         next(error);
     }
 };
+
+export async function getTermsWithExamTypes(req, res) {
+    const { courseId } = req.query;
+
+    const acedmicYearId = req.user.defaultAcademicYearId;
+
+    try {
+        const data = await termsService.getTermsWithExamTypes(courseId, acedmicYearId);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
