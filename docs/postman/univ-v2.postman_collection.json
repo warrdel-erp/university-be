@@ -238,6 +238,41 @@
           "response": []
         },
         {
+          "name": "get terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:courseId/terms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":courseId",
+                "terms"
+              ],
+              "variable": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "get with Subjects",
           "request": {
             "auth": {
@@ -471,6 +506,40 @@
                 {
                   "key": "sessionId",
                   "value": "6"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get withExamTypesPerCourse",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "withExamTypesPerCourse"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
                 }
               ]
             }
@@ -3201,6 +3270,133 @@
                   "key": "id",
                   "value": "1"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam setup type term mapping",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examSetupTypeTerms\": [\n        {\n            \"examSetupTypeId\": 2,\n            \"term\": 1,\n            \"courseId\": 34\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupTypeTerm/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupTypeTerm",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupTypeTerm/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupTypeTerm",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "time table routine",
+      "item": [
+        {
+          "name": "clone",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"previousRoutineId\": 25,\n    \"startingDate\": \"2026-5-2\",\n    \"endingDate\": \"2026-5-18\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/clone",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "clone"
               ]
             }
           },
