@@ -313,7 +313,7 @@ export async function getPeriodInfoRepository(timeTableCreationId) {
 //   }
 // };
 
-export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime) {
+export async function checkTeacherConflictRepository(employeeId, day, startTime, endTime, startingDate, endingDate) {
   try {
     return await model.classScheduleModel.findOne({
       where: {
@@ -331,12 +331,42 @@ export async function checkTeacherConflictRepository(employeeId, day, startTime,
               { endTime: { [Op.gt]: startTime } }
             ]
           }
+        },
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          attributes: ["startingDate", "endingDate", "classSectionsId"],
+          where: {
+            [Op.and]: [
+              { startingDate: { [Op.lte]: endingDate } },
+              { endingDate: { [Op.gte]: startingDate } }
+            ]
+          },
+          include: [
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ["section", "class"]
+            }
+          ]
         }
       ]
     });
 
   } catch (error) {
     console.error("Error in checkTeacherConflictRepository:", error);
+    throw error;
+  }
+};
+
+export async function getRoutineByIdRepository(timeTableRoutineId) {
+  try {
+    return await model.timeTableRoutineModel.findOne({
+      where: { timeTableRoutineId },
+      attributes: ["startingDate", "endingDate"]
+    });
+  } catch (error) {
+    console.error("Error in getRoutineByIdRepository:", error);
     throw error;
   }
 };
