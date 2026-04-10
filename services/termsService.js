@@ -155,3 +155,45 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
         throw error;
     }
 };
+
+export async function getTermsWithExamTypes(courseId, acedmicYearId) {
+    try {
+        // 1. Get course to find termType
+        const course = await courseRepository.getCourseByCourseId(courseId);
+        if (!course) {
+            throw new Error('Course not found');
+        }
+
+        const termType = course.termType || 'Term';
+
+        // 2. Fetch exam setup type terms
+        const examSetupTypeTerms = await termsRepository.getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId);
+
+        const plainExamSetupTypeTerms = examSetupTypeTerms.map(e => e.get({ plain: true }));
+
+        // 3. Group by term
+        const termsMap = {};
+
+        plainExamSetupTypeTerms.forEach(estt => {
+            const termNum = estt.term;
+            if (!termsMap[termNum]) {
+                termsMap[termNum] = {
+                    termName: `${termType} ${termNum}`,
+                    term: termNum,
+                    examSetupTypeTerms: []
+                };
+            }
+            termsMap[termNum].examSetupTypeTerms.push(estt);
+        });
+
+        // Convert map to sorted array
+        const result = Object.keys(termsMap)
+            .sort((a, b) => a - b)
+            .map(termNum => termsMap[termNum]);
+
+        return { result, course };
+    } catch (error) {
+        console.error('Error in getTermsWithExamTypes service:', error);
+        throw error;
+    }
+}

@@ -65,7 +65,7 @@ export const getSpecializationOptions = async (req, res) => {
     }
 };
 
-export const getSubjectOptions = async (req, res) => {
+export async function getSubjectOptions(req, res) {
     try {
         const { courseId, term } = req.query;
         const universityId = req.user.universityId;
@@ -78,4 +78,50 @@ export const getSubjectOptions = async (req, res) => {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
+
+export const getTeacherOptions = async (req, res) => {
+    try {
+        const { campusId } = req.query;
+        const instituteId = req.user.defaultInstituteId;
+        const result = await optionsServices.getTeacherOptions(instituteId, campusId);
+        return SuccessResponse(res, 200, "Teacher options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getTeacherOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getFeePlanOptions = async (req, res) => {
+    try {
+        const filters = {
+            ...req.query,
+            instituteId: req.user.defaultInstituteId,
+            acedmicYearId: req.user.defaultAcademicYearId
+        };
+
+        const result = await optionsServices.getFeePlanOptions(filters);
+        return SuccessResponse(res, 200, "Fee plan options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getFeePlanOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+export const getTopicOptions = async (req, res) => {
+    try {
+        const filters = {
+            ...req.query,
+            instituteId: req.user.defaultInstituteId,
+            universityId: req.user.universityId
+        };
+
+        const result = await optionsServices.getTopicOptions(filters);
+        return SuccessResponse(res, 200, "Topic options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getTopicOptions:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
+
+
 

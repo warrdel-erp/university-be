@@ -89,3 +89,22 @@ export const getTermsWithSubjectRepo = async (instituteId, academicYearId) => {
     ]
   });
 };
+
+export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId) {
+  try {
+    const examSetupTypeTerms = await model.examSetupTypeTermModel.findAll({
+      where: { courseId, acedmicYearId },
+      include: [
+        {
+          model: model.examSetupTypeModel,
+          as: 'examSetupType',
+        }
+      ],
+    });
+    return examSetupTypeTerms;
+
+  } catch (error) {
+    console.error('Error fetching exam setup type terms:', error);
+    throw error;
+  }
+}

@@ -1,44 +1,28 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import users from "./userModel.js";
-import subjectModel from "./subjectModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
-import semesterModel from "./semesterModel.js";
+import acedmicYearModel from "./acedmicYearModel.js";
+import instituteModel from "./instituteModel.js";
+import universityModel from "./universityModel.js";
+import courseModel from "./courseModel.js";
+import users from "./userModel.js";
 
 export default sequelize.define(
-    'exam_schedule',
+    'examSetupTypeTerm',
     {
-        examScheduleId: {
+        examSetupTypeTermId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_schedule_id'
+            field: 'exam_setup_type_term_id'
         },
-        subjectId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'subject_id',
-            references: {
-                model: subjectModel,
-                key: 'subject_id'
-            }
-        },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
-        },
-        examSetupTypeTermId: {
+        examSetupTypeId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'exam_setup_type_term_id',
+            field: 'exam_setup_type_id',
             references: {
-                model: 'exam_setup_type_term',
-                key: 'exam_setup_type_term_id'
+                model: examSetupTypeModel,
+                key: 'exam_setup_type_id'
             }
         },
         acedmicYearId: {
@@ -46,27 +30,41 @@ export default sequelize.define(
             allowNull: false,
             field: 'acedmic_year_id',
             references: {
-                model: 'acedmic_year',
+                model: acedmicYearModel,
                 key: 'acedmic_year_id'
             }
         },
-        examDate: {
-            type: DataTypes.DATEONLY,
+        instituteId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'exam_date'
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
         },
-        examTime: {
-            type: DataTypes.TIME,
+        universityId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'exam_time'
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
         },
-        type: {
-            type: DataTypes.STRING,
-            allowNull: false
+        term: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'term'
         },
-        duration: {
-            type: DataTypes.STRING,
-            allowNull: false
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -98,15 +96,17 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        }
+
     },
     {
-        tableName: 'exam_schedule',
+        tableName: 'exam_setup_type_term',
         timestamps: true,
-        paranoid: true
+        paranoid: false,
+        indexes: [
+            {
+                unique: true,
+                fields: ['exam_setup_type_id', 'term', 'course_id']
+            }
+        ]
     }
 );

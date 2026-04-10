@@ -26,31 +26,26 @@ export default sequelize.define(
             field: 'exam_type',
             allowNull: true
         },
-        maximumAssessment:{
-            type:DataTypes.INTEGER,
-            allowNull:true,
-            field:'maximum_assessment'
+        maximumAssessment: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'maximum_assessment'
         },
         examName: {
             type: DataTypes.STRING,
             field: 'exam_name',
             allowNull: true
         },
-        scheduledBy:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'scheduled_by'
+        scheduledBy: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'scheduled_by'
         },
-        evaluatedBy:{
-            type:DataTypes.STRING,
-            allowNull:true,
-            field:'evaluated_by'
-        },
-        isPublish:{
-            type:DataTypes.BOOLEAN,
-            allowNull:false,
-            defaultValue:false,
-            field:'is_publish'
+        isPublish: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_publish'
         },
         createdBy: {
             type: DataTypes.INTEGER,

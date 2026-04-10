@@ -143,7 +143,7 @@
               "raw": ""
             },
             "url": {
-              "raw": "{{baseurl}}/institute?campusId=11",
+              "raw": "{{baseurl}}/institute",
               "host": [
                 "{{baseurl}}"
               ],
@@ -153,7 +153,8 @@
               "query": [
                 {
                   "key": "campusId",
-                  "value": "11"
+                  "value": "11",
+                  "disabled": true
                 }
               ]
             }
@@ -1464,7 +1465,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"questionPaper\": {\n        \"name\": \"any json\"\n    }\n\n}",
+              "raw": "{\n  \"name\": \"Mid-Term Examination 2024\",\n  \"examScheduleId\": 1,\n  \"questionPaper\": [\n    {\n      \"sectionName\": \"Section A: Multiple Choice Questions\",\n      \"typeOfQuestions\": \"mcq\",\n      \"marksPerQuestion\": 2,\n      \"questions\": [\n        {\n          \"type\": \"mcq\",\n          \"question\": \"What is the capital of France?\",\n          \"Answer\": \"Paris\",\n          \"difficulty\": \"Easy\",\n          \"bloom\": \"Remembering\",\n          \"marks\": 2,\n          \"content\": {\n            \"options\": [\"London\", \"Berlin\", \"Paris\", \"Madrid\"]\n          }\n        }\n      ]\n    },\n    {\n      \"sectionName\": \"Section B: Theory Questions\",\n      \"typeOfQuestions\": \"theory\",\n      \"marksPerQuestion\": 5,\n      \"questions\": [\n        {\n          \"type\": \"theory\",\n          \"question\": \"Explain the laws of thermodynamics.\",\n          \"Answer\": \"The first law is conservation of energy...\",\n          \"difficulty\": \"Medium\",\n          \"bloom\": \"Understanding\",\n          \"marks\": 5,\n          \"content\": {}\n        }\n      ]\n    },\n    {\n      \"sectionName\": \"Section C: Theory with Choices\",\n      \"typeOfQuestions\": \"theoryChoice\",\n      \"marksPerQuestion\": 10,\n      \"questions\": [\n        {\n          \"type\": \"theoryChoice\",\n          \"question\": \"Choose any one from the following topics to describe:\",\n          \"Answer\": \"Specific answer depends on the choice made by the student.\",\n          \"difficulty\": \"Hard\",\n          \"bloom\": \"Analyzing\",\n          \"marks\": 10,\n          \"content\": {\n            \"mandatoryCount\": 1,\n            \"options\": [\n              {\n                \"question\": \"Describe the impact of AI on modern medicine.\",\n                \"Answer\": \"AI helps in radiology, drug discovery...\"\n              },\n              {\n                \"question\": \"Describe the impact of AI on autonomous driving.\",\n                \"Answer\": \"AI is used for perception, path planning...\"\n              }\n            ]\n          }\n        }\n      ]\n    }\n  ]\n}\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1500,7 +1501,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}",
+              "raw": "{\n  \"blueprintId\": 2,\n  \"examScheduleId\": 1,\n  \"numberOfPapers\": 1\n}\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1884,7 +1885,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\",\n    \"content\": {\n        \"options\" : [\n            {\n                \"value\": \"option a\"\n            },\n            {\n                \"value\": \"option b\"\n            }\n        ]\n    }\n}",
+              "raw": "{\n    \"type\": \"theory\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\",\n    \"subjectId\": 47,\n    \"content\": null\n} ",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1997,7 +1998,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"type\": \"a\",\n    \"difficulty\": \"a\",\n    \"bloom\": \"a\",\n    \"marks\": 44,\n    \"question\": \"a\",\n    \"Answer\": \"a\"\n}",
+              "raw": "",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2934,6 +2935,106 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "teachers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/teachers",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "teachers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "fee plans",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/feePlans?courseId=34&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "feePlans"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "topics",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/topics?lessonId=4",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "topics"
+              ],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -3044,12 +3145,19 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionPaperBlueprint",
+              "raw": "{{baseurl}}/questionPaperBlueprint?createdBy=46",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "questionPaperBlueprint"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "46",
+                  "type": "text"
+                }
               ]
             }
           },

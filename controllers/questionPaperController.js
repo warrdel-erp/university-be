@@ -5,8 +5,9 @@ export async function addQuestionPaper(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
+    const universityId = req.user.universityId;
     try {
-        const result = await questionPaperServices.addQuestionPaper(req.body, createdBy, updatedBy);
+        const result = await questionPaperServices.addQuestionPaper(req.body, createdBy, updatedBy, universityId);
 
         return SuccessResponse(res, 201, "Question paper created successfully", result);
     } catch (error) {

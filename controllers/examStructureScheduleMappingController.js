@@ -90,7 +90,7 @@ export async function deleteExamSchedule(req, res) {
 
 
 export async function addExamSchedule(req, res) {
-  const { examSetupTypeId } = req.body;
+  const { examSetupTypeTermId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
 
@@ -98,8 +98,8 @@ export async function addExamSchedule(req, res) {
   const acedmicYearId = req.user.defaultAcademicYearId;
 
   try {
-    if (!(examSetupTypeId)) {
-      return res.status(400).send("examSetupTypeId Required fields are missing");
+    if (!(examSetupTypeTermId)) {
+      return res.status(400).send("examSetupTypeTermId is required");
     }
 
     const examSchedule = await examStructureScheduleServices.addExamSchedule(
