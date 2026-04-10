@@ -161,7 +161,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   let teacherSubjectData = null;
 
   try {
-    const { timeTableRoutineId, timeTableCreationId, employeeId, teacherSubjectMappingId, day } = data;
+    const { timeTableRoutineId, timeTableCreationId, employeeId, teacherSubjectMappingId, day, classRoomSectionId } = data;
 
     const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(timeTableCreationId);
 
@@ -186,7 +186,16 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     if (!routineInfo) {
       throw new Error("Invalid timeTableRoutineId");
     }
-    const { startingDate, endingDate } = routineInfo;
+    const { startingDate, endingDate, isPublish } = routineInfo;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sDate = new Date(startingDate);
+    sDate.setHours(0, 0, 0, 0);
+
+    if (today > sDate) {
+      throw new Error("Cannot add or update mapping for a routine after its starting date.");
+    }
 
     const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(data.employeeId, day, startTime, endTime, startingDate, endingDate);
 
@@ -194,6 +203,15 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || "";
       const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.class || "";
       throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`);
+    }
+
+    if (classRoomSectionId) {
+      const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(classRoomSectionId, day, startTime, endTime, startingDate, endingDate);
+      if (roomConflict) {
+        const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || "";
+        const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.class || "";
+        throw new Error(`Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`);
+      }
     }
 
     const facultyLoad = await getSingleFaculityLoadDetails(data.employeeId);
@@ -273,7 +291,16 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
     if (!routineInfo) {
       throw new Error(`Routine ${baseRow.timeTableRoutineId} not found`);
     }
-    const { startingDate, endingDate } = routineInfo;
+    const { startingDate, endingDate, isPublish } = routineInfo;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sDate = new Date(startingDate);
+    sDate.setHours(0, 0, 0, 0);
+
+    if (isPublish && today > sDate) {
+      throw new Error("Cannot add or update mapping for a published routine after its starting date.");
+    }
 
     const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
 
@@ -283,13 +310,36 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
     const periodLength = Number(ttCreationData[0].dataValues.periodLength) || 0;
 
+    const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
+    if (!periodInfo) {
+      throw new Error(`Period Info not found for ID ${baseRow.timeTableCreationId}`);
+    }
+    const { startTime, endTime } = periodInfo;
+
+    // Check room conflict once for the entire batch as they share the same slot
+    if (baseRow.classRoomSectionId) {
+      const roomConflict = await timeTableCreateRepository.checkRoomConflictRepository(
+        baseRow.classRoomSectionId,
+        baseRow.day,
+        startTime,
+        endTime,
+        startingDate,
+        endingDate,
+      );
+
+      if (roomConflict) {
+        const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || "";
+        const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.class || "";
+        throw new Error(
+          `Room Conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
+        );
+      }
+    }
+
     // LOOP
     for (const item of mappingArray) {
       //  check conflict
       if (item.employeeId) {
-        const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(baseRow.timeTableCreationId);
-        const { startTime, endTime } = periodInfo;
-
         const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(
           item.employeeId,
           baseRow.day,

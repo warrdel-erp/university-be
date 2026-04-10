@@ -363,10 +363,56 @@ export async function getRoutineByIdRepository(timeTableRoutineId) {
   try {
     return await model.timeTableRoutineModel.findOne({
       where: { timeTableRoutineId },
-      attributes: ["startingDate", "endingDate"]
+      attributes: ["startingDate", "endingDate", "isPublish"]
     });
   } catch (error) {
     console.error("Error in getRoutineByIdRepository:", error);
+    throw error;
+  }
+};
+
+export async function checkRoomConflictRepository(classRoomSectionId, day, startTime, endTime, startingDate, endingDate) {
+  try {
+    return await model.classScheduleModel.findOne({
+      where: {
+        classRoomSectionId,
+        day
+      },
+      include: [
+        {
+          model: model.timeTableStructurePeriodsModel,
+          as: "timeTablecreation",
+          attributes: ["startTime", "endTime"],
+          where: {
+            [Op.and]: [
+              { startTime: { [Op.lt]: endTime } },
+              { endTime: { [Op.gt]: startTime } }
+            ]
+          }
+        },
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTablecreate",
+          attributes: ["startingDate", "endingDate", "classSectionsId"],
+          where: {
+            [Op.and]: [
+              { startingDate: { [Op.lte]: endingDate } },
+              { endingDate: { [Op.gte]: startingDate } }
+            ]
+          },
+          include: [
+            {
+              model: model.classSectionModel,
+              as: "timeTableClassSection",
+              attributes: ["section", "class"]
+            }
+          ]
+        }
+      ]
+    });
+
+  } catch (error) {
+    console.error("Error in checkRoomConflictRepository:", error);
     throw error;
   }
 };
