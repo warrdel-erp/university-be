@@ -84,6 +84,7 @@ import questionBank from "./router/questionBankRoute.js";
 import classSection from "./router/classSectionRoute.js";
 import teacherExamAssignment from "./router/teacherExamAssignmentRoute.js";
 import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
+import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import options from "./router/optionsRoute.js";
 
 
@@ -110,6 +111,7 @@ app.use("/classSections", classSection);
 app.use("/attendance", attendance);
 app.use("/teacherExamAssignment", teacherExamAssignment);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
+app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/options", options);
 
 

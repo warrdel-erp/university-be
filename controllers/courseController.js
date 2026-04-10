@@ -1,4 +1,5 @@
 import * as courseService from '../services/courseService.js';
+import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 /**
  * Handle listing of courses
@@ -123,3 +124,22 @@ export const getClassSectionsGrouped = async (req, res) => {
         });
     }
 };
+
+/**
+ * Get term options for a course
+ */
+export const getTermOptionsByCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+
+        const result = await courseService.getTermOptionsByCourse(courseId);
+
+        SuccessResponse(res, 200, "Term options fetched successfully", result);
+    } catch (error) {
+        console.error("Error in Get Term Options Controller:", error);
+        const statusCode = error.statusCode || 500;
+
+        ErrorResponse(res, error.message, statusCode);
+    }
+};
+

@@ -182,10 +182,18 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     // const teacherId = data.employeeId;
 
-    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(data.employeeId, day, startTime, endTime);
+    const routineInfo = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+    if (!routineInfo) {
+      throw new Error("Invalid timeTableRoutineId");
+    }
+    const { startingDate, endingDate } = routineInfo;
+
+    const conflict = await timeTableCreateRepository.checkTeacherConflictRepository(data.employeeId, day, startTime, endTime, startingDate, endingDate);
 
     if (conflict) {
-      throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime}`);
+      const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || "";
+      const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.class || "";
+      throw new Error(`Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`);
     }
 
     const facultyLoad = await getSingleFaculityLoadDetails(data.employeeId);
@@ -261,6 +269,12 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
     baseRow = baseRow.get({ plain: true });
 
+    const routineInfo = await timeTableCreateRepository.getRoutineByIdRepository(baseRow.timeTableRoutineId);
+    if (!routineInfo) {
+      throw new Error(`Routine ${baseRow.timeTableRoutineId} not found`);
+    }
+    const { startingDate, endingDate } = routineInfo;
+
     const ttCreationData = await getSingleTimeTableById(baseRow.timeTableCreationId);
 
     if (!ttCreationData || !ttCreationData[0]) {
@@ -281,13 +295,17 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
           baseRow.day,
           startTime,
           endTime,
+          startingDate,
+          endingDate,
         );
 
-        // if (conflict) {
-        //   throw new Error(
-        //     `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime}`
-        //   );
-        // }
+        if (conflict) {
+          const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || "";
+          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.class || "";
+          throw new Error(
+            `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
+          );
+        }
       }
       // conflict logic END
 

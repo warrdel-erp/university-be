@@ -13,6 +13,11 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'id'
         },
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            field: 'name'
+        },
         subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,

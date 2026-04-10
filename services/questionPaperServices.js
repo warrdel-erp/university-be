@@ -1,7 +1,16 @@
 import * as questionPaperRepository from "../repository/questionPaperRepository.js";
 import * as questionPaperBlueprintRepository from "../repository/questionPaperBlueprintRepository.js";
 import * as questionBankRepository from "../repository/questionBankRepository.js";
-export async function addQuestionPaper(questionPaperData, createdBy, updatedBy) {
+
+export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, universityId) {
+    const { examScheduleId } = questionPaperData;
+
+    // 1. Check if examSchedule exists
+    const examSchedule = await questionPaperRepository.getExamScheduleById(examScheduleId);
+    if (!examSchedule) {
+        throw new Error(`Exam schedule with id ${examScheduleId} not found`);
+    }
+
     questionPaperData.createdBy = createdBy;
     questionPaperData.updatedBy = updatedBy;
     const result = await questionPaperRepository.addQuestionPaper(questionPaperData);
@@ -48,13 +57,13 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
             const generatedPaper = [];
             for (const section of blueprintSections) {
                 const { typeOfQuestions, totalQuestions, marksPerQuestion, sectionName } = section;
-                
+
                 // Randomly fetch approved questions from bank
                 const questions = await questionBankRepository.getRandomQuestions(
-                    universityId, 
-                    blueprintRecord.subjectId, 
-                    typeOfQuestions, 
-                    marksPerQuestion, 
+                    universityId,
+                    blueprintRecord.subjectId,
+                    typeOfQuestions,
+                    marksPerQuestion,
                     totalQuestions
                 );
 
@@ -72,7 +81,7 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
 
             // 4. Create question paper data object
             const currentName = numberOfPapers > 1 ? `${name} - Version ${i + 1}` : name;
-            
+
             const questionPaperData = {
                 name: currentName,
                 examScheduleId,
