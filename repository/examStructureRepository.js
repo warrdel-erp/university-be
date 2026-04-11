@@ -139,12 +139,23 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, universityId) {
+export async function getSingleExamType(courseId, sessionId, universityId, termNumber) {
   try {
+    const examSetupTypeTermsInclude = {
+      model: model.examSetupTypeTermModel,
+      as: "examSetupTypeTerms",
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    };
+
+    if (termNumber) {
+      examSetupTypeTermsInclude.where = { term: termNumber };
+      examSetupTypeTermsInclude.required = true;
+    }
+
     const result = await model.examSetupTypeModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-    //   where: { examSetupTypeId },
       include: [
+        examSetupTypeTermsInclude,
         {
           model: model.examStructureModel,
           as: "examStructure",
@@ -154,12 +165,12 @@ export async function getSingleExamType(courseId, sessionId, universityId) {
             {
               model: model.courseModel,
               as: "courseExam",
-              attributes: ["courseId","courseName", "capacity"],
+              attributes: ["courseId", "courseName", "capacity"],
             },
             {
               model: model.sessionModel,
               as: "sessionExam",
-              attributes: ["sessionId","sessionName"],
+              attributes: ["sessionId", "sessionName"],
             },
             {
               model: model.acedmicYearModel,

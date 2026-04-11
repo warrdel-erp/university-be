@@ -37,8 +37,8 @@ export async function getDetailByExamType(examSetupTypeId) {
     return await examStructureRepository.getDetailByExamType(examSetupTypeId);
 };
 
-export async function getSingleExamType(courseId,sessionId, universityId) {
-    return await examStructureRepository.getSingleExamType(courseId,sessionId, universityId);
+export async function getSingleExamType(courseId, sessionId, universityId, termNumber) {
+    return await examStructureRepository.getSingleExamType(courseId, sessionId, universityId, termNumber);
 };
 
 export async function deleteExamType(examSetupTypeId) {
