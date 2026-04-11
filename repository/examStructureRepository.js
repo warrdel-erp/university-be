@@ -1,104 +1,104 @@
 import * as model from "../models/index.js";
 
 export async function addExamStructure(examDetail) {
-    try {
-        const result = await model.examStructureModel.create(examDetail);
-        return result;
-    } catch (error) {
-        console.error("Error adding exam Structure:", error);
-        throw error;
-    }
+  try {
+    const result = await model.examStructureModel.create(examDetail);
+    return result;
+  } catch (error) {
+    console.error("Error adding exam Structure:", error);
+    throw error;
+  }
 };
 
-export async function getExamStructure(universityId,acedmicYearId,role,instituteId) {
-    try {
-        const whereClause = {
-        ...(universityId && { universityId }),
-        ...(acedmicYearId && { acedmicYearId }),
-        ...(role === 'Head' && { institute_id: instituteId })
-        };
-        const result = await model.examStructureModel.findAll({
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-            },
-            where:whereClause,
-            include: [
-                {
-                    model: model.courseModel,
-                    as: "courseExam",
-                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-                },
-                {
-                    model: model.sessionModel,
-                    as: "sessionExam",
-                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-                },
-            ],
-        });
-        return result;
-    } catch (error) {
-        console.error("Error fetching exam Structures:", error);
-        throw error;
-    }
+export async function getExamStructure(universityId, acedmicYearId, role, instituteId) {
+  try {
+    const whereClause = {
+      ...(universityId && { universityId }),
+      ...(acedmicYearId && { acedmicYearId }),
+      ...(role === 'Head' && { institute_id: instituteId })
+    };
+    const result = await model.examStructureModel.findAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+      },
+      where: whereClause,
+      include: [
+        {
+          model: model.courseModel,
+          as: "courseExam",
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+        },
+        {
+          model: model.sessionModel,
+          as: "sessionExam",
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+        },
+      ],
+    });
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam Structures:", error);
+    throw error;
+  }
 };
 
 export async function getSingleExamStructure(courseId, sessionId, universityId) {
-    try {
-        const result = await model.examStructureModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { courseId, sessionId, universityId },
-            include: [
-                {
-                    model: model.courseModel,
-                    as: "courseExam",
-                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-                },
-                {
-                    model: model.sessionModel,
-                    as: "sessionExam",
-                    exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
-                },
-            ],
-        });
+  try {
+    const result = await model.examStructureModel.findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { courseId, sessionId, universityId },
+      include: [
+        {
+          model: model.courseModel,
+          as: "courseExam",
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+        },
+        {
+          model: model.sessionModel,
+          as: "sessionExam",
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+        },
+      ],
+    });
 
-        return result;
-    } catch (error) {
-        console.error("Error fetching exam Structure:", error);
-        throw error;
-    }
+    return result;
+  } catch (error) {
+    console.error("Error fetching exam Structure:", error);
+    throw error;
+  }
 };
 
 
 export async function deleteExamStructure(examStructureId) {
-    try {
-        const deleted = await model.examStructureModel.destroy({ where: { examStructureId } });
-        return deleted > 0;
-    } catch (error) {
-        console.error("Error deleting exam Structure:", error);
-        throw error;
-    }
+  try {
+    const deleted = await model.examStructureModel.destroy({ where: { examStructureId } });
+    return deleted > 0;
+  } catch (error) {
+    console.error("Error deleting exam Structure:", error);
+    throw error;
+  }
 };
 
 export async function updateExamStructure(examStructureId, examDetail) {
-    try {
-        const result = await model.examStructureModel.update(examDetail, {
-            where: { examStructureId },
-        });
-        return result;
-    } catch (error) {
-        console.error("Error updating exam Structure:", error);
-        throw error;
-    }
+  try {
+    const result = await model.examStructureModel.update(examDetail, {
+      where: { examStructureId },
+    });
+    return result;
+  } catch (error) {
+    console.error("Error updating exam Structure:", error);
+    throw error;
+  }
 };
 
 export async function addExamType(examDetail) {
-    try {
-        const result = await model.examSetupTypeModel.create(examDetail);
-        return result;
-    } catch (error) {
-        console.error("Error adding exam Structure setup type:", error);
-        throw error;
-    }
+  try {
+    const result = await model.examSetupTypeModel.create(examDetail);
+    return result;
+  } catch (error) {
+    console.error("Error adding exam Structure setup type:", error);
+    throw error;
+  }
 };
 
 export async function getDetailByExamType(examSetupTypeId) {
@@ -115,12 +115,12 @@ export async function getDetailByExamType(examSetupTypeId) {
             {
               model: model.courseModel,
               as: "courseExam",
-              attributes: ["courseId","courseName", "capacity"],
+              attributes: ["courseId", "courseName", "capacity"],
             },
             {
               model: model.sessionModel,
               as: "sessionExam",
-              attributes: ["sessionId","sessionName"],
+              attributes: ["sessionId", "sessionName"],
             },
             {
               model: model.acedmicYearModel,
@@ -148,7 +148,7 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
     };
 
     if (termNumber) {
-      examSetupTypeTermsInclude.where = { term: termNumber };
+      examSetupTypeTermsInclude.where = { term: termNumber, courseId };
       examSetupTypeTermsInclude.required = true;
     }
 
@@ -191,23 +191,23 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
 
 
 export async function deleteExamType(examSetupTypeId) {
-    try {
-        const deleted = await model.examSetupTypeModel.destroy({ where: { examSetupTypeId } });
-        return deleted > 0;
-    } catch (error) {
-        console.error("Error deleting exam type:", error);
-        throw error;
-    }
+  try {
+    const deleted = await model.examSetupTypeModel.destroy({ where: { examSetupTypeId } });
+    return deleted > 0;
+  } catch (error) {
+    console.error("Error deleting exam type:", error);
+    throw error;
+  }
 };
 
 export async function updateExamType(examSetupTypeId, examDetail) {
-    try {
-        const result = await model.examSetupTypeModel.update(examDetail, {
-            where: { examSetupTypeId },
-        });
-        return result;
-    } catch (error) {
-        console.error("Error updating exam type:", error);
-        throw error;
-    }
+  try {
+    const result = await model.examSetupTypeModel.update(examDetail, {
+      where: { examSetupTypeId },
+    });
+    return result;
+  } catch (error) {
+    console.error("Error updating exam type:", error);
+    throw error;
+  }
 };
