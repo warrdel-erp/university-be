@@ -1,7 +1,7 @@
 import * as ClassRoomCreation  from  "../services/classRoomServices.js";
 
 export async function addClassRoom(req, res) {
-    const {roomNumber,capacity,floorId} = req.body
+    const {roomNumber,capacity,floorId,examCapacity} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {

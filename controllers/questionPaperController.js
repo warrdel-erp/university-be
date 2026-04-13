@@ -108,3 +108,19 @@ export async function generateQuestionPaper(req, res) {
     }
 }
 
+export async function approveQuestionPaper(req, res) {
+    try {
+        const { id } = req.body;
+        const updatedBy = req.user.userId;
+
+        if (!id) {
+            return ErrorResponse(res, 400, "id is required");
+        }
+
+        const result = await questionPaperServices.approveQuestionPaper(id, updatedBy);
+
+        return SuccessResponse(res, 200, `Question paper approved successfully`, result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}

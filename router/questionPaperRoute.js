@@ -8,7 +8,9 @@ import {
     updateQuestionPaper,
     deleteQuestionPaper,
     generateQuestionPaper,
+    approveQuestionPaper,
 } from "../controllers/questionPaperController.js";
+
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { questionTypes } from "../constant.js";
@@ -91,6 +93,11 @@ const generateQuestionPaperSchema = z.object({
     numberOfPapers: z.number().int().min(1).max(50).optional().default(1),
 });
 
+const approveQuestionPaperSchema = z.object({
+    id: z.number({ required_error: "id is required" }),
+});
+
+
 router.post("/", userAuth, validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
 router.post("/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
@@ -102,5 +109,7 @@ router.get("/:id", userAuth, getSingleQuestionPaper);
 router.put("/", userAuth, validate({ body: updateQuestionPaperSchema }), updateQuestionPaper);
 
 router.delete("/:id", userAuth, deleteQuestionPaper);
+
+router.put("/approve", userAuth, validate({ body: approveQuestionPaperSchema }), approveQuestionPaper);
 
 export default router;
