@@ -490,7 +490,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34&sessionId=6",
+              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -505,7 +505,8 @@
                 },
                 {
                   "key": "sessionId",
-                  "value": "6"
+                  "value": "6",
+                  "disabled": true
                 }
               ]
             }
@@ -1749,6 +1750,43 @@
               "path": [
                 "questionPaper",
                 "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "approve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/approve",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "approve"
               ]
             }
           },
