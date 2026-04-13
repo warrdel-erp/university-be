@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import examSetupTypeModel from "./examSetupTypeModel.js";
 import semesterModel from "./semesterModel.js";
 
 export default sequelize.define(

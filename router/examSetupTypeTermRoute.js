@@ -16,4 +16,5 @@ const bulkCreateSchema = z.object({
 router.post('/bulk', userAuth, validate(bulkCreateSchema), examSetupTypeTermController.bulkCreateExamSetupTypeTerm);
 router.delete('/:id', userAuth, examSetupTypeTermController.deleteExamSetupTypeTerm);
 
+
 export default router;

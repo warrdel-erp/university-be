@@ -468,6 +468,44 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "withExamSchedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject/withExamSchedule?courseId=34&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "withExamSchedule"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -3372,7 +3410,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"subjectId\": 47,\n    \"blueprint\": [\n        {\n            \"sectionName\": \"sample\",\n            \"typeOfQuestions\": \"mcq\",\n            \"totalQuestions\": 4,\n            \"marksPerQuestion\": 5\n        }\n    ]\n}",
+              "raw": "",
               "options": {
                 "raw": {
                   "language": "json"

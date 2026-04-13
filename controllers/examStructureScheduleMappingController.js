@@ -19,8 +19,6 @@ export async function addExamStructureSchedule(req, res) {
   }
 };
 
-
-
 export async function getAllExamStructureSchedule(req, res) {
   const universityId = req.user.universityId;
   const { acedmicYearId } = req.query
@@ -32,11 +30,10 @@ export async function getAllExamStructureSchedule(req, res) {
     const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId);
     res.status(200).json(StructureSchedules);
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 }
-
-
 
 export async function publishExamSchedule(req, res) {
   try {

@@ -70,11 +70,18 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
                 ]
             },
 
-            // include exam schedule directly
+            // include exam schedules via the term join (exam_setup_type → term → schedule)
             {
-                model: model.examScheduleModel,
-                as: "examSchedulesTypes",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+                model: model.examSetupTypeTermModel,
+                as: "examSetupTypeTerms",
+                attributes: { exclude: ["createdAt", "updatedAt"] },
+                include: [
+                    {
+                        model: model.examScheduleModel,
+                        as: "examSchedules",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
+                    }
+                ]
             }
         ]
     });
@@ -246,6 +253,42 @@ export async function getExamScheduleById(examScheduleId) {
         return result;
     } catch (error) {
         console.error("Error fetching exam schedule by id:", error.message);
+        throw error;
+    }
+}
+
+export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term, examSetupTypeTermId) {
+    try {
+        const whereClause = {
+            ...(courseId && { courseId }),
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(term && { term })
+        };
+
+        const result = await model.subjectModel.findAll({
+            where: whereClause,
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include: [
+                {
+                    model: model.examScheduleModel,
+                    as: "scheduleSubject",
+                    required: false,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                        {
+                            model: model.examSetupTypeTermModel,
+                            where: { examSetupTypeTermId },
+                            as: "examSetupTypeTerm",
+                            attributes: { exclude: ["createdAt", "updatedAt"] }
+                        },
+                    ]
+                }
+            ]
+        });
+
+        return result;
+    } catch (error) {
+        console.error("Error fetching subjects with exam schedule:", error.message);
         throw error;
     }
 }
