@@ -92,7 +92,9 @@ export async function addExamType(req, res) {
     if (!(examStructureId)) {
       return res.status(400).send("examStructureId Required fields are missing");
     }
-    const examStructure = await examStructureServices.addExamType(req.body, createdBy, updatedBy);
+    const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
+    const examStructure = await examStructureServices.addExamType(req.body, createdBy, updatedBy, universityId, instituteId);
     res.status(201).json({ message: "Exam setup type created successfully", examStructure });
   } catch (error) {
     res.status(500).json({ error: error.message });

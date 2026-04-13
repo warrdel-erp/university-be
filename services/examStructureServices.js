@@ -29,6 +29,8 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
 export async function addExamType(examDetail, createdBy, updatedBy,universityId,instituteId) {
     examDetail.createdBy = createdBy;
     examDetail.updatedBy = updatedBy;
+    examDetail.universityId = universityId;
+    examDetail.instituteId = instituteId;
     const result = await examStructureRepository.addExamType(examDetail);
     return result;
 };
