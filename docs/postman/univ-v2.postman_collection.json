@@ -3621,13 +3621,6 @@
                 "examSchedule",
                 ":id"
               ],
-              "query": [
-                {
-                  "key": "id",
-                  "value": "1",
-                  "disabled": true
-                }
-              ],
               "variable": [
                 {
                   "key": "id",
