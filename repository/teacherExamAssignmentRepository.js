@@ -24,7 +24,14 @@ export async function getAssignments(whereClause) {
                             as: 'subjectSchedule'
                         },
                         {
-                            association: "examSetupTypeSchedule"
+                            model: model.examSetupTypeTermModel,
+                            as: "examSetupTypeTerm",
+                            include: [
+                                {
+                                    model: model.examSetupTypeModel,
+                                    as: "examSetupType"
+                                }
+                            ]
                         }
                     ]
                 },
