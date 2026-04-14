@@ -1013,10 +1013,11 @@ examStructureScheduleMappingModel.belongsTo(sessionModel, { foreignKey: "session
 examScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjectSchedule" });
 subjectModel.hasMany(examScheduleModel, { foreignKey: "subject_id", as: "scheduleSubject" });
 
-
-
 examScheduleModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYearSchedule" });
 acedmicYearModel.hasMany(examScheduleModel, { foreignKey: "acedmicYearId", as: "academicYearSchedule" });
+
+examScheduleModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionSchedule" });
+sessionModel.hasMany(examScheduleModel, { foreignKey: "sessionId", as: "examScheduleSession" });
 
 examSetupTypeModel.hasMany(syllabusDetailsModel, { foreignKey: "exam_setup_type_id", as: "syllabusDetailsExam" });
 syllabusDetailsModel.belongsTo(examSetupTypeModel, { foreignKey: "exam_setup_type_id", as: "examSetupTypeSyllabus" });

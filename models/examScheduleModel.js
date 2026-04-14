@@ -49,6 +49,15 @@ export default sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: 'session',
+                key: 'session_id'
+            }
+        },
         examDate: {
             type: DataTypes.DATEONLY,
             allowNull: false,

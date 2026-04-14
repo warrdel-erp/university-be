@@ -7,14 +7,15 @@ export const getExamSchedules = async (req, res) => {
         const acedmicYearId = req.user.defaultAcademicYearId
         const instituteId = req.user.defaultInstituteId;
 
-        const { subjectId, semesterId, examSetupTypeTermId, courseId, term } = req.query;
+        const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = req.query;
 
         const filters = {
             ...(subjectId && { subjectId: parseInt(subjectId) }),
             ...(semesterId && { semesterId: parseInt(semesterId) }),
             ...(examSetupTypeTermId && { examSetupTypeTermId: parseInt(examSetupTypeTermId) }),
             ...(courseId && { courseId: parseInt(courseId) }),
-            ...(term && { term: parseInt(term) })
+            ...(term && { term: parseInt(term) }),
+            ...(sessionId && { sessionId: parseInt(sessionId) })
         };
 
         const result = await examScheduleServices.getExamSchedules(universityId, acedmicYearId, instituteId, filters);

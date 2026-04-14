@@ -2,15 +2,17 @@ import * as model from "../models/index.js";
 
 export async function getExamSchedules(universityId, acedmicYearId, instituteId, filters = {}) {
     try {
-        const { subjectId, semesterId, examSetupTypeTermId, courseId, term } = filters;
+        const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = filters;
 
         const result = await model.examScheduleModel.findAll({
             where: {
                 ...(acedmicYearId && { acedmicYearId }),
                 ...(subjectId && { subjectId }),
                 ...(semesterId && { semesterId }),
-                ...(examSetupTypeTermId && { examSetupTypeTermId })
+                ...(examSetupTypeTermId && { examSetupTypeTermId }),
+                ...(sessionId && { sessionId })
             },
+
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
@@ -48,6 +50,11 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
                             },
                         }
                     ]
+                },
+                {
+                    model: model.sessionModel,
+                    as: "sessionSchedule",
+                    attributes: ["sessionId", "sessionName"]
                 }
             ]
         });
@@ -88,6 +95,11 @@ export async function getExamScheduleById(examScheduleId) {
                             attributes: ["examSetupTypeId", "examType", "examName"]
                         }
                     ]
+                },
+                {
+                    model: model.sessionModel,
+                    as: "sessionSchedule",
+                    attributes: ["sessionId", "sessionName"]
                 }
             ]
         });
