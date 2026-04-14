@@ -2,6 +2,7 @@ import * as questionPaperRepository from "../repository/questionPaperRepository.
 import * as questionPaperBlueprintRepository from "../repository/questionPaperBlueprintRepository.js";
 import * as questionBankRepository from "../repository/questionBankRepository.js";
 import * as subjectRepository from "../repository/subjectRepository.js";
+import { questionStatus } from "../constant.js";
 
 
 export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, universityId) {
@@ -132,7 +133,7 @@ export async function approveQuestionPaper(id, updatedBy) {
                 for (const question of section.questions) {
                     if (question.id) {
                         // Update status for existing bank questions
-                        await questionBankRepository.updateQuestion(question.id, { status: "Approved", updatedBy });
+                        await questionBankRepository.updateQuestion(question.id, { status: questionStatus[1], updatedBy });
                     } else {
                         // Create new entries for questions not in bank
                         const questionData = {
@@ -145,7 +146,7 @@ export async function approveQuestionPaper(id, updatedBy) {
                             content: question.content,
                             subjectId,
                             universityId,
-                            status: "Approved",
+                            status: questionStatus[1],
                             createdBy: updatedBy,
                             updatedBy
                         };
@@ -157,5 +158,5 @@ export async function approveQuestionPaper(id, updatedBy) {
     }
 
     // 3. Update the question paper status itself
-    return await questionPaperRepository.updateQuestionPaper(id, { status: "Approved", updatedBy });
+    return await questionPaperRepository.updateQuestionPaper(id, { status: questionStatus[1], updatedBy });
 }

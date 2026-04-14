@@ -58,6 +58,11 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
+        deadline: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deadline'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

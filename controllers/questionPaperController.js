@@ -1,5 +1,7 @@
 import * as questionPaperServices from "../services/questionPaperServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { ROLES } from "../const/roles.js";
+import { questionStatus } from "../constant.js";
 
 export async function addQuestionPaper(req, res) {
     const createdBy = req.user.userId;
@@ -41,6 +43,9 @@ export async function getSingleQuestionPaper(req, res) {
         const result = await questionPaperServices.getSingleQuestionPaper(id);
 
         if (result) {
+            if (result.status === questionStatus[1] && req.user.role !== ROLES.ADMIN) {
+                return ErrorResponse(res, 403, "This question paper is approved and can only be viewed by an administrator.");
+            }
             return SuccessResponse(res, 200, "Question paper fetched successfully", result);
         } else {
             return ErrorResponse(res, 404, "Question paper not found");

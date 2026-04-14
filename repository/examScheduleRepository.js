@@ -57,3 +57,43 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
         throw error;
     }
 }
+export async function getExamScheduleById(examScheduleId) {
+    try {
+        const result = await model.examScheduleModel.findByPk(examScheduleId, {
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            include: [
+                {
+                    model: model.subjectModel,
+                    as: "subjectSchedule",
+                    attributes: ["subjectId", "subjectName", "subjectCode"]
+                },
+                {
+                    model: model.semesterModel,
+                    as: "semesterexam",
+                    attributes: ["semesterId", "name"]
+                },
+                {
+                    model: model.acedmicYearModel,
+                    as: "acedmicYearSchedule",
+                    attributes: ["acedmicYearId", "yearTitle"]
+                },
+                {
+                    model: model.examSetupTypeTermModel,
+                    as: "examSetupTypeTerm",
+                    attributes: ["examSetupTypeTermId", "term", "courseId"],
+                    include: [
+                        {
+                            model: model.examSetupTypeModel,
+                            as: "examSetupType",
+                            attributes: ["examSetupTypeId", "examType", "examName"]
+                        }
+                    ]
+                }
+            ]
+        });
+        return result;
+    } catch (error) {
+        console.error("Error fetching exam schedule by id:", error);
+        throw error;
+    }
+}

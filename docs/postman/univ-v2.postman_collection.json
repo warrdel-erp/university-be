@@ -2151,7 +2151,7 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionBank?createdBy=46",
+              "raw": "{{baseurl}}/questionBank?createdBy=46&examScheduleId=2",
               "host": [
                 "{{baseurl}}"
               ],
@@ -2162,6 +2162,11 @@
                 {
                   "key": "createdBy",
                   "value": "46"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "2",
+                  "type": "text"
                 }
               ]
             }
@@ -3473,6 +3478,161 @@
               "path": [
                 "timeTableCreate",
                 "clone"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam setup type",
+      "item": [
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupType/?courseId=34&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupType",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "type": "text"
+                },
+                {
+                  "key": "term",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam schedule",
+      "item": [
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by Id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                ":id"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "disabled": true
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
               ]
             }
           },
