@@ -22,7 +22,8 @@ const subjectsWithScheduleQuerySchema = z.object({
 
 const subjectWeightageListSchema = z.object({
     sessionId: z.coerce.number({ required_error: "sessionId is required" }).int().positive(),
-    examSetupTypeTermId: z.coerce.number({ required_error: "examSetupTypeTermId is required" }).int().positive(),
+    courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
+    term: z.coerce.number({ required_error: "term is required" }).int().positive(),
 }).passthrough();
 
 router.get('/', userAuth, validate({ query: getAllSubjectsQuerySchema }), getAllSubjects);

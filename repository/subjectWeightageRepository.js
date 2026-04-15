@@ -37,16 +37,17 @@ export async function createOrUpdateWeightageBulk(dataList) {
     });
 }
 
-export async function getSubjectsWithWeightages(sessionId, examSetupTypeTermId) {
-    const examSetupTypeTerm = await model.examSetupTypeTermModel.findByPk(examSetupTypeTermId, {
-        attributes: ['courseId', 'term']
+export async function getSubjectsWithWeightages(sessionId, courseId, term) {
+    const validTerms = await model.examSetupTypeTermModel.findAll({
+        where: { courseId, term },
+        attributes: ['examSetupTypeTermId']
     });
-    if (!examSetupTypeTerm) return [];
+    const termIds = validTerms.map(t => t.examSetupTypeTermId);
 
     return await model.subjectModel.findAll({
         where: {
-            courseId: examSetupTypeTerm.courseId,
-            term: examSetupTypeTerm.term
+            courseId: courseId,
+            term: term
         },
         attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
         include: [
@@ -55,10 +56,10 @@ export async function getSubjectsWithWeightages(sessionId, examSetupTypeTermId) 
                 as: 'subjectWeightages',
                 where: {
                     sessionId: sessionId,
-                    examSetupTypeTermId: examSetupTypeTermId
+                    examSetupTypeTermId: termIds
                 },
                 required: false, // Left join to see all subjects even if no weightage
-                attributes: ['subjectWeightageId', 'weightage']
+                attributes: ['subjectWeightageId', 'weightage', 'examSetupTypeTermId']
             }
         ]
     });

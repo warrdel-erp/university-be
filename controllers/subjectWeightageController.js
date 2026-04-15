@@ -16,15 +16,16 @@ export async function createWeightageBulk(req, res) {
 
 export async function getSubjectsWithWeightages(req, res) {
     try {
-        const { sessionId, examSetupTypeTermId } = req.query;
+        const { sessionId, courseId, term } = req.query;
 
-        if (!sessionId || !examSetupTypeTermId) {
-            return ErrorResponse(res, 400, "sessionId and examSetupTypeTermId are mandatory filters");
+        if (!sessionId || !courseId || !term) {
+            return ErrorResponse(res, 400, "sessionId, courseId and term are mandatory filters");
         }
 
         const result = await subjectWeightageServices.getSubjectsWithWeightages(
             parseInt(sessionId),
-            parseInt(examSetupTypeTermId)
+            parseInt(courseId),
+            parseInt(term)
         );
         return SuccessResponse(res, 200, "Subjects with weightages fetched successfully", result);
     } catch (error) {

@@ -19,6 +19,6 @@ export async function createWeightageBulk(dataList, userId) {
     return await subjectWeightageRepository.createOrUpdateWeightageBulk(dataList);
 }
 
-export async function getSubjectsWithWeightages(sessionId, examSetupTypeTermId) {
-    return await subjectWeightageRepository.getSubjectsWithWeightages(sessionId, examSetupTypeTermId);
+export async function getSubjectsWithWeightages(sessionId, courseId, term) {
+    return await subjectWeightageRepository.getSubjectsWithWeightages(sessionId, courseId, term);
 }

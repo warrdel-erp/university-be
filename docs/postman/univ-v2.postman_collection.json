@@ -523,7 +523,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=34&examSetupTypeTermId=1",
+              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=34&courseId=1&term=1",
               "host": [
                 "{{baseurl}}"
               ],
@@ -537,7 +537,11 @@
                   "value": "34"
                 },
                 {
-                  "key": "examSetupTypeTermId",
+                  "key": "courseId",
+                  "value": "1"
+                },
+                {
+                  "key": "term",
                   "value": "1"
                 }
               ]
