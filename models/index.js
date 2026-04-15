@@ -137,9 +137,7 @@ import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
-
-
-
+import subjectWeightageModel from "./subjectWeightageModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -1218,6 +1216,15 @@ examSetupTypeTermModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'upda
 examScheduleModel.belongsTo(examSetupTypeTermModel, { foreignKey: 'examSetupTypeTermId', as: 'examSetupTypeTerm' });
 examSetupTypeTermModel.hasMany(examScheduleModel, { foreignKey: 'examSetupTypeTermId', as: 'examSchedules' });
 
+subjectWeightageModel.belongsTo(examSetupTypeTermModel, { foreignKey: 'examSetupTypeTermId', as: 'examSetupTypeTerm' });
+examSetupTypeTermModel.hasMany(subjectWeightageModel, { foreignKey: 'examSetupTypeTermId', as: 'subjectWeightages' });
+
+subjectWeightageModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectModel.hasMany(subjectWeightageModel, { foreignKey: 'subject_id', as: 'subjectWeightages' });
+
+subjectWeightageModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
+sessionModel.hasMany(subjectWeightageModel, { foreignKey: 'session_id', as: 'subjectWeightages' });
+
 export {
   settingModel,
   universityModel,
@@ -1358,4 +1365,5 @@ export {
   teacherExamAssignmentModel,
   questionPaperBlueprintModel,
   examSetupTypeTermModel,
+  subjectWeightageModel,
 };

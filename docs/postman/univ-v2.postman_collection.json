@@ -506,6 +506,44 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "withWeightages",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=34&examSetupTypeTermId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "withExamSchedule"
+              ],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "34"
+                },
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -1810,7 +1848,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"id\": 2\n}",
+              "raw": "{\n    \"id\": 2\n} ",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3626,6 +3664,48 @@
                   "key": "id",
                   "value": "1"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "subject weightage",
+      "item": [
+        {
+          "name": "bulk create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightages\": [\n    {\n      \"examSetupTypeTermId\": 1,\n      \"subjectId\": 101,\n      \"sessionId\": 5,\n      \"weightage\": 40.0\n    },\n    {\n      \"examSetupTypeTermId\": 1,\n      \"subjectId\": 102,\n      \"sessionId\": 5,\n      \"weightage\": 60.0\n    }\n  ]\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectWeightage/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectWeightage",
+                "bulk"
               ]
             }
           },
