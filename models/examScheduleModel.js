@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import examSetupTypeModel from "./examSetupTypeModel.js";
 import semesterModel from "./semesterModel.js";
 
 export default sequelize.define(
@@ -48,6 +47,15 @@ export default sequelize.define(
             references: {
                 model: 'acedmic_year',
                 key: 'acedmic_year_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: 'session',
+                key: 'session_id'
             }
         },
         examDate: {

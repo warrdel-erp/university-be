@@ -92,7 +92,9 @@ export async function addExamType(req, res) {
     if (!(examStructureId)) {
       return res.status(400).send("examStructureId Required fields are missing");
     }
-    const examStructure = await examStructureServices.addExamType(req.body, createdBy, updatedBy);
+    const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
+    const examStructure = await examStructureServices.addExamType(req.body, createdBy, updatedBy, universityId, instituteId);
     res.status(201).json({ message: "Exam setup type created successfully", examStructure });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -127,12 +129,13 @@ export async function getSingleExamType(req, res) {
   try {
     const courseId = parseInt(req.query.courseId, 10);
     const sessionId = parseInt(req.query.sessionId, 10);
+    const termNumber = req.query.termNumber ? parseInt(req.query.termNumber, 10) : null;
 
     if (!courseId && !sessionId) {
       return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
     }
 
-    const examDetails = await examStructureServices.getSingleExamType(courseId, sessionId, universityId);
+    const examDetails = await examStructureServices.getSingleExamType(courseId, sessionId, universityId, termNumber);
 
     if (examDetails) {
       res.status(200).json({ success: true, data: examDetails });
@@ -160,7 +163,8 @@ export async function updateExamType(req, res) {
 
 export async function deleteExamType(req, res) {
   try {
-    const { examSetupTypeId } = req.query;
+    const { examSetupTypeId } = req.params;
+
     if (!examSetupTypeId) {
       return res.status(400).json({ message: "examSetupTypeId is required" });
     }

@@ -4,7 +4,7 @@ import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 const router = Router();
 import {
-    addtimeTableCreate, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
+    addtimeTableCreate, cloneTimeTableRoutine, gettimeTableCreateDetails, getSingletimeTableCreateDetails, addtimeTableMapping, getTimeTableMappingDetail, getSingletimeTableMappingDetail, getTimeTableCellData
     , updatetimeTableCreate, getTimeTableElective, publishTimeTable, updateSimpleTeacherMappingController
     , deletetimeTableMapping, ClassSubjectCount, changeTimeTableCreate, getTimeTableByCourseAndSection, getRoutineByClassSectionId, getRoutineByTeacherAndAcademicYear
 } from '../controllers/timeTableCreateController.js';
@@ -18,11 +18,22 @@ const getRoutineByTeacherSchema = z.object({
     acedmicYearId: z.string().regex(/^\d+$/, "acedmicYearId must be a number").optional().transform(val => val ? parseInt(val) : undefined)
 });
 
+const cloneRoutineSchema = z.object({
+    previousRoutineId: z.number({ required_error: "previousRoutineId is required" }),
+    startingDate: z.string({ required_error: "startingDate is required" }),
+    endingDate: z.string({ required_error: "endingDate is required" })
+}).refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
+    message: "endingDate cannot be before startingDate",
+    path: ["endingDate"]
+});
+
 router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
 
 router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 
 router.post('/', userAuth, addtimeTableCreate);
+
+router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
 
 router.get('/', userAuth, gettimeTableCreateDetails);
 

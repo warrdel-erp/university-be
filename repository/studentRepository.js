@@ -791,8 +791,6 @@ export async function addElectiveSubject(data) {
 };
 
 export async function promoteStudent(studentId, data) {
-
-    // return 
     try {
         const result1 = await model.studentModel.update(data, {
             where: {
@@ -806,8 +804,6 @@ export async function promoteStudent(studentId, data) {
             },
         });
         return { result1, result2 };
-
-        return result;
     } catch (error) {
         console.error(`Error updating student promote ${studentId} :`, error);
         throw error;

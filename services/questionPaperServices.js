@@ -1,6 +1,9 @@
 import * as questionPaperRepository from "../repository/questionPaperRepository.js";
 import * as questionPaperBlueprintRepository from "../repository/questionPaperBlueprintRepository.js";
 import * as questionBankRepository from "../repository/questionBankRepository.js";
+import * as subjectRepository from "../repository/subjectRepository.js";
+import { questionStatus } from "../constant.js";
+
 
 export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, universityId) {
     const { examScheduleId } = questionPaperData;
@@ -101,4 +104,59 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
         console.error("Error in generateQuestionPaper service:", error);
         throw error;
     }
+}
+
+export async function approveQuestionPaper(id, updatedBy) {
+    const questionPaperRecord = await questionPaperRepository.getSingleQuestionPaper(id);
+    if (!questionPaperRecord) {
+        throw new Error(`Question paper with id ${id} not found`);
+    }
+
+    // 1. Fetch subject and university ID from exam schedule
+    const examSchedule = await questionPaperRepository.getExamScheduleById(questionPaperRecord.examScheduleId);
+    if (!examSchedule) {
+        throw new Error(`Exam schedule not found for question paper ${id}`);
+    }
+
+    const { subjectId } = examSchedule;
+    const subject = await subjectRepository.getSubjectById(subjectId);
+    if (!subject) {
+        throw new Error(`Subject with id ${subjectId} not found`);
+    }
+    const universityId = subject.universityId;
+
+    // 2. Iterate through sections and questions to add/update in bank
+    const sections = questionPaperRecord.questionPaper;
+    if (sections && Array.isArray(sections)) {
+        for (const section of sections) {
+            if (section.questions && Array.isArray(section.questions)) {
+                for (const question of section.questions) {
+                    if (question.id) {
+                        // Update status for existing bank questions
+                        await questionBankRepository.updateQuestion(question.id, { status: questionStatus[1], updatedBy });
+                    } else {
+                        // Create new entries for questions not in bank
+                        const questionData = {
+                            type: section.typeOfQuestions || question.type,
+                            difficulty: question.difficulty,
+                            bloom: question.bloom,
+                            marks: question.marks,
+                            question: question.question,
+                            Answer: question.Answer,
+                            content: question.content,
+                            subjectId,
+                            universityId,
+                            status: questionStatus[1],
+                            createdBy: updatedBy,
+                            updatedBy
+                        };
+                        await questionBankRepository.addQuestion(questionData);
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Update the question paper status itself
+    return await questionPaperRepository.updateQuestionPaper(id, { status: questionStatus[1], updatedBy });
 }

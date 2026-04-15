@@ -9,6 +9,10 @@ export async function bulkCreateExamSetupTypeTerm(data) {
 }
 
 export async function deleteExamSetupTypeTerm(examSetupTypeTermId) {
+    const isUsed = await examSetupTypeTermRepository.checkExamSetupTypeTermUsage(examSetupTypeTermId);
+    if (isUsed) {
+        throw new Error("This exam setup type term cannot be deleted because it is already used in an exam schedule.");
+    }
     return await examSetupTypeTermRepository.deleteExamSetupTypeTerm(examSetupTypeTermId);
 }
 

@@ -1,40 +1,50 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import examSetupTypeTerm from "./examSetupTypeTermModel.js";
+import subject from "./subjectModel.js";
+import session from "./sessionModel.js";
 import users from "./userModel.js";
-import floor from "./floorModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'subject_weightage',
     {
-        classRoomSectionId: {
+        subjectWeightageId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'subject_weightage_id'
         },
-        floorId: {
+        examSetupTypeTermId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'floor_id',
+            field: 'exam_setup_type_term_id',
             references: {
-                model: floor,
-                key: 'floor_id'
+                model: examSetupTypeTerm,
+                key: 'exam_setup_type_term_id'
             }
         },
-        roomNumber: {
-            type: DataTypes.STRING,
-            field: 'room_number',
+        subjectId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
+            field: 'subject_id',
+            references: {
+                model: subject,
+                key: 'subject_id'
+            }
         },
-        capacity: {
+        sessionId: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
-            allowNull: false
+            allowNull: false,
+            field: 'session_id',
+            references: {
+                model: session,
+                key: 'session_id'
+            }
         },
-        examCapacity: {
-            type: DataTypes.INTEGER,
-            field: 'exam_capacity',
-            allowNull: true
+        weightage: {
+            type: DataTypes.FLOAT,
+            allowNull: false,
+            field: 'weightage'
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -73,8 +83,17 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'class_room_section',
+        tableName: 'subject_weightage',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['exam_setup_type_term_id', 'subject_id'],
+                where: {
+                    deleted_at: null
+                }
+            }
+        ]
     }
 );

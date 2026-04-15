@@ -65,3 +65,12 @@ export async function setSubjectTerms(termsArray) {
         throw error;
     }
 }
+
+export async function getSubjectById(id) {
+    try {
+        return await model.subjectModel.findByPk(id);
+    } catch (error) {
+        console.error("Error fetching subject by ID:", error);
+        throw error;
+    }
+}

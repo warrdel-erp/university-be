@@ -19,8 +19,6 @@ export async function addExamStructureSchedule(req, res) {
   }
 };
 
-
-
 export async function getAllExamStructureSchedule(req, res) {
   const universityId = req.user.universityId;
   const { acedmicYearId } = req.query
@@ -32,11 +30,10 @@ export async function getAllExamStructureSchedule(req, res) {
     const StructureSchedules = await examStructureScheduleServices.getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId);
     res.status(200).json(StructureSchedules);
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 }
-
-
 
 export async function publishExamSchedule(req, res) {
   try {
@@ -90,7 +87,7 @@ export async function deleteExamSchedule(req, res) {
 
 
 export async function addExamSchedule(req, res) {
-  const { examSetupTypeTermId } = req.body;
+  const { examSetupTypeTermId, sessionId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
 
@@ -98,8 +95,8 @@ export async function addExamSchedule(req, res) {
   const acedmicYearId = req.user.defaultAcademicYearId;
 
   try {
-    if (!(examSetupTypeTermId)) {
-      return res.status(400).send("examSetupTypeTermId is required");
+    if (!(examSetupTypeTermId && sessionId)) {
+      return res.status(400).send("examSetupTypeTermId and sessionId are required");
     }
 
     const examSchedule = await examStructureScheduleServices.addExamSchedule(

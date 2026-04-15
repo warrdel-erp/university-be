@@ -2,6 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import examStructureModel from "./examStructureModel.js";
+import universityModel from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
     'exam_setup_type', // exam Type 1.1
@@ -19,6 +21,24 @@ export default sequelize.define(
             references: {
                 model: examStructureModel,
                 key: 'exam_structure_id'
+            }
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: universityModel,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
             }
         },
         examType: {
@@ -86,6 +106,17 @@ export default sequelize.define(
     {
         tableName: 'exam_setup_type',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        hooks: {
+            beforeValidate: async (examSetupType, options) => {
+                if (examSetupType.examStructureId && (!examSetupType.universityId || !examSetupType.instituteId)) {
+                    const examStructure = await examStructureModel.findByPk(examSetupType.examStructureId);
+                    if (examStructure) {
+                        examSetupType.universityId = examStructure.universityId;
+                        examSetupType.instituteId = examStructure.instituteId;
+                    }
+                }
+            }
+        }
     }
 );

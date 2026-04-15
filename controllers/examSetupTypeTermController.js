@@ -39,6 +39,9 @@ export const deleteExamSetupTypeTerm = async (req, res) => {
         }
     } catch (error) {
         console.error("Error in deleteExamSetupTypeTerm:", error);
+        if (error.message === "This exam setup type term cannot be deleted because it is already used in an exam schedule.") {
+            return ErrorResponse(res, 400, error.message);
+        }
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };

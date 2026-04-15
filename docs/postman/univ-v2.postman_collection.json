@@ -238,6 +238,41 @@
           "response": []
         },
         {
+          "name": "get terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/:courseId/terms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                ":courseId",
+                "terms"
+              ],
+              "variable": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "get with Subjects",
           "request": {
             "auth": {
@@ -433,6 +468,86 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "withExamSchedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject/withExamSchedule?courseId=34&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "withExamSchedule"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "withWeightages",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/subject/withWeightages?sessionId=34&courseId=1&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subject",
+                "withWeightages"
+              ],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "34"
+                },
+                {
+                  "key": "courseId",
+                  "value": "1"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -455,7 +570,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34&sessionId=6",
+              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -470,7 +585,42 @@
                 },
                 {
                   "key": "sessionId",
-                  "value": "6"
+                  "value": "6",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get withExamTypesPerCourse",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "withExamTypesPerCourse"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34"
                 }
               ]
             }
@@ -1684,6 +1834,43 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "approve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": 2\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/questionPaper/approve",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "questionPaper",
+                "approve"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -2006,7 +2193,7 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/questionBank?createdBy=46",
+              "raw": "{{baseurl}}/questionBank?createdBy=46&examScheduleId=2",
               "host": [
                 "{{baseurl}}"
               ],
@@ -2017,6 +2204,11 @@
                 {
                   "key": "createdBy",
                   "value": "46"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "2",
+                  "type": "text"
                 }
               ]
             }
@@ -3201,6 +3393,323 @@
                   "key": "id",
                   "value": "1"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam setup type term mapping",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examSetupTypeTerms\": [\n        {\n            \"examSetupTypeId\": 2,\n            \"term\": 1,\n            \"courseId\": 34\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupTypeTerm/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupTypeTerm",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupTypeTerm/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupTypeTerm",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "time table routine",
+      "item": [
+        {
+          "name": "clone",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"previousRoutineId\": 25,\n    \"startingDate\": \"2026-5-2\",\n    \"endingDate\": \"2026-5-18\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/clone",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "clone"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam setup type",
+      "item": [
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSetupType/?courseId=34&term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSetupType",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "type": "text"
+                },
+                {
+                  "key": "term",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam schedule",
+      "item": [
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by Id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "subject weightage",
+      "item": [
+        {
+          "name": "bulk create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weightages\": [\n    {\n      \"examSetupTypeTermId\": 1,\n      \"subjectId\": 101,\n      \"sessionId\": 5,\n      \"weightage\": 40.0\n    },\n    {\n      \"examSetupTypeTermId\": 1,\n      \"subjectId\": 102,\n      \"sessionId\": 5,\n      \"weightage\": 60.0\n    }\n  ]\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectWeightage/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectWeightage",
+                "bulk"
               ]
             }
           },

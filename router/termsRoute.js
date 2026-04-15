@@ -26,7 +26,6 @@ const termsListSchema = z.object({
 
 router.get('/withSubjectAndSection', userAuth, validate({ query: termsQuerySchema }), getTermsData);
 
-
 router.get('/withExamTypesPerCourse', userAuth, validate({ query: termsExamTypeQuerySchema }), getTermsWithExamTypes);
 
 router.get('/list/withSubject', userAuth, validate({ query: termsListSchema }), getTermsWithSubject);

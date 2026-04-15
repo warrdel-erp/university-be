@@ -1,9 +1,9 @@
 import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js'
 
-export async function addTimeTableCreate(data) {
+export async function addTimeTableCreate(data, transaction) {
   try {
-    const result = await model.timeTableRoutineModel.create(data);
+    const result = await model.timeTableRoutineModel.create(data, { transaction });
     return result;
   } catch (error) {
     console.error("Error in create create time table:", error);
@@ -363,7 +363,7 @@ export async function getRoutineByIdRepository(timeTableRoutineId) {
   try {
     return await model.timeTableRoutineModel.findOne({
       where: { timeTableRoutineId },
-      attributes: ["startingDate", "endingDate", "isPublish"]
+      attributes: ["startingDate", "endingDate", "isPublish", "classSectionsId"]
     });
   } catch (error) {
     console.error("Error in getRoutineByIdRepository:", error);
@@ -416,6 +416,50 @@ export async function checkRoomConflictRepository(classRoomSectionId, day, start
     throw error;
   }
 };
+
+export async function getFullRoutineDetailsRepository(timeTableRoutineId) {
+  try {
+    return await model.timeTableRoutineModel.findOne({
+      where: { timeTableRoutineId },
+      include: [
+        {
+          model: model.classScheduleModel,
+          as: 'timeTablecreate'
+        }
+      ]
+    });
+  } catch (error) {
+    console.error("Error in getFullRoutineDetailsRepository:", error);
+    throw error;
+  }
+};
+
+export async function checkRoutineOverlapRepository(classSectionsId, startingDate, endingDate, excludeRoutineId) {
+  try {
+    return await model.timeTableRoutineModel.findOne({
+      where: {
+        classSectionsId,
+        ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
+        [Op.and]: [
+          { startingDate: { [Op.lte]: endingDate } },
+          { endingDate: { [Op.gte]: startingDate } }
+        ]
+      }
+    });
+  } catch (error) {
+    console.error("Error in checkRoutineOverlapRepository:", error);
+    throw error;
+  }
+}
+
+export async function bulkCreateMappings(mappings, transaction) {
+  try {
+    return await model.classScheduleModel.bulkCreate(mappings, { transaction });
+  } catch (error) {
+    console.error("Error in bulkCreateMappings:", error);
+    throw error;
+  }
+}
 
 export async function changeTimeTableCreate(timeTableRoutineId, data) {
   try {

@@ -13,6 +13,30 @@ export const addtimeTableCreate = async (req, res) => {
     }
 };
 
+export const cloneTimeTableRoutine = async (req, res) => {
+    const { previousRoutineId, startingDate, endingDate } = req.body;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+
+    if (!previousRoutineId || !startingDate || !endingDate) {
+        return res.status(400).send("previousRoutineId, startingDate, and endingDate are required");
+    }
+
+    try {
+        const result = await timeTableCreateServices.cloneTimeTableRoutine(
+            previousRoutineId,
+            startingDate,
+            endingDate,
+            createdBy,
+            updatedBy
+        );
+        res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in cloning time table routine:", error);
+        res.status(500).send({ success: false, message: error.message || "Internal Server Error" });
+    }
+};
+
 export const gettimeTableCreateDetails = async (req, res) => {
     const universityId = req.user.universityId;
     try {

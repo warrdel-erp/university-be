@@ -1,4 +1,5 @@
 import * as subjectService from '../services/subjectService.js';
+import * as examStructureScheduleServices from '../services/examStructureScheduleMappingServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
 
 export const getAllSubjects = async (req, res) => {
@@ -30,5 +31,21 @@ export const setSubjectTerms = async (req, res) => {
         console.error("Error in setSubjectTerms controller:", error);
         const statusCode = error.statusCode || 500;
         return res.status(statusCode).send({ error: error.message, success: false });
+    }
+};
+
+export const getSubjectsWithExamSchedule = async (req, res) => {
+    try {
+        const { courseId, term, examSetupTypeTermId } = req.query;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+
+        const result = await examStructureScheduleServices.getSubjectsWithExamSchedule(
+            courseId, acedmicYearId, term, examSetupTypeTermId
+        );
+
+        return SuccessResponse(res, 200, "Subjects with exam schedule fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getSubjectsWithExamSchedule controller:", error);
+        return ErrorResponse(res, 500, error.message);
     }
 };

@@ -1,6 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
+import { questionStatus } from "../constant.js";
+
 
 const questionPaperModel = sequelize.define(
     "question_paper",
@@ -35,6 +37,12 @@ const questionPaperModel = sequelize.define(
             },
         },
 
+        status: {
+            type: DataTypes.ENUM(...questionStatus),
+            allowNull: false,
+            defaultValue: "Pending",
+            field: "status",
+        },
         questionPaper: {
             type: DataTypes.JSON,
             allowNull: false,
