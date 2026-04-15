@@ -19,6 +19,7 @@ import classSubjectMapperModel from "./classSubjectMapperModel.js";
 import classStudentMapperModel from "./classSectionStudentMapperModel.js";
 import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
+import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
 import userModel from "./userModel.js";
 import employeeModel from "./employeeModel.js";
 import employeeAddressModel from "./employeeAddressModel.js";
@@ -179,6 +180,12 @@ feePlanModel.hasMany(studentModel, { foreignKey: "fee_plan_id", as: "studentFeeP
 
 userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasOne(userStudentEmployeeModel, { foreignKey: "student_id", as: "student" });
+
+studentClassSectionsHistoryModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(studentClassSectionsHistoryModel, { foreignKey: "student_id", as: "sectionHistory" });
+
+studentClassSectionsHistoryModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "classSection" });
+classSectionModel.hasMany(studentClassSectionsHistoryModel, { foreignKey: "class_sections_id", as: "sectionHistory" });
 
 studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: "types", as: "typs" });
 employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: "types", as: "typs" });
@@ -1366,4 +1373,5 @@ export {
   questionPaperBlueprintModel,
   examSetupTypeTermModel,
   subjectWeightageModel,
+  studentClassSectionsHistoryModel,
 };
