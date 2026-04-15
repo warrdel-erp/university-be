@@ -523,13 +523,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=34&courseId=1&term=1",
+              "raw": "{{baseurl}}/subject/withWeightages?sessionId=34&courseId=1&term=1",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "subject",
-                "withExamSchedule"
+                "withWeightages"
               ],
               "query": [
                 {
