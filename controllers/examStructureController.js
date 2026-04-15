@@ -163,7 +163,8 @@ export async function updateExamType(req, res) {
 
 export async function deleteExamType(req, res) {
   try {
-    const { examSetupTypeId } = req.query;
+    const { examSetupTypeId } = req.params;
+
     if (!examSetupTypeId) {
       return res.status(400).json({ message: "examSetupTypeId is required" });
     }
