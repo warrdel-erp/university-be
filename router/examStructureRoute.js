@@ -6,7 +6,7 @@ import {
     getSingleExamStructure,
     updateExamStructure,
     deleteExamStructure,
-    addExamType,getDetailByExamType,getSingleExamType,updateExamType,deleteExamType
+    addExamType, getDetailByExamType, getSingleExamType, updateExamType, deleteExamType
 } from "../controllers/examStructureController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -28,6 +28,6 @@ router.get("/examType/single", userAuth, getSingleExamType);
 
 router.patch("/examType", userAuth, updateExamType);
 
-router.delete("/examType", userAuth, deleteExamType);
+router.delete("/examType/:examSetupTypeId", userAuth, deleteExamType);
 
 export default router;
