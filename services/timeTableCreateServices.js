@@ -33,6 +33,20 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
+    // Check for routine overlap for the same class section
+    if (data.classSectionsId && data.startingDate && data.endingDate) {
+      const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
+        data.classSectionsId,
+        data.startingDate,
+        data.endingDate,
+        data.timeTableRoutineId
+      );
+
+      if (overlap) {
+        throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${data.startingDate} to ${data.endingDate})`);
+      }
+    }
+
     let result;
 
     if (data.timeTableRoutineId && data.previousDate) {
@@ -42,26 +56,26 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
           endingDate: data.previousDate,
           updatedBy,
         },
-        // transaction
+        transaction
       );
 
       const { timeTableRoutineId, previousDate, ...newCreateData } = data;
 
       result = await timeTableCreateRepository.addTimeTableCreate(
         newCreateData,
-        // transaction
+        transaction
       );
     } else {
       result = await timeTableCreateRepository.addTimeTableCreate(
         data,
-        // transaction
+        transaction
       );
     }
 
-    // await transaction.commit();
+    await transaction.commit();
     return result;
   } catch (error) {
-    // await transaction.rollback();
+    if (transaction) await transaction.rollback();
     throw error;
   }
 }
@@ -319,6 +333,26 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
     const { timeTableRoutineId, ...updateData } = body;
+
+    // If dates or section are being updated, check for overlap
+    if (updateData.startingDate || updateData.endingDate || updateData.classSectionsId) {
+      // Get current values to fill gaps if only one field is being updated
+      const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+      const classSectionsId = updateData.classSectionsId || current.classSectionsId;
+      const start = updateData.startingDate || current.startingDate;
+      const end = updateData.endingDate || current.endingDate;
+
+      const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
+        classSectionsId,
+        start,
+        end,
+        timeTableRoutineId
+      );
+
+      if (overlap) {
+        throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${start} to ${end})`);
+      }
+    }
 
     const data = {
       ...updateData,

@@ -363,7 +363,7 @@ export async function getRoutineByIdRepository(timeTableRoutineId) {
   try {
     return await model.timeTableRoutineModel.findOne({
       where: { timeTableRoutineId },
-      attributes: ["startingDate", "endingDate", "isPublish"]
+      attributes: ["startingDate", "endingDate", "isPublish", "classSectionsId"]
     });
   } catch (error) {
     console.error("Error in getRoutineByIdRepository:", error);
@@ -434,11 +434,12 @@ export async function getFullRoutineDetailsRepository(timeTableRoutineId) {
   }
 };
 
-export async function checkRoutineOverlapRepository(classSectionsId, startingDate, endingDate) {
+export async function checkRoutineOverlapRepository(classSectionsId, startingDate, endingDate, excludeRoutineId) {
   try {
     return await model.timeTableRoutineModel.findOne({
       where: {
         classSectionsId,
+        ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
         [Op.and]: [
           { startingDate: { [Op.lte]: endingDate } },
           { endingDate: { [Op.gte]: startingDate } }
