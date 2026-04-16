@@ -16,6 +16,17 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
+                    model: model.teacherExamAssignmentModel,
+                    as: "teacherAssignments",
+                    include: [
+                        {
+                            model: model.employeeModel,
+                            as: "teacherEmployee",
+                            attributes: ["employeeName", "employeeId"]
+                        }
+                    ]
+                },
+                {
                     model: model.subjectModel,
                     as: "subjectSchedule",
                     attributes: ["subjectId", "subjectName", "subjectCode"]
