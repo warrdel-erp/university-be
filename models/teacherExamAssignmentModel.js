@@ -58,6 +58,11 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
+        deadline: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            field: 'deadline'
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -74,6 +79,13 @@ export default sequelize.define(
     {
         tableName: 'teacher_exam_assignment',
         timestamps: true,
-        paranoid: false
+        paranoid: false,
+        indexes: [
+            {
+                unique: true,
+                fields: ['exam_schedule_id', 'employee_id'],
+                name: 'uq_teacher_exam_assignment_schedule_employee'
+            }
+        ]
     }
 );

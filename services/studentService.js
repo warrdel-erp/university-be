@@ -1,5 +1,6 @@
 import { getCourseCode, getInstituteCode } from "../repository/collegeRepository.js";
 import * as studentRepository from "../repository/studentRepository.js";
+import * as historyRepository from "../repository/studentClassSectionsHistoryRepository.js";
 import * as fileHandler from "../utility/fileHandler.js";
 import moment from "moment";
 import { uploadFile } from "../utility/awsServices.js";
@@ -88,6 +89,14 @@ export async function addStudent(
 
     const data = { studentId, acedmicYearId, createdBy, sessionId };
     const result = await studentRepository.classStudentMapping(data, transaction);
+
+    // Record in history
+    await historyRepository.createHistory({
+      studentId,
+      classSectionsId: classSectionId,
+      status: "current",
+      createdBy,
+    }, transaction);
     //  entranceDetails
     let entranceDetails = [];
     if (info.entranceDetails) {
@@ -448,6 +457,15 @@ export async function importStudentData(excelData, data) {
     // Step 10: Bulk insert student-class mappings
     if (studentMapping.length > 0) {
       await studentRepository.classStudentMappingExcel(studentMapping, transaction);
+
+      // Bulk record in history
+      const historyEntries = studentMapping.map((mapping) => ({
+        studentId: mapping.studentId,
+        classSectionsId: data.classSectionsId,
+        status: "current",
+        createdBy: mapping.createdBy,
+      }));
+      await historyRepository.bulkCreateHistory(historyEntries, transaction);
     }
 
     // Step 11: Commit transaction
@@ -771,6 +789,15 @@ export async function classStudentMapping(data, createdBy) {
     for (const id of studentId) {
       const entryData = { studentId: id, classSectionId, createdBy };
       const result = await studentRepository.classStudentMapping(entryData);
+
+      // Record in history
+      await historyRepository.createHistory({
+        studentId: id,
+        classSectionsId: classSectionId,
+        status: "current",
+        createdBy,
+      });
+
       results.push(result);
     }
 
@@ -851,6 +878,30 @@ export async function promoteStudent(data) {
     acedmicYearId: nextAcedmicYearId,
     classSectionsId: data.classSectionsId, // if needed
   });
+
+  // Record history (New entries only)
+  const oldClassSectionId = studentDetail.dataValues.classSectionsId;
+  const createdBy = data.createdBy || null;
+
+  // 1. Create entry for old section as 'passed'
+  if (oldClassSectionId) {
+    await historyRepository.createHistory({
+      studentId: data.studentId,
+      classSectionsId: oldClassSectionId,
+      status: "passed",
+      createdBy,
+    });
+  }
+
+  // 2. Create entry for new section as 'current'
+  if (data.classSectionsId) {
+    await historyRepository.createHistory({
+      studentId: data.studentId,
+      classSectionsId: data.classSectionsId,
+      status: "current",
+      createdBy,
+    });
+  }
 
   return { message: "Student promoted", result };
 }

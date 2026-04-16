@@ -33,6 +33,20 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
+    // Check for routine overlap for the same class section
+    if (data.classSectionsId && data.startingDate && data.endingDate) {
+      const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
+        data.classSectionsId,
+        data.startingDate,
+        data.endingDate,
+        data.timeTableRoutineId
+      );
+
+      if (overlap) {
+        throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${data.startingDate} to ${data.endingDate})`);
+      }
+    }
+
     let result;
 
     if (data.timeTableRoutineId && data.previousDate) {
@@ -42,26 +56,26 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
           endingDate: data.previousDate,
           updatedBy,
         },
-        // transaction
+        transaction
       );
 
       const { timeTableRoutineId, previousDate, ...newCreateData } = data;
 
       result = await timeTableCreateRepository.addTimeTableCreate(
         newCreateData,
-        // transaction
+        transaction
       );
     } else {
       result = await timeTableCreateRepository.addTimeTableCreate(
         data,
-        // transaction
+        transaction
       );
     }
 
-    // await transaction.commit();
+    await transaction.commit();
     return result;
   } catch (error) {
-    // await transaction.rollback();
+    if (transaction) await transaction.rollback();
     throw error;
   }
 }
@@ -238,9 +252,107 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
   }
 }
 
+export async function cloneTimeTableRoutine(previousRoutineId, startingDate, endingDate, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const previousRoutine = await timeTableCreateRepository.getFullRoutineDetailsRepository(previousRoutineId);
+
+    if (!previousRoutine) {
+      throw new Error(`Routine with ID ${previousRoutineId} not found`);
+    }
+
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const start = formatDate(startingDate);
+    const end = formatDate(endingDate);
+
+    // Check for routine overlap for the same class section
+    const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
+      previousRoutine.classSectionsId,
+      start,
+      end
+    );
+
+    if (overlap) {
+      throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${start} to ${end})`);
+    }
+
+    // Create new routine data from previous one
+    const newRoutineData = {
+      ...previousRoutine.get({ plain: true }),
+      startingDate: start,
+      endingDate: end,
+      createdBy,
+      updatedBy
+    };
+
+    // Remove primary key and metadata
+    delete newRoutineData.timeTableRoutineId;
+    delete newRoutineData.createdAt;
+    delete newRoutineData.updatedAt;
+    delete newRoutineData.deletedAt;
+
+    const newRoutine = await timeTableCreateRepository.addTimeTableCreate(newRoutineData, transaction);
+    const newRoutineId = newRoutine.timeTableRoutineId;
+
+    // Copy mappings
+    const previousMappings = previousRoutine.timeTablecreate || [];
+    if (previousMappings.length > 0) {
+      const newMappings = previousMappings.map(mapping => {
+        const m = { ...mapping.get({ plain: true }) };
+        delete m.timeTableMappingId;
+        delete m.createdAt;
+        delete m.updatedAt;
+        delete m.deletedAt;
+        m.timeTableRoutineId = newRoutineId;
+        m.createdBy = createdBy;
+        m.updatedBy = updatedBy;
+        return m;
+      });
+
+      await timeTableCreateRepository.bulkCreateMappings(newMappings, transaction);
+    }
+
+    await transaction.commit();
+    return newRoutine;
+
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    console.error("Error in cloneTimeTableRoutine:", error);
+    throw error;
+  }
+}
+
 export async function changeTimeTableCreate(body, updatedBy) {
   try {
     const { timeTableRoutineId, ...updateData } = body;
+
+    // If dates or section are being updated, check for overlap
+    if (updateData.startingDate || updateData.endingDate || updateData.classSectionsId) {
+      // Get current values to fill gaps if only one field is being updated
+      const current = await timeTableCreateRepository.getRoutineByIdRepository(timeTableRoutineId);
+      const classSectionsId = updateData.classSectionsId || current.classSectionsId;
+      const start = updateData.startingDate || current.startingDate;
+      const end = updateData.endingDate || current.endingDate;
+
+      const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
+        classSectionsId,
+        start,
+        end,
+        timeTableRoutineId
+      );
+
+      if (overlap) {
+        throw new Error(`A routine already exists for this class section that overlaps with the selected date range (${start} to ${end})`);
+      }
+    }
 
     const data = {
       ...updateData,

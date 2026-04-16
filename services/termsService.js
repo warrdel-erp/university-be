@@ -158,13 +158,14 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
 
 export async function getTermsWithExamTypes(courseId, acedmicYearId) {
     try {
-        // 1. Get course to find termType
+        // 1. Get course to find termType and totalTerms
         const course = await courseRepository.getCourseByCourseId(courseId);
         if (!course) {
             throw new Error('Course not found');
         }
 
         const termType = course.termType || 'Term';
+        const totalTerms = course.totalTerms || 0;
 
         // 2. Fetch exam setup type terms
         const examSetupTypeTerms = await termsRepository.getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId);
@@ -173,23 +174,26 @@ export async function getTermsWithExamTypes(courseId, acedmicYearId) {
 
         // 3. Group by term
         const termsMap = {};
-
         plainExamSetupTypeTerms.forEach(estt => {
             const termNum = estt.term;
             if (!termsMap[termNum]) {
-                termsMap[termNum] = {
-                    termName: `${termType} ${termNum}`,
-                    term: termNum,
-                    examSetupTypeTerms: []
-                };
+                termsMap[termNum] = [];
             }
-            termsMap[termNum].examSetupTypeTerms.push(estt);
+            termsMap[termNum].push(estt);
         });
 
-        // Convert map to sorted array
-        const result = Object.keys(termsMap)
-            .sort((a, b) => a - b)
-            .map(termNum => termsMap[termNum]);
+        // 4. Ensure all terms from 1 to totalTerms (or max term found) are present
+        const maxTermFound = Object.keys(termsMap).reduce((max, curr) => Math.max(max, parseInt(curr)), 0);
+        const endTerm = Math.max(totalTerms, maxTermFound);
+
+        const result = [];
+        for (let i = 1; i <= endTerm; i++) {
+            result.push({
+                termName: `${termType} ${i}`,
+                term: i,
+                examSetupTypeTerms: termsMap[i] || []
+            });
+        }
 
         return { result, course };
     } catch (error) {

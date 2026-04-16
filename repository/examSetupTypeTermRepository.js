@@ -38,3 +38,14 @@ export async function checkExistingExamSetupTypeTerms(data) {
         throw error;
     }
 }
+export async function checkExamSetupTypeTermUsage(examSetupTypeTermId) {
+    try {
+        const usage = await model.examScheduleModel.findOne({
+            where: { examSetupTypeTermId }
+        });
+        return usage;
+    } catch (error) {
+        console.error("Error in checkExamSetupTypeTermUsage:", error);
+        throw error;
+    }
+}

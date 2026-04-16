@@ -2,7 +2,7 @@ import * as teacherExamAssignmentServices from "../services/teacherExamAssignmen
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function assignTeacherToExam(req, res) {
-    const { examScheduleId, employeeId } = req.body;
+    const { examScheduleId, employeeId, deadline } = req.body;
     const acedmicYearId = req.user.defaultAcademicYearId;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
@@ -11,6 +11,7 @@ export async function assignTeacherToExam(req, res) {
         const assignment = await teacherExamAssignmentServices.assignExam({
             examScheduleId,
             employeeId,
+            deadline,
             acedmicYearId,
             createdBy,
             updatedBy
@@ -18,7 +19,7 @@ export async function assignTeacherToExam(req, res) {
 
         return SuccessResponse(res, 201, "Teacher assigned to exam successfully", assignment);
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }
 

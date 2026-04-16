@@ -19,6 +19,7 @@ import classSubjectMapperModel from "./classSubjectMapperModel.js";
 import classStudentMapperModel from "./classSectionStudentMapperModel.js";
 import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
+import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
 import userModel from "./userModel.js";
 import employeeModel from "./employeeModel.js";
 import employeeAddressModel from "./employeeAddressModel.js";
@@ -137,9 +138,7 @@ import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
-
-
-
+import subjectWeightageModel from "./subjectWeightageModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -181,6 +180,12 @@ feePlanModel.hasMany(studentModel, { foreignKey: "fee_plan_id", as: "studentFeeP
 
 userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasOne(userStudentEmployeeModel, { foreignKey: "student_id", as: "student" });
+
+studentClassSectionsHistoryModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(studentClassSectionsHistoryModel, { foreignKey: "student_id", as: "sectionHistory" });
+
+studentClassSectionsHistoryModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "classSection" });
+classSectionModel.hasMany(studentClassSectionsHistoryModel, { foreignKey: "class_sections_id", as: "sectionHistory" });
 
 studentMetaData.belongsTo(employeeCodeMasterType, { foreignKey: "types", as: "typs" });
 employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: "types", as: "typs" });
@@ -1013,10 +1018,11 @@ examStructureScheduleMappingModel.belongsTo(sessionModel, { foreignKey: "session
 examScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjectSchedule" });
 subjectModel.hasMany(examScheduleModel, { foreignKey: "subject_id", as: "scheduleSubject" });
 
-
-
 examScheduleModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYearSchedule" });
 acedmicYearModel.hasMany(examScheduleModel, { foreignKey: "acedmicYearId", as: "academicYearSchedule" });
+
+examScheduleModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionSchedule" });
+sessionModel.hasMany(examScheduleModel, { foreignKey: "sessionId", as: "examScheduleSession" });
 
 examSetupTypeModel.hasMany(syllabusDetailsModel, { foreignKey: "exam_setup_type_id", as: "syllabusDetailsExam" });
 syllabusDetailsModel.belongsTo(examSetupTypeModel, { foreignKey: "exam_setup_type_id", as: "examSetupTypeSyllabus" });
@@ -1217,6 +1223,15 @@ examSetupTypeTermModel.belongsTo(userModel, { foreignKey: 'updatedBy', as: 'upda
 examScheduleModel.belongsTo(examSetupTypeTermModel, { foreignKey: 'examSetupTypeTermId', as: 'examSetupTypeTerm' });
 examSetupTypeTermModel.hasMany(examScheduleModel, { foreignKey: 'examSetupTypeTermId', as: 'examSchedules' });
 
+subjectWeightageModel.belongsTo(examSetupTypeTermModel, { foreignKey: 'examSetupTypeTermId', as: 'examSetupTypeTerm' });
+examSetupTypeTermModel.hasMany(subjectWeightageModel, { foreignKey: 'examSetupTypeTermId', as: 'subjectWeightages' });
+
+subjectWeightageModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectModel.hasMany(subjectWeightageModel, { foreignKey: 'subject_id', as: 'subjectWeightages' });
+
+subjectWeightageModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
+sessionModel.hasMany(subjectWeightageModel, { foreignKey: 'session_id', as: 'subjectWeightages' });
+
 export {
   settingModel,
   universityModel,
@@ -1357,4 +1372,6 @@ export {
   teacherExamAssignmentModel,
   questionPaperBlueprintModel,
   examSetupTypeTermModel,
+  subjectWeightageModel,
+  studentClassSectionsHistoryModel,
 };
