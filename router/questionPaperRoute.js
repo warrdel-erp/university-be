@@ -97,7 +97,6 @@ const approveQuestionPaperSchema = z.object({
     id: z.number({ required_error: "id is required" }),
 });
 
-
 router.post("/", userAuth, validate({ body: createQuestionPaperSchema }), addQuestionPaper);
 
 router.post("/generate", userAuth, validate({ body: generateQuestionPaperSchema }), generateQuestionPaper);
