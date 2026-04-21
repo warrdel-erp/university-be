@@ -139,6 +139,7 @@ import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
+import examRoomCapacityModel from "./examRoomCapacityModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -761,6 +762,12 @@ buildingModel.hasMany(floorModel, { foreignKey: "building_id", as: "floorBuildin
 classRoomModel.belongsTo(floorModel, { foreignKey: "floor_id", as: "roomFloor" });
 floorModel.hasMany(classRoomModel, { foreignKey: "floor_id", as: "roomFloor" });
 
+examRoomCapacityModel.belongsTo(classRoomModel, { foreignKey: "class_room_section_id", as: "classRoom" });
+classRoomModel.hasMany(examRoomCapacityModel, { foreignKey: "class_room_section_id", as: "capacities" });
+
+examScheduleModel.belongsTo(examRoomCapacityModel, { foreignKey: "exam_room_capacity_id", as: "roomCapacity" });
+examRoomCapacityModel.hasMany(examScheduleModel, { foreignKey: "exam_room_capacity_id", as: "schedules" });
+
 headModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "headCampus" });
 campusModel.hasMany(headModel, { foreignKey: "campus_id", as: "headCampus" });
 
@@ -1374,4 +1381,5 @@ export {
   examSetupTypeTermModel,
   subjectWeightageModel,
   studentClassSectionsHistoryModel,
+  examRoomCapacityModel,
 };

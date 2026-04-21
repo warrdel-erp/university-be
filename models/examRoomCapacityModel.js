@@ -1,54 +1,43 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import subject from "./subjectModel.js";
-import university from "./universityModel.js";
 import users from "./userModel.js";
+import classRoomModel from "./classRoomModel.js";
 
 export default sequelize.define(
-    'questionPaperBlueprint',
+    'exam_room_capacity',
     {
-        id: {
+        examRoomCapacityId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'id'
+            field: 'exam_room_capacity_id'
         },
-        name: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'name'
-        },
-        subjectId: {
+        classRoomSectionId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'subject_id',
+            field: 'class_room_section_id',
             references: {
-                model: subject,
-                key: 'subject_id'
+                model: classRoomModel,
+                key: 'class_room_section_id'
             }
         },
-        blueprint: {
-            type: DataTypes.JSON,
-            allowNull: false,
-            field: 'blueprint'
-        },
-        totalMarks: {
+        capacity: {
             type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'total_marks'
+            allowNull: false
         },
-        universityId: {
+        columns: {
             type: DataTypes.INTEGER,
+            allowNull: false
+        },
+        isActive: {
+            type: DataTypes.BOOLEAN,
             allowNull: false,
-            field: 'university_id',
-            references: {
-                model: university,
-                key: 'university_id'
-            }
+            defaultValue: true,
+            field: 'is_active'
         },
         createdBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'created_by',
             references: {
                 model: users,
@@ -57,7 +46,7 @@ export default sequelize.define(
         },
         updatedBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'updated_by',
             references: {
                 model: users,
@@ -75,11 +64,10 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
+        }
     },
     {
-        tableName: 'question_paper_blueprint',
-        timestamps: true,
-        paranoid: false
+        tableName: 'exam_room_capacity',
+        timestamps: true
     }
 );

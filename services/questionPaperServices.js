@@ -4,6 +4,21 @@ import * as questionBankRepository from "../repository/questionBankRepository.js
 import * as subjectRepository from "../repository/subjectRepository.js";
 import { questionStatus } from "../constant.js";
 
+/**
+ * Calculates total marks from all sections of a question paper.
+ * Sums the actual marks of each individual question across all sections.
+ * @param {Array} questionPaper - Array of section objects
+ * @returns {number}
+ */
+function calculateTotalMarks(questionPaper) {
+    if (!Array.isArray(questionPaper)) return 0;
+    return questionPaper.reduce((total, section) => {
+        if (!Array.isArray(section.questions)) return total;
+        return total + section.questions.reduce((sectionTotal, question) => {
+            return sectionTotal + (question.marks || 0);
+        }, 0);
+    }, 0);
+}
 
 export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, universityId) {
     const { examScheduleId } = questionPaperData;
@@ -16,6 +31,7 @@ export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, 
 
     questionPaperData.createdBy = createdBy;
     questionPaperData.updatedBy = updatedBy;
+    questionPaperData.totalMarks = calculateTotalMarks(questionPaperData.questionPaper);
     const result = await questionPaperRepository.addQuestionPaper(questionPaperData);
     return result;
 }
@@ -30,6 +46,9 @@ export async function getSingleQuestionPaper(id) {
 
 export async function updateQuestionPaper(id, questionPaperData, updatedBy) {
     questionPaperData.updatedBy = updatedBy;
+    if (Array.isArray(questionPaperData.questionPaper)) {
+        questionPaperData.totalMarks = calculateTotalMarks(questionPaperData.questionPaper);
+    }
     return await questionPaperRepository.updateQuestionPaper(id, questionPaperData);
 }
 
@@ -90,6 +109,7 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
                 examScheduleId,
                 blueprintId,
                 questionPaper: generatedPaper,
+                totalMarks: calculateTotalMarks(generatedPaper),
                 createdBy,
                 updatedBy
             };

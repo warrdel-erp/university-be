@@ -16,6 +16,18 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
+                    model: model.examRoomCapacityModel,
+                    as: "roomCapacity",
+                    where: { isActive: true },
+                    include: [
+                        {
+                            model: model.classRoomModel,
+                            as: "classRoom",
+                            attributes: ["classRoomId", "classRoomName"]
+                        }
+                    ]
+                },
+                {
                     model: model.teacherExamAssignmentModel,
                     as: "teacherAssignments",
                     include: [
@@ -80,6 +92,17 @@ export async function getExamScheduleById(examScheduleId) {
         const result = await model.examScheduleModel.findByPk(examScheduleId, {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
+                {
+                    model: model.examRoomCapacityModel,
+                    as: "roomCapacity",
+                    include: [
+                        {
+                            model: model.classRoomModel,
+                            as: "classRoom",
+                            attributes: ["classRoomId", "classRoomName"]
+                        }
+                    ]
+                },
                 {
                     model: model.subjectModel,
                     as: "subjectSchedule",

@@ -58,6 +58,16 @@ export default sequelize.define(
                 key: 'session_id'
             }
         },
+        examRoomCapacityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'exam_room_capacity_id',
+            references: {
+                model: 'exam_room_capacity',
+                key: 'exam_room_capacity_id'
+            }
+        },
+
         examDate: {
             type: DataTypes.DATEONLY,
             allowNull: false,

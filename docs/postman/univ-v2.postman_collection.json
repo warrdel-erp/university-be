@@ -3716,6 +3716,216 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "exam room capacity",
+      "item": [
+        {
+          "name": "add",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"capacity\": 23,\n    \"columns\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomCapacity",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examRoomCapacity"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomCapacity?classRoomSectionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examRoomCapacity"
+              ],
+              "query": [
+                {
+                  "key": "classRoomSectionId",
+                  "value": "6",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examRoomCapacityId\": 1,\n    \"capacity\": 24\n }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomCapacity",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examRoomCapacity"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "active",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examRoomCapacityId\": 1,\n    \"capacity\": 24\n }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomCapacity/active/:examRoomCapacityId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examRoomCapacity",
+                "active",
+                ":examRoomCapacityId"
+              ],
+              "variable": [
+                {
+                  "key": "examRoomCapacityId",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examRoomCapacity/:examRoomCapacityId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examRoomCapacity",
+                ":examRoomCapacityId"
+              ],
+              "variable": [
+                {
+                  "key": "examRoomCapacityId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }
