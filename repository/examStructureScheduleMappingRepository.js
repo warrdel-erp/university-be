@@ -241,8 +241,14 @@ export async function getExamScheduleById(examScheduleId) {
                     as: 'semesterexam',
                 },
                 {
-                    model: model.examSetupTypeModel,
-                    as: 'examSetupTypeSchedule',
+                    model: model.examSetupTypeTermModel,
+                    as: 'examSetupTypeTerm',
+                    include: [
+                        {
+                            model: model.examSetupTypeModel,
+                            as: 'examSetupType'
+                        }
+                    ]
                 },
                 {
                     model: model.acedmicYearModel,

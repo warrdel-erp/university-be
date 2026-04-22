@@ -2852,7 +2852,83 @@
       "name": "exam schedule",
       "item": [
         {
-          "name": "get",
+          "name": "assign room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"examScheduleId\": 2\n} ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/assignRoom",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "assignRoom"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update assigned room",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleRoomCapacityId\": 1,\n    \"capacity\": 50,\n    \"columns\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/roomAssignment",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                "roomAssignment"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "room assignments",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
           "request": {
             "auth": {
               "type": "bearer",
@@ -2866,32 +2942,30 @@
             },
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8080/examScheduleMapping?acedmicYearId=59&examSetupTypeId=8",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "examScheduleMapping"
-              ],
-              "query": [
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
-                },
-                {
-                  "key": "examSetupTypeId",
-                  "value": "8"
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/roomAssignments",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                "roomAssignments"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "get by id",
+          "name": "get by id (old)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -2913,6 +2987,92 @@
               "path": [
                 "examScheduleMapping",
                 "getScheduleById",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by Id",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
                 ":id"
               ],
               "variable": [
@@ -3586,94 +3746,7 @@
     },
     {
       "name": "exam schedule",
-      "item": [
-        {
-          "name": "get",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                ""
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get by Id",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/:id",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
+      "item": []
     },
     {
       "name": "subject weightage",
@@ -3920,6 +3993,47 @@
                   "key": "examRoomCapacityId",
                   "value": "1"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "class room",
+      "item": [
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"examCapacity\": 34,\n    \"examCapacityColumns\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/classRoom",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classRoom"
               ]
             }
           },

@@ -3,14 +3,25 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import classRoomModel from "./classRoomModel.js";
 
+import examScheduleModel from "./examScheduleModel.js";
+
 export default sequelize.define(
-    'exam_room_capacity',
+    'exam_schedule_room_capacity',
     {
-        examRoomCapacityId: {
+        examScheduleRoomCapacityId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_room_capacity_id'
+            field: 'exam_schedule_room_capacity_id'
+        },
+        examScheduleId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'exam_schedule_id',
+            references: {
+                model: examScheduleModel,
+                key: 'exam_schedule_id'
+            }
         },
         classRoomSectionId: {
             type: DataTypes.INTEGER,
@@ -29,12 +40,7 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false
         },
-        isActive: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: true,
-            field: 'is_active'
-        },
+
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -67,7 +73,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'exam_room_capacity',
+        tableName: 'exam_schedule_room_capacity',
         timestamps: true
     }
 );

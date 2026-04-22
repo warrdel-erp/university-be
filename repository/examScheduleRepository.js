@@ -16,14 +16,13 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
-                    model: model.examRoomCapacityModel,
-                    as: "roomCapacity",
-                    where: { isActive: true },
+                    model: model.examScheduleRoomCapacityModel,
+                    as: "roomCapacities",
                     include: [
                         {
                             model: model.classRoomModel,
                             as: "classRoom",
-                            attributes: ["classRoomId", "classRoomName"]
+                            attributes: ["classRoomSectionId", "roomNumber"]
                         }
                     ]
                 },
@@ -93,13 +92,13 @@ export async function getExamScheduleById(examScheduleId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
-                    model: model.examRoomCapacityModel,
-                    as: "roomCapacity",
+                    model: model.examScheduleRoomCapacityModel,
+                    as: "roomCapacities",
                     include: [
                         {
                             model: model.classRoomModel,
                             as: "classRoom",
-                            attributes: ["classRoomId", "classRoomName"]
+                            attributes: ["classRoomSectionId", "roomNumber"]
                         }
                     ]
                 },

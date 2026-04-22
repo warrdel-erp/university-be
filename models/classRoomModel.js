@@ -36,6 +36,11 @@ export default sequelize.define(
             field: 'exam_capacity',
             allowNull: true
         },
+        examCapacityColumns: {
+            type: DataTypes.INTEGER,
+            field: 'exam_capacity_columns',
+            allowNull: true
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,

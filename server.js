@@ -89,9 +89,6 @@ import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
-import examRoomCapacity from "./router/examRoomCapacityRoute.js";
-
-
 // middleware
 app.use(fileUpload());
 app.use(json());
@@ -120,7 +117,6 @@ app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
-app.use("/examRoomCapacity", examRoomCapacity);
 
 
 app.use("/main", main);
