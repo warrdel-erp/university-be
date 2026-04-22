@@ -5,6 +5,10 @@ export async function addExamRoomCapacity(data) {
     return await model.examScheduleRoomCapacityModel.create(data);
 }
 
+export async function bulkAddExamRoomCapacity(data) {
+    return await model.examScheduleRoomCapacityModel.bulkCreate(data);
+}
+
 
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data) {

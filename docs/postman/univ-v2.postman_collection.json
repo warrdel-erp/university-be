@@ -2868,7 +2868,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"examScheduleId\": 2\n} ",
+              "raw": "{\n    \"examScheduleId\": 45,\n    \"classRoomSectionIds\": [101, 102, 105]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3743,10 +3743,6 @@
           "response": []
         }
       ]
-    },
-    {
-      "name": "exam schedule",
-      "item": []
     },
     {
       "name": "subject weightage",

@@ -8,7 +8,7 @@ import { validate } from '../utility/validation.js';
 const router = Router();
 
 const addExamRoomCapacitySchema = z.object({
-    classRoomSectionId: z.number({ required_error: "classRoomSectionId is required" }),
+    classRoomSectionIds: z.array(z.number()).min(1, "At least one room is required"),
     examScheduleId: z.number({ required_error: "examScheduleId is required" })
 });
 
