@@ -1,4 +1,6 @@
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 
 export async function getExamSchedules(universityId, acedmicYearId, instituteId, filters = {}) {
     try {
@@ -80,12 +82,14 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
                 }
             ]
         });
+
         return result;
     } catch (error) {
         console.error("Error fetching exam schedules:", error);
         throw error;
     }
 }
+
 export async function getExamScheduleById(examScheduleId) {
     try {
         const result = await model.examScheduleModel.findByPk(examScheduleId, {
@@ -136,9 +140,87 @@ export async function getExamScheduleById(examScheduleId) {
                 }
             ]
         });
+
         return result;
     } catch (error) {
         console.error("Error fetching exam schedule by id:", error);
+        throw error;
+    }
+}
+
+export async function getStudentCountsByGroups(sessions, courses, terms, acedmicYears) {
+    try {
+        const counts = await model.studentModel.findAll({
+            attributes: [
+                [sequelize.col('studentSections.session_id'), 'sessionId'],
+                [sequelize.col('studentSections->classGroup.term'), 'term'],
+                [sequelize.col('studentSections.course_id'), 'courseId'],
+                [sequelize.col('studentSections.acedmic_year_id'), 'acedmicYearId'],
+                [sequelize.fn('COUNT', sequelize.col('students.student_id')), 'studentCount']
+            ],
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'studentSections',
+                    attributes: [],
+                    required: true,
+                    where: {
+                        sessionId: { [Op.in]: sessions },
+                        courseId: { [Op.in]: courses },
+                        acedmicYearId: { [Op.in]: acedmicYears }
+                    },
+                    include: [
+                        {
+                            model: model.classModel,
+                            as: 'classGroup',
+                            attributes: [],
+                            required: true,
+                            where: {
+                                term: { [Op.in]: terms }
+                            }
+                        }
+                    ]
+                }
+            ],
+            group: ['studentSections.session_id', 'studentSections->classGroup.term', 'studentSections.course_id', 'studentSections.acedmic_year_id'],
+            raw: true
+        });
+        return counts;
+    } catch (error) {
+        console.error("Error fetching student counts by groups:", error);
+        throw error;
+    }
+}
+
+export async function getStudentCountByGroup(sessionId, courseId, term, acedmicYearId) {
+    try {
+        const count = await model.studentModel.count({
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'studentSections',
+                    required: true,
+                    where: {
+                        sessionId,
+                        courseId,
+                        acedmicYearId
+                    },
+                    include: [
+                        {
+                            model: model.classModel,
+                            as: 'classGroup',
+                            required: true,
+                            where: {
+                                term
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+        return count;
+    } catch (error) {
+        console.error("Error fetching student count by group:", error);
         throw error;
     }
 }
