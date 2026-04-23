@@ -2888,6 +2888,43 @@
           "response": []
         },
         {
+          "name": "allocate seats randomly",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleId\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/allocateSeats/randomly",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "allocateSeats",
+                "randomly"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "update assigned room",
           "request": {
             "auth": {
