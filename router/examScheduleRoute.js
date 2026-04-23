@@ -18,6 +18,10 @@ const updateExamRoomCapacitySchema = z.object({
     columns: z.number()
 });
 
+const allocateSeatsSchema = z.object({
+    examScheduleId: z.number({ required_error: "examScheduleId is required" })
+});
+
 router.get('/', userAuth, examScheduleController.getExamSchedules);
 
 router.get('/:id', userAuth, examScheduleController.getExamScheduleById);
@@ -25,5 +29,7 @@ router.get('/:id', userAuth, examScheduleController.getExamScheduleById);
 router.post('/assignRoom', userAuth, validate({ body: addExamRoomCapacitySchema }), examRoomCapacityController.addExamRoomCapacity);
 
 router.put('/roomAssignment', userAuth, validate({ body: updateExamRoomCapacitySchema }), examRoomCapacityController.updateExamRoomCapacity);
+
+router.post('/allocateSeats/randomly', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeats);
 
 export default router;

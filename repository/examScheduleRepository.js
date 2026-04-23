@@ -224,3 +224,61 @@ export async function getStudentCountByGroup(sessionId, courseId, term, acedmicY
         throw error;
     }
 }
+
+export async function getStudentsForSchedule(sessionId, courseId, term, acedmicYearId) {
+    try {
+        const result = await model.studentModel.findAll({
+            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'studentSections',
+                    required: true,
+                    where: {
+                        sessionId,
+                        courseId,
+                        acedmicYearId
+                    },
+                    include: [
+                        {
+                            model: model.classModel,
+                            as: 'classGroup',
+                            required: true,
+                            where: {
+                                term
+                            }
+                        }
+                    ]
+                }
+            ],
+            order: [['firstName', 'ASC']]
+        });
+        return result;
+    } catch (error) {
+        console.error("Error fetching students for schedule:", error);
+        throw error;
+    }
+}
+
+export async function allocateSeats(allocations, transaction) {
+    try {
+        return await model.studentExamSeatModel.bulkCreate(allocations, { transaction });
+    } catch (error) {
+        console.error("Error allocating seats:", error);
+        throw error;
+    }
+}
+
+export async function clearExistingAllocations(examScheduleRoomCapacityIds, transaction) {
+    try {
+        return await model.studentExamSeatModel.destroy({
+            where: {
+                examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds }
+            },
+            transaction
+        });
+    } catch (error) {
+        console.error("Error clearing existing allocations:", error);
+        throw error;
+    }
+}
