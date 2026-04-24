@@ -103,6 +103,18 @@ export async function getExamScheduleById(examScheduleId) {
                             model: model.classRoomModel,
                             as: "classRoom",
                             attributes: ["classRoomSectionId", "roomNumber"]
+                        },
+                        {
+                            model: model.studentExamSeatModel,
+                            as: "seats",
+                            attributes: ["studentExamSeatId", "row", "column"],
+                            include: [
+                                {
+                                    model: model.studentModel,
+                                    as: "student",
+                                    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"]
+                                }
+                            ]
                         }
                     ]
                 },
