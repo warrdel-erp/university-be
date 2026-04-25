@@ -14,10 +14,35 @@ export async function updateOfficeDetails(employeeId, data, transaction) {
   try {
     return await model.employeeOfficeModel.update(
       data,
-      { where: { employeeId }, transaction }
+      { where: { employeeId }, transaction, paranoid: false }
     );
   } catch (error) {
     console.error("Error updating employee office details:", error);
+    throw error;
+  }
+}
+
+export async function updateOfficeDetailsById(employeeOfficeId, data, transaction) {
+  try {
+    return await model.employeeOfficeModel.update(
+      data,
+      { where: { employeeOfficeId }, transaction, paranoid: false }
+    );
+  } catch (error) {
+    console.error("Error updating employee office details by id:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeOfficeByEmployeeId(employeeId) {
+  try {
+    return await model.employeeOfficeModel.findOne({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false,
+    });
+  } catch (error) {
+    console.error("Error fetching employee office details:", error);
     throw error;
   }
 }

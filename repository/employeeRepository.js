@@ -45,6 +45,27 @@ export async function getAllEmployee(universityId, campusId, instituteId, acedmi
                     },
                 },
                 {
+                    model: model.userModel,
+                    as: 'user',
+                    attributes: ["universityId", "userId"],
+                    required: false,
+                    where: {
+                        universityId: universityId
+                    },
+                    include: [
+                        {
+                            model: model.userRoleModel,
+                            as: 'userRoles',
+                            attributes: ["role"],
+                        },
+                        {
+                            model: model.userPermissionModel,
+                            as: 'userPermissions',
+                            attributes: ["permission"],
+                        }
+                    ]
+                },
+                {
                     model: model.employeeOfficeModel,
                     as: 'office',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -86,6 +107,27 @@ export async function getSingleEmployeeDetails(employeeId, universityId) {
                     model: model.userModel,
                     as: 'userEmployee',
                     attributes: ["universityId", "userId"],
+                    where: {
+                        universityId: universityId
+                    },
+                    include: [
+                        {
+                            model: model.userRoleModel,
+                            as: 'userRoles',
+                            attributes: ["role"],
+                        },
+                        {
+                            model: model.userPermissionModel,
+                            as: 'userPermissions',
+                            attributes: ["permission"],
+                        }
+                    ]
+                },
+                {
+                    model: model.userModel,
+                    as: 'user',
+                    attributes: ["universityId", "userId"],
+                    required: false,
                     where: {
                         universityId: universityId
                     },

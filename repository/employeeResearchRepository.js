@@ -25,7 +25,12 @@ export async function deleteEmployeeResearch (employeeId) {
 
 export async function refreshEmployeeResearch(employeeId, research,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeResearchModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeResearchModel.destroy({
+      where: { employeeId },
+      force: true,
+      paranoid: false,
+      transaction
+    });
 
     const insertData = research.map(r => ({
       employeeId,createdBy,
@@ -36,6 +41,19 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
     return await model.employeeResearchModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee research:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeResearchByEmployeeId(employeeId) {
+  try {
+    return await model.employeeResearchModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false
+    });
+  } catch (error) {
+    console.error("Error fetching employee research:", error);
     throw error;
   }
 };

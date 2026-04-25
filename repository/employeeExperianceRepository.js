@@ -25,7 +25,12 @@ export async function deleteEmployeeExperiance (employeeId) {
 
 export async function refreshEmployeeExperiences(employeeId, experiences,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeExperianceModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeExperianceModel.destroy({
+      where: { employeeId },
+      force: true,
+      paranoid: false,
+      transaction
+    });
 
     const insertData = experiences.map(exp => ({
       employeeId,createdBy,
@@ -36,6 +41,19 @@ export async function refreshEmployeeExperiences(employeeId, experiences,created
     return await model.employeeExperianceModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee experiences:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeExperiencesByEmployeeId(employeeId) {
+  try {
+    return await model.employeeExperianceModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false
+    });
+  } catch (error) {
+    console.error("Error fetching employee experiences:", error);
     throw error;
   }
 }

@@ -25,7 +25,12 @@ export async function deleteEmployeeLongLeave (employeeId) {
 
 export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeLongLeaveModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeLongLeaveModel.destroy({
+      where: { employeeId },
+      force: true,
+      paranoid: false,
+      transaction
+    });
 
     const insertData = longLeaves.map(l => ({
       employeeId,createdBy,
@@ -36,6 +41,19 @@ export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy
     return await model.employeeLongLeaveModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee long leaves:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeLongLeavesByEmployeeId(employeeId) {
+  try {
+    return await model.employeeLongLeaveModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false
+    });
+  } catch (error) {
+    console.error("Error fetching employee long leaves:", error);
     throw error;
   }
 };

@@ -28,7 +28,61 @@ export const getAllEmployee = async (req, res) => {
     const { campusId, instituteId, acedmicYearId } = req.query
     try {
         const result = await employee.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role);
-        res.status(200).send(result);
+        const normalized = await Promise.all((result || []).map(async (row) => {
+            const item = typeof row?.toJSON === "function" ? row.toJSON() : row;
+            const authUser = item?.user || item?.userEmployee || {};
+            const userRoles = authUser?.userRoles || [];
+            const userPermissions = authUser?.userPermissions || [];
+            const mappedRoleData = {
+                role: userRoles?.[0]?.role || "",
+                permissions: userPermissions.map((p) => p.permission).filter(Boolean)
+            };
+
+            const directOffice = await employee.getEmployeeOfficeDetails(item?.employeeId);
+            const directOfficeEntry = directOffice?.toJSON ? directOffice.toJSON() : (directOffice || {});
+            const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
+            const officeEntry = Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
+            const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+
+            const employment = {
+                department: item?.department || "",
+                employmentType: item?.employmentType || "",
+                joiningDate: officeEntry?.joiningDate || "",
+                noticePeriod: officeEntry?.noticePeriod ?? "",
+                employeeFileNumber: officeEntry?.employeeFileNumber || "",
+                officeMailId: officeEntry?.officeMailId || addressEntry?.officalEmailId || "",
+                officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
+                employeeRank: officeEntry?.employeeRank || ""
+            };
+            const getMetaCode = (type) => {
+                return item?.employeeMetaData?.find((m) =>
+                    String(m?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
+                )?.typess?.code || "";
+            };
+
+            return {
+                employeeId: item?.employeeId,
+                userId: item?.userId,
+                employeeCode: item?.employeeCode,
+                employeeName: item?.employeeName || "",
+                dateOfBirth: item?.dateOfBirth || "",
+                department: item?.department || "",
+                employmentType: item?.employmentType || "",
+                pickColor: item?.pickColor || "",
+                campusId: item?.campusId,
+                instituteId: item?.instituteId,
+                acedmicYearId: item?.acedmicYearId,
+                roleId: item?.roleId || mappedRoleData?.role || "",
+                roleData: mappedRoleData,
+                role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+                joiningDate: employment.joiningDate,
+                gender: getMetaCode("gender"),
+                religion: getMetaCode("religion"),
+                nationality: getMetaCode("nationality"),
+                employment
+            };
+        }));
+        res.status(200).send(normalized);
     } catch (error) {
         console.error("Error in getting all employee:", error);
         res.status(500).send("Internal Server Error");
@@ -43,7 +97,103 @@ export const getSingleEmployeeDetails = async (req, res) => {
             return res.status(400).send('employeeId is required')
         }
         const result = await employee.getSingleEmployeeDetails(employeeId, universityId);
-        res.status(200).send(result);
+
+        // Keep DB-backed keys intact while normalizing API shape for frontend edit form.
+        const normalized = await Promise.all((result || []).map(async (row) => {
+            const item = typeof row?.toJSON === "function" ? row.toJSON() : row;
+            const authUser = item?.user || item?.userEmployee || {};
+            const userRoles = authUser?.userRoles || [];
+            const userPermissions = authUser?.userPermissions || [];
+
+            const mappedRoleData = {
+                role: userRoles?.[0]?.role || "",
+                permissions: userPermissions.map((p) => p.permission).filter(Boolean)
+            };
+
+            const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
+            const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
+            const directOffice = await employee.getEmployeeOfficeDetails(item?.employeeId);
+            const directOfficeEntry = directOffice?.toJSON ? directOffice.toJSON() : (directOffice || {});
+            const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
+            const officeEntry = Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
+            const referenceList = (Array.isArray(item?.reference) && item.reference.length > 0)
+                ? item.reference
+                : (await employee.getEmployeeReferenceDetails(item?.employeeId))?.map(r => (r?.toJSON ? r.toJSON() : r)) || [];
+            const skillList = (Array.isArray(item?.skill) && item.skill.length > 0)
+                ? item.skill
+                : (await employee.getEmployeeSkillDetails(item?.employeeId))?.map(s => (s?.toJSON ? s.toJSON() : s)) || [];
+            const qualificationList = (Array.isArray(mappedQualification) && mappedQualification.length > 0)
+                ? mappedQualification
+                : (await employee.getEmployeeDocumentDetails(item?.employeeId))?.map(q => (q?.toJSON ? q.toJSON() : q)) || [];
+            const documentList = (Array.isArray(mappedDocuments) && mappedDocuments.length > 0)
+                ? mappedDocuments
+                : (await employee.getEmployeeQualificationDetails(item?.employeeId))?.map(d => (d?.toJSON ? d.toJSON() : d)) || [];
+            const experienceList = (Array.isArray(item?.experiance) && item.experiance.length > 0)
+                ? item.experiance
+                : (await employee.getEmployeeExperienceDetails(item?.employeeId))?.map(e => (e?.toJSON ? e.toJSON() : e)) || [];
+            const achievementList = (Array.isArray(item?.achievements) && item.achievements.length > 0)
+                ? item.achievements
+                : (await employee.getEmployeeAchievementDetails(item?.employeeId))?.map(a => (a?.toJSON ? a.toJSON() : a)) || [];
+            const researchList = (Array.isArray(item?.research) && item.research.length > 0)
+                ? item.research
+                : (await employee.getEmployeeResearchList(item?.employeeId))?.map(r => (r?.toJSON ? r.toJSON() : r)) || [];
+            const activityList = (Array.isArray(item?.activty) && item.activty.length > 0)
+                ? item.activty
+                : (await employee.getEmployeeActivityDetails(item?.employeeId))?.map(a => (a?.toJSON ? a.toJSON() : a)) || [];
+            const normalizedActivityList = (Array.isArray(activityList) ? activityList : []).map((a) => ({
+                ...a,
+                activityName: a?.activityName ?? a?.activity ?? "",
+                date: a?.date ?? a?.monthYear ?? "",
+                description: a?.description ?? a?.remarks ?? "",
+                category: a?.category ?? ""
+            }));
+            const longLeaveList = (Array.isArray(item?.longLeave) && item.longLeave.length > 0)
+                ? item.longLeave
+                : (await employee.getEmployeeLongLeaveDetails(item?.employeeId))?.map(l => (l?.toJSON ? l.toJSON() : l)) || [];
+            const normalizedLongLeaveList = (Array.isArray(longLeaveList) ? longLeaveList : []).map((l) => ({
+                ...l,
+                leaveType: l?.leaveType ?? l?.leave_type ?? "",
+                fromDate: l?.fromDate ?? l?.dateOfLeaving ?? l?.DateOfLeaving ?? "",
+                toDate: l?.toDate ?? l?.dateOfRejoining ?? l?.DateOfRejoining ?? "",
+                reason: l?.reason ?? l?.remark ?? ""
+            }));
+            const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+            const employment = {
+                department: item?.department || "",
+                employmentType: item?.employmentType || "",
+                joiningDate: officeEntry?.joiningDate || "",
+                noticePeriod: officeEntry?.noticePeriod ?? "",
+                employeeFileNumber: officeEntry?.employeeFileNumber || "",
+                officeMailId: officeEntry?.officeMailId || addressEntry?.officalEmailId || "",
+                officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
+                employeeRank: officeEntry?.employeeRank || ""
+            };
+
+            const { office: _officeIgnored, ...itemWithoutOffice } = item;
+
+            return {
+                ...itemWithoutOffice,
+                userEmployee: authUser,
+                roleData: mappedRoleData,
+                roleId: item?.roleId || mappedRoleData?.role || "",
+                role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+                employment,
+                salutation: officeEntry?.employeeRank || "",
+                designation: officeEntry?.employeeRank || "",
+                qualification: qualificationList,
+                documents: documentList,
+                skill: skillList,
+                reference: referenceList,
+                // Frontend expects these keys; keep legacy keys untouched.
+                experience: experienceList,
+                achievements: achievementList,
+                research: researchList,
+                longLeave: normalizedLongLeaveList,
+                activity: normalizedActivityList
+            };
+        }));
+
+        res.status(200).send(normalized);
     } catch (error) {
         console.error("Error in getting single employee details:", error);
         res.status(500).send("Internal Server Error");

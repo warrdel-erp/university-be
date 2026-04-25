@@ -26,18 +26,41 @@ export async function deleteEmployeeSkill (employeeId) {
 export async function refreshEmployeeSkills(employeeId, skills,createdBy, updatedBy, transaction) {
   try {
     // Delete old
-    await model.employeeSkillModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeSkillModel.destroy({
+      where: { employeeId },
+      force: true,
+      paranoid: false,
+      transaction
+    });
 
     // Insert new
     const insertData = skills.map(skill => ({
-      employeeId,createdBy,
+      employeeId,
+      createdBy,
       updatedBy,
-      ...skill
+      // sanitize payload to avoid carrying stale IDs/system fields
+      name: skill.name,
+      experienceInYear: skill.experienceInYear ?? null,
+      experienceInMonth: skill.experienceInMonth ?? null,
+      proficiencyLevel: skill.proficiencyLevel
     }));
 
     return await model.employeeSkillModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee skills:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeSkillsByEmployeeId(employeeId) {
+  try {
+    return await model.employeeSkillModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false
+    });
+  } catch (error) {
+    console.error("Error fetching employee skills:", error);
     throw error;
   }
 };

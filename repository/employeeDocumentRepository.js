@@ -25,7 +25,12 @@ export async function deleteEmployeeDocuments (employeeId) {
 
 export async function refreshEmployeeDocuments(employeeId, documents,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeDocumentsModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeDocumentsModel.destroy({
+      where: { employeeId },
+      force: true,
+      paranoid: false,
+      transaction
+    });
 
     const insertData = documents.map(doc => ({
       employeeId,createdBy,
@@ -36,6 +41,19 @@ export async function refreshEmployeeDocuments(employeeId, documents,createdBy, 
     return await model.employeeDocumentsModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee documents:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeDocumentsByEmployeeId(employeeId) {
+  try {
+    return await model.employeeDocumentsModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      paranoid: false
+    });
+  } catch (error) {
+    console.error("Error fetching employee documents:", error);
     throw error;
   }
 }

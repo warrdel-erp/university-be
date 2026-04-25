@@ -61,6 +61,11 @@ export default sequelize.define(
             allowNull: true,
             field: 'employee_file_number'
         },
+        officeMailId: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'office_mail_id'
+        },
         istActive:{
             type: DataTypes.BOOLEAN,
             allowNull: true,
