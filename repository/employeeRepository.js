@@ -89,7 +89,21 @@ export async function getSingleEmployeeDetails(employeeId, universityId) {
                     where: {
                         universityId: universityId
                     },
+                    include: [
+                        {
+                            model: model.userRoleModel,
+                            as: 'userRoles',
+                            attributes: ["role"],
+                        },
+                        {
+                            model: model.userPermissionModel,
+                            as: 'userPermissions',
+                            attributes: ["permission"],
+                        }
+                    ]
                 },
+
+
                 {
                     model: model.employeeAddressModel,
                     as: 'address',

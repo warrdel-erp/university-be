@@ -498,9 +498,10 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
 
     //  Update main employee table
+    const { roleId: _excludedRoleId, ...employeeUpdateData } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
     await employeeRepository.updateEmployee(employeeId, {
-      ...data,
-      roleId,
+      ...employeeUpdateData,
+      roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
 
@@ -561,11 +562,12 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       );
     }
 
-    // Update Qualifications
-    if (qualifications && qualifications.length > 0) {
+    // Update Qualifications — only save items that have the required 'document' FK field
+    const validQualifications = (qualifications || []).filter(q => q.document != null);
+    if (validQualifications.length > 0) {
       await employeeQualificationRepository.refreshEmployeeQualifications(
         employeeId,
-        qualifications,
+        validQualifications,
         createdBy,
         updatedBy,
         transaction
