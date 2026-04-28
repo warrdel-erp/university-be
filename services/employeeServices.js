@@ -98,7 +98,65 @@ function normalizeDocumentAttachments(rows = []) {
     .filter((row) => Number.isInteger(Number(row?.document)));
 }
 
-// const data = { campusId: '1', instituteId: '1', resumeNumber: '12', employeeCode: '44', employeeName: 'AMIT', shortName: 'AMIT', dateOfBirth: '2024-09-02', anniversaryDate: '2024-09-02', fatherName: 'Darryl Jordan', motherName: 'Cailin Perkins', bodySign: 'A BLACK MOLE ON FACE', workingHours: '78', aicteCode: '44', from: '2024-09-02', to: '2024-09-02', vehicleNumber: 'ABC0101', drivingLicense: 'ABCD010101', drivingLicenseExpireDate: '2024-09-02', address: '{"pAddress":"DELHI","pPincode":"111111","cAddress":"DELHI","cPincode":"111111","phoneNumber":"1234567890","mobileNumber":"1234567890","officialMobileNumber":"1234567890","officialEmailId":"ABC@GMAIL.COM","personalEmail":"ABCD@GMAIL.COM"}', office: '{"joiningDate":"2024-09-02","confirmationDate":"2024-09-02","relievingDate":"2024-09-02","retirementDate":"2024-09-02","transferDate":"2024-09-02","resignationDate":"2024-09-02","noticePeriod":"12","employeeFileNumber":"12","istActive":true,"bankName":"ABC","accountNumber":"1234567890","ifscCode":"ABC123","iindActive":true,"contractBased":true,"gpf":"QWERTYU","esiNumber":"QWERTYU","uanNumber":"QWERTYU","lectureBased":true,"pfNumber":"QWERTYU","panNumber":"QWERTY1234","voterId":"ABC123","aadharNumber":"1234567890","spouseName":"AMITAMIT","nomineeName":"AMITAMITAMIT","officeExtensionNumber":"1234567890","employeeRank":"MANAGER"}', roles: '["Hostel","Transport"]', skill: '[{"name":"Kuldeep","experienceInMonth":"12","experienceInYear":"1","proficiencyLevel":1}]', documents: '[{"qualifications":1,"degreeLevel":1,"stream":1,"fromYear":"2024-09-02","toYear":"2024-09-02","universityBoard":"12122","medicalCouncilName":"12","medicalRegistrationNumber":"12","medicalCouncilRegistrationDate":"2024-09-02","medicalRegistrationExpiryDate":"2024-09-02","percentage":"1212","remarks":"12","pursuing":true}]', qualification: '[{"document":1,"receivedDate":"2024-09-02","returnedDate":"2024-09-02","documentCopy":"{}"}]', experience: '[{"experienceType":1,"organization":"12","designation":"12","fromDate":"2024-09-02","toDate":"2024-09-02","totalExperienceMonths":"12","totalExperienceYears":"12","totalExperienceDays":"12","lastSalary":"12","remarks":"12"}]', achievements: '[{"achievementCategory":1,"title":"12","description":"21","noOfTimes":"12","discipline":"12","date":"2024-09-02","nameOf":"12121"}]', ward: '[{"wardName":"12","studyIn":"12","annualFees":"12","dateOfBirth":"2024-09-02"}]', activity: '[{"activity":"21","monthYear":"2024-09-02","remarks":"12"}]', reference: '[{"name":"12","designation":"12","mobaileNumber":"12","address":"12"}]', research: '[{"thesisName":"12","associate":"12","periodFrom":"2024-09-02","to":"2024-09-02","institution":"1212"}]', longLeave: '[{"leaveType":1,"dateOfLeaving":"2024-09-02","dateOfRejoining":"2024-09-02","remark":"12"}]', allDropDownData: '{"type":[],"code":[]}' }
+function toPlain(value) {
+  return typeof value?.toJSON === "function" ? value.toJSON() : value;
+}
+
+function mapRoleData(authUser = {}) {
+  const userRoles = authUser?.userRoles || [];
+  const userPermissions = authUser?.userPermissions || [];
+  return {
+    role: userRoles?.[0]?.role || "",
+    permissions: userPermissions.map((permissionItem) => permissionItem.permission).filter(Boolean)
+  };
+}
+
+async function resolveOfficeEntry(item = {}) {
+  const directOffice = await getEmployeeOfficeDetails(item?.employeeId);
+  const directOfficeEntry = toPlain(directOffice) || {};
+  const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
+  return Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
+}
+
+function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
+  return {
+    department: item?.department || "",
+    employmentType: item?.employmentType || "",
+    joiningDate: officeEntry?.joiningDate || "",
+    noticePeriod: officeEntry?.noticePeriod ?? "",
+    employeeFileNumber: officeEntry?.employeeFileNumber || "",
+    officeMailId: officeEntry?.officeMailId || addressEntry?.officalEmailId || "",
+    officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
+    employeeRank: officeEntry?.employeeRank || ""
+  };
+}
+
+function getMetaCode(item = {}, type) {
+  return item?.employeeMetaData?.find((metaItem) =>
+    String(metaItem?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
+  )?.typess?.code || "";
+}
+
+function mapActivityForEmployeeDetails(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((activity) => ({
+    ...activity,
+    activityName: activity?.activityName ?? activity?.activity ?? "",
+    date: activity?.date ?? activity?.monthYear ?? "",
+    description: activity?.description ?? activity?.remarks ?? "",
+    category: activity?.category ?? ""
+  }));
+}
+
+function mapLongLeaveForEmployeeDetails(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((leave) => ({
+    ...leave,
+    leaveType: leave?.leaveType ?? leave?.leave_type ?? "",
+    fromDate: leave?.fromDate ?? leave?.dateOfLeaving ?? leave?.DateOfLeaving ?? "",
+    toDate: leave?.toDate ?? leave?.dateOfRejoining ?? leave?.DateOfRejoining ?? "",
+    reason: leave?.reason ?? leave?.remark ?? ""
+  }));
+}
+
 export async function addEmployee(data, files, createdBy, universityId, roleId, instituteId) {
 
   const transaction = await sequelize.transaction();
@@ -365,11 +423,99 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 // addEmployee(data,1)
 
 export async function getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role) {
-  return await employeeRepository.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role)
+  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role);
+  return Promise.all((result || []).map(async (row) => {
+    const item = toPlain(row) || {};
+    const authUser = item?.user || item?.userEmployee || {};
+    const mappedRoleData = mapRoleData(authUser);
+    const officeEntry = await resolveOfficeEntry(item);
+    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+    const employment = mapEmployment(item, officeEntry, addressEntry);
+
+    return {
+      employeeId: item?.employeeId,
+      userId: item?.userId,
+      employeeCode: item?.employeeCode,
+      employeeName: item?.employeeName || "",
+      dateOfBirth: item?.dateOfBirth || "",
+      department: item?.department || "",
+      employmentType: item?.employmentType || "",
+      pickColor: item?.pickColor || "",
+      campusId: item?.campusId,
+      instituteId: item?.instituteId,
+      acedmicYearId: item?.acedmicYearId,
+      roleId: item?.roleId || mappedRoleData?.role || "",
+      roleData: mappedRoleData,
+      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+      joiningDate: employment.joiningDate,
+      gender: getMetaCode(item, "gender"),
+      religion: getMetaCode(item, "religion"),
+      nationality: getMetaCode(item, "nationality"),
+      employment
+    };
+  }));
 };
 
 export async function getSingleEmployeeDetails(employeeId, universityId) {
-  return await employeeRepository.getSingleEmployeeDetails(employeeId, universityId)
+  const result = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+  return Promise.all((result || []).map(async (row) => {
+    const item = toPlain(row) || {};
+    const authUser = item?.user || item?.userEmployee || {};
+    const mappedRoleData = mapRoleData(authUser);
+    const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
+    const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
+    const officeEntry = await resolveOfficeEntry(item);
+    const referenceList = (Array.isArray(item?.reference) && item.reference.length > 0)
+      ? item.reference
+      : (await getEmployeeReferenceDetails(item?.employeeId))?.map(toPlain) || [];
+    const skillList = (Array.isArray(item?.skill) && item.skill.length > 0)
+      ? item.skill
+      : (await getEmployeeSkillDetails(item?.employeeId))?.map(toPlain) || [];
+    const qualificationList = (Array.isArray(mappedQualification) && mappedQualification.length > 0)
+      ? mappedQualification
+      : (await getEmployeeDocumentDetails(item?.employeeId))?.map(toPlain) || [];
+    const documentList = (Array.isArray(mappedDocuments) && mappedDocuments.length > 0)
+      ? mappedDocuments
+      : (await getEmployeeQualificationDetails(item?.employeeId))?.map(toPlain) || [];
+    const experienceList = (Array.isArray(item?.experiance) && item.experiance.length > 0)
+      ? item.experiance
+      : (await getEmployeeExperienceDetails(item?.employeeId))?.map(toPlain) || [];
+    const achievementList = (Array.isArray(item?.achievements) && item.achievements.length > 0)
+      ? item.achievements
+      : (await getEmployeeAchievementDetails(item?.employeeId))?.map(toPlain) || [];
+    const researchList = (Array.isArray(item?.research) && item.research.length > 0)
+      ? item.research
+      : (await getEmployeeResearchList(item?.employeeId))?.map(toPlain) || [];
+    const activityList = (Array.isArray(item?.activty) && item.activty.length > 0)
+      ? item.activty
+      : (await getEmployeeActivityDetails(item?.employeeId))?.map(toPlain) || [];
+    const longLeaveList = (Array.isArray(item?.longLeave) && item.longLeave.length > 0)
+      ? item.longLeave
+      : (await getEmployeeLongLeaveDetails(item?.employeeId))?.map(toPlain) || [];
+    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+    const employment = mapEmployment(item, officeEntry, addressEntry);
+    const { office: _officeIgnored, ...itemWithoutOffice } = item;
+
+    return {
+      ...itemWithoutOffice,
+      userEmployee: authUser,
+      roleData: mappedRoleData,
+      roleId: item?.roleId || mappedRoleData?.role || "",
+      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+      employment,
+      salutation: officeEntry?.employeeRank || "",
+      designation: officeEntry?.employeeRank || "",
+      qualification: qualificationList,
+      documents: documentList,
+      skill: skillList,
+      reference: referenceList,
+      experience: experienceList,
+      achievements: achievementList,
+      research: researchList,
+      longLeave: mapLongLeaveForEmployeeDetails(longLeaveList),
+      activity: mapActivityForEmployeeDetails(activityList)
+    };
+  }));
 };
 
 export async function deleteEmployeeDetail(employeeId) {
