@@ -139,7 +139,8 @@ import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
-import examRoomCapacityModel from "./examRoomCapacityModel.js";
+import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
+import studentExamSeatModel from "./studentExamSeatModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -762,11 +763,11 @@ buildingModel.hasMany(floorModel, { foreignKey: "building_id", as: "floorBuildin
 classRoomModel.belongsTo(floorModel, { foreignKey: "floor_id", as: "roomFloor" });
 floorModel.hasMany(classRoomModel, { foreignKey: "floor_id", as: "roomFloor" });
 
-examRoomCapacityModel.belongsTo(classRoomModel, { foreignKey: "class_room_section_id", as: "classRoom" });
-classRoomModel.hasMany(examRoomCapacityModel, { foreignKey: "class_room_section_id", as: "capacities" });
+examScheduleRoomCapacityModel.belongsTo(classRoomModel, { foreignKey: "class_room_section_id", as: "classRoom" });
+classRoomModel.hasMany(examScheduleRoomCapacityModel, { foreignKey: "class_room_section_id", as: "capacities" });
 
-examScheduleModel.belongsTo(examRoomCapacityModel, { foreignKey: "exam_room_capacity_id", as: "roomCapacity" });
-examRoomCapacityModel.hasMany(examScheduleModel, { foreignKey: "exam_room_capacity_id", as: "schedules" });
+examScheduleRoomCapacityModel.belongsTo(examScheduleModel, { foreignKey: "exam_schedule_id", as: "examSchedule" });
+examScheduleModel.hasMany(examScheduleRoomCapacityModel, { foreignKey: "exam_schedule_id", as: "roomCapacities" });
 
 headModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "headCampus" });
 campusModel.hasMany(headModel, { foreignKey: "campus_id", as: "headCampus" });
@@ -1239,6 +1240,12 @@ subjectModel.hasMany(subjectWeightageModel, { foreignKey: 'subject_id', as: 'sub
 subjectWeightageModel.belongsTo(sessionModel, { foreignKey: 'session_id', as: 'session' });
 sessionModel.hasMany(subjectWeightageModel, { foreignKey: 'session_id', as: 'subjectWeightages' });
 
+examScheduleRoomCapacityModel.hasMany(studentExamSeatModel, { foreignKey: "exam_schedule_room_capacity_id", as: "seats" });
+studentExamSeatModel.belongsTo(examScheduleRoomCapacityModel, { foreignKey: "exam_schedule_room_capacity_id", as: "roomCapacity" });
+
+studentModel.hasMany(studentExamSeatModel, { foreignKey: "student_id", as: "examSeats" });
+studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+
 export {
   settingModel,
   universityModel,
@@ -1381,5 +1388,6 @@ export {
   examSetupTypeTermModel,
   subjectWeightageModel,
   studentClassSectionsHistoryModel,
-  examRoomCapacityModel,
+  examScheduleRoomCapacityModel,
+  studentExamSeatModel,
 };

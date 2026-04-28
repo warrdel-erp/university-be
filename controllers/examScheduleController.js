@@ -41,3 +41,16 @@ export const getExamScheduleById = async (req, res) => {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
+
+export const allocateSeats = async (req, res) => {
+    try {
+        const { examScheduleId } = req.body;
+        const userId = req.user.userId;
+
+        const result = await examScheduleServices.allocateSeatsRandomly(examScheduleId, userId);
+        return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
+    } catch (error) {
+        console.error("Error in allocateSeats controller:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+};

@@ -1,39 +1,43 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import classRoomModel from "./classRoomModel.js";
+import student from "./studentModel.js";
+import examScheduleRoomCapacity from "./examScheduleRoomCapacityModel.js";
 
 export default sequelize.define(
-    'exam_room_capacity',
+    'student_exam_seat',
     {
-        examRoomCapacityId: {
+        studentExamSeatId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'exam_room_capacity_id'
+            field: 'student_exam_seat_id'
         },
-        classRoomSectionId: {
+        examScheduleRoomCapacityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_room_section_id',
+            field: 'exam_schedule_room_capacity_id',
             references: {
-                model: classRoomModel,
-                key: 'class_room_section_id'
+                model: examScheduleRoomCapacity,
+                key: 'exam_schedule_room_capacity_id'
             }
         },
-        capacity: {
+        studentId: {
             type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        columns: {
-            type: DataTypes.INTEGER,
-            allowNull: false
-        },
-        isActive: {
-            type: DataTypes.BOOLEAN,
             allowNull: false,
-            defaultValue: true,
-            field: 'is_active'
+            field: 'student_id',
+            references: {
+                model: student,
+                key: 'student_id'
+            }
+        },
+        row: {
+            type: DataTypes.INTEGER,
+            allowNull: false
+        },
+        column: {
+            type: DataTypes.INTEGER,
+            allowNull: false
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -67,7 +71,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'exam_room_capacity',
+        tableName: 'student_exam_seat',
         timestamps: true
     }
 );

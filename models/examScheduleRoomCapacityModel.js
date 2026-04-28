@@ -1,49 +1,49 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
-import floor from "./floorModel.js";
+import classRoomModel from "./classRoomModel.js";
+
+import examScheduleModel from "./examScheduleModel.js";
 
 export default sequelize.define(
-    'class_room_section',
+    'exam_schedule_room_capacity',
     {
-        classRoomSectionId: {
+        examScheduleRoomCapacityId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_room_section_id'
+            field: 'exam_schedule_room_capacity_id'
         },
-        floorId: {
+        examScheduleId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'floor_id',
+            field: 'exam_schedule_id',
             references: {
-                model: floor,
-                key: 'floor_id'
+                model: examScheduleModel,
+                key: 'exam_schedule_id'
             }
         },
-        roomNumber: {
-            type: DataTypes.STRING,
-            field: 'room_number',
+        classRoomSectionId: {
+            type: DataTypes.INTEGER,
             allowNull: false,
+            field: 'class_room_section_id',
+            references: {
+                model: classRoomModel,
+                key: 'class_room_section_id'
+            }
         },
         capacity: {
             type: DataTypes.INTEGER,
-            field: 'capacity',
             allowNull: false
         },
-        examCapacity: {
+        columns: {
             type: DataTypes.INTEGER,
-            field: 'exam_capacity',
-            allowNull: true
+            allowNull: false
         },
-        examCapacityColumns: {
-            type: DataTypes.INTEGER,
-            field: 'exam_capacity_columns',
-            allowNull: true
-        },
+
         createdBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'created_by',
             references: {
                 model: users,
@@ -52,7 +52,7 @@ export default sequelize.define(
         },
         updatedBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'updated_by',
             references: {
                 model: users,
@@ -70,16 +70,10 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
         }
     },
     {
-        tableName: 'class_room_section',
-        timestamps: true,
-        paranoid: true
+        tableName: 'exam_schedule_room_capacity',
+        timestamps: true
     }
 );
