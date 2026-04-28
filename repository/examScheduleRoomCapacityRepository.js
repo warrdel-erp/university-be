@@ -9,8 +9,6 @@ export async function bulkAddExamRoomCapacity(data) {
     return await model.examScheduleRoomCapacityModel.bulkCreate(data);
 }
 
-
-
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data) {
     await model.examScheduleRoomCapacityModel.update(data, {
         where: { examScheduleRoomCapacityId }
@@ -34,4 +32,25 @@ export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
             }
         ]
     });
+}
+
+export async function getRoomsForAllocationLookup(classRoomSectionIds) {
+    const rooms = await model.classRoomModel.findAll({
+        where: { classRoomSectionId: { [Op.in]: classRoomSectionIds } },
+        attributes: [
+            "classRoomSectionId",
+            "roomNumber",
+            "capacity",
+            "examCapacity",
+            "examCapacityColumns"
+        ],
+        raw: true
+    });
+
+    const roomLookup = new Map();
+    for (const room of rooms) {
+        roomLookup.set(room.classRoomSectionId, room);
+    }
+
+    return roomLookup;
 }

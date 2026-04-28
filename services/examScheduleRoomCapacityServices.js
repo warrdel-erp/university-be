@@ -1,10 +1,17 @@
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import { z } from "zod";
 import * as examScheduleServices from "./examScheduleServices.js";
-import * as model from "../models/index.js";
 
 const examRoomCapacitySchema = z.object({
-    classRoomSectionIds: z.array(z.number()),
+    classRoomSectionIds: z.array(
+        z.union([
+            z.number(),
+            z.object({
+                classRoomSectionId: z.number(),
+                orderKey: z.number().optional()
+            })
+        ])
+    ),
     examScheduleId: z.number()
 });
 
@@ -14,8 +21,20 @@ const updateExamRoomCapacitySchema = z.object({
     columns: z.number().optional()
 });
 
+function normalizeRoomIds(classRoomSectionIds) {
+    const uniqueRoomIds = new Set();
+
+    for (const item of classRoomSectionIds) {
+        const roomId = typeof item === "number" ? item : item.classRoomSectionId;
+        uniqueRoomIds.add(roomId);
+    }
+
+    return { uniqueRoomIds };
+}
+
 export async function addExamRoomCapacity(data, userId) {
     const validatedData = examRoomCapacitySchema.parse(data);
+    const { uniqueRoomIds } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
     // 1. Fetch Student Count for the Exam
     const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
@@ -25,11 +44,8 @@ export async function addExamRoomCapacity(data, userId) {
     const studentCount = exam.getDataValue('studentCount') || 0;
 
     // 2. Fetch Room Details
-    const rooms = await model.classRoomModel.findAll({
-        where: { classRoomSectionId: validatedData.classRoomSectionIds }
-    });
-
-    if (rooms.length !== validatedData.classRoomSectionIds.length) {
+    const roomLookup = await examRoomCapacityRepository.getRoomsForAllocationLookup([...uniqueRoomIds]);
+    if (roomLookup.size !== uniqueRoomIds.size) {
         throw new Error("One or more class rooms not found");
     }
 
@@ -37,17 +53,21 @@ export async function addExamRoomCapacity(data, userId) {
     let totalCapacity = 0;
     const assignments = [];
 
-    for (const room of rooms) {
-        if (room.examCapacity === null || room.examCapacityColumns === null) {
-            throw new Error(`Room ${room.roomNumber} exam capacity is not configured`);
+    for (const roomId of uniqueRoomIds) {
+        const room = roomLookup.get(roomId);
+        const resolvedExamCapacity = room.examCapacity ?? room.capacity;
+        const resolvedExamColumns = room.examCapacityColumns ?? 1;
+
+        if (!resolvedExamCapacity || resolvedExamCapacity <= 0) {
+            throw new Error(`Room ${room.roomNumber} has invalid capacity`);
         }
-        totalCapacity += room.examCapacity;
+        totalCapacity += resolvedExamCapacity;
 
         assignments.push({
             classRoomSectionId: room.classRoomSectionId,
             examScheduleId: validatedData.examScheduleId,
-            capacity: room.examCapacity,
-            columns: room.examCapacityColumns,
+            capacity: resolvedExamCapacity,
+            columns: resolvedExamColumns,
             createdBy: userId,
             updatedBy: userId
         });

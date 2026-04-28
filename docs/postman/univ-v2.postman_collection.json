@@ -2925,6 +2925,80 @@
           "response": []
         },
         {
+          "name": "allocate seats ascending",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleId\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/allocateSeats/ascending",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "allocateSeats",
+                "ascending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "allocate seats descending",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleId\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/allocateSeats/descending",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "allocateSeats",
+                "descending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "update assigned room",
           "request": {
             "auth": {
