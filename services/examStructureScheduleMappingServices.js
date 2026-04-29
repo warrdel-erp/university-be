@@ -182,11 +182,28 @@ export async function getExamScheduleById(examScheduleId) {
   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
 }
 
-export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term, examSetupTypeTermId) {
-  return await examStructureScheduleRepository.getSubjectsWithExamSchedule(
-    courseId ? parseInt(courseId) : null,
+export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYearId, sessionId) {
+  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examSetupTypeTermId);
+  if (!termDetail) {
+    throw new Error("Exam setup type term not found");
+  }
+
+  const { courseId, term } = termDetail;
+
+  const subjects = await examStructureScheduleRepository.getSubjectsWithExamSchedule(
+    courseId,
     acedmicYearId ? parseInt(acedmicYearId) : null,
-    term ? parseInt(term) : null,
-    examSetupTypeTermId ? parseInt(examSetupTypeTermId) : null
+    term,
+    examSetupTypeTermId ? parseInt(examSetupTypeTermId) : null,
+    sessionId ? parseInt(sessionId) : null
   );
+
+  const studentCount = await examStructureScheduleRepository.getStudentCountForTerm(
+    courseId,
+    acedmicYearId ? parseInt(acedmicYearId) : null,
+    term,
+    sessionId ? parseInt(sessionId) : null
+  );
+
+  return { studentCount, subjects };
 }
