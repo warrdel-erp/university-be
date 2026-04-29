@@ -8,7 +8,15 @@ import { validate } from '../utility/validation.js';
 const router = Router();
 
 const addExamRoomCapacitySchema = z.object({
-    classRoomSectionIds: z.array(z.number()).min(1, "At least one room is required"),
+    classRoomSectionIds: z.array(
+        z.union([
+            z.number(),
+            z.object({
+                classRoomSectionId: z.number(),
+                orderKey: z.number().int().positive().optional()
+            })
+        ])
+    ).min(1, "At least one room is required"),
     examScheduleId: z.number({ required_error: "examScheduleId is required" })
 });
 
@@ -31,5 +39,9 @@ router.post('/assignRoom', userAuth, validate({ body: addExamRoomCapacitySchema 
 router.put('/roomAssignment', userAuth, validate({ body: updateExamRoomCapacitySchema }), examRoomCapacityController.updateExamRoomCapacity);
 
 router.post('/allocateSeats/randomly', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeats);
+
+router.post('/allocateSeats/ascending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsAscending);
+
+router.post('/allocateSeats/descending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsDescending);
 
 export default router;

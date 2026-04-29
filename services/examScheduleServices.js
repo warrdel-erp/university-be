@@ -57,7 +57,41 @@ export async function getExamScheduleById(examScheduleId) {
     return result;
 }
 
-export async function allocateSeatsRandomly(examScheduleId, userId) {
+function getStudentDisplayName(student) {
+    return `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim().toLowerCase();
+}
+
+function orderStudentsByStrategy(students, strategy) {
+    if (strategy === "ascending") {
+        return [...students].sort((a, b) => getStudentDisplayName(a).localeCompare(getStudentDisplayName(b)));
+    }
+    if (strategy === "descending") {
+        return [...students].sort((a, b) => getStudentDisplayName(b).localeCompare(getStudentDisplayName(a)));
+    }
+    return [...students].sort(() => Math.random() - 0.5);
+}
+
+function sortRoomCapacitiesByAllocationOrder(roomCapacities) {
+    const normalizedOrderKeys = roomCapacities.map((room) => Number(room.orderKey));
+    const hasInvalidOrderKey = normalizedOrderKeys.some((orderKey) => !Number.isInteger(orderKey) || orderKey <= 0);
+    if (hasInvalidOrderKey) {
+        throw new Error("Invalid room allocation order. Please assign rooms with sequential order keys before allocating seats.");
+    }
+
+    const uniqueOrderKeys = [...new Set(normalizedOrderKeys)].sort((a, b) => a - b);
+    if (uniqueOrderKeys.length !== roomCapacities.length) {
+        throw new Error("Invalid room allocation order. Order keys must be unique for all assigned rooms.");
+    }
+
+    const isSequential = uniqueOrderKeys.every((orderKey, index) => orderKey === index + 1);
+    if (!isSequential) {
+        throw new Error(`Invalid room allocation order. For ${roomCapacities.length} rooms, order keys must be 1 to ${roomCapacities.length} without gaps.`);
+    }
+
+    return [...roomCapacities].sort((a, b) => a.orderKey - b.orderKey);
+}
+
+async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "random") {
     const transaction = await sequelize.transaction();
     try {
         const schedule = await examScheduleRepository.getExamScheduleById(examScheduleId);
@@ -86,14 +120,17 @@ export async function allocateSeatsRandomly(examScheduleId, userId) {
             throw new Error("No rooms assigned to this exam schedule");
         }
 
-        const totalCapacity = roomCapacities.reduce((sum, rc) => sum + rc.capacity, 0);
+        // Room allocation must strictly follow orderKey: 1 first, 2 second, then onward.
+        const orderedRoomCapacities = sortRoomCapacitiesByAllocationOrder(roomCapacities);
+
+        const totalCapacity = orderedRoomCapacities.reduce((sum, rc) => sum + rc.capacity, 0);
         if (totalCapacity < students.length) {
             throw new Error(`Insufficient capacity. Total capacity: ${totalCapacity}, Students: ${students.length}`);
         }
 
         // 3. Prepare seat pool
         let seatPool = [];
-        roomCapacities.forEach(rc => {
+        orderedRoomCapacities.forEach(rc => {
             const cols = rc.columns;
             for (let i = 0; i < rc.capacity; i++) {
                 seatPool.push({
@@ -104,15 +141,15 @@ export async function allocateSeatsRandomly(examScheduleId, userId) {
             }
         });
 
-        // 4. Shuffle students for random allocation
-        const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+        // 4. Order students by allocation strategy
+        const orderedStudents = orderStudentsByStrategy(students, strategy);
 
         // 5. Clear existing allocations for these rooms
-        const rcIds = roomCapacities.map(rc => rc.examScheduleRoomCapacityId);
+        const rcIds = orderedRoomCapacities.map(rc => rc.examScheduleRoomCapacityId);
         await examScheduleRepository.clearExistingAllocations(rcIds, transaction);
 
         // 6. Allocate
-        const allocations = shuffledStudents.map((student, index) => ({
+        const allocations = orderedStudents.map((student, index) => ({
             examScheduleRoomCapacityId: seatPool[index].examScheduleRoomCapacityId,
             studentId: student.studentId,
             row: seatPool[index].row,
@@ -126,12 +163,24 @@ export async function allocateSeatsRandomly(examScheduleId, userId) {
         await transaction.commit();
         return {
             allocatedCount: result.length,
-            totalStudents: students.length,
+            totalStudents: orderedStudents.length,
             totalCapacity
         };
     } catch (error) {
         await transaction.rollback();
-        console.error("Error in allocateSeatsRandomly service:", error);
+        console.error(`Error in allocateSeatsByStrategy service (${strategy}):`, error);
         throw error;
     }
+}
+
+export async function allocateSeatsRandomly(examScheduleId, userId) {
+    return allocateSeatsByStrategy(examScheduleId, userId, "random");
+}
+
+export async function allocateSeatsAscending(examScheduleId, userId) {
+    return allocateSeatsByStrategy(examScheduleId, userId, "ascending");
+}
+
+export async function allocateSeatsDescending(examScheduleId, userId) {
+    return allocateSeatsByStrategy(examScheduleId, userId, "descending");
 }
