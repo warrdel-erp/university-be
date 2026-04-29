@@ -31,10 +31,24 @@ export async function refreshEmployeeDocuments(employeeId, documents,createdBy, 
       transaction
     });
 
-    const insertData = documents.map(doc => ({
-      employeeId,createdBy,
+    const insertData = documents.map((doc) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...doc
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      qualifications: doc?.qualifications ?? null,
+      degreeLevel: doc?.degreeLevel ?? null,
+      stream: doc?.stream ?? doc?.degreeLevel ?? null,
+      fromYear: doc?.fromYear ?? null,
+      toYear: doc?.toYear ?? null,
+      university: doc?.university ?? null,
+      medicalCouncilName: doc?.medicalCouncilName ?? null,
+      medicalRegistrationNumber: doc?.medicalRegistrationNumber ?? null,
+      medicalCouncilRegistrationDate: doc?.medicalCouncilRegistrationDate ?? null,
+      medicalRegistrationExpiryDate: doc?.medicalRegistrationExpiryDate ?? null,
+      percentage: doc?.percentage ?? null,
+      remarks: doc?.remarks ?? null,
+      pursuing: doc?.pursuing ?? null
     }));
 
     return await model.employeeDocumentsModel.bulkCreate(insertData, { transaction });

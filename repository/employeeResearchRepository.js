@@ -31,10 +31,16 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
       transaction
     });
 
-    const insertData = research.map(r => ({
-      employeeId,createdBy,
+    const insertData = research.map((r) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...r
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      thesisName: r?.thesisName ?? null,
+      associate: r?.associate ?? null,
+      periodFrom: r?.periodFrom ?? null,
+      to: r?.to ?? null,
+      institution: r?.institution ?? null
     }));
 
     return await model.employeeResearchModel.bulkCreate(insertData, { transaction });

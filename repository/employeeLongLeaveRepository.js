@@ -31,10 +31,15 @@ export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy
       transaction
     });
 
-    const insertData = longLeaves.map(l => ({
-      employeeId,createdBy,
+    const insertData = longLeaves.map((l) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...l
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      leaveType: l?.leaveType ?? l?.leave_type ?? null,
+      DateOfLeaving: l?.DateOfLeaving ?? l?.fromDate ?? null,
+      DateOfRejoining: l?.DateOfRejoining ?? l?.toDate ?? null,
+      remark: l?.remark ?? l?.reason ?? null
     }));
 
     return await model.employeeLongLeaveModel.bulkCreate(insertData, { transaction });

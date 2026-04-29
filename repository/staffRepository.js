@@ -2,7 +2,15 @@ import * as model from '../models/index.js'
 
 export async function addStaff(staffData) {
     try {
-        const result = await model.staffModel.create(staffData);
+        // Only allow writable fields; ignore any UI-provided IDs/system fields.
+        const payload = {
+            departmentId: staffData?.departmentId,
+            employeeId: staffData?.employeeId,
+            universityId: staffData?.universityId,
+            createdBy: staffData?.createdBy,
+            updatedBy: staffData?.updatedBy
+        };
+        const result = await model.staffModel.create(payload);
         return result;
     } catch (error) {
         console.error("Error in add Staff :", error);
@@ -72,7 +80,12 @@ export async function deleteStaff(staffId) {
 
 export async function updateStaff(staffId, staffData) {
     try {
-        const result = await model.staffModel.update(staffData, {
+        const payload = {
+            departmentId: staffData?.departmentId,
+            employeeId: staffData?.employeeId,
+            updatedBy: staffData?.updatedBy
+        };
+        const result = await model.staffModel.update(payload, {
             where: { staffId }
         });
         return result;

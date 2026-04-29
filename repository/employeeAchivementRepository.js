@@ -31,10 +31,18 @@ export async function refreshEmployeeAchievements(employeeId, achievements,creat
       transaction
     });
 
-    const insertData = achievements.map(a => ({
-      employeeId,createdBy,
+    const insertData = achievements.map((a) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...a
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      achievementCategory: a?.achievementCategory ?? a?.achievement_category ?? null,
+      title: a?.title ?? null,
+      description: a?.description ?? null,
+      noOfTimes: a?.noOfTimes ?? null,
+      discipline: a?.discipline ?? null,
+      nameOf: a?.nameOf ?? null,
+      date: a?.date ?? null
     }));
 
     return await model.employeeAchievementModel.bulkCreate(insertData, { transaction });

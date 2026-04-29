@@ -31,10 +31,14 @@ export async function refreshEmployeeActivities(employeeId, activities,createdBy
       transaction
     });
 
-    const insertData = activities.map(a => ({
-      employeeId,createdBy,
+    const insertData = activities.map((a) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...a
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      activity: a?.activity ?? a?.activityName ?? null,
+      monthYear: a?.monthYear ?? a?.date ?? null,
+      remarks: a?.remarks ?? a?.description ?? null
     }));
 
     return await model.employeeActivityModel.bulkCreate(insertData, { transaction });

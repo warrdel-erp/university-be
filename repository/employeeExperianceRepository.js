@@ -31,10 +31,21 @@ export async function refreshEmployeeExperiences(employeeId, experiences,created
       transaction
     });
 
-    const insertData = experiences.map(exp => ({
-      employeeId,createdBy,
+    const insertData = experiences.map((exp) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...exp
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      experienceType: exp?.experienceType ?? exp?.experience_type ?? null,
+      organization: exp?.organization ?? null,
+      desigation: exp?.desigation ?? null,
+      fromDate: exp?.fromDate ?? null,
+      toDate: exp?.toDate ?? null,
+      totalExperianceYears: exp?.totalExperianceYears ?? null,
+      totalExperianceMonths: exp?.totalExperianceMonths ?? null,
+      totalExperiancedays: exp?.totalExperiancedays ?? null,
+      lastSalary: exp?.lastSalary ?? null,
+      remarks: exp?.remarks ?? null
     }));
 
     return await model.employeeExperianceModel.bulkCreate(insertData, { transaction });

@@ -815,8 +815,19 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       }
     }
 
-    //  Update Skills
-    if (skills && skills.length > 0) {
+    // Update Skills:
+    // If FE sends skill key (including []), treat it as source of truth and refresh.
+    const hasSkillField = Object.prototype.hasOwnProperty.call(data, 'skill');
+    const hasDocumentsField = Object.prototype.hasOwnProperty.call(data, 'documents');
+    const hasQualificationField = Object.prototype.hasOwnProperty.call(data, 'qualification');
+    const hasExperienceField = Object.prototype.hasOwnProperty.call(data, 'experience');
+    const hasAchievementsField = Object.prototype.hasOwnProperty.call(data, 'achievements');
+    const hasWardField = Object.prototype.hasOwnProperty.call(data, 'ward');
+    const hasActivityField = Object.prototype.hasOwnProperty.call(data, 'activity');
+    const hasReferenceField = Object.prototype.hasOwnProperty.call(data, 'reference');
+    const hasResearchField = Object.prototype.hasOwnProperty.call(data, 'research');
+    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
+    if (hasSkillField) {
       await employeeSkillRepository.refreshEmployeeSkills(
         employeeId,
         skills,
@@ -828,7 +839,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     // Update Documents (frontend "documents" tab) -> employee_qualification table
     const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
-    if (validDocsForQualification.length > 0) {
+    if (hasDocumentsField) {
       await employeeQualificationRepository.refreshEmployeeQualifications(
         employeeId,
         validDocsForQualification,
@@ -845,7 +856,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         ...q,
         stream: q?.stream ?? q?.degreeLevel
       }));
-    if (validQualificationsForDocuments.length > 0) {
+    if (hasQualificationField) {
       await employeeDocumentRepository.refreshEmployeeDocuments(
         employeeId,
         validQualificationsForDocuments,
@@ -856,7 +867,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Experiences
-    if (experiences && experiences.length > 0) {
+    if (hasExperienceField) {
       await employeeExperianceRepository.refreshEmployeeExperiences(
         employeeId,
         experiences,
@@ -867,7 +878,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Achievements
-    if (achievements && achievements.length > 0) {
+    if (hasAchievementsField) {
       await employeeAchivementRepository.refreshEmployeeAchievements(
         employeeId,
         achievements,
@@ -878,7 +889,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Wards
-    if (wards && wards.length > 0) {
+    if (hasWardField) {
       await employeeWardRepository.refreshEmployeeWards(
         employeeId,
         wards,
@@ -889,7 +900,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Activities
-    if (activities && activities.length > 0) {
+    if (hasActivityField) {
       await employeeActivityRepository.refreshEmployeeActivities(
         employeeId,
         activities,
@@ -900,7 +911,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update References
-    if (references && references.length > 0) {
+    if (hasReferenceField) {
       await employeeReferenceRepository.refreshEmployeeReferences(
         employeeId,
         references,
@@ -911,7 +922,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Research
-    if (research && research.length > 0) {
+    if (hasResearchField) {
       await employeeResearchRepository.refreshEmployeeResearch(
         employeeId,
         research,
@@ -922,7 +933,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     //  Update Long Leaves
-    if (longLeaves && longLeaves.length > 0) {
+    if (hasLongLeaveField) {
       await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
         employeeId,
         longLeaves,

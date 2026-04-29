@@ -27,10 +27,15 @@ export async function refreshEmployeeWards(employeeId, wards,createdBy, updatedB
   try {
     await model.employeeWardModel.destroy({ where: { employeeId }, transaction });
 
-    const insertData = wards.map(w => ({
-      employeeId,createdBy,
+    const insertData = wards.map((w) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...w
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      name: w?.name ?? null,
+      relationship: w?.relationship ?? null,
+      dateOfBirth: w?.dateOfBirth ?? null,
+      profession: w?.profession ?? null
     }));
 
     return await model.employeeWardModel.bulkCreate(insertData, { transaction });

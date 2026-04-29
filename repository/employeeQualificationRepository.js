@@ -31,10 +31,15 @@ export async function refreshEmployeeQualifications(employeeId, qualifications,c
       transaction
     });
 
-    const insertData = qualifications.map(q => ({
-      employeeId,createdBy,
+    const insertData = qualifications.map((q) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...q
+      // Never trust UI-provided IDs/joins while re-inserting rows
+      document: q?.document ?? null,
+      receivedDate: q?.receivedDate ?? null,
+      returnedDate: q?.returnedDate ?? null,
+      attachment: q?.attachment ?? null
     }));
 
     return await model.employeeQualificationModel.bulkCreate(insertData, { transaction });
