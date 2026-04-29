@@ -23,18 +23,38 @@ const updateExamRoomCapacitySchema = z.object({
 
 function normalizeRoomIds(classRoomSectionIds) {
     const uniqueRoomIds = new Set();
+    const roomSelections = [];
 
-    for (const item of classRoomSectionIds) {
+    for (let index = 0; index < classRoomSectionIds.length; index++) {
+        const item = classRoomSectionIds[index];
         const roomId = typeof item === "number" ? item : item.classRoomSectionId;
+        const orderKey =
+            typeof item === "number" || item.orderKey === undefined || item.orderKey === null
+                ? index + 1
+                : Number(item.orderKey);
+
+        if (!Number.isFinite(orderKey) || orderKey <= 0) {
+            throw new Error("Invalid orderKey. It must be a positive number for each selected room.");
+        }
+
+        if (uniqueRoomIds.has(roomId)) {
+            continue;
+        }
+
         uniqueRoomIds.add(roomId);
+        roomSelections.push({ roomId, orderKey, index });
     }
 
-    return { uniqueRoomIds };
+    roomSelections.sort((a, b) => (a.orderKey - b.orderKey) || (a.index - b.index));
+    const orderedRoomIds = roomSelections.map((item) => item.roomId);
+    const roomOrderLookup = new Map(roomSelections.map((item) => [item.roomId, item.orderKey]));
+
+    return { uniqueRoomIds, orderedRoomIds, roomOrderLookup };
 }
 
 export async function addExamRoomCapacity(data, userId) {
     const validatedData = examRoomCapacitySchema.parse(data);
-    const { uniqueRoomIds } = normalizeRoomIds(validatedData.classRoomSectionIds);
+    const { uniqueRoomIds, orderedRoomIds, roomOrderLookup } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
     // 1. Fetch Student Count for the Exam
     const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
@@ -53,7 +73,7 @@ export async function addExamRoomCapacity(data, userId) {
     let totalCapacity = 0;
     const assignments = [];
 
-    for (const roomId of uniqueRoomIds) {
+    for (const roomId of orderedRoomIds) {
         const room = roomLookup.get(roomId);
         const resolvedExamCapacity = room.examCapacity ?? room.capacity;
         const resolvedExamColumns = room.examCapacityColumns ?? 1;
@@ -68,6 +88,7 @@ export async function addExamRoomCapacity(data, userId) {
             examScheduleId: validatedData.examScheduleId,
             capacity: resolvedExamCapacity,
             columns: resolvedExamColumns,
+            orderKey: roomOrderLookup.get(room.classRoomSectionId),
             createdBy: userId,
             updatedBy: userId
         });

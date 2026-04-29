@@ -71,6 +71,14 @@ function orderStudentsByStrategy(students, strategy) {
     return [...students].sort(() => Math.random() - 0.5);
 }
 
+function sortRoomCapacitiesByAllocationOrder(roomCapacities) {
+    return [...roomCapacities].sort((a, b) => {
+        const aOrder = a.orderKey ?? a.examScheduleRoomCapacityId;
+        const bOrder = b.orderKey ?? b.examScheduleRoomCapacityId;
+        return aOrder - bOrder;
+    });
+}
+
 async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "random") {
     const transaction = await sequelize.transaction();
     try {
@@ -100,14 +108,17 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
             throw new Error("No rooms assigned to this exam schedule");
         }
 
-        const totalCapacity = roomCapacities.reduce((sum, rc) => sum + rc.capacity, 0);
+        // Room allocation must follow orderKey. If not present, fallback to insertion/PK order.
+        const orderedRoomCapacities = sortRoomCapacitiesByAllocationOrder(roomCapacities);
+
+        const totalCapacity = orderedRoomCapacities.reduce((sum, rc) => sum + rc.capacity, 0);
         if (totalCapacity < students.length) {
             throw new Error(`Insufficient capacity. Total capacity: ${totalCapacity}, Students: ${students.length}`);
         }
 
         // 3. Prepare seat pool
         let seatPool = [];
-        roomCapacities.forEach(rc => {
+        orderedRoomCapacities.forEach(rc => {
             const cols = rc.columns;
             for (let i = 0; i < rc.capacity; i++) {
                 seatPool.push({
@@ -122,7 +133,7 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
         const orderedStudents = orderStudentsByStrategy(students, strategy);
 
         // 5. Clear existing allocations for these rooms
-        const rcIds = roomCapacities.map(rc => rc.examScheduleRoomCapacityId);
+        const rcIds = orderedRoomCapacities.map(rc => rc.examScheduleRoomCapacityId);
         await examScheduleRepository.clearExistingAllocations(rcIds, transaction);
 
         // 6. Allocate
