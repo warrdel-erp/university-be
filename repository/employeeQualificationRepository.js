@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
 
 export async function addEmployeeQualification(data,transaction) {
     try {
@@ -27,8 +28,6 @@ export async function refreshEmployeeQualifications(employeeId, qualifications,c
   try {
     await model.employeeQualificationModel.destroy({
       where: { employeeId },
-      force: true,
-      paranoid: false,
       transaction
     });
 
@@ -47,10 +46,12 @@ export async function refreshEmployeeQualifications(employeeId, qualifications,c
 
 export async function getEmployeeQualificationsByEmployeeId(employeeId) {
   try {
-    return await model.employeeQualificationModel.findAll({
-      where: { employeeId },
+    return await model.employeeQualificationModel.unscoped().findAll({
+      where: {
+        employeeId,
+        deletedAt: null
+      },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      paranoid: false
     });
   } catch (error) {
     console.error("Error fetching employee qualifications:", error);

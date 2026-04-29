@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
 
 export async function addEmployeeResearch(data,transaction) {
     try {
@@ -27,8 +28,6 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
   try {
     await model.employeeResearchModel.destroy({
       where: { employeeId },
-      force: true,
-      paranoid: false,
       transaction
     });
 
@@ -47,10 +46,12 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
 
 export async function getEmployeeResearchByEmployeeId(employeeId) {
   try {
-    return await model.employeeResearchModel.findAll({
-      where: { employeeId },
+    return await model.employeeResearchModel.unscoped().findAll({
+      where: {
+        employeeId,
+        deletedAt: null
+      },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      paranoid: false
     });
   } catch (error) {
     console.error("Error fetching employee research:", error);

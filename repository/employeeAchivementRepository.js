@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
 
 export async function addEmployeeAchievement(data,transaction) {
     try {
@@ -27,8 +28,6 @@ export async function refreshEmployeeAchievements(employeeId, achievements,creat
   try {
     await model.employeeAchievementModel.destroy({
       where: { employeeId },
-      force: true,
-      paranoid: false,
       transaction
     });
 
@@ -47,10 +46,12 @@ export async function refreshEmployeeAchievements(employeeId, achievements,creat
 
 export async function getEmployeeAchievementsByEmployeeId(employeeId) {
   try {
-    return await model.employeeAchievementModel.findAll({
-      where: { employeeId },
+    return await model.employeeAchievementModel.unscoped().findAll({
+      where: {
+        employeeId,
+        deletedAt: null
+      },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      paranoid: false
     });
   } catch (error) {
     console.error("Error fetching employee achievements:", error);

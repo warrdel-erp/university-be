@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
 
 export async function addEmployeeSkill(data,transaction) {
     try {
@@ -28,8 +29,6 @@ export async function refreshEmployeeSkills(employeeId, skills,createdBy, update
     // Delete old
     await model.employeeSkillModel.destroy({
       where: { employeeId },
-      force: true,
-      paranoid: false,
       transaction
     });
 
@@ -54,10 +53,12 @@ export async function refreshEmployeeSkills(employeeId, skills,createdBy, update
 
 export async function getEmployeeSkillsByEmployeeId(employeeId) {
   try {
-    return await model.employeeSkillModel.findAll({
-      where: { employeeId },
+    return await model.employeeSkillModel.unscoped().findAll({
+      where: {
+        employeeId,
+        deletedAt: null
+      },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      paranoid: false
     });
   } catch (error) {
     console.error("Error fetching employee skills:", error);
