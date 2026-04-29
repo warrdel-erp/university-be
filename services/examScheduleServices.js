@@ -72,11 +72,23 @@ function orderStudentsByStrategy(students, strategy) {
 }
 
 function sortRoomCapacitiesByAllocationOrder(roomCapacities) {
-    return [...roomCapacities].sort((a, b) => {
-        const aOrder = a.orderKey ?? a.examScheduleRoomCapacityId;
-        const bOrder = b.orderKey ?? b.examScheduleRoomCapacityId;
-        return aOrder - bOrder;
-    });
+    const normalizedOrderKeys = roomCapacities.map((room) => Number(room.orderKey));
+    const hasInvalidOrderKey = normalizedOrderKeys.some((orderKey) => !Number.isInteger(orderKey) || orderKey <= 0);
+    if (hasInvalidOrderKey) {
+        throw new Error("Invalid room allocation order. Please assign rooms with sequential order keys before allocating seats.");
+    }
+
+    const uniqueOrderKeys = [...new Set(normalizedOrderKeys)].sort((a, b) => a - b);
+    if (uniqueOrderKeys.length !== roomCapacities.length) {
+        throw new Error("Invalid room allocation order. Order keys must be unique for all assigned rooms.");
+    }
+
+    const isSequential = uniqueOrderKeys.every((orderKey, index) => orderKey === index + 1);
+    if (!isSequential) {
+        throw new Error(`Invalid room allocation order. For ${roomCapacities.length} rooms, order keys must be 1 to ${roomCapacities.length} without gaps.`);
+    }
+
+    return [...roomCapacities].sort((a, b) => a.orderKey - b.orderKey);
 }
 
 async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "random") {
@@ -108,7 +120,7 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
             throw new Error("No rooms assigned to this exam schedule");
         }
 
-        // Room allocation must follow orderKey. If not present, fallback to insertion/PK order.
+        // Room allocation must strictly follow orderKey: 1 first, 2 second, then onward.
         const orderedRoomCapacities = sortRoomCapacitiesByAllocationOrder(roomCapacities);
 
         const totalCapacity = orderedRoomCapacities.reduce((sum, rc) => sum + rc.capacity, 0);

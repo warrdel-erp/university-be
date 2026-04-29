@@ -13,7 +13,7 @@ const addExamRoomCapacitySchema = z.object({
             z.number(),
             z.object({
                 classRoomSectionId: z.number(),
-                orderKey: z.number().optional()
+                orderKey: z.number().int().positive().optional()
             })
         ])
     ).min(1, "At least one room is required"),

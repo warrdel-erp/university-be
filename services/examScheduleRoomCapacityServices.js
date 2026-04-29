@@ -8,7 +8,7 @@ const examRoomCapacitySchema = z.object({
             z.number(),
             z.object({
                 classRoomSectionId: z.number(),
-                orderKey: z.number().optional()
+                orderKey: z.number().int().positive().optional()
             })
         ])
     ),
@@ -43,6 +43,16 @@ function normalizeRoomIds(classRoomSectionIds) {
 
         uniqueRoomIds.add(roomId);
         roomSelections.push({ roomId, orderKey, index });
+    }
+
+    const normalizedOrderKeys = [...new Set(roomSelections.map((item) => item.orderKey))].sort((a, b) => a - b);
+    if (normalizedOrderKeys.length !== roomSelections.length) {
+        throw new Error("Invalid room order. Order keys must be unique and sequential from 1.");
+    }
+
+    const hasSequentialOrder = normalizedOrderKeys.every((orderKey, idx) => orderKey === idx + 1);
+    if (!hasSequentialOrder) {
+        throw new Error(`Invalid room order. For ${roomSelections.length} selected rooms, order keys must be 1 to ${roomSelections.length} without gaps.`);
     }
 
     roomSelections.sort((a, b) => (a.orderKey - b.orderKey) || (a.index - b.index));

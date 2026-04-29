@@ -40,6 +40,11 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false
         },
+        orderKey: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'order_key'
+        },
 
         createdBy: {
             type: DataTypes.INTEGER,
