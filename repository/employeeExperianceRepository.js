@@ -35,7 +35,7 @@ export async function refreshEmployeeExperiences(employeeId, experiences,created
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       experienceType: exp?.experienceType ?? exp?.experience_type ?? null,
       organization: exp?.organization ?? null,
       desigation: exp?.desigation ?? null,

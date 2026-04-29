@@ -35,7 +35,7 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       thesisName: r?.thesisName ?? null,
       associate: r?.associate ?? null,
       periodFrom: r?.periodFrom ?? null,

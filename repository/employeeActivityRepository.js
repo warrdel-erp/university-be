@@ -35,7 +35,7 @@ export async function refreshEmployeeActivities(employeeId, activities,createdBy
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       activity: a?.activity ?? a?.activityName ?? null,
       monthYear: a?.monthYear ?? a?.date ?? null,
       remarks: a?.remarks ?? a?.description ?? null

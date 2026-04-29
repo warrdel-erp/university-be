@@ -35,7 +35,7 @@ export async function refreshEmployeeAchievements(employeeId, achievements,creat
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       achievementCategory: a?.achievementCategory ?? a?.achievement_category ?? null,
       title: a?.title ?? null,
       description: a?.description ?? null,

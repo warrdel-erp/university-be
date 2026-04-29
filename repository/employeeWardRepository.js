@@ -31,7 +31,7 @@ export async function refreshEmployeeWards(employeeId, wards,createdBy, updatedB
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       name: w?.name ?? null,
       relationship: w?.relationship ?? null,
       dateOfBirth: w?.dateOfBirth ?? null,

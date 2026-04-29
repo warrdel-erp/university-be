@@ -35,7 +35,7 @@ export async function refreshEmployeeDocuments(employeeId, documents,createdBy, 
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       qualifications: doc?.qualifications ?? null,
       degreeLevel: doc?.degreeLevel ?? null,
       stream: doc?.stream ?? doc?.degreeLevel ?? null,

@@ -35,7 +35,7 @@ export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy
       employeeId,
       createdBy,
       updatedBy,
-      // Never trust UI-provided IDs/joins while re-inserting rows
+     
       leaveType: l?.leaveType ?? l?.leave_type ?? null,
       DateOfLeaving: l?.DateOfLeaving ?? l?.fromDate ?? null,
       DateOfRejoining: l?.DateOfRejoining ?? l?.toDate ?? null,
