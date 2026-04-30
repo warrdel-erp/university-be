@@ -55,10 +55,7 @@ export async function refreshEmployeeAchievements(employeeId, achievements,creat
 export async function getEmployeeAchievementsByEmployeeId(employeeId) {
   try {
     return await model.employeeAchievementModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

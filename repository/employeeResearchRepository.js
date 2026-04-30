@@ -53,10 +53,7 @@ export async function refreshEmployeeResearch(employeeId, research,createdBy, up
 export async function getEmployeeResearchByEmployeeId(employeeId) {
   try {
     return await model.employeeResearchModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

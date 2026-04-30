@@ -52,10 +52,7 @@ export async function refreshEmployeeQualifications(employeeId, qualifications,c
 export async function getEmployeeQualificationsByEmployeeId(employeeId) {
   try {
     return await model.employeeQualificationModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

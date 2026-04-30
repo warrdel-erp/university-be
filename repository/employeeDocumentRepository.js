@@ -61,10 +61,7 @@ export async function refreshEmployeeDocuments(employeeId, documents,createdBy, 
 export async function getEmployeeDocumentsByEmployeeId(employeeId) {
   try {
     return await model.employeeDocumentsModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

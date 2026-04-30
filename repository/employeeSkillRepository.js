@@ -54,10 +54,7 @@ export async function refreshEmployeeSkills(employeeId, skills,createdBy, update
 export async function getEmployeeSkillsByEmployeeId(employeeId) {
   try {
     return await model.employeeSkillModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

@@ -58,10 +58,7 @@ export async function refreshEmployeeExperiences(employeeId, experiences,created
 export async function getEmployeeExperiencesByEmployeeId(employeeId) {
   try {
     return await model.employeeExperianceModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

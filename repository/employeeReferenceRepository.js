@@ -52,10 +52,7 @@ export async function refreshEmployeeReferences(employeeId, references,createdBy
 export async function getEmployeeReferencesByEmployeeId(employeeId) {
   try {
     return await model.employeeReferenceModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

@@ -52,10 +52,7 @@ export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy
 export async function getEmployeeLongLeavesByEmployeeId(employeeId) {
   try {
     return await model.employeeLongLeaveModel.unscoped().findAll({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {

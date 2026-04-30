@@ -38,10 +38,7 @@ export async function updateOfficeDetailsById(employeeOfficeId, data, transactio
 export async function getEmployeeOfficeByEmployeeId(employeeId) {
   try {
     return await model.employeeOfficeModel.unscoped().findOne({
-      where: {
-        employeeId,
-        deletedAt: null
-      },
+      where: { employeeId },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     });
   } catch (error) {
