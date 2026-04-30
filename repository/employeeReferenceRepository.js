@@ -1,5 +1,4 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 
 export async function addEmployeeReference(data,transaction) {
     try {
@@ -51,9 +50,9 @@ export async function refreshEmployeeReferences(employeeId, references,createdBy
 
 export async function getEmployeeReferencesByEmployeeId(employeeId) {
   try {
-    return await model.employeeReferenceModel.unscoped().findAll({
+    return await model.employeeReferenceModel.findAll({
       where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
     });
   } catch (error) {
     console.error("Error fetching employee references:", error);

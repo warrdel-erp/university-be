@@ -68,15 +68,10 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'employee_reference',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );

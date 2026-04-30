@@ -1,5 +1,4 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 
 export async function addEmployeeLongLeave(data,transaction) {
     try {
@@ -13,7 +12,7 @@ export async function addEmployeeLongLeave(data,transaction) {
 
 export async function deleteEmployeeLongLeave (employeeId) {
     try {
-        const result = await model.emplopeeRoleModel.destroy({
+        const result = await model.employeeLongLeaveModel.destroy({
             where: { employeeId },
             individualHooks: true
         });
@@ -51,9 +50,9 @@ export async function refreshEmployeeLongLeaves(employeeId, longLeaves,createdBy
 
 export async function getEmployeeLongLeavesByEmployeeId(employeeId) {
   try {
-    return await model.employeeLongLeaveModel.unscoped().findAll({
+    return await model.employeeLongLeaveModel.findAll({
       where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
     });
   } catch (error) {
     console.error("Error fetching employee long leaves:", error);

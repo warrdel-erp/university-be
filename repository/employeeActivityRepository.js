@@ -1,5 +1,4 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 
 export async function addEmployeeActivity(data,transaction) {
     try {
@@ -50,9 +49,9 @@ export async function refreshEmployeeActivities(employeeId, activities,createdBy
 
 export async function getEmployeeActivitiesByEmployeeId(employeeId) {
   try {
-    return await model.employeeActivityModel.unscoped().findAll({
+    return await model.employeeActivityModel.findAll({
       where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
     });
   } catch (error) {
     console.error("Error fetching employee activities:", error);
