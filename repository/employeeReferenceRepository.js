@@ -25,17 +25,37 @@ export async function deleteEmployeeReference (employeeId) {
 
 export async function refreshEmployeeReferences(employeeId, references,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeReferenceModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeReferenceModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
     const insertData = references.map(r => ({
-      employeeId,createdBy,
+      employeeId,
+      createdBy,
       updatedBy,
-      ...r
+      // Never trust UI payload IDs/system fields for refresh inserts.
+      name: r.name,
+      designation: r.designation,
+      mobileNumber: r.mobileNumber ?? r.mobaileNumber ?? null,
+      address: r.address ?? null
     }));
 
     return await model.employeeReferenceModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee references:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeReferencesByEmployeeId(employeeId) {
+  try {
+    return await model.employeeReferenceModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee references:", error);
     throw error;
   }
 };

@@ -12,7 +12,7 @@ export async function addEmployeeResearch(data,transaction) {
 
 export async function deleteEmployeeResearch (employeeId) {
     try {
-        const result = await model.emplopeeRoleModel.destroy({
+        const result = await model.employeeResearchModel.destroy({
             where: { employeeId },
             individualHooks: true
         });
@@ -25,17 +25,38 @@ export async function deleteEmployeeResearch (employeeId) {
 
 export async function refreshEmployeeResearch(employeeId, research,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeResearchModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeResearchModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = research.map(r => ({
-      employeeId,createdBy,
+    const insertData = research.map((r) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...r
+     
+      thesisName: r?.thesisName ?? null,
+      associate: r?.associate ?? null,
+      periodFrom: r?.periodFrom ?? null,
+      to: r?.to ?? null,
+      institution: r?.institution ?? null
     }));
 
     return await model.employeeResearchModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee research:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeResearchByEmployeeId(employeeId) {
+  try {
+    return await model.employeeResearchModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee research:", error);
     throw error;
   }
 };

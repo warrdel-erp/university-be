@@ -48,7 +48,115 @@ async function generateEmployeeNumber(campusId, instituteId) {
   return enrollNumber;
 };
 
-// const data = { campusId: '1', instituteId: '1', resumeNumber: '12', employeeCode: '44', employeeName: 'AMIT', shortName: 'AMIT', dateOfBirth: '2024-09-02', anniversaryDate: '2024-09-02', fatherName: 'Darryl Jordan', motherName: 'Cailin Perkins', bodySign: 'A BLACK MOLE ON FACE', workingHours: '78', aicteCode: '44', from: '2024-09-02', to: '2024-09-02', vehicleNumber: 'ABC0101', drivingLicense: 'ABCD010101', drivingLicenseExpireDate: '2024-09-02', address: '{"pAddress":"DELHI","pPincode":"111111","cAddress":"DELHI","cPincode":"111111","phoneNumber":"1234567890","mobileNumber":"1234567890","officialMobileNumber":"1234567890","officialEmailId":"ABC@GMAIL.COM","personalEmail":"ABCD@GMAIL.COM"}', office: '{"joiningDate":"2024-09-02","confirmationDate":"2024-09-02","relievingDate":"2024-09-02","retirementDate":"2024-09-02","transferDate":"2024-09-02","resignationDate":"2024-09-02","noticePeriod":"12","employeeFileNumber":"12","istActive":true,"bankName":"ABC","accountNumber":"1234567890","ifscCode":"ABC123","iindActive":true,"contractBased":true,"gpf":"QWERTYU","esiNumber":"QWERTYU","uanNumber":"QWERTYU","lectureBased":true,"pfNumber":"QWERTYU","panNumber":"QWERTY1234","voterId":"ABC123","aadharNumber":"1234567890","spouseName":"AMITAMIT","nomineeName":"AMITAMITAMIT","officeExtensionNumber":"1234567890","employeeRank":"MANAGER"}', roles: '["Hostel","Transport"]', skill: '[{"name":"Kuldeep","experienceInMonth":"12","experienceInYear":"1","proficiencyLevel":1}]', documents: '[{"qualifications":1,"degreeLevel":1,"stream":1,"fromYear":"2024-09-02","toYear":"2024-09-02","universityBoard":"12122","medicalCouncilName":"12","medicalRegistrationNumber":"12","medicalCouncilRegistrationDate":"2024-09-02","medicalRegistrationExpiryDate":"2024-09-02","percentage":"1212","remarks":"12","pursuing":true}]', qualification: '[{"document":1,"receivedDate":"2024-09-02","returnedDate":"2024-09-02","documentCopy":"{}"}]', experience: '[{"experienceType":1,"organization":"12","designation":"12","fromDate":"2024-09-02","toDate":"2024-09-02","totalExperienceMonths":"12","totalExperienceYears":"12","totalExperienceDays":"12","lastSalary":"12","remarks":"12"}]', achievements: '[{"achievementCategory":1,"title":"12","description":"21","noOfTimes":"12","discipline":"12","date":"2024-09-02","nameOf":"12121"}]', ward: '[{"wardName":"12","studyIn":"12","annualFees":"12","dateOfBirth":"2024-09-02"}]', activity: '[{"activity":"21","monthYear":"2024-09-02","remarks":"12"}]', reference: '[{"name":"12","designation":"12","mobaileNumber":"12","address":"12"}]', research: '[{"thesisName":"12","associate":"12","periodFrom":"2024-09-02","to":"2024-09-02","institution":"1212"}]', longLeave: '[{"leaveType":1,"dateOfLeaving":"2024-09-02","dateOfRejoining":"2024-09-02","remark":"12"}]', allDropDownData: '{"type":[],"code":[]}' }
+function normalizeLongLeaves(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => ({
+      ...row,
+      leaveType: row?.leaveType ?? row?.leave_type ?? null,
+      DateOfLeaving: row?.DateOfLeaving ?? row?.dateOfLeaving ?? row?.fromDate ?? null,
+      DateOfRejoining: row?.DateOfRejoining ?? row?.dateOfRejoining ?? row?.toDate ?? null,
+      remark: row?.remark ?? row?.reason ?? null
+    }))
+    .filter((row) => Number.isInteger(Number(row?.leaveType)))
+    .map((row) => ({
+      leaveType: Number(row.leaveType),
+      DateOfLeaving: row.DateOfLeaving,
+      DateOfRejoining: row.DateOfRejoining,
+      remark: row.remark
+    }));
+}
+
+function normalizeActivities(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => ({
+      activity: row?.activity ?? row?.activityName ?? null,
+      monthYear: row?.monthYear ?? row?.date ?? null,
+      remarks: row?.remarks ?? row?.description ?? row?.category ?? null
+    }))
+    .filter((row) => row.activity);
+}
+
+function normalizeAchievements(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => ({
+      ...row,
+      achievementCategory: row?.achievementCategory ?? row?.achievement_category ?? null
+    }))
+    .filter((row) => Number.isInteger(Number(row?.achievementCategory)))
+    .map((row) => ({
+      ...row,
+      achievementCategory: Number(row.achievementCategory)
+    }));
+}
+
+function normalizeDocumentAttachments(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((row) => ({
+      ...row,
+      document: row?.document ?? row?.documentType ?? null
+    }))
+    .filter((row) => Number.isInteger(Number(row?.document)));
+}
+
+function toPlain(value) {
+  return typeof value?.toJSON === "function" ? value.toJSON() : value;
+}
+
+function mapRoleData(authUser = {}) {
+  const userRoles = authUser?.userRoles || [];
+  const userPermissions = authUser?.userPermissions || [];
+  return {
+    role: userRoles?.[0]?.role || "",
+    permissions: userPermissions.map((permissionItem) => permissionItem.permission).filter(Boolean)
+  };
+}
+
+async function resolveOfficeEntry(item = {}) {
+  const directOffice = await getEmployeeOfficeDetails(item?.employeeId);
+  const directOfficeEntry = toPlain(directOffice) || {};
+  const includedOffice = Array.isArray(item?.office) ? (item.office[0] || {}) : (item?.office || {});
+  return Object.keys(directOfficeEntry).length > 0 ? directOfficeEntry : includedOffice;
+}
+
+function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
+  return {
+    department: item?.department || "",
+    employmentType: item?.employmentType || "",
+    joiningDate: officeEntry?.joiningDate || "",
+    noticePeriod: officeEntry?.noticePeriod ?? "",
+    employeeFileNumber: officeEntry?.employeeFileNumber || "",
+    officeMailId: officeEntry?.officeMailId || addressEntry?.officalEmailId || "",
+    officeExtensionNumber: officeEntry?.officeExtensionNumber || "",
+    employeeRank: officeEntry?.employeeRank || ""
+  };
+}
+
+function getMetaCode(item = {}, type) {
+  return item?.employeeMetaData?.find((metaItem) =>
+    String(metaItem?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
+  )?.typess?.code || "";
+}
+
+function mapActivityForEmployeeDetails(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((activity) => ({
+    ...activity,
+    activityName: activity?.activityName ?? activity?.activity ?? "",
+    date: activity?.date ?? activity?.monthYear ?? "",
+    description: activity?.description ?? activity?.remarks ?? "",
+    category: activity?.category ?? ""
+  }));
+}
+
+function mapLongLeaveForEmployeeDetails(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((leave) => ({
+    ...leave,
+    leaveType: leave?.leaveType ?? leave?.leave_type ?? "",
+    fromDate: leave?.fromDate ?? leave?.dateOfLeaving ?? leave?.DateOfLeaving ?? "",
+    toDate: leave?.toDate ?? leave?.dateOfRejoining ?? leave?.DateOfRejoining ?? "",
+    reason: leave?.reason ?? leave?.remark ?? ""
+  }));
+}
+
 export async function addEmployee(data, files, createdBy, universityId, roleId, instituteId) {
 
   const transaction = await sequelize.transaction();
@@ -56,17 +164,25 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     const address = data.address ? JSON.parse(data.address) : null;
     const corsAddress = data.corsAddress ? JSON.parse(data.corsAddress) : null;
     const office = data.office ? JSON.parse(data.office) : null;
+    const normalizedOffice = office ? {
+      ...office,
+      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null
+    } : null;
+
     const roleData = data.roleData ? JSON.parse(data.roleData) : null;
     const skills = data.skill ? JSON.parse(data.skill) : [];
     const documents = data.documents ? JSON.parse(data.documents) : [];
     const qualifications = data.qualification ? JSON.parse(data.qualification) : [];
     const experiences = data.experience ? JSON.parse(data.experience) : [];
-    const achievements = data.achievements ? JSON.parse(data.achievements) : [];
+    const achievementsRaw = data.achievements ? JSON.parse(data.achievements) : [];
+    const achievements = normalizeAchievements(achievementsRaw);
     const wards = data.ward ? JSON.parse(data.ward) : [];
-    const activities = data.activity ? JSON.parse(data.activity) : [];
+    const activitiesRaw = data.activity ? JSON.parse(data.activity) : [];
+    const activities = normalizeActivities(activitiesRaw);
     const references = data.reference ? JSON.parse(data.reference) : [];
     const research = data.research ? JSON.parse(data.research) : [];
-    const longLeaves = data.longLeave ? JSON.parse(data.longLeave) : [];
+    const longLeavesRaw = data.longLeave ? JSON.parse(data.longLeave) : [];
+    const longLeaves = normalizeLongLeaves(longLeavesRaw);
 
 
     // const roleDetails = await getSingleRoleDetails(roleId)
@@ -134,18 +250,25 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     }, transaction);
     const { personalEmail, mobileNumber, officalMobileNumber, officalEmailId } = addressDetail.dataValues
 
+    // Normalize correspondence address keys for FE compatibility
+    const normalizedCorsAddress = corsAddress ? {
+      ...corsAddress,
+      address: corsAddress.address ?? corsAddress.cAddress ?? null,
+      pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null
+    } : null;
+
     // Add employee cor-address
     await employeeAddressRepository.addCorsAddress({
       employeeId,
       createdBy,
-      ...corsAddress
+      ...normalizedCorsAddress
     }, transaction);
 
     // Add employee office details
     await employeeOfficeRepository.addOfficeDetails({
       employeeId,
       createdBy,
-      ...office
+      ...normalizedOffice
     }, transaction);
 
     // Add employee roles
@@ -166,18 +289,26 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
       }, transaction);
     }
 
-    // Add employee documents
-    for (const document of documents) {
-      await employeeDocumentRepository.addEmployeeDocuments({
+    // Add employee documents (frontend "documents" tab) -> employee_qualification table
+    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
+    for (const document of validDocsForQualification) {
+      await employeeQualificationRepository.addEmployeeQualification({
         employeeId,
         createdBy,
         ...document
       }, transaction);
     }
 
-    // Add employee qualifications
-    for (const qualification of qualifications) {
-      await employeeQualificationRepository.addEmployeeQualification({
+    // Add employee qualifications (frontend "qualification" tab) -> employee_documents table
+    const validQualificationsForDocuments = (qualifications || [])
+      .filter((q) => q?.qualifications && q?.degreeLevel)
+      .map((q) => ({
+        ...q,
+        // Backward-compatible fallback for non-null stream column in some DBs
+        stream: q?.stream ?? q?.degreeLevel
+      }));
+    for (const qualification of validQualificationsForDocuments) {
+      await employeeDocumentRepository.addEmployeeDocuments({
         employeeId,
         createdBy,
         ...qualification
@@ -292,11 +423,99 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 // addEmployee(data,1)
 
 export async function getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role) {
-  return await employeeRepository.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role)
+  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role);
+  return Promise.all((result || []).map(async (row) => {
+    const item = toPlain(row) || {};
+    const authUser = item?.user || item?.userEmployee || {};
+    const mappedRoleData = mapRoleData(authUser);
+    const officeEntry = await resolveOfficeEntry(item);
+    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+    const employment = mapEmployment(item, officeEntry, addressEntry);
+
+    return {
+      employeeId: item?.employeeId,
+      userId: item?.userId,
+      employeeCode: item?.employeeCode,
+      employeeName: item?.employeeName || "",
+      dateOfBirth: item?.dateOfBirth || "",
+      department: item?.department || "",
+      employmentType: item?.employmentType || "",
+      pickColor: item?.pickColor || "",
+      campusId: item?.campusId,
+      instituteId: item?.instituteId,
+      acedmicYearId: item?.acedmicYearId,
+      roleId: item?.roleId || mappedRoleData?.role || "",
+      roleData: mappedRoleData,
+      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+      joiningDate: employment.joiningDate,
+      gender: getMetaCode(item, "gender"),
+      religion: getMetaCode(item, "religion"),
+      nationality: getMetaCode(item, "nationality"),
+      employment
+    };
+  }));
 };
 
 export async function getSingleEmployeeDetails(employeeId, universityId) {
-  return await employeeRepository.getSingleEmployeeDetails(employeeId, universityId)
+  const result = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+  return Promise.all((result || []).map(async (row) => {
+    const item = toPlain(row) || {};
+    const authUser = item?.user || item?.userEmployee || {};
+    const mappedRoleData = mapRoleData(authUser);
+    const mappedQualification = Array.isArray(item?.qualification) ? item.qualification : [];
+    const mappedDocuments = Array.isArray(item?.documents) ? item.documents : [];
+    const officeEntry = await resolveOfficeEntry(item);
+    const referenceList = (Array.isArray(item?.reference) && item.reference.length > 0)
+      ? item.reference
+      : (await getEmployeeReferenceDetails(item?.employeeId))?.map(toPlain) || [];
+    const skillList = (Array.isArray(item?.skill) && item.skill.length > 0)
+      ? item.skill
+      : (await getEmployeeSkillDetails(item?.employeeId))?.map(toPlain) || [];
+    const qualificationList = (Array.isArray(mappedQualification) && mappedQualification.length > 0)
+      ? mappedQualification
+      : (await getEmployeeDocumentDetails(item?.employeeId))?.map(toPlain) || [];
+    const documentList = (Array.isArray(mappedDocuments) && mappedDocuments.length > 0)
+      ? mappedDocuments
+      : (await getEmployeeQualificationDetails(item?.employeeId))?.map(toPlain) || [];
+    const experienceList = (Array.isArray(item?.experiance) && item.experiance.length > 0)
+      ? item.experiance
+      : (await getEmployeeExperienceDetails(item?.employeeId))?.map(toPlain) || [];
+    const achievementList = (Array.isArray(item?.achievements) && item.achievements.length > 0)
+      ? item.achievements
+      : (await getEmployeeAchievementDetails(item?.employeeId))?.map(toPlain) || [];
+    const researchList = (Array.isArray(item?.research) && item.research.length > 0)
+      ? item.research
+      : (await getEmployeeResearchList(item?.employeeId))?.map(toPlain) || [];
+    const activityList = (Array.isArray(item?.activty) && item.activty.length > 0)
+      ? item.activty
+      : (await getEmployeeActivityDetails(item?.employeeId))?.map(toPlain) || [];
+    const longLeaveList = (Array.isArray(item?.longLeave) && item.longLeave.length > 0)
+      ? item.longLeave
+      : (await getEmployeeLongLeaveDetails(item?.employeeId))?.map(toPlain) || [];
+    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+    const employment = mapEmployment(item, officeEntry, addressEntry);
+    const { office: _officeIgnored, ...itemWithoutOffice } = item;
+
+    return {
+      ...itemWithoutOffice,
+      userEmployee: authUser,
+      roleData: mappedRoleData,
+      roleId: item?.roleId || mappedRoleData?.role || "",
+      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+      employment,
+      salutation: officeEntry?.employeeRank || "",
+      designation: officeEntry?.employeeRank || "",
+      qualification: qualificationList,
+      documents: documentList,
+      skill: skillList,
+      reference: referenceList,
+      experience: experienceList,
+      achievements: achievementList,
+      research: researchList,
+      longLeave: mapLongLeaveForEmployeeDetails(longLeaveList),
+      activity: mapActivityForEmployeeDetails(activityList)
+    };
+  }));
 };
 
 export async function deleteEmployeeDetail(employeeId) {
@@ -483,24 +702,33 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     const address = typeof data.address === 'string' && data.address ? JSON.parse(data.address) : data.address || null;
     const corsAddress = typeof data.corsAddress === 'string' && data.corsAddress ? JSON.parse(data.corsAddress) : data.corsAddress || null;
     const office = typeof data.office === 'string' && data.office ? JSON.parse(data.office) : data.office || null;
+    const normalizedOffice = office ? {
+      ...office,
+      employeeRank: office.employeeRank ?? data.salutation ?? data.designation ?? null
+    } : null;
+
 
     // array
     const skills = typeof data.skill === 'string' && data.skill ? JSON.parse(data.skill) : data.skill || [];
     const documents = typeof data.documents === 'string' && data.documents ? JSON.parse(data.documents) : data.documents || [];
     const qualifications = typeof data.qualification === 'string' && data.qualification ? JSON.parse(data.qualification) : data.qualification || [];
     const experiences = typeof data.experience === 'string' && data.experience ? JSON.parse(data.experience) : data.experience || [];
-    const achievements = typeof data.achievements === 'string' && data.achievements ? JSON.parse(data.achievements) : data.achievements || [];
+    const achievementsRaw = typeof data.achievements === 'string' && data.achievements ? JSON.parse(data.achievements) : data.achievements || [];
+    const achievements = normalizeAchievements(achievementsRaw);
     const wards = typeof data.ward === 'string' && data.ward ? JSON.parse(data.ward) : data.ward || [];
-    const activities = typeof data.activity === 'string' && data.activity ? JSON.parse(data.activity) : data.activity || [];
+    const activitiesRaw = typeof data.activity === 'string' && data.activity ? JSON.parse(data.activity) : data.activity || [];
+    const activities = normalizeActivities(activitiesRaw);
     const references = typeof data.reference === 'string' && data.reference ? JSON.parse(data.reference) : data.reference || [];
     const research = typeof data.research === 'string' && data.research ? JSON.parse(data.research) : data.research || [];
-    const longLeaves = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
+    const longLeavesRaw = typeof data.longLeave === 'string' && data.longLeave ? JSON.parse(data.longLeave) : data.longLeave || [];
+    const longLeaves = normalizeLongLeaves(longLeavesRaw);
     const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
 
     //  Update main employee table
+    const { roleId: _excludedRoleId, ...employeeUpdateData } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
     await employeeRepository.updateEmployee(employeeId, {
-      ...data,
-      roleId,
+      ...employeeUpdateData,
+      roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
 
@@ -518,29 +746,88 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     //  Update Address
     if (address) {
-      await employeeAddressRepository.updateAddress(employeeId, {
+      const addressPayload = {
         updatedBy,
         ...address
-      }, transaction);
+      };
+      const addressUpdateResult = await employeeAddressRepository.updateAddress(
+        employeeId,
+        addressPayload,
+        transaction
+      );
+      const updatedAddressCount = Array.isArray(addressUpdateResult) ? (addressUpdateResult[0] || 0) : 0;
+      if (updatedAddressCount === 0) {
+        await employeeAddressRepository.addAddress({
+          employeeId,
+          createdBy,
+          ...address
+        }, transaction);
+      }
     }
 
-    if (corsAddress) {
-      await employeeAddressRepository.updateCorsAddress(employeeId, {
+    const normalizedCorsAddress = corsAddress ? {
+      ...corsAddress,
+      address: corsAddress.address ?? corsAddress.cAddress ?? null,
+      pincode: corsAddress.pincode ?? corsAddress.cPincode ?? null
+    } : null;
+
+    if (normalizedCorsAddress) {
+      const corsAddressPayload = {
         updatedBy,
-        ...corsAddress
-      }, transaction);
+        ...normalizedCorsAddress
+      };
+      const corsUpdateResult = await employeeAddressRepository.updateCorsAddress(
+        employeeId,
+        corsAddressPayload,
+        transaction
+      );
+      const updatedCorsCount = Array.isArray(corsUpdateResult) ? (corsUpdateResult[0] || 0) : 0;
+      if (updatedCorsCount === 0) {
+        await employeeAddressRepository.addCorsAddress({
+          employeeId,
+          createdBy,
+          ...normalizedCorsAddress
+        }, transaction);
+      }
     }
 
     //  Update Office details
-    if (office) {
-      await employeeOfficeRepository.updateOfficeDetails(employeeId, {
+    if (normalizedOffice) {
+      const officePayload = {
         updatedBy,
-        ...office
-      }, transaction);
+        ...normalizedOffice
+      };
+
+      const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+
+      if (existingOffice?.employeeOfficeId) {
+        await employeeOfficeRepository.updateOfficeDetailsById(
+          existingOffice.employeeOfficeId,
+          officePayload,
+          transaction
+        );
+      } else {
+        await employeeOfficeRepository.addOfficeDetails({
+          employeeId,
+          createdBy,
+          ...normalizedOffice
+        }, transaction);
+      }
     }
 
-    //  Update Skills
-    if (skills && skills.length > 0) {
+    // Update Skills:
+    // If FE sends skill key (including []), treat it as source of truth and refresh.
+    const hasSkillField = Object.prototype.hasOwnProperty.call(data, 'skill');
+    const hasDocumentsField = Object.prototype.hasOwnProperty.call(data, 'documents');
+    const hasQualificationField = Object.prototype.hasOwnProperty.call(data, 'qualification');
+    const hasExperienceField = Object.prototype.hasOwnProperty.call(data, 'experience');
+    const hasAchievementsField = Object.prototype.hasOwnProperty.call(data, 'achievements');
+    const hasWardField = Object.prototype.hasOwnProperty.call(data, 'ward');
+    const hasActivityField = Object.prototype.hasOwnProperty.call(data, 'activity');
+    const hasReferenceField = Object.prototype.hasOwnProperty.call(data, 'reference');
+    const hasResearchField = Object.prototype.hasOwnProperty.call(data, 'research');
+    const hasLongLeaveField = Object.prototype.hasOwnProperty.call(data, 'longLeave');
+    if (hasSkillField) {
       await employeeSkillRepository.refreshEmployeeSkills(
         employeeId,
         skills,
@@ -550,22 +837,29 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       );
     }
 
-    //  Update Documents
-    if (documents && documents.length > 0) {
-      await employeeDocumentRepository.refreshEmployeeDocuments(
+    // Update Documents (frontend "documents" tab) -> employee_qualification table
+    const validDocsForQualification = normalizeDocumentAttachments(documents || []).filter((doc) => doc?.receivedDate);
+    if (hasDocumentsField) {
+      await employeeQualificationRepository.refreshEmployeeQualifications(
         employeeId,
-        documents,
+        validDocsForQualification,
         createdBy,
         updatedBy,
         transaction
       );
     }
 
-    // Update Qualifications
-    if (qualifications && qualifications.length > 0) {
-      await employeeQualificationRepository.refreshEmployeeQualifications(
+    // Update Qualifications (frontend "qualification" tab) -> employee_documents table
+    const validQualificationsForDocuments = (qualifications || [])
+      .filter((q) => q?.qualifications && q?.degreeLevel)
+      .map((q) => ({
+        ...q,
+        stream: q?.stream ?? q?.degreeLevel
+      }));
+    if (hasQualificationField) {
+      await employeeDocumentRepository.refreshEmployeeDocuments(
         employeeId,
-        qualifications,
+        validQualificationsForDocuments,
         createdBy,
         updatedBy,
         transaction
@@ -573,7 +867,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Experiences
-    if (experiences && experiences.length > 0) {
+    if (hasExperienceField) {
       await employeeExperianceRepository.refreshEmployeeExperiences(
         employeeId,
         experiences,
@@ -584,7 +878,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Achievements
-    if (achievements && achievements.length > 0) {
+    if (hasAchievementsField) {
       await employeeAchivementRepository.refreshEmployeeAchievements(
         employeeId,
         achievements,
@@ -595,7 +889,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Wards
-    if (wards && wards.length > 0) {
+    if (hasWardField) {
       await employeeWardRepository.refreshEmployeeWards(
         employeeId,
         wards,
@@ -606,7 +900,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Activities
-    if (activities && activities.length > 0) {
+    if (hasActivityField) {
       await employeeActivityRepository.refreshEmployeeActivities(
         employeeId,
         activities,
@@ -617,7 +911,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update References
-    if (references && references.length > 0) {
+    if (hasReferenceField) {
       await employeeReferenceRepository.refreshEmployeeReferences(
         employeeId,
         references,
@@ -628,7 +922,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     // Update Research
-    if (research && research.length > 0) {
+    if (hasResearchField) {
       await employeeResearchRepository.refreshEmployeeResearch(
         employeeId,
         research,
@@ -639,7 +933,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     }
 
     //  Update Long Leaves
-    if (longLeaves && longLeaves.length > 0) {
+    if (hasLongLeaveField) {
       await employeeLongLeaveRepository.refreshEmployeeLongLeaves(
         employeeId,
         longLeaves,
@@ -679,6 +973,46 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     throw new Error("Failed to update employee data");
   }
 };
+
+export async function getEmployeeOfficeDetails(employeeId) {
+  return await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
+}
+
+export async function getEmployeeReferenceDetails(employeeId) {
+  return await employeeReferenceRepository.getEmployeeReferencesByEmployeeId(employeeId);
+}
+
+export async function getEmployeeSkillDetails(employeeId) {
+  return await employeeSkillRepository.getEmployeeSkillsByEmployeeId(employeeId);
+}
+
+export async function getEmployeeDocumentDetails(employeeId) {
+  return await employeeDocumentRepository.getEmployeeDocumentsByEmployeeId(employeeId);
+}
+
+export async function getEmployeeQualificationDetails(employeeId) {
+  return await employeeQualificationRepository.getEmployeeQualificationsByEmployeeId(employeeId);
+}
+
+export async function getEmployeeExperienceDetails(employeeId) {
+  return await employeeExperianceRepository.getEmployeeExperiencesByEmployeeId(employeeId);
+}
+
+export async function getEmployeeAchievementDetails(employeeId) {
+  return await employeeAchivementRepository.getEmployeeAchievementsByEmployeeId(employeeId);
+}
+
+export async function getEmployeeResearchList(employeeId) {
+  return await employeeResearchRepository.getEmployeeResearchByEmployeeId(employeeId);
+}
+
+export async function getEmployeeActivityDetails(employeeId) {
+  return await employeeActivityRepository.getEmployeeActivitiesByEmployeeId(employeeId);
+}
+
+export async function getEmployeeLongLeaveDetails(employeeId) {
+  return await employeeLongLeaveRepository.getEmployeeLongLeavesByEmployeeId(employeeId);
+}
 
 export async function getBooksIssuedToEmployee(employeeId) {
   const rawData = await libraryRepository.getBooksIssuedToEmployee(employeeId);

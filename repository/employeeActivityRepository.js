@@ -25,17 +25,36 @@ export async function deleteEmployeeActivity (employeeId) {
 
 export async function refreshEmployeeActivities(employeeId, activities,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeActivityModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeActivityModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = activities.map(a => ({
-      employeeId,createdBy,
+    const insertData = activities.map((a) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...a
+     
+      activity: a?.activity ?? a?.activityName ?? null,
+      monthYear: a?.monthYear ?? a?.date ?? null,
+      remarks: a?.remarks ?? a?.description ?? null
     }));
 
     return await model.employeeActivityModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee activities:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeActivitiesByEmployeeId(employeeId) {
+  try {
+    return await model.employeeActivityModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee activities:", error);
     throw error;
   }
 };
