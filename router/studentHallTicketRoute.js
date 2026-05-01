@@ -20,6 +20,10 @@ const canGenerateQuerySchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
 });
 
+const qrQuerySchema = z.object({
+    qr: z.string().min(1, "qr is required")
+});
+
 const updateSchema = z.object({
     qr: z.string().min(1).optional(),
     examSetupTypeTermId: z.number().optional(),
@@ -33,6 +37,7 @@ const updateSchema = z.object({
 
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
 router.get("/canGenerate", userAuth, validate({ query: canGenerateQuerySchema }), studentHallTicketController.canGenerateHallTickets);
+router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 router.get("/", userAuth, studentHallTicketController.getAllHallTickets);
 router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
 router.patch("/:id", userAuth, validate({ params: idParamsSchema, body: updateSchema }), studentHallTicketController.updateHallTicket);

@@ -4228,6 +4228,41 @@
           "response": []
         },
         {
+          "name": "get by qr",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/byQr?qr=replace-with-hall-ticket-uuid",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "byQr"
+              ],
+              "query": [
+                {
+                  "key": "qr",
+                  "value": "replace-with-hall-ticket-uuid",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "update",
           "request": {
             "auth": {

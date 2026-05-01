@@ -150,6 +150,31 @@ export async function getHallTicketById(id) {
     });
 }
 
+export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
+    return sequelize.transaction(async (transaction) => {
+        const hallTicket = await studentHallTicketRepository.getHallTicketByQr(
+            qr,
+            instituteId,
+            universityId,
+            transaction
+        );
+        if (!hallTicket) return null;
+
+        return {
+            id: hallTicket.id,
+            qr: hallTicket.qr,
+            studentId: hallTicket.studentId,
+            sessionId: hallTicket.sessionId,
+            examSetupTypeTermId: hallTicket.examSetupTypeTermId,
+            instituteId: hallTicket.instituteId,
+            universityId: hallTicket.universityId,
+            student: hallTicket.student,
+            session: hallTicket.session,
+            examSetupTypeTerm: hallTicket.examSetupTypeTerm
+        };
+    });
+}
+
 export async function getAllHallTickets(filters) {
     return sequelize.transaction(async (transaction) => {
         return studentHallTicketRepository.getAllHallTickets(filters, transaction);

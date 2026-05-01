@@ -86,6 +86,14 @@ export async function getHallTicketById(id, transaction) {
     });
 }
 
+export async function getHallTicketByQr(qr, instituteId, universityId, transaction) {
+    return model.studentHallTicketModel.findOne({
+        transaction,
+        where: { qr, instituteId, universityId },
+        include: getHallTicketIncludes()
+    });
+}
+
 export async function getAllHallTickets(filters = {}, transaction) {
     const where = {
         ...(filters.examSetupTypeTermId && { examSetupTypeTermId: filters.examSetupTypeTermId }),

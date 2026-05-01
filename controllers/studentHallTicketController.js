@@ -60,6 +60,21 @@ export async function getHallTicketById(req, res) {
     }
 }
 
+export async function getHallTicketByQr(req, res) {
+    try {
+        const { qr } = req.query;
+        const result = await studentHallTicketServices.getHallTicketDetailsByQr(
+            qr,
+            req.user.defaultInstituteId,
+            req.user.universityId
+        );
+        if (!result) return ErrorResponse(res, 404, "Hall ticket not found");
+        return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
 export async function updateHallTicket(req, res) {
     try {
         const id = Number(req.params.id);
