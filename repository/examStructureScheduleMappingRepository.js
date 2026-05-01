@@ -263,7 +263,16 @@ export async function getExamScheduleById(examScheduleId) {
     }
 }
 
-export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term, examSetupTypeTermId) {
+export async function getExamSetupTypeTermById(examSetupTypeTermId) {
+    try {
+        return await model.examSetupTypeTermModel.findByPk(examSetupTypeTermId);
+    } catch (error) {
+        console.error("Error fetching exam setup type term by id:", error.message);
+        throw error;
+    }
+}
+
+export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term, examSetupTypeTermId, sessionId) {
     try {
         const whereClause = {
             ...(courseId && { courseId }),
@@ -279,6 +288,9 @@ export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term,
                     model: model.examScheduleModel,
                     as: "scheduleSubject",
                     required: false,
+                    where: {
+                        ...(sessionId && { sessionId })
+                    },
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     include: [
                         {
@@ -295,6 +307,47 @@ export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term,
         return result;
     } catch (error) {
         console.error("Error fetching subjects with exam schedule:", error.message);
+        throw error;
+    }
+}
+
+/**
+ * Fetches the total count of students enrolled in a specific course, academic year, term, and session.
+ * @param {number} courseId - The ID of the course.
+ * @param {number} acedmicYearId - The ID of the academic year.
+ * @param {number} term - The term/semester number.
+ * @param {number} sessionId - The ID of the session.
+ * @returns {Promise<number>} - The total count of students.
+ */
+export async function getStudentCountForTerm(courseId, acedmicYearId, term, sessionId) {
+    try {
+        const count = await model.studentModel.count({
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'studentSections',
+                    required: true,
+                    where: {
+                        courseId,
+                        acedmicYearId,
+                        ...(sessionId && { sessionId })
+                    },
+                    include: [
+                        {
+                            model: model.classModel,
+                            as: 'classGroup',
+                            required: true,
+                            where: {
+                                term
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+        return count;
+    } catch (error) {
+        console.error("Error fetching student count for term:", error.message);
         throw error;
     }
 }
