@@ -1,0 +1,40 @@
+import { Router } from "express";
+import { z } from "zod";
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
+import * as studentHallTicketController from "../controllers/studentHallTicketController.js";
+
+const router = Router();
+
+const idParamsSchema = z.object({
+    id: z.string().regex(/^\d+$/, "id must be a number").transform((v) => Number(v))
+});
+
+const generateSchema = z.object({
+    examSetupTypeTermId: z.number({ required_error: "examSetupTypeTermId is required" }),
+    sessionId: z.number({ required_error: "sessionId is required" })
+});
+
+const canGenerateQuerySchema = z.object({
+    examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number"),
+    sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
+});
+
+const updateSchema = z.object({
+    qr: z.string().min(1).optional(),
+    examSetupTypeTermId: z.number().optional(),
+    sessionId: z.number().optional(),
+    studentId: z.number().optional(),
+    instituteId: z.number().optional(),
+    universityId: z.number().optional()
+}).refine((obj) => Object.keys(obj).length > 0, {
+    message: "At least one field is required for update"
+});
+
+router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
+router.get("/canGenerate", userAuth, validate({ query: canGenerateQuerySchema }), studentHallTicketController.canGenerateHallTickets);
+router.get("/", userAuth, studentHallTicketController.getAllHallTickets);
+router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
+router.patch("/:id", userAuth, validate({ params: idParamsSchema, body: updateSchema }), studentHallTicketController.updateHallTicket);
+
+export default router;

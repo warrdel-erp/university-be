@@ -141,6 +141,8 @@ import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
+import examRoomCapacityModel from "./examRoomCapacityModel.js";
+import studentHallTicketModel from "./studentHallTicketModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -1245,7 +1247,20 @@ studentExamSeatModel.belongsTo(examScheduleRoomCapacityModel, { foreignKey: "exa
 
 studentModel.hasMany(studentExamSeatModel, { foreignKey: "student_id", as: "examSeats" });
 studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentHallTicketModel.belongsTo(examSetupTypeTermModel, { foreignKey: "exam_setup_type_term_id", as: "examSetupTypeTerm" });
+examSetupTypeTermModel.hasMany(studentHallTicketModel, { foreignKey: "exam_setup_type_term_id", as: "hallTickets" });
 
+studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
+sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
+
+studentHallTicketModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(studentHallTicketModel, { foreignKey: "student_id", as: "hallTickets" });
+
+studentHallTicketModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as: "hallTickets" });
+
+studentHallTicketModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", as: "hallTickets" });
 export {
   settingModel,
   universityModel,
@@ -1390,4 +1405,6 @@ export {
   studentClassSectionsHistoryModel,
   examScheduleRoomCapacityModel,
   studentExamSeatModel,
+  examRoomCapacityModel,
+  studentHallTicketModel,
 };

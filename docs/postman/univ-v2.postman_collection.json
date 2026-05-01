@@ -4073,6 +4073,204 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "student hall ticket",
+      "item": [
+        {
+          "name": "generate",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeTermId\": 1,\n  \"sessionId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "generate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "can generate",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/canGenerate?examSetupTypeTermId=1&sessionId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "canGenerate"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId=1&sessionId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{\\\"type\\\":\\\"hall-ticket\\\",\\\"note\\\":\\\"manual update\\\"}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

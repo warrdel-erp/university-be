@@ -87,6 +87,7 @@ import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
+import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 // middleware
@@ -115,6 +116,9 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
+
+app.use("/studentHallTicket", studentHallTicket);
+
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
