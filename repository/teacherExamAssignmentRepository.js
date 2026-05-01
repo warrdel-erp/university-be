@@ -1,5 +1,14 @@
 import * as model from "../models/index.js";
 
+export async function findAssignment(whereClause) {
+    try {
+        return await model.teacherExamAssignmentModel.findOne({ where: whereClause });
+    } catch (error) {
+        console.error("Error in findAssignment repository:", error);
+        throw error;
+    }
+}
+
 export async function assignExam(data) {
     try {
         const result = await model.teacherExamAssignmentModel.create(data);
@@ -21,7 +30,13 @@ export async function getAssignments(whereClause) {
                     include: [
                         {
                             model: model.subjectModel,
-                            as: 'subjectSchedule'
+                            as: 'subjectSchedule',
+                            include: [
+                                {
+                                    model: model.courseModel,
+                                    as: "courseInfo"
+                                }
+                            ]
                         },
                         {
                             model: model.examSetupTypeTermModel,

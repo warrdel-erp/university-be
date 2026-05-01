@@ -19,6 +19,7 @@ const blueprintItemSchema = z.object({
 });
 
 const createBlueprintSchema = z.object({
+    name: z.string({ required_error: "name is required" }),
     subjectId: z.number({ required_error: "subjectId is required" }),
     blueprint: z.array(blueprintItemSchema).min(1, "Blueprint must have at least one section"),
 });

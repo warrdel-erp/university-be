@@ -25,17 +25,43 @@ export async function deleteEmployeeExperiance (employeeId) {
 
 export async function refreshEmployeeExperiences(employeeId, experiences,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeExperianceModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeExperianceModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = experiences.map(exp => ({
-      employeeId,createdBy,
+    const insertData = experiences.map((exp) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...exp
+     
+      experienceType: exp?.experienceType ?? exp?.experience_type ?? null,
+      organization: exp?.organization ?? null,
+      desigation: exp?.desigation ?? null,
+      fromDate: exp?.fromDate ?? null,
+      toDate: exp?.toDate ?? null,
+      totalExperianceYears: exp?.totalExperianceYears ?? null,
+      totalExperianceMonths: exp?.totalExperianceMonths ?? null,
+      totalExperiancedays: exp?.totalExperiancedays ?? null,
+      lastSalary: exp?.lastSalary ?? null,
+      remarks: exp?.remarks ?? null
     }));
 
     return await model.employeeExperianceModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee experiences:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeExperiencesByEmployeeId(employeeId) {
+  try {
+    return await model.employeeExperianceModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee experiences:", error);
     throw error;
   }
 }

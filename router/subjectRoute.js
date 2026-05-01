@@ -15,16 +15,15 @@ const setSubjectTermsSchema = z.array(z.object({
 const getAllSubjectsQuerySchema = z.object({}).catchall(z.any());
 
 const subjectsWithScheduleQuerySchema = z.object({
-    courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
     examSetupTypeTermId: z.coerce.number({ required_error: "examSetupTypeTermId is required" }).int().positive(),
-    term: z.coerce.number({ required_error: "term is required" }).int().positive(),
-}).passthrough();
+    sessionId: z.coerce.number().int().positive().optional(),
+});
 
 const subjectWeightageListSchema = z.object({
     sessionId: z.coerce.number({ required_error: "sessionId is required" }).int().positive(),
     courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
     term: z.coerce.number({ required_error: "term is required" }).int().positive(),
-}).passthrough();
+});
 
 router.get('/', userAuth, validate({ query: getAllSubjectsQuerySchema }), getAllSubjects);
 

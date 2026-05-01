@@ -1,54 +1,47 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import subject from "./subjectModel.js";
-import university from "./universityModel.js";
 import users from "./userModel.js";
+import student from "./studentModel.js";
+import examScheduleRoomCapacity from "./examScheduleRoomCapacityModel.js";
 
 export default sequelize.define(
-    'questionPaperBlueprint',
+    'student_exam_seat',
     {
-        id: {
+        studentExamSeatId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'id'
+            field: 'student_exam_seat_id'
         },
-        name: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'name'
-        },
-        subjectId: {
+        examScheduleRoomCapacityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'subject_id',
+            field: 'exam_schedule_room_capacity_id',
             references: {
-                model: subject,
-                key: 'subject_id'
+                model: examScheduleRoomCapacity,
+                key: 'exam_schedule_room_capacity_id'
             }
         },
-        blueprint: {
-            type: DataTypes.JSON,
-            allowNull: false,
-            field: 'blueprint'
-        },
-        totalMarks: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'total_marks'
-        },
-        universityId: {
+        studentId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'university_id',
+            field: 'student_id',
             references: {
-                model: university,
-                key: 'university_id'
+                model: student,
+                key: 'student_id'
             }
+        },
+        row: {
+            type: DataTypes.INTEGER,
+            allowNull: false
+        },
+        column: {
+            type: DataTypes.INTEGER,
+            allowNull: false
         },
         createdBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'created_by',
             references: {
                 model: users,
@@ -57,7 +50,7 @@ export default sequelize.define(
         },
         updatedBy: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'updated_by',
             references: {
                 model: users,
@@ -75,11 +68,10 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
+        }
     },
     {
-        tableName: 'question_paper_blueprint',
-        timestamps: true,
-        paranoid: false
+        tableName: 'student_exam_seat',
+        timestamps: true
     }
 );

@@ -19,7 +19,7 @@ export async function assignTeacherToExam(req, res) {
 
         return SuccessResponse(res, 201, "Teacher assigned to exam successfully", assignment);
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }
 

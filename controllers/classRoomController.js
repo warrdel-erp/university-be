@@ -1,14 +1,10 @@
 import * as ClassRoomCreation  from  "../services/classRoomServices.js";
 
 export async function addClassRoom(req, res) {
-    const {roomNumber,capacity,floorId,examCapacity} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(roomNumber && capacity  && floorId)){
-           return res.status(400).send('room Number,floorId and capacity is required')
-        }
-        const classRoom = await ClassRoomCreation.addClassRoom(req.body,createdBy,updatedBy);
+        const classRoom = await ClassRoomCreation.addClassRoom(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", classRoom });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -29,11 +25,11 @@ export async function getSingleClassRoomDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const { classRoomSectionId } = req.query;
-        const ClassRoom = await ClassRoomCreation.getSingleClassRoomDetails(classRoomSectionId,universityId);
+        const ClassRoom = await ClassRoomCreation.getSingleClassRoomDetails(classRoomSectionId, universityId);
         if (ClassRoom) {
             res.status(200).json(ClassRoom);
         } else {
-            res.status(404).json({ message: "ClassRoom not found" });
+            res.status(404).json({ message: "Class room not found" });
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -42,13 +38,10 @@ export async function getSingleClassRoomDetails(req, res) {
 
 export async function updateClassRoom(req, res) {
     try {
-        const {classRoomSectionId} = req.body
-        if(!(classRoomSectionId)){
-            return res.status(400).send('classRoomSectionId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updatedClassRoom = await ClassRoomCreation.updateClassRoom(classRoomSectionId, req.body,updatedBy);
-            res.status(200).json({message: "ClassRoom update succesfully" });
+        const { classRoomSectionId } = req.body;
+        const updatedBy = req.user.userId;
+        const result = await ClassRoomCreation.updateClassRoom(classRoomSectionId, req.body, updatedBy);
+        res.status(200).json({ message: "Class room updated successfully", result });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -57,14 +50,11 @@ export async function updateClassRoom(req, res) {
 export async function deleteClassRoom(req, res) {
     try {
         const { classRoomSectionId } = req.query;
-        if (!classRoomSectionId) {
-            return res.status(400).json({ message: "classRoomSectionId is required" });
-        }
         const deleted = await ClassRoomCreation.deleteClassRoom(classRoomSectionId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for ClassRoom ID ${classRoomSectionId}` });
         } else {
-            res.status(404).json({ message: "ClassRoom not found" });
+            res.status(404).json({ message: "Class room not found" });
         }
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -10,6 +10,7 @@ import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 
 const assignmentSchema = z.object({
+    deadline: z.string({ required_error: "deadline is required" }),
     examScheduleId: z.number({ required_error: "examScheduleId is required" }),
     employeeId: z.number({ required_error: "employeeId is required" })
 });

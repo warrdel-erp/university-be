@@ -70,6 +70,24 @@ export async function assignTeacher(data) {
     }
 };
 
+/**
+ * Checks if a specific teacher is already assigned to a specific exam schedule.
+ * @param {number} scheduleId - The ID of the exam schedule.
+ * @param {number} employeeId - The ID of the teacher/employee.
+ * @returns {Promise<Object|null>} - The assignment record if found, otherwise null.
+ */
+export async function getAssignmentByScheduleAndEmployee(scheduleId, employeeId) {
+    try {
+        const assignment = await model.scheduleAssignModel.findOne({
+            where: { scheduleId, employeeId }
+        });
+        return assignment;
+    } catch (error) {
+        console.error("Error fetching assignment by scheduleId and employeeId:", error);
+        throw error;
+    }
+};
+
 export async function getAssignTeacher() {
     try {
         const scheduleAssignments = await model.scheduleAssignModel.findAll({

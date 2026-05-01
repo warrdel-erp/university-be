@@ -36,7 +36,6 @@ const questionPaperModel = sequelize.define(
                 key: "id",
             },
         },
-
         status: {
             type: DataTypes.ENUM(...questionStatus),
             allowNull: false,
@@ -47,6 +46,11 @@ const questionPaperModel = sequelize.define(
             type: DataTypes.JSON,
             allowNull: false,
             field: "question_paper",
+        },
+        totalMarks: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: "total_marks",
         },
         createdBy: {
             type: DataTypes.INTEGER,
