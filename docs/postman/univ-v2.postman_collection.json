@@ -3121,6 +3121,155 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "answer sheet qr - bulk generate",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "answer sheet qr - get list",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr?page=1&limit=20&usageType=all",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "usageType",
+                  "value": "all"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "answer sheet qr - map once",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"0a7f3886-99c4-4c1d-bd3d-1143bfae8bd4\",\n  \"studentId\": 2106,\n  \"examScheduleId\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "answer sheet qr - get by id details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/:id",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -4073,6 +4222,26 @@
           "response": []
         }
       ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTI5VDA3OjIxOjM3LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc1NDgwNDIsImV4cCI6MTc4MDE0MDA0Mn0.0AOONQ4Lqtzs32uMIv2sPKU7LidulWmN48TNC6fdqeU"
     }
   ]
 }

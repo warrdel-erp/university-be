@@ -141,6 +141,7 @@ import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
+import answerSheetQrModel from "./answerSheetQrModel.js";
 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -1246,6 +1247,12 @@ studentExamSeatModel.belongsTo(examScheduleRoomCapacityModel, { foreignKey: "exa
 studentModel.hasMany(studentExamSeatModel, { foreignKey: "student_id", as: "examSeats" });
 studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 
+answerSheetQrModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(answerSheetQrModel, { foreignKey: "student_id", as: "answerSheetQrs" });
+
+answerSheetQrModel.belongsTo(examScheduleModel, { foreignKey: "exam_schedule_id", as: "examSchedule" });
+examScheduleModel.hasMany(answerSheetQrModel, { foreignKey: "exam_schedule_id", as: "answerSheetQrs" });
+
 export {
   settingModel,
   universityModel,
@@ -1390,4 +1397,5 @@ export {
   studentClassSectionsHistoryModel,
   examScheduleRoomCapacityModel,
   studentExamSeatModel,
+  answerSheetQrModel,
 };
