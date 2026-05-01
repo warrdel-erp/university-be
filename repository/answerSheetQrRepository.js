@@ -1,8 +1,7 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
-import sequelize from "../database/sequelizeConfig.js";
 
-export async function countUnusedByInstitute(instituteId, universityId) {
+export async function countUnusedByInstitute(instituteId, universityId, transaction) {
   return model.answerSheetQrModel.count({
     where: {
       instituteId,
@@ -10,26 +9,35 @@ export async function countUnusedByInstitute(instituteId, universityId) {
       studentId: { [Op.is]: null },
       examScheduleId: { [Op.is]: null },
     },
+    transaction,
   });
 }
 
-export async function bulkCreateAnswerSheetQr(rows) {
-  return model.answerSheetQrModel.bulkCreate(rows);
+export async function bulkCreateAnswerSheetQr(rows, transaction) {
+  return model.answerSheetQrModel.bulkCreate(rows, { transaction });
 }
 
-export async function getAnswerSheetQrs(instituteId, universityId, limit, offset) {
+export async function getAnswerSheetQrs(instituteId, universityId, limit, offset, transaction) {
   const { count, rows } = await model.answerSheetQrModel.findAndCountAll({
     where: { instituteId, universityId },
     attributes: ["id", "qr", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
     order: [["id", "DESC"]],
     limit,
     offset,
+    transaction,
   });
 
   return { count, rows };
 }
 
-export async function getAnswerSheetQrsByUsage(instituteId, universityId, usageType, limit, offset) {
+export async function getAnswerSheetQrsByUsage(
+  instituteId,
+  universityId,
+  usageType,
+  limit,
+  offset,
+  transaction
+) {
   const whereClause = {
     instituteId,
     universityId,
@@ -84,12 +92,13 @@ export async function getAnswerSheetQrsByUsage(instituteId, universityId, usageT
     order: [["id", "DESC"]],
     limit,
     offset,
+    transaction,
   });
 
   return { count, rows };
 }
 
-export async function getAnswerSheetQrById(id, instituteId, universityId) {
+export async function getAnswerSheetQrById(id, instituteId, universityId, transaction) {
   return model.answerSheetQrModel.findOne({
     where: { id, instituteId, universityId },
     attributes: ["id", "qr", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
@@ -129,17 +138,19 @@ export async function getAnswerSheetQrById(id, instituteId, universityId) {
         ],
       },
     ],
+    transaction,
   });
 }
 
-export async function getScopedStudent(studentId, instituteId, universityId) {
+export async function getScopedStudent(studentId, instituteId, universityId, transaction) {
   return model.studentModel.findOne({
     where: { studentId, instituteId, universityId },
     attributes: ["studentId", "instituteId", "universityId"],
+    transaction,
   });
 }
 
-export async function getScopedExamSchedule(examScheduleId, instituteId, universityId) {
+export async function getScopedExamSchedule(examScheduleId, instituteId, universityId, transaction) {
   return model.examScheduleModel.findOne({
     where: { examScheduleId },
     attributes: ["examScheduleId", "examSetupTypeTermId"],
@@ -152,24 +163,23 @@ export async function getScopedExamSchedule(examScheduleId, instituteId, univers
         required: true,
       },
     ],
+    transaction,
   });
 }
 
-export async function mapAnswerSheetQrOnce(qr, mappingPayload, instituteId, universityId) {
-  return sequelize.transaction(async (transaction) => {
-    const row = await model.answerSheetQrModel.findOne({
-      where: { qr, instituteId, universityId },
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-    });
-
-    if (!row) return null;
-
-    if (row.studentId !== null || row.examScheduleId !== null) {
-      return { alreadyUsed: true, row };
-    }
-
-    await row.update(mappingPayload, { transaction });
-    return { alreadyUsed: false, row };
+export async function mapAnswerSheetQrOnce(qr, mappingPayload, instituteId, universityId, transaction) {
+  const row = await model.answerSheetQrModel.findOne({
+    where: { qr, instituteId, universityId },
+    transaction,
+    lock: transaction?.LOCK?.UPDATE,
   });
+
+  if (!row) return null;
+
+  if (row.studentId !== null || row.examScheduleId !== null) {
+    return { alreadyUsed: true, row };
+  }
+
+  await row.update(mappingPayload, { transaction });
+  return { alreadyUsed: false, row };
 }
