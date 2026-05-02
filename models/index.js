@@ -141,7 +141,6 @@ import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
-import examRoomCapacityModel from "./examRoomCapacityModel.js";
 import studentHallTicketModel from "./studentHallTicketModel.js";
 
 
@@ -1405,6 +1404,5 @@ export {
   studentClassSectionsHistoryModel,
   examScheduleRoomCapacityModel,
   studentExamSeatModel,
-  examRoomCapacityModel,
   studentHallTicketModel,
 };
