@@ -272,28 +272,24 @@ export async function getHallTicketById(id, instituteId, universityId) {
     });
 }
 
+/** Same flattened payload as GET /studentHallTicket/:id (`flattenHallTicketDetail` + `subjects`). */
 export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
     return sequelize.transaction(async (transaction) => {
-        const hallTicket = await studentHallTicketRepository.getHallTicketByQr(
+        const ticket = await studentHallTicketRepository.getHallTicketByQr(
             qr,
             instituteId,
             universityId,
             transaction
         );
-        if (!hallTicket) return null;
+        if (!ticket) return null;
 
-        return {
-            id: hallTicket.id,
-            qr: hallTicket.qr,
-            studentId: hallTicket.studentId,
-            sessionId: hallTicket.sessionId,
-            examSetupTypeTermId: hallTicket.examSetupTypeTermId,
-            instituteId: hallTicket.instituteId,
-            universityId: hallTicket.universityId,
-            student: hallTicket.student,
-            session: hallTicket.session,
-            examSetupTypeTerm: hallTicket.examSetupTypeTerm
-        };
+        const schedules = await studentHallTicketRepository.getSchedulesWithSubjectsForExamTermSession(
+            ticket.examSetupTypeTermId,
+            ticket.sessionId,
+            transaction
+        );
+
+        return flattenHallTicketDetail(ticket, schedules);
     });
 }
 

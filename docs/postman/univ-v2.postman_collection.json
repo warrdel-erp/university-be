@@ -4406,7 +4406,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/byQr?qr=**\n\nLookup by ticket QR UUID (`hallticket_qr`).",
+            "description": "**GET /studentHallTicket/byQr?qr=**\n\nLookup by ticket QR UUID (`hallticket_qr`). **`data`** matches **GET /studentHallTicket/:id** — flat student/session/exam fields and **`subjects`** (with nested **`subject`** / **`semester`** per schedule row).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4443,7 +4443,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"student\": {}\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 10,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2103,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"JAYANSH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"SHARMA\",\n    \"scholarNumber\": \"ASA/ID/2025/10\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 2,\n        \"subjectId\": 129,\n        \"subjectName\": \"SOM\",\n        \"subjectCode\": \"som\",\n        \"semesterId\": null,\n        \"semesterName\": null,\n        \"examDate\": \"2026-05-08\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"60\",\n        \"scheduleKind\": \"Theory\",\n        \"subject\": { \"subjectId\": 129, \"subjectName\": \"SOM\", \"subjectCode\": \"som\", \"subjectType\": \"Theoretical\" },\n        \"semester\": null\n      }\n    ]\n  }\n}"
             }
           ]
         }
