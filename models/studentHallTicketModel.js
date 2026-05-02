@@ -85,6 +85,16 @@ export default sequelize.define(
             {
                 unique: true,
                 fields: ["exam_setup_type_term_id", "session_id", "student_id"]
+            },
+            /** Scope hall-ticket counts/lists by institute (pairs with session + term filters). */
+            {
+                name: "student_hall_ticket_inst_univ_est_session_idx",
+                fields: ["institute_id", "university_id", "exam_setup_type_term_id", "session_id"]
+            },
+            /** GET /byQr — equality on qr within tenant. */
+            {
+                name: "student_hall_ticket_qr_idx",
+                fields: ["qr"]
             }
         ]
     }

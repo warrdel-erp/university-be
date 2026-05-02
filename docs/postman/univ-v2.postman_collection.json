@@ -4263,6 +4263,54 @@
           ]
         },
         {
+          "name": "exam type dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: `examSetupTypeTermId`, `sessionId`. **Empty `data` []** unless at least one hall ticket exists for that pair. **Default `view=subject`:** one array item **per exam paper** (`exam_schedule` row) — a term often has **multiple subjects**; hall tickets are **per student** for the whole term+session, not one row per ticket. **One card for the whole exam:** `view=examType`.\n\nEach row includes `examSetupTypeTermId` and `sessionId` (repeated; same cohort).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/exam-type/dashboard?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&view=subject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "exam-type",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "{{hallticket_examSetupTypeTermId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{hallticket_sessionId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "view",
+                  "value": "subject",
+                  "type": "text",
+                  "description": "subject (default) | examType"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "status by exam type",
           "request": {
             "method": "GET",
@@ -4485,7 +4533,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/:id**\n\nPath id uses `hallticket_hallTicketId`.",
+            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Response is a **flat** object: student/session/exam-type fields at top level, plus **`subjects`** — every `exam_schedule` row for this ticket’s `examSetupTypeTermId` + `sessionId` (same exam type), each entry includes subject, semester, date/time.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4514,7 +4562,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"studentId\": 10,\n    \"examSetupTypeTerm\": {}\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2094,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"AKASH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"CHOUDHARY\",\n    \"scholarNumber\": \"ASA/ID/2025/11\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 101,\n        \"subjectId\": 12,\n        \"subjectName\": \"Mathematics\",\n        \"subjectCode\": \"MTH\",\n        \"semesterId\": 2,\n        \"semesterName\": \"Semester 2\",\n        \"examDate\": \"2026-05-15\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"180\",\n        \"scheduleKind\": \"Theory\"\n      }\n    ]\n  }\n}"
             }
           ]
         },
@@ -4612,6 +4660,18 @@
           ]
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "type": "string"
     }
   ]
 }

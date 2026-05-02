@@ -22,6 +22,34 @@ export async function getSchedulesByExamSetupTypeTermAndSession(examSetupTypeTer
     });
 }
 
+/** All scheduled papers for this exam setup type term + session (same exam “type” cohort as the hall ticket). */
+export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTermId, sessionId, transaction) {
+    return model.examScheduleModel.findAll({
+        transaction,
+        where: { examSetupTypeTermId, sessionId },
+        attributes: ["examScheduleId", "subjectId", "semesterId", "examDate", "examTime", "duration", "type"],
+        include: [
+            {
+                model: model.subjectModel,
+                as: "subjectSchedule",
+                attributes: ["subjectId", "subjectName", "subjectCode"],
+                required: false,
+            },
+            {
+                model: model.semesterModel,
+                as: "semesterexam",
+                attributes: ["semesterId", "name"],
+                required: false,
+            },
+        ],
+        order: [
+            ["examDate", "ASC"],
+            ["examTime", "ASC"],
+            ["examScheduleId", "ASC"],
+        ],
+    });
+}
+
 export async function getEligibleStudents(sessionId, courseId, term, instituteId, universityId, transaction) {
     return model.studentModel.findAll({
         transaction,

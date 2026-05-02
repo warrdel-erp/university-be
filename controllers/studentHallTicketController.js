@@ -110,6 +110,25 @@ export async function getExamsScheduled(req, res) {
     }
 }
 
+/** GET query: examSetupTypeTermId, sessionId — dashboard row(s) for that exam term + session. */
+export async function getExamTypeDashboard(req, res) {
+    try {
+        const examSetupTypeTermId = Number(req.query.examSetupTypeTermId);
+        const sessionId = Number(req.query.sessionId);
+        const view = req.query.view === "examType" ? "examType" : "subject";
+        const result = await studentHallTicketServices.getExamTypeDashboardRows({
+            examSetupTypeTermId,
+            sessionId,
+            instituteId: req.user.defaultInstituteId,
+            universityId: req.user.universityId,
+            view,
+        });
+        return SuccessResponse(res, 200, "Exam type dashboard fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+}
+
 export async function getAllHallTickets(req, res) {
     try {
         const filters = {
@@ -145,7 +164,11 @@ export async function getAllHallTicketsAllExams(req, res) {
 
 export async function getHallTicketById(req, res) {
     try {
-        const result = await studentHallTicketServices.getHallTicketById(Number(req.params.id));
+        const result = await studentHallTicketServices.getHallTicketById(
+            Number(req.params.id),
+            req.user.defaultInstituteId,
+            req.user.universityId
+        );
         if (!result) return ErrorResponse(res, 404, "Hall ticket not found");
         return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
     } catch (error) {

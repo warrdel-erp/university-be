@@ -20,6 +20,11 @@ const canGenerateQuerySchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
 });
 
+/** Same as canGenerate, plus optional `view` (default: one row per scheduled subject; `examType` = single exam-type summary row). */
+const examTypeDashboardQuerySchema = canGenerateQuerySchema.extend({
+    view: z.enum(["subject", "examType"]).optional().default("subject")
+});
+
 const qrQuerySchema = z.object({
     qr: z.string().min(1, "qr is required")
 });
@@ -73,6 +78,13 @@ router.get(
     userAuth,
     validate({ query: statusByExamTypeQuerySchema }),
     studentHallTicketController.getExamsScheduled
+);
+
+router.get(
+    "/exam-type/dashboard",
+    userAuth,
+    validate({ query: examTypeDashboardQuerySchema }),
+    studentHallTicketController.getExamTypeDashboard
 );
 
 router.get("/", userAuth, studentHallTicketController.getAllHallTickets);
