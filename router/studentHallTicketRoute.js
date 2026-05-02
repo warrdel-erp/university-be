@@ -20,9 +20,10 @@ const canGenerateQuerySchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
 });
 
-/** Same as canGenerate, plus optional `view` (default: one row per scheduled subject; `examType` = single exam-type summary row). */
-const examTypeDashboardQuerySchema = canGenerateQuerySchema.extend({
-    view: z.enum(["subject", "examType"]).optional().default("subject")
+/** `termNumber` + `sessionId` — one summary row per scheduled exam cohort (`examSetupTypeTermId` + `sessionId`). */
+const examTypeDashboardQuerySchema = z.object({
+    sessionId: z.coerce.number().int().positive(),
+    termNumber: z.coerce.number().int(),
 });
 
 const qrQuerySchema = z.object({

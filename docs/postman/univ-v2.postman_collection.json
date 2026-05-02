@@ -4267,7 +4267,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: `examSetupTypeTermId`, `sessionId`. **Empty `data` []** unless at least one hall ticket exists for that pair. **Default `view=subject`:** one array item **per exam paper** (`exam_schedule` row) — a term often has **multiple subjects**; hall tickets are **per student** for the whole term+session, not one row per ticket. **One card for the whole exam:** `view=examType`.\n\nEach row includes `examSetupTypeTermId` and `sessionId` (repeated; same cohort).",
+            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4279,7 +4279,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/exam-type/dashboard?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&view=subject",
+              "raw": "{{baseurl}}/studentHallTicket/exam-type/dashboard?termNumber={{hallticket_termNumber}}&sessionId={{hallticket_sessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4290,20 +4290,14 @@
               ],
               "query": [
                 {
-                  "key": "examSetupTypeTermId",
-                  "value": "{{hallticket_examSetupTypeTermId}}",
+                  "key": "termNumber",
+                  "value": "{{hallticket_termNumber}}",
                   "type": "text"
                 },
                 {
                   "key": "sessionId",
                   "value": "{{hallticket_sessionId}}",
                   "type": "text"
-                },
-                {
-                  "key": "view",
-                  "value": "subject",
-                  "type": "text",
-                  "description": "subject (default) | examType"
                 }
               ]
             }

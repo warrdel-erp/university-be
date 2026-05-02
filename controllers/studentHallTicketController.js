@@ -110,18 +110,17 @@ export async function getExamsScheduled(req, res) {
     }
 }
 
-/** GET query: examSetupTypeTermId, sessionId — dashboard row(s) for that exam term + session. */
+/** GET query: `termNumber`, `sessionId` — compact cohort list with hall-ticket generated flag. */
 export async function getExamTypeDashboard(req, res) {
     try {
-        const examSetupTypeTermId = Number(req.query.examSetupTypeTermId);
         const sessionId = Number(req.query.sessionId);
-        const view = req.query.view === "examType" ? "examType" : "subject";
+        const termNumber = Number(req.query.termNumber);
         const result = await studentHallTicketServices.getExamTypeDashboardRows({
-            examSetupTypeTermId,
             sessionId,
+            termNumber,
             instituteId: req.user.defaultInstituteId,
             universityId: req.user.universityId,
-            view,
+            acedmicYearId: req.user.defaultAcademicYearId,
         });
         return SuccessResponse(res, 200, "Exam type dashboard fetched successfully", result);
     } catch (error) {

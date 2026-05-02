@@ -535,104 +535,38 @@ export async function getScheduledExamsWithHallTicketInfo({ universityId, acedmi
 }
 
 /**
- * Dashboard for one exam setup term + session — **only when hall tickets exist** (`generatedTicketCount > 0`).
- * Schedules load via `exam_schedule` filtered by `examSetupTypeTermId` + `sessionId`.
- *
- * **Why multiple rows?** One **exam setup type term** usually has **several papers** (`exam_schedule` rows — different subjects/dates).
- * Hall tickets are **not per subject**: generation creates tickets **per student** for that `(examSetupTypeTermId, sessionId)` cohort.
- * So one “generate” run can still yield **one row per scheduled paper** here (each row shares the same `examSetupTypeTermId` / `sessionId`).
- * For a **single** summary card use `view=examType`.
- *
- * **`view=subject`:** cohort hall-ticket **status** (Ready / Generated / …) applies only to the **first** paper
- * by schedule order (earliest `examDate`, then `examTime`, then `examScheduleId`). Other subjects show **`Pending`**.
+ * Dashboard for `termNumber` + `sessionId`: one row per scheduled exam cohort (`examSetupTypeTermId` + `sessionId`).
+ * Response keys only: `examSetupTypeTermId`, `sessionId`, `examTerm`, `examName`, `isHallTicketGenerated`.
  */
 export async function getExamTypeDashboardRows({
-    examSetupTypeTermId,
     sessionId,
+    termNumber,
     instituteId,
     universityId,
-    view = "subject"
+    acedmicYearId,
 }) {
-    const ht = await canGenerateHallTicketsByExamSession({
-        examSetupTypeTermId,
-        sessionId,
-        instituteId,
+    const groups = await getExamListWithHallTickets({
         universityId,
+        acedmicYearId,
+        instituteId,
+        filters: { sessionId, term: termNumber },
     });
 
-    const generatedCount = ht.stats?.generatedTicketCount ?? 0;
-    if (generatedCount === 0) {
+    if (!groups?.length) {
         return [];
     }
 
-    const typeId = ht.examSetupType?.examSetupTypeId;
-    const eligible = ht.stats?.eligibleStudentCount ?? 0;
-    const cohortGenerationStatus = ht.generationStatus ?? "Pending";
-    const cohortStatusDisplay = toSimpleExamTypeStatus(cohortGenerationStatus);
-    const examTypeLabel = ht.examSetupType?.examType ?? null;
+    return groups.map((group) => {
+        const generatedCount = group.hallTicket?.stats?.generatedTicketCount ?? 0;
+        const termVal = group.examSetupTypeTerm?.term ?? null;
+        const examNameStr = group.examType?.examName ?? "";
 
-    const buildExamTypeSummaryRow = async () => {
-        const schedules = await studentHallTicketRepository.getSchedulesByExamSetupTypeTermAndSession(
-            examSetupTypeTermId,
-            sessionId,
-            undefined
-        );
-        const date = earliestExamDateFromSchedules(schedules.map((r) => ({ examDate: r.examDate })));
-        return [
-            {
-                id: typeId != null ? String(typeId).padStart(3, "0") : "000",
-                examSetupTypeTermId,
-                sessionId,
-                name: ht.examSetupType?.examName ?? "",
-                date,
-                studentCount: eligible,
-                status: cohortStatusDisplay,
-                examType: examTypeLabel,
-            },
-        ];
-    };
-
-    if (view === "examType") {
-        return buildExamTypeSummaryRow();
-    }
-
-    const scheduleRows = await studentHallTicketRepository.getSchedulesWithSubjectsForExamTermSession(
-        examSetupTypeTermId,
-        sessionId,
-        undefined
-    );
-
-    const raw = (scheduleRows || []).filter((r) => r != null);
-    if (!raw.length) {
-        return [];
-    }
-
-    const sorted = [...raw].sort((a, b) => {
-        const da = scheduleDateToYyyyMmDd(a.examDate);
-        const db = scheduleDateToYyyyMmDd(b.examDate);
-        if (da !== db) return da.localeCompare(db);
-        const ta = String(a.examTime ?? "");
-        const tb = String(b.examTime ?? "");
-        if (ta !== tb) return ta.localeCompare(tb);
-        return (a.examScheduleId ?? 0) - (b.examScheduleId ?? 0);
-    });
-
-    return sorted.map((row, index) => {
-        const name =
-            row.subjectSchedule?.subjectName != null
-                ? row.subjectSchedule.subjectName
-                : ht.examSetupType?.examName ?? "";
-        const rowStatus = index === 0 ? cohortStatusDisplay : "Pending";
         return {
-            id: String(row.examScheduleId),
-            examSetupTypeTermId,
-            sessionId,
-            subjectId: row.subjectId ?? null,
-            name,
-            date: scheduleDateToYyyyMmDd(row.examDate),
-            studentCount: eligible,
-            status: rowStatus,
-            examType: examTypeLabel,
+            examSetupTypeTermId: group.examSetupTypeTermId,
+            sessionId: group.sessionId,
+            examTerm: termVal,
+            examName: examNameStr,
+            isHallTicketGenerated: generatedCount > 0,
         };
     });
 }
