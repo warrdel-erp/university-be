@@ -4106,25 +4106,25 @@
           "key": "hallticket_studentId",
           "value": "1",
           "type": "string",
-          "description": "Optional filter for GET /all or PATCH body"
+          "description": "Optional student id for examples"
         },
         {
           "key": "hallticket_hallTicketId",
           "value": "1",
           "type": "string",
-          "description": "student_hall_ticket.id — GET/PATCH by id"
+          "description": "student_hall_ticket.id — GET by id"
         },
         {
           "key": "hallticket_qr",
           "value": "550e8400-e29b-41d4-a716-446655440000",
           "type": "string",
-          "description": "UUID stored on hall ticket — GET byQr; PATCH body may set new qr"
+          "description": "UUID stored on hall ticket — GET byQr"
         },
         {
           "key": "hallticket_examSetupTypeId",
           "value": "1",
           "type": "string",
-          "description": "exam_setup_type id — optional filter for status by exam type"
+          "description": "exam_setup_type id — optional for related requests"
         }
       ],
       "item": [
@@ -4305,11 +4305,11 @@
           "response": []
         },
         {
-          "name": "status by exam type",
+          "name": "students by exam term",
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/status/by-exam-type**\n\nHall ticket generation status **grouped by exam setup type** (`exam_setup_type`: Mid-Term, End-Term, etc.). Under each type, `sessions[]` lists every `(examSetupTypeTermId, session)` that has schedules, with full `hallTicket` block (same as canGenerate) and `generateHallTicketsBody` for POST generate.\n\nOptional query (same as exam schedule filters): `sessionId`, `courseId`, `term`, `subjectId`, `semesterId`, `examSetupTypeTermId`, `examSetupTypeId` (restrict to one exam type — enable rows below).",
+            "description": "**GET /studentHallTicket/students/by-exam-term**\n\nQuery: **`examSetupTypeTermId`** (required), **`sessionId`** (optional).\n\nReturns exam-type metadata plus **`sessions[]`**: for each academic **`sessionId`** that has hall tickets, **`subjects`** lists every `exam_schedule` row for that exam term + session (subject, semester, date/time — same shape as GET by id). **`hallTickets`** lists every ticket with **`studentId`**, **`qr`**, and nested **`student`** (name, scholar/enroll). Omitting **`sessionId`** includes all sessions that have tickets for this exam term.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4321,164 +4321,39 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/status/by-exam-type",
+              "raw": "{{baseurl}}/studentHallTicket/students/by-exam-term?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "studentHallTicket",
-                "status",
-                "by-exam-type"
+                "students",
+                "by-exam-term"
               ],
               "query": [
-                {
-                  "key": "sessionId",
-                  "value": "{{hallticket_sessionId}}",
-                  "description": "Optional — enable to filter",
-                  "disabled": true
-                },
-                {
-                  "key": "examSetupTypeId",
-                  "value": "{{hallticket_examSetupTypeId}}",
-                  "description": "Optional — one exam type id",
-                  "disabled": true
-                },
                 {
                   "key": "examSetupTypeTermId",
                   "value": "{{hallticket_examSetupTypeTermId}}",
-                  "description": "Optional — single term row",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket generation status by exam type fetched successfully\",\n  \"data\": [\n    {\n      \"examSetupTypeId\": 1,\n      \"examType\": \"Semester\",\n      \"examName\": \"Mid-Term Examination\",\n      \"isPublish\": true,\n      \"sessions\": [\n        {\n          \"examSetupTypeTermId\": 1,\n          \"sessionId\": 1,\n          \"session\": { \"sessionId\": 1, \"sessionName\": \"2024-25\" },\n          \"academicYear\": { \"acedmicYearId\": 1, \"yearTitle\": \"2024-2025\" },\n          \"examSetupTypeTerm\": { \"term\": 1, \"courseId\": 1, \"course\": { \"courseName\": \"B.Tech\" } },\n          \"hallTicket\": {\n            \"canGenerate\": true,\n            \"generationStatus\": \"Ready\",\n            \"stats\": { \"eligibleStudentCount\": 120, \"generatedTicketCount\": 0 }\n          },\n          \"generateHallTicketsBody\": { \"examSetupTypeTermId\": 1, \"sessionId\": 1 },\n          \"scheduleCount\": 5\n        }\n      ]\n    }\n  ]\n}"
-            }
-          ]
-        },
-        {
-          "name": "get exams scheduled",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "description": "**GET /studentHallTicket/exams-scheduled**\n\n**Response:** one object per **exam type / term** where **at least one hall ticket has been generated** (same shape as the dashboard list). Omitted: exam terms with zero generated hall tickets. Fields: `id`, `name`, `date`, `studentCount`, `status`, `generated`.\n\nQuery matches **`GET /examStructure/examType/single`**: `courseId`, `sessionId`, `termNumber`. Same optional filters as **status-by-exam-type**.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/exams-scheduled",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "exams-scheduled"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{hallticket_courseId}}",
-                  "description": "Same as examStructure/examType/single",
-                  "disabled": true
+                  "description": "Primary key — exam_setup_type_term_id",
+                  "type": "text"
                 },
                 {
                   "key": "sessionId",
                   "value": "{{hallticket_sessionId}}",
-                  "description": "Same as examStructure/examType/single",
-                  "disabled": true
-                },
-                {
-                  "key": "termNumber",
-                  "value": "{{hallticket_termNumber}}",
-                  "description": "Same as examStructure/examType/single (maps to examSetupTypeTerm.term)",
-                  "disabled": true
-                },
-                {
-                  "key": "examSetupTypeId",
-                  "value": "{{hallticket_examSetupTypeId}}",
-                  "description": "Optional — one exam type",
+                  "description": "Optional — omit for every session under this exam term",
                   "disabled": true
                 }
               ]
             }
           },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Scheduled exam types fetched successfully\",\n  \"data\": [\n    {\n      \"id\": \"002\",\n      \"name\": \"Final Semester Examination\",\n      \"date\": \"2024-06-10\",\n      \"studentCount\": 120,\n      \"status\": \"Generated\",\n      \"generated\": 120\n    },\n    {\n      \"id\": \"004\",\n      \"name\": \"Sessional Examination\",\n      \"date\": \"2024-05-18\",\n      \"studentCount\": 90,\n      \"status\": \"Pending\",\n      \"generated\": 12\n    }\n  ]\n}"
-            }
-          ]
-        },
-        {
-          "name": "get all (every exam)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "description": "**GET /studentHallTicket/all**\n\nFull hall ticket rows + student + institute + exam context for the whole institute. Optional `studentId` uses `hallticket_studentId` (disable query param to list everyone).",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "all"
-              ],
-              "query": [
-                {
-                  "key": "studentId",
-                  "value": "{{hallticket_studentId}}",
-                  "description": "Optional. Disabled by default — enable to filter one student.",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"All hall tickets fetched successfully\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"qr\": \"uuid-string\",\n      \"examSetupTypeTermId\": 1,\n      \"sessionId\": 1,\n      \"studentId\": 10,\n      \"student\": {\n        \"firstName\": \"Jane\"\n      },\n      \"examSetupTypeTerm\": {\n        \"term\": 1,\n        \"examSetupType\": {\n          \"examName\": \"Mid-Term Examination\"\n        }\n      }\n    }\n  ]\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "get all",
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket**\n\nFiltered list by exam setup term + session (folder vars). Lighter includes than `/all`.",
+            "description": "**GET /studentHallTicket**\n\nFiltered list by exam setup term + session (folder vars). Default includes are lighter than a full nested payload.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4603,53 +4478,6 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"student\": {}\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "update",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "description": "**PATCH /studentHallTicket/:id**\n\nSend at least one field. Path id = `hallticket_hallTicketId`. Example body rotates `qr` (plain UUID string).",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr\": \"{{hallticket_qr}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/{{hallticket_hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "{{hallticket_hallTicketId}}"
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket updated successfully\",\n  \"data\": {}\n}"
             }
           ]
         }

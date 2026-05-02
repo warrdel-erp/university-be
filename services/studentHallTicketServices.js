@@ -123,35 +123,6 @@ function deriveHallTicketRowStatus({ eligibleStudentCount, generatedTicketCount,
     return "Pending";
 }
 
-/** Dashboard row: Ready | Generated | Pending (matches FE mock). */
-function toSimpleExamTypeStatus(generationStatus) {
-    if (generationStatus === "Generated") return "Generated";
-    if (generationStatus === "Ready") return "Ready";
-    return "Pending";
-}
-
-function earliestExamDateFromSchedules(schedules) {
-    if (!Array.isArray(schedules) || !schedules.length) return null;
-    const times = [];
-    for (const s of schedules) {
-        const d = s.examDate;
-        if (d == null) continue;
-        const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
-        if (!Number.isNaN(t)) times.push(t);
-    }
-    if (!times.length) return null;
-    return new Date(Math.min(...times)).toISOString().slice(0, 10);
-}
-
-function scheduleDateToYyyyMmDd(examDate) {
-    if (examDate == null) return null;
-    if (examDate instanceof Date) return examDate.toISOString().slice(0, 10);
-    const s = String(examDate);
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-    const t = new Date(s).getTime();
-    return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10);
-}
-
 export async function canGenerateHallTicketsByExamSession({
     examSetupTypeTermId,
     sessionId,
@@ -217,13 +188,8 @@ export async function canGenerateHallTicketsByExamSession({
     });
 }
 
-function flattenHallTicketDetail(ticket, scheduleRows) {
-    const st = ticket.student;
-    const sess = ticket.session;
-    const est = ticket.examSetupTypeTerm;
-    const examType = est?.examSetupType;
-
-    const subjects = (scheduleRows || []).map((row) => {
+function schedulesToSubjectList(scheduleRows) {
+    return (scheduleRows || []).map((row) => {
         const plain = typeof row.get === "function" ? row.get({ plain: true }) : row;
         const sub = plain.subjectSchedule;
         const sem = plain.semesterexam;
@@ -240,6 +206,15 @@ function flattenHallTicketDetail(ticket, scheduleRows) {
             scheduleKind: plain.type ?? null,
         };
     });
+}
+
+function flattenHallTicketDetail(ticket, scheduleRows) {
+    const st = ticket.student;
+    const sess = ticket.session;
+    const est = ticket.examSetupTypeTerm;
+    const examType = est?.examSetupType;
+
+    const subjects = schedulesToSubjectList(scheduleRows);
 
     return {
         id: ticket.id,
@@ -294,6 +269,102 @@ export async function getHallTicketById(id, instituteId, universityId) {
     });
 }
 
+/**
+ * All hall tickets for an exam setup type term, grouped by session, with `exam_schedule` rows mapped to subjects per session.
+ * Optional `sessionId` restricts to one academic session cohort.
+ */
+export async function getHallTicketStudentsByExamSetupTypeTerm({
+    examSetupTypeTermId,
+    sessionId,
+    instituteId,
+    universityId,
+}) {
+    return sequelize.transaction(async (transaction) => {
+        const est = await studentHallTicketRepository.findExamSetupTypeTermById(examSetupTypeTermId, transaction);
+        if (!est) {
+            const err = new Error("examSetupTypeTerm not found");
+            err.statusCode = 404;
+            throw err;
+        }
+        if (
+            Number(est.instituteId) !== Number(instituteId) ||
+            Number(est.universityId) !== Number(universityId)
+        ) {
+            const err = new Error("examSetupTypeTerm does not belong to current institute/university");
+            err.statusCode = 400;
+            throw err;
+        }
+
+        const filters = {
+            examSetupTypeTermId,
+            instituteId,
+            universityId,
+            ...(sessionId != null && { sessionId }),
+        };
+
+        const tickets = await studentHallTicketRepository.getAllHallTickets(filters, transaction);
+        const examSetupType = est.examSetupType;
+
+        const bySession = new Map();
+        for (const t of tickets) {
+            const sid = t.sessionId;
+            if (!bySession.has(sid)) bySession.set(sid, []);
+            bySession.get(sid).push(t);
+        }
+
+        const sessions = [];
+        const sortedSessionIds = [...bySession.keys()].sort((a, b) => Number(a) - Number(b));
+
+        for (const sid of sortedSessionIds) {
+            const scheduleRows = await studentHallTicketRepository.getSchedulesWithSubjectsForExamTermSession(
+                examSetupTypeTermId,
+                sid,
+                transaction
+            );
+            const subjects = schedulesToSubjectList(scheduleRows);
+            const sessionTickets = bySession.get(sid);
+            const sess = sessionTickets[0]?.session;
+
+            sessions.push({
+                sessionId: sid,
+                sessionName: sess?.sessionName ?? null,
+                subjects,
+                hallTickets: sessionTickets.map((ht) => ({
+                    id: ht.id,
+                    qr: ht.qr,
+                    studentId: ht.studentId,
+                    createdAt: ht.createdAt,
+                    updatedAt: ht.updatedAt,
+                    student: ht.student
+                        ? {
+                              studentId: ht.student.studentId,
+                              firstName: ht.student.firstName,
+                              middleName: ht.student.middleName,
+                              lastName: ht.student.lastName,
+                              scholarNumber: ht.student.scholarNumber,
+                              enrollNumber: ht.student.enrollNumber,
+                          }
+                        : null,
+                })),
+            });
+        }
+
+        return {
+            examSetupTypeTermId: est.examSetupTypeTermId,
+            term: est.term,
+            courseId: est.courseId,
+            examSetupType: examSetupType
+                ? {
+                      examSetupTypeId: examSetupType.examSetupTypeId,
+                      examType: examSetupType.examType,
+                      examName: examSetupType.examName,
+                  }
+                : null,
+            sessions,
+        };
+    });
+}
+
 export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
     return sequelize.transaction(async (transaction) => {
         const hallTicket = await studentHallTicketRepository.getHallTicketByQr(
@@ -322,13 +393,6 @@ export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
 export async function getAllHallTickets(filters) {
     return sequelize.transaction(async (transaction) => {
         return studentHallTicketRepository.getAllHallTickets(filters, transaction);
-    });
-}
-
-/** All hall tickets across exams with full student + related exam/institute payload (GET /all). */
-export async function getAllHallTicketsAllExams(filters) {
-    return sequelize.transaction(async (transaction) => {
-        return studentHallTicketRepository.getAllHallTickets(filters, transaction, { fullDetail: true });
     });
 }
 
@@ -444,97 +508,6 @@ export async function getExamListWithHallTickets({ universityId, acedmicYearId, 
 }
 
 /**
- * Same data as list-with-hall-tickets, grouped by exam setup type (Mid-Term / End-Term / …).
- * Each item has examSetupTypeId + labels and an array of session/term rows with hallTicket status.
- */
-export async function getHallTicketStatusByExamType({ universityId, acedmicYearId, instituteId, filters }) {
-    const flatGroups = await getExamListWithHallTickets({
-        universityId,
-        acedmicYearId,
-        instituteId,
-        filters,
-    });
-
-    const byExamTypeId = new Map();
-
-    for (const item of flatGroups) {
-        const typeId = item.examType?.examSetupTypeId;
-        if (typeId == null) continue;
-
-        if (!byExamTypeId.has(typeId)) {
-            byExamTypeId.set(typeId, {
-                examSetupTypeId: typeId,
-                examType: item.examType?.examType ?? null,
-                examName: item.examType?.examName ?? null,
-                isPublish: item.examType?.isPublish ?? null,
-                sessions: [],
-            });
-        }
-
-        byExamTypeId.get(typeId).sessions.push({
-            examSetupTypeTermId: item.examSetupTypeTermId,
-            sessionId: item.sessionId,
-            session: item.session,
-            academicYear: item.academicYear,
-            examSetupTypeTerm: item.examSetupTypeTerm,
-            hallTicket: item.hallTicket,
-            generateHallTicketsBody: item.generateHallTicketsBody,
-            scheduleCount: Array.isArray(item.schedules) ? item.schedules.length : 0,
-        });
-    }
-
-    let result = Array.from(byExamTypeId.values()).sort((a, b) =>
-        (a.examName || "").localeCompare(b.examName || "")
-    );
-
-    if (filters?.examSetupTypeId != null) {
-        const only = Number(filters.examSetupTypeId);
-        result = result.filter((row) => row.examSetupTypeId === only);
-    }
-
-    return result;
-}
-
-/**
- * One row per scheduled exam **type** (grouped from exam_schedule rows): compact dashboard shape.
- * `date` = earliest subject paper date in that exam type; counts from hall-ticket stats for (examSetupTypeTermId, sessionId).
- * **Only** includes rows where at least one hall ticket has been generated for that exam term + session.
- */
-export async function getScheduledExamsWithHallTicketInfo({ universityId, acedmicYearId, instituteId, filters }) {
-    let groups = await getExamListWithHallTickets({
-        universityId,
-        acedmicYearId,
-        instituteId,
-        filters,
-    });
-
-    if (filters?.examSetupTypeId != null) {
-        const only = Number(filters.examSetupTypeId);
-        groups = groups.filter((g) => g.examType?.examSetupTypeId === only);
-    }
-
-    // Only exam types / terms where at least one hall ticket exists.
-    groups = groups.filter((g) => (g.hallTicket?.stats?.generatedTicketCount ?? 0) > 0);
-
-    return groups.map((g) => {
-        const typeId = g.examType?.examSetupTypeId;
-        const ht = g.hallTicket;
-        const eligible = ht?.stats?.eligibleStudentCount ?? 0;
-        const generated = ht?.stats?.generatedTicketCount ?? 0;
-        const genStatus = ht?.generationStatus ?? "Pending";
-
-        return {
-            id: typeId != null ? String(typeId).padStart(3, "0") : "000",
-            name: g.examType?.examName ?? "",
-            date: earliestExamDateFromSchedules(g.schedules),
-            studentCount: eligible,
-            status: toSimpleExamTypeStatus(genStatus),
-            generated,
-        };
-    });
-}
-
-/**
  * Dashboard for `termNumber` + `sessionId`: one row per scheduled exam cohort (`examSetupTypeTermId` + `sessionId`).
  * Response keys only: `examSetupTypeTermId`, `sessionId`, `examTerm`, `examName`, `isHallTicketGenerated`.
  */
@@ -568,12 +541,6 @@ export async function getExamTypeDashboardRows({
             examName: examNameStr,
             isHallTicketGenerated: generatedCount > 0,
         };
-    });
-}
-
-export async function updateHallTicket(id, payload) {
-    return sequelize.transaction(async (transaction) => {
-        return studentHallTicketRepository.updateHallTicket(id, payload, transaction);
     });
 }
 

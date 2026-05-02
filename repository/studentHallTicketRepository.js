@@ -154,13 +154,6 @@ export async function countHallTickets(filters = {}, transaction) {
     return model.studentHallTicketModel.count({ where, transaction });
 }
 
-export async function updateHallTicket(id, payload, transaction) {
-    const hallTicket = await model.studentHallTicketModel.findByPk(id, { transaction });
-    if (!hallTicket) return null;
-    await hallTicket.update(payload, { transaction });
-    return hallTicket;
-}
-
 export async function deleteHallTicket(id, transaction) {
     return model.studentHallTicketModel.destroy({ where: { id }, transaction });
 }
