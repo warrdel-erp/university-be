@@ -1,6 +1,19 @@
 import * as studentHallTicketServices from "../services/studentHallTicketServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
+/** Aligns with GET /examStructure/examType/single: `termNumber` preferred over `term`. */
+function termFilterFromQuery(q) {
+    if (q.termNumber != null && q.termNumber !== "") {
+        const n = Number(q.termNumber);
+        if (!Number.isNaN(n)) return n;
+    }
+    if (q.term !== undefined && q.term !== null && q.term !== "") {
+        const n = Number(q.term);
+        if (!Number.isNaN(n)) return n;
+    }
+    return undefined;
+}
+
 export async function generateHallTickets(req, res) {
     try {
         const { examSetupTypeTermId, sessionId } = req.body;
@@ -40,12 +53,13 @@ export async function getHallTicketStatusByExamType(req, res) {
         const instituteId = req.user.defaultInstituteId;
         const q = req.query;
 
+        const term = termFilterFromQuery(q);
         const filters = {
             ...(q.subjectId != null && { subjectId: Number(q.subjectId) }),
             ...(q.semesterId != null && { semesterId: Number(q.semesterId) }),
             ...(q.examSetupTypeTermId != null && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
             ...(q.courseId != null && { courseId: Number(q.courseId) }),
-            ...(q.term !== undefined && q.term !== null && q.term !== "" && { term: Number(q.term) }),
+            ...(term !== undefined && { term }),
             ...(q.sessionId != null && { sessionId: Number(q.sessionId) }),
             ...(q.examSetupTypeId != null && { examSetupTypeId: Number(q.examSetupTypeId) }),
         };
@@ -71,12 +85,13 @@ export async function getExamsScheduled(req, res) {
         const instituteId = req.user.defaultInstituteId;
         const q = req.query;
 
+        const term = termFilterFromQuery(q);
         const filters = {
             ...(q.subjectId != null && { subjectId: Number(q.subjectId) }),
             ...(q.semesterId != null && { semesterId: Number(q.semesterId) }),
             ...(q.examSetupTypeTermId != null && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
             ...(q.courseId != null && { courseId: Number(q.courseId) }),
-            ...(q.term !== undefined && q.term !== null && q.term !== "" && { term: Number(q.term) }),
+            ...(term !== undefined && { term }),
             ...(q.sessionId != null && { sessionId: Number(q.sessionId) }),
             ...(q.examSetupTypeId != null && { examSetupTypeId: Number(q.examSetupTypeId) }),
         };
@@ -88,7 +103,7 @@ export async function getExamsScheduled(req, res) {
             filters,
         });
 
-        return SuccessResponse(res, 200, "Scheduled exams with hall ticket status fetched successfully", result);
+        return SuccessResponse(res, 200, "Scheduled exam types fetched successfully", result);
     } catch (error) {
         console.error("Error in getExamsScheduled:", error);
         return ErrorResponse(res, 500, error.message || "Internal Server Error");

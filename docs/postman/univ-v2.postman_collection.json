@@ -4091,6 +4091,18 @@
           "description": "Session PK — used by generate, canGenerate, filtered list"
         },
         {
+          "key": "hallticket_courseId",
+          "value": "1",
+          "type": "string",
+          "description": "Program/course PK — same as GET /examStructure/examType/single"
+        },
+        {
+          "key": "hallticket_termNumber",
+          "value": "1",
+          "type": "string",
+          "description": "Term index on exam setup type term — same as examStructure single `termNumber`"
+        },
+        {
           "key": "hallticket_studentId",
           "value": "1",
           "type": "string",
@@ -4314,7 +4326,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/exams-scheduled**\n\nEach **exam_schedule** row (subject paper): exam date/time, **program** (`course` + **totalStudents** = eligible cohort for that exam session), **semester**, **examType**, session, academic year. **isHallTicketGenerated** + **hallTicket.status** (`pending` | `partial` | `generated` | `no_students`) reflect hall tickets for the shared `(examSetupTypeTermId, sessionId)`. Same optional query filters as status-by-exam-type.",
+            "description": "**GET /studentHallTicket/exams-scheduled**\n\n**Response:** one object per **exam type / term** where **at least one hall ticket has been generated** (same shape as the dashboard list). Omitted: exam terms with zero generated hall tickets. Fields: `id`, `name`, `date`, `studentCount`, `status`, `generated`.\n\nQuery matches **`GET /examStructure/examType/single`**: `courseId`, `sessionId`, `termNumber`. Same optional filters as **status-by-exam-type**.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4336,9 +4348,21 @@
               ],
               "query": [
                 {
+                  "key": "courseId",
+                  "value": "{{hallticket_courseId}}",
+                  "description": "Same as examStructure/examType/single",
+                  "disabled": true
+                },
+                {
                   "key": "sessionId",
                   "value": "{{hallticket_sessionId}}",
-                  "description": "Optional filter",
+                  "description": "Same as examStructure/examType/single",
+                  "disabled": true
+                },
+                {
+                  "key": "termNumber",
+                  "value": "{{hallticket_termNumber}}",
+                  "description": "Same as examStructure/examType/single (maps to examSetupTypeTerm.term)",
                   "disabled": true
                 },
                 {
@@ -4357,7 +4381,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Scheduled exams with hall ticket status fetched successfully\",\n  \"data\": [\n    {\n      \"examScheduleId\": 10,\n      \"examDate\": \"2025-05-15\",\n      \"examTime\": \"10:00:00\",\n      \"duration\": \"180\",\n      \"scheduleKind\": \"Theory\",\n      \"subject\": { \"subjectId\": 3, \"subjectName\": \"Mathematics\", \"subjectCode\": \"MTH101\" },\n      \"semester\": { \"semesterId\": 2, \"name\": \"Semester 2\" },\n      \"program\": { \"courseId\": 1, \"courseName\": \"B.Tech\", \"courseCode\": \"BT\", \"totalStudents\": 120 },\n      \"examType\": { \"examSetupTypeId\": 1, \"examType\": \"Semester\", \"examName\": \"Mid-Term Examination\", \"isPublish\": true },\n      \"session\": { \"sessionId\": 1, \"sessionName\": \"2024-25\" },\n      \"academicYear\": { \"acedmicYearId\": 1, \"yearTitle\": \"2024-2025\" },\n      \"examSetupTypeTermId\": 5,\n      \"sessionId\": 1,\n      \"examSetupTypeTerm\": { \"examSetupTypeTermId\": 5, \"term\": 1, \"courseId\": 1 },\n      \"studentCountOnSchedule\": 120,\n      \"isHallTicketGenerated\": false,\n      \"hallTicket\": {\n        \"isGenerated\": false,\n        \"status\": \"pending\",\n        \"generationStatus\": \"Ready\",\n        \"canGenerate\": true,\n        \"eligibleStudentCount\": 120,\n        \"generatedTicketCount\": 0,\n        \"pendingTicketCount\": 120,\n        \"checks\": {}\n      },\n      \"generateHallTicketsBody\": { \"examSetupTypeTermId\": 5, \"sessionId\": 1 }\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Scheduled exam types fetched successfully\",\n  \"data\": [\n    {\n      \"id\": \"002\",\n      \"name\": \"Final Semester Examination\",\n      \"date\": \"2024-06-10\",\n      \"studentCount\": 120,\n      \"status\": \"Generated\",\n      \"generated\": 120\n    },\n    {\n      \"id\": \"004\",\n      \"name\": \"Sessional Examination\",\n      \"date\": \"2024-05-18\",\n      \"studentCount\": 90,\n      \"status\": \"Pending\",\n      \"generated\": 12\n    }\n  ]\n}"
             }
           ]
         },

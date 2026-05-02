@@ -42,6 +42,8 @@ const updateSchema = z.object({
 const statusByExamTypeQuerySchema = z.object({
     sessionId: z.coerce.number().int().positive().optional(),
     courseId: z.coerce.number().int().positive().optional(),
+    /** Same as GET /examStructure/examType/single — maps to examSetupTypeTerm.term in schedule filters. */
+    termNumber: z.coerce.number().int().optional(),
     term: z.coerce.number().optional(),
     subjectId: z.coerce.number().int().positive().optional(),
     semesterId: z.coerce.number().int().positive().optional(),

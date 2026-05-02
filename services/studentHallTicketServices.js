@@ -123,6 +123,26 @@ function deriveHallTicketRowStatus({ eligibleStudentCount, generatedTicketCount,
     return "Pending";
 }
 
+/** Dashboard row: Ready | Generated | Pending (matches FE mock). */
+function toSimpleExamTypeStatus(generationStatus) {
+    if (generationStatus === "Generated") return "Generated";
+    if (generationStatus === "Ready") return "Ready";
+    return "Pending";
+}
+
+function earliestExamDateFromSchedules(schedules) {
+    if (!Array.isArray(schedules) || !schedules.length) return null;
+    const times = [];
+    for (const s of schedules) {
+        const d = s.examDate;
+        if (d == null) continue;
+        const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
+        if (!Number.isNaN(t)) times.push(t);
+    }
+    if (!times.length) return null;
+    return new Date(Math.min(...times)).toISOString().slice(0, 10);
+}
+
 export async function canGenerateHallTicketsByExamSession({
     examSetupTypeTermId,
     sessionId,
@@ -396,144 +416,42 @@ export async function getHallTicketStatusByExamType({ universityId, acedmicYearI
 }
 
 /**
- * One row per scheduled exam (exam_schedule): subject paper date/time, program (course), semester,
- * exam type, session/academic year, plus hall-ticket state for that exam's (examSetupTypeTermId + sessionId).
- * Hall ticket stats are shared across all subject rows in the same term+session (cached per pair).
+ * One row per scheduled exam **type** (grouped from exam_schedule rows): compact dashboard shape.
+ * `date` = earliest subject paper date in that exam type; counts from hall-ticket stats for (examSetupTypeTermId, sessionId).
+ * **Only** includes rows where at least one hall ticket has been generated for that exam term + session.
  */
 export async function getScheduledExamsWithHallTicketInfo({ universityId, acedmicYearId, instituteId, filters }) {
-    const rows = await examScheduleServices.getExamSchedules(universityId, acedmicYearId, instituteId, filters, {
-        includeCourse: true,
+    let groups = await getExamListWithHallTickets({
+        universityId,
+        acedmicYearId,
+        instituteId,
+        filters,
     });
 
-    if (!rows?.length) return [];
-
-    const hallTicketCache = new Map();
-
-    async function resolveHallTicket(examSetupTypeTermId, sessionId) {
-        const cacheKey = `${examSetupTypeTermId}_${sessionId}`;
-        if (!hallTicketCache.has(cacheKey)) {
-            const ht = await canGenerateHallTicketsByExamSession({
-                examSetupTypeTermId,
-                sessionId,
-                instituteId,
-                universityId,
-            });
-            hallTicketCache.set(cacheKey, ht);
-        }
-        return hallTicketCache.get(cacheKey);
+    if (filters?.examSetupTypeId != null) {
+        const only = Number(filters.examSetupTypeId);
+        groups = groups.filter((g) => g.examType?.examSetupTypeId === only);
     }
 
-    const out = [];
+    // Only exam types / terms where at least one hall ticket exists.
+    groups = groups.filter((g) => (g.hallTicket?.stats?.generatedTicketCount ?? 0) > 0);
 
-    for (const row of rows) {
-        if (filters?.examSetupTypeId != null) {
-            const typeId = row.examSetupTypeTerm?.examSetupType?.examSetupTypeId;
-            if (typeId !== Number(filters.examSetupTypeId)) continue;
-        }
+    return groups.map((g) => {
+        const typeId = g.examType?.examSetupTypeId;
+        const ht = g.hallTicket;
+        const eligible = ht?.stats?.eligibleStudentCount ?? 0;
+        const generated = ht?.stats?.generatedTicketCount ?? 0;
+        const genStatus = ht?.generationStatus ?? "Pending";
 
-        const termId = row.examSetupTypeTermId;
-        const sessionId = row.sessionId;
-        const ht = await resolveHallTicket(termId, sessionId);
-        const eligible = ht.stats?.eligibleStudentCount ?? 0;
-        const generated = ht.stats?.generatedTicketCount ?? 0;
-
-        const isHallTicketGenerated = eligible > 0 && generated >= eligible;
-
-        const est = row.examSetupTypeTerm;
-        const examSetupType = est?.examSetupType;
-        const course = est?.course;
-
-        let hallTicketStatus = "pending";
-        if (eligible === 0) hallTicketStatus = "no_students";
-        else if (generated >= eligible) hallTicketStatus = "generated";
-        else if (generated > 0) hallTicketStatus = "partial";
-
-        out.push({
-            examScheduleId: row.examScheduleId,
-            examDate: row.examDate,
-            examTime: row.examTime,
-            duration: row.duration,
-            scheduleKind: row.type,
-            subject: row.subjectSchedule
-                ? {
-                      subjectId: row.subjectSchedule.subjectId,
-                      subjectName: row.subjectSchedule.subjectName,
-                      subjectCode: row.subjectSchedule.subjectCode,
-                  }
-                : null,
-            semester: row.semesterexam
-                ? {
-                      semesterId: row.semesterexam.semesterId,
-                      name: row.semesterexam.name,
-                  }
-                : null,
-            program: course
-                ? {
-                      courseId: course.courseId,
-                      courseName: course.courseName,
-                      courseCode: course.courseCode,
-                      totalStudents: eligible,
-                  }
-                : null,
-            examType: examSetupType
-                ? {
-                      examSetupTypeId: examSetupType.examSetupTypeId,
-                      examType: examSetupType.examType,
-                      examName: examSetupType.examName,
-                      isPublish: examSetupType.isPublish,
-                  }
-                : null,
-            session: row.sessionSchedule
-                ? {
-                      sessionId: row.sessionSchedule.sessionId,
-                      sessionName: row.sessionSchedule.sessionName,
-                  }
-                : null,
-            academicYear: row.acedmicYearSchedule
-                ? {
-                      acedmicYearId: row.acedmicYearSchedule.acedmicYearId,
-                      yearTitle: row.acedmicYearSchedule.yearTitle,
-                  }
-                : null,
-            examSetupTypeTermId: termId,
-            sessionId,
-            examSetupTypeTerm: est
-                ? {
-                      examSetupTypeTermId: est.examSetupTypeTermId,
-                      term: est.term,
-                      courseId: est.courseId,
-                  }
-                : null,
-            studentCountOnSchedule: row.getDataValue ? row.getDataValue("studentCount") ?? 0 : 0,
-            isHallTicketGenerated,
-            hallTicket: {
-                isGenerated: isHallTicketGenerated,
-                status: hallTicketStatus,
-                generationStatus: ht.generationStatus,
-                canGenerate: ht.canGenerate,
-                eligibleStudentCount: eligible,
-                generatedTicketCount: generated,
-                pendingTicketCount: ht.stats?.pendingTicketCount ?? 0,
-                checks: ht.checks,
-            },
-            generateHallTicketsBody: {
-                examSetupTypeTermId: termId,
-                sessionId,
-            },
-        });
-    }
-
-    out.sort((a, b) => {
-        const dA = a.examDate ? String(a.examDate) : "";
-        const dB = b.examDate ? String(b.examDate) : "";
-        if (dA !== dB) return dA.localeCompare(dB);
-        const tA = a.examTime ? String(a.examTime) : "";
-        const tB = b.examTime ? String(b.examTime) : "";
-        if (tA !== tB) return tA.localeCompare(tB);
-        return (a.examScheduleId ?? 0) - (b.examScheduleId ?? 0);
+        return {
+            id: typeId != null ? String(typeId).padStart(3, "0") : "000",
+            name: g.examType?.examName ?? "",
+            date: earliestExamDateFromSchedules(g.schedules),
+            studentCount: eligible,
+            status: toSimpleExamTypeStatus(genStatus),
+            generated,
+        };
     });
-
-    return out;
 }
 
 export async function updateHallTicket(id, payload) {
