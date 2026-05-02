@@ -89,6 +89,7 @@ import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
+import answerSheetQr from "./router/answerSheetQrRoute.js";
 // middleware
 app.use(fileUpload());
 app.use(json());
@@ -115,6 +116,7 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
+app.use("/answerSheetQr", answerSheetQr);
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
