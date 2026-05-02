@@ -1024,8 +1024,8 @@ examStructureScheduleMappingModel.belongsTo(sessionModel, { foreignKey: "session
 // examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
 // examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
 
-examScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjectSchedule" });
-subjectModel.hasMany(examScheduleModel, { foreignKey: "subject_id", as: "scheduleSubject" });
+examScheduleModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectSchedule" });
+subjectModel.hasMany(examScheduleModel, { foreignKey: "subjectId", as: "scheduleSubject" });
 
 examScheduleModel.belongsTo(acedmicYearModel, { foreignKey: "acedmicYearId", as: "acedmicYearSchedule" });
 acedmicYearModel.hasMany(examScheduleModel, { foreignKey: "acedmicYearId", as: "academicYearSchedule" });

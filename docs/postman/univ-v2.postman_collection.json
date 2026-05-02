@@ -4267,7 +4267,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`studentCount`** (eligible students in that term + session; same as GET `/canGenerate` **eligibleStudentCount**), **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
+            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`examType`** (`\"theory\"` | `\"practical\"` | null — from exam setup type or, if needed, consistent `exam_schedule.type`; null when mixed or unknown), **`studentCount`** (eligible students in that term + session; same as GET `/canGenerate` **eligibleStudentCount**), **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4305,55 +4305,11 @@
           "response": []
         },
         {
-          "name": "students by exam term",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "description": "**GET /studentHallTicket/students/by-exam-term**\n\nQuery: **`examSetupTypeTermId`** (required), **`sessionId`** (optional).\n\nReturns exam-type metadata plus **`sessions[]`**: for each academic **`sessionId`** that has hall tickets, **`subjects`** lists every `exam_schedule` row for that exam term + session (subject, semester, date/time — same shape as GET by id). **`hallTickets`** lists every ticket with **`studentId`**, **`qr`**, and nested **`student`** (name, scholar/enroll). Omitting **`sessionId`** includes all sessions that have tickets for this exam term.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/students/by-exam-term?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "students",
-                "by-exam-term"
-              ],
-              "query": [
-                {
-                  "key": "examSetupTypeTermId",
-                  "value": "{{hallticket_examSetupTypeTermId}}",
-                  "description": "Primary key — exam_setup_type_term_id",
-                  "type": "text"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{hallticket_sessionId}}",
-                  "description": "Optional — omit for every session under this exam term",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "get all",
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket**\n\nFiltered list by exam setup term + session (folder vars). Default includes are lighter than a full nested payload.",
+            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default 10, max 100). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4365,7 +4321,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}",
+              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&page=1&limit=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4382,6 +4338,16 @@
                   "key": "sessionId",
                   "value": "{{hallticket_sessionId}}",
                   "type": "text"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1-based page index"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size (max 100)"
                 }
               ]
             }
@@ -4393,7 +4359,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets fetched successfully\",\n  \"data\": []\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets fetched successfully\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 0,\n    \"limit\": 10,\n    \"page\": 1,\n    \"totalPages\": 0\n  }\n}"
             }
           ]
         },
@@ -4402,7 +4368,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Response is a **flat** object: student/session/exam-type fields at top level, plus **`subjects`** — every `exam_schedule` row for this ticket’s `examSetupTypeTermId` + `sessionId` (same exam type), each entry includes subject, semester, date/time.",
+            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Top level: student/session/exam-type fields; **`subjects`** lists every `exam_schedule` for this ticket’s term + session. Each item has flat fields (`subjectId`, `subjectName`, …) plus nested **`subject`** (full subject row: type, term, course, etc.) and **`semester`** when linked.",
             "auth": {
               "type": "bearer",
               "bearer": [

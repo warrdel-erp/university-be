@@ -33,7 +33,7 @@ export async function canGenerateHallTickets(req, res) {
     }
 }
 
-/** GET query: `termNumber`, `sessionId` — cohort list with `studentCount` (eligible for exam) and `isHallTicketGenerated`. */
+/** GET query: `termNumber`, `sessionId` — cohort list with `examType` (`theory`|`practical`|null), `studentCount`, `isHallTicketGenerated`. */
 export async function getExamTypeDashboard(req, res) {
     try {
         const sessionId = Number(req.query.sessionId);
@@ -51,37 +51,26 @@ export async function getExamTypeDashboard(req, res) {
     }
 }
 
-export async function getHallTicketStudentsByExamTerm(req, res) {
-    try {
-        const examSetupTypeTermId = Number(req.query.examSetupTypeTermId);
-        const sessionId =
-            req.query.sessionId != null && String(req.query.sessionId).length > 0
-                ? Number(req.query.sessionId)
-                : undefined;
-        const result = await studentHallTicketServices.getHallTicketStudentsByExamSetupTypeTerm({
-            examSetupTypeTermId,
-            sessionId: Number.isFinite(sessionId) ? sessionId : undefined,
-            instituteId: req.user.defaultInstituteId,
-            universityId: req.user.universityId,
-        });
-        return SuccessResponse(res, 200, "Hall ticket students and exam subjects fetched successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-}
-
 export async function getAllHallTickets(req, res) {
     try {
+        const q = req.query;
         const filters = {
-            ...(req.query.examSetupTypeTermId && { examSetupTypeTermId: Number(req.query.examSetupTypeTermId) }),
-            ...(req.query.sessionId && { sessionId: Number(req.query.sessionId) }),
-            ...(req.query.studentId && { studentId: Number(req.query.studentId) }),
+            ...(q.examSetupTypeTermId && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
+            ...(q.sessionId && { sessionId: Number(q.sessionId) }),
+            ...(q.studentId && { studentId: Number(q.studentId) }),
             instituteId: req.user.defaultInstituteId,
-            universityId: req.user.universityId
+            universityId: req.user.universityId,
         };
 
-        const result = await studentHallTicketServices.getAllHallTickets(filters);
-        return SuccessResponse(res, 200, "Hall tickets fetched successfully", result);
+        const result = await studentHallTicketServices.getAllHallTickets(filters, {
+            page: q.page,
+            limit: q.limit,
+        });
+        return SuccessResponse(res, 200, "Hall tickets fetched successfully", result.rows, {
+            total: result.total,
+            limit: result.limit,
+            page: result.page,
+        });
     } catch (error) {
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }

@@ -32,14 +32,14 @@ export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTe
             {
                 model: model.subjectModel,
                 as: "subjectSchedule",
-                attributes: ["subjectId", "subjectName", "subjectCode"],
                 required: false,
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             },
             {
                 model: model.semesterModel,
                 as: "semesterexam",
-                attributes: ["semesterId", "name"],
                 required: false,
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             },
         ],
         order: [
@@ -138,7 +138,9 @@ export async function getAllHallTickets(filters = {}, transaction, options = {})
         transaction,
         where,
         include,
-        order: [["id", "DESC"]]
+        order: [["id", "DESC"]],
+        ...(options.limit != null && { limit: options.limit }),
+        ...(options.offset != null && { offset: options.offset }),
     });
 }
 

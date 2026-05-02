@@ -20,7 +20,6 @@ const canGenerateQuerySchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
 });
 
-/** `termNumber` + `sessionId` — one row per cohort with `studentCount`, `isHallTicketGenerated`, etc. */
 const examTypeDashboardQuerySchema = z.object({
     sessionId: z.coerce.number().int().positive(),
     termNumber: z.coerce.number().int(),
@@ -30,10 +29,13 @@ const qrQuerySchema = z.object({
     qr: z.string().min(1, "qr is required")
 });
 
-/** Required `examSetupTypeTermId`; optional `sessionId` narrows to one cohort. */
-const studentsByExamTermQuerySchema = z.object({
-    examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number"),
+/** Filters + optional `page` / `limit` (defaults 1 / 10, max limit 100). */
+const listHallTicketsQuerySchema = z.object({
+    examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number").optional(),
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number").optional(),
+    studentId: z.string().regex(/^\d+$/, "studentId must be a number").optional(),
+    page: z.string().regex(/^\d+$/, "page must be a positive integer").optional(),
+    limit: z.string().regex(/^\d+$/, "limit must be a positive integer").optional(),
 });
 
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
@@ -47,14 +49,8 @@ router.get(
     studentHallTicketController.getExamTypeDashboard
 );
 
-router.get(
-    "/students/by-exam-term",
-    userAuth,
-    validate({ query: studentsByExamTermQuerySchema }),
-    studentHallTicketController.getHallTicketStudentsByExamTerm
-);
+router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
 
-router.get("/", userAuth, studentHallTicketController.getAllHallTickets);
 router.get("/:id", userAuth, validate({ params: idParamsSchema }), studentHallTicketController.getHallTicketById);
 
 export default router;
