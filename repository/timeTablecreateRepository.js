@@ -1296,6 +1296,8 @@ export async function getTodayClassScheduleForEmployee(
 ) {
   try {
     const result = await model.classScheduleModel.findAll({
+      raw: true,
+      nest: true,
       where: {
         [Op.or]: [
           { employeeId },
@@ -1304,6 +1306,9 @@ export async function getTodayClassScheduleForEmployee(
       },
       attributes: [
         'timeTableMappingId',
+        'timeTableType',
+        'day',
+        'period',
         [
           Sequelize.literal(`(
             SELECT COUNT(*) 
@@ -1378,7 +1383,7 @@ export async function getTodayClassScheduleForEmployee(
                 {
                   model: model.subjectModel,
                   as: "subjects",
-                  attributes: ['subjectName']
+                  attributes: ['subjectId', 'subjectName']
                 }
               ]
             }
@@ -1387,12 +1392,12 @@ export async function getTodayClassScheduleForEmployee(
         {
           model: model.subjectModel,
           as: "timeTableSubject",
-          attributes: ['subjectName']
+          attributes: ['subjectId', 'subjectName']
         },
         {
           model: model.electiveSubjectModel,
           as: "timeTableElective",
-          attributes: ['electiveSubjectName']
+          attributes: ['electiveSubjectId', 'electiveSubjectName']
         },
         {
           model: model.classRoomModel,
@@ -1475,7 +1480,7 @@ export async function getPastClassSchedulesForEmployee(
                 {
                   model: model.subjectModel,
                   as: "subjects",
-                  attributes: ['subjectName']
+                  attributes: ['subjectId', 'subjectName']
                 }
               ]
             }
@@ -1484,12 +1489,12 @@ export async function getPastClassSchedulesForEmployee(
         {
           model: model.subjectModel,
           as: "timeTableSubject",
-          attributes: ['subjectName']
+          attributes: ['subjectId', 'subjectName']
         },
         {
           model: model.electiveSubjectModel,
           as: "timeTableElective",
-          attributes: ['electiveSubjectName']
+          attributes: ['electiveSubjectId', 'electiveSubjectName']
         },
         {
           model: model.classRoomModel,
@@ -1572,7 +1577,7 @@ export async function getUpcomingClassSchedulesForEmployee(
                 {
                   model: model.subjectModel,
                   as: "subjects",
-                  attributes: ['subjectName']
+                  attributes: ['subjectId', 'subjectName']
                 }
               ]
             }
@@ -1581,12 +1586,12 @@ export async function getUpcomingClassSchedulesForEmployee(
         {
           model: model.subjectModel,
           as: "timeTableSubject",
-          attributes: ['subjectName']
+          attributes: ['subjectId', 'subjectName']
         },
         {
           model: model.electiveSubjectModel,
           as: "timeTableElective",
-          attributes: ['electiveSubjectName']
+          attributes: ['electiveSubjectId', 'electiveSubjectName']
         },
         {
           model: model.classRoomModel,
