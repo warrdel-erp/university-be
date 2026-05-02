@@ -121,7 +121,7 @@ export const updateEmployee = async (req, res) => {
             updatedBy,
             createdBy,
             universityId,
-            roleId,
+            // roleId,
             instituteId
         );
 
@@ -219,7 +219,7 @@ export async function getSubjectEvalution(req, res) {
 
 export const getTodayClassSchedule = async (req, res) => {
     try {
-        const { employeeId, date, sessionId } = req.query;
+        const { employeeId, date, sessionId, groupPeriods } = req.query;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
@@ -236,7 +236,8 @@ export const getTodayClassSchedule = async (req, res) => {
             employeeId,
             formattedDate,
             dayString,
-            sessionId
+            sessionId,
+            groupPeriods === 'true'
         );
 
         res.status(200).send({ success: true, result });
@@ -291,7 +292,7 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
 
 export const getPastClassSchedules = async (req, res) => {
     try {
-        const { employeeId, date } = req.query;
+        const { employeeId, date, groupPeriods } = req.query;
         const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
@@ -308,7 +309,8 @@ export const getPastClassSchedules = async (req, res) => {
         const result = await employee.getPastClassSchedules(
             employeeId,
             acedmicYearId,
-            formattedDate
+            formattedDate,
+            groupPeriods === 'true'
         );
 
         res.status(200).send({ success: true, result });
@@ -320,7 +322,7 @@ export const getPastClassSchedules = async (req, res) => {
 
 export const getUpcomingClassSchedules = async (req, res) => {
     try {
-        const { employeeId, date } = req.query;
+        const { employeeId, date, groupPeriods } = req.query;
         const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
@@ -337,7 +339,8 @@ export const getUpcomingClassSchedules = async (req, res) => {
         const result = await employee.getUpcomingClassSchedules(
             employeeId,
             acedmicYearId,
-            formattedDate
+            formattedDate,
+            groupPeriods === 'true'
         );
 
         res.status(200).send({ success: true, result });
