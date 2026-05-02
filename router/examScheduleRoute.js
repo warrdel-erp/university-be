@@ -22,7 +22,23 @@ const allocateSeatsSchema = z.object({
     examScheduleId: z.number({ required_error: "examScheduleId is required" })
 });
 
+const listWithHallTicketsQuerySchema = z.object({
+    sessionId: z.coerce.number().int().positive().optional(),
+    courseId: z.coerce.number().int().positive().optional(),
+    term: z.coerce.number().optional(),
+    subjectId: z.coerce.number().int().positive().optional(),
+    semesterId: z.coerce.number().int().positive().optional(),
+    examSetupTypeTermId: z.coerce.number().int().positive().optional(),
+});
+
 router.get('/', userAuth, examScheduleController.getExamSchedules);
+
+router.get(
+    '/list-with-hall-tickets',
+    userAuth,
+    validate({ query: listWithHallTicketsQuerySchema }),
+    examScheduleController.getExamListWithHallTickets
+);
 
 router.get('/:id', userAuth, examScheduleController.getExamScheduleById);
 

@@ -94,7 +94,7 @@ export async function getHallTicketByQr(qr, instituteId, universityId, transacti
     });
 }
 
-export async function getAllHallTickets(filters = {}, transaction) {
+export async function getAllHallTickets(filters = {}, transaction, options = {}) {
     const where = {
         ...(filters.examSetupTypeTermId && { examSetupTypeTermId: filters.examSetupTypeTermId }),
         ...(filters.sessionId && { sessionId: filters.sessionId }),
@@ -103,12 +103,27 @@ export async function getAllHallTickets(filters = {}, transaction) {
         ...(filters.universityId && { universityId: filters.universityId })
     };
 
+    const include =
+        options.fullDetail === true ? getHallTicketIncludesFull() : getHallTicketIncludes();
+
     return model.studentHallTicketModel.findAll({
         transaction,
         where,
-        include: getHallTicketIncludes(),
+        include,
         order: [["id", "DESC"]]
     });
+}
+
+export async function countHallTickets(filters = {}, transaction) {
+    const where = {
+        ...(filters.examSetupTypeTermId && { examSetupTypeTermId: filters.examSetupTypeTermId }),
+        ...(filters.sessionId && { sessionId: filters.sessionId }),
+        ...(filters.studentId && { studentId: filters.studentId }),
+        ...(filters.instituteId && { instituteId: filters.instituteId }),
+        ...(filters.universityId && { universityId: filters.universityId }),
+    };
+
+    return model.studentHallTicketModel.count({ where, transaction });
 }
 
 export async function updateHallTicket(id, payload, transaction) {
@@ -146,5 +161,57 @@ function getHallTicketIncludes() {
                 }
             ]
         }
+    ];
+}
+
+/** Full hall ticket row + institute/university + complete student + richer exam/session context (for GET /all). */
+function getHallTicketIncludesFull() {
+    return [
+        {
+            model: model.instituteModel,
+            as: "institute",
+            attributes: ["instituteId", "instituteName"],
+        },
+        {
+            model: model.universityModel,
+            as: "university",
+            attributes: ["universityId", "universityName"],
+        },
+        {
+            model: model.studentModel,
+            as: "student",
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: "studentSections",
+                    attributes: ["classSectionsId", "class", "section", "sessionId"],
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.sessionModel,
+            as: "session",
+        },
+        {
+            model: model.examSetupTypeTermModel,
+            as: "examSetupTypeTerm",
+            include: [
+                {
+                    model: model.examSetupTypeModel,
+                    as: "examSetupType",
+                },
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                },
+                {
+                    model: model.acedmicYearModel,
+                    as: "acedmicYear",
+                    attributes: ["acedmicYearId", "yearTitle"],
+                },
+            ],
+        },
     ];
 }

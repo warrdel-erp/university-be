@@ -2,9 +2,10 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 
-export async function getExamSchedules(universityId, acedmicYearId, instituteId, filters = {}) {
+export async function getExamSchedules(universityId, acedmicYearId, instituteId, filters = {}, options = {}) {
     try {
         const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = filters;
+        const { includeCourse = false } = options;
 
         const result = await model.examScheduleModel.findAll({
             where: {
@@ -67,12 +68,21 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
                         {
                             model: model.examSetupTypeModel,
                             as: "examSetupType",
-                            attributes: ["examSetupTypeId", "examType", "examName"],
+                            attributes: ["examSetupTypeId", "examType", "examName", "isPublish"],
                             where: {
                                 ...(universityId && { universityId }),
                                 ...(instituteId && { instituteId })
                             },
-                        }
+                        },
+                        ...(includeCourse
+                            ? [
+                                  {
+                                      model: model.courseModel,
+                                      as: "course",
+                                      attributes: ["courseId", "courseName", "courseCode"],
+                                  },
+                              ]
+                            : [])
                     ]
                 },
                 {

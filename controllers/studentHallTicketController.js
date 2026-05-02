@@ -33,6 +33,68 @@ export async function canGenerateHallTickets(req, res) {
     }
 }
 
+export async function getHallTicketStatusByExamType(req, res) {
+    try {
+        const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+        const instituteId = req.user.defaultInstituteId;
+        const q = req.query;
+
+        const filters = {
+            ...(q.subjectId != null && { subjectId: Number(q.subjectId) }),
+            ...(q.semesterId != null && { semesterId: Number(q.semesterId) }),
+            ...(q.examSetupTypeTermId != null && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
+            ...(q.courseId != null && { courseId: Number(q.courseId) }),
+            ...(q.term !== undefined && q.term !== null && q.term !== "" && { term: Number(q.term) }),
+            ...(q.sessionId != null && { sessionId: Number(q.sessionId) }),
+            ...(q.examSetupTypeId != null && { examSetupTypeId: Number(q.examSetupTypeId) }),
+        };
+
+        const result = await studentHallTicketServices.getHallTicketStatusByExamType({
+            universityId,
+            acedmicYearId,
+            instituteId,
+            filters,
+        });
+
+        return SuccessResponse(res, 200, "Hall ticket generation status by exam type fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getHallTicketStatusByExamType:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+export async function getExamsScheduled(req, res) {
+    try {
+        const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+        const instituteId = req.user.defaultInstituteId;
+        const q = req.query;
+
+        const filters = {
+            ...(q.subjectId != null && { subjectId: Number(q.subjectId) }),
+            ...(q.semesterId != null && { semesterId: Number(q.semesterId) }),
+            ...(q.examSetupTypeTermId != null && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
+            ...(q.courseId != null && { courseId: Number(q.courseId) }),
+            ...(q.term !== undefined && q.term !== null && q.term !== "" && { term: Number(q.term) }),
+            ...(q.sessionId != null && { sessionId: Number(q.sessionId) }),
+            ...(q.examSetupTypeId != null && { examSetupTypeId: Number(q.examSetupTypeId) }),
+        };
+
+        const result = await studentHallTicketServices.getScheduledExamsWithHallTicketInfo({
+            universityId,
+            acedmicYearId,
+            instituteId,
+            filters,
+        });
+
+        return SuccessResponse(res, 200, "Scheduled exams with hall ticket status fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getExamsScheduled:", error);
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
 export async function getAllHallTickets(req, res) {
     try {
         const filters = {
@@ -45,6 +107,22 @@ export async function getAllHallTickets(req, res) {
 
         const result = await studentHallTicketServices.getAllHallTickets(filters);
         return SuccessResponse(res, 200, "Hall tickets fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message || "Internal Server Error");
+    }
+}
+
+/** All hall tickets for the current institute across every exam/session (no examSetupTypeTermId/sessionId filter). */
+export async function getAllHallTicketsAllExams(req, res) {
+    try {
+        const filters = {
+            ...(req.query.studentId && { studentId: Number(req.query.studentId) }),
+            instituteId: req.user.defaultInstituteId,
+            universityId: req.user.universityId
+        };
+
+        const result = await studentHallTicketServices.getAllHallTicketsAllExams(filters);
+        return SuccessResponse(res, 200, "All hall tickets fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }

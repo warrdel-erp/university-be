@@ -1,5 +1,36 @@
 import * as examScheduleServices from '../services/examScheduleServices.js';
+import * as studentHallTicketServices from '../services/studentHallTicketServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+
+export const getExamListWithHallTickets = async (req, res) => {
+    try {
+        const universityId = req.user.universityId;
+        const acedmicYearId = req.user.defaultAcademicYearId;
+        const instituteId = req.user.defaultInstituteId;
+        const q = req.query;
+
+        const filters = {
+            ...(q.subjectId != null && { subjectId: Number(q.subjectId) }),
+            ...(q.semesterId != null && { semesterId: Number(q.semesterId) }),
+            ...(q.examSetupTypeTermId != null && { examSetupTypeTermId: Number(q.examSetupTypeTermId) }),
+            ...(q.courseId != null && { courseId: Number(q.courseId) }),
+            ...(q.term !== undefined && q.term !== null && q.term !== '' && { term: Number(q.term) }),
+            ...(q.sessionId != null && { sessionId: Number(q.sessionId) }),
+        };
+
+        const result = await studentHallTicketServices.getExamListWithHallTickets({
+            universityId,
+            acedmicYearId,
+            instituteId,
+            filters,
+        });
+
+        return SuccessResponse(res, 200, "Exam list with hall ticket status fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getExamListWithHallTickets:", error);
+        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+    }
+};
 
 export const getExamSchedules = async (req, res) => {
     try {
