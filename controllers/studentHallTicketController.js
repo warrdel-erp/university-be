@@ -33,7 +33,7 @@ export async function canGenerateHallTickets(req, res) {
     }
 }
 
-/** GET query: `termNumber`, `sessionId` — compact cohort list with hall-ticket generated flag. */
+/** GET query: `termNumber`, `sessionId` — cohort list with `studentCount` (eligible for exam) and `isHallTicketGenerated`. */
 export async function getExamTypeDashboard(req, res) {
     try {
         const sessionId = Number(req.query.sessionId);

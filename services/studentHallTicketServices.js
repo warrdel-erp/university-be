@@ -509,7 +509,7 @@ export async function getExamListWithHallTickets({ universityId, acedmicYearId, 
 
 /**
  * Dashboard for `termNumber` + `sessionId`: one row per scheduled exam cohort (`examSetupTypeTermId` + `sessionId`).
- * Response keys only: `examSetupTypeTermId`, `sessionId`, `examTerm`, `examName`, `isHallTicketGenerated`.
+ * Each row includes `studentCount` — eligible students for that term + session (same rule as GET /canGenerate `eligibleStudentCount`).
  */
 export async function getExamTypeDashboardRows({
     sessionId,
@@ -531,6 +531,7 @@ export async function getExamTypeDashboardRows({
 
     return groups.map((group) => {
         const generatedCount = group.hallTicket?.stats?.generatedTicketCount ?? 0;
+        const studentCount = group.hallTicket?.stats?.eligibleStudentCount ?? 0;
         const termVal = group.examSetupTypeTerm?.term ?? null;
         const examNameStr = group.examType?.examName ?? "";
 
@@ -539,6 +540,7 @@ export async function getExamTypeDashboardRows({
             sessionId: group.sessionId,
             examTerm: termVal,
             examName: examNameStr,
+            studentCount,
             isHallTicketGenerated: generatedCount > 0,
         };
     });

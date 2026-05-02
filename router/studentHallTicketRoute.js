@@ -20,7 +20,7 @@ const canGenerateQuerySchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
 });
 
-/** `termNumber` + `sessionId` — one summary row per scheduled exam cohort (`examSetupTypeTermId` + `sessionId`). */
+/** `termNumber` + `sessionId` — one row per cohort with `studentCount`, `isHallTicketGenerated`, etc. */
 const examTypeDashboardQuerySchema = z.object({
     sessionId: z.coerce.number().int().positive(),
     termNumber: z.coerce.number().int(),
