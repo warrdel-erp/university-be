@@ -11,12 +11,6 @@ function createServiceError(message, statusCode = 400) {
   return error;
 }
 
-function maskQr(qr) {
-  if (!qr || typeof qr !== "string") return null;
-  if (qr.length <= 8) return "****";
-  return `${qr.slice(0, 4)}****${qr.slice(-4)}`;
-}
-
 function getStudentDisplayName(student) {
   if (!student) return null;
   return [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ").trim() || null;
@@ -117,7 +111,7 @@ export async function getAnswerSheetQrList(instituteId, universityId, page = 1, 
     return {
       data: rows.map((item) => ({
         id: item.id,
-        qr: maskQr(item.qr),
+        qr: item.qr,
         studentId: item.studentId,
         examScheduleId: item.examScheduleId,
         instituteId: item.instituteId,
@@ -170,7 +164,7 @@ export async function getAnswerSheetQrListSecure(
     return {
       data: rows.map((item) => ({
         id: item.id,
-        qr: includeQr ? item.qr : maskQr(item.qr),
+        qr: item.qr,
         studentId: item.studentId,
         examScheduleId: item.examScheduleId,
         instituteId: item.instituteId,
