@@ -15,11 +15,6 @@ const generateSchema = z.object({
     sessionId: z.number({ required_error: "sessionId is required" })
 });
 
-const canGenerateQuerySchema = z.object({
-    examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number"),
-    sessionId: z.string().regex(/^\d+$/, "sessionId must be a number")
-});
-
 const examTypeDashboardQuerySchema = z.object({
     sessionId: z.coerce.number().int().positive(),
     termNumber: z.coerce.number().int(),
@@ -29,7 +24,7 @@ const qrQuerySchema = z.object({
     qr: z.string().min(1, "qr is required")
 });
 
-/** Filters + optional `page` / `limit` (defaults 1 / 10, max limit 100). */
+/** Filters + optional `page` / `limit` (limit defaults 1000, clamped 10–1000 per page). */
 const listHallTicketsQuerySchema = z.object({
     examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number").optional(),
     sessionId: z.string().regex(/^\d+$/, "sessionId must be a number").optional(),
@@ -39,11 +34,10 @@ const listHallTicketsQuerySchema = z.object({
 });
 
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
-router.get("/canGenerate", userAuth, validate({ query: canGenerateQuerySchema }), studentHallTicketController.canGenerateHallTickets);
 router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 
 router.get(
-    "/exam-type/dashboard",
+    "/examType/dashboard",
     userAuth,
     validate({ query: examTypeDashboardQuerySchema }),
     studentHallTicketController.getExamTypeDashboard

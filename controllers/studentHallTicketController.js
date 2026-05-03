@@ -16,23 +16,6 @@ export async function generateHallTickets(req, res) {
     }
 }
 
-export async function canGenerateHallTickets(req, res) {
-    try {
-        const examSetupTypeTermId = Number(req.query.examSetupTypeTermId);
-        const sessionId = Number(req.query.sessionId);
-
-        const result = await studentHallTicketServices.canGenerateHallTicketsByExamSession({
-            examSetupTypeTermId,
-            sessionId,
-            instituteId: req.user.defaultInstituteId,
-            universityId: req.user.universityId
-        });
-        return SuccessResponse(res, 200, "Hall ticket generation readiness fetched successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-}
-
 /** GET query: `termNumber`, `sessionId` — cohort list with `examType` (`theory`|`practical`|null), `studentCount`, `isHallTicketGenerated`. */
 export async function getExamTypeDashboard(req, res) {
     try {
@@ -100,17 +83,6 @@ export async function getHallTicketByQr(req, res) {
         );
         if (!result) return ErrorResponse(res, 404, "Hall ticket not found");
         return SuccessResponse(res, 200, "Hall ticket fetched successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, 500, error.message || "Internal Server Error");
-    }
-}
-
-export async function deleteHallTicket(req, res) {
-    try {
-        const id = Number(req.params.id);
-        const deletedCount = await studentHallTicketServices.deleteHallTicket(id);
-        if (!deletedCount) return ErrorResponse(res, 404, "Hall ticket not found");
-        return SuccessResponse(res, 200, "Hall ticket deleted successfully");
     } catch (error) {
         return ErrorResponse(res, 500, error.message || "Internal Server Error");
     }

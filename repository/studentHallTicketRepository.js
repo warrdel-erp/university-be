@@ -85,25 +85,7 @@ export async function getEligibleStudents(sessionId, courseId, term, instituteId
     });
 }
 
-export async function upsertHallTicket(payload, transaction) {
-    const existing = await model.studentHallTicketModel.findOne({
-        transaction,
-        where: {
-            examSetupTypeTermId: payload.examSetupTypeTermId,
-            sessionId: payload.sessionId,
-            studentId: payload.studentId
-        }
-    });
-
-    if (existing) {
-        await existing.update({
-            qr: payload.qr,
-            instituteId: payload.instituteId,
-            universityId: payload.universityId
-        }, { transaction });
-        return existing;
-    }
-
+export async function createHallTicket(payload, transaction) {
     return model.studentHallTicketModel.create(payload, { transaction });
 }
 
@@ -131,13 +113,10 @@ export async function getAllHallTickets(filters = {}, transaction, options = {})
         ...(filters.universityId && { universityId: filters.universityId })
     };
 
-    const include =
-        options.fullDetail === true ? getHallTicketIncludesFull() : getHallTicketIncludes();
-
     return model.studentHallTicketModel.findAll({
         transaction,
         where,
-        include,
+        include: getHallTicketIncludes(),
         order: [["id", "DESC"]],
         ...(options.limit != null && { limit: options.limit }),
         ...(options.offset != null && { offset: options.offset }),
@@ -156,39 +135,7 @@ export async function countHallTickets(filters = {}, transaction) {
     return model.studentHallTicketModel.count({ where, transaction });
 }
 
-export async function deleteHallTicket(id, transaction) {
-    return model.studentHallTicketModel.destroy({ where: { id }, transaction });
-}
-
 function getHallTicketIncludes() {
-    return [
-        {
-            model: model.studentModel,
-            as: "student",
-            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"]
-        },
-        {
-            model: model.sessionModel,
-            as: "session",
-            attributes: ["sessionId", "sessionName"]
-        },
-        {
-            model: model.examSetupTypeTermModel,
-            as: "examSetupTypeTerm",
-            attributes: ["examSetupTypeTermId", "examSetupTypeId", "term", "courseId"],
-            include: [
-                {
-                    model: model.examSetupTypeModel,
-                    as: "examSetupType",
-                    attributes: ["examSetupTypeId", "examType", "examName"]
-                }
-            ]
-        }
-    ];
-}
-
-/** Full hall ticket row + institute/university + complete student + richer exam/session context (for GET /all). */
-function getHallTicketIncludesFull() {
     return [
         {
             model: model.instituteModel,
@@ -203,6 +150,7 @@ function getHallTicketIncludesFull() {
         {
             model: model.studentModel,
             as: "student",
+            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
             include: [
                 {
                     model: model.classSectionModel,
@@ -215,14 +163,17 @@ function getHallTicketIncludesFull() {
         {
             model: model.sessionModel,
             as: "session",
+            attributes: ["sessionId", "sessionName"],
         },
         {
             model: model.examSetupTypeTermModel,
             as: "examSetupTypeTerm",
+            attributes: ["examSetupTypeTermId", "examSetupTypeId", "term", "courseId"],
             include: [
                 {
                     model: model.examSetupTypeModel,
                     as: "examSetupType",
+                    attributes: ["examSetupTypeId", "examType", "examName"],
                 },
                 {
                     model: model.courseModel,

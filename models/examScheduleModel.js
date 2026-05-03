@@ -116,12 +116,5 @@ export default sequelize.define(
         tableName: 'exam_schedule',
         timestamps: true,
         paranoid: true,
-        /** Hall ticket + listing APIs filter by term + session constantly. */
-        indexes: [
-            {
-                name: 'exam_schedule_est_session_idx',
-                fields: ['exam_setup_type_term_id', 'session_id']
-            }
-        ]
     }
 );

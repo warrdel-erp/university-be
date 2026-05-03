@@ -1,4 +1,5 @@
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
+import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
 export async function addExamStructureSchedule(examScheduleDetail, createdBy, updatedBy, universityId, instituteId) {
   examScheduleDetail.createdBy = createdBy;
@@ -182,7 +183,13 @@ export async function getExamScheduleById(examScheduleId) {
   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
 }
 
-export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYearId, sessionId) {
+export async function getSubjectsWithExamSchedule(
+  examSetupTypeTermId,
+  acedmicYearId,
+  sessionId,
+  instituteId,
+  universityId
+) {
   const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examSetupTypeTermId);
   if (!termDetail) {
     throw new Error("Exam setup type term not found");
@@ -205,5 +212,24 @@ export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYe
     sessionId ? parseInt(sessionId) : null
   );
 
-  return { studentCount, subjects };
+  let isHallTicketGenerated = false;
+  if (
+    sessionId != null &&
+    instituteId != null &&
+    universityId != null &&
+    examSetupTypeTermId != null
+  ) {
+    const ticketCount = await studentHallTicketRepository.countHallTickets(
+      {
+        examSetupTypeTermId: parseInt(examSetupTypeTermId, 10),
+        sessionId: parseInt(sessionId, 10),
+        instituteId: parseInt(instituteId, 10),
+        universityId: parseInt(universityId, 10),
+      },
+      undefined
+    );
+    isHallTicketGenerated = ticketCount > 0;
+  }
+
+  return { studentCount, subjects, isHallTicketGenerated };
 }

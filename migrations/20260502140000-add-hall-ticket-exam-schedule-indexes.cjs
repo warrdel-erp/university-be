@@ -3,10 +3,6 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface) {
-    await queryInterface.addIndex('exam_schedule', ['exam_setup_type_term_id', 'session_id'], {
-      name: 'exam_schedule_est_session_idx'
-    });
-
     await queryInterface.addIndex(
       'student_hall_ticket',
       ['institute_id', 'university_id', 'exam_setup_type_term_id', 'session_id'],
@@ -27,6 +23,5 @@ module.exports = {
       'student_hall_ticket',
       'student_hall_ticket_inst_univ_est_session_idx'
     );
-    await queryInterface.removeIndex('exam_schedule', 'exam_schedule_est_session_idx');
   }
 };

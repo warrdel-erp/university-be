@@ -485,7 +485,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject/withExamSchedule?sessionsId=1&examSetupTypeTermId=1",
+              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=6&examSetupTypeTermId=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -495,15 +495,16 @@
               ],
               "query": [
                 {
-                  "key": "sessionsId",
-                  "value": "1"
+                  "key": "sessionId",
+                  "value": "6"
                 },
                 {
                   "key": "examSetupTypeTermId",
-                  "value": "1"
+                  "value": "10"
                 }
               ]
-            }
+            },
+            "description": "**GET /subject/withExamSchedule**\n\nReturns `studentCount`, `subjects[]` (all subjects for the course/term), and **`isHallTicketGenerated`** (true if any `student_hall_ticket` row exists for this examSetupTypeTermId + sessionId + institute + university)."
           },
           "response": []
         },
@@ -4082,13 +4083,13 @@
           "key": "hallticket_examSetupTypeTermId",
           "value": "1",
           "type": "string",
-          "description": "Exam setup type term PK — used by generate, canGenerate, filtered list"
+          "description": "Exam setup type term PK — used by generate, filtered list"
         },
         {
           "key": "hallticket_sessionId",
           "value": "1",
           "type": "string",
-          "description": "Session PK — used by generate, canGenerate, filtered list"
+          "description": "Session PK — used by generate, filtered list"
         },
         {
           "key": "hallticket_courseId",
@@ -4133,7 +4134,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "description": "**POST /studentHallTicket/generate**\n\nCreates/updates hall ticket rows (QR per student) for the given exam setup term + session. Requires every `exam_schedule` row for that pair to have `examDate` and `examTime`.\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
+            "description": "**POST /studentHallTicket/generate**\n\n**One-time only:** if any hall ticket already exists for that exam setup term + session (same institute/university), returns **400** — regeneration is not allowed.\n\nOtherwise **creates** one row per eligible student (new QR each). **Requires at least one** `exam_schedule` row for that pair with **both** `examDate` and `examTime` (one scheduled subject is enough for Mid-term / End-sem, etc.).\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4199,75 +4200,11 @@
           ]
         },
         {
-          "name": "can generate",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "description": "**GET /studentHallTicket/canGenerate**\n\nReturns whether generation is allowed (`canGenerate`), schedule checks, eligible vs generated counts, and `generationStatus` (Ready | Generated | Pending | Partial | NoStudents). Query params use folder vars.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/canGenerate?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "canGenerate"
-              ],
-              "query": [
-                {
-                  "key": "examSetupTypeTermId",
-                  "value": "{{hallticket_examSetupTypeTermId}}",
-                  "description": "Maps to hallticket_examSetupTypeTermId",
-                  "type": "text"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{hallticket_sessionId}}",
-                  "description": "Maps to hallticket_sessionId",
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/studentHallTicket/canGenerate?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}"
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket generation readiness fetched successfully\",\n  \"data\": {\n    \"canGenerate\": true,\n    \"checks\": {\n      \"isPublished\": true,\n      \"hasSchedules\": true,\n      \"hasCompleteScheduleDateTime\": true\n    },\n    \"stats\": {\n      \"totalSchedules\": 5,\n      \"missingDateTimeCount\": 0,\n      \"eligibleStudentCount\": 120,\n      \"generatedTicketCount\": 0,\n      \"pendingTicketCount\": 120\n    },\n    \"generationStatus\": \"Ready\",\n    \"examSetupType\": {\n      \"examSetupTypeId\": 1,\n      \"examType\": \"Semester\",\n      \"examName\": \"Mid-Term Examination\"\n    },\n    \"examSetupTypeTermId\": 1,\n    \"sessionId\": 1\n  }\n}"
-            }
-          ]
-        },
-        {
           "name": "exam type dashboard",
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/exam-type/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`examType`** (`\"theory\"` | `\"practical\"` | null — from exam setup type or, if needed, consistent `exam_schedule.type`; null when mixed or unknown), **`studentCount`** (eligible students in that term + session; same as GET `/canGenerate` **eligibleStudentCount**), **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
+            "description": "**GET /studentHallTicket/examType/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`examType`** (`\"theory\"` | `\"practical\"` | null — from exam setup type or, if needed, consistent `exam_schedule.type`; null when mixed or unknown), **`studentCount`** (eligible students in that term + session), **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4279,13 +4216,13 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/exam-type/dashboard?termNumber={{hallticket_termNumber}}&sessionId={{hallticket_sessionId}}",
+              "raw": "{{baseurl}}/studentHallTicket/examType/dashboard?termNumber={{hallticket_termNumber}}&sessionId={{hallticket_sessionId}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "studentHallTicket",
-                "exam-type",
+                "examType",
                 "dashboard"
               ],
               "query": [
@@ -4309,7 +4246,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default 10, max 100). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
+            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default **1000** if omitted; each request clamps **`limit`** to **10–1000**). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -4321,7 +4258,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&page=1&limit=10",
+              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&page=1&limit=1000",
               "host": [
                 "{{baseurl}}"
               ],
