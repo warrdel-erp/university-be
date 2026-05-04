@@ -4200,48 +4200,6 @@
           ]
         },
         {
-          "name": "exam type dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "description": "**GET /studentHallTicket/examType/dashboard**\n\nQuery: **`termNumber`** (`exam_setup_type_term.term`), **`sessionId`**.\n\n`data[]`: one object per scheduled cohort — **`examSetupTypeTermId`**, **`sessionId`**, **`examTerm`**, **`examName`**, **`examType`** (`\"theory\"` | `\"practical\"` | null — from exam setup type or, if needed, consistent `exam_schedule.type`; null when mixed or unknown), **`studentCount`** (eligible students in that term + session), **`isHallTicketGenerated`** (true if at least one hall ticket exists for that pair).",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/examType/dashboard?termNumber={{hallticket_termNumber}}&sessionId={{hallticket_sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "examType",
-                "dashboard"
-              ],
-              "query": [
-                {
-                  "key": "termNumber",
-                  "value": "{{hallticket_termNumber}}",
-                  "type": "text"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{hallticket_sessionId}}",
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "get all",
           "request": {
             "method": "GET",

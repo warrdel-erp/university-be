@@ -16,24 +16,6 @@ export async function generateHallTickets(req, res) {
     }
 }
 
-/** GET query: `termNumber`, `sessionId` — cohort list with `examType` (`theory`|`practical`|null), `studentCount`, `isHallTicketGenerated`. */
-export async function getExamTypeDashboard(req, res) {
-    try {
-        const sessionId = Number(req.query.sessionId);
-        const termNumber = Number(req.query.termNumber);
-        const result = await studentHallTicketServices.getExamTypeDashboardRows({
-            sessionId,
-            termNumber,
-            instituteId: req.user.defaultInstituteId,
-            universityId: req.user.universityId,
-            acedmicYearId: req.user.defaultAcademicYearId,
-        });
-        return SuccessResponse(res, 200, "Exam type dashboard fetched successfully", result);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-}
-
 export async function getAllHallTickets(req, res) {
     try {
         const q = req.query;

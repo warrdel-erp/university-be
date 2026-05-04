@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
-import * as examScheduleServices from "./examScheduleServices.js";
 
 
 async function buildGenerationReadiness({
@@ -34,36 +33,6 @@ async function buildGenerationReadiness({
     };
 }
 
-async function cohortStudentAndTicketCounts(
-    { examSetupTypeTermId, sessionId, instituteId, universityId },
-    courseId,
-    term
-) {
-    return sequelize.transaction(async (transaction) => {
-        const eligibleStudents = await studentHallTicketRepository.getEligibleStudents(
-            sessionId,
-            courseId,
-            term,
-            instituteId,
-            universityId,
-            transaction
-        );
-        const generatedTicketCount = await studentHallTicketRepository.countHallTickets(
-            {
-                examSetupTypeTermId,
-                sessionId,
-                instituteId,
-                universityId
-            },
-            transaction
-        );
-        return {
-            eligibleStudentCount: eligibleStudents.length,
-            generatedTicketCount
-        };
-    });
-}
-
 export async function generateHallTicketsByExamSession({
     examSetupTypeTermId,
     sessionId,
@@ -85,7 +54,7 @@ export async function generateHallTicketsByExamSession({
             );
             error.statusCode = 400;
             throw error;
-        }223
+        }
 
         const existingCount = await studentHallTicketRepository.countHallTickets(
             {
@@ -264,94 +233,4 @@ export async function getAllHallTickets(filters, pagination = {}) {
         ]);
         return { rows, total, page, limit };
     });
-}
-
-/** Maps labels to `theory` | `practical` for dashboard (exam_setup_type.exam_type or exam_schedule.type). */
-function toTheoryOrPractical(raw) {
-    if (raw == null || String(raw).trim() === "") return null;
-    const s = String(raw).trim().toLowerCase();
-    if (s.includes("practical")) return "practical";
-    if (s.includes("theory")) return "theory";
-    return null;
-}
-
-function dashboardExamTypeTheoryOrPractical(group) {
-    const fromSetup = toTheoryOrPractical(group.examType?.examType);
-    if (fromSetup) return fromSetup;
-    const kinds = (group.schedules || [])
-        .map((s) => s.scheduleKind)
-        .filter(Boolean);
-    const normalized = [...new Set(kinds.map(toTheoryOrPractical).filter(Boolean))];
-    if (normalized.length === 1) return normalized[0];
-    return null;
-}
-
-
-export async function getExamTypeDashboardRows({
-    sessionId,
-    termNumber,
-    instituteId,
-    universityId,
-    acedmicYearId,
-}) {
-    const rows = await examScheduleServices.getExamSchedules(universityId, acedmicYearId, instituteId, {
-        sessionId,
-        term: termNumber,
-    });
-
-    if (!rows?.length) return [];
-
-    const groupsMap = new Map();
-    for (const row of rows) {
-        const key = `${row.examSetupTypeTermId}_${row.sessionId}`;
-        if (!groupsMap.has(key)) groupsMap.set(key, []);
-        groupsMap.get(key).push(row);
-    }
-
-    const dashboardRows = [];
-    for (const scheduleRows of groupsMap.values()) {
-        const first = scheduleRows[0];
-        const examSetupTypeTerm = first.examSetupTypeTerm;
-        if (!examSetupTypeTerm) continue;
-
-        const examSetupType = examSetupTypeTerm.examSetupType;
-        const counts = await cohortStudentAndTicketCounts(
-            {
-                examSetupTypeTermId: first.examSetupTypeTermId,
-                sessionId: first.sessionId,
-                instituteId,
-                universityId,
-            },
-            examSetupTypeTerm.courseId,
-            examSetupTypeTerm.term
-        );
-
-        const groupForExamType = {
-            examType: examSetupType
-                ? {
-                      examType: examSetupType.examType,
-                      examName: examSetupType.examName,
-                  }
-                : null,
-            schedules: scheduleRows.map((r) => ({ scheduleKind: r.type })),
-        };
-
-        dashboardRows.push({
-            examSetupTypeTermId: first.examSetupTypeTermId,
-            sessionId: first.sessionId,
-            examTerm: examSetupTypeTerm.term ?? null,
-            examName: examSetupType?.examName ?? "",
-            examType: dashboardExamTypeTheoryOrPractical(groupForExamType),
-            studentCount: counts.eligibleStudentCount,
-            isHallTicketGenerated: counts.generatedTicketCount > 0,
-        });
-    }
-
-    dashboardRows.sort((a, b) => {
-        const byName = (a.examName || "").localeCompare(b.examName || "");
-        if (byName !== 0) return byName;
-        return (a.sessionId ?? 0) - (b.sessionId ?? 0);
-    });
-
-    return dashboardRows;
 }
