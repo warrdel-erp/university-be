@@ -4076,6 +4076,188 @@
       ]
     },
     {
+      "name": "answer sheet qr",
+      "description": "Answer sheet QR APIs. Folder variables use `answersheetqr_*` prefix. Auth uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
+        {
+          "key": "answersheetqr_count",
+          "value": "10",
+          "type": "string",
+          "description": "How many QR codes to generate in one call (1-5000)."
+        },
+        {
+          "key": "answersheetqr_id",
+          "value": "1",
+          "type": "string",
+          "description": "answer_sheet_qr.id used for GET by id."
+        },
+        {
+          "key": "answersheetqr_qr",
+          "value": "550e8400-e29b-41d4-a716-446655440001",
+          "type": "string",
+          "description": "Raw QR string to map with student and exam schedule."
+        },
+        {
+          "key": "answersheetqr_studentId",
+          "value": "1",
+          "type": "string",
+          "description": "Student id used in map endpoint."
+        },
+        {
+          "key": "answersheetqr_examScheduleId",
+          "value": "1",
+          "type": "string",
+          "description": "Exam schedule id used in map endpoint."
+        }
+      ],
+      "item": [
+        {
+          "name": "bulk generate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": {{answersheetqr_count}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr?page=1&limit=20&usageType=all",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "usageType",
+                  "value": "all",
+                  "description": "Allowed values: all, used, unused."
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{answersheetqr_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{answersheetqr_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "map qr",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{{answersheetqr_qr}}\",\n  \"studentId\": {{answersheetqr_studentId}},\n  \"examScheduleId\": {{answersheetqr_examScheduleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "student hall ticket",
       "description": "Hall ticket APIs share folder variables prefixed `hallticket_`. Edit them once on this folder (Variables tab) — all requests below resolve `{{hallticket_*}}`. Auth still uses global `{{token}}` and `{{baseurl}}`.",
       "variable": [
