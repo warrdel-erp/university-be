@@ -90,6 +90,8 @@ import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
+
+import answerSheetQr from "./router/answerSheetQrRoute.js";
 // middleware
 app.use(fileUpload());
 app.use(json());
@@ -186,6 +188,9 @@ app.use("/jobs", jobs);
 app.use("/grade", grade);
 app.use("/credit", credit);
 app.use("/evalution", evalution);
+app.use("/answerSheetQr", answerSheetQr);
+
+
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

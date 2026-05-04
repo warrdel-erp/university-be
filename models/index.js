@@ -142,7 +142,8 @@ import subjectWeightageModel from "./subjectWeightageModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
 import studentHallTicketModel from "./studentHallTicketModel.js";
-
+import answerSheetQrModel from "./answerSheetQrModel.js";
+ 
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
 campusModel.hasMany(studentModel, { foreignKey: "campus_id", as: "campus" });
@@ -1249,6 +1250,12 @@ studentExamSeatModel.belongsTo(studentModel, { foreignKey: "student_id", as: "st
 studentHallTicketModel.belongsTo(examSetupTypeTermModel, { foreignKey: "exam_setup_type_term_id", as: "examSetupTypeTerm" });
 examSetupTypeTermModel.hasMany(studentHallTicketModel, { foreignKey: "exam_setup_type_term_id", as: "hallTickets" });
 
+answerSheetQrModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(answerSheetQrModel, { foreignKey: "student_id", as: "answerSheetQrs" });
+
+answerSheetQrModel.belongsTo(examScheduleModel, { foreignKey: "exam_schedule_id", as: "examSchedule" });
+examScheduleModel.hasMany(answerSheetQrModel, { foreignKey: "exam_schedule_id", as: "answerSheetQrs" });
+
 studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
 sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
 
@@ -1306,6 +1313,7 @@ export {
   libraryAuthorityModel,
   libraryAddItemModel,
   libraryMemberModel,
+  answerSheetQrModel,
   libraryIssueBookModel,
   libraryAuthorDetailsModel,
   libraryMultipleBookDetailsModel,
