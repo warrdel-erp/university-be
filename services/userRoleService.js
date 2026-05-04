@@ -13,7 +13,7 @@ export async function assignRoleToUser(userId, role, permissions = [], transacti
             throw new Error(`Invalid role: ${role}. Valid roles are ${validRoles.join(', ')}`);
         }
 
-        const roleExists = await repository.checkUserRoleExists(userId, role);
+        const roleExists = await repository.checkUserRoleExists(userId, role, activeTransaction);
         if (roleExists) {
             throw new Error(`User already has the role: ${role}`);
         }
@@ -42,7 +42,7 @@ export async function removeRoleFromUser(userId, role, transaction = null) {
     const internalTransaction = !transaction ? await sequelize.transaction() : null;
     const activeTransaction = transaction || internalTransaction;
     try {
-        const roleExists = await repository.checkUserRoleExists(userId, role);
+        const roleExists = await repository.checkUserRoleExists(userId, role, activeTransaction);
         if (!roleExists) {
             throw new Error(`User does not have the role: ${role}`);
         }
@@ -83,5 +83,43 @@ export async function getUserAuthorization(userId) {
     } catch (error) {
         console.error("Service: Error in getUserAuthorization:", error);
         throw error;
+    }
+}
+
+/**
+ * For PATCH /employee/:id — align user_roles and user_permissions with roleData (same rules as Add Staff).
+ * ADMIN: full permission list is stored. TEACHER and other roles: all permissions removed.
+ */
+export async function syncUserRoleAndPermissions(userId, roleData, transaction = null) {
+    if (!userId || !roleData?.role) return;
+
+    const newRole = roleData.role;
+    const permissions = Array.isArray(roleData.permissions) ? roleData.permissions : [];
+
+    const validRoles = Object.values(ROLES);
+    if (!validRoles.includes(newRole)) {
+        throw new Error(`Invalid role: ${newRole}. Valid roles are ${validRoles.join(", ")}`);
+    }
+
+    const currentRoles = await repository.getUserRoles(userId, transaction);
+
+    for (const r of currentRoles) {
+        if (r !== newRole) {
+            await repository.removeUserRole(userId, r, transaction);
+        }
+    }
+
+    const hasNewRole = await repository.checkUserRoleExists(userId, newRole, transaction);
+    if (!hasNewRole) {
+        await repository.addUserRole(userId, newRole, transaction);
+    }
+
+    await permissionRepository.clearAllUserPermissions(userId, transaction);
+
+    if (newRole === ROLES.ADMIN) {
+        if (permissions.length === 0) {
+            throw new Error("Permissions are mandatory for ADMIN role");
+        }
+        await permissionRepository.setUserPermissions(userId, permissions, transaction);
     }
 }

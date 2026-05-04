@@ -28,11 +28,12 @@ export async function removeUserRole(userId, role, transaction = null) {
     }
 }
 
-export async function getUserRoles(userId) {
+export async function getUserRoles(userId, transaction = null) {
     try {
         const roles = await model.userRoleModel.findAll({
             where: { userId },
-            attributes: ['role']
+            attributes: ['role'],
+            transaction
         });
         return roles.map(r => r.role);
     } catch (error) {
@@ -41,13 +42,14 @@ export async function getUserRoles(userId) {
     }
 }
 
-export async function checkUserRoleExists(userId, role) {
+export async function checkUserRoleExists(userId, role, transaction = null) {
     try {
         const count = await model.userRoleModel.count({
             where: {
                 userId,
                 role
-            }
+            },
+            transaction
         });
         return count > 0;
     } catch (error) {

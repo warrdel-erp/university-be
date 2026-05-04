@@ -11,6 +11,20 @@ export async function addEmployee(data, transaction) {
     }
 };
 
+export async function getEmployeeUserId(employeeId, transaction = null) {
+    try {
+        const row = await model.employeeModel.findOne({
+            attributes: ["userId"],
+            where: { employeeId },
+            transaction
+        });
+        return row?.userId ?? null;
+    } catch (error) {
+        console.error("Error in getEmployeeUserId:", error);
+        throw error;
+    }
+}
+
 export async function updateEmployee(employeeId, data, transaction) {
     try {
         const result = await model.employeeModel.update(

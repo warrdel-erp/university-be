@@ -131,6 +131,27 @@ function mapEmployment(item = {}, officeEntry = {}, addressEntry = {}) {
   };
 }
 
+/** Work email is stored in `employee_office.office_mail_id`, not `employee_address.offical_email_id`. */
+function addressWithoutWorkEmailFields(address) {
+  if (!address || typeof address !== 'object') return address;
+  const { officalEmailId, officialEmailId, ...rest } = address;
+  return rest;
+}
+
+/** Build office payload: work email must come from Employment section (`office.officeMailId`). */
+function buildOfficePayloadForWrite(normalizedOffice, requestData) {
+  const officeMailId =
+    normalizedOffice?.officeMailId ??
+    normalizedOffice?.office_mail_id ??
+    null;
+
+  return {
+    ...(normalizedOffice || {}),
+    ...(officeMailId ? { officeMailId } : {}),
+    employeeRank: normalizedOffice?.employeeRank ?? requestData?.salutation ?? requestData?.designation ?? null
+  };
+}
+
 function getMetaCode(item = {}, type) {
   return item?.employeeMetaData?.find((metaItem) =>
     String(metaItem?.typess?.codes?.codeMasterType || "").trim().toLowerCase() === type
@@ -154,6 +175,13 @@ function mapLongLeaveForEmployeeDetails(rows = []) {
     fromDate: leave?.fromDate ?? leave?.dateOfLeaving ?? leave?.DateOfLeaving ?? "",
     toDate: leave?.toDate ?? leave?.dateOfRejoining ?? leave?.DateOfRejoining ?? "",
     reason: leave?.reason ?? leave?.remark ?? ""
+  }));
+}
+
+function mapExperienceForEmployeeDetails(rows = []) {
+  return (Array.isArray(rows) ? rows : []).map((exp) => ({
+    ...exp,
+    designation: exp?.designation ?? exp?.desigation ?? ""
   }));
 }
 
@@ -193,10 +221,13 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     //   finalRegisterRoleId = 13;
     // }
 
+    const officePersist = buildOfficePayloadForWrite(normalizedOffice, data);
+    const workEmailForAccount = officePersist?.officeMailId || null;
+
     const employeePersonalDetail = {
-      personalEmail: address?.officalEmailId || address?.officialEmailId,
+      personalEmail: address?.personalEmail || null,
       mobileNumber: address?.mobileNumber
-    }
+    };
 
     const employeeRegisterData = {
       universityId,
@@ -242,13 +273,14 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
       await Promise.all(uploadPromises);
     }
 
-    // Add employee address
+    // Add employee address (do not persist work email here — it belongs on employee_office)
+    const addressForRow = address ? addressWithoutWorkEmailFields(address) : null;
     const addressDetail = await employeeAddressRepository.addAddress({
       employeeId,
       createdBy,
-      ...address
+      ...addressForRow
     }, transaction);
-    const { personalEmail, mobileNumber, officalMobileNumber, officalEmailId } = addressDetail.dataValues
+    const { personalEmail, mobileNumber, officalMobileNumber } = addressDetail.dataValues;
 
     // Normalize correspondence address keys for FE compatibility
     const normalizedCorsAddress = corsAddress ? {
@@ -264,11 +296,11 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
       ...normalizedCorsAddress
     }, transaction);
 
-    // Add employee office details
+    // Add employee office details (work email -> office_mail_id)
     await employeeOfficeRepository.addOfficeDetails({
       employeeId,
       createdBy,
-      ...normalizedOffice
+      ...officePersist
     }, transaction);
 
     // Add employee roles
@@ -407,8 +439,21 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 
 
     if (roleData?.role?.trim().toLowerCase() === 'admin') {
-      const data = { campusId, instituteId, universityId, createdBy, updatedBy: createdBy, headName: employeeName, mobileNumber, alternateNumber: officalMobileNumber, registerEmail: officalEmailId, alternateEmail: personalEmail, isAdmin: true, designation: 'Admin' }
-      await addHead(data, transaction)
+      const headPayload = {
+        campusId,
+        instituteId,
+        universityId,
+        createdBy,
+        updatedBy: createdBy,
+        headName: employeeName,
+        mobileNumber,
+        alternateNumber: officalMobileNumber,
+        registerEmail: workEmailForAccount || personalEmail,
+        alternateEmail: personalEmail,
+        isAdmin: true,
+        designation: 'Admin'
+      };
+      await addHead(headPayload, transaction);
     }
     // Commit transaction
     await transaction.commit();
@@ -509,7 +554,8 @@ export async function getSingleEmployeeDetails(employeeId, universityId) {
       documents: documentList,
       skill: skillList,
       reference: referenceList,
-      experience: experienceList,
+      experiance: mapExperienceForEmployeeDetails(experienceList),
+      experience: mapExperienceForEmployeeDetails(experienceList),
       achievements: achievementList,
       research: researchList,
       longLeave: mapLongLeaveForEmployeeDetails(longLeaveList),
@@ -647,6 +693,7 @@ export async function importEmployeeData(excelData, commonData) {
         employeeFileNumber: convertedData.employeeFileNumber,
         noticePeriod: convertedData.noticePeriod,
         createdBy: convertedData.createdBy,
+        officeMailId: convertedData.officeMailId ?? convertedData.officalEmailId,
       };
 
       const addressData = {
@@ -658,7 +705,6 @@ export async function importEmployeeData(excelData, commonData) {
         phoneNumber: convertedData.phoneNumber,
         mobileNumber: convertedData.mobileNumber,
         officalMobileNumber: convertedData.officalMobileNumber,
-        officalEmailId: convertedData.officalEmailId,
         personalEmail: convertedData.personalEmail,
         createdBy: convertedData.createdBy,
       };
@@ -676,9 +722,9 @@ export async function importEmployeeData(excelData, commonData) {
         employeeId
       }
       const employeePersonalDetail = {
-        officalEmailId: convertedData.officalEmailId,
+        personalEmail: convertedData.personalEmail || convertedData.officeMailId || convertedData.officalEmailId,
         mobileNumber: convertedData.mobileNumber
-      }
+      };
 
       const userId = await employeeRegister(employeePersonalDetail, employeeRegisterData, transaction);
       await employeeRepository.updateEmployee(employeeId, { userId }, transaction);
@@ -724,13 +770,31 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
     const longLeaves = normalizeLongLeaves(longLeavesRaw);
     const allDropDownData = typeof data.allDropDownData === 'string' && data.allDropDownData ? JSON.parse(data.allDropDownData) : data.allDropDownData || { type: [], code: [] };
 
-    //  Update main employee table
-    const { roleId: _excludedRoleId, ...employeeUpdateData } = data; // roleId is a string ("ADMIN"), not an int FK — exclude it
+    let roleDataParsed = null;
+    if (data.roleData) {
+      try {
+        roleDataParsed = typeof data.roleData === 'string' ? JSON.parse(data.roleData) : data.roleData;
+      } catch {
+        throw new Error('Invalid roleData JSON');
+      }
+    }
+
+    //  Update main employee table (exclude fields not on employee row / managed elsewhere)
+    const { roleId: _excludedRoleId, roleData: _roleDataRaw, ...employeeUpdateData } = data;
     await employeeRepository.updateEmployee(employeeId, {
       ...employeeUpdateData,
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
+
+    // user_roles + user_permissions — same behaviour as Add Staff when roleData is sent
+    if (roleDataParsed?.role) {
+      const userId = await employeeRepository.getEmployeeUserId(employeeId, transaction);
+      if (!userId) {
+        throw new Error('Employee has no linked user account');
+      }
+      await userRoleService.syncUserRoleAndPermissions(userId, roleDataParsed, transaction);
+    }
 
     //  Upload/update files
     if (files) {
@@ -744,11 +808,14 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       await Promise.all(uploadPromises);
     }
 
-    //  Update Address
+    const officeToPersist = buildOfficePayloadForWrite(normalizedOffice, data);
+
+    //  Update Address (work email excluded — persisted on employee_office only)
     if (address) {
+      const addressClean = addressWithoutWorkEmailFields(address);
       const addressPayload = {
         updatedBy,
-        ...address
+        ...addressClean
       };
       const addressUpdateResult = await employeeAddressRepository.updateAddress(
         employeeId,
@@ -760,7 +827,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         await employeeAddressRepository.addAddress({
           employeeId,
           createdBy,
-          ...address
+          ...addressClean
         }, transaction);
       }
     }
@@ -791,11 +858,14 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       }
     }
 
-    //  Update Office details
-    if (normalizedOffice) {
+    //  Update Office details (work email -> employee_office.office_mail_id)
+    const shouldSyncOffice =
+      normalizedOffice != null ||
+      Boolean(address?.officalEmailId || address?.officialEmailId);
+    if (shouldSyncOffice) {
       const officePayload = {
         updatedBy,
-        ...normalizedOffice
+        ...officeToPersist
       };
 
       const existingOffice = await employeeOfficeRepository.getEmployeeOfficeByEmployeeId(employeeId);
@@ -810,7 +880,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
         await employeeOfficeRepository.addOfficeDetails({
           employeeId,
           createdBy,
-          ...normalizedOffice
+          ...officeToPersist
         }, transaction);
       }
     }
