@@ -125,6 +125,7 @@ export async function getDetailByExamType(req, res) {
 
 export async function getSingleExamType(req, res) {
   const universityId = req.user.universityId;
+  const instituteId = req.user.defaultInstituteId;
 
   try {
     const courseId = parseInt(req.query.courseId, 10);
@@ -135,7 +136,13 @@ export async function getSingleExamType(req, res) {
       return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
     }
 
-    const examDetails = await examStructureServices.getSingleExamType(courseId, sessionId, universityId, termNumber);
+    const examDetails = await examStructureServices.getSingleExamType(
+      courseId,
+      sessionId,
+      universityId,
+      termNumber,
+      instituteId
+    );
 
     if (examDetails) {
       res.status(200).json({ success: true, data: examDetails });

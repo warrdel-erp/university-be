@@ -89,6 +89,10 @@ export async function createHallTicket(payload, transaction) {
     return model.studentHallTicketModel.create(payload, { transaction });
 }
 
+export async function bulkCreateHallTickets(payloads, transaction) {
+    return model.studentHallTicketModel.bulkCreate(payloads, { transaction });
+}
+
 export async function getHallTicketById(id, transaction) {
     return model.studentHallTicketModel.findByPk(id, {
         transaction,

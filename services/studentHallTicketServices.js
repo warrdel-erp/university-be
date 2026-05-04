@@ -85,7 +85,7 @@ export async function generateHallTicketsByExamSession({
             );
             error.statusCode = 400;
             throw error;
-        }
+        }223
 
         const existingCount = await studentHallTicketRepository.countHallTickets(
             {
@@ -117,21 +117,16 @@ export async function generateHallTicketsByExamSession({
             return { generatedCount: 0, hallTickets: [] };
         }
 
-        const createPromises = students.map((student) =>
-            studentHallTicketRepository.createHallTicket(
-                {
-                    examSetupTypeTermId,
-                    sessionId,
-                    studentId: student.studentId,
-                    instituteId,
-                    universityId,
-                    qr: crypto.randomUUID(),
-                },
-                transaction
-            )
-        );
+        const hallTicketPayloads = students.map((student) => ({
+            examSetupTypeTermId,
+            sessionId,
+            studentId: student.studentId,
+            instituteId,
+            universityId,
+            qr: crypto.randomUUID(),
+        }));
 
-        await Promise.all(createPromises);
+        await studentHallTicketRepository.bulkCreateHallTickets(hallTicketPayloads, transaction);
 
         const hallTickets = await studentHallTicketRepository.getAllHallTickets({
             examSetupTypeTermId,
