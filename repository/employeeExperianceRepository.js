@@ -7,7 +7,6 @@ function normalizeExperiencePayload(raw = {}) {
     updatedBy: raw?.updatedBy ?? null,
     experienceType: raw?.experienceType ?? raw?.experience_type ?? null,
     organization: raw?.organization ?? null,
-    // DB column/property is legacy-typo "desigation"; accept FE "designation".
     desigation: raw?.desigation ?? raw?.designation ?? null,
     fromDate: raw?.fromDate ?? null,
     toDate: raw?.toDate ?? null,
