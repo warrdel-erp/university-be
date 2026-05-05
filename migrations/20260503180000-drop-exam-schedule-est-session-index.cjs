@@ -9,6 +9,22 @@ module.exports = {
     const dialect = qi.getDialect();
 
     if (dialect === 'mysql' || dialect === 'mariadb') {
+      // Ensure individual indexes exist for foreign key columns so MySQL doesn't block the drop.
+      try {
+        await queryInterface.addIndex('exam_schedule', ['exam_setup_type_term_id'], {
+          name: 'exam_schedule_est_idx'
+        });
+      } catch (e) {
+        // ignore if already exists
+      }
+      try {
+        await queryInterface.addIndex('exam_schedule', ['session_id'], {
+          name: 'exam_schedule_session_idx'
+        });
+      } catch (e) {
+        // ignore if already exists
+      }
+
       const [rows] = await qi.query(
         `SHOW INDEX FROM exam_schedule WHERE Key_name = 'exam_schedule_est_session_idx'`
       );
