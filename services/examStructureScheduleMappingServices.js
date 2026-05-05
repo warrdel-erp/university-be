@@ -182,7 +182,11 @@ export async function getExamScheduleById(examScheduleId) {
   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
 }
 
-export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYearId, sessionId) {
+export async function getSubjectsWithExamSchedule(
+  examSetupTypeTermId,
+  acedmicYearId,
+  sessionId
+) {
   const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examSetupTypeTermId);
   if (!termDetail) {
     throw new Error("Exam setup type term not found");

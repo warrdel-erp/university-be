@@ -40,7 +40,9 @@ export const getSubjectsWithExamSchedule = async (req, res) => {
         const acedmicYearId = req.user.defaultAcademicYearId;
 
         const result = await examStructureScheduleServices.getSubjectsWithExamSchedule(
-            examSetupTypeTermId, acedmicYearId, sessionId
+            examSetupTypeTermId,
+            acedmicYearId,
+            sessionId
         );
 
         return SuccessResponse(res, 200, "Subjects with exam schedule fetched successfully", result);

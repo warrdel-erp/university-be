@@ -3,36 +3,46 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('answer_sheet_qr', {
+    await queryInterface.createTable('student_hall_ticket', {
       id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        primaryKey: true,
         autoIncrement: true,
-        primaryKey: true
+        allowNull: false
       },
       qr: {
-        type: Sequelize.STRING(100),
+        type: Sequelize.TEXT,
         allowNull: false
+      },
+      exam_setup_type_term_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'exam_setup_type_term',
+          key: 'exam_setup_type_term_id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
+      },
+      session_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'session',
+          key: 'session_id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       student_id: {
         type: Sequelize.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
           model: 'students',
           key: 'student_id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
-      exam_schedule_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'exam_schedule',
-          key: 'exam_schedule_id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'CASCADE'
       },
       institute_id: {
         type: Sequelize.INTEGER,
@@ -42,7 +52,7 @@ module.exports = {
           key: 'institute_id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       },
       university_id: {
         type: Sequelize.INTEGER,
@@ -52,7 +62,7 @@ module.exports = {
           key: 'university_id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       },
       created_at: {
         type: Sequelize.DATE,
@@ -66,14 +76,14 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('answer_sheet_qr', ['qr'], {
-      name: 'idx_answer_sheet_qr_qr',
-      unique: true
+    await queryInterface.addIndex('student_hall_ticket', ['exam_setup_type_term_id', 'session_id', 'student_id'], {
+      unique: true,
+      name: 'uq_student_hall_ticket_exam_session_student'
     });
   },
 
-  async down(queryInterface) {
-    await queryInterface.removeIndex('answer_sheet_qr', 'idx_answer_sheet_qr_qr');
-    await queryInterface.dropTable('answer_sheet_qr');
+  async down(queryInterface, Sequelize) {
+    await queryInterface.removeIndex('student_hall_ticket', 'uq_student_hall_ticket_exam_session_student');
+    await queryInterface.dropTable('student_hall_ticket');
   }
 };
