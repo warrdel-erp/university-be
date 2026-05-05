@@ -27,6 +27,7 @@ export default sequelize.define(
     examScheduleId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      unique: true,
       field: "exam_schedule_id",
       references: {
         model: "exam_schedule",

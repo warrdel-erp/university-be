@@ -70,9 +70,16 @@ module.exports = {
       name: 'idx_answer_sheet_qr_qr',
       unique: true
     });
+
+    // One exam schedule can map to only one answer sheet QR row.
+    await queryInterface.addIndex('answer_sheet_qr', ['exam_schedule_id'], {
+      name: 'uq_answer_sheet_qr_exam_schedule_id',
+      unique: true
+    });
   },
 
   async down(queryInterface) {
+    await queryInterface.removeIndex('answer_sheet_qr', 'uq_answer_sheet_qr_exam_schedule_id');
     await queryInterface.removeIndex('answer_sheet_qr', 'idx_answer_sheet_qr_qr');
     await queryInterface.dropTable('answer_sheet_qr');
   }

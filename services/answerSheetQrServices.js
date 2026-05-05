@@ -229,9 +229,9 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
       throw createServiceError("QR code not found.", 404);
     }
 
-    if (result.alreadyUsed) {
+    if (result.examScheduleAlreadyMapped) {
       throw createServiceError(
-        "This QR code is already used. Mapped QR codes cannot be edited or reverted.",
+        "This exam schedule is already mapped to another answer sheet QR.",
         409
       );
     }

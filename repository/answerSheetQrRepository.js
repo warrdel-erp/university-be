@@ -176,10 +176,23 @@ export async function mapAnswerSheetQrOnce(qr, mappingPayload, instituteId, univ
 
   if (!row) return null;
 
-  if (row.studentId !== null || row.examScheduleId !== null) {
-    return { alreadyUsed: true, row };
+  if (mappingPayload.examScheduleId != null) {
+    const existingExamScheduleMapping = await model.answerSheetQrModel.findOne({
+      where: {
+        examScheduleId: mappingPayload.examScheduleId,
+        instituteId,
+        universityId,
+        id: { [Op.ne]: row.id },
+      },
+      transaction,
+      lock: transaction?.LOCK?.UPDATE,
+    });
+
+    if (existingExamScheduleMapping) {
+      return { examScheduleAlreadyMapped: true, row };
+    }
   }
 
   await row.update(mappingPayload, { transaction });
-  return { alreadyUsed: false, row };
+  return { examScheduleAlreadyMapped: false, row };
 }
