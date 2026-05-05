@@ -485,7 +485,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject/withExamSchedule?sessionsId=1&examSetupTypeTermId=1",
+              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=6&examSetupTypeTermId=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -495,15 +495,16 @@
               ],
               "query": [
                 {
-                  "key": "sessionsId",
-                  "value": "1"
+                  "key": "sessionId",
+                  "value": "6"
                 },
                 {
                   "key": "examSetupTypeTermId",
-                  "value": "1"
+                  "value": "10"
                 }
               ]
-            }
+            },
+            "description": "**GET /subject/withExamSchedule**\n\nReturns `studentCount`, `subjects[]` (all subjects for the course/term), and **`isHallTicketGenerated`** (true if any `student_hall_ticket` row exists for this examSetupTypeTermId + sessionId + institute + university)."
           },
           "response": []
         },
@@ -3121,155 +3122,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "answer sheet qr - bulk generate",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"count\": 100\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/answerSheetQr/bulk",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "answerSheetQr",
-                "bulk"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "answer sheet qr - get list",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/answerSheetQr?page=1&limit=20&usageType=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "answerSheetQr"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "usageType",
-                  "value": "all"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "answer sheet qr - map once",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"qr\": \"0a7f3886-99c4-4c1d-bd3d-1143bfae8bd4\",\n  \"studentId\": 2106,\n  \"examScheduleId\": 2\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/answerSheetQr/map",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "answerSheetQr",
-                "map"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "answer sheet qr - get by id details",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/answerSheetQr/:id",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "answerSheetQr",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "5"
-                }
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -4222,26 +4074,469 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "answer sheet qr",
+      "description": "Answer sheet QR APIs. Folder variables use `answersheetqr_*` prefix. Auth uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
+        {
+          "key": "answersheetqr_count",
+          "value": "10",
+          "type": "string",
+          "description": "How many QR codes to generate in one call (1-5000)."
+        },
+        {
+          "key": "answersheetqr_id",
+          "value": "1",
+          "type": "string",
+          "description": "answer_sheet_qr.id used for GET by id."
+        },
+        {
+          "key": "answersheetqr_qr",
+          "value": "550e8400-e29b-41d4-a716-446655440001",
+          "type": "string",
+          "description": "Raw QR string to map with student and exam schedule."
+        },
+        {
+          "key": "answersheetqr_studentId",
+          "value": "1",
+          "type": "string",
+          "description": "Student id used in map endpoint."
+        },
+        {
+          "key": "answersheetqr_examScheduleId",
+          "value": "1",
+          "type": "string",
+          "description": "Exam schedule id used in map endpoint."
+        }
+      ],
+      "item": [
+        {
+          "name": "bulk generate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": {{answersheetqr_count}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr?page=1&limit=20&usageType=all",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "usageType",
+                  "value": "all",
+                  "description": "Allowed values: all, used, unused."
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{answersheetqr_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{answersheetqr_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "map qr",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{{answersheetqr_qr}}\",\n  \"studentId\": {{answersheetqr_studentId}},\n  \"examScheduleId\": {{answersheetqr_examScheduleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "student hall ticket",
+      "description": "Hall ticket APIs share folder variables prefixed `hallticket_`. Edit them once on this folder (Variables tab) — all requests below resolve `{{hallticket_*}}`. Auth still uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
+        {
+          "key": "hallticket_examSetupTypeTermId",
+          "value": "1",
+          "type": "string",
+          "description": "Exam setup type term PK — used by generate, filtered list"
+        },
+        {
+          "key": "hallticket_sessionId",
+          "value": "1",
+          "type": "string",
+          "description": "Session PK — used by generate, filtered list"
+        },
+        {
+          "key": "hallticket_courseId",
+          "value": "1",
+          "type": "string",
+          "description": "Program/course PK — same as GET /examStructure/examType/single"
+        },
+        {
+          "key": "hallticket_termNumber",
+          "value": "1",
+          "type": "string",
+          "description": "Term index on exam setup type term — same as examStructure single `termNumber`"
+        },
+        {
+          "key": "hallticket_studentId",
+          "value": "1",
+          "type": "string",
+          "description": "Optional student id for examples"
+        },
+        {
+          "key": "hallticket_hallTicketId",
+          "value": "1",
+          "type": "string",
+          "description": "student_hall_ticket.id — GET by id"
+        },
+        {
+          "key": "hallticket_qr",
+          "value": "550e8400-e29b-41d4-a716-446655440000",
+          "type": "string",
+          "description": "UUID stored on hall ticket — GET byQr"
+        },
+        {
+          "key": "hallticket_examSetupTypeId",
+          "value": "1",
+          "type": "string",
+          "description": "exam_setup_type id — optional for related requests"
+        }
+      ],
+      "item": [
+        {
+          "name": "generate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "**POST /studentHallTicket/generate**\n\n**One-time only:** if any hall ticket already exists for that exam setup term + session (same institute/university), returns **400** — regeneration is not allowed.\n\nOtherwise **creates** one row per eligible student (new QR each). **Requires at least one** `exam_schedule` row for that pair with **both** `examDate` and `examTime` (one scheduled subject is enough for Mid-term / End-sem, etc.).\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeTermId\": {{hallticket_examSetupTypeTermId}},\n  \"sessionId\": {{hallticket_sessionId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "generate"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"examSetupTypeTermId\": {{hallticket_examSetupTypeTermId}},\n  \"sessionId\": {{hallticket_sessionId}}\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/studentHallTicket/generate",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentHallTicket",
+                    "generate"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets generated successfully\",\n  \"data\": {\n    \"generatedCount\": 120,\n    \"examSetupType\": {\n      \"examSetupTypeId\": 1,\n      \"examType\": \"Semester\",\n      \"examName\": \"Mid-Term Examination\"\n    },\n    \"hallTickets\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default **1000** if omitted; each request clamps **`limit`** to **10–1000**). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&page=1&limit=1000",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "{{hallticket_examSetupTypeTermId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{hallticket_sessionId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1-based page index"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size (max 100)"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets fetched successfully\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 0,\n    \"limit\": 10,\n    \"page\": 1,\n    \"totalPages\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Top level: student/session/exam-type fields; **`subjects`** lists every `exam_schedule` for this ticket’s term + session. Each item has flat fields (`subjectId`, `subjectName`, …) plus nested **`subject`** (full subject row: type, term, course, etc.) and **`semester`** when linked.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/{{hallticket_hallTicketId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "{{hallticket_hallTicketId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2094,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"AKASH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"CHOUDHARY\",\n    \"scholarNumber\": \"ASA/ID/2025/11\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 101,\n        \"subjectId\": 12,\n        \"subjectName\": \"Mathematics\",\n        \"subjectCode\": \"MTH\",\n        \"semesterId\": 2,\n        \"semesterName\": \"Semester 2\",\n        \"examDate\": \"2026-05-15\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"180\",\n        \"scheduleKind\": \"Theory\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get by qr",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket/byQr?qr=**\n\nLookup by ticket QR UUID (`hallticket_qr`). **`data`** matches **GET /studentHallTicket/:id** — flat student/session/exam fields and **`subjects`** (with nested **`subject`** / **`semester`** per schedule row).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{hallticket_qr}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "byQr"
+              ],
+              "query": [
+                {
+                  "key": "qr",
+                  "value": "{{hallticket_qr}}",
+                  "description": "UUID from hall ticket row",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 10,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2103,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"JAYANSH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"SHARMA\",\n    \"scholarNumber\": \"ASA/ID/2025/10\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 2,\n        \"subjectId\": 129,\n        \"subjectName\": \"SOM\",\n        \"subjectCode\": \"som\",\n        \"semesterId\": null,\n        \"semesterName\": null,\n        \"examDate\": \"2026-05-08\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"60\",\n        \"scheduleKind\": \"Theory\",\n        \"subject\": { \"subjectId\": 129, \"subjectName\": \"SOM\", \"subjectCode\": \"som\", \"subjectType\": \"Theoretical\" },\n        \"semester\": null\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{token}}",
-        "type": "string"
-      }
-    ]
-  },
   "variable": [
     {
       "key": "baseurl",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8080",
+      "type": "string"
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTI5VDA3OjIxOjM3LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc1NDgwNDIsImV4cCI6MTc4MDE0MDA0Mn0.0AOONQ4Lqtzs32uMIv2sPKU7LidulWmN48TNC6fdqeU"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "type": "string"
     }
   ]
 }

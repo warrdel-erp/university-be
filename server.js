@@ -87,8 +87,10 @@ import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examSetupTypeTerm from "./router/examSetupTypeTermRoute.js";
 import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
+import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
+
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 // middleware
 app.use(fileUpload());
@@ -116,7 +118,9 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
-app.use("/answerSheetQr", answerSheetQr);
+
+app.use("/studentHallTicket", studentHallTicket);
+
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
@@ -184,6 +188,9 @@ app.use("/jobs", jobs);
 app.use("/grade", grade);
 app.use("/credit", credit);
 app.use("/evalution", evalution);
+app.use("/answerSheetQr", answerSheetQr);
+
+
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

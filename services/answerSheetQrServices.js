@@ -260,11 +260,20 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
       throw createServiceError("Answer sheet QR not found.", 404);
     }
 
-    if (row.studentId === null || row.examScheduleId === null) {
-      throw createServiceError("Answer sheet QR is not fully mapped yet.", 409);
-    }
-
-    const examContext = buildExamContext(row, { includeStudentIdentity: false });
+    const isMapped = row.studentId !== null && row.examScheduleId !== null;
+    const examContext = isMapped
+      ? buildExamContext(row, { includeStudentIdentity: false })
+      : {
+          subjectName: null,
+          subjectCode: null,
+          examType: null,
+          examName: null,
+          examDate: null,
+          examTime: null,
+          semesterId: null,
+          sessionId: null,
+          term: null,
+        };
 
     return {
       id: row.id,
@@ -273,6 +282,7 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
       examScheduleId: row.examScheduleId,
       instituteId: row.instituteId,
       universityId: row.universityId,
+      isMapped,
       ...examContext,
     };
   });
