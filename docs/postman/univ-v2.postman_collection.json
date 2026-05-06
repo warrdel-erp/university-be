@@ -4083,7 +4083,7 @@
           "key": "answersheetqr_count",
           "value": "10",
           "type": "string",
-          "description": "How many QR codes to generate in one call (1-5000)."
+          "description": "How many QR codes to generate in one call (must be >= 1)."
         },
         {
           "key": "answersheetqr_id",
@@ -4108,6 +4108,12 @@
           "value": "1",
           "type": "string",
           "description": "Exam schedule id used in map endpoint."
+        },
+        {
+          "key": "answersheetqr_requestId",
+          "value": "550e8400-e29b-41d4-a716-446655440099",
+          "type": "string",
+          "description": "requestId from bulk generation response."
         }
       ],
       "item": [
@@ -4213,6 +4219,84 @@
               "path": [
                 "answerSheetQr",
                 "{{answersheetqr_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get generation requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/requests?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get qrs by request id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/requests/{{answersheetqr_requestId}}/qrs?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "requests",
+                "{{answersheetqr_requestId}}",
+                "qrs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
               ]
             }
           },

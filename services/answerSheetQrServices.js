@@ -3,7 +3,6 @@ import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.
 import sequelize from "../database/sequelizeConfig.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
-const MAX_BULK_GENERATION_PER_REQUEST = 5000;
 
 function createServiceError(message, statusCode = 400) {
   const error = new Error(message);
@@ -49,13 +48,6 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
       throw createServiceError("Please provide a valid positive integer for count.", 400);
     }
 
-    if (count > MAX_BULK_GENERATION_PER_REQUEST) {
-      throw createServiceError(
-        `You can generate up to ${MAX_BULK_GENERATION_PER_REQUEST} QR codes in one request.`,
-        400
-      );
-    }
-
     const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(
       instituteId,
       universityId,
@@ -69,8 +61,10 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
       );
     }
 
+    const requestId = uuidv4();
     const payload = Array.from({ length: count }, () => ({
       qr: uuidv4(),
+      requestId,
       instituteId,
       universityId,
     }));
@@ -78,6 +72,7 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
     const created = await answerSheetQrRepository.bulkCreateAnswerSheetQr(payload, transaction);
 
     return {
+      requestId,
       createdCount: created.length,
       unusedCountAfterCreation: unusedCount + created.length,
       items: created,
@@ -112,6 +107,7 @@ export async function getAnswerSheetQrList(instituteId, universityId, page = 1, 
       data: rows.map((item) => ({
         id: item.id,
         qr: item.qr,
+        requestId: item.requestId ?? null,
         studentId: item.studentId,
         examScheduleId: item.examScheduleId,
         instituteId: item.instituteId,
@@ -165,6 +161,7 @@ export async function getAnswerSheetQrListSecure(
       data: rows.map((item) => ({
         id: item.id,
         qr: item.qr,
+        requestId: item.requestId ?? null,
         studentId: item.studentId,
         examScheduleId: item.examScheduleId,
         instituteId: item.instituteId,
@@ -178,6 +175,7 @@ export async function getAnswerSheetQrListSecure(
         limit: safeLimit,
         total: count,
       },
+      requestIds: [...new Set(rows.map((item) => item.requestId).filter(Boolean))],
     };
   });
 }
@@ -229,9 +227,9 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
       throw createServiceError("QR code not found.", 404);
     }
 
-    if (result.alreadyUsed) {
+    if (result.examScheduleAlreadyMapped) {
       throw createServiceError(
-        "This QR code is already used. Mapped QR codes cannot be edited or reverted.",
+        "This exam schedule is already mapped to another answer sheet QR.",
         409
       );
     }
@@ -239,6 +237,7 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
     return {
       id: result.row.id,
       qr: result.row.qr,
+      requestId: result.row.requestId ?? null,
       studentId: result.row.studentId,
       examScheduleId: result.row.examScheduleId,
       instituteId: result.row.instituteId,
@@ -278,12 +277,96 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
     return {
       id: row.id,
       qr: row.qr,
+      requestId: row.requestId ?? null,
       studentId: row.studentId,
       examScheduleId: row.examScheduleId,
       instituteId: row.instituteId,
       universityId: row.universityId,
       isMapped,
       ...examContext,
+    };
+  });
+}
+
+export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, page = 1, limit = 20) {
+  return sequelize.transaction(async (transaction) => {
+    const safePage = Number(page);
+    const safeLimit = Number(limit);
+    if (!Number.isInteger(safePage) || safePage <= 0) {
+      throw createServiceError("Page must be a positive integer.", 400);
+    }
+
+    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
+      throw createServiceError("Limit must be between 1 and 100.", 400);
+    }
+
+    const offset = (safePage - 1) * safeLimit;
+    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrGenerationRequests(
+      instituteId,
+      universityId,
+      safeLimit,
+      offset,
+      transaction
+    );
+
+    return {
+      data: rows.map((row) => ({
+        requestId: row.requestId,
+        totalQrs: Number(row.totalQrs || 0),
+        mappedQrs: Number(row.mappedQrs || 0),
+        unmappedQrs: Number(row.unmappedQrs || 0),
+        firstGeneratedAt: row.firstGeneratedAt,
+        lastGeneratedAt: row.lastGeneratedAt,
+      })),
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total: count,
+      },
+    };
+  });
+}
+
+export async function getAnswerSheetQrsByRequestId(requestId, instituteId, universityId, page = 1, limit = 20) {
+  return sequelize.transaction(async (transaction) => {
+    const safePage = Number(page);
+    const safeLimit = Number(limit);
+    if (!Number.isInteger(safePage) || safePage <= 0) {
+      throw createServiceError("Page must be a positive integer.", 400);
+    }
+
+    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
+      throw createServiceError("Limit must be between 1 and 100.", 400);
+    }
+
+    const offset = (safePage - 1) * safeLimit;
+    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByRequestId(
+      instituteId,
+      universityId,
+      requestId,
+      safeLimit,
+      offset,
+      transaction
+    );
+
+    return {
+      data: rows.map((item) => ({
+        id: item.id,
+        qr: item.qr,
+        requestId: item.requestId ?? null,
+        studentId: item.studentId,
+        examScheduleId: item.examScheduleId,
+        instituteId: item.instituteId,
+        universityId: item.universityId,
+        isUsed: item.studentId !== null || item.examScheduleId !== null,
+        createdAt: item.createdAt,
+        ...(item.studentId !== null || item.examScheduleId !== null ? buildExamContext(item) : {}),
+      })),
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total: count,
+      },
     };
   });
 }

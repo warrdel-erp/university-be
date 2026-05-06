@@ -15,6 +15,11 @@ export default sequelize.define(
       allowNull: false,
       unique: true,
     },
+    requestId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: "request_id",
+    },
     studentId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -27,6 +32,7 @@ export default sequelize.define(
     examScheduleId: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      unique: true,
       field: "exam_schedule_id",
       references: {
         model: "exam_schedule",

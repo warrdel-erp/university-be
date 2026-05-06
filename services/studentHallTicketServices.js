@@ -117,8 +117,10 @@ function schedulesToSubjectList(scheduleRows) {
         const plain = typeof row.toJSON === "function" ? row.toJSON() : typeof row.get === "function" ? row.get({ plain: true }) : row;
         const sub = plain.subjectSchedule;
         const sem = plain.semesterexam;
+        const isMapped = plain.examScheduleId != null;
         return {
             examScheduleId: plain.examScheduleId,
+            isMapped,
             subjectId: sub?.subjectId ?? plain.subjectId ?? null,
             subjectName: sub?.subjectName ?? null,
             subjectCode: sub?.subjectCode ?? null,
