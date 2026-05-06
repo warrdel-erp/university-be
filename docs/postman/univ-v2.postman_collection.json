@@ -4609,6 +4609,370 @@
           ]
         }
       ]
+    },
+    {
+      "name": "library creation",
+      "description": "Library creation and inventory APIs under `/libraryCreation`.",
+      "variable": [
+        { "key": "libraryCreation_id", "value": "1", "type": "string" },
+        { "key": "libraryFloor_id", "value": "1", "type": "string" },
+        { "key": "libraryBook_id", "value": "1", "type": "string" },
+        { "key": "inventory_id", "value": "1", "type": "string" }
+      ],
+      "item": [
+        {
+          "name": "add library",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"instituteId\": 12,\n  \"name\": \"Central Library\",\n  \"description\": \"Main campus library\",\n  \"campusId\": 1,\n  \"floors\": [\n    { \"name\": \"Ground Floor\" }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Library and floors added successfully\",\n  \"libraryId\": 25\n}"
+            }
+          ]
+        },
+        {
+          "name": "get libraries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryCreationId\": 25,\n    \"name\": \"Central Library\",\n    \"description\": \"Main campus library\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get single library",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/single?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "single"],
+              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"libraryCreationId\": 25,\n  \"name\": \"Central Library\",\n  \"floors\": [\n    { \"libraryFloorId\": 1, \"name\": \"Ground Floor\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update library",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Central Library Updated\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Library Creation  update succesfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete library",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation"],
+              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Delete successful for library creation ID 25\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "add book with inventory",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/addBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "addBook"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 51,\n      \"libraryCreationId\": 25,\n      \"title\": \"Introduction to Algorithms\",\n      \"subjectId\": 0,\n      \"classSectionsId\": 0,\n      \"remark\": \"\",\n      \"itemType\": \"print\"\n    },\n    \"inventory\": 1\n  }\n}"
+            },
+            {
+              "name": "201 Created — partial payload example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"title\": \"Data Structures\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryCreation/addBook",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryCreation", "addBook"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 52,\n      \"libraryCreationId\": 25,\n      \"title\": \"Data Structures\"\n    },\n    \"inventory\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "allBook"],
+              "query": [
+                { "key": "libraryCreationId", "value": "{{libraryCreation_id}}" },
+                { "key": "libraryFloorId", "value": "{{libraryFloor_id}}" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryBookId\": 51,\n    \"title\": \"Introduction to Algorithms\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get single book",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/singleBook?libraryBookId={{libraryBook_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "singleBook"],
+              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"libraryBookId\": 51,\n  \"title\": \"Introduction to Algorithms\",\n  \"subjectId\": 0,\n  \"classSectionsId\": 0,\n  \"remark\": \"\",\n  \"itemType\": \"print\",\n  \"inventoryCopies\": [\n    {\n      \"inventoryId\": 81,\n      \"excisionNumber\": \"ACC-1001\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update book",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book updated successfully\",\n  \"result\": [1]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update inventory",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/updateInventory", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateInventory"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Inventory updated successfully\",\n  \"result\": [1]\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete book",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/deleteBook?libraryBookId={{libraryBook_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "deleteBook"],
+              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete inventory copy",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/deleteInventory?inventoryId={{inventory_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "deleteInventory"],
+              "query": [{ "key": "inventoryId", "value": "{{inventory_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Inventory copy deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "get issued books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryCreation/issuedBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "issuedBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Issued books fetched successfully\",\n  \"issuedBooks\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "bulk upload books",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "book", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/bulkUpload", "host": ["{{baseurl}}"], "path": ["libraryCreation", "bulkUpload"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Books uploaded successfully\",\n  \"created\": 10,\n  \"failed\": 0\n}"
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [

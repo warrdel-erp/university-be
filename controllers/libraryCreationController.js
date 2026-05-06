@@ -109,9 +109,14 @@ export async function addBookWithInventory(req, res) {
             return res.status(400).json({ message: "Book and Inventory details are required" });
         }
 
+        const inventoryList = Array.isArray(inventory) ? inventory : [inventory];
+        if (!inventoryList.length) {
+            return res.status(400).json({ message: "At least one inventory row is required" });
+        }
+
         const result = await libraryCreation.addBookWithInventory(
             book,
-            inventory,
+            inventoryList,
             createdBy,
             updatedBy
         );

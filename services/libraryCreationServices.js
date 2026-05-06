@@ -89,16 +89,35 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
   const transaction = await sequelize.transaction();
 
   try {
-    bookData.createdBy = createdBy;
-    bookData.updatedBy = updatedBy;
+    const normalizedBookData = {
+      ...bookData,
+      // newly added API keys
+      subjectId: bookData.subjectId ?? null,
+      classSectionsId: bookData.classSectionsId ?? null,
+      remark: bookData.remark ?? null,
+      itemType: bookData.itemType ?? null,
+      createdBy,
+      updatedBy,
+    };
 
     // Create Book First
-    const newBook = await libraryCreationService.createBook(bookData, transaction);
+    const newBook = await libraryCreationService.createBook(normalizedBookData, transaction);
 
     // Insert Inventory Copies
     for (let inv of inventoryList) {
-      inv.libraryBookId = newBook.dataValues.libraryBookId;
-      await libraryCreationService.createInventory(inv, transaction);
+      const normalizedInventory = {
+        ...inv,
+        libraryBookId: newBook.dataValues.libraryBookId,
+        // backward-compatible alias: accessionNo -> excisionNumber
+        excisionNumber: inv.excisionNumber ?? inv.accessionNo ?? null,
+        // newly added API keys
+        billNo: inv.billNo ?? null,
+        billDate: inv.billDate ?? null,
+        itemPrice: inv.itemPrice ?? null,
+        netPrice: inv.netPrice ?? null,
+        currency: inv.currency ?? null,
+      };
+      await libraryCreationService.createInventory(normalizedInventory, transaction);
     }
 
     await transaction.commit();
