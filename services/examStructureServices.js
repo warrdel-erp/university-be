@@ -28,11 +28,15 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
 };
 
 export async function addExamType(examDetail, createdBy, updatedBy,universityId,instituteId) {
-    examDetail.createdBy = createdBy;
-    examDetail.updatedBy = updatedBy;
-    examDetail.universityId = universityId;
-    examDetail.instituteId = instituteId;
-    const result = await examStructureRepository.addExamType(examDetail);
+    const payload = { ...examDetail };
+    // scheduledBy should not be accepted in create exam setup type.
+    delete payload.scheduledBy;
+
+    payload.createdBy = createdBy;
+    payload.updatedBy = updatedBy;
+    payload.universityId = universityId;
+    payload.instituteId = instituteId;
+    const result = await examStructureRepository.addExamType(payload);
     return result;
 };
 
