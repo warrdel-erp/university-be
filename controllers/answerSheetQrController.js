@@ -43,7 +43,10 @@ export async function getAnswerSheetQrList(req, res) {
       200,
       "Answer sheet QR list fetched successfully",
       result.data,
-      result.pagination
+      {
+        ...result.pagination,
+        requestIds: result.requestIds || [],
+      }
     );
   } catch (error) {
     console.error("Error in getAnswerSheetQrList controller:", error);
@@ -87,6 +90,60 @@ export async function getAnswerSheetQrById(req, res) {
     return SuccessResponse(res, 200, "Answer sheet QR details fetched successfully", result);
   } catch (error) {
     console.error("Error in getAnswerSheetQrById controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getAnswerSheetQrGenerationRequests(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    const { page = 1, limit = 20 } = req.query;
+
+    const result = await answerSheetQrServices.getAnswerSheetQrGenerationRequests(
+      instituteId,
+      universityId,
+      page,
+      limit
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet QR generation requests fetched successfully",
+      result.data,
+      result.pagination
+    );
+  } catch (error) {
+    console.error("Error in getAnswerSheetQrGenerationRequests controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getAnswerSheetQrsByRequestId(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    const { requestId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const result = await answerSheetQrServices.getAnswerSheetQrsByRequestId(
+      requestId,
+      instituteId,
+      universityId,
+      page,
+      limit
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Answer sheet QRs fetched by request successfully",
+      result.data,
+      result.pagination
+    );
+  } catch (error) {
+    console.error("Error in getAnswerSheetQrsByRequestId controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
