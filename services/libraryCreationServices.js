@@ -85,39 +85,38 @@ export async function updateLibrary(libraryCreationId, libraryData, updatedBy) {
   }
 }
 
+
 export async function addBookWithInventory(bookData, inventoryList, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    const normalizedBookData = {
-      ...bookData,
-      // newly added API keys
-      subjectId: bookData.subjectId ?? null,
-      classSectionsId: bookData.classSectionsId ?? null,
-      remark: bookData.remark ?? null,
-      itemType: bookData.itemType ?? null,
-      createdBy,
-      updatedBy,
-    };
-
-    // Create Book First
-    const newBook = await libraryCreationService.createBook(normalizedBookData, transaction);
+    // bookData already validated by zod
+    const newBook = await libraryCreationService.createBook(
+      {
+        ...bookData,
+        createdBy,
+        updatedBy,
+      },
+      transaction
+    );
 
     // Insert Inventory Copies
-    for (let inv of inventoryList) {
-      const normalizedInventory = {
-        ...inv,
-        libraryBookId: newBook.dataValues.libraryBookId,
-        // backward-compatible alias: accessionNo -> excisionNumber
-        excisionNumber: inv.excisionNumber ?? inv.accessionNo ?? null,
-        // newly added API keys
-        billNo: inv.billNo ?? null,
-        billDate: inv.billDate ?? null,
-        itemPrice: inv.itemPrice ?? null,
-        netPrice: inv.netPrice ?? null,
-        currency: inv.currency ?? null,
-      };
-      await libraryCreationService.createInventory(normalizedInventory, transaction);
+    for (const inv of inventoryList) {
+      await libraryCreationService.createInventory(
+        {
+          libraryBookId: newBook.dataValues.libraryBookId,
+
+          // backward-compatible alias
+          excisionNumber: inv.excisionNumber ?? inv.accessionNo ?? null,
+
+          billNo: inv.billNo ?? null,
+          billDate: inv.billDate ?? null,
+          itemPrice: inv.itemPrice ?? null,
+          netPrice: inv.netPrice ?? null,
+          currency: inv.currency ?? null,
+        },
+        transaction
+      );
     }
 
     await transaction.commit();

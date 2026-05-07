@@ -43,7 +43,7 @@ function buildExamContext(item, options = {}) {
 }
 
 export async function generateBulkAnswerSheetQr(count, instituteId, universityId) {
-  return sequelize.transaction(async (transaction) => {
+  const result = await sequelize.transaction(async (transaction) => {
     if (!Number.isInteger(count) || count <= 0) {
       throw createServiceError("Please provide a valid positive integer for count.", 400);
     }
@@ -78,110 +78,11 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
       items: created,
     };
   });
-}
-
-export async function getAnswerSheetQrList(instituteId, universityId, page = 1, limit = 20) {
-  return sequelize.transaction(async (transaction) => {
-    const safePage = Number(page);
-    const safeLimit = Number(limit);
-
-    if (!Number.isInteger(safePage) || safePage <= 0) {
-      throw createServiceError("Page must be a positive integer.", 400);
-    }
-
-    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
-      throw createServiceError("Limit must be between 1 and 100.", 400);
-    }
-
-    const offset = (safePage - 1) * safeLimit;
-
-    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrs(
-      instituteId,
-      universityId,
-      safeLimit,
-      offset,
-      transaction
-    );
-
-    return {
-      data: rows.map((item) => ({
-        id: item.id,
-        qr: item.qr,
-        requestId: item.requestId ?? null,
-        studentId: item.studentId,
-        examScheduleId: item.examScheduleId,
-        instituteId: item.instituteId,
-        universityId: item.universityId,
-        createdAt: item.createdAt,
-      })),
-      pagination: {
-        page: safePage,
-        limit: safeLimit,
-        total: count,
-      },
-    };
-  });
-}
-
-export async function getAnswerSheetQrListSecure(
-  instituteId,
-  universityId,
-  page = 1,
-  limit = 20,
-  usageType = "all",
-  includeQr = false
-) {
-  return sequelize.transaction(async (transaction) => {
-    const safePage = Number(page);
-    const safeLimit = Number(limit);
-    if (!Number.isInteger(safePage) || safePage <= 0) {
-      throw createServiceError("Page must be a positive integer.", 400);
-    }
-
-    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
-      throw createServiceError("Limit must be between 1 and 100.", 400);
-    }
-
-    if (!["all", "used", "unused"].includes(usageType)) {
-      throw createServiceError("usageType must be one of: all, used, unused.", 400);
-    }
-
-    const offset = (safePage - 1) * safeLimit;
-
-    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByUsage(
-      instituteId,
-      universityId,
-      usageType,
-      safeLimit,
-      offset,
-      transaction
-    );
-
-    return {
-      data: rows.map((item) => ({
-        id: item.id,
-        qr: item.qr,
-        requestId: item.requestId ?? null,
-        studentId: item.studentId,
-        examScheduleId: item.examScheduleId,
-        instituteId: item.instituteId,
-        universityId: item.universityId,
-        isUsed: item.studentId !== null || item.examScheduleId !== null,
-        createdAt: item.createdAt,
-        ...(item.studentId !== null || item.examScheduleId !== null ? buildExamContext(item) : {}),
-      })),
-      pagination: {
-        page: safePage,
-        limit: safeLimit,
-        total: count,
-      },
-      requestIds: [...new Set(rows.map((item) => item.requestId).filter(Boolean))],
-    };
-  });
+  return result;
 }
 
 export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteId, universityId) {
-  return sequelize.transaction(async (transaction) => {
+  const resultData = await sequelize.transaction(async (transaction) => {
     if (!studentId || !examScheduleId) {
       throw createServiceError("Both studentId and examScheduleId are required for mapping.", 400);
     }
@@ -244,10 +145,11 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
       universityId: result.row.universityId,
     };
   });
+  return resultData;
 }
 
 export async function getAnswerSheetQrDetailById(id, instituteId, universityId) {
-  return sequelize.transaction(async (transaction) => {
+  const result = await sequelize.transaction(async (transaction) => {
     const row = await answerSheetQrRepository.getAnswerSheetQrById(
       id,
       instituteId,
@@ -286,87 +188,115 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
       ...examContext,
     };
   });
+  return result;
 }
 
-export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, page = 1, limit = 20) {
-  return sequelize.transaction(async (transaction) => {
-    const safePage = Number(page);
-    const safeLimit = Number(limit);
-    if (!Number.isInteger(safePage) || safePage <= 0) {
-      throw createServiceError("Page must be a positive integer.", 400);
-    }
+export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, page = 1, limit = 10) {
+  const safePage = Number(page);
+  const safeLimit = Number(limit);
+  const offset = (safePage - 1) * safeLimit;
 
-    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
-      throw createServiceError("Limit must be between 1 and 100.", 400);
-    }
+  const { groupedRows, totalRequests } = await answerSheetQrRepository.getAnswerSheetQrGenerationRequests(
+    instituteId,
+    universityId,
+    safeLimit,
+    offset
+  );
 
-    const offset = (safePage - 1) * safeLimit;
-    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrGenerationRequests(
+  const selectedRequest = groupedRows[0];
+  let data = {};
+
+  if (selectedRequest) {
+    const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
       instituteId,
       universityId,
-      safeLimit,
-      offset,
-      transaction
+      selectedRequest.requestId
     );
 
-    return {
-      data: rows.map((row) => ({
-        requestId: row.requestId,
-        totalQrs: Number(row.totalQrs || 0),
-        mappedQrs: Number(row.mappedQrs || 0),
-        unmappedQrs: Number(row.unmappedQrs || 0),
-        firstGeneratedAt: row.firstGeneratedAt,
-        lastGeneratedAt: row.lastGeneratedAt,
-      })),
-      pagination: {
-        page: safePage,
-        limit: safeLimit,
-        total: count,
-      },
-    };
-  });
-}
-
-export async function getAnswerSheetQrsByRequestId(requestId, instituteId, universityId, page = 1, limit = 20) {
-  return sequelize.transaction(async (transaction) => {
-    const safePage = Number(page);
-    const safeLimit = Number(limit);
-    if (!Number.isInteger(safePage) || safePage <= 0) {
-      throw createServiceError("Page must be a positive integer.", 400);
+    let mappedQrs = 0;
+    for (const row of usageRows) {
+      if (row.studentId != null || row.examScheduleId != null) {
+        mappedQrs++;
+      }
     }
 
-    if (!Number.isInteger(safeLimit) || safeLimit <= 0 || safeLimit > 100) {
-      throw createServiceError("Limit must be between 1 and 100.", 400);
-    }
+    const totalQrs = usageRows.length;
+    const unmappedQrs = totalQrs - mappedQrs;
 
-    const offset = (safePage - 1) * safeLimit;
-    const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByRequestId(
-      instituteId,
-      universityId,
-      requestId,
-      safeLimit,
-      offset,
-      transaction
-    );
-
-    return {
-      data: rows.map((item) => ({
-        id: item.id,
-        qr: item.qr,
-        requestId: item.requestId ?? null,
-        studentId: item.studentId,
-        examScheduleId: item.examScheduleId,
-        instituteId: item.instituteId,
-        universityId: item.universityId,
-        isUsed: item.studentId !== null || item.examScheduleId !== null,
-        createdAt: item.createdAt,
-        ...(item.studentId !== null || item.examScheduleId !== null ? buildExamContext(item) : {}),
-      })),
-      pagination: {
-        page: safePage,
-        limit: safeLimit,
-        total: count,
-      },
+    data = {
+      requestId: selectedRequest.requestId,
+      totalQrs,
+      mappedQrs,
+      unmappedQrs,
+      generatedAt: selectedRequest.generatedAt,
     };
-  });
+  }
+
+  return {
+    data,
+    paginationData: {
+      total: totalRequests,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(totalRequests / safeLimit),
+    },
+  };
 }
+
+export async function getAnswerSheetQrsByRequestId(
+  requestId,
+  instituteId,
+  universityId,
+  page = 1,
+  limit = 20
+) {
+  const safePage = Number(page);
+  const safeLimit = Number(limit);
+  const offset = (safePage - 1) * safeLimit;
+
+  const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByRequestId(
+    instituteId,
+    universityId,
+    requestId,
+    safeLimit,
+    offset
+  );
+
+  const data = rows.map((item) => ({
+    id: item.id,
+    qr: item.qr,
+    requestId: item.requestId ?? null,
+    studentId: item.studentId,
+    examScheduleId: item.examScheduleId,
+    instituteId: item.instituteId,
+    universityId: item.universityId,
+    isUsed: item.studentId !== null || item.examScheduleId !== null,
+    createdAt: item.createdAt,
+    studentDisplayName:
+      [item.student?.firstName, item.student?.middleName, item.student?.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim(),
+    enrollNumber: item.student?.enrollNumber || null,
+    scholarNumber: item.student?.scholarNumber || null,
+    subjectName: item.examSchedule?.subjectSchedule?.subjectName || null,
+    subjectCode: item.examSchedule?.subjectSchedule?.subjectCode || null,
+    examType: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examType || null,
+    examName: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examName || null,
+    examDate: item.examSchedule?.examDate || null,
+    examTime: item.examSchedule?.examTime || null,
+    semesterId: item.examSchedule?.semesterId || null,
+    sessionId: item.examSchedule?.sessionId || null,
+    term: item.examSchedule?.examSetupTypeTerm?.term || null,
+  }));
+
+  return {
+    data,
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total: count,
+    },
+  };
+}
+

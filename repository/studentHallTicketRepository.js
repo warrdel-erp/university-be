@@ -85,10 +85,6 @@ export async function getEligibleStudents(sessionId, courseId, term, instituteId
     });
 }
 
-export async function createHallTicket(payload, transaction) {
-    return model.studentHallTicketModel.create(payload, { transaction });
-}
-
 export async function bulkCreateHallTickets(payloads, transaction) {
     return model.studentHallTicketModel.bulkCreate(payloads, { transaction });
 }
@@ -109,32 +105,33 @@ export async function getHallTicketByQr(qr, instituteId, universityId, transacti
 }
 
 export async function getAllHallTickets(filters = {}, transaction, options = {}) {
-    const where = {
-        ...(filters.examSetupTypeTermId && { examSetupTypeTermId: filters.examSetupTypeTermId }),
-        ...(filters.sessionId && { sessionId: filters.sessionId }),
-        ...(filters.studentId && { studentId: filters.studentId }),
-        ...(filters.instituteId && { instituteId: filters.instituteId }),
-        ...(filters.universityId && { universityId: filters.universityId })
-    };
+    const where = {};
+    if (filters.examSetupTypeTermId) where.examSetupTypeTermId = filters.examSetupTypeTermId;
+    if (filters.sessionId) where.sessionId = filters.sessionId;
+    if (filters.studentId) where.studentId = filters.studentId;
+    if (filters.instituteId) where.instituteId = filters.instituteId;
+    if (filters.universityId) where.universityId = filters.universityId;
 
-    return model.studentHallTicketModel.findAll({
+    const query = {
         transaction,
         where,
         include: getHallTicketIncludes(),
         order: [["id", "DESC"]],
-        ...(options.limit != null && { limit: options.limit }),
-        ...(options.offset != null && { offset: options.offset }),
-    });
+    };
+
+    if (options.limit != null) query.limit = options.limit;
+    if (options.offset != null) query.offset = options.offset;
+
+    return model.studentHallTicketModel.findAll(query);
 }
 
 export async function countHallTickets(filters = {}, transaction) {
-    const where = {
-        ...(filters.examSetupTypeTermId && { examSetupTypeTermId: filters.examSetupTypeTermId }),
-        ...(filters.sessionId && { sessionId: filters.sessionId }),
-        ...(filters.studentId && { studentId: filters.studentId }),
-        ...(filters.instituteId && { instituteId: filters.instituteId }),
-        ...(filters.universityId && { universityId: filters.universityId }),
-    };
+    const where = {};
+    if (filters.examSetupTypeTermId) where.examSetupTypeTermId = filters.examSetupTypeTermId;
+    if (filters.sessionId) where.sessionId = filters.sessionId;
+    if (filters.studentId) where.studentId = filters.studentId;
+    if (filters.instituteId) where.instituteId = filters.instituteId;
+    if (filters.universityId) where.universityId = filters.universityId;
 
     return model.studentHallTicketModel.count({ where, transaction });
 }

@@ -4,7 +4,6 @@ import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import {
   generateAnswerSheetQrBulk,
-  getAnswerSheetQrList,
   getAnswerSheetQrById,
   mapAnswerSheetQr,
   getAnswerSheetQrGenerationRequests,
@@ -18,12 +17,6 @@ const bulkGenerateSchema = z.object({
     .number({ required_error: "Count is required." })
     .int("Count must be a whole number.")
     .min(1, "Count must be at least 1."),
-});
-
-const listSchema = z.object({
-  page: z.coerce.number().int().optional().default(1),
-  limit: z.coerce.number().int().optional().default(20),
-  usageType: z.enum(["all", "used", "unused"]).optional().default("all"),
 });
 
 const mapSchema = z
@@ -59,25 +52,28 @@ router.post(
   validate({ body: bulkGenerateSchema }),
   generateAnswerSheetQrBulk
 );
-router.get("/", userAuth, validate({ query: listSchema }), getAnswerSheetQrList);
+
 router.get(
   "/requests",
   userAuth,
   validate({ query: paginationSchema }),
   getAnswerSheetQrGenerationRequests
 );
+
 router.get(
   "/requests/:requestId/qrs",
   userAuth,
   validate({ params: requestIdParamSchema, query: paginationSchema }),
   getAnswerSheetQrsByRequestId
 );
+
 router.get(
   "/:id",
   userAuth,
   validate({ params: idParamSchema }),
   getAnswerSheetQrById
 );
+
 router.patch(
   "/map",
   userAuth,

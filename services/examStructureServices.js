@@ -31,7 +31,6 @@ export async function addExamType(examDetail, createdBy, updatedBy,universityId,
     const payload = { ...examDetail };
     // scheduledBy should not be accepted in create exam setup type.
     delete payload.scheduledBy;
-
     payload.createdBy = createdBy;
     payload.updatedBy = updatedBy;
     payload.universityId = universityId;
