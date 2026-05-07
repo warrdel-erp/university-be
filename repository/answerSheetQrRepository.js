@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 
 export async function countUnusedByInstitute(instituteId, universityId, transaction) {
@@ -17,91 +17,10 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
   return model.answerSheetQrModel.bulkCreate(rows, { transaction });
 }
 
-export async function getAnswerSheetQrs(instituteId, universityId, limit, offset, transaction) {
-  const { count, rows } = await model.answerSheetQrModel.findAndCountAll({
-    where: { instituteId, universityId },
-    attributes: ["id", "qr", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
-    order: [["id", "DESC"]],
-    limit,
-    offset,
-    transaction,
-  });
-
-  return { count, rows };
-}
-
-export async function getAnswerSheetQrsByUsage(
-  instituteId,
-  universityId,
-  usageType,
-  limit,
-  offset,
-  transaction
-) {
-  const whereClause = {
-    instituteId,
-    universityId,
-    ...(usageType === "used" && {
-      [Op.or]: [{ studentId: { [Op.not]: null } }, { examScheduleId: { [Op.not]: null } }],
-    }),
-    ...(usageType === "unused" && {
-      studentId: { [Op.is]: null },
-      examScheduleId: { [Op.is]: null },
-    }),
-  };
-
-  const { count, rows } = await model.answerSheetQrModel.findAndCountAll({
-    where: whereClause,
-    attributes: ["id", "qr", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
-    include: [
-      {
-        model: model.studentModel,
-        as: "student",
-        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
-        required: false,
-      },
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
-        required: false,
-        include: [
-          {
-            model: model.subjectModel,
-            as: "subjectSchedule",
-            attributes: ["subjectId", "subjectName", "subjectCode"],
-            required: false,
-          },
-          {
-            model: model.examSetupTypeTermModel,
-            as: "examSetupTypeTerm",
-            attributes: ["examSetupTypeTermId", "term", "courseId"],
-            required: false,
-            include: [
-              {
-                model: model.examSetupTypeModel,
-                as: "examSetupType",
-                attributes: ["examSetupTypeId", "examType", "examName"],
-                required: false,
-              },
-            ],
-          },
-        ],
-      },
-    ],
-    order: [["id", "DESC"]],
-    limit,
-    offset,
-    transaction,
-  });
-
-  return { count, rows };
-}
-
 export async function getAnswerSheetQrById(id, instituteId, universityId, transaction) {
   return model.answerSheetQrModel.findOne({
     where: { id, instituteId, universityId },
-    attributes: ["id", "qr", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -141,6 +60,101 @@ export async function getAnswerSheetQrById(id, instituteId, universityId, transa
     transaction,
   });
 }
+
+export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, limit, offset) {
+  const whereClause = {
+    instituteId,
+    universityId,
+    requestId: { [Op.not]: null },
+  };
+
+  const groupedRows = await model.answerSheetQrModel.findAll({
+    where: whereClause,
+    attributes: [
+      "requestId",
+      [fn("COUNT", col("id")), "totalQrs"],
+      [fn("MAX", col("created_at")), "generatedAt"],
+    ],
+    group: ["requestId"],
+    order: [[fn("MAX", col("created_at")), "DESC"]],
+    limit,
+    offset,
+    raw: true,
+  });
+
+  const totalRequests = await model.answerSheetQrModel.count({
+    where: whereClause,
+    distinct: true,
+    col: "requestId",
+  });
+
+  return { groupedRows, totalRequests };
+}
+
+export async function getAnswerSheetQrUsageByRequestId(instituteId, universityId, requestId) {
+  return model.answerSheetQrModel.findAll({
+    where: {
+      instituteId,
+      universityId,
+      requestId,
+    },
+    attributes: ["studentId", "examScheduleId"],
+    raw: true,
+  });
+}
+
+export async function getAnswerSheetQrsByRequestId(
+  instituteId,
+  universityId,
+  requestId,
+  limit,
+  offset
+) {
+  return model.answerSheetQrModel.findAndCountAll({
+    where: { instituteId, universityId, requestId },
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
+        required: false,
+      },
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
+        required: false,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+          {
+            model: model.examSetupTypeTermModel,
+            as: "examSetupTypeTerm",
+            attributes: ["examSetupTypeTermId", "term", "courseId"],
+            required: false,
+            include: [
+              {
+                model: model.examSetupTypeModel,
+                as: "examSetupType",
+                attributes: ["examSetupTypeId", "examType", "examName"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [["id", "DESC"]],
+    limit,
+    offset,
+  });
+}
+
 
 export async function getScopedStudent(studentId, instituteId, universityId, transaction) {
   return model.studentModel.findOne({
@@ -167,19 +181,37 @@ export async function getScopedExamSchedule(examScheduleId, instituteId, univers
   });
 }
 
-export async function mapAnswerSheetQrOnce(qr, mappingPayload, instituteId, universityId, transaction) {
+export async function mapAnswerSheetQrOnce(
+  qr,
+  mappingPayload,
+  instituteId,
+  universityId,
+  transaction
+) {
   const row = await model.answerSheetQrModel.findOne({
     where: { qr, instituteId, universityId },
     transaction,
-    lock: transaction?.LOCK?.UPDATE,
   });
 
   if (!row) return null;
 
-  if (row.studentId !== null || row.examScheduleId !== null) {
-    return { alreadyUsed: true, row };
+  const existingMapping =
+    mappingPayload.examScheduleId &&
+    await model.answerSheetQrModel.findOne({
+      where: {
+        examScheduleId: mappingPayload.examScheduleId,
+        instituteId,
+        universityId,
+        id: { [Op.ne]: row.id },
+      },
+      transaction,
+    });
+
+  if (existingMapping) {
+    return { examScheduleAlreadyMapped: true, row };
   }
 
   await row.update(mappingPayload, { transaction });
-  return { alreadyUsed: false, row };
+
+  return { examScheduleAlreadyMapped: false, row };
 }

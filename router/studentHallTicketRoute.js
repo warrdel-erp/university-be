@@ -21,11 +21,11 @@ const qrQuerySchema = z.object({
 
 /** Filters + optional `page` / `limit` (limit defaults 1000, clamped 10–1000 per page). */
 const listHallTicketsQuerySchema = z.object({
-    examSetupTypeTermId: z.string().regex(/^\d+$/, "examSetupTypeTermId must be a number").optional(),
-    sessionId: z.string().regex(/^\d+$/, "sessionId must be a number").optional(),
-    studentId: z.string().regex(/^\d+$/, "studentId must be a number").optional(),
-    page: z.string().regex(/^\d+$/, "page must be a positive integer").optional(),
-    limit: z.string().regex(/^\d+$/, "limit must be a positive integer").optional(),
+    examSetupTypeTermId: z.coerce.number().int("examSetupTypeTermId must be an integer").positive("examSetupTypeTermId must be greater than 0").optional(),
+    sessionId: z.coerce.number().int("sessionId must be an integer").positive("sessionId must be greater than 0").optional(),
+    studentId: z.coerce.number().int("studentId must be an integer").positive("studentId must be greater than 0").optional(),
+    page: z.coerce.number().int("page must be an integer").min(1, "page must be at least 1").optional().default(1),
+    limit: z.coerce.number().int("limit must be an integer").min(1, "limit must be at least 1").optional().default(1000),
 });
 
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);

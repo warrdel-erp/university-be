@@ -15,6 +15,11 @@ export default sequelize.define(
       allowNull: false,
       unique: true,
     },
+    requestId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: "request_id",
+    },
     studentId: {
       type: DataTypes.INTEGER,
       allowNull: true,

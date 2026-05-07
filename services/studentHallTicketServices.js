@@ -39,7 +39,7 @@ export async function generateHallTicketsByExamSession({
     instituteId,
     universityId
 }) {
-    return sequelize.transaction(async (transaction) => {
+    const result = await sequelize.transaction(async (transaction) => {
         const readiness = await buildGenerationReadiness({
             examSetupTypeTermId,
             sessionId,
@@ -110,15 +110,27 @@ export async function generateHallTicketsByExamSession({
             hallTickets
         };
     });
+    return result;
+}
+
+export async function generateHallTicketsForUser(payload, user) {
+    return generateHallTicketsByExamSession({
+        examSetupTypeTermId: Number(payload.examSetupTypeTermId),
+        sessionId: Number(payload.sessionId),
+        instituteId: user.defaultInstituteId,
+        universityId: user.universityId,
+    });
 }
 
 function schedulesToSubjectList(scheduleRows) {
     return (scheduleRows || []).map((row) => {
-        const plain = typeof row.toJSON === "function" ? row.toJSON() : typeof row.get === "function" ? row.get({ plain: true }) : row;
+        const plain = row.get({ plain: true });
         const sub = plain.subjectSchedule;
         const sem = plain.semesterexam;
+        const isMapped = plain.examScheduleId != null;
         return {
             examScheduleId: plain.examScheduleId,
+            isMapped,
             subjectId: sub?.subjectId ?? plain.subjectId ?? null,
             subjectName: sub?.subjectName ?? null,
             subjectCode: sub?.subjectCode ?? null,
@@ -173,7 +185,7 @@ function flattenHallTicketDetail(ticket, scheduleRows) {
 }
 
 export async function getHallTicketById(id, instituteId, universityId) {
-    return sequelize.transaction(async (transaction) => {
+    const result = await sequelize.transaction(async (transaction) => {
         const ticket = await studentHallTicketRepository.getHallTicketById(id, transaction);
         if (!ticket) return null;
 
@@ -194,10 +206,19 @@ export async function getHallTicketById(id, instituteId, universityId) {
 
         return flattenHallTicketDetail(ticket, schedules);
     });
+    return result;
+}
+
+export async function getHallTicketByIdForUser(id, user) {
+    return getHallTicketById(
+        Number(id),
+        user.defaultInstituteId,
+        user.universityId
+    );
 }
 
 export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
-    return sequelize.transaction(async (transaction) => {
+    const result = await sequelize.transaction(async (transaction) => {
         const ticket = await studentHallTicketRepository.getHallTicketByQr(
             qr,
             instituteId,
@@ -214,23 +235,46 @@ export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
 
         return flattenHallTicketDetail(ticket, schedules);
     });
+    return result;
+}
+
+export async function getHallTicketByQrForUser(qr, user) {
+    return getHallTicketDetailsByQr(
+        qr,
+        user.defaultInstituteId,
+        user.universityId
+    );
 }
 
 /** Pagination for GET hall ticket list: page ≥ 1; limit clamped to 10–1000 (default 1000). */
 export async function getAllHallTickets(filters, pagination = {}) {
-    const page = Math.max(1, parseInt(pagination.page, 10) || 1);
-    const rawLimit = parseInt(pagination.limit, 10);
-    const limit =
-        Number.isNaN(rawLimit) || rawLimit < 1
-            ? 1000
-            : Math.min(1000, Math.max(10, rawLimit));
+    const page = pagination.page ?? 1;
+    const rawLimit = pagination.limit ?? 1000;
+    const limit = Math.min(1000, Math.max(10, rawLimit));
     const offset = (page - 1) * limit;
 
-    return sequelize.transaction(async (transaction) => {
+    const result = await sequelize.transaction(async (transaction) => {
         const [rows, total] = await Promise.all([
             studentHallTicketRepository.getAllHallTickets(filters, transaction, { limit, offset }),
             studentHallTicketRepository.countHallTickets(filters, transaction),
         ]);
         return { rows, total, page, limit };
+    });
+    return result;
+}
+
+export async function getAllHallTicketsForUser(query = {}, user) {
+    const filters = {
+        instituteId: user.defaultInstituteId,
+        universityId: user.universityId,
+    };
+
+    if (query.examSetupTypeTermId) filters.examSetupTypeTermId = query.examSetupTypeTermId;
+    if (query.sessionId) filters.sessionId = query.sessionId;
+    if (query.studentId) filters.studentId = query.studentId;
+
+    return getAllHallTickets(filters, {
+        page: query.page,
+        limit: query.limit,
     });
 }
