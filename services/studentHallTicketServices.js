@@ -248,12 +248,9 @@ export async function getHallTicketByQrForUser(qr, user) {
 
 /** Pagination for GET hall ticket list: page ≥ 1; limit clamped to 10–1000 (default 1000). */
 export async function getAllHallTickets(filters, pagination = {}) {
-    const page = Math.max(1, parseInt(pagination.page, 10) || 1);
-    const rawLimit = parseInt(pagination.limit, 10);
-    const limit =
-        Number.isNaN(rawLimit) || rawLimit < 1
-            ? 1000
-            : Math.min(1000, Math.max(10, rawLimit));
+    const page = pagination.page ?? 1;
+    const rawLimit = pagination.limit ?? 1000;
+    const limit = Math.min(1000, Math.max(10, rawLimit));
     const offset = (page - 1) * limit;
 
     const result = await sequelize.transaction(async (transaction) => {
@@ -272,9 +269,9 @@ export async function getAllHallTicketsForUser(query = {}, user) {
         universityId: user.universityId,
     };
 
-    if (query.examSetupTypeTermId) filters.examSetupTypeTermId = Number(query.examSetupTypeTermId);
-    if (query.sessionId) filters.sessionId = Number(query.sessionId);
-    if (query.studentId) filters.studentId = Number(query.studentId);
+    if (query.examSetupTypeTermId) filters.examSetupTypeTermId = query.examSetupTypeTermId;
+    if (query.sessionId) filters.sessionId = query.sessionId;
+    if (query.studentId) filters.studentId = query.studentId;
 
     return getAllHallTickets(filters, {
         page: query.page,

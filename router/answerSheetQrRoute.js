@@ -34,7 +34,10 @@ const mapSchema = z
   });
 
 const idParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z.coerce
+    .number()
+    .int("id must be an integer")
+    .positive("id must be greater than 0"),
 });
 
 const requestIdParamSchema = z.object({
@@ -42,8 +45,18 @@ const requestIdParamSchema = z.object({
 });
 
 const paginationSchema = z.object({
-  page: z.coerce.number().int().optional().default(1),
-  limit: z.coerce.number().int().optional().default(20),
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .optional()
+    .default(20),
 });
 
 router.post(

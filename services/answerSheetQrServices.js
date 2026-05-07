@@ -192,14 +192,12 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
 }
 
 export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, page = 1, limit = 10) {
-  const safePage = Number(page);
-  const safeLimit = Number(limit);
-  const offset = (safePage - 1) * safeLimit;
+  const offset = (page - 1) * limit;
 
   const { groupedRows, totalRequests } = await answerSheetQrRepository.getAnswerSheetQrGenerationRequests(
     instituteId,
     universityId,
-    safeLimit,
+    limit,
     offset
   );
 
@@ -236,9 +234,9 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
     data,
     paginationData: {
       total: totalRequests,
-      page: safePage,
-      limit: safeLimit,
-      totalPages: Math.ceil(totalRequests / safeLimit),
+      page,
+      limit,
+      totalPages: Math.ceil(totalRequests / limit),
     },
   };
 }
@@ -250,15 +248,13 @@ export async function getAnswerSheetQrsByRequestId(
   page = 1,
   limit = 20
 ) {
-  const safePage = Number(page);
-  const safeLimit = Number(limit);
-  const offset = (safePage - 1) * safeLimit;
+  const offset = (page - 1) * limit;
 
   const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByRequestId(
     instituteId,
     universityId,
     requestId,
-    safeLimit,
+    limit,
     offset
   );
 
@@ -293,8 +289,8 @@ export async function getAnswerSheetQrsByRequestId(
   return {
     data,
     pagination: {
-      page: safePage,
-      limit: safeLimit,
+      page,
+      limit,
       total: count,
     },
   };
