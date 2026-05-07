@@ -401,3 +401,35 @@ export async function getStudentsByClassSection(req, res) {
     }
 
 }
+
+
+export const getAllAnswerSheets = async (req, res) => {
+    try {
+        const { sessionId, examSetupTypeId, examScheduleId } = req.query;
+        const instituteId = req.user.defaultInstituteId;
+        const universityId = req.user.universityId;
+
+        const result = await studentService.getAllAnswerSheets(
+            {
+                sessionId,
+                examSetupTypeId,
+                examScheduleId
+            },
+            instituteId,
+            universityId
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: "Answer sheets fetched successfully",
+            data: result
+        });
+    } catch (error) {
+        console.error("Error in getAllAnswerSheets:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Internal Server Error",
+            error: error.message
+        });
+    }
+};

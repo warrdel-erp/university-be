@@ -1530,3 +1530,59 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
   }
 
 }
+
+export async function getAllAnswerSheets(filters, instituteId, universityId) {
+  const { sessionId, examSetupTypeId, examScheduleId } = filters;
+
+  const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
+    examScheduleId,
+    instituteId,
+    universityId
+  );
+
+  if (!schedule) {
+    const error = new Error("Exam schedule not found for the selected institute/university");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (schedule.sessionId !== sessionId) {
+    const error = new Error("Selected sessionId does not match examScheduleId");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (schedule.examSetupTypeTerm?.examSetupTypeId !== examSetupTypeId) {
+    const error = new Error("Selected examSetupTypeId does not match examScheduleId");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const studentsdata = await studentRepository.getStudentsWithAnswerSheetMapping(
+    {
+      sessionId,
+      courseId: schedule.examSetupTypeTerm?.courseId,
+      semesterId: schedule.semesterId,
+      examScheduleId,
+    },
+    instituteId,
+    universityId
+  );
+
+  const data = studentsdata.map((student) => {
+    const fullName = [student.firstName, student.middleName, student.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const mappedAnswerSheet = student.answerSheetQrs[0] || null;
+
+    return {
+      enrollNumber: student.enrollNumber || null,
+      scholarNumber: student.scholarNumber || null,
+      fullName: fullName || null,
+      isMapped: Boolean(mappedAnswerSheet),
+    };
+  });
+
+  return data;
+}

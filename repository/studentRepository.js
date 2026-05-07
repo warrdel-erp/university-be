@@ -1107,7 +1107,58 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
         console.error("Repository Error:", error);
         throw error;
     }
+}
 
+export async function getScopedExamScheduleForEvaluation(examScheduleId, instituteId, universityId) {
+    return model.examScheduleModel.findOne({
+        where: { examScheduleId },
+        attributes: ["examScheduleId", "sessionId", "semesterId"],
+        include: [
+            {
+                model: model.examSetupTypeTermModel,
+                as: "examSetupTypeTerm",
+                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId"],
+                where: { instituteId, universityId },
+                required: true
+            }
+        ]
+    });
+}
+
+export async function getStudentsWithAnswerSheetMapping(filters, instituteId, universityId) {
+    const { courseId, sessionId, semesterId, examScheduleId } = filters;
+    const whereCondition = {
+        sessionId,
+        instituteId,
+        universityId
+    };
+
+    if (courseId) {
+        whereCondition.courseId = courseId;
+    }
+
+    if (semesterId) {
+        whereCondition.semesterId = semesterId;
+    }
+
+    return model.studentModel.findAll({
+        where: whereCondition,
+        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
+        include: [
+            {
+                model: model.answerSheetQrModel,
+                as: "answerSheetQrs",
+                attributes: ["id", "studentId", "examScheduleId"],
+                where: {
+                    examScheduleId,
+                    instituteId,
+                    universityId
+                },
+                required: false
+            }
+        ],
+        order: [["firstName", "ASC"], ["studentId", "ASC"]]
+    });
 }
 
 

@@ -1503,6 +1503,87 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "get all answer sheet qrs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `sessionId`, `examSetupTypeId`, and `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
+            "url": {
+              "raw": "{{baseurl}}/student/getallanswerSheetQrs?sessionId=6&examSetupTypeId=15&examScheduleId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "getallanswerSheetQrs"
+              ],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "6"
+                },
+                {
+                  "key": "examSetupTypeId",
+                  "value": "15"
+                },
+                {
+                  "key": "examScheduleId",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?sessionId=6&examSetupTypeId=15&examScheduleId=101",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "getallanswerSheetQrs"
+                  ],
+                  "query": [
+                    {
+                      "key": "sessionId",
+                      "value": "6"
+                    },
+                    {
+                      "key": "examSetupTypeId",
+                      "value": "15"
+                    },
+                    {
+                      "key": "examScheduleId",
+                      "value": "101"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Answer sheets fetched successfully\",\n  \"data\": [\n    {\n      \"enrollNumber\": \"ENR-001\",\n      \"scholarNumber\": \"SCH-001\",\n      \"fullName\": \"Akash Choudhary\",\n      \"isMapped\": true\n    },\n    {\n      \"enrollNumber\": \"ENR-002\",\n      \"scholarNumber\": \"SCH-002\",\n      \"fullName\": \"Riya Sharma\",\n      \"isMapped\": false\n    }\n  ]\n}"
+            }
+          ]
         }
       ]
     },
