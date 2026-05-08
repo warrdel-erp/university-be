@@ -9,25 +9,31 @@ const router = Router();
 
 const classRoomSectionIdsSchema = z.object({
     examScheduleId: z.coerce.number(),
-  
-    classRoomSectionIds: z
-      .array(
-        z.object({
-          classRoomSectionId: z.coerce.number(),
-          orderKey: z.coerce.number().optional()
-        })
-      )
-      .transform((items) =>
-        items.map((item) => item.classRoomSectionId)
-      )
-  });
 
-  
+    classRoomSectionIds: z
+        .array(
+            z.object({
+                classRoomSectionId: z.coerce.number(),
+                orderKey: z.coerce.number().optional()
+            })
+        )
+        .transform((items) =>
+            items.map((item) => item.classRoomSectionId)
+        )
+});
+
+
 const addExamRoomCapacitySchema = z.object({
-    classRoomSectionIds: classRoomSectionIdsSchema.refine((ids) => ids.length > 0, {
-        message: "At least one room is required"
-    }),
-    examScheduleId: z.coerce.number({ required_error: "examScheduleId is required" })
+    classRoomSectionIds: z.array(
+        z.union([
+            z.number(),
+            z.object({
+                classRoomSectionId: z.number(),
+                orderKey: z.number().int().positive().optional()
+            })
+        ])
+    ).min(1, "At least one room is required"),
+    examScheduleId: z.number({ required_error: "examScheduleId is required" })
 });
 
 const updateExamRoomCapacitySchema = z.object({
@@ -49,5 +55,9 @@ router.post('/assignRoom', userAuth, validate({ body: addExamRoomCapacitySchema 
 router.put('/roomAssignment', userAuth, validate({ body: updateExamRoomCapacitySchema }), examRoomCapacityController.updateExamRoomCapacity);
 
 router.post('/allocateSeats/randomly', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeats);
+
+router.post('/allocateSeats/ascending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsAscending);
+
+router.post('/allocateSeats/descending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsDescending);
 
 export default router;
