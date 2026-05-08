@@ -1107,7 +1107,61 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
         console.error("Repository Error:", error);
         throw error;
     }
+}
 
+export async function getScopedExamScheduleForEvaluation(examScheduleId, instituteId, universityId) {
+    return model.examScheduleModel.findOne({
+        where: { examScheduleId },
+        attributes: ["examScheduleId", "sessionId", "semesterId"],
+        include: [
+            {
+                model: model.examSetupTypeTermModel,
+                as: "examSetupTypeTerm",
+                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId", "term"],
+                where: { instituteId, universityId },
+                required: true
+            }
+        ]
+    });
+}
+
+
+export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId, instituteId, universityId) {
+    const studentWhere = { sessionId, instituteId, universityId };
+    const sectionWhere = { sessionId, courseId, instituteId, acedmicYearId: { [Op.ne]: null } };
+    const answerSheetWhere = { examScheduleId, instituteId, universityId };
+
+    return model.studentModel.findAll({
+        where: studentWhere,
+        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
+        include: [
+            {
+                model: model.classSectionModel,
+                as: "studentSections",
+                required: true,
+                attributes: [],
+                where: sectionWhere,
+                include: [
+                    {
+                        model: model.classModel,
+                        as: "classGroup",
+                        required: true,
+                        attributes: [],
+                        where: { term }
+                    }
+                ]
+            },
+            {
+                model: model.answerSheetQrModel,
+                as: "answerSheetQrs",
+                attributes: ["id", "studentId", "examScheduleId"],
+                // LEFT JOIN keeps eligible students even if answer sheet QR is not mapped yet.
+                where: answerSheetWhere,
+                required: false
+            }
+        ],
+        order: [["firstName", "ASC"], ["studentId", "ASC"]]
+    });
 }
 
 

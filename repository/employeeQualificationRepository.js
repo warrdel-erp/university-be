@@ -25,17 +25,37 @@ export async function deleteEmployeeQualification (employeeId) {
 
 export async function refreshEmployeeQualifications(employeeId, qualifications,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeQualificationModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeQualificationModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = qualifications.map(q => ({
-      employeeId,createdBy,
+    const insertData = qualifications.map((q) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...q
+     
+      document: q?.document ?? null,
+      receivedDate: q?.receivedDate ?? null,
+      returnedDate: q?.returnedDate ?? null,
+      attachment: q?.attachment ?? null
     }));
 
     return await model.employeeQualificationModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee qualifications:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeQualificationsByEmployeeId(employeeId) {
+  try {
+    return await model.employeeQualificationModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee qualifications:", error);
     throw error;
   }
 }

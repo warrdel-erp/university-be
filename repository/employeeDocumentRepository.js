@@ -25,17 +25,46 @@ export async function deleteEmployeeDocuments (employeeId) {
 
 export async function refreshEmployeeDocuments(employeeId, documents,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeDocumentsModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeDocumentsModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = documents.map(doc => ({
-      employeeId,createdBy,
+    const insertData = documents.map((doc) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...doc
+     
+      qualifications: doc?.qualifications ?? null,
+      degreeLevel: doc?.degreeLevel ?? null,
+      stream: doc?.stream ?? doc?.degreeLevel ?? null,
+      fromYear: doc?.fromYear ?? null,
+      toYear: doc?.toYear ?? null,
+      university: doc?.university ?? null,
+      medicalCouncilName: doc?.medicalCouncilName ?? null,
+      medicalRegistrationNumber: doc?.medicalRegistrationNumber ?? null,
+      medicalCouncilRegistrationDate: doc?.medicalCouncilRegistrationDate ?? null,
+      medicalRegistrationExpiryDate: doc?.medicalRegistrationExpiryDate ?? null,
+      percentage: doc?.percentage ?? null,
+      remarks: doc?.remarks ?? null,
+      pursuing: doc?.pursuing ?? null
     }));
 
     return await model.employeeDocumentsModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee documents:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeDocumentsByEmployeeId(employeeId) {
+  try {
+    return await model.employeeDocumentsModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee documents:", error);
     throw error;
   }
 }

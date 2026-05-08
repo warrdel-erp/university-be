@@ -25,17 +25,40 @@ export async function deleteEmployeeAchievement (employeeId) {
 
 export async function refreshEmployeeAchievements(employeeId, achievements,createdBy, updatedBy, transaction) {
   try {
-    await model.employeeAchievementModel.destroy({ where: { employeeId }, transaction });
+    await model.employeeAchievementModel.destroy({
+      where: { employeeId },
+      transaction
+    });
 
-    const insertData = achievements.map(a => ({
-      employeeId,createdBy,
+    const insertData = achievements.map((a) => ({
+      employeeId,
+      createdBy,
       updatedBy,
-      ...a
+     
+      achievementCategory: a?.achievementCategory ?? a?.achievement_category ?? null,
+      title: a?.title ?? null,
+      description: a?.description ?? null,
+      noOfTimes: a?.noOfTimes ?? null,
+      discipline: a?.discipline ?? null,
+      nameOf: a?.nameOf ?? null,
+      date: a?.date ?? null
     }));
 
     return await model.employeeAchievementModel.bulkCreate(insertData, { transaction });
   } catch (error) {
     console.error("Error refreshing employee achievements:", error);
+    throw error;
+  }
+};
+
+export async function getEmployeeAchievementsByEmployeeId(employeeId) {
+  try {
+    return await model.employeeAchievementModel.findAll({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee achievements:", error);
     throw error;
   }
 };

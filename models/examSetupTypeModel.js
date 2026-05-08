@@ -56,11 +56,6 @@ export default sequelize.define(
             field: 'exam_name',
             allowNull: true
         },
-        scheduledBy: {
-            type: DataTypes.STRING,
-            allowNull: true,
-            field: 'scheduled_by'
-        },
         isPublish: {
             type: DataTypes.BOOLEAN,
             allowNull: false,

@@ -1,5 +1,4 @@
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
-import { z } from "zod";
 import * as examScheduleServices from "./examScheduleServices.js";
 
 const examRoomCapacitySchema = z.object({
@@ -67,7 +66,7 @@ export async function addExamRoomCapacity(data, userId) {
     const { uniqueRoomIds, orderedRoomIds, roomOrderLookup } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
     // 1. Fetch Student Count for the Exam
-    const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
+    const exam = await examScheduleServices.getExamScheduleById(examScheduleId);
     if (!exam) {
         throw new Error("Exam schedule not found");
     }
@@ -115,16 +114,21 @@ export async function addExamRoomCapacity(data, userId) {
 
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, userId) {
-    const validatedData = updateExamRoomCapacitySchema.parse({ ...data, examScheduleRoomCapacityId });
+    const { capacity, columns } = data;
+    const updatePayload = {
+        examScheduleRoomCapacityId,
+        capacity,
+        columns
+    };
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {
         throw new Error("Exam room capacity not found");
     }
     // Check if assigned to any schedule? 
     // In the new implementation, it IS an assignment to a schedule.
-    
-    validatedData.updatedBy = userId;
-    return await examRoomCapacityRepository.updateExamRoomCapacity(examScheduleRoomCapacityId, validatedData);
+
+    updatePayload.updatedBy = userId;
+    return await examRoomCapacityRepository.updateExamRoomCapacity(examScheduleRoomCapacityId, updatePayload);
 }
 
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {

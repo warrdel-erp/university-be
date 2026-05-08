@@ -1,4 +1,5 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
 
 export async function addOfficeDetails(data,transaction) {
     try {
@@ -18,6 +19,30 @@ export async function updateOfficeDetails(employeeId, data, transaction) {
     );
   } catch (error) {
     console.error("Error updating employee office details:", error);
+    throw error;
+  }
+}
+
+export async function updateOfficeDetailsById(employeeOfficeId, data, transaction) {
+  try {
+    return await model.employeeOfficeModel.update(
+      data,
+      { where: { employeeOfficeId }, transaction }
+    );
+  } catch (error) {
+    console.error("Error updating employee office details by id:", error);
+    throw error;
+  }
+}
+
+export async function getEmployeeOfficeByEmployeeId(employeeId) {
+  try {
+    return await model.employeeOfficeModel.unscoped().findOne({
+      where: { employeeId },
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching employee office details:", error);
     throw error;
   }
 }

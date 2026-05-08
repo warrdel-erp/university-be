@@ -7,6 +7,22 @@ import { validate } from '../utility/validation.js';
 
 const router = Router();
 
+const classRoomSectionIdsSchema = z.object({
+    examScheduleId: z.coerce.number(),
+
+    classRoomSectionIds: z
+        .array(
+            z.object({
+                classRoomSectionId: z.coerce.number(),
+                orderKey: z.coerce.number().optional()
+            })
+        )
+        .transform((items) =>
+            items.map((item) => item.classRoomSectionId)
+        )
+});
+
+
 const addExamRoomCapacitySchema = z.object({
     classRoomSectionIds: z.array(
         z.union([

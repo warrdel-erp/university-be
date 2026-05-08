@@ -104,6 +104,25 @@ export default sequelize.define(
       allowNull: true,
       field: "additional_author",
     },
+    subjectId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "subject_id",
+    },
+    classSectionsId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "class_sections_id",
+    },
+    remark: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    itemType: {
+      type: DataTypes.ENUM("print", "Xerox", "Digital"),
+      allowNull: true,
+      field: "item_type",
+    },
     createdBy: {
       type: DataTypes.INTEGER,
       allowNull: false,

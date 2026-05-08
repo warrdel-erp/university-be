@@ -85,20 +85,38 @@ export async function updateLibrary(libraryCreationId, libraryData, updatedBy) {
   }
 }
 
+
 export async function addBookWithInventory(bookData, inventoryList, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    bookData.createdBy = createdBy;
-    bookData.updatedBy = updatedBy;
-
-    // Create Book First
-    const newBook = await libraryCreationService.createBook(bookData, transaction);
+    // bookData already validated by zod
+    const newBook = await libraryCreationService.createBook(
+      {
+        ...bookData,
+        createdBy,
+        updatedBy,
+      },
+      transaction
+    );
 
     // Insert Inventory Copies
-    for (let inv of inventoryList) {
-      inv.libraryBookId = newBook.dataValues.libraryBookId;
-      await libraryCreationService.createInventory(inv, transaction);
+    for (const inv of inventoryList) {
+      await libraryCreationService.createInventory(
+        {
+          libraryBookId: newBook.dataValues.libraryBookId,
+
+          // backward-compatible alias
+          excisionNumber: inv.excisionNumber ?? inv.accessionNo ?? null,
+
+          billNo: inv.billNo ?? null,
+          billDate: inv.billDate ?? null,
+          itemPrice: inv.itemPrice ?? null,
+          netPrice: inv.netPrice ?? null,
+          currency: inv.currency ?? null,
+        },
+        transaction
+      );
     }
 
     await transaction.commit();
