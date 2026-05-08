@@ -1547,7 +1547,9 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
     throw error;
   }
 
-  if (schedule.examSetupTypeTerm?.examSetupTypeTermId !== examSetupTypeTermId) {
+  const examSetupTypeTerm = schedule.examSetupTypeTerm;
+
+  if (examSetupTypeTerm?.examSetupTypeTermId !== examSetupTypeTermId) {
     const error = new Error("Selected examSetupTypeTermId does not match examScheduleId");
     error.statusCode = 400;
     throw error;
@@ -1559,8 +1561,8 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
     throw error;
   }
 
-  const courseId = schedule.examSetupTypeTerm?.courseId;
-  const term = schedule.examSetupTypeTerm?.term;
+  const courseId = examSetupTypeTerm?.courseId;
+  const term = examSetupTypeTerm?.term;
 
   const studentsdata = await studentRepository.getStudentsWithAnswerSheetStatus(
     sessionId,
@@ -1576,19 +1578,13 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
       .filter(Boolean)
       .join(" ")
       .trim();
-    const uniqueQrIds = new Set();
-    for (const qr of student.answerSheetQrs || []) {
-      if (qr && qr.id) {
-        uniqueQrIds.add(qr.id);
-      }
-    }
 
     return {
       enrollNumber: student.enrollNumber || null,
       scholarNumber: student.scholarNumber || null,
       fullName: fullName || null,
-      // Join rows can duplicate the same QR record, so we check unique QR ids.
-      isMapped: uniqueQrIds.size > 0,
+      // Left join can return empty array when QR is not mapped.
+      isMapped: Boolean(student.answerSheetQrs && student.answerSheetQrs[0]),
     };
   });
 
