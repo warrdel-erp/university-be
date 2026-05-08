@@ -38,6 +38,25 @@ export default sequelize.define(
         key: "exam_schedule_id",
       },
     },
+    assignedToUser: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "assigned_to_user",
+      references: {
+        model: "users",
+        key: "user_id",
+      },
+    },
+    evaluatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "evaluated_at",
+    },
+    obtainedMarks: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true,
+      field: "obtained_marks",
+    },
     instituteId: {
       type: DataTypes.INTEGER,
       allowNull: false,

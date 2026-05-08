@@ -1256,6 +1256,9 @@ studentModel.hasMany(answerSheetQrModel, { foreignKey: "student_id", as: "answer
 answerSheetQrModel.belongsTo(examScheduleModel, { foreignKey: "exam_schedule_id", as: "examSchedule" });
 examScheduleModel.hasMany(answerSheetQrModel, { foreignKey: "exam_schedule_id", as: "answerSheetQrs" });
 
+answerSheetQrModel.belongsTo(userModel, { foreignKey: "assigned_to_user", as: "assignedTeacher" });
+userModel.hasMany(answerSheetQrModel, { foreignKey: "assigned_to_user", as: "assignedAnswerSheetQrs" });
+
 studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
 sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
 

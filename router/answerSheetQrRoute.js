@@ -8,6 +8,9 @@ import {
   mapAnswerSheetQr,
   getAnswerSheetQrGenerationRequests,
   getAnswerSheetQrsByRequestId,
+  assignAnswerSheetsToTeachers,
+  getScriptsAssignedToTeacher,
+  assignObtainedMarksToAnswerSheet,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -59,6 +62,35 @@ const paginationSchema = z.object({
     .default(20),
 });
 
+const assignTeachersSchema = z.object({
+  assignedToUserId: z.coerce
+    .number()
+    .int("assignedToUserId must be an integer")
+    .positive("assignedToUserId must be greater than 0"),
+  answerSheetQrIds: z
+    .array(
+      z.coerce
+        .number()
+        .int("answerSheetQrId must be an integer")
+        .positive("answerSheetQrId must be greater than 0")
+    )
+    .min(1, "At least one answerSheetQrId is required"),
+});
+
+const teacherIdParamSchema = z.object({
+  assignedToUserId: z.coerce
+    .number()
+    .int("assignedToUserId must be an integer")
+    .positive("assignedToUserId must be greater than 0"),
+});
+
+const assignObtainedMarksSchema = z.object({
+  obtained_marks: z.coerce
+    .number()
+    .min(0, "obtained_marks must be greater than or equal to 0")
+    .max(999.99, "obtained_marks must be less than or equal to 999.99"),
+});
+
 router.post(
   "/bulk",
   userAuth,
@@ -92,6 +124,27 @@ router.patch(
   userAuth,
   validate({ body: mapSchema }),
   mapAnswerSheetQr
+);
+
+router.post(
+  "/assign/evaluator",
+  userAuth,
+  validate({ body: assignTeachersSchema }),
+  assignAnswerSheetsToTeachers
+);
+
+router.get(
+  "/evaluator/:assignedToUserId",
+  userAuth,
+  validate({ params: teacherIdParamSchema, query: paginationSchema }),
+  getScriptsAssignedToTeacher
+);
+
+router.patch(
+  "/:id/obtainedMarks",
+  userAuth,
+  validate({ params: idParamSchema, body: assignObtainedMarksSchema }),
+  assignObtainedMarksToAnswerSheet
 );
 
 export default router;

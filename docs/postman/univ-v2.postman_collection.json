@@ -4179,6 +4179,18 @@
           "value": "550e8400-e29b-41d4-a716-446655440099",
           "type": "string",
           "description": "requestId from bulk generation response."
+        },
+        {
+          "key": "answersheetqr_assignedToUserId",
+          "value": "1",
+          "type": "string",
+          "description": "Evaluator user id used for assignment and list endpoints."
+        },
+        {
+          "key": "answersheetqr_obtainedMarks",
+          "value": "80",
+          "type": "string",
+          "description": "Obtained marks value used in marks assignment endpoint."
         }
       ],
       "item": [
@@ -4361,6 +4373,124 @@
                 "map"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "assign evaluator",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": {{answersheetqr_assignedToUserId}},\n  \"answerSheetQrIds\": [\n    {{answersheetqr_id}}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assign/evaluator",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assign",
+                "evaluator"
+              ]
+            },
+            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to an evaluator."
+          },
+          "response": []
+        },
+        {
+          "name": "get scripts by evaluator",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/evaluator/{{answersheetqr_assignedToUserId}}?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "evaluator",
+                "{{answersheetqr_assignedToUserId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nReturns scripts assigned to a specific evaluator with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "assign obtained marks",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{answersheetqr_obtainedMarks}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{answersheetqr_id}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{answersheetqr_id}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR."
           },
           "response": []
         }
