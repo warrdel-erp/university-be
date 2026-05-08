@@ -1519,9 +1519,9 @@
             },
             "method": "GET",
             "header": [],
-            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examSetupTypeTermId` and `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
+            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examSetupTypeTermId`, `sessionId`, and `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
             "url": {
-              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&examScheduleId=101",
+              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&sessionId=6&examScheduleId=101",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1533,6 +1533,10 @@
                 {
                   "key": "examSetupTypeTermId",
                   "value": "10"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6"
                 },
                 {
                   "key": "examScheduleId",
@@ -1548,7 +1552,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&examScheduleId=101",
+                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&sessionId=6&examScheduleId=101",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -1560,6 +1564,10 @@
                     {
                       "key": "examSetupTypeTermId",
                       "value": "10"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "6"
                     },
                     {
                       "key": "examScheduleId",
