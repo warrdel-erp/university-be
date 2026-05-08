@@ -1532,11 +1532,10 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
 }
 
 export async function getAllAnswerSheets(filters, instituteId, universityId) {
-  const { examSetupTypeTermId, examScheduleId, sessionId } = filters;
+  const { examScheduleId } = filters;
 
   const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
     examScheduleId,
-    examSetupTypeTermId,
     instituteId,
     universityId
   );
@@ -1548,18 +1547,7 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
   }
 
   const examSetupTypeTerm = schedule.examSetupTypeTerm;
-
-  if (examSetupTypeTerm?.examSetupTypeTermId !== examSetupTypeTermId) {
-    const error = new Error("Selected examSetupTypeTermId does not match examScheduleId");
-    error.statusCode = 400;
-    throw error;
-  }
-
-  if (schedule.sessionId !== sessionId) {
-    const error = new Error("Selected sessionId does not match examScheduleId");
-    error.statusCode = 400;
-    throw error;
-  }
+  const sessionId = schedule.sessionId;
 
   const courseId = examSetupTypeTerm?.courseId;
   const term = examSetupTypeTerm?.term;

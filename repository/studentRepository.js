@@ -1109,9 +1109,9 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
     }
 }
 
-export async function getScopedExamScheduleForEvaluation(examScheduleId, examSetupTypeTermId, instituteId, universityId) {
+export async function getScopedExamScheduleForEvaluation(examScheduleId, instituteId, universityId) {
     return model.examScheduleModel.findOne({
-        where: { examScheduleId, examSetupTypeTermId },
+        where: { examScheduleId },
         attributes: ["examScheduleId", "sessionId", "semesterId"],
         include: [
             {
@@ -1127,12 +1127,12 @@ export async function getScopedExamScheduleForEvaluation(examScheduleId, examSet
 
 
 export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId, instituteId, universityId) {
+    const studentWhere = { sessionId, instituteId, universityId };
+    const sectionWhere = { sessionId, courseId, instituteId, acedmicYearId: { [Op.ne]: null } };
+    const answerSheetWhere = { examScheduleId, instituteId, universityId };
+
     return model.studentModel.findAll({
-        where: {
-            sessionId,
-            instituteId,
-            universityId
-        },
+        where: studentWhere,
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         include: [
             {
@@ -1140,12 +1140,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
                 as: "studentSections",
                 required: true,
                 attributes: [],
-                where: {
-                    sessionId,
-                    courseId,
-                    instituteId,
-                    acedmicYearId: { [Op.ne]: null }
-                },
+                where: sectionWhere,
                 include: [
                     {
                         model: model.classModel,
@@ -1161,11 +1156,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
                 as: "answerSheetQrs",
                 attributes: ["id", "studentId", "examScheduleId"],
                 // LEFT JOIN keeps eligible students even if answer sheet QR is not mapped yet.
-                where: {
-                    examScheduleId,
-                    instituteId,
-                    universityId
-                },
+                where: answerSheetWhere,
                 required: false
             }
         ],

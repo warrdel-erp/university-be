@@ -405,14 +405,12 @@ export async function getStudentsByClassSection(req, res) {
 
 export const getAllAnswerSheets = async (req, res) => {
     try {
-        const { examSetupTypeTermId, examScheduleId, sessionId } = req.query;
+        const { examScheduleId } = req.query;
         const instituteId = req.user.defaultInstituteId;
         const universityId = req.user.universityId;
 
         const result = await studentService.getAllAnswerSheets(
             {
-                examSetupTypeTermId,
-                sessionId,
                 examScheduleId
             },
             instituteId,
