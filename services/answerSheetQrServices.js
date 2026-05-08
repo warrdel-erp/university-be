@@ -141,6 +141,9 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
       requestId: result.row.requestId ?? null,
       studentId: result.row.studentId,
       examScheduleId: result.row.examScheduleId,
+      assignedToUser: result.row.assignedToUser ?? null,
+      evaluatedAt: result.row.evaluatedAt ?? null,
+      obtainedMarks: result.row.obtainedMarks ?? null,
       instituteId: result.row.instituteId,
       universityId: result.row.universityId,
     };
@@ -182,6 +185,10 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
       requestId: row.requestId ?? null,
       studentId: row.studentId,
       examScheduleId: row.examScheduleId,
+      assignedToUser: row.assignedToUser ?? null,
+      assignedTeacherName: row.assignedTeacher?.userName || null,
+      evaluatedAt: row.evaluatedAt ?? null,
+      obtainedMarks: row.obtainedMarks ?? null,
       instituteId: row.instituteId,
       universityId: row.universityId,
       isMapped,
@@ -264,6 +271,10 @@ export async function getAnswerSheetQrsByRequestId(
     requestId: item.requestId ?? null,
     studentId: item.studentId,
     examScheduleId: item.examScheduleId,
+    assignedToUser: item.assignedToUser ?? null,
+    assignedTeacherName: item.assignedTeacher?.userName || null,
+    evaluatedAt: item.evaluatedAt ?? null,
+    obtainedMarks: item.obtainedMarks ?? null,
     instituteId: item.instituteId,
     universityId: item.universityId,
     isUsed: item.studentId !== null || item.examScheduleId !== null,
@@ -294,5 +305,168 @@ export async function getAnswerSheetQrsByRequestId(
       total: count,
     },
   };
+}
+
+export async function assignAnswerSheetsToTeachers(
+  assignedToUserId,
+  answerSheetQrIds,
+  instituteId,
+  universityId
+) {
+  const transaction = await sequelize.transaction();
+  try {
+    const teacher = await answerSheetQrRepository.getScopedUser(
+      assignedToUserId,
+      instituteId,
+      universityId,
+      transaction
+    );
+    if (!teacher) {
+      throw createServiceError(`User not found for userId: ${assignedToUserId}`, 404);
+    }
+
+    const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
+      answerSheetQrIds,
+      instituteId,
+      universityId,
+      transaction
+    );
+
+    if (answerSheets.length !== answerSheetQrIds.length) {
+      throw createServiceError("One or more answer sheet QR records were not found.", 404);
+    }
+
+    await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
+      answerSheetQrIds,
+      assignedToUserId,
+      instituteId,
+      universityId,
+      transaction
+    );
+
+    const result = {
+      assignedCount: answerSheetQrIds.length,
+      assignedToUserId,
+      answerSheetQrIds,
+    };
+    await transaction.commit();
+    return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function getScriptsAssignedToTeacher(
+  teacherUserId,
+  instituteId,
+  universityId,
+  page = 1,
+  limit = 20
+) {
+  const teacher = await answerSheetQrRepository.getScopedUser(
+    teacherUserId,
+    instituteId,
+    universityId
+  );
+  if (!teacher) {
+    throw createServiceError("Teacher user not found in your institute.", 404);
+  }
+
+  const offset = (page - 1) * limit;
+  const { count, rows } = await answerSheetQrRepository.getScriptsAssignedToTeacher(
+    teacherUserId,
+    instituteId,
+    universityId,
+    limit,
+    offset
+  );
+
+  const data = rows.map((item) => ({
+    id: item.id,
+    qr: item.qr,
+    requestId: item.requestId ?? null,
+    studentId: item.studentId,
+    examScheduleId: item.examScheduleId,
+    assignedToUser: item.assignedToUser ?? null,
+    assignedTeacherName: item.assignedTeacher?.userName || null,
+    assignedTeacherEmail: item.assignedTeacher?.email || null,
+    evaluatedAt: item.evaluatedAt ?? null,
+    obtainedMarks: item.obtainedMarks ?? null,
+    studentDisplayName:
+      [item.student?.firstName, item.student?.middleName, item.student?.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || null,
+    enrollNumber: item.student?.enrollNumber || null,
+    scholarNumber: item.student?.scholarNumber || null,
+    subjectName: item.examSchedule?.subjectSchedule?.subjectName || null,
+    subjectCode: item.examSchedule?.subjectSchedule?.subjectCode || null,
+    examType: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examType || null,
+    examName: item.examSchedule?.examSetupTypeTerm?.examSetupType?.examName || null,
+    examDate: item.examSchedule?.examDate || null,
+    examTime: item.examSchedule?.examTime || null,
+    semesterId: item.examSchedule?.semesterId || null,
+    sessionId: item.examSchedule?.sessionId || null,
+    term: item.examSchedule?.examSetupTypeTerm?.term || null,
+    createdAt: item.createdAt,
+  }));
+
+  return {
+    teacher: {
+      userId: teacher.userId,
+      userName: teacher.userName,
+      email: teacher.email,
+    },
+    data,
+    pagination: {
+      page,
+      limit,
+      total: count,
+      totalPages: Math.ceil(count / limit),
+    },
+  };
+}
+
+export async function assignObtainedMarksToAnswerSheet(
+  answerSheetQrId,
+  obtainedMarks,
+  instituteId,
+  universityId
+) {
+  const transaction = await sequelize.transaction();
+  try {
+    const answerSheet = await answerSheetQrRepository.getAnswerSheetQrById(
+      answerSheetQrId,
+      instituteId,
+      universityId,
+      transaction
+    );
+
+    if (!answerSheet) {
+      throw createServiceError("Answer sheet QR not found.", 404);
+    }
+
+    await answerSheetQrRepository.assignMarksByAnswerSheetId(
+      answerSheetQrId,
+      obtainedMarks,
+      new Date(),
+      instituteId,
+      universityId,
+      transaction
+    );
+
+    const result = {
+      answerSheetQrId,
+      evaluatedAt: new Date(),
+      obtained_marks: obtainedMarks,
+      updated: true,
+    };
+    await transaction.commit();
+    return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 

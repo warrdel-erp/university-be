@@ -7,9 +7,27 @@ import { validate } from '../utility/validation.js';
 
 const router = Router();
 
+const classRoomSectionIdsSchema = z.object({
+    examScheduleId: z.coerce.number(),
+  
+    classRoomSectionIds: z
+      .array(
+        z.object({
+          classRoomSectionId: z.coerce.number(),
+          orderKey: z.coerce.number().optional()
+        })
+      )
+      .transform((items) =>
+        items.map((item) => item.classRoomSectionId)
+      )
+  });
+
+  
 const addExamRoomCapacitySchema = z.object({
-    classRoomSectionIds: z.array(z.number()).min(1, "At least one room is required"),
-    examScheduleId: z.number({ required_error: "examScheduleId is required" })
+    classRoomSectionIds: classRoomSectionIdsSchema.refine((ids) => ids.length > 0, {
+        message: "At least one room is required"
+    }),
+    examScheduleId: z.coerce.number({ required_error: "examScheduleId is required" })
 });
 
 const updateExamRoomCapacitySchema = z.object({

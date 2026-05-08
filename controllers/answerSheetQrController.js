@@ -123,3 +123,72 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function assignAnswerSheetsToTeachers(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    const { assignedToUserId, answerSheetQrIds } = req.body;
+
+    const result = await answerSheetQrServices.assignAnswerSheetsToTeachers(
+      assignedToUserId,
+      answerSheetQrIds,
+      instituteId,
+      universityId
+    );
+
+    return SuccessResponse(res, 200, "Answer sheets assigned to teachers successfully", result);
+  } catch (error) {
+    console.error("Error in assignAnswerSheetsToTeachers controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getScriptsAssignedToTeacher(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    const { assignedToUserId } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const result = await answerSheetQrServices.getScriptsAssignedToTeacher(
+      assignedToUserId,
+      instituteId,
+      universityId,
+      page,
+      limit
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Assigned scripts fetched successfully",
+      result.data,
+      { ...result.pagination, teacher: result.teacher }
+    );
+  } catch (error) {
+    console.error("Error in getScriptsAssignedToTeacher controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function assignObtainedMarksToAnswerSheet(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    const { id } = req.params;
+    const { obtained_marks } = req.body;
+
+    const result = await answerSheetQrServices.assignObtainedMarksToAnswerSheet(
+      Number(id),
+      Number(obtained_marks),
+      instituteId,
+      universityId
+    );
+
+    return SuccessResponse(res, 200, "Obtained marks assigned successfully", result);
+  } catch (error) {
+    console.error("Error in assignObtainedMarksToAnswerSheet controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

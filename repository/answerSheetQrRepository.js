@@ -20,7 +20,7 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
 export async function getAnswerSheetQrById(id, instituteId, universityId, transaction) {
   return model.answerSheetQrModel.findOne({
     where: { id, instituteId, universityId },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -55,6 +55,12 @@ export async function getAnswerSheetQrById(id, instituteId, universityId, transa
             ],
           },
         ],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
       },
     ],
     transaction,
@@ -112,7 +118,7 @@ export async function getAnswerSheetQrsByRequestId(
 ) {
   return model.answerSheetQrModel.findAndCountAll({
     where: { instituteId, universityId, requestId },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -147,6 +153,12 @@ export async function getAnswerSheetQrsByRequestId(
             ],
           },
         ],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
       },
     ],
     order: [["id", "DESC"]],
@@ -214,4 +226,121 @@ export async function mapAnswerSheetQrOnce(
   await row.update(mappingPayload, { transaction });
 
   return { examScheduleAlreadyMapped: false, row };
+}
+
+export async function getScopedUser(userId, instituteId, universityId, transaction) {
+  return model.userModel.findOne({
+    where: { userId, defaultInstituteId: instituteId, universityId },
+    attributes: ["userId", "userName", "email", "defaultInstituteId", "universityId"],
+    transaction,
+  });
+}
+
+export async function getAnswerSheetQrsByIds(ids, instituteId, universityId, transaction) {
+  return model.answerSheetQrModel.findAll({
+    where: {
+      id: { [Op.in]: ids },
+      instituteId,
+      universityId,
+    },
+    attributes: ["id", "qr", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "instituteId", "universityId"],
+    transaction,
+  });
+}
+
+export async function assignTeacherByAnswerSheetIds(
+  ids,
+  assignedToUserId,
+  instituteId,
+  universityId,
+  transaction
+) {
+  const [affectedCount] = await model.answerSheetQrModel.update(
+    { assignedToUser: assignedToUserId },
+    {
+      where: { id: { [Op.in]: ids }, instituteId, universityId },
+      transaction,
+    }
+  );
+  return affectedCount;
+}
+
+export async function assignMarksByAnswerSheetId(
+  id,
+  obtainedMarks,
+  evaluatedAt,
+  instituteId,
+  universityId,
+  transaction
+) {
+  const [affectedCount] = await model.answerSheetQrModel.update(
+    { obtainedMarks, evaluatedAt },
+    {
+      where: { id, instituteId, universityId },
+      transaction,
+    }
+  );
+  return affectedCount;
+}
+
+export async function getScriptsAssignedToTeacher(
+  teacherUserId,
+  instituteId,
+  universityId,
+  limit,
+  offset
+) {
+  return model.answerSheetQrModel.findAndCountAll({
+    where: {
+      assignedToUser: teacherUserId,
+      instituteId,
+      universityId,
+    },
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "createdAt"],
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
+        required: false,
+      },
+      {
+        model: model.examScheduleModel,
+        as: "examSchedule",
+        attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
+        required: false,
+        include: [
+          {
+            model: model.subjectModel,
+            as: "subjectSchedule",
+            attributes: ["subjectId", "subjectName", "subjectCode"],
+            required: false,
+          },
+          {
+            model: model.examSetupTypeTermModel,
+            as: "examSetupTypeTerm",
+            attributes: ["examSetupTypeTermId", "term", "courseId"],
+            required: false,
+            include: [
+              {
+                model: model.examSetupTypeModel,
+                as: "examSetupType",
+                attributes: ["examSetupTypeId", "examType", "examName"],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.userModel,
+        as: "assignedTeacher",
+        attributes: ["userId", "userName", "email"],
+        required: false,
+      },
+    ],
+    order: [["id", "DESC"]],
+    limit,
+    offset,
+  });
 }
