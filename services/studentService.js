@@ -19,7 +19,6 @@ import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from '../models/index.js'
-import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
 
 export async function addStudent(
@@ -1563,19 +1562,10 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
   const courseId = schedule.examSetupTypeTerm?.courseId;
   const term = schedule.examSetupTypeTerm?.term;
 
-  const eligibleRows = await studentHallTicketRepository.getEligibleStudents(
+  const studentsdata = await studentRepository.getStudentsWithAnswerSheetStatus(
     sessionId,
     courseId,
     term,
-    instituteId,
-    universityId,
-    null
-  );
-
-  const studentIds = [...new Set(eligibleRows.map((r) => r.studentId))];
-
-  const studentsdata = await studentRepository.getStudentsWithAnswerSheetMappingByStudentIds(
-    studentIds,
     examScheduleId,
     instituteId,
     universityId
@@ -1586,13 +1576,19 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
       .filter(Boolean)
       .join(" ")
       .trim();
-    const mappedAnswerSheet = student.answerSheetQrs[0] || null;
+    const uniqueQrIds = new Set();
+    for (const qr of student.answerSheetQrs || []) {
+      if (qr && qr.id) {
+        uniqueQrIds.add(qr.id);
+      }
+    }
 
     return {
       enrollNumber: student.enrollNumber || null,
       scholarNumber: student.scholarNumber || null,
       fullName: fullName || null,
-      isMapped: Boolean(mappedAnswerSheet),
+      // Join rows can duplicate the same QR record, so we check unique QR ids.
+      isMapped: uniqueQrIds.size > 0,
     };
   });
 

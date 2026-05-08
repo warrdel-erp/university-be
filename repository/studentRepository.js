@@ -1125,20 +1125,42 @@ export async function getScopedExamScheduleForEvaluation(examScheduleId, examSet
     });
 }
 
-/** Same cohort as hall tickets: only students with a class section for courseId + term (see getEligibleStudents). */
-export async function getStudentsWithAnswerSheetMappingByStudentIds(studentIds, examScheduleId, instituteId, universityId) {
-    if (!studentIds?.length) {
-        return [];
-    }
 
+export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId, instituteId, universityId) {
     return model.studentModel.findAll({
-        where: { studentId: { [Op.in]: studentIds } },
+        where: {
+            sessionId,
+            instituteId,
+            universityId
+        },
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         include: [
+            {
+                model: model.classSectionModel,
+                as: "studentSections",
+                required: true,
+                attributes: [],
+                where: {
+                    sessionId,
+                    courseId,
+                    instituteId,
+                    acedmicYearId: { [Op.ne]: null }
+                },
+                include: [
+                    {
+                        model: model.classModel,
+                        as: "classGroup",
+                        required: true,
+                        attributes: [],
+                        where: { term }
+                    }
+                ]
+            },
             {
                 model: model.answerSheetQrModel,
                 as: "answerSheetQrs",
                 attributes: ["id", "studentId", "examScheduleId"],
+                // LEFT JOIN keeps eligible students even if answer sheet QR is not mapped yet.
                 where: {
                     examScheduleId,
                     instituteId,
