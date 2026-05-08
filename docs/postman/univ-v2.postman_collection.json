@@ -1519,9 +1519,9 @@
             },
             "method": "GET",
             "header": [],
-            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `sessionId`, `examSetupTypeId`, and `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
+            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examSetupTypeTermId` and `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
             "url": {
-              "raw": "{{baseurl}}/student/getallanswerSheetQrs?sessionId=6&examSetupTypeId=15&examScheduleId=101",
+              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&examScheduleId=101",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1531,12 +1531,8 @@
               ],
               "query": [
                 {
-                  "key": "sessionId",
-                  "value": "6"
-                },
-                {
-                  "key": "examSetupTypeId",
-                  "value": "15"
+                  "key": "examSetupTypeTermId",
+                  "value": "10"
                 },
                 {
                   "key": "examScheduleId",
@@ -1552,7 +1548,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?sessionId=6&examSetupTypeId=15&examScheduleId=101",
+                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examSetupTypeTermId=10&examScheduleId=101",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -1562,12 +1558,8 @@
                   ],
                   "query": [
                     {
-                      "key": "sessionId",
-                      "value": "6"
-                    },
-                    {
-                      "key": "examSetupTypeId",
-                      "value": "15"
+                      "key": "examSetupTypeTermId",
+                      "value": "10"
                     },
                     {
                       "key": "examScheduleId",

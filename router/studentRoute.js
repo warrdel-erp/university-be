@@ -7,14 +7,14 @@ import { Router } from 'express'
 const router = Router();
 
 const getAllAnswerSheetsQuerySchema = z.object({
+    examSetupTypeTermId: z.coerce
+        .number()
+        .int("examSetupTypeTermId must be an integer")
+        .positive("examSetupTypeTermId must be greater than 0"),
     sessionId: z.coerce
         .number()
         .int("sessionId must be an integer")
         .positive("sessionId must be greater than 0"),
-    examSetupTypeId: z.coerce
-        .number()
-        .int("examSetupTypeId must be an integer")
-        .positive("examSetupTypeId must be greater than 0"),
     examScheduleId: z.coerce
         .number()
         .int("examScheduleId must be an integer")

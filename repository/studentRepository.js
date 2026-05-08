@@ -1109,15 +1109,15 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
     }
 }
 
-export async function getScopedExamScheduleForEvaluation(examScheduleId, instituteId, universityId) {
+export async function getScopedExamScheduleForEvaluation(examScheduleId, examSetupTypeTermId, instituteId, universityId) {
     return model.examScheduleModel.findOne({
-        where: { examScheduleId },
+        where: { examScheduleId, examSetupTypeTermId },
         attributes: ["examScheduleId", "sessionId", "semesterId"],
         include: [
             {
                 model: model.examSetupTypeTermModel,
                 as: "examSetupTypeTerm",
-                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId"],
+                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId", "term"],
                 where: { instituteId, universityId },
                 required: true
             }
@@ -1125,24 +1125,14 @@ export async function getScopedExamScheduleForEvaluation(examScheduleId, institu
     });
 }
 
-export async function getStudentsWithAnswerSheetMapping(filters, instituteId, universityId) {
-    const { courseId, sessionId, semesterId, examScheduleId } = filters;
-    const whereCondition = {
-        sessionId,
-        instituteId,
-        universityId
-    };
-
-    if (courseId) {
-        whereCondition.courseId = courseId;
-    }
-
-    if (semesterId) {
-        whereCondition.semesterId = semesterId;
+/** Same cohort as hall tickets: only students with a class section for courseId + term (see getEligibleStudents). */
+export async function getStudentsWithAnswerSheetMappingByStudentIds(studentIds, examScheduleId, instituteId, universityId) {
+    if (!studentIds?.length) {
+        return [];
     }
 
     return model.studentModel.findAll({
-        where: whereCondition,
+        where: { studentId: { [Op.in]: studentIds } },
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         include: [
             {

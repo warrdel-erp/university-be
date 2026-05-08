@@ -19,6 +19,7 @@ import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from '../models/index.js'
+import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
 
 export async function addStudent(
@@ -1532,10 +1533,11 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
 }
 
 export async function getAllAnswerSheets(filters, instituteId, universityId) {
-  const { sessionId, examSetupTypeId, examScheduleId } = filters;
+  const { examSetupTypeTermId, examScheduleId, sessionId } = filters;
 
   const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
     examScheduleId,
+    examSetupTypeTermId,
     instituteId,
     universityId
   );
@@ -1546,25 +1548,35 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
     throw error;
   }
 
+  if (schedule.examSetupTypeTerm?.examSetupTypeTermId !== examSetupTypeTermId) {
+    const error = new Error("Selected examSetupTypeTermId does not match examScheduleId");
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (schedule.sessionId !== sessionId) {
     const error = new Error("Selected sessionId does not match examScheduleId");
     error.statusCode = 400;
     throw error;
   }
 
-  if (schedule.examSetupTypeTerm?.examSetupTypeId !== examSetupTypeId) {
-    const error = new Error("Selected examSetupTypeId does not match examScheduleId");
-    error.statusCode = 400;
-    throw error;
-  }
+  const courseId = schedule.examSetupTypeTerm?.courseId;
+  const term = schedule.examSetupTypeTerm?.term;
 
-  const studentsdata = await studentRepository.getStudentsWithAnswerSheetMapping(
-    {
-      sessionId,
-      courseId: schedule.examSetupTypeTerm?.courseId,
-      semesterId: schedule.semesterId,
-      examScheduleId,
-    },
+  const eligibleRows = await studentHallTicketRepository.getEligibleStudents(
+    sessionId,
+    courseId,
+    term,
+    instituteId,
+    universityId,
+    null
+  );
+
+  const studentIds = [...new Set(eligibleRows.map((r) => r.studentId))];
+
+  const studentsdata = await studentRepository.getStudentsWithAnswerSheetMappingByStudentIds(
+    studentIds,
+    examScheduleId,
     instituteId,
     universityId
   );
