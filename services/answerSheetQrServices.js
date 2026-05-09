@@ -358,14 +358,14 @@ export async function assignAnswerSheetsToTeachers(
 }
 
 export async function getScriptsAssignedToTeacher(
-  teacherUserId,
+  assignedToUserId,
   instituteId,
   universityId,
   page = 1,
   limit = 20
 ) {
   const teacher = await answerSheetQrRepository.getScopedUser(
-    teacherUserId,
+    assignedToUserId,
     instituteId,
     universityId
   );
@@ -375,7 +375,7 @@ export async function getScriptsAssignedToTeacher(
 
   const offset = (page - 1) * limit;
   const { count, rows } = await answerSheetQrRepository.getScriptsAssignedToTeacher(
-    teacherUserId,
+    assignedToUserId,
     instituteId,
     universityId,
     limit,

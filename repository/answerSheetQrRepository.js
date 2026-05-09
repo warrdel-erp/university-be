@@ -284,7 +284,7 @@ export async function assignMarksByAnswerSheetId(
 }
 
 export async function getScriptsAssignedToTeacher(
-  teacherUserId,
+  assignedToUserId,
   instituteId,
   universityId,
   limit,
@@ -292,7 +292,7 @@ export async function getScriptsAssignedToTeacher(
 ) {
   return model.answerSheetQrModel.findAndCountAll({
     where: {
-      assignedToUser: teacherUserId,
+      assignedToUser:assignedToUserId,
       instituteId,
       universityId,
     },
