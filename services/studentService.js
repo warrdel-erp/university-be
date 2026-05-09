@@ -1573,6 +1573,7 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
       fullName: fullName || null,
       // Left join can return empty array when QR is not mapped.
       isMapped: Boolean(student.answerSheetQrs && student.answerSheetQrs[0]),
+      answerSheetQrId: student.answerSheetQrs?.[0]?.id ?? null,
     };
   });
 
