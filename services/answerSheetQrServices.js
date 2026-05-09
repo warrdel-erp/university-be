@@ -208,34 +208,33 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
     offset
   );
 
-  const selectedRequest = groupedRows[0];
-  let data = {};
+  const data = await Promise.all(
+    groupedRows.map(async (request) => {
+      const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
+        instituteId,
+        universityId,
+        request.requestId
+      );
 
-  if (selectedRequest) {
-    const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
-      instituteId,
-      universityId,
-      selectedRequest.requestId
-    );
-
-    let mappedQrs = 0;
-    for (const row of usageRows) {
-      if (row.studentId != null || row.examScheduleId != null) {
-        mappedQrs++;
+      let mappedQrs = 0;
+      for (const row of usageRows) {
+        if (row.studentId != null || row.examScheduleId != null) {
+          mappedQrs++;
+        }
       }
-    }
 
-    const totalQrs = usageRows.length;
-    const unmappedQrs = totalQrs - mappedQrs;
+      const totalQrs = usageRows.length;
+      const unmappedQrs = totalQrs - mappedQrs;
 
-    data = {
-      requestId: selectedRequest.requestId,
-      totalQrs,
-      mappedQrs,
-      unmappedQrs,
-      generatedAt: selectedRequest.generatedAt,
-    };
-  }
+      return {
+        requestId: request.requestId,
+        totalQrs,
+        mappedQrs,
+        unmappedQrs,
+        generatedAt: request.generatedAt,
+      };
+    })
+  );
 
   return {
     data,
