@@ -1,5 +1,6 @@
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
+import { z } from "zod";
 
 const examRoomCapacitySchema = z.object({
     classRoomSectionIds: z.array(
