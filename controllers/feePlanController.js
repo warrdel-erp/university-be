@@ -1,4 +1,5 @@
 import * as feePlan from "../services/feePlanServices.js";
+import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 
 export async function addFeePlan(req, res) {
     const { name } = req.body
@@ -85,9 +86,13 @@ export async function updateFeePlanById(req, res) {
             universityId: req.user.universityId,
             instituteId: req.user.defaultInstituteId,
         });
-        res.status(200).json({ message: "Data updated successfully", feePlanData });
+        return SuccessResponse(res, 200, "Data updated successfully", feePlanData);
     } catch (error) {
-        const status = error.statusCode ?? 500;
-        res.status(status).json({ error: error.message });
+        console.error("Error in updateFeePlanById controller:", error);
+        return ErrorResponse(
+            res,
+            error.statusCode || 500,
+            error.message || "Internal Server Error"
+        );
     }
 }
