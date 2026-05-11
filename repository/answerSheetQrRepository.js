@@ -195,7 +195,8 @@ export async function getScopedExamSchedule(examScheduleId, instituteId, univers
 
 export async function mapAnswerSheetQrOnce(
   qr,
-  mappingPayload,
+  studentId,
+  examScheduleId,
   instituteId,
   universityId,
   transaction
@@ -207,9 +208,28 @@ export async function mapAnswerSheetQrOnce(
 
   if (!row) return null;
 
-  await row.update(mappingPayload, { transaction });
+  if (row.studentId && row.examScheduleId) {
+    return { answerSheetAlreadyMapped: true, row };
+  }
 
-  return { examScheduleAlreadyMapped: false, row };
+  const existingPair = await model.answerSheetQrModel.findOne({
+    where: {
+      studentId,
+      examScheduleId,
+      instituteId,
+      universityId,
+      id: { [Op.ne]: row.id },
+    },
+    transaction,
+  });
+
+  if (existingPair) {
+    return { studentExamAlreadyMapped: true, row };
+  }
+
+  await row.update({ studentId, examScheduleId }, { transaction });
+
+  return { row, answerSheetAlreadyMapped: false, studentExamAlreadyMapped: false };
 }
 
 export async function getScopedUser(userId, instituteId, universityId, transaction) {

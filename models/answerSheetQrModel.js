@@ -91,5 +91,12 @@ export default sequelize.define(
   {
     tableName: "answer_sheet_qr",
     timestamps: true,
+    indexes: [
+      {
+        name: "uq_answer_sheet_qr_student_exam",
+        unique: true,
+        fields: ["student_id", "exam_schedule_id"],
+      },
+    ],
   }
 );

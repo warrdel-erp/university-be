@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { UniqueConstraintError } from "sequelize";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 
@@ -82,73 +83,63 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
 }
 
 export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteId, universityId) {
-  const resultData = await sequelize.transaction(async (transaction) => {
-    if (!studentId || !examScheduleId) {
-      throw createServiceError("Both studentId and examScheduleId are required for mapping.", 400);
-    }
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const [student, examSchedule] = await Promise.all([
+        answerSheetQrRepository.getScopedStudent(
+          studentId,
+          instituteId,
+          universityId,
+          transaction
+        ),
+        answerSheetQrRepository.getScopedExamSchedule(
+          examScheduleId,
+          instituteId,
+          universityId,
+          transaction
+        ),
+      ]);
 
-    if (studentId) {
-      const student = await answerSheetQrRepository.getScopedStudent(
+      if (!student) throw createServiceError("Student not found in your institute.", 404);
+      if (!examSchedule) throw createServiceError("Exam schedule not found in your institute.", 404);
+
+      const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
+        qr,
         studentId,
-        instituteId,
-        universityId,
-        transaction
-      );
-      if (!student) {
-        throw createServiceError("Student not found in your institute.", 404);
-      }
-    }
-
-    if (examScheduleId) {
-      const examSchedule = await answerSheetQrRepository.getScopedExamSchedule(
         examScheduleId,
         instituteId,
         universityId,
         transaction
       );
-      if (!examSchedule) {
-        throw createServiceError("Exam schedule not found in your institute.", 404);
+
+      if (!result) throw createServiceError("QR code not found.", 404);
+      if (result.answerSheetAlreadyMapped) {
+        throw createServiceError("This answer sheet is already mapped", 409);
       }
+      if (result.studentExamAlreadyMapped) {
+        throw createServiceError("This student is already assigned to this exam schedule", 409);
+      }
+
+      const { row } = result;
+      return {
+        id: row.id,
+        qr: row.qr,
+        requestId: row.requestId ?? null,
+        studentId: row.studentId,
+        examScheduleId: row.examScheduleId,
+        assignedToUser: row.assignedToUser ?? null,
+        evaluatedAt: row.evaluatedAt ?? null,
+        obtainedMarks: row.obtainedMarks ?? null,
+        instituteId: row.instituteId,
+        universityId: row.universityId,
+      };
+    });
+  } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      throw createServiceError("This student is already assigned to this exam schedule", 409);
     }
-
-    const mappingPayload = {
-      ...(studentId && { studentId }),
-      ...(examScheduleId && { examScheduleId }),
-    };
-
-    const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
-      qr,
-      mappingPayload,
-      instituteId,
-      universityId,
-      transaction
-    );
-
-    if (!result) {
-      throw createServiceError("QR code not found.", 404);
-    }
-
-    if (result.examScheduleAlreadyMapped) {
-      throw createServiceError(
-        "This exam schedule is already mapped to another answer sheet QR.",
-        409
-      );
-    }
-
-    return {
-      id: result.row.id,
-      qr: result.row.qr,
-      requestId: result.row.requestId ?? null,
-      studentId: result.row.studentId,
-      examScheduleId: result.row.examScheduleId,
-      assignedToUser: result.row.assignedToUser ?? null,
-      evaluatedAt: result.row.evaluatedAt ?? null,
-      obtainedMarks: result.row.obtainedMarks ?? null,
-      instituteId: result.row.instituteId,
-      universityId: result.row.universityId,
-    };
-  });
-  return resultData;
+    throw error;
+  }
 }
 
 export async function getAnswerSheetQrDetailById(id, instituteId, universityId) {
