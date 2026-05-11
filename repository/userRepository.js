@@ -247,11 +247,12 @@ export async function headRegister(data, transaction) {
 };
 
 
-export async function updateUser(userId, data) {
+export async function updateUser(userId, data, transaction) {
 
     try {
         const result = await model.userModel.update(data, {
-            where: { userId }
+            where: { userId },
+            transaction
         });
         return result;
     } catch (error) {

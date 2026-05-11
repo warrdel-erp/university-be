@@ -485,7 +485,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/subject/withExamSchedule?sessionsId=1&examSetupTypeTermId=1",
+              "raw": "{{baseurl}}/subject/withExamSchedule?sessionId=6&examSetupTypeTermId=10",
               "host": [
                 "{{baseurl}}"
               ],
@@ -495,15 +495,16 @@
               ],
               "query": [
                 {
-                  "key": "sessionsId",
-                  "value": "1"
+                  "key": "sessionId",
+                  "value": "6"
                 },
                 {
                   "key": "examSetupTypeTermId",
-                  "value": "1"
+                  "value": "10"
                 }
               ]
-            }
+            },
+            "description": "**GET /subject/withExamSchedule**\n\nReturns `studentCount`, `subjects[]` (all subjects for the course/term), and **`isHallTicketGenerated`** (true if any `student_hall_ticket` row exists for this examSetupTypeTermId + sessionId + institute + university)."
           },
           "response": []
         },
@@ -1502,6 +1503,71 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "get all answer sheet qrs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
+            "url": {
+              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "getallanswerSheetQrs"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "getallanswerSheetQrs"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "101"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Answer sheets fetched successfully\",\n  \"data\": [\n    {\n      \"enrollNumber\": \"ENR-001\",\n      \"scholarNumber\": \"SCH-001\",\n      \"fullName\": \"Akash Choudhary\",\n      \"isMapped\": true\n    },\n    {\n      \"enrollNumber\": \"ENR-002\",\n      \"scholarNumber\": \"SCH-002\",\n      \"fullName\": \"Riya Sharma\",\n      \"isMapped\": false\n    }\n  ]\n}"
+            }
+          ]
         }
       ]
     },
@@ -2925,6 +2991,80 @@
           "response": []
         },
         {
+          "name": "allocate seats ascending",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleId\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/allocateSeats/ascending",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "allocateSeats",
+                "ascending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "allocate seats descending",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"examScheduleId\": 45\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}examSchedule/allocateSeats/descending",
+              "host": [
+                "{{baseurl}}examSchedule"
+              ],
+              "path": [
+                "allocateSeats",
+                "descending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "update assigned room",
           "request": {
             "auth": {
@@ -4073,6 +4213,1007 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "answer sheet qr",
+      "description": "Answer sheet QR APIs. Folder variables use `answersheetqr_*` prefix. Auth uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
+        {
+          "key": "answersheetqr_count",
+          "value": "10",
+          "type": "string",
+          "description": "How many QR codes to generate in one call (must be >= 1)."
+        },
+        {
+          "key": "answersheetqr_id",
+          "value": "1",
+          "type": "string",
+          "description": "answer_sheet_qr.id used for GET by id."
+        },
+        {
+          "key": "answersheetqr_qr",
+          "value": "550e8400-e29b-41d4-a716-446655440001",
+          "type": "string",
+          "description": "Raw QR string to map with student and exam schedule."
+        },
+        {
+          "key": "answersheetqr_studentId",
+          "value": "1",
+          "type": "string",
+          "description": "Student id used in map endpoint."
+        },
+        {
+          "key": "answersheetqr_examScheduleId",
+          "value": "1",
+          "type": "string",
+          "description": "Exam schedule id used in map endpoint."
+        },
+        {
+          "key": "answersheetqr_requestId",
+          "value": "550e8400-e29b-41d4-a716-446655440099",
+          "type": "string",
+          "description": "requestId from bulk generation response."
+        },
+        {
+          "key": "answersheetqr_assignedToUserId",
+          "value": "1",
+          "type": "string",
+          "description": "Evaluator user id used for assignment and list endpoints."
+        },
+        {
+          "key": "answersheetqr_obtainedMarks",
+          "value": "80",
+          "type": "string",
+          "description": "Obtained marks value used in marks assignment endpoint."
+        }
+      ],
+      "item": [
+        {
+          "name": "bulk generate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"count\": {{answersheetqr_count}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/bulk",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "bulk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{answersheetqr_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{answersheetqr_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get generation requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/requests?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "requests"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "**GET /answerSheetQr/requests**\n\nReturns one summary object for a selected requestId window with `requestId`, `totalQrs`, `mappedQrs`, `unmappedQrs`, and `generatedAt`."
+          },
+          "response": []
+        },
+        {
+          "name": "get qrs by request id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/requests/{{answersheetqr_requestId}}/qrs?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "requests",
+                "{{answersheetqr_requestId}}",
+                "qrs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "**GET /answerSheetQr/requests/:requestId/qrs**\n\nLists all QRs for the given requestId with mapping status and exam/student context."
+          },
+          "response": []
+        },
+        {
+          "name": "map qr",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr\": \"{{answersheetqr_qr}}\",\n  \"studentId\": {{answersheetqr_studentId}},\n  \"examScheduleId\": {{answersheetqr_examScheduleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "map"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "assign evaluator",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": {{answersheetqr_assignedToUserId}},\n  \"answerSheetQrIds\": [\n    {{answersheetqr_id}}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/assign/evaluator",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "assign",
+                "evaluator"
+              ]
+            },
+            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to an evaluator."
+          },
+          "response": []
+        },
+        {
+          "name": "get scripts by evaluator",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/evaluator/{{answersheetqr_assignedToUserId}}?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "evaluator",
+                "{{answersheetqr_assignedToUserId}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nReturns scripts assigned to a specific evaluator with pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "assign obtained marks",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"obtained_marks\": {{answersheetqr_obtainedMarks}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/answerSheetQr/{{answersheetqr_id}}/obtainedMarks",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "answerSheetQr",
+                "{{answersheetqr_id}}",
+                "obtainedMarks"
+              ]
+            },
+            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "student hall ticket",
+      "description": "Hall ticket APIs share folder variables prefixed `hallticket_`. Edit them once on this folder (Variables tab) — all requests below resolve `{{hallticket_*}}`. Auth still uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
+        {
+          "key": "hallticket_examSetupTypeTermId",
+          "value": "1",
+          "type": "string",
+          "description": "Exam setup type term PK — used by generate, filtered list"
+        },
+        {
+          "key": "hallticket_sessionId",
+          "value": "1",
+          "type": "string",
+          "description": "Session PK — used by generate, filtered list"
+        },
+        {
+          "key": "hallticket_courseId",
+          "value": "1",
+          "type": "string",
+          "description": "Program/course PK — same as GET /examStructure/examType/single"
+        },
+        {
+          "key": "hallticket_termNumber",
+          "value": "1",
+          "type": "string",
+          "description": "Term index on exam setup type term — same as examStructure single `termNumber`"
+        },
+        {
+          "key": "hallticket_studentId",
+          "value": "1",
+          "type": "string",
+          "description": "Optional student id for examples"
+        },
+        {
+          "key": "hallticket_hallTicketId",
+          "value": "1",
+          "type": "string",
+          "description": "student_hall_ticket.id — GET by id"
+        },
+        {
+          "key": "hallticket_qr",
+          "value": "550e8400-e29b-41d4-a716-446655440000",
+          "type": "string",
+          "description": "UUID stored on hall ticket — GET byQr"
+        },
+        {
+          "key": "hallticket_examSetupTypeId",
+          "value": "1",
+          "type": "string",
+          "description": "exam_setup_type id — optional for related requests"
+        }
+      ],
+      "item": [
+        {
+          "name": "generate",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "**POST /studentHallTicket/generate**\n\n**One-time only:** if any hall ticket already exists for that exam setup term + session (same institute/university), returns **400** — regeneration is not allowed.\n\nOtherwise **creates** one row per eligible student (new QR each). **Requires at least one** `exam_schedule` row for that pair with **both** `examDate` and `examTime` (one scheduled subject is enough for Mid-term / End-sem, etc.).\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeTermId\": {{hallticket_examSetupTypeTermId}},\n  \"sessionId\": {{hallticket_sessionId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/generate",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "generate"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"examSetupTypeTermId\": {{hallticket_examSetupTypeTermId}},\n  \"sessionId\": {{hallticket_sessionId}}\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/studentHallTicket/generate",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentHallTicket",
+                    "generate"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets generated successfully\",\n  \"data\": {\n    \"generatedCount\": 120,\n    \"examSetupType\": {\n      \"examSetupTypeId\": 1,\n      \"examType\": \"Semester\",\n      \"examName\": \"Mid-Term Examination\"\n    },\n    \"hallTickets\": []\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default **1000** if omitted; each request clamps **`limit`** to **10–1000**). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket?examSetupTypeTermId={{hallticket_examSetupTypeTermId}}&sessionId={{hallticket_sessionId}}&page=1&limit=1000",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket"
+              ],
+              "query": [
+                {
+                  "key": "examSetupTypeTermId",
+                  "value": "{{hallticket_examSetupTypeTermId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{hallticket_sessionId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "1-based page index"
+                },
+                {
+                  "key": "limit",
+                  "value": "1000",
+                  "description": "Page size (service clamps to 10-1000; default 1000)"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall tickets fetched successfully\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 0,\n    \"limit\": 1000,\n    \"page\": 1,\n    \"totalPages\": 0\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Top level: student/session/exam-type fields; **`subjects`** lists every `exam_schedule` for this ticket’s term + session. Each item has flat fields (`subjectId`, `subjectName`, …) plus nested **`subject`** (full subject row: type, term, course, etc.) and **`semester`** when linked.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/{{hallticket_hallTicketId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "{{hallticket_hallTicketId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2094,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"AKASH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"CHOUDHARY\",\n    \"scholarNumber\": \"ASA/ID/2025/11\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 101,\n        \"isMapped\": true,\n        \"subjectId\": 12,\n        \"subjectName\": \"Mathematics\",\n        \"subjectCode\": \"MTH\",\n        \"semesterId\": 2,\n        \"semesterName\": \"Semester 2\",\n        \"examDate\": \"2026-05-15\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"180\",\n        \"scheduleKind\": \"Theory\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get by qr",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "**GET /studentHallTicket/byQr?qr=**\n\nLookup by ticket QR UUID (`hallticket_qr`). Response data matches **GET /studentHallTicket/:id** and each subject row includes `isMapped`.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{hallticket_qr}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "studentHallTicket",
+                "byQr"
+              ],
+              "query": [
+                {
+                  "key": "qr",
+                  "value": "{{hallticket_qr}}",
+                  "description": "UUID from hall ticket row",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Hall ticket fetched successfully\",\n  \"data\": {\n    \"id\": 10,\n    \"qr\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"examSetupTypeTermId\": 10,\n    \"sessionId\": 6,\n    \"studentId\": 2103,\n    \"instituteId\": 12,\n    \"universityId\": 4,\n    \"createdAt\": \"2026-05-01T12:20:08.000Z\",\n    \"updatedAt\": \"2026-05-02T06:04:05.000Z\",\n    \"studentFirstName\": \"JAYANSH\",\n    \"studentMiddleName\": null,\n    \"studentLastName\": \"SHARMA\",\n    \"scholarNumber\": \"ASA/ID/2025/10\",\n    \"enrollNumber\": null,\n    \"sessionName\": \"Session 1\",\n    \"examSetupTypeId\": 15,\n    \"examType\": \"Theory\",\n    \"examName\": \"End sem\",\n    \"term\": 1,\n    \"courseId\": 35,\n    \"subjects\": [\n      {\n        \"examScheduleId\": 2,\n        \"isMapped\": true,\n        \"subjectId\": 129,\n        \"subjectName\": \"SOM\",\n        \"subjectCode\": \"som\",\n        \"semesterId\": null,\n        \"semesterName\": null,\n        \"examDate\": \"2026-05-08\",\n        \"examTime\": \"10:00:00\",\n        \"duration\": \"60\",\n        \"scheduleKind\": \"Theory\",\n        \"subject\": { \"subjectId\": 129, \"subjectName\": \"SOM\", \"subjectCode\": \"som\", \"subjectType\": \"Theoretical\" },\n        \"semester\": null\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "library creation",
+      "description": "Library creation and inventory APIs under `/libraryCreation`.",
+      "variable": [
+        { "key": "libraryCreation_id", "value": "1", "type": "string" },
+        { "key": "libraryFloor_id", "value": "1", "type": "string" },
+        { "key": "libraryBook_id", "value": "1", "type": "string" },
+        { "key": "inventory_id", "value": "1", "type": "string" }
+      ],
+      "item": [
+        {
+          "name": "add library",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"instituteId\": 12,\n  \"name\": \"Central Library\",\n  \"description\": \"Main campus library\",\n  \"campusId\": 1,\n  \"floors\": [\n    { \"name\": \"Ground Floor\" }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Library and floors added successfully\",\n  \"libraryId\": 25\n}"
+            }
+          ]
+        },
+        {
+          "name": "get libraries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryCreationId\": 25,\n    \"name\": \"Central Library\",\n    \"description\": \"Main campus library\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get single library",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/single?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "single"],
+              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"libraryCreationId\": 25,\n  \"name\": \"Central Library\",\n  \"floors\": [\n    { \"libraryFloorId\": 1, \"name\": \"Ground Floor\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update library",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Central Library Updated\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Library Creation  update succesfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete library",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation"],
+              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Delete successful for library creation ID 25\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "add book with inventory",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/addBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "addBook"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 51,\n      \"libraryCreationId\": 25,\n      \"title\": \"Introduction to Algorithms\",\n      \"subjectId\": 0,\n      \"classSectionsId\": 0,\n      \"remark\": \"\",\n      \"itemType\": \"print\"\n    },\n    \"inventory\": 1\n  }\n}"
+            },
+            {
+              "name": "201 Created — partial payload example",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"title\": \"Data Structures\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryCreation/addBook",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryCreation", "addBook"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 52,\n      \"libraryCreationId\": 25,\n      \"title\": \"Data Structures\"\n    },\n    \"inventory\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "allBook"],
+              "query": [
+                { "key": "libraryCreationId", "value": "{{libraryCreation_id}}" },
+                { "key": "libraryFloorId", "value": "{{libraryFloor_id}}" }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryBookId\": 51,\n    \"title\": \"Introduction to Algorithms\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get single book",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/singleBook?libraryBookId={{libraryBook_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "singleBook"],
+              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"libraryBookId\": 51,\n  \"title\": \"Introduction to Algorithms\",\n  \"subjectId\": 0,\n  \"classSectionsId\": 0,\n  \"remark\": \"\",\n  \"itemType\": \"print\",\n  \"inventoryCopies\": [\n    {\n      \"inventoryId\": 81,\n      \"excisionNumber\": \"ACC-1001\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update book",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book updated successfully\",\n  \"result\": [1]\n}"
+            }
+          ]
+        },
+        {
+          "name": "update inventory",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/updateInventory", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateInventory"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Inventory updated successfully\",\n  \"result\": [1]\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete book",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/deleteBook?libraryBookId={{libraryBook_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "deleteBook"],
+              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete inventory copy",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/deleteInventory?inventoryId={{inventory_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "deleteInventory"],
+              "query": [{ "key": "inventoryId", "value": "{{inventory_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Inventory copy deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "get issued books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryCreation/issuedBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "issuedBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Issued books fetched successfully\",\n  \"issuedBooks\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "bulk upload books",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "book", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{baseurl}}/libraryCreation/bulkUpload", "host": ["{{baseurl}}"], "path": ["libraryCreation", "bulkUpload"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Books uploaded successfully\",\n  \"created\": 10,\n  \"failed\": 0\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "type": "string"
     }
   ]
 }

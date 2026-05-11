@@ -115,6 +115,6 @@ export default sequelize.define(
     {
         tableName: 'exam_schedule',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
     }
 );

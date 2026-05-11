@@ -39,7 +39,7 @@ export async function getEmployeeOfficeByEmployeeId(employeeId) {
   try {
     return await model.employeeOfficeModel.unscoped().findOne({
       where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
     });
   } catch (error) {
     console.error("Error fetching employee office details:", error);

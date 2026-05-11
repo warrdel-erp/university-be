@@ -68,7 +68,7 @@ export async function getAllEmployee(universityId, campusId, instituteId, acedmi
                 {
                     model: model.employeeOfficeModel,
                     as: 'office',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
                 },
                 {
                     model: model.employeeMetaDataModel,
@@ -126,7 +126,7 @@ export async function getSingleEmployeeDetails(employeeId, universityId) {
                 {
                     model: model.userModel,
                     as: 'user',
-                    attributes: ["universityId", "userId"],
+                    attributes: ["universityId", "userId", "email"],
                     required: false,
                     where: {
                         universityId: universityId
@@ -197,7 +197,7 @@ export async function getSingleEmployeeDetails(employeeId, universityId) {
                 {
                     model: model.employeeOfficeModel,
                     as: 'office',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    attributes: { exclude: ["createdAt", "updatedAt"] },
                 },
                 {
                     model: model.emplopeeRoleModel,

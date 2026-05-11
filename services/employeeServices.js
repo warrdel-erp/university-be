@@ -194,7 +194,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     // }
 
     const employeePersonalDetail = {
-      personalEmail: address?.officalEmailId || address?.officialEmailId,
+      personalEmail: data.officalEmailId,
       mobileNumber: address?.mobileNumber
     }
 
@@ -676,7 +676,7 @@ export async function importEmployeeData(excelData, commonData) {
         employeeId
       }
       const employeePersonalDetail = {
-        officalEmailId: convertedData.officalEmailId,
+        personalEmail: convertedData.officalEmailId,
         mobileNumber: convertedData.mobileNumber
       }
 
@@ -731,6 +731,15 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
+
+    // Sync officialEmailId with user table email
+    if (data.officalEmailId) {
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+      const userId = employeeDetails?.[0]?.userId;
+      if (userId) {
+        await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
+      }
+    }
 
     //  Upload/update files
     if (files) {
@@ -1197,8 +1206,20 @@ export async function getSubjectEvalution(employeeId) {
 }
 
 
-export async function getTodayClassSchedule(employeeId, currentDate, dayString, sessionId) {
-  return await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString, sessionId);
+export async function getTodayClassSchedule(employeeId, currentDate, dayString, sessionId, groupPeriods = false) {
+  const result = await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString, sessionId);
+
+  // Add date to each item for grouping logic
+  const resultWithDate = result.map(item => ({
+    ...item,
+    date: currentDate
+  }));
+
+  if (groupPeriods) {
+    return groupConsecutivePeriods(resultWithDate);
+  }
+
+  return resultWithDate;
 }
 
 export async function getTeacherCourses(employeeId, acedmicYearId) {
@@ -1209,7 +1230,7 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
   return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
 }
 
-export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString) {
+export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
   const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
 
   const daysOfWeek = {
@@ -1256,10 +1277,16 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   // Sort by date descending
   pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  if (groupPeriods) {
+    const grouped = groupConsecutivePeriods(pastClasses);
+    grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return grouped;
+  }
+
   return pastClasses;
 }
 
-export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString) {
+export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
   const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
 
   const daysOfWeek = {
@@ -1307,7 +1334,85 @@ export async function getUpcomingClassSchedules(employeeId, acedmicYearId, curre
   // Sort by date ascending for upcoming classes
   upcomingClasses.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  if (groupPeriods) {
+    const grouped = groupConsecutivePeriods(upcomingClasses);
+    grouped.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return grouped;
+  }
+
   return upcomingClasses;
+}
+
+function groupConsecutivePeriods(classes) {
+  if (!classes.length) return [];
+
+  // Grouping should preserve date sort order (already sorted in main functions)
+  // We need to group within each date.
+
+  const groupedResult = [];
+
+  // To group correctly, we need to handle sorting by date, then routine, then subject, then period
+  // But wait, the input 'classes' is already sorted by date.
+  // We can process it sequentially and only group items with same date, routine and subject if they are consecutive.
+
+  // First, stable sort by routine, subject, and period within each date group
+  // Actually, it's easier to just re-sort properly for grouping, then re-sort by date for final output.
+
+  const getSubjectInfo = (item) => {
+    if (item.timeTableSubject) return { id: item.timeTableSubject.subjectId, name: item.timeTableSubject.subjectName };
+    if (item.timeTableElective) return { id: item.timeTableElective.electiveSubjectId, name: item.timeTableElective.electiveSubjectName };
+    if (item.timeTableTeacherSubject?.employeeSubject?.subjects) return { id: item.timeTableTeacherSubject.employeeSubject.subjects.subjectId, name: item.timeTableTeacherSubject.employeeSubject.subjects.subjectName };
+    return { id: null, name: 'Unknown' };
+  };
+
+  // Sort for grouping
+  classes.sort((a, b) => {
+    if (a.date !== b.date) return new Date(a.date) - new Date(b.date);
+    if (a.timeTablecreate.timeTableRoutineId !== b.timeTablecreate.timeTableRoutineId)
+      return a.timeTablecreate.timeTableRoutineId - b.timeTablecreate.timeTableRoutineId;
+
+    const subjA = getSubjectInfo(a);
+    const subjB = getSubjectInfo(b);
+    if (subjA.id !== subjB.id) return (subjA.id || 0) - (subjB.id || 0);
+
+    return parseInt(a.period) - parseInt(b.period);
+  });
+
+  let currentGroup = null;
+
+  for (const item of classes) {
+    const subj = getSubjectInfo(item);
+    const periodNum = parseInt(item.period);
+
+    if (currentGroup &&
+      currentGroup.date === item.date &&
+      currentGroup.timeTablecreate.timeTableRoutineId === item.timeTablecreate.timeTableRoutineId &&
+      currentGroup.subjectId === subj.id &&
+      currentGroup.periods[currentGroup.periods.length - 1] + 1 === periodNum
+    ) {
+      // Consecutive period
+      currentGroup.classScheduleItems.push(item);
+      currentGroup.periods.push(periodNum);
+    } else {
+      // New group
+      currentGroup = {
+        ...item,
+        subjectId: subj.id,
+        subjectName: subj.name,
+        classScheduleItems: [item],
+        periods: [periodNum]
+      };
+      groupedResult.push(currentGroup);
+    }
+  }
+
+  // Final sort based on date (descending for past, ascending for upcoming?)
+  // Actually, the original functions had different sort orders. 
+  // Let's check if we should restore it.
+  // For simplicity, let's just use the fact that 'classes' was passed with a specific sort.
+  // Wait, I already re-sorted it. I should re-apply the desired date sort.
+
+  return groupedResult;
 }
 
 function extractSubjectDetails(schedule) {

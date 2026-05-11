@@ -30,6 +30,30 @@ export default sequelize.define(
       allowNull: true,
       field: "excision_number",
     },
+    billNo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "bill_no",
+    },
+    billDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "bill_date",
+    },
+    itemPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      field: "item_price",
+    },
+    netPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      field: "net_price",
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     libraryAisleId: {
       type: DataTypes.INTEGER,
       allowNull: false,

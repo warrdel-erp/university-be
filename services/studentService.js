@@ -1530,3 +1530,51 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
   }
 
 }
+
+export async function getAllAnswerSheets(filters, instituteId, universityId) {
+  const { examScheduleId } = filters;
+
+  const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
+    examScheduleId,
+    instituteId,
+    universityId
+  );
+
+  if (!schedule) {
+    const error = new Error("Exam schedule not found for the selected institute/university");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const examSetupTypeTerm = schedule.examSetupTypeTerm;
+  const sessionId = schedule.sessionId;
+
+  const courseId = examSetupTypeTerm?.courseId;
+  const term = examSetupTypeTerm?.term;
+
+  const studentsdata = await studentRepository.getStudentsWithAnswerSheetStatus(
+    sessionId,
+    courseId,
+    term,
+    examScheduleId,
+    instituteId,
+    universityId
+  );
+
+  const data = studentsdata.map((student) => {
+    const fullName = [student.firstName, student.middleName, student.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    return {
+      enrollNumber: student.enrollNumber || null,
+      scholarNumber: student.scholarNumber || null,
+      fullName: fullName || null,
+      // Left join can return empty array when QR is not mapped.
+      isMapped: Boolean(student.answerSheetQrs && student.answerSheetQrs[0]),
+    };
+  });
+
+  return data;
+}
