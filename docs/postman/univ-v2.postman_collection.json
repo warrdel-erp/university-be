@@ -4451,7 +4451,7 @@
           "response": []
         },
         {
-          "name": "assign evaluator",
+          "name": "assign evaluator (POST /assign/evaluator)",
           "request": {
             "method": "POST",
             "header": [],
@@ -4485,12 +4485,12 @@
                 "evaluator"
               ]
             },
-            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to an evaluator."
+            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to a target user (`assignedToUserId`).\n\nPayload:\n- `assignedToUserId` (number)\n- `answerSheetQrIds` (number[])"
           },
           "response": []
         },
         {
-          "name": "get scripts by evaluator",
+          "name": "get scripts by evaluator (GET /evaluator/:assignedToUserId)",
           "request": {
             "method": "GET",
             "header": [],
@@ -4525,12 +4525,12 @@
                 }
               ]
             },
-            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nReturns scripts assigned to a specific evaluator with pagination."
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nQuery: `page`, `limit` (defaults 1 and 20).\n\n**200 response** (`SuccessResponse`):\n- `data` — object with:\n  - `filteredrows` — array of assigned script rows (id, qr, requestId, student/exam metadata, marks, etc.)\n  - `teacher` — `{ userId, userName, email }` for the user in `:assignedToUserId`\n- `paginationData` — `{ page, limit, total, totalPages }`\n\nAccess:\n- Teacher-only; `assignedToUserId` must match the authenticated user."
           },
           "response": []
         },
         {
-          "name": "assign obtained marks",
+          "name": "assign obtained marks (PATCH /:id/obtainedMarks)",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -4564,7 +4564,7 @@
                 "obtainedMarks"
               ]
             },
-            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR."
+            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR.\n\nBody:\n- `obtained_marks` (number, 0 to 999.99)\n\nAccess behavior in current backend:\n- Teacher-only endpoint\n- Only owner teacher can update (answer sheet must be assigned to token user)."
           },
           "response": []
         }

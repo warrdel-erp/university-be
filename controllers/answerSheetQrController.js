@@ -164,7 +164,7 @@ export async function getScriptsAssignedToTeacher(req, res) {
       200,
       "Assigned scripts fetched successfully",
       result.data,
-      { ...result.pagination, teacher: result.teacher }
+      result.pagination
     );
   } catch (error) {
     console.error("Error in getScriptsAssignedToTeacher controller:", error);
