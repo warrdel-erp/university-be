@@ -4451,7 +4451,7 @@
                 }
               ]
             },
-            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nReturns scripts assigned to a specific evaluator with pagination.\n\nAccess behavior in current backend:\n- Teacher-only endpoint\n- Only owner teacher can access (`assignedToUserId` must match token user id)."
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nQuery: `page`, `limit` (defaults 1 and 20).\n\n**200 response** (`SuccessResponse`):\n- `data` — object with:\n  - `filteredrows` — array of assigned script rows (id, qr, requestId, student/exam metadata, marks, etc.)\n  - `teacher` — `{ userId, userName, email }` for the user in `:assignedToUserId`\n- `paginationData` — `{ page, limit, total, totalPages }`\n\nAccess:\n- Teacher-only; `assignedToUserId` must match the authenticated user."
           },
           "response": []
         },
