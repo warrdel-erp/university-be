@@ -1,4 +1,4 @@
-import * as model from '../models/index.js'
+import * as model from "../models/index.js";
 
 export async function addFeePlan(data, transaction) {
   try {
@@ -180,3 +180,59 @@ export async function findByPlanId(feePlanId) {
     throw error;
   }
 };
+
+export async function findFeePlanForUpdate(feePlanId, universityId, instituteId, transaction) {
+    const where = { feePlanId };
+    if (universityId != null && universityId !== "") {
+        where.universityId = universityId;
+    }
+    if (instituteId != null && instituteId !== "") {
+        where.instituteId = instituteId;
+    }
+    return model.feePlanModel.findOne({
+        where,
+        transaction,
+        attributes: ["feePlanId"],
+    });
+}
+
+export async function deleteFeePlanNestedByFeePlanId(feePlanId, transaction) {
+    const invoices = await model.feeNewInvoiceModel.findAll({
+        where: { feePlanId },
+        attributes: ["feeNewInvoiceId"],
+        transaction,
+    });
+    for (const inv of invoices) {
+        const id = inv.feeNewInvoiceId;
+        await model.feePlanSemesterModel.destroy({
+            where: { feeNewInvoiceId: id },
+            transaction,
+        });
+        await model.feePlanTypeModel.destroy({
+            where: { feeNewInvoiceId: id },
+            transaction,
+        });
+    }
+    await model.feeNewInvoiceModel.destroy({ where: { feePlanId }, transaction });
+}
+
+export async function updateFeePlanHeader(
+    feePlanId,
+    fields,
+    universityId,
+    instituteId,
+    transaction
+) {
+    const where = { feePlanId };
+    if (universityId != null && universityId !== "") {
+        where.universityId = universityId;
+    }
+    if (instituteId != null && instituteId !== "") {
+        where.instituteId = instituteId;
+    }
+    const [affectedCount] = await model.feePlanModel.update(fields, {
+        where,
+        transaction,
+    });
+    return affectedCount;
+}

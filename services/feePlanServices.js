@@ -90,3 +90,136 @@ export async function updateFeePlan(poId, data, updatedBy) {
 export async function deleteFeePlan(poId) {
     return await feePlan.deleteFeePlan(poId);
 }
+
+/** Re-inserts invoices for an existing fee plan (same rows as add flow; used by update only). */
+async function insertInvoicesForExistingFeePlan(
+    feePlanId,
+    invoices,
+    actorId,
+    transaction
+) {
+    for (const invoice of invoices) {
+        const productTotal = (invoice.product || []).reduce(
+            (sum, p) => sum + Number(p.fee || 0),
+            0
+        );
+        const additionalTotal = (invoice.additionalFee || []).reduce(
+            (sum, f) => sum + Number(f.fee || 0),
+            0
+        );
+        const total = productTotal + additionalTotal;
+
+        const newInvoice = await feePlan.addFeeNewInvoice(
+            {
+                feePlanId,
+                name: invoice.name,
+                startDate: invoice.startDate,
+                EndDate: invoice.EndDate,
+                total,
+                createdBy: actorId,
+                updatedBy: actorId,
+            },
+            transaction
+        );
+        const feeNewInvoiceId = newInvoice.dataValues.feeNewInvoiceId;
+
+        if (invoice.product?.length > 0) {
+            for (const product of invoice.product) {
+                await feePlan.addFeePlanSemester(
+                    {
+                        feeNewInvoiceId,
+                        name: product.name,
+                        fee: product.fee,
+                        createdBy: actorId,
+                        updatedBy: actorId,
+                    },
+                    transaction
+                );
+            }
+        }
+        if (invoice.additionalFee?.length > 0) {
+            for (const fee of invoice.additionalFee) {
+                await feePlan.addFeePlanType(
+                    {
+                        feeNewInvoiceId,
+                        feeTypeId: fee.feeTypeId,
+                        name: fee.name,
+                        fee: fee.fee,
+                        createdBy: actorId,
+                        updatedBy: actorId,
+                    },
+                    transaction
+                );
+            }
+        }
+    }
+}
+
+export async function updateFeePlanById({
+    feePlanId,
+    payload,
+    updatedBy,
+    universityId,
+    instituteId,
+}) {
+    const planId = feePlanId;
+    const transaction = await sequelize.transaction();
+
+    try {
+        const existing = await feePlan.findFeePlanForUpdate(
+            planId,
+            universityId,
+            instituteId,
+            transaction
+        );
+        if (!existing) {
+            const err = new Error("Fee plan not found");
+            err.statusCode = 404;
+            throw err;
+        }
+
+        await feePlan.deleteFeePlanNestedByFeePlanId(planId, transaction);
+
+        const headerFields = {
+            name: payload.name,
+            PlanType: payload.PlanType,
+            courseId: payload.courseId,
+            acedmicYearId: payload.acedmicYearId,
+            sessionId: payload.sessionId,
+            updatedBy,
+        };
+        if (payload.description !== undefined) {
+            headerFields.description = payload.description;
+        }
+
+        const headerCount = await feePlan.updateFeePlanHeader(
+            planId,
+            headerFields,
+            universityId,
+            instituteId,
+            transaction
+        );
+        if (headerCount === 0) {
+            const err = new Error("Fee plan not found");
+            err.statusCode = 404;
+            throw err;
+        }
+
+        await insertInvoicesForExistingFeePlan(
+            planId,
+            payload.invoice,
+            updatedBy,
+            transaction
+        );
+
+        await transaction.commit();
+        return { success: true };
+    } catch (error) {
+        await transaction.rollback();
+        if (error.statusCode) {
+            throw error;
+        }
+        console.error("Transaction failed in update Fee Plan:", error);
+        throw error;
+    }
+}

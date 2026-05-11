@@ -4843,10 +4843,26 @@
       "name": "library creation",
       "description": "Library creation and inventory APIs under `/libraryCreation`.",
       "variable": [
-        { "key": "libraryCreation_id", "value": "1", "type": "string" },
-        { "key": "libraryFloor_id", "value": "1", "type": "string" },
-        { "key": "libraryBook_id", "value": "1", "type": "string" },
-        { "key": "inventory_id", "value": "1", "type": "string" }
+        {
+          "key": "libraryCreation_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryFloor_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryBook_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "inventory_id",
+          "value": "1",
+          "type": "string"
+        }
       ],
       "item": [
         {
@@ -4854,13 +4870,34 @@
           "request": {
             "method": "POST",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"instituteId\": 12,\n  \"name\": \"Central Library\",\n  \"description\": \"Main campus library\",\n  \"campusId\": 1,\n  \"floors\": [\n    { \"name\": \"Ground Floor\" }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4878,8 +4915,25 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4897,12 +4951,31 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/single?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "single"],
-              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -4921,13 +4994,34 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Central Library Updated\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4945,12 +5039,30 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation"],
-              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -4970,13 +5082,35 @@
             "method": "POST",
             "header": [],
             "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/addBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "addBook"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/addBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "addBook"
+              ]
+            }
           },
           "response": [
             {
@@ -4998,8 +5132,13 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/libraryCreation/addBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryCreation", "addBook"]
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "libraryCreation",
+                    "addBook"
+                  ]
                 }
               },
               "status": "Created",
@@ -5015,14 +5154,34 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "allBook"],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "allBook"
+              ],
               "query": [
-                { "key": "libraryCreationId", "value": "{{libraryCreation_id}}" },
-                { "key": "libraryFloorId", "value": "{{libraryFloor_id}}" }
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                },
+                {
+                  "key": "libraryFloorId",
+                  "value": "{{libraryFloor_id}}"
+                }
               ]
             }
           },
@@ -5042,12 +5201,31 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/singleBook?libraryBookId={{libraryBook_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "singleBook"],
-              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "singleBook"
+              ],
+              "query": [
+                {
+                  "key": "libraryBookId",
+                  "value": "{{libraryBook_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5066,13 +5244,35 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/updateBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateBook"
+              ]
+            }
           },
           "response": [
             {
@@ -5090,13 +5290,35 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/updateInventory", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateInventory"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/updateInventory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateInventory"
+              ]
+            }
           },
           "response": [
             {
@@ -5114,12 +5336,31 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/deleteBook?libraryBookId={{libraryBook_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "deleteBook"],
-              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "deleteBook"
+              ],
+              "query": [
+                {
+                  "key": "libraryBookId",
+                  "value": "{{libraryBook_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5138,12 +5379,31 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/deleteInventory?inventoryId={{inventory_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "deleteInventory"],
-              "query": [{ "key": "inventoryId", "value": "{{inventory_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "deleteInventory"
+              ],
+              "query": [
+                {
+                  "key": "inventoryId",
+                  "value": "{{inventory_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5162,8 +5422,26 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "url": { "raw": "{{baseurl}}/libraryCreation/issuedBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "issuedBook"] }
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/issuedBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "issuedBook"
+              ]
+            }
           },
           "response": [
             {
@@ -5181,14 +5459,36 @@
           "request": {
             "method": "POST",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "book", "type": "file", "src": [] }
+                {
+                  "key": "book",
+                  "type": "file",
+                  "src": []
+                }
               ]
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/bulkUpload", "host": ["{{baseurl}}"], "path": ["libraryCreation", "bulkUpload"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/bulkUpload",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "bulkUpload"
+              ]
+            }
           },
           "response": [
             {
@@ -5202,18 +5502,172 @@
           ]
         }
       ]
+    },
+    {
+      "name": "feePlan",
+      "description": "Mounted at /feePlan. POST create and PATCH /:feePlanId expect the same body shape (name, PlanType?, description?, courseId, acedmicYearId, sessionId, invoice[] with product / additionalFee). Router validates only the path feePlanId (Zod); body is handled in the service like add. PATCH replaces existing invoices for that plan. GET /single returns invoices/semesters/additionalFees — map to invoice/product/additionalFee before PATCH.",
+      "variable": [
+        {
+          "key": "feePlan_id",
+          "value": "6",
+          "type": "string",
+          "description": "fee_plan_id for get single + PATCH"
+        }
+      ],
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"B.Tech annual fee 2025\",\n  \"PlanType\": \"semester\",\n  \"courseId\": 34,\n  \"acedmicYearId\": 59,\n  \"sessionId\": 6,\n  \"invoice\": [\n    {\n      \"name\": \"Year 1 Semester 1\",\n      \"startDate\": \"2025-07-01\",\n      \"EndDate\": \"2025-12-31\",\n      \"product\": [\n        { \"name\": \"Tuition\", \"fee\": 50000 },\n        { \"name\": \"Lab charges\", \"fee\": 5000 }\n      ],\n      \"additionalFee\": [\n        { \"feeTypeId\": 1, \"name\": \"Registration\", \"fee\": 2500 }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/feePlan",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "feePlan"
+              ]
+            },
+            "description": "POST /feePlan — `name` required; `invoice[]` with `product` / `additionalFee`; institute & university from JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "get all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "GET /feePlan — lists fee plans for the authenticated user (university / institute / role).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/feePlan",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "feePlan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get single",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "GET /feePlan/single?feePlanId= — one plan with invoices (semesters / additionalFees). Use folder variable feePlan_id.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/feePlan/single?feePlanId={{feePlan_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "feePlan",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "feePlanId",
+                  "value": "{{feePlan_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update by id",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ODD Sem Fee Plan\",\n  \"description\": null,\n  \"PlanType\": \"Semi - Annually\",\n  \"courseId\": 34,\n  \"acedmicYearId\": 59,\n  \"sessionId\": 6,\n  \"invoice\": [\n    {\n      \"name\": \"Semi - Annually 1\",\n      \"startDate\": \"2025-07-01\",\n      \"EndDate\": \"2025-07-31\",\n      \"product\": [\n        { \"name\": \"Sem 1 Fees\", \"fee\": 56250 }\n      ],\n      \"additionalFee\": [\n        { \"feeTypeId\": 8, \"name\": \"Caution Money\", \"fee\": 10000 },\n        { \"feeTypeId\": 9, \"name\": \"Development Fees\", \"fee\": 6250 },\n        { \"feeTypeId\": 10, \"name\": \"RTU Development Fees\", \"fee\": 3000 }\n      ]\n    },\n    {\n      \"name\": \"Semi - Annually 2\",\n      \"startDate\": \"2026-01-01\",\n      \"EndDate\": \"2026-01-31\",\n      \"product\": [\n        { \"name\": \"Sem 2 Fees\", \"fee\": 56250 }\n      ],\n      \"additionalFee\": [\n        { \"feeTypeId\": 9, \"name\": \"Development Fees\", \"fee\": 6250 }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/feePlan/{{feePlan_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "feePlan",
+                "{{feePlan_id}}"
+              ]
+            },
+            "description": "PATCH /feePlan/:feePlanId — same JSON as POST /feePlan. Path feePlanId is coerced/validated by Zod. 404 if plan missing or not in scope; other errors return { error } with status from server."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
     {
       "key": "baseurl",
       "value": "http://localhost:8080",
-      "type": "string"
+      "type": "string",
+      "description": "API root, no trailing slash"
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
-      "type": "string"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzg0OTU4MzUsImV4cCI6MTc4MTA4NzgzNX0.qE863-oljHcveS_-8j8tmk6A_mEN_MzKUEz6sE27OcU",
+      "type": "string",
+      "description": "Default Bearer token for {{token}} in collection requests"
     }
   ]
 }

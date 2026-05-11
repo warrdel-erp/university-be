@@ -75,3 +75,19 @@ export async function deleteFeePlan(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+
+export async function updateFeePlanById(req, res) {
+    try {
+        const feePlanData = await feePlan.updateFeePlanById({
+            feePlanId: req.params.feePlanId,
+            payload: req.body,
+            updatedBy: req.user.userId,
+            universityId: req.user.universityId,
+            instituteId: req.user.defaultInstituteId,
+        });
+        res.status(200).json({ message: "Data updated successfully", feePlanData });
+    } catch (error) {
+        const status = error.statusCode ?? 500;
+        res.status(status).json({ error: error.message });
+    }
+}
