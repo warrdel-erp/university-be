@@ -159,13 +159,12 @@ export async function getScriptsAssignedToTeacher(req, res) {
       limit
     );
 
-    return res.status(200).json({
-      success: true,
-      message: "Assigned scripts fetched successfully",
-      data: result.data,
-      paginationData: result.pagination,
-      teacher: result.teacher,
-    });
+    return SuccessResponse(
+      res,
+      200,
+      "Assigned scripts fetched successfully",
+      result
+    );
   } catch (error) {
     console.error("Error in getScriptsAssignedToTeacher controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

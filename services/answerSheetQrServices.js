@@ -412,17 +412,17 @@ export async function getScriptsAssignedToTeacher(
   }));
 
   return {
-    teacher: {
-      userId: teacher.userId,
-      userName: teacher.userName,
-      email: teacher.email,
-    },
     data,
     pagination: {
       page,
       limit,
       total: count,
       totalPages: Math.ceil(count / limit),
+    },
+    teacher: {
+      userId: teacher.userId,
+      userName: teacher.userName,
+      email: teacher.email,
     },
   };
 }
