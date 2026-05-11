@@ -200,15 +200,9 @@ export default sequelize.define(
         //         key: 'user_id'
         //     }
         // },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'employee_office',
-        timestamps: true,
-        paranoid: true
+        timestamps: true
     }
 );

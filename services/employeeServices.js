@@ -194,7 +194,7 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
     // }
 
     const employeePersonalDetail = {
-      personalEmail: address?.officalEmailId || address?.officialEmailId,
+      personalEmail: data.officalEmailId,
       mobileNumber: address?.mobileNumber
     }
 
@@ -676,7 +676,7 @@ export async function importEmployeeData(excelData, commonData) {
         employeeId
       }
       const employeePersonalDetail = {
-        officalEmailId: convertedData.officalEmailId,
+        personalEmail: convertedData.officalEmailId,
         mobileNumber: convertedData.mobileNumber
       }
 
@@ -731,6 +731,15 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
       roleId: null,  // role_id in employee table is always null; role is managed via user_roles table
       updatedBy
     }, transaction);
+
+    // Sync officialEmailId with user table email
+    if (data.officalEmailId) {
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+      const userId = employeeDetails?.[0]?.userId;
+      if (userId) {
+        await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
+      }
+    }
 
     //  Upload/update files
     if (files) {
