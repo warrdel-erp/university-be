@@ -381,7 +381,7 @@ export async function getScriptsAssignedToTeacher(
     offset
   );
 
-  const data = rows.map((item) => ({
+  const filteredrows = rows.map((item) => ({
     id: item.id,
     qr: item.qr,
     requestId: item.requestId ?? null,
@@ -412,17 +412,18 @@ export async function getScriptsAssignedToTeacher(
   }));
 
   return {
-    data,
+   data: {
+    filteredrows,
+    teacher: {
+      userId: teacher.userId,
+      userName: teacher.userName,
+      email: teacher.email,
+    }},
     pagination: {
       page,
       limit,
       total: count,
       totalPages: Math.ceil(count / limit),
-    },
-    teacher: {
-      userId: teacher.userId,
-      userName: teacher.userName,
-      email: teacher.email,
     },
   };
 }
