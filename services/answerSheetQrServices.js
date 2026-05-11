@@ -103,6 +103,21 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
       if (!student) throw createServiceError("Student not found in your institute.", 404);
       if (!examSchedule) throw createServiceError("Exam schedule not found in your institute.", 404);
 
+      const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamTerm(
+        studentId,
+        examSchedule.examSetupTypeTermId,
+        examSchedule.sessionId,
+        instituteId,
+        universityId,
+        transaction
+      );
+      if (!hasHallTicket) {
+        throw createServiceError(
+          "Student does not have a hall ticket for this exam setup type term.",
+          400
+        );
+      }
+
       const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
         qr,
         studentId,

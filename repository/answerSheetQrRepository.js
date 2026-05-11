@@ -179,7 +179,7 @@ export async function getScopedStudent(studentId, instituteId, universityId, tra
 export async function getScopedExamSchedule(examScheduleId, instituteId, universityId, transaction) {
   return model.examScheduleModel.findOne({
     where: { examScheduleId },
-    attributes: ["examScheduleId", "examSetupTypeTermId"],
+    attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
     include: [
       {
         model: model.examSetupTypeTermModel,
@@ -191,6 +191,22 @@ export async function getScopedExamSchedule(examScheduleId, instituteId, univers
     ],
     transaction,
   });
+}
+
+export async function hasStudentHallTicketForExamTerm(
+  studentId,
+  examSetupTypeTermId,
+  sessionId,
+  instituteId,
+  universityId,
+  transaction
+) {
+  const row = await model.studentHallTicketModel.findOne({
+    where: { studentId, examSetupTypeTermId, sessionId, instituteId, universityId },
+    attributes: ["id"],
+    transaction,
+  });
+  return Boolean(row);
 }
 
 export async function mapAnswerSheetQrOnce(
