@@ -10,6 +10,9 @@ export async function addSession(req, res) {
         const session = await sessionCreation.addSession(req.body, createdBy, updatedBy, universityId, instituteId);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
+        if (error?.message?.includes('already mapped')) {
+            return res.status(409).json({ error: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
 };
@@ -87,6 +90,9 @@ export async function couseSessionMapping(req, res) {
         const session = await sessionCreation.couseSessionMapping(req.body, createdBy, updatedBy, universityId, instituteId);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
+        if (error?.message?.includes('already mapped')) {
+            return res.status(409).json({ error: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
 };
@@ -101,8 +107,14 @@ export async function updateCouseSessionMapping(req, res) {
             return res.status(400).send('sessionCourseMappingId is required')
         }
         const session = await sessionCreation.updateCouseSessionMapping(req.body, updatedBy, universityId, instituteId);
-        res.status(201).json({ message: "Data added successfully", session });
+        res.status(200).json({ message: "Mapping updated successfully", session });
     } catch (error) {
+        if (error.message === "Session course mapping not found") {
+            return res.status(404).json({ error: error.message });
+        }
+        if (error?.message?.includes('already mapped')) {
+            return res.status(409).json({ error: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
 };

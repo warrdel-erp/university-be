@@ -199,47 +199,167 @@ export async function getAllCourses(universityId, instituteId, campusId) {
     }
 }
 
+async function resolveInstituteScope(courseId, universityId, instituteIdFromUser) {
+    if (instituteIdFromUser != null && instituteIdFromUser !== undefined) {
+        return instituteIdFromUser;
+    }
+    const row = await model.courseModel.findOne({
+        where: { courseId, universityId },
+        attributes: ["instituteId"],
+    });
+    return row?.instituteId ?? null;
+}
+
+function collectTermsThatHaveClasses(classRows) {
+    const termNumbers = new Set();
+    for (const row of classRows || []) {
+        if (row.term) termNumbers.add(row.term);
+    }
+    return termNumbers;
+}
+
+function listMissingTermLabels(termNumbersPresent, totalTerms, termTypePrefix) {
+    const labels = [];
+    const prefix = termTypePrefix ?? "";
+    for (let termIndex = 1; termIndex <= totalTerms; termIndex++) {
+        if (!termNumbersPresent.has(termIndex)) {
+            labels.push(prefix + " " + termIndex);
+        }
+    }
+    return labels;
+}
+
+function sectionsWithUniversityId(rawSections, universityIdFallback) {
+    return rawSections.map(({ courseSection, ...fields }) => ({
+        ...fields,
+        universityId: courseSection?.universityId ?? universityIdFallback,
+    }));
+}
+
+function bucketSectionsByUniversityAndInstitute(sections) {
+    const buckets = {};
+    for (const section of sections) {
+        const key = `${section.universityId}_${section.instituteId}`;
+        if (!buckets[key]) {
+            buckets[key] = {
+                universityId: section.universityId,
+                instituteId: section.instituteId,
+                classSections: [],
+            };
+        }
+        buckets[key].classSections.push(section);
+    }
+    return Object.values(buckets);
+}
+
+function shapeCourseSessionsPayload(data) {
+    const courseUniversityId = data.universityId;
+
+    for (const mapping of data.sessionCourseMappings || []) {
+        const session = mapping.session;
+        if (!session) continue;
+
+        const termsThatHaveClasses = collectTermsThatHaveClasses(session.classes);
+
+        session.missingTerms = listMissingTermLabels(
+            termsThatHaveClasses,
+            data.totalTerms || 0,
+            data.termType
+        );
+
+        delete session.classes;
+
+        const rawSections = session.classSession;
+        if (!rawSections?.length) continue;
+
+        session.classSession = sectionsWithUniversityId(rawSections, courseUniversityId);
+
+        session.classSectionsByUniversityAndInstitute = bucketSectionsByUniversityAndInstitute(
+            session.classSession
+        );
+    }
+
+    return data;
+}
+
 /**
- * Get single course with its sessions
- * @param {number} courseId 
- * @param {number} universityId 
- * @param {number} [acedmicYearId] 
- * @returns {Promise<Object>}
+ * Course + sessions for GET /course/:id/sessions — query + API shaping (plain object).
  */
-export async function getCourseByIdWithSessions(courseId, universityId, acedmicYearId) {
+export async function getCourseWithSessionsData(
+    courseId,
+    universityId,
+    acedmicYearId,
+    instituteIdFromUser
+) {
     try {
-        return await model.courseModel.findOne({
+        const instituteScope = await resolveInstituteScope(
+            courseId,
+            universityId,
+            instituteIdFromUser
+        );
+
+        const classSessionInclude = {
+            model: model.classSectionModel,
+            as: "classSession",
+            attributes: ["classSectionsId", "section", "instituteId"],
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "courseSection",
+                    attributes: ["universityId"],
+                },
+            ],
+        };
+
+        const classesInclude = {
+            model: model.classModel,
+            as: "classes",
+            attributes: ["classId", "term", "instituteId", "universityId"],
+        };
+
+        if (instituteScope != null) {
+            classSessionInclude.required = false;
+            classSessionInclude.where = { instituteId: instituteScope };
+            classesInclude.required = false;
+            classesInclude.where = {
+                universityId,
+                instituteId: instituteScope,
+            };
+        }
+
+        const course = await model.courseModel.findOne({
             where: { courseId, universityId },
             include: [
                 {
                     model: model.sessionCouseMappingModel,
-                    as: 'sessionCourseMappings',
+                    as: "sessionCourseMappings",
                     attributes: ["sessionCourseMappingId"],
                     include: [
                         {
                             model: model.sessionModel,
-                            as: 'session',
-                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId"],
+                            as: "session",
+                            attributes: [
+                                "sessionId",
+                                "sessionName",
+                                "startingDate",
+                                "endingDate",
+                                "classTillDate",
+                                "acedmicYearId",
+                            ],
                             where: acedmicYearId ? { acedmicYearId } : {},
-                            include: [
-                                {
-                                    model: model.classSectionModel,
-                                    as: 'classSession',
-                                    attributes: ["classSectionsId", "section"],
-                                },
-                                {
-                                    model: model.classModel,
-                                    as: 'classes',
-                                    attributes: ["classId", "term"],
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                            include: [classSessionInclude, classesInclude],
+                        },
+                    ],
+                },
+            ],
         });
+
+        if (!course) return null;
+
+        const plain = course.get({ plain: true });
+        return shapeCourseSessionsPayload(plain);
     } catch (error) {
-        console.error("Error in Course Repository (getCourseByIdWithSessions):", error);
+        console.error("Error in Course Repository (getCourseWithSessionsData):", error);
         throw error;
     }
 }

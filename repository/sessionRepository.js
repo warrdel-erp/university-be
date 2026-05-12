@@ -1,6 +1,29 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
+
+async function assertNoDuplicateCourseSessionPair(
+    courseId,
+    sessionId,
+    transaction,
+    excludeSessionCourseMappingId
+) {
+    const where = {
+        courseId,
+        sessionId,
+        ...(excludeSessionCourseMappingId != null && {
+            sessionCourseMappingId: { [Op.ne]: excludeSessionCourseMappingId },
+        }),
+    };
+    const clash = await model.sessionCouseMappingModel.findOne({
+        where,
+        transaction,
+    });
+    if (clash) {
+        throw new Error('This course and session are already mapped.');
+    }
+}
+
 export async function addSession(sessionData, transaction) {
     try {
         const result = await model.sessionModel.create(sessionData, { transaction });
@@ -24,6 +47,21 @@ export async function addBulkSession(sessionData) {
 
 export async function courseSectionMapping(sessionData, transaction) {
     try {
+        const seenPair = new Set();
+        for (const row of sessionData) {
+            const key = `${row.courseId}_${row.sessionId}`;
+            if (seenPair.has(key)) {
+                throw new Error('This course and session are already mapped.');
+            }
+            seenPair.add(key);
+            await assertNoDuplicateCourseSessionPair(
+                row.courseId,
+                row.sessionId,
+                transaction,
+                null
+            );
+        }
+
         const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
         return result;
     } catch (error) {
@@ -34,6 +72,23 @@ export async function courseSectionMapping(sessionData, transaction) {
 
 export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
     try {
+        const existing = await model.sessionCouseMappingModel.findOne({
+            where: { sessionCourseMappingId },
+        });
+        if (!existing) {
+            throw new Error('Session course mapping not found');
+        }
+
+        const nextCourseId = data.courseId ?? existing.courseId;
+        const nextSessionId = data.sessionId ?? existing.sessionId;
+
+        await assertNoDuplicateCourseSessionPair(
+            nextCourseId,
+            nextSessionId,
+            undefined,
+            sessionCourseMappingId
+        );
+
         const result = await model.sessionCouseMappingModel.update(data, {
             where: { sessionCourseMappingId }
         });

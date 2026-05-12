@@ -70,6 +70,7 @@ export const getCourseSessions = async (req, res) => {
     try {
         const universityId = req.user.universityId;
         const acedmicYearId = req.user.defaultAcademicYearId;
+        const instituteId = req.user.defaultInstituteId;
 
         const courseId = req.params.courseId;
 
@@ -80,7 +81,12 @@ export const getCourseSessions = async (req, res) => {
             });
         }
 
-        const result = await courseService.getCourseWithSessions(courseId, universityId, acedmicYearId);
+        const result = await courseService.getCourseWithSessions(
+            courseId,
+            universityId,
+            acedmicYearId,
+            instituteId
+        );
 
         if (!result) {
             return res.status(404).json({
