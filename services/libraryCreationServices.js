@@ -106,8 +106,7 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
         {
           libraryBookId: newBook.dataValues.libraryBookId,
 
-          // backward-compatible alias
-          excisionNumber: inv.excisionNumber ?? inv.accessionNo ?? null,
+          excisionNumber: inv.excisionNumber ?? null,
 
           billNo: inv.billNo ?? null,
           billDate: inv.billDate ?? null,
@@ -155,12 +154,27 @@ export async function updateInventory(inventoryId, inventoryData) {
   return await libraryCreationService.updateInventory(inventoryId, inventoryData);
 }
 
+export async function createInventory(inventoryData) {
+  return await libraryCreationService.createInventory(inventoryData);
+}
+
 export async function deleteBook(libraryBookId) {
   return await libraryCreationService.deleteBook(libraryBookId);
 }
 
 export async function deleteInventoryCopy(inventoryId) {
   return await libraryCreationService.deleteInventoryCopy(inventoryId);
+}
+
+export async function deleteInventoryCopiesForBookExceptIds(libraryBookId, keepInventoryIds) {
+  return await libraryCreationService.deleteInventoryCopiesForBookExceptIds(
+    libraryBookId,
+    keepInventoryIds,
+  );
+}
+
+export async function getLibraryBookIdByInventoryId(inventoryId) {
+  return await libraryCreationService.getLibraryBookIdByInventoryId(inventoryId);
 }
 
 export async function getAllIssuedBooks() {

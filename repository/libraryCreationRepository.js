@@ -334,6 +334,23 @@ export async function deleteInventoryCopy(inventoryId) {
   }
 }
 
+/** Soft-deletes all inventory rows for a book except those in keepInventoryIds. Empty keepInventoryIds deletes every copy for the book. */
+export async function deleteInventoryCopiesForBookExceptIds(libraryBookId, keepInventoryIds) {
+  const keep = [...new Set((keepInventoryIds || []).map(Number).filter((n) => !Number.isNaN(n)))];
+  const where = { libraryBookId };
+  if (keep.length > 0) {
+    where.inventoryId = { [Op.notIn]: keep };
+  }
+  return await model.libraryBookInventoryModel.destroy({ where });
+}
+
+export async function getLibraryBookIdByInventoryId(inventoryId) {
+  const row = await model.libraryBookInventoryModel.findByPk(inventoryId, {
+    attributes: ["libraryBookId"],
+  });
+  return row?.libraryBookId ?? null;
+}
+
 export async function getAllIssuedBooks() {
   try {
     const result = await model.libraryBookInventoryModel.findAll({

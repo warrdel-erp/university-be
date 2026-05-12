@@ -4969,7 +4969,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
+            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"excisionNumber\": \"ACC-1002\"\n    }\n  ]\n}\n```",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "body": {
               "mode": "raw",
@@ -4994,7 +4994,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"title\": \"Data Structures\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}"
+                  "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"title\": \"Data Structures\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"excisionNumber\": \"ACC-1002\"\n    }\n  ]\n}"
                 },
                 "url": {
                   "raw": "{{baseurl}}/libraryCreation/addBook",
@@ -5062,14 +5062,15 @@
           ]
         },
         {
-          "name": "update book",
+          "name": "update book with inventory",
           "request": {
             "method": "PATCH",
             "header": [],
+            "description": "**PATCH /libraryCreation/updateBook**\n\nMerged endpoint that updates a `library_book` and/or its `library_book_inventory` copies in one call.\n\n**Per-item action rules (`inventory[]`):**\n- Item has `inventoryId` → update that copy. Sending `status: \"return\"` auto-resets `issueDate`, `dueDate`, `studentId`, `employeeId` and sets `status` to `\"available\"`.\n- Item has no `inventoryId` → create a new copy. `libraryBookId` is inherited from `book.libraryBookId` if present, otherwise must be set on the item itself. `libraryAisleId`, `libraryRackId`, `libraryRowId` are required.\n\n**Inventory sync rules:**\n- `inventory` omitted → no inventory changes.\n- `inventory` is `[]` (with a resolvable `libraryBookId`) → ALL existing copies for that book are soft-deleted.\n- `inventory` has at least one item with `inventoryId` → any existing copy for the book whose `inventoryId` is not in the payload list is soft-deleted (sync mode).\n- `inventory` has only new items (no `inventoryId`s) → only adds, nothing is deleted.\n\nAt least one of `book` or a non-empty `inventory` array must be provided.\n\n**Full payload example (update book + update copy 101 + return copy 102 + add a new copy + soft-delete any copy not listed):**\n```json\n{\n  \"book\": {\n    \"libraryBookId\": 1,\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"GRAMMER OF ORNAMENT\",\n    \"subtitle\": \"NO\",\n    \"authors\": \"JONES OWEN\",\n    \"publisher\": \"PARKEATE BOOKS LTD.\",\n    \"placeOfPublication\": \"LONDON\",\n    \"yearOfPublication\": 1997,\n    \"edition\": \"1st\",\n    \"seriesTitle\": \"NO\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"NO\",\n    \"issn\": \"NO\",\n    \"barcode\": \"0001\",\n    \"physicalDescription\": \"ARTS AND GRAPHICS\",\n    \"numberOfPages\": 272,\n    \"illustrations\": false,\n    \"summary\": \"74/76\",\n    \"keywords\": \"GRAMMER, ORNAMENT\",\n    \"additionalAuthor\": \"NO\",\n    \"subjectId\": 47,\n    \"classSectionsId\": 195,\n    \"remark\": \"\",\n    \"itemType\": \"Print\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": 101,\n      \"excisionNumber\": \"EX-101\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 2,\n      \"libraryRowId\": 3,\n      \"studentId\": 9001,\n      \"employeeId\": null,\n      \"issueDate\": \"2026-05-12\",\n      \"dueDate\": \"2026-05-26\",\n      \"status\": \"issued\",\n      \"billNo\": \"B-001\",\n      \"billDate\": \"2026-05-01\",\n      \"itemPrice\": 1200,\n      \"netPrice\": 1100,\n      \"currency\": \"INR\"\n    },\n    {\n      \"inventoryId\": 102,\n      \"status\": \"return\"\n    },\n    {\n      \"excisionNumber\": \"EX-201\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 2,\n      \"libraryRowId\": 4,\n      \"status\": \"available\",\n      \"billNo\": \"B-099\",\n      \"billDate\": \"2026-05-10\",\n      \"itemPrice\": 1500,\n      \"netPrice\": 1400,\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Update only the book:**\n```json\n{\n  \"book\": { \"libraryBookId\": 1, \"title\": \"GRAMMER OF ORNAMENT (Rev.)\" }\n}\n```\n\n**Return a copy:**\n```json\n{\n  \"inventory\": [{ \"inventoryId\": 101, \"status\": \"return\" }]\n}\n```\n\n**Add a new copy without updating the book:**\n```json\n{\n  \"inventory\": [\n    {\n      \"libraryBookId\": 1,\n      \"excisionNumber\": \"EX-202\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 2,\n      \"libraryRowId\": 4\n    }\n  ]\n}\n```\n\n**Soft-delete every copy of the book:**\n```json\n{\n  \"book\": { \"libraryBookId\": 1 },\n  \"inventory\": []\n}\n```",
             "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
+              "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": {{inventory_id}},\n      \"status\": \"available\"\n    },\n    {\n      \"excisionNumber\": \"EX-NEW-001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\"\n    }\n  ]\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
@@ -5081,31 +5082,41 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"message\": \"Book updated successfully\",\n  \"result\": [1]\n}"
-            }
-          ]
-        },
-        {
-          "name": "update inventory",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "body": "{\n  \"message\": \"Book and/or inventory processed successfully\",\n  \"book\": {\n    \"libraryBookId\": 1,\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms - 3rd Edition\",\n    \"inventoryCopies\": [\n      {\n        \"inventoryId\": 101,\n        \"excisionNumber\": \"EX-101\",\n        \"status\": \"available\"\n      },\n      {\n        \"inventoryId\": 305,\n        \"excisionNumber\": \"EX-NEW-001\",\n        \"status\": \"available\"\n      }\n    ]\n  },\n  \"inventory\": [\n    { \"action\": \"updated\", \"inventoryId\": 101, \"result\": [1] },\n    { \"action\": \"created\", \"inventoryId\": 305, \"result\": { \"inventoryId\": 305 } }\n  ],\n  \"removedInventoryCount\": 1\n}"
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/updateInventory", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateInventory"] }
-          },
-          "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK — book only",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book\": { \"libraryBookId\": {{libraryBook_id}}, \"title\": \"New Title\" }\n}"
+                },
+                "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+              },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"message\": \"Inventory updated successfully\",\n  \"result\": [1]\n}"
+              "body": "{\n  \"message\": \"Book and/or inventory processed successfully\",\n  \"book\": { \"libraryBookId\": 1, \"title\": \"New Title\" }\n}"
+            },
+            {
+              "name": "200 OK — delete all copies",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"book\": { \"libraryBookId\": {{libraryBook_id}} },\n  \"inventory\": []\n}"
+                },
+                "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book and/or inventory processed successfully\",\n  \"book\": { \"libraryBookId\": 1, \"inventoryCopies\": [] },\n  \"removedInventoryCount\": 3\n}"
             }
           ]
         },
