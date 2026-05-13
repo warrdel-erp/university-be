@@ -190,7 +190,19 @@ export async function getAllCourses(universityId, instituteId, campusId) {
                     as: 'instituted',
                     attributes: ["instituteId", "instituteName", "instituteCode", "campusId"],
                     where: campusId ? { campusId } : {},
-                }
+                },
+                {
+                    model: model.affiliatedIniversityModel,
+                    as: 'affiliated',
+                    attributes: ['affiliatedUniversityId', 'affiliatedUniversityName'],
+                    required: false,
+                },
+                {
+                    model: model.employeeCodeMasterType,
+                    as: 'courseLevelCourses',
+                    attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                    required: false,
+                },
             ]
         });
     } catch (error) {
@@ -200,46 +212,140 @@ export async function getAllCourses(universityId, instituteId, campusId) {
 }
 
 /**
- * Get single course with its sessions
- * @param {number} courseId 
- * @param {number} universityId 
- * @param {number} [acedmicYearId] 
- * @returns {Promise<Object>}
+ * Course + sessions for GET /courses/:courseId/sessions (plain object).
+ * @param {number} courseId
+ * @param {number} universityId
+ * @param {number} [acedmicYearId] Filter sessions by academic year (property name matches DB / Sequelize model).
+ * @param {number} [instituteIdFromUser] Logged-in user default institute; narrows class rows when on same campus.
  */
-export async function getCourseByIdWithSessions(courseId, universityId, acedmicYearId) {
+export async function getCourseWithSessionsData(
+    courseId,
+    universityId,
+    acedmicYearId,
+    instituteIdFromUser
+) {
     try {
-        return await model.courseModel.findOne({
+        const courseInstituteRow = await model.courseModel.findOne({
+            where: { courseId, universityId },
+            attributes: ["instituteId"],
+            include: [{ model: model.instituteModel, as: "instituted", attributes: ["campusId"] }],
+        });
+        if (!courseInstituteRow) return null;
+
+        const { instituteId: courseInstituteId, instituted } = courseInstituteRow.get({ plain: true });
+        const instituteCampusId = instituted?.campusId;
+        let allowedInstituteIds = [courseInstituteId];
+
+        if (instituteIdFromUser != null) {
+            if (instituteCampusId != null) {
+                const institutesOnSameCampus = await model.instituteModel.findAll({
+                    where: { universityId, campusId: instituteCampusId },
+                    attributes: ["instituteId"],
+                });
+                if (
+                    institutesOnSameCampus.some(
+                        (institute) => institute.instituteId === instituteIdFromUser
+                    )
+                ) {
+                    allowedInstituteIds = [instituteIdFromUser];
+                }
+            } else if (instituteIdFromUser === courseInstituteId) {
+                allowedInstituteIds = [instituteIdFromUser];
+            }
+        }
+
+        const instituteScopeWhere =
+            allowedInstituteIds.length === 1
+                ? { instituteId: allowedInstituteIds[0] }
+                : { instituteId: { [Op.in]: allowedInstituteIds } };
+
+        const course = await model.courseModel.findOne({
             where: { courseId, universityId },
             include: [
                 {
                     model: model.sessionCouseMappingModel,
-                    as: 'sessionCourseMappings',
+                    as: "sessionCourseMappings",
                     attributes: ["sessionCourseMappingId"],
                     include: [
                         {
                             model: model.sessionModel,
-                            as: 'session',
-                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId"],
+                            as: "session",
+                            attributes: [
+                                "sessionId",
+                                "sessionName",
+                                "startingDate",
+                                "endingDate",
+                                "classTillDate",
+                                "acedmicYearId",
+                            ],
                             where: acedmicYearId ? { acedmicYearId } : {},
                             include: [
                                 {
                                     model: model.classSectionModel,
-                                    as: 'classSession',
+                                    as: "classSession",
                                     attributes: ["classSectionsId", "section"],
+                                    required: false,
+                                    where: { courseId, ...instituteScopeWhere },
                                 },
                                 {
                                     model: model.classModel,
-                                    as: 'classes',
+                                    as: "classes",
                                     attributes: ["classId", "term"],
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                                    required: false,
+                                    where: { courseId, universityId, ...instituteScopeWhere },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
         });
+        if (!course) return null;
+
+        const coursePayload = course.get({ plain: true });
+        const dedupedSessionIds = new Set();
+        coursePayload.sessionCourseMappings = (coursePayload.sessionCourseMappings || []).filter(
+            (sessionCourseMapping) => {
+                const sessionId = sessionCourseMapping.session?.sessionId;
+                if (sessionId == null) return true;
+                if (dedupedSessionIds.has(sessionId)) return false;
+                dedupedSessionIds.add(sessionId);
+                return true;
+            }
+        );
+
+        const totalTerms = coursePayload.totalTerms || 0;
+        const termTypePrefix = `${coursePayload.termType ?? ""} `;
+
+        for (const sessionCourseMapping of coursePayload.sessionCourseMappings) {
+            const session = sessionCourseMapping.session;
+            if (!session) continue;
+
+            const termNumbersHavingClasses = new Set(
+                (session.classes || []).map((classRow) => classRow.term).filter(Boolean)
+            );
+            session.missingTerms = Array.from({ length: totalTerms }, (_, index) => index + 1)
+                .filter((termNumber) => !termNumbersHavingClasses.has(termNumber))
+                .map((termNumber) => termTypePrefix + termNumber);
+            delete session.classes;
+
+            const dedupedClassSectionIds = new Set();
+            session.classSession = (session.classSession || [])
+                .filter(
+                    (classSectionRow) =>
+                        classSectionRow?.classSectionsId &&
+                        !dedupedClassSectionIds.has(classSectionRow.classSectionsId) &&
+                        dedupedClassSectionIds.add(classSectionRow.classSectionsId)
+                )
+                .map((classSectionRow) => ({
+                    classSectionsId: classSectionRow.classSectionsId,
+                    section: classSectionRow.section,
+                }));
+        }
+
+        return coursePayload;
     } catch (error) {
-        console.error("Error in Course Repository (getCourseByIdWithSessions):", error);
+        console.error("Error in Course Repository (getCourseWithSessionsData):", error);
         throw error;
     }
 }
@@ -271,9 +377,9 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
 
 /**
  * Get course list with associated subjects
- * @param {number} universityId 
- * @param {number} instituteId 
- * @param {number} acedmicYearId 
+ * @param {number} universityId
+ * @param {number} instituteId
+ * @param {number} acedmicYearId Academic year id (matches DB / Sequelize property spelling).
  * @returns {Promise<Array>}
  */
 export async function getCourseListWithSubjects(universityId, instituteId, acedmicYearId) {
@@ -295,7 +401,19 @@ export async function getCourseListWithSubjects(universityId, instituteId, acedm
                         instituteId,
                     },
                     required: false
-                }
+                },
+                {
+                    model: model.affiliatedIniversityModel,
+                    as: 'affiliated',
+                    attributes: ['affiliatedUniversityId', 'affiliatedUniversityName'],
+                    required: false,
+                },
+                {
+                    model: model.employeeCodeMasterType,
+                    as: 'courseLevelCourses',
+                    attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                    required: false,
+                },
             ]
         });
     } catch (error) {
