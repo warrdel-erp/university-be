@@ -33,9 +33,11 @@ router.get("/", userAuth, validate({ query: listCoursesSchema }), courseControll
 
 router.get("/withSubjects", userAuth, validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
 
+router.get("/:courseId/sessions", userAuth, validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
+
+
 router.get("/semesterWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getClassSectionsGrouped);
 
-router.get("/:courseId/sessions", userAuth, validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 
 router.get("/:courseId/terms", userAuth, courseController.getTermOptionsByCourse);
 
