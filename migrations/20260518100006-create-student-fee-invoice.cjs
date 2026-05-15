@@ -1,0 +1,59 @@
+'use strict';
+
+/** @type {import('sequelize-cli').Migration} */
+module.exports = {
+  async up(queryInterface, Sequelize) {
+    await queryInterface.createTable('student_fee_invoice', {
+      student_fee_invoice_id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
+      },
+      amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
+      create_date: { type: Sequelize.DATEONLY, allowNull: false },
+      due_date: { type: Sequelize.DATEONLY, allowNull: true },
+      total: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
+      status: {
+        type: Sequelize.ENUM('non_generated', 'generated'),
+        allowNull: false,
+        defaultValue: 'non_generated',
+      },
+      student_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: 'students', key: 'student_id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT',
+      },
+      fee_plan_item_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: 'fee_plan_item', key: 'fee_plan_item_id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT',
+      },
+      institute_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: 'institute', key: 'institute_id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT',
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+    });
+  },
+
+  async down(queryInterface) {
+    await queryInterface.dropTable('student_fee_invoice');
+  },
+};

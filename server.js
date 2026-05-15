@@ -27,6 +27,8 @@ import attendance from "./router/attendanceRoute.js";
 import classRoom from "./router/classRoomRoute.js";
 import feeGroup from "./router/feeGroupRoute.js";
 import feeType from "./router/feeTypeRoute.js";
+import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
+import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
 import feeInvoice from "./router/feeInvoiceRoute.js";
 import feeInvoiceDetails from "./router/feeInvoiceDetailRoute.js";
 import role from "./router/roleRoute.js";
@@ -58,6 +60,7 @@ import session from "./router/sessionRoute.js";
 import po from "./router/poRoute.js";
 import co from "./router/coRoute.js";
 import feePlan from "./router/feePlanRoute.js";
+import feePlanProfile from "./router/feePlanProfileRoute.js";
 import feeInvoiceRecord from "./router/feeInvoiceDetailRecordRoute.js";
 import studentInvoice from "./router/studentInvoiceRoute.js";
 import lesson from "./router/lessonRoute.js";
@@ -140,10 +143,16 @@ app.use("/faculityLoad", faculityLoad);
 app.use("/timeTableCreate", timeTableCreate);
 app.use("/libraryMember", libraryMember);
 app.use("/classRoom", classRoom);
+
 app.use("/feeGroup", feeGroup);
 app.use("/feeType", feeType);
+app.use("/feePlan", feePlan);
+
+app.use("/feeInvoiceRecord", feeInvoiceRecord);
+app.use("/studentInvoice", studentInvoice);
 app.use("/feeInvoice", feeInvoice);
 app.use("/feeInvoiceDetails", feeInvoiceDetails);
+
 app.use("/role", role);
 app.use("/permission", permission);
 app.use("/rolePermissionMapping", rolePermissionMapping);
@@ -170,9 +179,9 @@ app.use("/staff", staff);
 app.use("/departmentStructure", departmentStructure);
 app.use("/po", po);
 app.use("/co", co);
-app.use("/feePlan", feePlan);
-app.use("/feeInvoiceRecord", feeInvoiceRecord);
-app.use("/studentInvoice", studentInvoice);
+
+
+
 app.use("/lesson", lesson);
 app.use("/notice", notice);
 app.use("/examStructure", examStructure);
@@ -190,7 +199,10 @@ app.use("/credit", credit);
 app.use("/evalution", evalution);
 app.use("/answerSheetQr", answerSheetQr);
 
-
+//New fee management routes
+app.use("/feeTypeCategory", feeTypeCategory);
+app.use("/feeTypeCatalog", feeTypeCatalog);
+app.use("/feePlanProfile", feePlanProfile);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
