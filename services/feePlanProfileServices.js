@@ -105,6 +105,7 @@ function buildListRow(plainProfile, totalInvoices) {
     feePlanProfileId: plainProfile.feePlanProfileId,
     planName: plainProfile.name,
     planType: plainProfile.planType,
+    courseSessionId: plainProfile.courseSessionId,
     term: items.length,
     termFees,
     additionalFees,
@@ -112,6 +113,20 @@ function buildListRow(plainProfile, totalInvoices) {
     totalInvoices,
     instituteId: plainProfile.instituteId,
   };
+}
+
+async function buildFeePlanListRows(list, instituteId, transaction) {
+  const feePlans = [];
+  for (const row of list) {
+    const plain = toPlain(row);
+    const totalInvoices = await repo.countStudentFeeInvoicesForFeePlanProfile(
+      plain.feePlanProfileId,
+      instituteId,
+      { transaction }
+    );
+    feePlans.push(buildListRow(plain, totalInvoices));
+  }
+  return feePlans;
 }
 
 export function formatFeePlanProfileDetail(row) {
@@ -186,19 +201,32 @@ export async function listFeePlanProfiles(instituteId, courseSessionId) {
       transaction,
     });
 
-    const feePlans = [];
-    for (const row of list) {
-      const plain = toPlain(row);
-      const totalInvoices = await repo.countStudentFeeInvoicesForFeePlanProfile(
-        plain.feePlanProfileId,
-        instituteId,
-        { transaction }
-      );
-      feePlans.push(buildListRow(plain, totalInvoices));
-    }
-
+    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
     return { courseSessionId, feePlans };
   });
+}
+
+export async function listAllFeePlanProfiles(instituteId) {
+  return sequelize.transaction(async (transaction) => {
+    const list = await repo.findFeePlanProfilesByInstitute(instituteId, { transaction });
+    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
+    return { feePlans };
+  });
+}
+
+/** Fees Invoice dashboard cards: active / inactive / all fee plan counts. */
+export async function getFeePlanProfileSummary(instituteId) {
+  const [allFeePlans, activeFeePlans] = await Promise.all([
+    repo.countFeePlanProfilesByInstitute(instituteId),
+    repo.countActiveFeePlanProfilesByInstitute(instituteId),
+  ]);
+  const inactiveFeePlans = allFeePlans - activeFeePlans;
+
+  return {
+    activeFeePlans,
+    inactiveFeePlans,
+    allFeePlans,
+  };
 }
 
 export async function getSingleFeePlanProfile(feePlanProfileId, instituteId) {

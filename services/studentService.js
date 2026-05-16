@@ -23,6 +23,7 @@ import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
+import { toMoneyNumber } from "../utility/decimalMoney.js";
 
 export async function addStudent(
   info,
@@ -1148,6 +1149,145 @@ export async function lookupFeePlanProfilesForStudent(courseSessionId, institute
     courseSessionId,
     instituteId,
   );
+}
+
+function toPlainRow(row) {
+  if (!row) return null;
+  return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatStudentDisplayName(student) {
+  return [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
+  const startDate = String(feePlanItem.createDate).slice(0, 10);
+
+  if (!invoice) {
+    return startDate > today ? "upcoming" : "pending";
+  }
+
+  if (invoice.paymentStatus === "paid") return "paid";
+  if (invoice.paymentStatus === "partial") return "partial";
+  return "unpaid";
+}
+
+function formatTermTemplateRow(feePlanItem, index) {
+  const item = toPlainRow(feePlanItem);
+  return {
+    sno: index + 1,
+    feePlanItemId: item.feePlanItemId,
+    feePlanTypeId: item.feePlanItemId,
+    termName: item.termName ?? null,
+    startDate: item.createDate,
+    endDate: item.dueDate ?? null,
+    amount: toMoneyNumber(item.amount),
+  };
+}
+
+function formatStudentTermRow(feePlanItem, invoice, index) {
+  const item = toPlainRow(feePlanItem);
+  const inv = invoice ? toPlainRow(invoice) : null;
+  const status = resolveTermDisplayStatus(item, inv);
+
+  return {
+    sno: index + 1,
+    feePlanItemId: item.feePlanItemId,
+    feePlanTypeId: item.feePlanItemId,
+    termName: item.termName ?? null,
+    startDate: item.createDate,
+    endDate: item.dueDate ?? null,
+    amount: toMoneyNumber(item.amount),
+    status,
+    studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
+    paymentStatus: inv?.paymentStatus ?? null,
+    canGenerateInvoice: !inv,
+  };
+}
+
+function formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap) {
+  const s = toPlainRow(student);
+  const profile = s.studentFeePlanProfile ?? {};
+  const course = s.course ?? {};
+  const session = s.studentSession ?? {};
+  const section = s.studentSections ?? {};
+
+  const studentInvoices = invoiceMap.get(s.studentId) ?? new Map();
+
+  return {
+    studentId: s.studentId,
+    date: s.enrollDate ?? s.admisssionDate ?? null,
+    studentName: formatStudentDisplayName(s),
+    scholarNumber: s.scholarNumber,
+    className:
+      [section.class, section.section].filter(Boolean).join("") ||
+      section.section ||
+      section.class ||
+      null,
+    program: course.courseName ?? null,
+    session: session.sessionName ?? null,
+    feePlanName: profile.name ?? null,
+    feePlanProfileId: s.feePlanProfileId,
+    terms: feePlanItems.map((item, index) =>
+      formatStudentTermRow(item, studentInvoices.get(toPlainRow(item).feePlanItemId), index)
+    ),
+  };
+}
+
+export async function getFeePlanInitiateByProfile(feePlanProfileId, instituteId, filters = {}) {
+  const profile = await studentRepository.findFeePlanProfileByIdForInitiate(
+    feePlanProfileId,
+    instituteId
+  );
+  if (!profile) {
+    throw new Error("Fee plan profile not found");
+  }
+
+  const profilePlain = toPlainRow(profile);
+  const feePlanItems = await studentRepository.findFeePlanItemsByProfileId(
+    feePlanProfileId,
+    instituteId
+  );
+
+  const students = await studentRepository.findStudentsByFeePlanProfileId(
+    feePlanProfileId,
+    instituteId,
+    { acedmicYearId: filters.acedmicYearId }
+  );
+
+  const studentIds = students.map((s) => toPlainRow(s).studentId);
+  const invoices = await studentRepository.findInvoicesByStudentIdsForProfile(
+    studentIds,
+    feePlanProfileId,
+    instituteId
+  );
+
+  const invoiceMap = new Map();
+  for (const inv of invoices) {
+    const p = toPlainRow(inv);
+    if (!invoiceMap.has(p.studentId)) {
+      invoiceMap.set(p.studentId, new Map());
+    }
+    invoiceMap.get(p.studentId).set(p.feePlanItemId, inv);
+  }
+
+  return {
+    feePlanProfileId: profilePlain.feePlanProfileId,
+    feePlanName: profilePlain.name,
+    planType: profilePlain.planType,
+    courseSessionId: profilePlain.courseSessionId,
+    terms: feePlanItems.map((item, index) => formatTermTemplateRow(item, index)),
+    students: students.map((student) =>
+      formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap)
+    ),
+  };
 }
 
 export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId) {

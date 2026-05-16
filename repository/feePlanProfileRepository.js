@@ -1,4 +1,5 @@
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 
 export const PLAN_TYPES = new Set(["annual", "semester", "trimester"]);
@@ -61,18 +62,13 @@ export async function findFeePlanProfilesByInstitute(instituteId, options = {}) 
   if (courseSessionId != null) {
     where.courseSessionId = courseSessionId;
   }
-  const include = [...profileIncludes];
-  if (courseSessionId != null) {
-    include.push(feePlanItemsWithAdditionalFeesInclude);
-  }
-  const order = [["feePlanProfileId", "ASC"]];
-  if (courseSessionId != null) {
-    order.push([{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"]);
-  }
   return model.feePlanProfileModel.findAll({
     where,
-    include,
-    order,
+    include: [...profileIncludes, feePlanItemsWithAdditionalFeesInclude],
+    order: [
+      ["feePlanProfileId", "ASC"],
+      [{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"],
+    ],
     transaction,
   });
 }
@@ -135,6 +131,36 @@ export async function updateFeePlanProfile(feePlanProfileId, instituteId, payloa
     transaction,
   });
   return affected;
+}
+
+export async function countFeePlanProfilesByInstitute(instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanProfileModel.count({
+    where: { instituteId },
+    transaction,
+  });
+}
+
+/** Profiles with at least one student_fee_invoice on any fee_plan_item (term). */
+export async function countActiveFeePlanProfilesByInstitute(instituteId, options = {}) {
+  const { transaction } = options;
+  const [row] = await sequelize.query(
+    `SELECT COUNT(DISTINCT fpi.fee_plan_profile_id) AS activeCount
+     FROM student_fee_invoice sfi
+     INNER JOIN fee_plan_item fpi
+       ON fpi.fee_plan_item_id = sfi.fee_plan_item_id
+       AND fpi.institute_id = :instituteId
+     INNER JOIN fee_plan_profile fpp
+       ON fpp.fee_plan_profile_id = fpi.fee_plan_profile_id
+       AND fpp.institute_id = :instituteId
+     WHERE sfi.institute_id = :instituteId`,
+    {
+      replacements: { instituteId },
+      type: QueryTypes.SELECT,
+      transaction,
+    }
+  );
+  return Number(row?.activeCount ?? 0);
 }
 
 export async function countStudentFeeInvoicesForFeePlanProfile(

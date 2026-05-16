@@ -5,6 +5,8 @@ import {
   addFeePlanProfile,
   lookupFeePlanProfiles,
   getAllFeePlanProfile,
+  getAllFeePlanProfiles,
+  getFeePlanProfileSummary,
   getSingleFeePlanProfileDetails,
   updateFeePlanProfile,
 } from "../controllers/feePlanProfileController.js";
@@ -59,6 +61,8 @@ const profileIdQuery = z.object({ feePlanProfileId: id });
 const listQuery = z.object({ courseSessionId: id });
 
 router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
+router.get("/summary", userAuth, getFeePlanProfileSummary);
+router.get("/all", userAuth, getAllFeePlanProfiles);
 router.get("/lookup", userAuth, validate({ query: listQuery }), lookupFeePlanProfiles);
 router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);
 router.get("/single", userAuth, validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);

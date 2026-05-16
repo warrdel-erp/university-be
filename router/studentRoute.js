@@ -12,6 +12,7 @@ import {
   getclassStudentMapping,
   promoteStudent,
   getFeePlanProfiles,
+  getFeePlanInitiate,
   getEmptyFeeDetails,
   getStudentSubject,
   getFeeDetailsByStudentId,
@@ -53,6 +54,11 @@ const acedmicYearIdQuerySchema = z.object({
 
 const courseSessionIdQuerySchema = z.object({
   courseSessionId: positiveIntegerId,
+});
+
+const feePlanInitiateQuerySchema = z.object({
+  feePlanProfileId: positiveIntegerId,
+  acedmicYearId: positiveIntegerId.optional(),
 });
 
 const studentIdQuerySchema = z.object({
@@ -100,6 +106,12 @@ router.get(
   userAuth,
   validate({ query: courseSessionIdQuerySchema }),
   getFeePlanProfiles
+);
+router.get(
+  "/feePlanInitiate",
+  userAuth,
+  validate({ query: feePlanInitiateQuerySchema }),
+  getFeePlanInitiate
 );
 router.get(
   "/emptyfeeDetails",

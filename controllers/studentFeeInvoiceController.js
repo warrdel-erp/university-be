@@ -42,3 +42,16 @@ export async function listStudentFeeInvoicesByStudent(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function listAllStudentFeeInvoices(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const { paymentTab } = req.query;
+    const data = await studentFeeInvoiceService.listAllStudentFeeInvoices(instituteId, {
+      paymentTab,
+    });
+    return SuccessResponse(res, 200, "All student fee invoices fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

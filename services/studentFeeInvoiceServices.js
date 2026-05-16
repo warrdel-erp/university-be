@@ -195,3 +195,49 @@ export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) 
   const rows = await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId);
   return rows.map((r) => formatStudentFeeInvoiceListRow(r));
 }
+
+function formatStudentDisplayName(student) {
+  return [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function resolvePaymentStatusesFilter(paymentTab) {
+  if (paymentTab === "pending") return ["unpaid", "partial"];
+  if (paymentTab === "completed") return ["paid"];
+  return null;
+}
+
+/** Fees Invoice table: all institute invoices (no student/fee-plan filter). */
+function formatFeesInvoiceTableRow(row) {
+  const p = toPlain(row);
+  const student = p.studentFeeInvoiceStudent ?? {};
+  const item = p.feePlanItem ?? {};
+  const payment = paymentSummaryFromPlain(p);
+
+  return {
+    studentFeeInvoiceId: p.studentFeeInvoiceId,
+    invoiceNo: p.studentFeeInvoiceId,
+    studentId: p.studentId,
+    studentName: formatStudentDisplayName(student) || null,
+    scholarNumber: student.scholarNumber ?? null,
+    amount: toMoneyNumber(p.total),
+    paid: payment.totalPaid,
+    deposits: null,
+    balanceDue: payment.balanceDue,
+    status: (p.paymentStatus ?? "unpaid").toUpperCase(),
+    paymentStatus: p.paymentStatus ?? "unpaid",
+    termName: item.termName ?? null,
+    createDate: p.createDate,
+    dueDate: p.dueDate ?? null,
+  };
+}
+
+export async function listAllStudentFeeInvoices(instituteId, filters = {}) {
+  const paymentStatuses = resolvePaymentStatusesFilter(filters.paymentTab);
+  const rows = await repo.findAllStudentFeeInvoicesByInstitute(instituteId, {
+    paymentStatuses,
+  });
+  return rows.map((row) => formatFeesInvoiceTableRow(row));
+}

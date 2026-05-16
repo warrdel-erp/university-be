@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
@@ -100,6 +101,43 @@ export async function findStudentFeeInvoicesByStudentId(studentId, instituteId, 
   return model.studentFeeInvoiceModel.findAll({
     where: { studentId, instituteId },
     include: [feePlanItemInclude, additionalFeeLineInclude, feePaymentsInclude],
+    order: [["studentFeeInvoiceId", "DESC"]],
+    transaction,
+  });
+}
+
+export async function findAllStudentFeeInvoicesByInstitute(instituteId, options = {}) {
+  const { transaction, paymentStatuses } = options;
+  const where = { instituteId, status: "generated" };
+
+  if (paymentStatuses?.length) {
+    where.paymentStatus = { [Op.in]: paymentStatuses };
+  }
+
+  return model.studentFeeInvoiceModel.findAll({
+    where,
+    attributes: [
+      "studentFeeInvoiceId",
+      "studentId",
+      "feePlanItemId",
+      "instituteId",
+      "amount",
+      "total",
+      "createDate",
+      "dueDate",
+      "status",
+      "paymentStatus",
+    ],
+    include: [
+      {
+        model: model.studentModel,
+        as: "studentFeeInvoiceStudent",
+        attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
+        required: true,
+      },
+      feePlanItemInclude,
+      feePaymentsInclude,
+    ],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction,
   });

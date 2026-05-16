@@ -36,6 +36,26 @@ export async function getAllFeePlanProfile(req, res) {
   }
 }
 
+export async function getAllFeePlanProfiles(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const data = await feePlanProfileService.listAllFeePlanProfiles(instituteId);
+    return SuccessResponse(res, 200, "All fee plan profiles fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFeePlanProfileSummary(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const data = await feePlanProfileService.getFeePlanProfileSummary(instituteId);
+    return SuccessResponse(res, 200, "Fee plan summary fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getSingleFeePlanProfileDetails(req, res) {
   try {
     const { feePlanProfileId } = req.query;

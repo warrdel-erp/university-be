@@ -6,6 +6,7 @@ import {
   generateStudentFeeInvoice,
   getStudentFeeInvoiceById,
   listStudentFeeInvoicesByStudent,
+  listAllStudentFeeInvoices,
 } from "../controllers/studentFeeInvoiceController.js";
 
 const router = Router();
@@ -28,11 +29,22 @@ const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
 
+const listAllInvoicesQuerySchema = z.object({
+  paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+});
+
 router.post(
   "/",
   userAuth,
   validate({ body: generateInvoiceBodySchema }),
   generateStudentFeeInvoice
+);
+
+router.get(
+  "/all",
+  userAuth,
+  validate({ query: listAllInvoicesQuerySchema }),
+  listAllStudentFeeInvoices
 );
 
 router.get(

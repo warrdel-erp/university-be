@@ -5905,6 +5905,64 @@
               "response": []
             },
             {
+              "name": "summary (active / inactive / all)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/summary",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "summary"
+                  ]
+                },
+                "description": "**GET /feePlanProfile/summary** — dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile with ≥1 student_fee_invoice (any term / fee_plan_item)\n- **inactiveFeePlans**: profiles with zero invoices\n- **allFeePlans**: total profiles for institute"
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (institute)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ]
+                },
+                "description": "**GET /feePlanProfile/all** — all fee plan profiles for your institute (no courseSessionId).\n\ndata: { feePlans: [{ feePlanProfileId, planName, planType, courseSessionId, term, termFees, additionalFees, totalFees, totalInvoices }] }"
+              },
+              "response": []
+            },
+            {
               "name": "list by course session",
               "request": {
                 "auth": {
@@ -6085,6 +6143,42 @@
               "response": []
             },
             {
+              "name": "list all (fees invoice table)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?paymentTab=all",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "paymentTab",
+                      "value": "all",
+                      "description": "all | pending (unpaid+partial) | completed (paid)"
+                    }
+                  ]
+                },
+                "description": "Fees Invoice page table. No studentId/feePlan filter — all generated invoices for the institute. data[]: studentFeeInvoiceId, invoiceNo, studentName, scholarNumber, amount, paid, deposits, balanceDue, status (UNPAID/PAID/PARTIAL), paymentStatus, termName, createDate, dueDate."
+              },
+              "response": []
+            },
+            {
               "name": "list by student (table)",
               "request": {
                 "auth": {
@@ -6251,7 +6345,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2 student enrollment: (1) lookup fee plan profiles for a course–session, (2) create student with feePlanProfileId. Then use **studentFeeInvoice** to generate term invoices.",
+          "description": "Fee v2: lookup profiles → **feePlanInitiate** (nested UI table) → create student → **studentFeeInvoice** generate per term.",
           "item": [
             {
               "name": "1 lookup fee plan profiles (courseSessionId)",
@@ -6306,7 +6400,48 @@
               "response": []
             },
             {
-              "name": "2 create student (full details + feePlanProfileId)",
+              "name": "2 fee plan initiate (nested students + terms)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/feePlanInitiate?feePlanProfileId={{feePlanProfile_id}}&acedmicYearId={{acedmicYear_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "feePlanInitiate"
+                  ],
+                  "query": [
+                    {
+                      "key": "feePlanProfileId",
+                      "value": "{{feePlanProfile_id}}",
+                      "disabled": false
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /student/feePlanInitiate** — Fee Plan Initiate screen.\n\nReturns all students on `feePlanProfileId` with nested `terms[]` (S.No, startDate, endDate, amount, status: pending|upcoming|paid|partial). Top-level `terms` = plan template from `fee_plan_item`. Term id: `feePlanItemId` (alias `feePlanTypeId`). Generate: POST /studentFeeInvoice with studentId + feePlanItemId when canGenerateInvoice is true."
+              },
+              "response": []
+            },
+            {
+              "name": "3 create student (full details + feePlanProfileId)",
               "event": [
                 {
                   "listen": "test",
