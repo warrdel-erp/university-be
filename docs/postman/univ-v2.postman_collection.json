@@ -3520,7 +3520,8 @@
                   "value": "6"
                 }
               ]
-            }
+            },
+            "description": "**GET /options/feePlans** — v2 only. Query: courseId, sessionId. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] } — same shape as GET /feePlanProfile/lookup."
           },
           "response": []
         },
