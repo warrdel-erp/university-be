@@ -5504,7 +5504,8 @@
       ]
     },
     {
-      "name": "fee v2 (migrations: categories, catalog, plan profile, invoices)",
+      "name": "fee v2 (category, catalog, plan profile, student invoice)",
+      "description": "Order: feeTypeCategory → feeTypeCatalog → feePlanProfile → studentFeeInvoice.\n\nfeePlanProfile: POST/PATCH/GET only (no DELETE). feePlanItems optional on create; each installment may include feeTypeCatalogs[] with feeTypeCatalogId + amount (stored on additional_fee). planType must be lowercase: annual | semester | trimester.\n\nGET /feePlanProfile/single returns plain Sequelize data (includes createdAt/updatedAt on profile, feePlanItems, nested feeTypeCatalog / feeTypeCategory).\n\nstudentFeeInvoice: POST body is only studentId + feePlanItemId; GET list returns an array of summary rows per invoice.",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -5857,6 +5858,24 @@
           "item": [
             {
               "name": "create (with installments + catalogs)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.feePlanProfileId) {",
+                      "  pm.collectionVariables.set('feePlanProfile_id', String(data.feePlanProfileId));",
+                      "}",
+                      "if (data && data.feePlanItems && data.feePlanItems[0]) {",
+                      "  pm.collectionVariables.set('feePlanItem_id', String(data.feePlanItems[0].feePlanItemId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -5881,14 +5900,51 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"semester\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"name\": \"Semester 1\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"amount\": \"50000.00\",\n      \"feeTypeCatalogs\": [\n        {\n          \"feeTypeCategoryId\": \"{{feeTypeCategory_id}}\",\n          \"name\": \"Development fee\",\n          \"amount\": \"5000.00\"\n        }\n      ]\n    }\n  ]\n}",
+                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"semester\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"name\": \"Semester 1\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"amount\": \"50000.00\",\n      \"feeTypeCatalogs\": [\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"5000.00\"\n        }\n      ]\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "Creates fee_plan_profile, fee_plan_item rows, fee_type_catalog, additional_fee. planType: annual | semester | trimester. amount fields as decimal strings."
+                "description": "Creates fee_plan_profile. If feePlanItems is sent (optional), creates fee_plan_item rows and additional_fee per feeTypeCatalogs line.\n\nEach feeTypeCatalogs[] entry: feeTypeCatalogId (must exist in /feeTypeCatalog) + amount (saved on additional_fee; catalog master row unchanged).\n\nOmit feePlanItems entirely for an empty profile shell. Duplicate feeTypeCatalogId in the same installment is rejected.\n\nplanType: annual | semester | trimester (lowercase). academicYearId optional (must match session when provided)."
+              },
+              "response": []
+            },
+            {
+              "name": "create (profile only, no installments)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"B.Tech 2026 shell\",\n  \"planType\": \"semester\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Same as create but without feePlanItems — only fee_plan_profile row."
               },
               "response": []
             },
@@ -5922,7 +5978,8 @@
                       "disabled": false
                     }
                   ]
-                }
+                },
+                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } with summary per profile: planName, planType, term count, termFees, additionalFees, totalFees, totalInvoices, instituteId."
               },
               "response": []
             },
@@ -5957,7 +6014,8 @@
                       "disabled": false
                     }
                   ]
-                }
+                },
+                "description": "Query: feePlanProfileId. Returns plain JSON for the profile and nested feePlanItems → itemAdditionalFees → feeTypeCatalog → feeTypeCategory (includes createdAt/updatedAt where the model exposes them)."
               },
               "response": []
             },
@@ -5994,12 +6052,12 @@
                     }
                   }
                 },
-                "description": "When feePlanItems is non-empty, name + planType + courseSessionId are required; replacing items is blocked if any student_fee_invoice exists for this profile."
+                "description": "PATCH body must include at least one of: name, planType, courseSessionId, academicYearId, or non-empty feePlanItems.\n\nWhen feePlanItems is present: name, planType, and courseSessionId are all required in the same body. Replacing feePlanItems is blocked (409) if any student_fee_invoice exists for this profile."
               },
               "response": []
             },
             {
-              "name": "delete",
+              "name": "update (replace feePlanItems)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6011,24 +6069,27 @@
                     }
                   ]
                 },
-                "method": "DELETE",
+                "method": "PATCH",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/feePlanProfile?feePlanProfileId={{feePlanProfile_id}}",
+                  "raw": "{{baseurl}}/feePlanProfile",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "feePlanProfile"
-                  ],
-                  "query": [
-                    {
-                      "key": "feePlanProfileId",
-                      "value": "{{feePlanProfile_id}}",
-                      "disabled": false
-                    }
                   ]
-                }
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"planType\": \"semester\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"feePlanItems\": [\n    {\n      \"name\": \"Semester 1\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"amount\": \"50000.00\",\n      \"feeTypeCatalogs\": [\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"5500.00\"\n        }\n      ]\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Full replace of installments: removes old fee_plan_item + additional_fee rows for this profile, then inserts from feePlanItems (same shape as POST). fee_type_catalog master rows are never deleted."
               },
               "response": []
             }
@@ -6038,7 +6099,22 @@
           "name": "studentFeeInvoice",
           "item": [
             {
-              "name": "create",
+              "name": "generate invoice",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentFeeInvoiceId) {",
+                      "  pm.collectionVariables.set('studentFeeInvoice_id', String(data.studentFeeInvoiceId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6063,18 +6139,19 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"studentId\": \"{{student_id}}\",\n  \"feePlanItemId\": \"{{feePlanItem_id}}\",\n  \"amount\": 25000,\n  \"total\": 25000,\n  \"createDate\": \"2026-01-20\",\n  \"dueDate\": \"2026-02-20\",\n  \"status\": \"non_generated\"\n}",
+                  "raw": "{\n  \"studentId\": \"{{student_id}}\",\n  \"feePlanItemId\": \"{{feePlanItem_id}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
-                }
+                },
+                "description": "Body: studentId, feePlanItemId only. Creates student_fee_invoice + student_invoice_additional_fee rows from plan additional_fee lines.\n\n201 message: \"Invoice generated\". data includes amount, total, totalVerified, additionalFees[], feePlanItem, etc."
               },
               "response": []
             },
             {
-              "name": "get all",
+              "name": "list by student (table)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6089,19 +6166,27 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/studentFeeInvoice",
+                  "raw": "{{baseurl}}/studentFeeInvoice?studentId={{student_id}}",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "studentFeeInvoice"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}",
+                      "disabled": false
+                    }
                   ]
-                }
+                },
+                "description": "Query: studentId (required). data is an array of summary objects: studentFeeInvoiceId, termName, createDate, dueDate, amount, additionalFeesTotal, total, status, additionalFees[{ name, amount }]."
               },
               "response": []
             },
             {
-              "name": "get single",
+              "name": "get single (full detail)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6131,77 +6216,8 @@
                       "disabled": false
                     }
                   ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "update",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
                 },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/studentFeeInvoice",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "studentFeeInvoice"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n  \"status\": \"generated\",\n  \"total\": 25000\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "delete",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/studentFeeInvoice?studentFeeInvoiceId={{studentFeeInvoice_id}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "studentFeeInvoice"
-                  ],
-                  "query": [
-                    {
-                      "key": "studentFeeInvoiceId",
-                      "value": "{{studentFeeInvoice_id}}",
-                      "disabled": false
-                    }
-                  ]
-                }
+                "description": "Query: studentFeeInvoiceId. data is the full formatted invoice (additionalFees with catalog names, feePlanItem, total, storedTotal, totalVerified, timestamps)."
               },
               "response": []
             }

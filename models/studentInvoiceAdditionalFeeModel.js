@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import additionalFeeModel from "./additionalFeeModel.js";
+import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
 export default sequelize.define(
   "student_invoice_additional_fee",
@@ -10,6 +11,15 @@ export default sequelize.define(
       primaryKey: true,
       autoIncrement: true,
       field: "student_invoice_additional_fee_id",
+    },
+    studentFeeInvoiceId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "student_fee_invoice_id",
+      references: {
+        model: studentFeeInvoiceModel,
+        key: "student_fee_invoice_id",
+      },
     },
     amount: {
       type: DataTypes.DECIMAL(12, 2),

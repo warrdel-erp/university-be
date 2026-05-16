@@ -10,6 +10,13 @@ module.exports = {
         autoIncrement: true,
         allowNull: false,
       },
+      student_fee_invoice_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: 'student_fee_invoice', key: 'student_fee_invoice_id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
       amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
       waiver: { type: Sequelize.DECIMAL(12, 2), allowNull: true },
       additional_fee_id: {

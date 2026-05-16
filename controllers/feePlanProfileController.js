@@ -48,21 +48,3 @@ export async function updateFeePlanProfile(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
-
-export async function deleteFeePlanProfile(req, res) {
-  try {
-    const { feePlanProfileId } = req.query;
-    await feePlanProfileService.deleteFeePlanProfile(
-      feePlanProfileId,
-      req.user.defaultInstituteId
-    );
-    return SuccessResponse(
-      res,
-      200,
-      `Fee plan profile deleted successfully (ID ${feePlanProfileId})`,
-      null
-    );
-  } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-  }
-}

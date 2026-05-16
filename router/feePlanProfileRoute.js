@@ -1,108 +1,48 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
-import * as feePlanProfileRepo from "../repository/feePlanProfileRepository.js";
 import {
   addFeePlanProfile,
   getAllFeePlanProfile,
   getSingleFeePlanProfileDetails,
   updateFeePlanProfile,
-  deleteFeePlanProfile,
 } from "../controllers/feePlanProfileController.js";
 import userAuth from "../middleware/authUser.js";
 
 const router = Router();
 
-const positiveIntegerId = z.coerce
-  .number({ invalid_type_error: "id must be a number" })
-  .int({ message: "id must be an integer" })
-  .positive({ message: "id must be positive" });
+const id = z.coerce.number().int().positive();
+const amount = z.coerce.string().trim().min(1);
 
-const AMOUNT_DECIMAL_RE = /^\d+(\.\d{1,2})?$/;
-
-function preprocessAmountToDecimalString(val) {
-  if (val === null || val === undefined) return val;
-  if (typeof val === "number" && Number.isFinite(val)) return val.toFixed(2);
-  if (typeof val === "string") return val.trim();
-  return val;
-}
-
-const amountDecimalString = z.preprocess(
-  preprocessAmountToDecimalString,
-  z
-    .string({ required_error: "amount is required" })
-    .min(1, { message: "amount is required" })
-    .regex(AMOUNT_DECIMAL_RE, {
-      message: 'amount must be a non-negative decimal string (e.g. "45.00") with at most 2 fractional digits',
-    })
-);
-
-const planTypeSchema = z
-  .string()
-  .trim()
-  .transform((raw) => feePlanProfileRepo.normalizePlanType(raw))
-  .refine((v) => v != null, {
-    message: 'planType must be "annual", "semester", or "trimester"',
-  });
-
-const feeTypeCatalogLineSchema = z.object({
-  feeTypeCategoryId: positiveIntegerId,
-  name: z.string().trim().min(1, { message: "name is required" }),
-  amount: amountDecimalString,
+const catalogLine = z.object({
+  feeTypeCatalogId: id,
+  amount,
 });
 
-const feePlanItemSchema = z
-  .object({
-    name: z.string().trim().min(1, { message: "name is required" }),
-    startDate: z.string().trim().min(1, { message: "startDate is required" }),
-    dueDate: z.string().trim().optional(),
-    amount: amountDecimalString,
-    feeTypeCatalogs: z.array(feeTypeCatalogLineSchema).optional(),
-  })
-  .transform((row) => ({
-    name: row.name,
-    startDate: row.startDate,
-    dueDate: row.dueDate && String(row.dueDate).trim() !== "" ? row.dueDate : null,
-    amount: row.amount,
-    feeTypeCatalogs: row.feeTypeCatalogs ?? [],
-  }));
-
-const feePlanItemsArraySchema = z
-  .array(feePlanItemSchema)
-  .min(1, { message: "feePlanItems must have at least one installment when provided" });
-
-const createFeePlanProfileBodySchema = z
-  .object({
-    name: z.string().trim().min(1, { message: "name is required" }),
-    planType: planTypeSchema,
-    courseSessionId: positiveIntegerId,
-    academicYearId: positiveIntegerId.optional(),
-    feePlanItems: feePlanItemsArraySchema.optional(),
-  })
-  .transform((d) => ({
-    name: d.name,
-    planType: d.planType,
-    courseSessionId: d.courseSessionId,
-    academicYearId: d.academicYearId,
-    feePlanItems: d.feePlanItems ?? [],
-  }));
-
-const feePlanProfileIdQuerySchema = z.object({
-  feePlanProfileId: positiveIntegerId,
+const feePlanItem = z.object({
+  name: z.string().trim().min(1),
+  startDate: z.string().trim().min(1),
+  dueDate: z.string().trim().optional(),
+  amount,
+  feeTypeCatalogs: z.array(catalogLine).optional(),
 });
 
-const feePlanProfileListQuerySchema = z.object({
-  courseSessionId: positiveIntegerId,
+const createBody = z.object({
+  name: z.string().trim().min(1),
+  planType: z.enum(["annual", "semester", "trimester"]),
+  courseSessionId: id,
+  academicYearId: id.optional(),
+  feePlanItems: z.array(feePlanItem).min(1).optional(),
 });
 
-const updateFeePlanProfileBodySchema = z
+const updateBody = z
   .object({
-    feePlanProfileId: positiveIntegerId,
-    name: z.string().trim().min(1, { message: "name cannot be empty" }).optional(),
-    planType: planTypeSchema.optional(),
-    courseSessionId: positiveIntegerId.optional(),
-    academicYearId: positiveIntegerId.optional(),
-    feePlanItems: feePlanItemsArraySchema.optional(),
+    feePlanProfileId: id,
+    name: z.string().trim().min(1).optional(),
+    planType: z.enum(["annual", "semester", "trimester"]).optional(),
+    courseSessionId: id.optional(),
+    academicYearId: id.optional(),
+    feePlanItems: z.array(feePlanItem).min(1).optional(),
   })
   .refine(
     (d) =>
@@ -110,38 +50,16 @@ const updateFeePlanProfileBodySchema = z
       d.planType !== undefined ||
       d.courseSessionId !== undefined ||
       d.academicYearId !== undefined ||
-      (Array.isArray(d.feePlanItems) && d.feePlanItems.length > 0),
-    {
-      message:
-        "Provide at least one of: name, planType, courseSessionId, academicYearId, feePlanItems (non-empty)",
-    }
-  )
-  .refine(
-    (d) => {
-      if (!Array.isArray(d.feePlanItems) || d.feePlanItems.length === 0) return true;
-      return d.name !== undefined && d.planType !== undefined && d.courseSessionId !== undefined;
-    },
-    {
-      message: "When feePlanItems is provided, name, planType, and courseSessionId are required (same as POST)",
-    }
-  )
-  .transform((d) => ({
-    feePlanProfileId: d.feePlanProfileId,
-    name: d.name,
-    planType: d.planType,
-    courseSessionId: d.courseSessionId,
-    academicYearId: d.academicYearId,
-    feePlanItems: d.feePlanItems ?? [],
-  }));
+      (d.feePlanItems && d.feePlanItems.length > 0),
+    { message: "At least one field is required to update" }
+  );
 
-router.post("/", userAuth, validate({ body: createFeePlanProfileBodySchema }), addFeePlanProfile);
+const profileIdQuery = z.object({ feePlanProfileId: id });
+const listQuery = z.object({ courseSessionId: id });
 
-
-router.get("/", userAuth, validate({ query: feePlanProfileListQuerySchema }), getAllFeePlanProfile);
-
-router.get("/single", userAuth, validate({ query: feePlanProfileIdQuerySchema }), getSingleFeePlanProfileDetails);
-
-router.patch("/", userAuth, validate({ body: updateFeePlanProfileBodySchema }), updateFeePlanProfile);
-router.delete("/", userAuth, validate({ query: feePlanProfileIdQuerySchema }), deleteFeePlanProfile);
+router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
+router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);
+router.get("/single", userAuth, validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);
+router.patch("/", userAuth, validate({ body: updateBody }), updateFeePlanProfile);
 
 export default router;

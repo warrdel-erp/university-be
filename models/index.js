@@ -973,6 +973,15 @@ feePlanItemModel.hasMany(additionalFeeModel, { foreignKey: "feePlanItemId", as: 
 additionalFeeModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAdditionalFee" });
 instituteModel.hasMany(additionalFeeModel, { foreignKey: "instituteId", as: "additionalFeeList" });
 
+studentInvoiceAdditionalFeeModel.belongsTo(studentFeeInvoiceModel, {
+  foreignKey: "studentFeeInvoiceId",
+  as: "studentFeeInvoice",
+});
+studentFeeInvoiceModel.hasMany(studentInvoiceAdditionalFeeModel, {
+  foreignKey: "studentFeeInvoiceId",
+  as: "invoiceAdditionalFees",
+});
+
 studentInvoiceAdditionalFeeModel.belongsTo(additionalFeeModel, {
   foreignKey: "additionalFeeId",
   as: "additionalFee",
