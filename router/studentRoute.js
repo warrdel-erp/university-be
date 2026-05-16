@@ -74,7 +74,7 @@ const addStudentWithFeePlanProfileBodySchema = z
     affiliatedUniversityId: positiveIntegerId,
     courseLevelId: positiveIntegerId,
     courseId: positiveIntegerId,
-    roleId: positiveIntegerId,
+    roleId: z.string().trim().optional(),
     classSectionsId: positiveIntegerId,
     acedmicYearId: positiveIntegerId,
     email: z.string().trim().min(1),
