@@ -83,7 +83,6 @@ export async function createStudentFeeInvoice(data, options = {}) {
 export async function bulkCreateStudentInvoiceAdditionalFees(rows, options = {}) {
   return model.studentInvoiceAdditionalFeeModel.bulkCreate(rows, {
     transaction: options.transaction,
-    returning: true,
   });
 }
 
