@@ -1286,7 +1286,7 @@ function groupFeePlanItemsByProfileId(feePlanItems) {
   return byProfile;
 }
 
-/** GET /student/feePlanInitiate — all students with fee plan + nested terms (no filters). */
+/** GET /student/feePlanProfiles/all — all students with fee plan + nested terms (no filters). */
 export async function getFeePlanInitiateAll(instituteId) {
   const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId);
   if (!students.length) {

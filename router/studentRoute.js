@@ -129,7 +129,7 @@ router.get(
   validate({ query: courseSessionIdQuerySchema }),
   getFeePlanProfiles
 );
-router.get("/feePlanInitiate", userAuth, getFeePlanInitiate);
+router.get("/feePlanProfiles/all", userAuth, getFeePlanInitiate);
 router.get(
   "/emptyfeeDetails",
   userAuth,

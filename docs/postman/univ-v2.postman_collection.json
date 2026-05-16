@@ -6346,7 +6346,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2: lookup profiles → **feePlanInitiate** (nested UI table) → create student → **studentFeeInvoice** generate per term.",
+          "description": "Fee v2: lookup profiles → **GET /student/feePlanProfiles/all** (nested UI table) → create student → **studentFeeInvoice** generate per term.",
           "item": [
             {
               "name": "1 lookup fee plan profiles (courseSessionId)",
@@ -6401,7 +6401,7 @@
               "response": []
             },
             {
-              "name": "2 fee plan initiate (nested students + terms)",
+              "name": "2 fee plan profiles all (nested students + terms)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6416,16 +6416,17 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/feePlanInitiate",
+                  "raw": "{{baseurl}}/student/feePlanProfiles/all",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "student",
-                    "feePlanInitiate"
+                    "feePlanProfiles",
+                    "all"
                   ]
                 },
-                "description": "**GET /student/feePlanInitiate** — no query filters. All institute students with `fee_plan_profile_id` set.\n\ndata: { students: [{ studentId, date, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, terms: [{ sno, feePlanItemId, feePlanTypeId, termName, startDate, endDate, amount, status, studentFeeInvoiceId, paymentStatus, canGenerateInvoice }] }] }\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
+                "description": "**GET /student/feePlanProfiles/all** — no query filters. All institute students with `fee_plan_profile_id` set.\n\ndata: { students: [{ studentId, date, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, terms: [{ sno, feePlanItemId, feePlanTypeId, termName, startDate, endDate, amount, status, studentFeeInvoiceId, paymentStatus, canGenerateInvoice }] }] }\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
               },
               "response": []
             },
