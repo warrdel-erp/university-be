@@ -6416,28 +6416,16 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/feePlanInitiate?feePlanProfileId={{feePlanProfile_id}}&acedmicYearId={{acedmicYear_id}}",
+                  "raw": "{{baseurl}}/student/feePlanInitiate",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "student",
                     "feePlanInitiate"
-                  ],
-                  "query": [
-                    {
-                      "key": "feePlanProfileId",
-                      "value": "{{feePlanProfile_id}}",
-                      "disabled": false
-                    },
-                    {
-                      "key": "acedmicYearId",
-                      "value": "{{acedmicYear_id}}",
-                      "disabled": false
-                    }
                   ]
                 },
-                "description": "**GET /student/feePlanInitiate** — Fee Plan Initiate screen.\n\nReturns all students on `feePlanProfileId` with nested `terms[]` (S.No, startDate, endDate, amount, status: pending|upcoming|paid|partial). Top-level `terms` = plan template from `fee_plan_item`. Term id: `feePlanItemId` (alias `feePlanTypeId`). Generate: POST /studentFeeInvoice with studentId + feePlanItemId when canGenerateInvoice is true."
+                "description": "**GET /student/feePlanInitiate** — no query filters. All institute students with `fee_plan_profile_id` set.\n\ndata: { students: [{ studentId, date, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, terms: [{ sno, feePlanItemId, feePlanTypeId, termName, startDate, endDate, amount, status, studentFeeInvoiceId, paymentStatus, canGenerateInvoice }] }] }\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
               },
               "response": []
             },

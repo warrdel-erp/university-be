@@ -1214,19 +1214,6 @@ function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly())
   return "unpaid";
 }
 
-function formatTermTemplateRow(feePlanItem, index) {
-  const item = toPlainRow(feePlanItem);
-  return {
-    sno: index + 1,
-    feePlanItemId: item.feePlanItemId,
-    feePlanTypeId: item.feePlanItemId,
-    termName: item.termName ?? null,
-    startDate: item.createDate,
-    endDate: item.dueDate ?? null,
-    amount: toMoneyNumber(item.amount),
-  };
-}
-
 function formatStudentTermRow(feePlanItem, invoice, index) {
   const item = toPlainRow(feePlanItem);
   const inv = invoice ? toPlainRow(invoice) : null;
@@ -1276,34 +1263,7 @@ function formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap) {
   };
 }
 
-export async function getFeePlanInitiateByProfile(feePlanProfileId, instituteId, filters = {}) {
-  const profile = await studentRepository.findFeePlanProfileByIdForInitiate(
-    feePlanProfileId,
-    instituteId
-  );
-  if (!profile) {
-    throw new Error("Fee plan profile not found");
-  }
-
-  const profilePlain = toPlainRow(profile);
-  const feePlanItems = await studentRepository.findFeePlanItemsByProfileId(
-    feePlanProfileId,
-    instituteId
-  );
-
-  const students = await studentRepository.findStudentsByFeePlanProfileId(
-    feePlanProfileId,
-    instituteId,
-    { acedmicYearId: filters.acedmicYearId }
-  );
-
-  const studentIds = students.map((s) => toPlainRow(s).studentId);
-  const invoices = await studentRepository.findInvoicesByStudentIdsForProfile(
-    studentIds,
-    feePlanProfileId,
-    instituteId
-  );
-
+function buildInvoiceMap(invoices) {
   const invoiceMap = new Map();
   for (const inv of invoices) {
     const p = toPlainRow(inv);
@@ -1312,16 +1272,50 @@ export async function getFeePlanInitiateByProfile(feePlanProfileId, instituteId,
     }
     invoiceMap.get(p.studentId).set(p.feePlanItemId, inv);
   }
+  return invoiceMap;
+}
+
+function groupFeePlanItemsByProfileId(feePlanItems) {
+  const byProfile = new Map();
+  for (const item of feePlanItems) {
+    const p = toPlainRow(item);
+    const profileId = p.feePlanProfileId;
+    if (!byProfile.has(profileId)) byProfile.set(profileId, []);
+    byProfile.get(profileId).push(item);
+  }
+  return byProfile;
+}
+
+/** GET /student/feePlanInitiate — all students with fee plan + nested terms (no filters). */
+export async function getFeePlanInitiateAll(instituteId) {
+  const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId);
+  if (!students.length) {
+    return { students: [] };
+  }
+
+  const studentIds = students.map((s) => toPlainRow(s).studentId);
+  const profileIds = [
+    ...new Set(
+      students
+        .map((s) => toPlainRow(s).feePlanProfileId)
+        .filter((id) => id != null)
+    ),
+  ];
+
+  const [feePlanItems, invoices] = await Promise.all([
+    studentRepository.findFeePlanItemsByProfileIds(profileIds, instituteId),
+    studentRepository.findInvoicesByStudentIds(studentIds, instituteId),
+  ]);
+
+  const itemsByProfile = groupFeePlanItemsByProfileId(feePlanItems);
+  const invoiceMap = buildInvoiceMap(invoices);
 
   return {
-    feePlanProfileId: profilePlain.feePlanProfileId,
-    feePlanName: profilePlain.name,
-    planType: profilePlain.planType,
-    courseSessionId: profilePlain.courseSessionId,
-    terms: feePlanItems.map((item, index) => formatTermTemplateRow(item, index)),
-    students: students.map((student) =>
-      formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap)
-    ),
+    students: students.map((student) => {
+      const profileId = toPlainRow(student).feePlanProfileId;
+      const items = itemsByProfile.get(profileId) ?? [];
+      return formatFeePlanInitiateStudentRow(student, items, invoiceMap);
+    }),
   };
 }
 

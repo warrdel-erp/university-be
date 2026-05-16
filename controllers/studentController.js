@@ -247,12 +247,7 @@ export const getFeePlanProfiles = async (req, res) => {
 export const getFeePlanInitiate = async (req, res) => {
     try {
         const instituteId = req.user.defaultInstituteId;
-        const { feePlanProfileId, acedmicYearId } = req.query;
-        const data = await studentService.getFeePlanInitiateByProfile(
-            feePlanProfileId,
-            instituteId,
-            { acedmicYearId }
-        );
+        const data = await studentService.getFeePlanInitiateAll(instituteId);
         return SuccessResponse(res, 200, "Fee plan initiate data fetched successfully", data);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

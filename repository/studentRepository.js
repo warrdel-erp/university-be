@@ -846,6 +846,114 @@ export async function updateStudentfeeStatus(studentId, data) {
     }
 };
 
+export async function findStudentsWithFeePlanForInitiate(instituteId, options = {}) {
+    try {
+        const { transaction } = options;
+        return await model.studentModel.findAll({
+            where: {
+                instituteId,
+                feePlanProfileId: { [Op.ne]: null },
+            },
+            attributes: [
+                "studentId",
+                "firstName",
+                "middleName",
+                "lastName",
+                "scholarNumber",
+                "enrollDate",
+                "admisssionDate",
+                "feePlanProfileId",
+            ],
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName"],
+                },
+                {
+                    model: model.sessionModel,
+                    as: "studentSession",
+                    attributes: ["sessionId", "sessionName"],
+                },
+                {
+                    model: model.classSectionModel,
+                    as: "studentSections",
+                    attributes: ["classSectionsId", "class", "section"],
+                },
+                {
+                    model: model.feePlanProfileModel,
+                    as: "studentFeePlanProfile",
+                    attributes: ["feePlanProfileId", "name", "planType", "courseSessionId"],
+                },
+            ],
+            order: [
+                ["scholarNumber", "ASC"],
+                ["studentId", "ASC"],
+            ],
+            transaction,
+        });
+    } catch (error) {
+        console.error("Error in findStudentsWithFeePlanForInitiate:", error);
+        throw error;
+    }
+}
+
+export async function findFeePlanItemsByProfileIds(profileIds, instituteId, options = {}) {
+    try {
+        const { transaction } = options;
+        if (!profileIds?.length) return [];
+
+        return await model.feePlanItemModel.findAll({
+            where: {
+                feePlanProfileId: { [Op.in]: profileIds },
+                instituteId,
+            },
+            attributes: [
+                "feePlanItemId",
+                "feePlanProfileId",
+                "termName",
+                "createDate",
+                "dueDate",
+                "amount",
+            ],
+            order: [
+                ["feePlanProfileId", "ASC"],
+                ["createDate", "ASC"],
+                ["feePlanItemId", "ASC"],
+            ],
+            transaction,
+        });
+    } catch (error) {
+        console.error("Error in findFeePlanItemsByProfileIds:", error);
+        throw error;
+    }
+}
+
+export async function findInvoicesByStudentIds(studentIds, instituteId, options = {}) {
+    try {
+        const { transaction } = options;
+        if (!studentIds.length) return [];
+
+        return await model.studentFeeInvoiceModel.findAll({
+            where: {
+                studentId: { [Op.in]: studentIds },
+                instituteId,
+            },
+            attributes: [
+                "studentFeeInvoiceId",
+                "studentId",
+                "feePlanItemId",
+                "paymentStatus",
+                "status",
+            ],
+            transaction,
+        });
+    } catch (error) {
+        console.error("Error in findInvoicesByStudentIds:", error);
+        throw error;
+    }
+}
+
 export async function findStudentsByFeePlanProfileId(
     feePlanProfileId,
     instituteId,

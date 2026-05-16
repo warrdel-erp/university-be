@@ -57,23 +57,11 @@ const courseSessionIdQuerySchema = z.object({
   courseSessionId: positiveIntegerId,
 });
 
-const feePlanInitiateQuerySchema = z.object({
-  feePlanProfileId: positiveIntegerId,
-  acedmicYearId: positiveIntegerId.optional(),
-});
-
 const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
 
 const dateField = z.string().trim().min(1, "date is required");
-
-const entranceDetailSchema = z.object({
-  entranceExam: z.string().trim().min(1),
-  rollNumber: z.string().trim().min(1),
-  categoryRank: z.coerce.number().int().nonnegative(),
-  marks: z.coerce.number(),
-});
 
 const addStudentWithFeePlanProfileBodySchema = z.object({
   feePlanProfileId: requiredFeePlanProfileId,
@@ -114,7 +102,7 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
   cCountry: z.string().trim().optional(),
   cState: z.string().trim().optional(),
   cCity: z.string().trim().optional(),
-  entranceDetails: z.array(entranceDetailSchema).optional(),
+  entranceDetails: z.any().optional(),
   semesterId: positiveIntegerId.optional(),
 });
 
@@ -141,12 +129,7 @@ router.get(
   validate({ query: courseSessionIdQuerySchema }),
   getFeePlanProfiles
 );
-router.get(
-  "/feePlanInitiate",
-  userAuth,
-  validate({ query: feePlanInitiateQuerySchema }),
-  getFeePlanInitiate
-);
+router.get("/feePlanInitiate", userAuth, getFeePlanInitiate);
 router.get(
   "/emptyfeeDetails",
   userAuth,
