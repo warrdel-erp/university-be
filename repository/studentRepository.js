@@ -846,9 +846,27 @@ export async function updateStudentfeeStatus(studentId, data) {
     }
 };
 
-export async function findStudentsWithFeePlanForInitiate(instituteId, options = {}) {
+export async function countStudentsWithFeePlanForInitiate(instituteId, options = {}) {
     try {
         const { transaction } = options;
+        return await model.studentModel.count({
+            where: {
+                instituteId,
+                feePlanProfileId: { [Op.ne]: null },
+            },
+            transaction,
+        });
+    } catch (error) {
+        console.error("Error in countStudentsWithFeePlanForInitiate:", error);
+        throw error;
+    }
+}
+
+export async function findStudentsWithFeePlanForInitiate(instituteId, options = {}) {
+    try {
+        const { page = 1, limit = 20, transaction } = options;
+        const offset = (page - 1) * limit;
+
         return await model.studentModel.findAll({
             where: {
                 instituteId,
@@ -890,6 +908,8 @@ export async function findStudentsWithFeePlanForInitiate(instituteId, options = 
                 ["scholarNumber", "ASC"],
                 ["studentId", "ASC"],
             ],
+            limit,
+            offset,
             transaction,
         });
     } catch (error) {

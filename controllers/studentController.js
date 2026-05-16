@@ -230,25 +230,18 @@ export const promoteStudent = async (req, res) => {
     }
 };
 
-export const getFeePlanProfiles = async (req, res) => {
-    try {
-        const instituteId = req.user.defaultInstituteId;
-        const { courseSessionId } = req.query;
-        const data = await studentService.lookupFeePlanProfilesForStudent(
-            courseSessionId,
-            instituteId,
-        );
-        return SuccessResponse(res, 200, "Fee plan profiles fetched successfully", data);
-    } catch (error) {
-        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-    }
-};
-
 export const getFeePlanInitiate = async (req, res) => {
     try {
         const instituteId = req.user.defaultInstituteId;
-        const data = await studentService.getFeePlanInitiateAll(instituteId);
-        return SuccessResponse(res, 200, "Fee plan initiate data fetched successfully", data);
+        const { page, limit } = req.query;
+        const result = await studentService.getFeePlanInitiateAll(instituteId, { page, limit });
+        return SuccessResponse(
+            res,
+            200,
+            "Fee plan initiate data fetched successfully",
+            { students: result.students },
+            result.pagination
+        );
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }

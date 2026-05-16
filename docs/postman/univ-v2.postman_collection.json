@@ -1463,41 +1463,6 @@
           "response": []
         },
         {
-          "name": "fee",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/fee?courseSessionId={{courseSession_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "fee"
-              ],
-              "query": [
-                {
-                  "key": "courseSessionId",
-                  "value": "{{courseSession_id}}"
-                }
-              ]
-            },
-            "description": "Moved to fee v2 → student (fee v2) → 1 lookup fee plan profiles. Same as GET /feePlanProfile/lookup."
-          },
-          "response": []
-        },
-        {
           "name": "get all answer sheet qrs",
           "request": {
             "auth": {
@@ -6346,20 +6311,33 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2: lookup profiles → **GET /student/feePlanProfiles/all** (nested UI table) → create student → **studentFeeInvoice** generate per term.",
+          "description": "Fee v2: **GET /student/feePlanProfiles/all** (paginated, Fee Plan Initiate table) → create student → **studentFeeInvoice** per term. Profile dropdown: **GET /options/feePlans** or **GET /feePlanProfile/lookup**.",
           "item": [
             {
-              "name": "1 lookup fee plan profiles (courseSessionId)",
+              "name": "1 fee plan profiles all (paginated)",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
                       "const res = pm.response.json();",
-                      "const data = res && res.data;",
-                      "const profiles = data && data.profiles;",
-                      "if (Array.isArray(profiles) && profiles[0]) {",
-                      "  pm.collectionVariables.set('feePlanProfile_id', String(profiles[0].feePlanProfileId));",
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('pagination present', () => {",
+                      "  const p = res.paginationData;",
+                      "  pm.expect(p).to.have.property('page');",
+                      "  pm.expect(p).to.have.property('limit');",
+                      "  pm.expect(p).to.have.property('total');",
+                      "  pm.expect(p).to.have.property('totalPages');",
+                      "});",
+                      "const students = res.data && res.data.students;",
+                      "if (Array.isArray(students) && students[0]) {",
+                      "  pm.collectionVariables.set('student_id', String(students[0].studentId));",
+                      "  if (students[0].feePlanProfileId) {",
+                      "    pm.collectionVariables.set('feePlanProfile_id', String(students[0].feePlanProfileId));",
+                      "  }",
+                      "  if (students[0].terms && students[0].terms[0]) {",
+                      "    pm.collectionVariables.set('feePlanItem_id', String(students[0].terms[0].feePlanItemId));",
+                      "  }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -6380,43 +6358,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/fee?courseSessionId={{courseSession_id}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "student",
-                    "fee"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseSessionId",
-                      "value": "{{courseSession_id}}",
-                      "disabled": false
-                    }
-                  ]
-                },
-                "description": "**GET /student/fee?courseSessionId=**\n\n`courseSessionId` = `session_course_mapping.session_course_mapping_id` (not course_id).\n\nReturns `{ courseSessionId, profiles: [{ feePlanProfileId, name }] }` for enrollment dropdown. Test script sets `feePlanProfile_id`."
-              },
-              "response": []
-            },
-            {
-              "name": "2 fee plan profiles all (nested students + terms)",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/student/feePlanProfiles/all",
+                  "raw": "{{baseurl}}/student/feePlanProfiles/all?page={{feePlanInitiate_page}}&limit={{feePlanInitiate_limit}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -6424,23 +6366,45 @@
                     "student",
                     "feePlanProfiles",
                     "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{feePlanInitiate_page}}",
+                      "description": "1-based page (default 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{feePlanInitiate_limit}}",
+                      "description": "Page size (default 20, max 100)"
+                    }
                   ]
                 },
-                "description": "**GET /student/feePlanProfiles/all** — no query filters. All institute students with `fee_plan_profile_id` set.\n\ndata: { students: [{ studentId, date, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, terms: [{ sno, feePlanItemId, feePlanTypeId, termName, startDate, endDate, amount, status, studentFeeInvoiceId, paymentStatus, canGenerateInvoice }] }] }\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
+                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` — studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `paginationData` — page, limit, total, totalPages\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
               },
-              "response": []
+              "response": [
+                {
+                  "name": "200 OK — example",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Fee plan initiate data fetched successfully\",\n  \"data\": {\n    \"students\": [\n      {\n        \"studentId\": 2152,\n        \"studentName\": \"Rahul Kumar Sharma\",\n        \"scholarNumber\": \"Asa@rj03/BARCH/25/100002\",\n        \"feePlanProfileId\": 1,\n        \"terms\": [\n          {\n            \"sno\": 1,\n            \"feePlanItemId\": 1,\n            \"feePlanTypeId\": 1,\n            \"termName\": \"Year 1\",\n            \"status\": \"pending\",\n            \"canGenerateInvoice\": true\n          }\n        ]\n      }\n    ]\n  },\n  \"paginationData\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 48,\n    \"totalPages\": 3\n  }\n}"
+                }
+              ]
             },
             {
-              "name": "3 create student (full details + feePlanProfileId)",
+              "name": "2 create student (full details + feePlanProfileId)",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
                       "const res = pm.response.json();",
-                      "const student = res && res.student;",
-                      "if (student && student.studentId) {",
-                      "  pm.collectionVariables.set('student_id', String(student.studentId));",
+                      "const data = res && res.data;",
+                      "const studentId = data && (data.studentId || (data.student && data.student.studentId));",
+                      "if (studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(studentId));",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -6546,6 +6510,16 @@
     {
       "key": "student_id",
       "value": "1513",
+      "type": "string"
+    },
+    {
+      "key": "feePlanInitiate_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feePlanInitiate_limit",
+      "value": "20",
       "type": "string"
     }
   ]

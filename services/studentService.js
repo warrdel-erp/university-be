@@ -18,7 +18,6 @@ import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
-import * as feePlanProfileServices from "./feePlanProfileServices.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
@@ -1179,13 +1178,6 @@ function incrementScholarNumber(scholarNumber) {
   return parts.join("/");
 }
 
-export async function lookupFeePlanProfilesForStudent(courseSessionId, instituteId) {
-  return feePlanProfileServices.lookupFeePlanProfilesByCourseSession(
-    courseSessionId,
-    instituteId,
-  );
-}
-
 function toPlainRow(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
@@ -1286,11 +1278,22 @@ function groupFeePlanItemsByProfileId(feePlanItems) {
   return byProfile;
 }
 
-/** GET /student/feePlanProfiles/all — all students with fee plan + nested terms (no filters). */
-export async function getFeePlanInitiateAll(instituteId) {
-  const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId);
+/** GET /student/feePlanProfiles/all — students with fee plan + nested terms (paginated). */
+export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
+  const page = pagination.page ?? 1;
+  const limit = pagination.limit ?? 20;
+
+  const total = await studentRepository.countStudentsWithFeePlanForInitiate(instituteId);
+  const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId, {
+    page,
+    limit,
+  });
+
   if (!students.length) {
-    return { students: [] };
+    return {
+      students: [],
+      pagination: { page, limit, total },
+    };
   }
 
   const studentIds = students.map((s) => toPlainRow(s).studentId);
@@ -1316,6 +1319,7 @@ export async function getFeePlanInitiateAll(instituteId) {
       const items = itemsByProfile.get(profileId) ?? [];
       return formatFeePlanInitiateStudentRow(student, items, invoiceMap);
     }),
+    pagination: { page, limit, total },
   };
 }
 
