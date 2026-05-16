@@ -1,5 +1,6 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
+import sequelize from '../database/sequelizeConfig.js';
 
 export async function addRole(RoleData) {    
     try {
@@ -39,11 +40,30 @@ export async function getSingleRoleDetails(roleId) {
     }
 }
 
-export async function findRoleByRoleName(roleName) {
-    return model.roleModel.findOne({
+/** Avoid string compare in SQL (role column may be latin1). */
+export async function findStudentRoleId() {
+    const roles = await model.roleModel.findAll({
         attributes: ["roleId", "role"],
-        where: { role: roleName },
     });
+    for (const row of roles) {
+        const plain = typeof row.get === "function" ? row.get({ plain: true }) : row;
+        const name = String(plain.role ?? "").trim().toUpperCase();
+        if (name === "STUDENT") return plain.roleId;
+    }
+    return null;
+}
+
+/** Legacy latin1-safe lookup when SQL string compare is required. */
+export async function findRoleByRoleName(roleName) {
+    const rows = await sequelize.query(
+        `SELECT role_id AS roleId, role
+         FROM role
+         WHERE role = CONVERT(:roleName USING latin1)
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        { replacements: { roleName }, type: QueryTypes.SELECT }
+    );
+    return rows[0] ?? null;
 }
 
 export async function deleteRole(roleId) {

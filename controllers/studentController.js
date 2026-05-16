@@ -8,10 +8,10 @@ export const addStudentWithFeePlanProfile = async (req, res) => {
             files: req.files,
             createdBy: req.user.userId,
         });
-        return res.status(200).send(result);
+        return SuccessResponse(res, 201, "Student created successfully", result);
     } catch (error) {
         console.error("Error in addStudentWithFeePlanProfile:", error);
-        return res.status(error.statusCode || 500).send(error.message || "Internal Server Error");
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 

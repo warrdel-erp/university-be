@@ -66,24 +66,57 @@ const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
 
-const addStudentWithFeePlanProfileBodySchema = z
-  .object({
-    feePlanProfileId: requiredFeePlanProfileId,
-    universityId: positiveIntegerId,
-    campusId: positiveIntegerId,
-    instituteId: positiveIntegerId,
-    affiliatedUniversityId: positiveIntegerId,
-    courseLevelId: positiveIntegerId,
-    courseId: positiveIntegerId,
-    roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
-    classSectionsId: positiveIntegerId,
-    acedmicYearId: positiveIntegerId,
-    email: z.string().trim().min(1),
-    sessionId: positiveIntegerId.optional(),
-    semesterId: positiveIntegerId.optional(),
-    enrollNumber: z.string().trim().optional(),
-  })
-  .passthrough();
+const dateField = z.string().trim().min(1, "date is required");
+
+const entranceDetailSchema = z.object({
+  entranceExam: z.string().trim().min(1),
+  rollNumber: z.string().trim().min(1),
+  categoryRank: z.coerce.number().int().nonnegative(),
+  marks: z.coerce.number(),
+});
+
+const addStudentWithFeePlanProfileBodySchema = z.object({
+  feePlanProfileId: requiredFeePlanProfileId,
+  universityId: positiveIntegerId,
+  campusId: positiveIntegerId,
+  instituteId: positiveIntegerId,
+  affiliatedUniversityId: positiveIntegerId,
+  courseLevelId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
+  classSectionsId: positiveIntegerId,
+  acedmicYearId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  email: z.string().trim().email(),
+  enrollNumber: z.string().trim().min(1).optional(),
+  firstName: z.string().trim().min(1),
+  middleName: z.string().trim().optional(),
+  lastName: z.string().trim().optional(),
+  fatherName: z.string().trim().min(1),
+  motherName: z.string().trim().optional(),
+  annualIncome: z.coerce.number().nonnegative().optional(),
+  birthDate: dateField,
+  admisssionDate: dateField.optional(),
+  enrollDate: dateField.optional(),
+  phoneNumber: z.string().trim().min(1),
+  mobileNumber: z.string().trim().optional(),
+  parentEmail: z.string().trim().email().optional(),
+  parentNumber: z.string().trim().optional(),
+  aadharNumber: z.string().trim().optional(),
+  placeOfBirth: z.string().trim().optional(),
+  pAddress: z.string().trim().optional(),
+  pPincode: z.coerce.number().int().optional(),
+  pCountry: z.string().trim().optional(),
+  pState: z.string().trim().optional(),
+  pCity: z.string().trim().optional(),
+  cAddress: z.string().trim().optional(),
+  cPincode: z.coerce.number().int().optional(),
+  cCountry: z.string().trim().optional(),
+  cState: z.string().trim().optional(),
+  cCity: z.string().trim().optional(),
+  entranceDetails: z.array(entranceDetailSchema).optional(),
+  semesterId: positiveIntegerId.optional(),
+});
 
 // Student routes (create via POST /withFeePlanProfile — fee v2)
 router.get("/all", userAuth, getAllStudents);

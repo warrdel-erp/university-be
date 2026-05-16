@@ -18,7 +18,6 @@ import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
-import { ROLES } from "../const/roles.js";
 import * as feePlanProfileServices from "./feePlanProfileServices.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
@@ -79,8 +78,19 @@ export async function addStudent(
 
     delete info.semesterId;
 
+    const studentPayload = { ...info };
+    for (const key of [
+      "entranceDetails",
+      "addressDetails",
+      "corsAddress",
+      "allDropDownData",
+      "roleId",
+    ]) {
+      delete studentPayload[key];
+    }
+
     // Save student information
-    const student = await studentRepository.addStudent(info, transaction);
+    const student = await studentRepository.addStudent(studentPayload, transaction);
     const studentId = student.dataValues.studentId;
 
     const { email, phoneNumber, mobileNumber, scholarNumber } =
@@ -228,11 +238,27 @@ export async function addStudent(
     );
 
     await transaction.commit();
+
+    const plainStudent =
+      typeof student.get === "function" ? student.get({ plain: true }) : student;
+
     return {
-      student,
+      studentId: plainStudent.studentId,
+      feePlanProfileId: plainStudent.feePlanProfileId,
+      scholarNumber: plainStudent.scholarNumber,
+      enrollNumber: plainStudent.enrollNumber,
+      email: plainStudent.email,
+      firstName: plainStudent.firstName,
+      lastName: plainStudent.lastName,
+      classSectionsId: plainStudent.classSectionsId,
+      courseId: plainStudent.courseId,
+      sessionId: plainStudent.sessionId,
+      acedmicYearId: plainStudent.acedmicYearId,
+      userId,
+      student: plainStudent,
       entranceDetails,
       addressDetails,
-      CorsAddressDetails,
+      corsAddressDetails: CorsAddressDetails,
       allDropDownData,
     };
   } catch (error) {
@@ -280,11 +306,9 @@ async function assertStudentEmailAvailable(email) {
 }
 
 async function resolveStudentRoleId() {
-  const row =
-    (await roleRepository.findRoleByRoleName(ROLES.STUDENT)) ??
-    (await roleRepository.findRoleByRoleName("Student"));
-  if (!row) throw new Error("STUDENT role not found in role table");
-  return row.roleId;
+  const roleId = await roleRepository.findStudentRoleId();
+  if (!roleId) throw new Error("STUDENT role not found in role table");
+  return roleId;
 }
 
 export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
