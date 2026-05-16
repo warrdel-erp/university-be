@@ -1,18 +1,33 @@
 'use strict';
 
 /**
- * Same as 20260521130000 after it was changed to non-destructive.
- * Runs on DBs that already executed the old destructive version of 213000.
- * Safe to run multiple times — only adds missing tables/columns.
+ * Schema fixes (no data delete): repair tables + allow NULL fee_plan_item_id on invoices.
  */
 
 const repair = require('./20260521130000-recreate-fee-v2-tables.cjs');
+
+async function tableExists(queryInterface, tableName) {
+  const [rows] = await queryInterface.sequelize.query(
+    `SELECT COUNT(*) AS cnt FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName`,
+    { replacements: { tableName } }
+  );
+  return Number(rows[0].cnt) > 0;
+}
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     await repair.up(queryInterface, Sequelize);
+
+    if (!(await tableExists(queryInterface, 'student_fee_invoice'))) return;
+
+    const nullableMigration = require('./20260521150000-student-fee-invoice-fee-plan-item-nullable.cjs');
+    await nullableMigration.up(queryInterface);
   },
 
-  async down() {},
+  async down(queryInterface, Sequelize) {
+    const nullableMigration = require('./20260521150000-student-fee-invoice-fee-plan-item-nullable.cjs');
+    await nullableMigration.down(queryInterface, Sequelize);
+  },
 };

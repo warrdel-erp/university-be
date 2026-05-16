@@ -249,10 +249,10 @@ module.exports = {
         },
         fee_plan_item_id: {
           type: Sequelize.INTEGER,
-          allowNull: false,
+          allowNull: true,
           references: { model: 'fee_plan_item', key: 'fee_plan_item_id' },
           onUpdate: 'CASCADE',
-          onDelete: 'RESTRICT',
+          onDelete: 'SET NULL',
         },
         institute_id: {
           type: Sequelize.INTEGER,
