@@ -62,6 +62,7 @@ import co from "./router/coRoute.js";
 import feePlan from "./router/feePlanRoute.js";
 import feePlanProfile from "./router/feePlanProfileRoute.js";
 import studentFeeInvoice from "./router/studentFeeInvoiceRoute.js";
+import studentFeePayment from "./router/studentFeePaymentRoute.js";
 import feeInvoiceRecord from "./router/feeInvoiceDetailRecordRoute.js";
 import studentInvoice from "./router/studentInvoiceRoute.js";
 import lesson from "./router/lessonRoute.js";
@@ -205,6 +206,7 @@ app.use("/feeTypeCategory", feeTypeCategory);
 app.use("/feeTypeCatalog", feeTypeCatalog);
 app.use("/feePlanProfile", feePlanProfile);
 app.use("/studentFeeInvoice", studentFeeInvoice);
+app.use("/studentFeePayment", studentFeePayment);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

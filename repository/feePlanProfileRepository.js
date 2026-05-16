@@ -42,6 +42,19 @@ export async function createFeePlanProfile(data, options = {}) {
   return model.feePlanProfileModel.create(data, { transaction: options.transaction });
 }
 
+export async function findFeePlanProfileNamesByCourseSession(
+  instituteId,
+  courseSessionId,
+  options = {}
+) {
+  return model.feePlanProfileModel.findAll({
+    where: { instituteId, courseSessionId },
+    attributes: ["feePlanProfileId", "name"],
+    order: [["feePlanProfileId", "ASC"]],
+    transaction: options.transaction,
+  });
+}
+
 export async function findFeePlanProfilesByInstitute(instituteId, options = {}) {
   const { courseSessionId, transaction } = options;
   const where = { instituteId };

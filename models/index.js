@@ -148,6 +148,7 @@ import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
 import studentHallTicketModel from "./studentHallTicketModel.js";
 import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
+import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import studentInvoiceAdditionalFeeModel from "./studentInvoiceAdditionalFeeModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
  
@@ -991,6 +992,24 @@ studentFeeInvoiceModel.hasMany(studentInvoiceAdditionalFeeModel, {
   as: "invoiceAdditionalFees",
 });
 
+studentFeePaymentModel.belongsTo(studentFeeInvoiceModel, {
+  foreignKey: "studentFeeInvoiceId",
+  as: "studentFeeInvoice",
+});
+studentFeeInvoiceModel.hasMany(studentFeePaymentModel, {
+  foreignKey: "studentFeeInvoiceId",
+  as: "feePayments",
+});
+
+studentFeePaymentModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteStudentFeePayment",
+});
+instituteModel.hasMany(studentFeePaymentModel, {
+  foreignKey: "instituteId",
+  as: "studentFeePaymentList",
+});
+
 studentInvoiceAdditionalFeeModel.belongsTo(additionalFeeModel, {
   foreignKey: "additionalFeeId",
   as: "additionalFee",
@@ -1501,5 +1520,6 @@ export {
   examScheduleRoomCapacityModel,
   studentExamSeatModel,
   studentFeeInvoiceModel,
+  studentFeePaymentModel,
   studentHallTicketModel,
 };

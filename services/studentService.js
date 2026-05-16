@@ -16,18 +16,9 @@ import {
 } from "../repository/courseRepository.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
-import {
-  findByPlanId,
-  getfeePlanByCourseAndAcedmic,
-} from "../repository/feePlanRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
+import * as feePlanProfileServices from "./feePlanProfileServices.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
-import { getSemesterById } from "./mainServices.js";
-import {
-  getSingleacedmicYearDetails,
-  getSingleacedmicYearDetailsByTitle,
-} from "./acedmicYearServices.js";
-import { getSemesterGroup } from "../utility/semesterGroup.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
@@ -43,9 +34,7 @@ export async function addStudent(
   classSectionId,
   semesterId,
   sessionId,
-  options = {},
 ) {
-  const { skipLegacyInvoiceMapper = false } = options;
   const transaction = await sequelize.transaction();
   try {
     // Upload files and update info object
@@ -90,7 +79,6 @@ export async function addStudent(
     // Save student information
     const student = await studentRepository.addStudent(info, transaction);
     const studentId = student.dataValues.studentId;
-    const feePlanId = student.dataValues.feePlanId;
 
     const { email, phoneNumber, mobileNumber, scholarNumber } =
       student.dataValues;
@@ -236,23 +224,6 @@ export async function addStudent(
       transaction,
     );
 
-    if (!skipLegacyInvoiceMapper && feePlanId) {
-      const getInvoice = await findByPlanId(feePlanId);
-      const dataToInsert = getInvoice.map((invoice) => ({
-        studentId,
-        universityId,
-        feePlanId,
-        feeNewInvoiceId: invoice.feeNewInvoiceId,
-        invoiceStatus: false,
-        createdBy,
-        updatedBy: createdBy,
-      }));
-      await studentRepository.addStudentInvoiceMapper(
-        dataToInsert,
-        transaction,
-      );
-    }
-
     await transaction.commit();
     return {
       student,
@@ -292,11 +263,25 @@ async function assertStudentEnrollNumberAvailable(enrollNumber) {
   }
 }
 
+async function assertStudentEmailAvailable(email) {
+  if (!email) {
+    throw new Error("Email is required");
+  }
+  const existing = await studentRepository.findStudentByEmail(email);
+  if (
+    existing &&
+    email.toLowerCase() === existing.dataValues.email.toLowerCase()
+  ) {
+    throw new Error("Email is already existing");
+  }
+}
+
 export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   await assertFeePlanProfileForInstitute(
     info.feePlanProfileId,
     info.instituteId,
   );
+  await assertStudentEmailAvailable(info.email);
   await assertStudentEnrollNumberAvailable(info.enrollNumber);
 
   const {
@@ -318,7 +303,6 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
     classSectionId,
     semesterId,
     sessionId,
-    { skipLegacyInvoiceMapper: true },
   );
 }
 
@@ -540,7 +524,13 @@ export async function importStudentData(excelData, data) {
       convertedData.birthDate = formatDob;
       convertedData.enrollDate = formatEnrollDate;
       convertedData.admisssionDate = formatAdmissionDate;
-      // convertedData.feePlanId = convertedData.feePlanId ? Number(convertedData.feePlanId) : null;
+
+      if (convertedData.feePlanProfileId) {
+        await assertFeePlanProfileForInstitute(
+          convertedData.feePlanProfileId,
+          convertedData.instituteId,
+        );
+      }
 
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(
@@ -576,26 +566,6 @@ export async function importStudentData(excelData, data) {
         { userId },
         transaction,
       );
-
-      // student Invoice mapping
-      const feePlanId = result?.dataValues?.feePlanId;
-
-      if (feePlanId) {
-        const getInvoice = await findByPlanId(feePlanId);
-        const dataToInsert = getInvoice.map((invoice) => ({
-          studentId,
-          universityId,
-          feePlanId,
-          feeNewInvoiceId: invoice.feeNewInvoiceId,
-          invoiceStatus: false,
-          createdBy,
-          updatedBy: createdBy,
-        }));
-        await studentRepository.addStudentInvoiceMapper(
-          dataToInsert,
-          transaction,
-        );
-      }
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
@@ -1173,54 +1143,18 @@ function incrementScholarNumber(scholarNumber) {
   return parts.join("/");
 }
 
-export async function getFeePlanId(
-  semesterId,
-  acedmicYearId,
-  courseId,
-  universityId,
-) {
-  const semesterDetail = await getSemesterById(semesterId);
-  const { name, semesterDuration } = semesterDetail.dataValues;
-  const acedmiceBack = getSemesterGroup(name, semesterDuration);
-  const acedmicYearDetail = await getSingleacedmicYearDetails(
-    acedmicYearId,
-    universityId,
+export async function lookupFeePlanProfilesForStudent(courseSessionId, instituteId) {
+  return feePlanProfileServices.lookupFeePlanProfilesByCourseSession(
+    courseSessionId,
+    instituteId,
   );
-  const { yearTitle, startingDate, endingDate } = acedmicYearDetail.dataValues;
-
-  const [startYear, endYear] = yearTitle.split("-").map(Number);
-
-  const backAcedmicYear = acedmiceBack.group - 1;
-
-  const newStartYear = startYear - backAcedmicYear;
-  const newEndYear = endYear - backAcedmicYear;
-
-  const updatedYearTitle = `${newStartYear}-${newEndYear}`;
-  const previousAcedmicYear =
-    await getSingleacedmicYearDetailsByTitle(updatedYearTitle);
-  const previousAcedmicYearId = previousAcedmicYear.dataValues.acedmicYearId;
-  const isActive = previousAcedmicYear.dataValues.isActive;
-
-  if (!isActive) {
-    return {
-      message: `Please activate academic year ${updatedYearTitle}`,
-      success: false,
-    };
-  }
-  return await getfeePlanByCourseAndAcedmic(courseId, previousAcedmicYearId);
 }
 
-export async function getEmptyFeeDetails(
-  universityId,
-  acedmicYearId,
-  instituteId,
-  role,
-) {
+export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId) {
   return await studentRepository.getEmptyFeeDetails(
     universityId,
     acedmicYearId,
     instituteId,
-    role,
   );
 }
 

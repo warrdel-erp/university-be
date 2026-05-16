@@ -4,6 +4,7 @@ require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
 const tables = [
+  'student_fee_payment',
   'student_invoice_additional_fee',
   'student_fee_invoice',
   'additional_fee',
@@ -36,7 +37,8 @@ async function main() {
     `DELETE FROM SequelizeMeta
      WHERE name LIKE '202605181%'
         OR name LIKE '202605191%'
-        OR name LIKE '202605201%'`
+        OR name LIKE '202605201%'
+        OR name LIKE '202605211%'`
   );
   console.log('SequelizeMeta rows removed:', meta.affectedRows ?? meta);
 

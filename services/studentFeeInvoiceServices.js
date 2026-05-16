@@ -7,6 +7,17 @@ import {
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 
+function paymentSummaryFromPlain(p) {
+  const payments = p.feePayments ?? [];
+  const totalPaid = decimalSum(payments.map((pay) => toMoneyNumber(pay.paidAmount)));
+  const invoiceTotal = toMoneyNumber(p.total);
+  return {
+    paymentStatus: p.paymentStatus ?? "unpaid",
+    totalPaid,
+    balanceDue: decimalSubtract(invoiceTotal, totalPaid),
+  };
+}
+
 function toPlain(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
@@ -60,6 +71,7 @@ export function formatStudentFeeInvoiceResponse(row) {
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
     status: p.status,
+    ...paymentSummaryFromPlain(p),
     createdAt: p.createdAt ?? p.created_at ?? null,
     updatedAt: p.updatedAt ?? p.updated_at ?? null,
     feePlanItem: {
@@ -94,6 +106,7 @@ function formatStudentFeeInvoiceListRow(row) {
     additionalFeesTotal,
     total,
     status: p.status,
+    ...paymentSummaryFromPlain(p),
     additionalFees: additionalFees.map((l) => ({
       name: l.name,
       amount: l.netAmount,
@@ -104,32 +117,18 @@ function formatStudentFeeInvoiceListRow(row) {
 export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, instituteId) {
   const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
     const feePlanItem = await repo.findFeePlanItemById(feePlanItemId, instituteId, { transaction });
-    if (!feePlanItem) {
-      const err = new Error("Fee plan item not found");
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!feePlanItem) throw new Error("Fee plan item not found");
 
     const student = await repo.findStudentById(studentId, instituteId, { transaction });
-    if (!student) {
-      const err = new Error("Student not found");
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!student) throw new Error("Student not found");
 
     const studentProfileId = student.feePlanProfileId ?? student.get?.("feePlanProfileId");
-    if (!studentProfileId) {
-      const err = new Error("Student has no fee plan profile assigned");
-      err.statusCode = 400;
-      throw err;
-    }
+    if (!studentProfileId) throw new Error("Student has no fee plan profile assigned");
 
     const itemProfileId =
       feePlanItem.feePlanProfileId ?? feePlanItem.get?.("feePlanProfileId");
     if (itemProfileId !== studentProfileId) {
-      const err = new Error("Fee plan item does not belong to the student's fee plan profile");
-      err.statusCode = 400;
-      throw err;
+      throw new Error("Fee plan item does not belong to the student's fee plan profile");
     }
 
     const existing = await repo.findStudentFeeInvoiceByStudentAndItem(
@@ -139,9 +138,7 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
       { transaction }
     );
     if (existing) {
-      const err = new Error("Invoice already exists for this student and fee plan item");
-      err.statusCode = 409;
-      throw err;
+      throw new Error("Invoice already exists for this student and fee plan item");
     }
 
     const additionalFees = await repo.findAdditionalFeesByFeePlanItemId(feePlanItemId, instituteId, {
@@ -162,6 +159,7 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
         createDate: feePlanItem.createDate,
         dueDate: feePlanItem.dueDate,
         status: "generated",
+        paymentStatus: "unpaid",
       },
       { transaction }
     );
@@ -187,21 +185,13 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
 
 export async function getStudentFeeInvoiceById(studentFeeInvoiceId, instituteId) {
   const row = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId);
-  if (!row) {
-    const err = new Error("Student fee invoice not found");
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!row) throw new Error("Student fee invoice not found");
   return formatStudentFeeInvoiceResponse(row);
 }
 
 export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) {
   const student = await repo.findStudentById(studentId, instituteId);
-  if (!student) {
-    const err = new Error("Student not found");
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!student) throw new Error("Student not found");
   const rows = await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId);
   return rows.map((r) => formatStudentFeeInvoiceListRow(r));
 }

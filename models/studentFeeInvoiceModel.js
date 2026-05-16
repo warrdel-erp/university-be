@@ -36,6 +36,12 @@ export default sequelize.define(
       allowNull: false,
       defaultValue: "non_generated",
     },
+    paymentStatus: {
+      type: DataTypes.ENUM("unpaid", "partial", "paid"),
+      allowNull: false,
+      defaultValue: "unpaid",
+      field: "payment_status",
+    },
     studentId: {
       type: DataTypes.INTEGER,
       allowNull: false,

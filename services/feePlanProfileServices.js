@@ -151,6 +151,25 @@ export async function addFeePlanProfile(body, instituteId) {
   return formatFeePlanProfileDetail(full);
 }
 
+export async function lookupFeePlanProfilesByCourseSession(courseSessionId, instituteId) {
+  const mapping = await repo.findSessionCourseMappingForInstitute(courseSessionId, instituteId);
+  if (!mapping) {
+    throw httpError("courseSessionId not found or not in your institute", 400);
+  }
+
+  const rows = await repo.findFeePlanProfileNamesByCourseSession(instituteId, courseSessionId);
+  return {
+    courseSessionId,
+    profiles: rows.map((row) => {
+      const plain = toPlain(row);
+      return {
+        feePlanProfileId: plain.feePlanProfileId,
+        name: plain.name,
+      };
+    }),
+  };
+}
+
 export async function listFeePlanProfiles(instituteId, courseSessionId) {
   return sequelize.transaction(async (transaction) => {
     const mapping = await repo.findSessionCourseMappingForInstitute(

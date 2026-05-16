@@ -162,7 +162,13 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                         ]
                     },
                 ]
-            }
+            },
+            {
+                model: model.feePlanProfileModel,
+                as: "studentFeePlanProfile",
+                required: false,
+                attributes: ["feePlanProfileId", "name", "planType"],
+            },
         ];
 
         const whereCondition = {
@@ -360,46 +366,21 @@ export async function getSingleStudentDetail(studentId, universityId) {
                     ]
                 },
                 {
-                    model: model.feePlanModel,
-                    as: 'studentFeePlan',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+                    model: model.feePlanProfileModel,
+                    as: "studentFeePlanProfile",
+                    required: false,
+                    attributes: ["feePlanProfileId", "name", "planType", "courseSessionId", "instituteId"],
                     include: [
-                        // {
-                        //     model: model.feePlanTypeModel,
-                        //     as: "feePlanType",
-                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        //     include:[
-                        //         {
-                        //             model:model.feeTypeModel,
-                        //             as:'feeType',
-                        //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        //         }
-                        //     ]
-                        // },
-                        // {
-                        //     model:model.feePlanSemesterModel,
-                        //     as:'feePlanSemester',
-                        //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        //     include :[
-                        //         {
-                        //             model:model.semesterModel,
-                        //             as:'Semester',
-                        //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        //             // include:[
-                        //             //     {
-                        //             //         model:model.courseModel,
-                        //             //         as:'semesterCourse',
-                        //             //         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        //             //     }
-                        //             // ]
-                        //         }
-                        //     ]
-                        // }
-                    ]
+                        {
+                            model: model.sessionCouseMappingModel,
+                            as: "courseSessionMapping",
+                            attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+                        },
+                    ],
                 }
             ],
             where: {
-                student_id: studentId
+                studentId,
             },
         });
         return result;
@@ -639,8 +620,8 @@ export async function findStudentAddressByStudentId(StudentId) {
         const result = await model.studentsAddress.findOne({
             attributes: attribute,
             where: {
-                student_id: StudentId,
-                deleted_at: null
+                studentId: StudentId,
+                deletedAt: null,
             }
         });
         return result;
@@ -865,15 +846,13 @@ export async function updateStudentfeeStatus(studentId, data) {
     }
 };
 
-export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role) {
+export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId) {
     try {
         const result = await model.studentModel.findAll({
             where: {
-                ...(acedmicYearId && { acedmicYearId }),
-                feePlanId: {
-                    [Op.or]: [null, '']
-                },
-                ...(role === 'Head' && { instituteId })
+                acedmicYearId,
+                instituteId,
+                feePlanProfileId: { [Op.is]: null },
             },
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             include: [

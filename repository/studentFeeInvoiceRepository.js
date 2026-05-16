@@ -29,6 +29,13 @@ const feePlanItemInclude = {
   attributes: { exclude: excludeTs },
 };
 
+const feePaymentsInclude = {
+  model: model.studentFeePaymentModel,
+  as: "feePayments",
+  required: false,
+  attributes: { exclude: excludeTs },
+};
+
 export async function findFeePlanItemById(feePlanItemId, instituteId, options = {}) {
   const { transaction } = options;
   return model.feePlanItemModel.findOne({
@@ -83,7 +90,7 @@ export async function findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId
   const { transaction } = options;
   return model.studentFeeInvoiceModel.findOne({
     where: { studentFeeInvoiceId, instituteId },
-    include: [feePlanItemInclude, additionalFeeLineInclude],
+    include: [feePlanItemInclude, additionalFeeLineInclude, feePaymentsInclude],
     transaction,
   });
 }
@@ -92,7 +99,7 @@ export async function findStudentFeeInvoicesByStudentId(studentId, instituteId, 
   const { transaction } = options;
   return model.studentFeeInvoiceModel.findAll({
     where: { studentId, instituteId },
-    include: [feePlanItemInclude, additionalFeeLineInclude],
+    include: [feePlanItemInclude, additionalFeeLineInclude, feePaymentsInclude],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction,
   });
