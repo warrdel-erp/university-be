@@ -1,10 +1,14 @@
 'use strict';
 
+/**
+ * Fee v2 student invoice (production baseline).
+ * fee_plan_item_id nullable — term invoices or adhoc invoices without a term.
+ */
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('student_fee_invoice', {
-      student_fee_invoice_id: {
+    await queryInterface.createTable('student_fee_invoice', {      student_fee_invoice_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -19,6 +23,11 @@ module.exports = {
         allowNull: false,
         defaultValue: 'non_generated',
       },
+      payment_status: {
+        type: Sequelize.ENUM('unpaid', 'partial', 'paid'),
+        allowNull: false,
+        defaultValue: 'unpaid',
+      },
       student_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -31,7 +40,7 @@ module.exports = {
         allowNull: true,
         references: { model: 'fee_plan_item', key: 'fee_plan_item_id' },
         onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT',
+        onDelete: 'SET NULL',
       },
       institute_id: {
         type: Sequelize.INTEGER,

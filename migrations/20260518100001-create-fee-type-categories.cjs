@@ -1,5 +1,13 @@
 'use strict';
 
+/**
+ * Fee v2 — production migration order (fresh DB):
+ *   20260518100001 … 20260518100007
+ *   20260520130000-add-fee-plan-profile-id-to-students
+ *   20260521100000-create-student-fee-payment
+ * Skip 20260521120000–216000 (dev/staging repair only).
+ */
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {

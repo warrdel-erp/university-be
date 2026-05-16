@@ -1,11 +1,22 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/studentFeeInvoiceRepository.js";
+import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
 import {
   decimalCompare,
   decimalSubtract,
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
+
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function netLineAmount(amount, waiver) {
+  const lineAmount = toMoneyNumber(amount);
+  const lineWaiver = waiver != null ? toMoneyNumber(waiver) : null;
+  return lineWaiver != null ? decimalSubtract(lineAmount, lineWaiver) : lineAmount;
+}
 
 function paymentSummaryFromPlain(p) {
   const payments = p.feePayments ?? [];
@@ -21,6 +32,24 @@ function paymentSummaryFromPlain(p) {
 function toPlain(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function formatStudentFeeInvoiceStudent(student) {
+  const s = toPlain(student);
+  if (!s?.studentId) return null;
+
+  return {
+    studentId: s.studentId,
+    firstName: s.firstName ?? null,
+    middleName: s.middleName ?? null,
+    lastName: s.lastName ?? null,
+    studentName: formatStudentDisplayName(s) || null,
+    scholarNumber: s.scholarNumber ?? null,
+    email: s.email ?? null,
+    mobileNumber: s.mobileNumber ?? null,
+    enrollNumber: s.enrollNumber ?? null,
+    feePlanProfileId: s.feePlanProfileId ?? null,
+  };
 }
 
 function mapAdditionalFeeLine(line) {
@@ -54,13 +83,23 @@ export function formatStudentFeeInvoiceResponse(row) {
   const baseAmount = toMoneyNumber(p.amount);
   const additionalFees = (p.invoiceAdditionalFees ?? []).map(mapAdditionalFeeLine);
   const additionalFeesTotal = decimalSum(additionalFees.map((l) => l.netAmount));
-  const computedTotal = decimalSum([baseAmount, additionalFeesTotal]);
   const storedTotal = toMoneyNumber(p.total);
-  const totalVerified = decimalCompare(computedTotal, storedTotal) === 0;
+  const isAdhocInvoice = p.feePlanItemId == null;
+
+  const computedTotal = isAdhocInvoice
+    ? storedTotal
+    : decimalSum([baseAmount, additionalFeesTotal]);
+  const totalVerified = isAdhocInvoice
+    ? decimalCompare(additionalFeesTotal, storedTotal) === 0 &&
+      decimalCompare(baseAmount, storedTotal) === 0
+    : decimalCompare(computedTotal, storedTotal) === 0;
+
+  const student = formatStudentFeeInvoiceStudent(p.studentFeeInvoiceStudent);
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
     studentId: p.studentId,
+    student,
     feePlanItemId: p.feePlanItemId,
     instituteId: p.instituteId,
     amount: baseAmount,
@@ -183,6 +222,92 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
   return formatStudentFeeInvoiceResponse(full);
 }
 
+/**
+ * Adhoc invoice from fee type catalog lines (misconduct, fine, etc.).
+ * One additional_fee per fee line; invoice total = sum of (amount - waiver) per line.
+ * fee_plan_item_id NULL on student_fee_invoice and additional_fee.
+ */
+export async function generateStudentFeeInvoiceFromAdditionalFees(
+  { studentId, feeTypeCatalogs, total, createDate, dueDate },
+  instituteId
+) {
+  const feeLines = feeTypeCatalogs.map((line) => ({
+    feeTypeCatalogId: line.feeTypeCatalogId,
+    amount: toMoneyNumber(line.amount),
+    waiver: line.waiver != null ? toMoneyNumber(line.waiver) : null,
+  }));
+  const linesNetTotal = decimalSum(
+    feeLines.map((line) => netLineAmount(line.amount, line.waiver))
+  );
+
+  if (total != null && decimalCompare(linesNetTotal, toMoneyNumber(total)) !== 0) {
+    throw new Error("total must equal sum of feeTypeCatalogs amounts after waivers");
+  }
+
+  const invoiceTotal = linesNetTotal;
+  const catalogIds = [...new Set(feeLines.map((line) => line.feeTypeCatalogId))];
+
+  const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
+    const student = await repo.findStudentById(studentId, instituteId, { transaction });
+    if (!student) throw new Error("Student not found");
+
+    const catalogs = await feeTypeCatalogRepo.findFeeTypeCatalogsByIds(
+      catalogIds,
+      instituteId,
+      { transaction }
+    );
+    if (catalogs.length !== catalogIds.length) {
+      throw new Error("One or more fee type catalog entries not found");
+    }
+
+    const additionalFeeRows = await repo.bulkCreateAdditionalFees(
+      feeLines.map((line) => ({
+        amount: line.amount,
+        feeTypeCatalogId: line.feeTypeCatalogId,
+        feePlanItemId: null,
+        instituteId,
+      })),
+      { transaction }
+    );
+
+    const invoice = await repo.createStudentFeeInvoice(
+      {
+        studentId,
+        feePlanItemId: null,
+        instituteId,
+        amount: invoiceTotal,
+        total: invoiceTotal,
+        createDate,
+        dueDate: dueDate ?? null,
+        status: "generated",
+        paymentStatus: "unpaid",
+      },
+      { transaction }
+    );
+
+    await repo.bulkCreateStudentInvoiceAdditionalFees(
+      additionalFeeRows.map((af, index) => ({
+        studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+        additionalFeeId: af.additionalFeeId,
+        amount: feeLines[index].amount,
+        waiver: feeLines[index].waiver,
+      })),
+      { transaction }
+    );
+
+    return invoice.studentFeeInvoiceId;
+  });
+
+  return {
+    studentFeeInvoiceId,
+    studentId,
+    total: invoiceTotal,
+    createDate,
+    dueDate: dueDate ?? null,
+    paymentStatus: "unpaid",
+  };
+}
+
 export async function getStudentFeeInvoiceById(studentFeeInvoiceId, instituteId) {
   const row = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId);
   if (!row) throw new Error("Student fee invoice not found");
@@ -197,6 +322,7 @@ export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) 
 }
 
 function formatStudentDisplayName(student) {
+  if (!student) return "";
   return [student.firstName, student.middleName, student.lastName]
     .filter(Boolean)
     .join(" ")

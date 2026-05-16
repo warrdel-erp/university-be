@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Fee v2 additional fee lines (production baseline).
+ * fee_plan_item_id nullable — plan term fees or standalone catalog fees (e.g. misconduct).
+ */
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {

@@ -1,10 +1,14 @@
 'use strict';
 
+/**
+ * Fee v2 payments. payment_status lives on student_fee_invoice (see 20260518100006).
+ * addColumn below is only for DBs that ran an older 100006 without payment_status.
+ */
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('student_fee_payment', {
-      student_fee_payment_id: {
+    await queryInterface.createTable('student_fee_payment', {      student_fee_payment_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
@@ -52,15 +56,21 @@ module.exports = {
       name: 'idx_student_fee_payment_invoice',
     });
 
-    await queryInterface.addColumn('student_fee_invoice', 'payment_status', {
-      type: Sequelize.ENUM('unpaid', 'partial', 'paid'),
-      allowNull: false,
-      defaultValue: 'unpaid',
-    });
+    const invoiceTable = await queryInterface.describeTable('student_fee_invoice');
+    if (!invoiceTable.payment_status) {
+      await queryInterface.addColumn('student_fee_invoice', 'payment_status', {
+        type: Sequelize.ENUM('unpaid', 'partial', 'paid'),
+        allowNull: false,
+        defaultValue: 'unpaid',
+      });
+    }
   },
 
   async down(queryInterface) {
-    await queryInterface.removeColumn('student_fee_invoice', 'payment_status');
+    const invoiceTable = await queryInterface.describeTable('student_fee_invoice');
+    if (invoiceTable.payment_status) {
+      await queryInterface.removeColumn('student_fee_invoice', 'payment_status');
+    }
     await queryInterface.dropTable('student_fee_payment');
   },
 };

@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
 const catalogExclude = ["createdAt", "updatedAt"];
@@ -31,6 +32,18 @@ export async function findFeeTypeCatalogById(feeTypeCatalogId, instituteId, opti
     attributes: { exclude: catalogExclude },
     where: { feeTypeCatalogId, instituteId },
     include: catalogIncludeCategory,
+    transaction,
+  });
+}
+
+export async function findFeeTypeCatalogsByIds(feeTypeCatalogIds, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feeTypeCatalogModel.findAll({
+    attributes: { exclude: catalogExclude },
+    where: {
+      feeTypeCatalogId: { [Op.in]: feeTypeCatalogIds },
+      instituteId,
+    },
     transaction,
   });
 }

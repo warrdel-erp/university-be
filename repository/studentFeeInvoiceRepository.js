@@ -37,6 +37,22 @@ const feePaymentsInclude = {
   attributes: { exclude: excludeTs },
 };
 
+const studentInclude = {
+  model: model.studentModel,
+  as: "studentFeeInvoiceStudent",
+  attributes: [
+    "studentId",
+    "firstName",
+    "middleName",
+    "lastName",
+    "scholarNumber",
+    "email",
+    "mobileNumber",
+    "enrollNumber",
+    "feePlanProfileId",
+  ],
+};
+
 export async function findFeePlanItemById(feePlanItemId, instituteId, options = {}) {
   const { transaction } = options;
   return model.feePlanItemModel.findOne({
@@ -86,11 +102,24 @@ export async function bulkCreateStudentInvoiceAdditionalFees(rows, options = {})
   });
 }
 
+export async function createAdditionalFee(data, options = {}) {
+  return model.additionalFeeModel.create(data, { transaction: options.transaction });
+}
+
+export async function bulkCreateAdditionalFees(rows, options = {}) {
+  return model.additionalFeeModel.bulkCreate(rows, { transaction: options.transaction });
+}
+
 export async function findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId, options = {}) {
   const { transaction } = options;
   return model.studentFeeInvoiceModel.findOne({
     where: { studentFeeInvoiceId, instituteId },
-    include: [feePlanItemInclude, additionalFeeLineInclude, feePaymentsInclude],
+    include: [
+      studentInclude,
+      feePlanItemInclude,
+      additionalFeeLineInclude,
+      feePaymentsInclude,
+    ],
     transaction,
   });
 }

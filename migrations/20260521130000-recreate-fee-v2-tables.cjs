@@ -1,8 +1,9 @@
 'use strict';
 
 /**
- * Fix fee v2 table schemas only — does NOT drop tables or delete data.
- * Adds missing tables/columns, renames legacy PK columns when needed.
+ * DEV/STAGING ONLY — schema repair (no DROP, no data delete).
+ * Fresh production: run 20260518100001–100007 + 20260520130000 + 20260521100000 only.
+ * Skip 20260521120000–216000 on new databases.
  */
 
 async function tableExists(queryInterface, tableName) {

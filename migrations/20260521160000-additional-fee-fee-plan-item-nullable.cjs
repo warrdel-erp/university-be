@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * DEV/STAGING ONLY — alters existing student_fee_invoice.fee_plan_item_id to NULL.
- * Fresh production: already nullable in 20260518100006-create-student-fee-invoice.cjs.
+ * DEV/STAGING ONLY — alters existing additional_fee.fee_plan_item_id to NULL.
+ * Fresh production: already nullable in 20260518100005-create-additional-fee.cjs.
  */
 
 async function tableExists(queryInterface, tableName) {
@@ -14,30 +14,31 @@ async function tableExists(queryInterface, tableName) {
   return Number(rows[0].cnt) > 0;
 }
 
-async function allowNullFeePlanItemId(queryInterface) {
+async function allowNullFeePlanItemId(queryInterface, tableName, constraintName) {
   const [fks] = await queryInterface.sequelize.query(
     `SELECT CONSTRAINT_NAME AS name
      FROM information_schema.KEY_COLUMN_USAGE
      WHERE TABLE_SCHEMA = DATABASE()
-       AND TABLE_NAME = 'student_fee_invoice'
+       AND TABLE_NAME = :tableName
        AND COLUMN_NAME = 'fee_plan_item_id'
-       AND REFERENCED_TABLE_NAME IS NOT NULL`
+       AND REFERENCED_TABLE_NAME IS NOT NULL`,
+    { replacements: { tableName } }
   );
 
   for (const { name } of fks) {
     await queryInterface.sequelize.query(
-      `ALTER TABLE \`student_fee_invoice\` DROP FOREIGN KEY \`${name}\``
+      `ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${name}\``
     );
   }
 
   await queryInterface.sequelize.query(
-    'ALTER TABLE `student_fee_invoice` MODIFY `fee_plan_item_id` INT NULL'
+    `ALTER TABLE \`${tableName}\` MODIFY \`fee_plan_item_id\` INT NULL`
   );
 
-  await queryInterface.addConstraint('student_fee_invoice', {
+  await queryInterface.addConstraint(tableName, {
     fields: ['fee_plan_item_id'],
     type: 'foreign key',
-    name: 'fk_student_fee_invoice_fee_plan_item',
+    name: constraintName,
     references: { table: 'fee_plan_item', field: 'fee_plan_item_id' },
     onUpdate: 'CASCADE',
     onDelete: 'SET NULL',
@@ -47,19 +48,24 @@ async function allowNullFeePlanItemId(queryInterface) {
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface) {
-    if (!(await tableExists(queryInterface, 'student_fee_invoice'))) return;
-    await allowNullFeePlanItemId(queryInterface);
+    if (!(await tableExists(queryInterface, 'additional_fee'))) return;
+
+    await allowNullFeePlanItemId(
+      queryInterface,
+      'additional_fee',
+      'fk_additional_fee_fee_plan_item'
+    );
   },
 
   async down(queryInterface, Sequelize) {
-    if (!(await tableExists(queryInterface, 'student_fee_invoice'))) return;
+    if (!(await tableExists(queryInterface, 'additional_fee'))) return;
 
     await queryInterface.removeConstraint(
-      'student_fee_invoice',
-      'fk_student_fee_invoice_fee_plan_item'
+      'additional_fee',
+      'fk_additional_fee_fee_plan_item'
     );
 
-    await queryInterface.changeColumn('student_fee_invoice', 'fee_plan_item_id', {
+    await queryInterface.changeColumn('additional_fee', 'fee_plan_item_id', {
       type: Sequelize.INTEGER,
       allowNull: false,
       references: { model: 'fee_plan_item', key: 'fee_plan_item_id' },

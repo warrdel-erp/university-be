@@ -15,6 +15,20 @@ export async function generateStudentFeeInvoice(req, res) {
   }
 }
 
+export async function generateStudentFeeInvoiceFromAdditionalFees(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const { studentId, feeTypeCatalogs, total, createDate, dueDate } = req.body;
+    const data = await studentFeeInvoiceService.generateStudentFeeInvoiceFromAdditionalFees(
+      { studentId, feeTypeCatalogs, total, createDate, dueDate },
+      instituteId
+    );
+    return SuccessResponse(res, 201, "Additional fee invoice generated", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getStudentFeeInvoiceById(req, res) {
   try {
     const instituteId = req.user.defaultInstituteId;

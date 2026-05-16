@@ -5464,7 +5464,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines (amount per category)\n3. **feePlanProfile** — create plan + feePlanItems (terms) + optional feeTypeCatalogs per term\n4. **student (fee v2)** — lookup plan → create student with feePlanProfileId\n5. **studentFeeInvoice** — generate invoice per term (studentId + feePlanItemId)\n6. **studentFeePayment** — record payment; updates invoice payment_status (unpaid | partial | paid)\n\n## Legacy removed\n- POST /student (old, feePlanId + auto mapper) — use **POST /student** with feePlanProfileId\n- GET /student/:id/feeDetails — legacy mapper; use **GET /studentFeeInvoice?studentId=** for v2\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines (amount per category)\n3. **feePlanProfile** — create plan + feePlanItems (terms) + optional feeTypeCatalogs per term\n4. **student (fee v2)** — lookup plan → create student with feePlanProfileId\n5. **studentFeeInvoice** — term invoice: POST / (studentId + feePlanItemId); adhoc invoice: POST /additional (feeTypeCatalogs[] from catalog, no feePlanItemId)\n6. **studentFeePayment** — record payment; updates invoice payment_status (unpaid | partial | paid)\n\n## Legacy removed\n- POST /student (old, feePlanId + auto mapper) — use **POST /student** with feePlanProfileId\n- GET /student/:id/feeDetails — legacy mapper; use **GET /studentFeeInvoice?studentId=** for v2\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -6057,7 +6057,7 @@
           "name": "studentFeeInvoice",
           "item": [
             {
-              "name": "generate invoice",
+              "name": "generate term invoice",
               "event": [
                 {
                   "listen": "test",
@@ -6104,7 +6104,60 @@
                     }
                   }
                 },
-                "description": "Body: studentId, feePlanItemId only. Creates student_fee_invoice + student_invoice_additional_fee rows from plan additional_fee lines.\n\n201 message: \"Invoice generated\". data includes amount, total, totalVerified, additionalFees[], feePlanItem, etc."
+                "description": "**POST /studentFeeInvoice** — term / fee-plan invoice.\n\nBody: studentId, feePlanItemId only. instituteId from auth.\n\nCreates student_fee_invoice (linked to fee_plan_item) + student_invoice_additional_fee rows from plan additional_fee lines.\n\n201 message: \"Invoice generated\". data: studentFeeInvoiceId, amount, total, totalVerified, additionalFees[], feePlanItem, student (if loaded)."
+              },
+              "response": []
+            },
+            {
+              "name": "generate adhoc invoice (additional fees)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentFeeInvoiceId) {",
+                      "  pm.collectionVariables.set('studentFeeInvoice_id', String(data.studentFeeInvoiceId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/additional",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "additional"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"{{student_id}}\",\n  \"feeTypeCatalogs\": [\n    { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"5000.00\", \"waiver\": \"500.00\" },\n    { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"3000.00\", \"waiver\": \"500.00\" }\n  ],\n  \"total\": \"7000.00\",\n  \"createDate\": \"2026-05-16\",\n  \"dueDate\": \"2026-06-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**POST /studentFeeInvoice/additional** — adhoc invoice (misconduct, fine, etc.). No feePlanItemId.\n\n**Body (required):** studentId, feeTypeCatalogs[] (min 1), createDate (YYYY-MM-DD).\n\n**feeTypeCatalogs[] each line:** feeTypeCatalogId, amount; optional waiver (≥ 0, cannot exceed amount).\n\n**Invoice total** = sum of (amount − waiver) per line. Example: 5000−500 + 3000−500 = **7000** (not 8000 gross).\n\n**Optional:** dueDate (null allowed), total — if sent, must equal net sum after waivers; omit total to auto-compute.\n\n**Stored:** student_invoice_additional_fee.amount (gross), .waiver; student_fee_invoice.amount = total (net).\n\ninstituteId from auth.\n\n201 data (minimal): studentFeeInvoiceId, studentId, total, createDate, dueDate, paymentStatus. Use GET /studentFeeInvoice/single for full detail."
               },
               "response": []
             },
@@ -6211,7 +6264,7 @@
                     }
                   ]
                 },
-                "description": "Query: studentFeeInvoiceId. data: full invoice + paymentStatus, totalPaid, balanceDue, additionalFees[], feePlanItem, total, storedTotal, totalVerified."
+                "description": "**GET /studentFeeInvoice/single?studentFeeInvoiceId=**\n\nFull invoice detail. data includes:\n- studentFeeInvoiceId, studentId, feePlanItemId, instituteId\n- **student** — studentId, firstName, middleName, lastName, studentName, scholarNumber, email, mobileNumber, enrollNumber, feePlanProfileId\n- amount, additionalFeesTotal, total, storedTotal, totalVerified\n- createDate, dueDate, status, paymentStatus, totalPaid, balanceDue\n- feePlanItem (term; null fields for adhoc)\n- additionalFees[] — name, description, amount, netAmount per catalog line"
               },
               "response": []
             }
@@ -6475,6 +6528,11 @@
     {
       "key": "feeTypeCatalog_id",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCatalog_id_2",
+      "value": "2",
       "type": "string"
     },
     {

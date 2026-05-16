@@ -1,7 +1,8 @@
 'use strict';
 
 /**
- * Schema fixes (no data delete): repair tables + allow NULL fee_plan_item_id on invoices.
+ * DEV/STAGING ONLY — same as 20260521130000 + nullable fee_plan_item on invoice.
+ * Not required on fresh production (see 20260518100006).
  */
 
 const repair = require('./20260521130000-recreate-fee-v2-tables.cjs');
