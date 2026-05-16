@@ -74,6 +74,15 @@ export async function findFeePlanProfileById(feePlanProfileId, instituteId, opti
   });
 }
 
+export async function findFeePlanProfileByIdForInstitute(feePlanProfileId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanProfileModel.findOne({
+    where: { feePlanProfileId, instituteId },
+    attributes: ["feePlanProfileId", "instituteId"],
+    transaction,
+  });
+}
+
 export async function findSessionCourseMappingForInstitute(
   sessionCourseMappingId,
   instituteId,

@@ -99,7 +99,7 @@ export default sequelize.define(
         },
     },
     {
-        tableName: 'student_invoice_mapper',
+        tableName: 'student_invoice_mapper__deprecated',
         timestamps: true,
         paranoid: true
     }

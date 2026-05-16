@@ -46,6 +46,20 @@ export const addStudent = async (req, res) => {
     }
 };
 
+export const addStudentWithFeePlanProfile = async (req, res) => {
+    try {
+        const result = await studentService.addStudentWithFeePlanProfile({
+            info: req.body,
+            files: req.files,
+            createdBy: req.user.userId,
+        });
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in addStudentWithFeePlanProfile:", error);
+        return res.status(error.statusCode || 500).send(error.message || "Internal Server Error");
+    }
+};
+
 // 2. get all student
 export const getAllStudents = async (req, res) => {
     const universityId = req.user.universityId;

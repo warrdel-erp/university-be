@@ -5505,7 +5505,7 @@
     },
     {
       "name": "fee v2 (category, catalog, plan profile, student invoice)",
-      "description": "Order: feeTypeCategory → feeTypeCatalog → feePlanProfile → studentFeeInvoice.\n\nfeePlanProfile: POST/PATCH/GET only (no DELETE). feePlanItems optional on create; each installment may include feeTypeCatalogs[] with feeTypeCatalogId + amount (stored on additional_fee). planType must be lowercase: annual | semester | trimester.\n\nGET /feePlanProfile/single returns plain Sequelize data (includes createdAt/updatedAt on profile, feePlanItems, nested feeTypeCatalog / feeTypeCategory).\n\nstudentFeeInvoice: POST body is only studentId + feePlanItemId; GET list returns an array of summary rows per invoice.",
+      "description": "Order: feeTypeCategory → feeTypeCatalog → feePlanProfile → POST /student/withFeePlanProfile → studentFeeInvoice.\n\nfeePlanProfile (mount /feePlanProfile): plan CRUD. feePlanItems optional on create; feeTypeCatalogs[] per installment. planType: annual | semester | trimester.\n\nstudent: POST /student/withFeePlanProfile sets fee_plan_profile_id on create (no legacy invoice mapper). Invoices per term via POST /studentFeeInvoice with studentId + feePlanItemId.",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -6222,6 +6222,59 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "create student with profile (no invoice mapper)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const student = res && res.student;",
+                      "if (student && student.studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(student.studentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/withFeePlanProfile",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "withFeePlanProfile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"universityId\": 4,\n  \"campusId\": 1,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 1,\n  \"courseLevelId\": 1,\n  \"courseId\": 1,\n  \"roleId\": 1,\n  \"classSectionsId\": 1,\n  \"acedmicYearId\": \"{{acedmicYear_id}}\",\n  \"sessionId\": 1,\n  \"email\": \"student.fee.v2@example.com\",\n  \"firstName\": \"Fee\",\n  \"fatherName\": \"Parent\",\n  \"phoneNumber\": \"9999999999\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Same required fields as POST /student plus feePlanProfileId. Saves students.fee_plan_profile_id only — does not create student_invoice_mapper or invoices."
+              },
+              "response": []
         }
       ]
     }

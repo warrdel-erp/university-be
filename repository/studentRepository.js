@@ -511,38 +511,42 @@ export async function updateStudentMetaData(studentId, type, code, transaction) 
     }
 };
 
-export async function checkEmail(email) {
+export async function findStudentByEmail(email) {
     try {
-        const attribute = ["email"];
-        const result = await model.studentModel.findOne({
-            attributes: attribute,
+        return await model.studentModel.findOne({
+            attributes: ["email"],
             where: {
-                email: email,
-                deleted_at: null
-            }
+                email,
+                deleted_at: null,
+            },
         });
-        return result;
     } catch (error) {
-        console.error(`Error in check Email for ${email}:`, error);
+        console.error(`Error finding student by email ${email}:`, error);
         throw error;
     }
-};
+}
 
-export async function checkEnroll(enrollNumber) {
+export async function findStudentByEnrollNumber(enrollNumber) {
     try {
-        const attribute = ["enroll_number"];
-        const result = await model.studentModel.findOne({
-            attributes: attribute,
-            where: {
-                enrollNumber: enrollNumber
-            }
+        return await model.studentModel.findOne({
+            attributes: ["enroll_number"],
+            where: { enrollNumber },
         });
-        return result;
     } catch (error) {
-        console.error(`Error in check Email for ${email}:`, error);
+        console.error(`Error finding student by enroll number ${enrollNumber}:`, error);
         throw error;
     }
-};
+}
+
+/** @deprecated Use findStudentByEmail */
+export async function checkEmail(email) {
+    return findStudentByEmail(email);
+}
+
+/** @deprecated Use findStudentByEnrollNumber */
+export async function checkEnroll(enrollNumber) {
+    return findStudentByEnrollNumber(enrollNumber);
+}
 
 export async function getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role) {
     try {

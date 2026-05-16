@@ -14,6 +14,7 @@ import sessionModel from "./sessionModel.js";
 import semesterModel from "./semesterModel.js";
 import classSectionModel from "./classSectionModel.js";
 import feePlanModel from "./feePlanModel.js";
+import feePlanProfileModel from "./feePlanProfileModel.js";
 
 export default sequelize.define(
     'students',
@@ -140,6 +141,15 @@ export default sequelize.define(
                 model: feePlanModel,
                 key: 'fee_plan_id'
             }
+        },
+        feePlanProfileId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'fee_plan_profile_id',
+            references: {
+                model: feePlanProfileModel,
+                key: 'fee_plan_profile_id',
+            },
         },
         scholarNumber: {
             type: DataTypes.STRING(150),

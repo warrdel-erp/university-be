@@ -189,6 +189,15 @@ employeeCodeMasterType.hasMany(studentModel, { foreignKey: "course_level_id", as
 studentModel.belongsTo(feePlanModel, { foreignKey: "fee_plan_id", as: "studentFeePlan" });
 feePlanModel.hasMany(studentModel, { foreignKey: "fee_plan_id", as: "studentFeePlan" });
 
+studentModel.belongsTo(feePlanProfileModel, {
+  foreignKey: "fee_plan_profile_id",
+  as: "studentFeePlanProfile",
+});
+feePlanProfileModel.hasMany(studentModel, {
+  foreignKey: "fee_plan_profile_id",
+  as: "studentsWithFeePlanProfile",
+});
+
 userStudentEmployeeModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
 studentModel.hasOne(userStudentEmployeeModel, { foreignKey: "student_id", as: "student" });
 

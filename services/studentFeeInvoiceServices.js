@@ -117,6 +117,21 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
       throw err;
     }
 
+    const studentProfileId = student.feePlanProfileId ?? student.get?.("feePlanProfileId");
+    if (!studentProfileId) {
+      const err = new Error("Student has no fee plan profile assigned");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const itemProfileId =
+      feePlanItem.feePlanProfileId ?? feePlanItem.get?.("feePlanProfileId");
+    if (itemProfileId !== studentProfileId) {
+      const err = new Error("Fee plan item does not belong to the student's fee plan profile");
+      err.statusCode = 400;
+      throw err;
+    }
+
     const existing = await repo.findStudentFeeInvoiceByStudentAndItem(
       studentId,
       feePlanItemId,
