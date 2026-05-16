@@ -39,6 +39,13 @@ export async function getSingleRoleDetails(roleId) {
     }
 }
 
+export async function findRoleByRoleName(roleName) {
+    return model.roleModel.findOne({
+        attributes: ["roleId", "role"],
+        where: { role: roleName },
+    });
+}
+
 export async function deleteRole(roleId) {
     const deleted = await model.roleModel.destroy({ where: { roleId: roleId } });
     return deleted > 0;

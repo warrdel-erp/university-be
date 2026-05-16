@@ -25,6 +25,7 @@ import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import { z } from "zod";
 import { Router } from "express";
+import { ROLES } from "../const/roles.js";
 
 const router = Router();
 
@@ -74,7 +75,7 @@ const addStudentWithFeePlanProfileBodySchema = z
     affiliatedUniversityId: positiveIntegerId,
     courseLevelId: positiveIntegerId,
     courseId: positiveIntegerId,
-    roleId: z.string().trim().optional(),
+    roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
     classSectionsId: positiveIntegerId,
     acedmicYearId: positiveIntegerId,
     email: z.string().trim().min(1),

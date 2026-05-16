@@ -17,6 +17,8 @@ import {
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
+import * as roleRepository from "../repository/roleRepository.js";
+import { ROLES } from "../const/roles.js";
 import * as feePlanProfileServices from "./feePlanProfileServices.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
@@ -277,6 +279,14 @@ async function assertStudentEmailAvailable(email) {
   }
 }
 
+async function resolveStudentRoleId() {
+  const row =
+    (await roleRepository.findRoleByRoleName(ROLES.STUDENT)) ??
+    (await roleRepository.findRoleByRoleName("Student"));
+  if (!row) throw new Error("STUDENT role not found in role table");
+  return row.roleId;
+}
+
 export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   await assertFeePlanProfileForInstitute(
     info.feePlanProfileId,
@@ -287,12 +297,13 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
 
   const {
     universityId,
-    roleId,
     acedmicYearId,
     classSectionsId: classSectionId,
     sessionId,
     semesterId,
   } = info;
+
+  const roleId = await resolveStudentRoleId();
 
   return addStudent(
     info,
