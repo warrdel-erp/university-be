@@ -66,7 +66,19 @@ export async function findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId, 
 export async function findStudentCourseSessionById(studentId, instituteId, options = {}) {
   return model.studentModel.findOne({
     where: { studentId, instituteId },
-    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "courseId",
+      "sessionId",
+      "feePlanProfileId",
+      "email",
+      "mobileNumber",
+      "enrollNumber",
+    ],
     include: [
       {
         model: model.courseModel,
@@ -77,6 +89,11 @@ export async function findStudentCourseSessionById(studentId, instituteId, optio
         model: model.sessionModel,
         as: "studentSession",
         attributes: ["sessionId", "sessionName"],
+      },
+      {
+        model: model.feePlanProfileModel,
+        as: "studentFeePlanProfile",
+        attributes: ["feePlanProfileId", "name", "planType", "courseSessionId"],
       },
     ],
     transaction: options.transaction,

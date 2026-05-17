@@ -1,6 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import * as invoiceRepo from "../repository/studentFeeInvoiceRepository.js";
+import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
+import * as studentRepository from "../repository/studentRepository.js";
 import { formatStudentFeeInvoiceResponse } from "./studentFeeInvoiceServices.js";
 import {
   decimalAdd,
@@ -42,15 +44,84 @@ function formatPaymentListStudent(student) {
 
   const course = s.course ?? {};
   const session = s.studentSession ?? {};
+  const profile = s.studentFeePlanProfile ?? {};
 
   return {
     studentId: s.studentId,
+    firstName: s.firstName ?? null,
+    middleName: s.middleName ?? null,
+    lastName: s.lastName ?? null,
     studentName: formatStudentDisplayName(s) || null,
     scholarNumber: s.scholarNumber ?? null,
+    email: s.email ?? null,
+    mobileNumber: s.mobileNumber ?? null,
+    enrollNumber: s.enrollNumber ?? null,
+    feePlanProfileId: s.feePlanProfileId ?? profile.feePlanProfileId ?? null,
+    feePlanName: profile.name ?? null,
     courseId: course.courseId ?? s.courseId ?? null,
     courseName: course.courseName ?? null,
-    sessionId: session.sessionId ?? null,
+    sessionId: session.sessionId ?? s.sessionId ?? null,
     sessionName: session.sessionName ?? null,
+  };
+}
+
+function formatFeePlanProfile(profile) {
+  const p = toPlain(profile);
+  if (!p?.feePlanProfileId) return null;
+
+  return {
+    feePlanProfileId: p.feePlanProfileId,
+    name: p.name ?? null,
+    planType: p.planType ?? null,
+    courseSessionId: p.courseSessionId ?? null,
+  };
+}
+
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
+  const startDate = String(feePlanItem.createDate).slice(0, 10);
+
+  if (!invoice) {
+    return startDate > today ? "upcoming" : "pending";
+  }
+
+  if (invoice.paymentStatus === "paid") return "paid";
+  if (invoice.paymentStatus === "partial") return "partial";
+  return "unpaid";
+}
+
+function buildStudentInvoiceMap(invoices) {
+  const byStudent = new Map();
+  for (const inv of invoices) {
+    const p = toPlain(inv);
+    if (!byStudent.has(p.studentId)) {
+      byStudent.set(p.studentId, new Map());
+    }
+    if (p.feePlanItemId != null) {
+      byStudent.get(p.studentId).set(p.feePlanItemId, p);
+    }
+  }
+  return byStudent;
+}
+
+function formatPaymentTermRow(feePlanItem, invoice, index) {
+  const item = toPlain(feePlanItem);
+  const inv = invoice ? toPlain(invoice) : null;
+
+  return {
+    sno: index + 1,
+    feePlanItemId: item.feePlanItemId,
+    termName: item.termName ?? null,
+    startDate: item.createDate,
+    endDate: item.dueDate ?? null,
+    amount: toMoneyNumber(item.amount),
+    status: resolveTermDisplayStatus(item, inv),
+    studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
+    paymentStatus: inv?.paymentStatus ?? null,
+    isCurrentInvoice: false,
   };
 }
 
@@ -147,30 +218,69 @@ export async function recordStudentFeePayment(body, instituteId, createdBy) {
 }
 
 export async function listPaymentsByInvoiceId(studentFeeInvoiceId, instituteId) {
-  const invoice = await paymentRepo.findStudentFeeInvoiceForPayment(
+  const invoiceRow = await invoiceRepo.findStudentFeeInvoiceById(
     studentFeeInvoiceId,
-    instituteId
+    instituteId,
   );
-  if (!invoice) {
+  if (!invoiceRow) {
     throw httpError("Student fee invoice not found", 404);
   }
 
-  const invoicePlain = toPlain(invoice);
+  const invoicePlain = toPlain(invoiceRow);
+  const invoice = formatStudentFeeInvoiceResponse(invoiceRow);
+  const studentId = invoicePlain.studentId;
 
-  const [rows, student] = await Promise.all([
+  const [paymentRows, studentRow] = await Promise.all([
     paymentRepo.findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId),
-    paymentRepo.findStudentCourseSessionById(invoicePlain.studentId, instituteId),
+    paymentRepo.findStudentCourseSessionById(studentId, instituteId),
   ]);
-  const invoiceTotal = toMoneyNumber(invoicePlain.total);
-  const totalPaid = decimalSum(rows.map((r) => toMoneyNumber(toPlain(r).paidAmount)));
+
+  const feePlanProfileId =
+    invoicePlain.studentFeeInvoiceStudent?.feePlanProfileId ??
+    toPlain(studentRow)?.feePlanProfileId ??
+    invoice?.feePlanItem?.feePlanProfileId ??
+    null;
+
+  let feePlan = null;
+  let terms = [];
+
+  if (feePlanProfileId) {
+    const [profileRow, feePlanItems, studentInvoices] = await Promise.all([
+      feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+        feePlanProfileId,
+        instituteId,
+      ),
+      studentRepository.findFeePlanItemsByProfileIds([feePlanProfileId], instituteId),
+      studentRepository.findInvoicesByStudentIds([studentId], instituteId),
+    ]);
+
+    feePlan = formatFeePlanProfile(profileRow);
+    const invoiceByItem = buildStudentInvoiceMap(studentInvoices).get(studentId) ?? new Map();
+
+    terms = feePlanItems.map((item, index) => {
+      const row = formatPaymentTermRow(item, invoiceByItem.get(toPlain(item).feePlanItemId), index);
+      row.isCurrentInvoice = row.studentFeeInvoiceId === studentFeeInvoiceId;
+      return row;
+    });
+  }
+
+  const invoiceTotal = invoice?.total ?? toMoneyNumber(invoicePlain.total);
+  const totalPaid =
+    invoice?.totalPaid ??
+    decimalSum(paymentRows.map((r) => toMoneyNumber(toPlain(r).paidAmount)));
+  const balanceDue = invoice?.balanceDue ?? decimalSubtract(invoiceTotal, totalPaid);
+  const paymentStatus = invoice?.paymentStatus ?? invoicePlain.paymentStatus;
 
   return {
     studentFeeInvoiceId,
-    student: formatPaymentListStudent(student),
+    student: formatPaymentListStudent(studentRow),
+    invoice,
+    feePlan,
+    terms,
     invoiceTotal,
     totalPaid,
-    balanceDue: decimalSubtract(invoiceTotal, totalPaid),
-    paymentStatus: invoicePlain.paymentStatus,
-    payments: rows.map((r) => formatStudentFeePayment(r)),
+    balanceDue,
+    paymentStatus,
+    payments: paymentRows.map((r) => formatStudentFeePayment(r)),
   };
 }
