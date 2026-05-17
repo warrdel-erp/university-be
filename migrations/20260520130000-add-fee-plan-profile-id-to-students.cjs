@@ -1,5 +1,7 @@
 'use strict';
 
+/** Links students to fee v2 fee_plan_profile. Run after 20260518100003. */
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {

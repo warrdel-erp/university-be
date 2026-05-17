@@ -1,5 +1,10 @@
 'use strict';
 
+/**
+ * Dev only: drop fee v2 tables and clear SequelizeMeta for fee v2 migrations.
+ * Then run: npx sequelize-cli db:migrate
+ */
+
 require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
@@ -12,6 +17,12 @@ const tables = [
   'fee_plan_profile',
   'fee_type_catalog',
   'fee_type_categories',
+];
+
+const metaPatterns = [
+  '202605181%',
+  '20260520130000-add-fee-plan-profile-id-to-students.cjs',
+  '20260520120000-rename-old-fee-tables-deprecated.cjs',
 ];
 
 async function main() {
@@ -33,14 +44,12 @@ async function main() {
   }
   await sequelize.query('SET FOREIGN_KEY_CHECKS = 1');
 
-  const [, meta] = await sequelize.query(
-    `DELETE FROM SequelizeMeta
-     WHERE name LIKE '202605181%'
-        OR name LIKE '202605191%'
-        OR name LIKE '202605201%'
-        OR name LIKE '202605211%'`
-  );
-  console.log('SequelizeMeta rows removed:', meta.affectedRows ?? meta);
+  for (const pattern of metaPatterns) {
+    const [, meta] = await sequelize.query(
+      `DELETE FROM SequelizeMeta WHERE name LIKE '${pattern}'`
+    );
+    console.log(`SequelizeMeta removed (${pattern}):`, meta.affectedRows ?? meta);
+  }
 
   await sequelize.close();
 }

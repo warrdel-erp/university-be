@@ -62,3 +62,23 @@ export async function findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId, 
     transaction: options.transaction,
   });
 }
+
+export async function findStudentCourseSessionById(studentId, instituteId, options = {}) {
+  return model.studentModel.findOne({
+    where: { studentId, instituteId },
+    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName"],
+      },
+      {
+        model: model.sessionModel,
+        as: "studentSession",
+        attributes: ["sessionId", "sessionName"],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}

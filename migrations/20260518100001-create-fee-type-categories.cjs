@@ -1,11 +1,12 @@
 'use strict';
 
 /**
- * Fee v2 — production migration order (fresh DB):
- *   20260518100001 … 20260518100007
+ * Fee v2 — production baseline (fresh database). Run in order:
+ *   20260518100001 … 20260518100008  (v2 tables)
  *   20260520130000-add-fee-plan-profile-id-to-students
- *   20260521100000-create-student-fee-payment
- * Skip 20260521120000–216000 (dev/staging repair only).
+ *   20260520120000-rename-old-fee-tables-deprecated
+ *
+ * Do NOT run 20260521120000–216000 (removed; were dev/staging repair only).
  */
 
 /** @type {import('sequelize-cli').Migration} */

@@ -6453,7 +6453,7 @@
                     }
                   ]
                 },
-                "description": "Query: studentFeeInvoiceId. data: invoiceTotal, totalPaid, balanceDue, paymentStatus, payments[]."
+                "description": "**GET /studentFeePayment?studentFeeInvoiceId=**\n\n**data:** studentFeeInvoiceId, **student** { studentId, studentName, scholarNumber, courseId, courseName, sessionId, sessionName }, invoiceTotal, totalPaid, balanceDue, paymentStatus, payments[]."
               },
               "response": []
             }

@@ -1,6 +1,11 @@
 'use strict';
 
-/** Legacy fee tables → *.__deprecated (old flow; replaced by fee v2). */
+/**
+ * Legacy fee tables → *.__deprecated (replaced by fee v2).
+ * Safe on fresh DB: skips rename if source table does not exist.
+ * Run after 20260518100001–10008 and 20260520130000 on production merge.
+ */
+
 const RENAMES = [
   ['fee_group', 'fee_group__deprecated'],
   ['fee_type', 'fee_type__deprecated'],

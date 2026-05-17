@@ -28,6 +28,32 @@ function resolvePaymentStatus(totalPaid, invoiceTotal) {
   return "paid";
 }
 
+function formatStudentDisplayName(student) {
+  if (!student) return "";
+  return [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function formatPaymentListStudent(student) {
+  const s = toPlain(student);
+  if (!s?.studentId) return null;
+
+  const course = s.course ?? {};
+  const session = s.studentSession ?? {};
+
+  return {
+    studentId: s.studentId,
+    studentName: formatStudentDisplayName(s) || null,
+    scholarNumber: s.scholarNumber ?? null,
+    courseId: course.courseId ?? s.courseId ?? null,
+    courseName: course.courseName ?? null,
+    sessionId: session.sessionId ?? null,
+    sessionName: session.sessionName ?? null,
+  };
+}
+
 export function formatStudentFeePayment(row) {
   const p = toPlain(row);
   if (!p) return null;
@@ -129,13 +155,18 @@ export async function listPaymentsByInvoiceId(studentFeeInvoiceId, instituteId) 
     throw httpError("Student fee invoice not found", 404);
   }
 
-  const rows = await paymentRepo.findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId);
   const invoicePlain = toPlain(invoice);
+
+  const [rows, student] = await Promise.all([
+    paymentRepo.findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId),
+    paymentRepo.findStudentCourseSessionById(invoicePlain.studentId, instituteId),
+  ]);
   const invoiceTotal = toMoneyNumber(invoicePlain.total);
   const totalPaid = decimalSum(rows.map((r) => toMoneyNumber(toPlain(r).paidAmount)));
 
   return {
     studentFeeInvoiceId,
+    student: formatPaymentListStudent(student),
     invoiceTotal,
     totalPaid,
     balanceDue: decimalSubtract(invoiceTotal, totalPaid),
