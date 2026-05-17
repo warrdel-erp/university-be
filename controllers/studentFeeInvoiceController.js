@@ -60,10 +60,8 @@ export async function listStudentFeeInvoicesByStudent(req, res) {
 export async function listAllStudentFeeInvoices(req, res) {
   try {
     const instituteId = req.user.defaultInstituteId;
-    const { paymentTab } = req.query;
-    const data = await studentFeeInvoiceService.listAllStudentFeeInvoices(instituteId, {
-      paymentTab,
-    });
+    const { status } = req.query;
+    const data = await studentFeeInvoiceService.listAllStudentFeeInvoices(instituteId, status);
     return SuccessResponse(res, 200, "All student fee invoices fetched successfully", data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

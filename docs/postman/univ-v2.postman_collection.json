@@ -3486,7 +3486,7 @@
                 }
               ]
             },
-            "description": "**GET /options/feePlans** — v2 only. Query: courseId, sessionId. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] } — same shape as GET /feePlanProfile/lookup."
+            "description": "**GET /options/feePlans** — v2 only. Query: courseId, sessionId. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] }"
           },
           "response": []
         },
@@ -5464,7 +5464,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines (amount per category)\n3. **feePlanProfile** — create plan + feePlanItems (terms) + optional feeTypeCatalogs per term\n4. **student (fee v2)** — lookup plan → create student with feePlanProfileId\n5. **studentFeeInvoice** — term invoice: POST / (studentId + feePlanItemId); adhoc invoice: POST /additional (feeTypeCatalogs[] from catalog, no feePlanItemId)\n6. **studentFeePayment** — record payment; updates invoice payment_status (unpaid | partial | paid)\n\n## Legacy removed\n- POST /student (old, feePlanId + auto mapper) — use **POST /student** with feePlanProfileId\n- GET /student/:id/feeDetails — legacy mapper; use **GET /studentFeeInvoice?studentId=** for v2\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary** (counts); **GET /all?status=** (all|active|inactive by student assignment)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; create student with feePlanProfileId; dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -5814,6 +5814,7 @@
         },
         {
           "name": "feePlanProfile",
+          "description": "Fee plans v2. **GET /summary** — active/inactive counts (by student assignment). **GET /all?status=** — list plans. **GET /** — by courseSessionId. Dropdown: **GET /options/feePlans** (not /lookup).",
           "item": [
             {
               "name": "create",
@@ -5895,12 +5896,12 @@
                     "summary"
                   ]
                 },
-                "description": "**GET /feePlanProfile/summary** — dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile with ≥1 student_fee_invoice (any term / fee_plan_item)\n- **inactiveFeePlans**: profiles with zero invoices\n- **allFeePlans**: total profiles for institute"
+                "description": "**GET /feePlanProfile/summary** — dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactiveFeePlans**: profiles not assigned to any student\n- **allFeePlans**: total profiles for institute"
               },
               "response": []
             },
             {
-              "name": "list all plans (institute)",
+              "name": "list all plans (status=all)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -5915,16 +5916,93 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/feePlanProfile/all",
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=all",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "feePlanProfile",
                     "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "all",
+                      "description": "all | active | inactive"
+                    }
                   ]
                 },
-                "description": "**GET /feePlanProfile/all** — all fee plan profiles for your institute (no courseSessionId).\n\ndata: { feePlans: [{ feePlanProfileId, planName, planType, courseSessionId, term, termFees, additionalFees, totalFees, totalInvoices }] }"
+                "description": "**GET /feePlanProfile/all?status=**\n\n- **all** — every fee plan for institute\n- **active** — assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactive** — no student assigned\n\n**data:** { status, feePlans[] }"
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (status=active)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=active",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Fee plans with ≥1 student assigned. Response: { status: \"active\", feePlans[] }."
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (status=inactive)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=inactive",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "inactive"
+                    }
+                  ]
+                },
+                "description": "Fee plans with zero students assigned. Response: { status: \"inactive\", feePlans[] }."
               },
               "response": []
             },
@@ -5959,59 +6037,7 @@
                     }
                   ]
                 },
-                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } with summary per profile: planName, planType, term count, termFees, additionalFees, totalFees, totalInvoices, instituteId."
-              },
-              "response": []
-            },
-            {
-              "name": "lookup by course session (id + name)",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const res = pm.response.json();",
-                      "const data = res && res.data;",
-                      "const profiles = data && data.profiles;",
-                      "if (Array.isArray(profiles) && profiles[0]) {",
-                      "  pm.collectionVariables.set('feePlanProfile_id', String(profiles[0].feePlanProfileId));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/feePlanProfile/lookup?courseSessionId={{courseSession_id}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "feePlanProfile",
-                    "lookup"
-                  ],
-                  "query": [
-                    {
-                      "key": "courseSessionId",
-                      "value": "{{courseSession_id}}",
-                      "disabled": false
-                    }
-                  ]
-                },
-                "description": "Lightweight dropdown lookup. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] }."
+                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } — each plan: numberOfInvoices (term invoices via fee_plan_item), feePlanItems[{ feePlanItemId, termName, numberOfInvoices }], assignedStudentCount, status, termFees, totalFees, etc."
               },
               "response": []
             },
@@ -6055,6 +6081,7 @@
         },
         {
           "name": "studentFeeInvoice",
+          "description": "Invoices v2. Term: POST / with feePlanItemId. Adhoc: POST /additional with feeTypeCatalogs[] (+ optional waiver). List institute: GET /all?status=all|pending|completed. By student: GET /?studentId= returns { student, invoices[] }. Detail: GET /single.",
           "item": [
             {
               "name": "generate term invoice",
@@ -6162,7 +6189,7 @@
               "response": []
             },
             {
-              "name": "list all (fees invoice table)",
+              "name": "list all invoices (status=all)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -6177,7 +6204,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/studentFeeInvoice/all?paymentTab=all",
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=all",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -6187,13 +6214,83 @@
                   ],
                   "query": [
                     {
-                      "key": "paymentTab",
+                      "key": "status",
                       "value": "all",
-                      "description": "all | pending (unpaid+partial) | completed (paid)"
+                      "description": "all | pending | completed (alias: paymentTab)"
                     }
                   ]
                 },
-                "description": "Fees Invoice page table. No studentId/feePlan filter — all generated invoices for the institute. data[]: studentFeeInvoiceId, invoiceNo, studentName, scholarNumber, amount, paid, deposits, balanceDue, status (UNPAID/PAID/PARTIAL), paymentStatus, termName, createDate, dueDate."
+                "description": "**GET /studentFeeInvoice/all?status=**\n\n- **all** — every generated invoice\n- **pending** — unpaid + partial\n- **completed** — paid\n\n**data:** { status, invoices[] } — studentFeeInvoiceId, studentName, scholarNumber, amount, paid, balanceDue, paymentStatus, termName, createDate, dueDate."
+              },
+              "response": []
+            },
+            {
+              "name": "list all invoices (status=pending)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=pending",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending"
+                    }
+                  ]
+                },
+                "description": "Unpaid and partial invoices only. Same response shape as status=all."
+              },
+              "response": []
+            },
+            {
+              "name": "list all invoices (status=completed)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=completed",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "completed"
+                    }
+                  ]
+                },
+                "description": "Paid invoices only. Same response shape as status=all."
               },
               "response": []
             },
@@ -6228,7 +6325,7 @@
                     }
                   ]
                 },
-                "description": "Query: studentId (required). **V2 replacement for GET /student/:id/feeDetails.** data[]: studentFeeInvoiceId, termName, createDate, dueDate, amount, additionalFeesTotal, total, status, paymentStatus, totalPaid, balanceDue, additionalFees[{ name, amount }]."
+                "description": "**GET /studentFeeInvoice?studentId=** — v2 replacement for GET /student/:id/feeDetails.\n\n**data:** { student: { studentId, studentName, scholarNumber }, invoices[] } — each invoice: studentFeeInvoiceId, termName, total, paymentStatus, totalPaid, balanceDue, additionalFees[{ name, amount }]."
               },
               "response": []
             },
@@ -6364,7 +6461,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2: **GET /student/feePlanProfiles/all** (paginated, Fee Plan Initiate table) → create student → **studentFeeInvoice** per term. Profile dropdown: **GET /options/feePlans** or **GET /feePlanProfile/lookup**.",
+          "description": "Fee v2: **GET /student/feePlanProfiles/all** (paginated, Fee Plan Initiate table) → create student → **studentFeeInvoice** per term. Profile dropdown: **GET /options/feePlans**.",
           "item": [
             {
               "name": "1 fee plan profiles all (paginated)",

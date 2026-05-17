@@ -43,19 +43,6 @@ export async function createFeePlanProfile(data, options = {}) {
   return model.feePlanProfileModel.create(data, { transaction: options.transaction });
 }
 
-export async function findFeePlanProfileNamesByCourseSession(
-  instituteId,
-  courseSessionId,
-  options = {}
-) {
-  return model.feePlanProfileModel.findAll({
-    where: { instituteId, courseSessionId },
-    attributes: ["feePlanProfileId", "name"],
-    order: [["feePlanProfileId", "ASC"]],
-    transaction: options.transaction,
-  });
-}
-
 export async function findFeePlanProfilesByInstitute(instituteId, options = {}) {
   const { courseSessionId, transaction } = options;
   const where = { instituteId };
@@ -141,19 +128,17 @@ export async function countFeePlanProfilesByInstitute(instituteId, options = {})
   });
 }
 
-/** Profiles with at least one student_fee_invoice on any fee_plan_item (term). */
+/** Profiles assigned to at least one student (students.fee_plan_profile_id). */
 export async function countActiveFeePlanProfilesByInstitute(instituteId, options = {}) {
   const { transaction } = options;
   const [row] = await sequelize.query(
-    `SELECT COUNT(DISTINCT fpi.fee_plan_profile_id) AS activeCount
-     FROM student_fee_invoice sfi
-     INNER JOIN fee_plan_item fpi
-       ON fpi.fee_plan_item_id = sfi.fee_plan_item_id
-       AND fpi.institute_id = :instituteId
+    `SELECT COUNT(DISTINCT s.fee_plan_profile_id) AS activeCount
+     FROM students s
      INNER JOIN fee_plan_profile fpp
-       ON fpp.fee_plan_profile_id = fpi.fee_plan_profile_id
+       ON fpp.fee_plan_profile_id = s.fee_plan_profile_id
        AND fpp.institute_id = :instituteId
-     WHERE sfi.institute_id = :instituteId`,
+     WHERE s.institute_id = :instituteId
+       AND s.fee_plan_profile_id IS NOT NULL`,
     {
       replacements: { instituteId },
       type: QueryTypes.SELECT,
@@ -161,6 +146,29 @@ export async function countActiveFeePlanProfilesByInstitute(instituteId, options
     }
   );
   return Number(row?.activeCount ?? 0);
+}
+
+/** fee_plan_profile_id → number of students assigned. */
+export async function countStudentsGroupedByFeePlanProfile(instituteId, options = {}) {
+  const { transaction } = options;
+  const rows = await sequelize.query(
+    `SELECT s.fee_plan_profile_id AS feePlanProfileId, COUNT(*) AS studentCount
+     FROM students s
+     WHERE s.institute_id = :instituteId
+       AND s.fee_plan_profile_id IS NOT NULL
+     GROUP BY s.fee_plan_profile_id`,
+    {
+      replacements: { instituteId },
+      type: QueryTypes.SELECT,
+      transaction,
+    }
+  );
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.feePlanProfileId), Number(row.studentCount));
+  }
+  return map;
 }
 
 export async function countStudentFeeInvoicesForFeePlanProfile(
@@ -182,6 +190,57 @@ export async function countStudentFeeInvoicesForFeePlanProfile(
     ],
     transaction,
   });
+}
+
+/** fee_plan_profile_id → term invoice count (student_fee_invoice via fee_plan_item). */
+export async function countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId, options = {}) {
+  const { transaction } = options;
+  const rows = await sequelize.query(
+    `SELECT fpi.fee_plan_profile_id AS feePlanProfileId,
+            COUNT(sfi.student_fee_invoice_id) AS invoiceCount
+     FROM student_fee_invoice sfi
+     INNER JOIN fee_plan_item fpi
+       ON fpi.fee_plan_item_id = sfi.fee_plan_item_id
+       AND fpi.institute_id = :instituteId
+     WHERE sfi.institute_id = :instituteId
+       AND sfi.fee_plan_item_id IS NOT NULL
+     GROUP BY fpi.fee_plan_profile_id`,
+    {
+      replacements: { instituteId },
+      type: QueryTypes.SELECT,
+      transaction,
+    }
+  );
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.feePlanProfileId), Number(row.invoiceCount));
+  }
+  return map;
+}
+
+/** fee_plan_item_id → term invoice count for that installment. */
+export async function countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, options = {}) {
+  const { transaction } = options;
+  const rows = await sequelize.query(
+    `SELECT sfi.fee_plan_item_id AS feePlanItemId,
+            COUNT(sfi.student_fee_invoice_id) AS invoiceCount
+     FROM student_fee_invoice sfi
+     WHERE sfi.institute_id = :instituteId
+       AND sfi.fee_plan_item_id IS NOT NULL
+     GROUP BY sfi.fee_plan_item_id`,
+    {
+      replacements: { instituteId },
+      type: QueryTypes.SELECT,
+      transaction,
+    }
+  );
+
+  const map = new Map();
+  for (const row of rows) {
+    map.set(Number(row.feePlanItemId), Number(row.invoiceCount));
+  }
+  return map;
 }
 
 export async function removeInstallmentsForProfile(feePlanProfileId, instituteId, options = {}) {

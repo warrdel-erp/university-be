@@ -60,9 +60,14 @@ const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
 
-const listAllInvoicesQuerySchema = z.object({
-  paymentTab: z.enum(["all", "pending", "completed"]).optional(),
-});
+const listAllInvoicesQuerySchema = z
+  .object({
+    status: z.enum(["all", "pending", "completed"]).optional(),
+    paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+  })
+  .transform((d) => ({
+    status: d.status ?? d.paymentTab ?? "all",
+  }));
 
 router.post(
   "/",

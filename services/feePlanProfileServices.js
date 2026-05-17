@@ -91,7 +91,18 @@ async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transact
   return prepared;
 }
 
-function buildListRow(plainProfile, totalInvoices) {
+function buildFeePlanItemInvoiceRows(items, invoiceCountByItem) {
+  return (items ?? []).map((item) => {
+    const plain = toPlain(item);
+    return {
+      feePlanItemId: plain.feePlanItemId,
+      termName: plain.termName ?? null,
+      numberOfInvoices: invoiceCountByItem.get(plain.feePlanItemId) ?? 0,
+    };
+  });
+}
+
+function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invoiceCountByItem) {
   const items = plainProfile.feePlanItems ?? [];
   const termFees = decimalSum(items.map((i) => toMoneyNumber(i.amount)));
   let additionalFees = 0;
@@ -110,23 +121,34 @@ function buildListRow(plainProfile, totalInvoices) {
     termFees,
     additionalFees,
     totalFees: decimalAdd(termFees, additionalFees),
-    totalInvoices,
+    numberOfInvoices,
+    totalInvoices: numberOfInvoices,
+    feePlanItems: buildFeePlanItemInvoiceRows(items, invoiceCountByItem),
+    assignedStudentCount,
+    status: assignedStudentCount > 0 ? "active" : "inactive",
     instituteId: plainProfile.instituteId,
   };
 }
 
+function matchesPlanStatusFilter(assignedStudentCount, planStatus) {
+  if (planStatus === "active") return assignedStudentCount > 0;
+  if (planStatus === "inactive") return assignedStudentCount === 0;
+  return true;
+}
+
 async function buildFeePlanListRows(list, instituteId, transaction) {
-  const feePlans = [];
-  for (const row of list) {
+  const [studentCountByProfile, invoiceCountByProfile, invoiceCountByItem] = await Promise.all([
+    repo.countStudentsGroupedByFeePlanProfile(instituteId, { transaction }),
+    repo.countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId, { transaction }),
+    repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, { transaction }),
+  ]);
+
+  return list.map((row) => {
     const plain = toPlain(row);
-    const totalInvoices = await repo.countStudentFeeInvoicesForFeePlanProfile(
-      plain.feePlanProfileId,
-      instituteId,
-      { transaction }
-    );
-    feePlans.push(buildListRow(plain, totalInvoices));
-  }
-  return feePlans;
+    const assignedStudentCount = studentCountByProfile.get(plain.feePlanProfileId) ?? 0;
+    const numberOfInvoices = invoiceCountByProfile.get(plain.feePlanProfileId) ?? 0;
+    return buildListRow(plain, numberOfInvoices, assignedStudentCount, invoiceCountByItem);
+  });
 }
 
 export function formatFeePlanProfileDetail(row) {
@@ -166,25 +188,6 @@ export async function addFeePlanProfile(body, instituteId) {
   return formatFeePlanProfileDetail(full);
 }
 
-export async function lookupFeePlanProfilesByCourseSession(courseSessionId, instituteId) {
-  const mapping = await repo.findSessionCourseMappingForInstitute(courseSessionId, instituteId);
-  if (!mapping) {
-    throw httpError("courseSessionId not found or not in your institute", 400);
-  }
-
-  const rows = await repo.findFeePlanProfileNamesByCourseSession(instituteId, courseSessionId);
-  return {
-    courseSessionId,
-    profiles: rows.map((row) => {
-      const plain = toPlain(row);
-      return {
-        feePlanProfileId: plain.feePlanProfileId,
-        name: plain.name,
-      };
-    }),
-  };
-}
-
 export async function listFeePlanProfiles(instituteId, courseSessionId) {
   return sequelize.transaction(async (transaction) => {
     const mapping = await repo.findSessionCourseMappingForInstitute(
@@ -206,15 +209,20 @@ export async function listFeePlanProfiles(instituteId, courseSessionId) {
   });
 }
 
-export async function listAllFeePlanProfiles(instituteId) {
+export async function listAllFeePlanProfiles(instituteId, planStatus = "all") {
   return sequelize.transaction(async (transaction) => {
     const list = await repo.findFeePlanProfilesByInstitute(instituteId, { transaction });
     const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
-    return { feePlans };
+    const filtered =
+      planStatus === "all"
+        ? feePlans
+        : feePlans.filter((row) => matchesPlanStatusFilter(row.assignedStudentCount, planStatus));
+
+    return { status: planStatus, feePlans: filtered };
   });
 }
 
-/** Fees Invoice dashboard cards: active / inactive / all fee plan counts. */
+/** Fees Invoice dashboard cards: active = assigned to ≥1 student; inactive = none assigned. */
 export async function getFeePlanProfileSummary(instituteId) {
   const [allFeePlans, activeFeePlans] = await Promise.all([
     repo.countFeePlanProfilesByInstitute(instituteId),

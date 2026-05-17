@@ -34,6 +34,17 @@ function toPlain(row) {
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
+function formatStudentFeeInvoiceListStudent(student) {
+  const s = toPlain(student);
+  if (!s?.studentId) return null;
+
+  return {
+    studentId: s.studentId,
+    studentName: formatStudentDisplayName(s) || null,
+    scholarNumber: s.scholarNumber ?? null,
+  };
+}
+
 function formatStudentFeeInvoiceStudent(student) {
   const s = toPlain(student);
   if (!s?.studentId) return null;
@@ -315,10 +326,16 @@ export async function getStudentFeeInvoiceById(studentFeeInvoiceId, instituteId)
 }
 
 export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) {
-  const student = await repo.findStudentById(studentId, instituteId);
+  const student = await repo.findStudentById(studentId, instituteId, {
+    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
+  });
   if (!student) throw new Error("Student not found");
+
   const rows = await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId);
-  return rows.map((r) => formatStudentFeeInvoiceListRow(r));
+  return {
+    student: formatStudentFeeInvoiceListStudent(student),
+    invoices: rows.map((r) => formatStudentFeeInvoiceListRow(r)),
+  };
 }
 
 function formatStudentDisplayName(student) {
@@ -360,10 +377,13 @@ function formatFeesInvoiceTableRow(row) {
   };
 }
 
-export async function listAllStudentFeeInvoices(instituteId, filters = {}) {
-  const paymentStatuses = resolvePaymentStatusesFilter(filters.paymentTab);
+export async function listAllStudentFeeInvoices(instituteId, status = "all") {
+  const paymentStatuses = resolvePaymentStatusesFilter(status);
   const rows = await repo.findAllStudentFeeInvoicesByInstitute(instituteId, {
     paymentStatuses,
   });
-  return rows.map((row) => formatFeesInvoiceTableRow(row));
+  return {
+    status,
+    invoices: rows.map((row) => formatFeesInvoiceTableRow(row)),
+  };
 }

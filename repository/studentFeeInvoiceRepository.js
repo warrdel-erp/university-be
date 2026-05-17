@@ -62,10 +62,10 @@ export async function findFeePlanItemById(feePlanItemId, instituteId, options = 
 }
 
 export async function findStudentById(studentId, instituteId, options = {}) {
-  const { transaction } = options;
+  const { transaction, attributes } = options;
   return model.studentModel.findOne({
     where: { studentId, instituteId },
-    attributes: ["studentId", "instituteId", "feePlanProfileId"],
+    attributes: attributes ?? ["studentId", "instituteId", "feePlanProfileId"],
     transaction,
   });
 }

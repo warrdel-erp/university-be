@@ -3,7 +3,6 @@ import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import {
   addFeePlanProfile,
-  lookupFeePlanProfiles,
   getAllFeePlanProfile,
   getAllFeePlanProfiles,
   getFeePlanProfileSummary,
@@ -59,11 +58,17 @@ const updateBody = z
 
 const profileIdQuery = z.object({ feePlanProfileId: id });
 const listQuery = z.object({ courseSessionId: id });
+const listAllQuery = z
+  .object({
+    status: z.enum(["all", "active", "inactive"]).optional(),
+  })
+  .transform((d) => ({
+    status: d.status ?? "all",
+  }));
 
 router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
 router.get("/summary", userAuth, getFeePlanProfileSummary);
-router.get("/all", userAuth, getAllFeePlanProfiles);
-router.get("/lookup", userAuth, validate({ query: listQuery }), lookupFeePlanProfiles);
+router.get("/all", userAuth, validate({ query: listAllQuery }), getAllFeePlanProfiles);
 router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);
 router.get("/single", userAuth, validate({ query: profileIdQuery }), getSingleFeePlanProfileDetails);
 router.patch("/", userAuth, validate({ body: updateBody }), updateFeePlanProfile);
