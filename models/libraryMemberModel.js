@@ -80,16 +80,11 @@ export default sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
         }
     },
     {
         tableName: 'library_member',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );

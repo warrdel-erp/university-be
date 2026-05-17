@@ -10,8 +10,7 @@ import {
   addBookWithInventory,
   getAllBooks,
   getSingleBookDetails,
-  updateBook,
-  updateInventory,
+  updateBookWithInventory,
   deleteBook,
   deleteInventoryCopy,
   getAllIssuedBooks,
@@ -88,7 +87,6 @@ const bookSchema = z.object({
 
 const inventoryRowSchema = z.object({
   excisionNumber: z.string().optional().nullable(),
-  accessionNo: z.string().optional().nullable(),
   libraryAisleId: z.coerce.number(),
   libraryRackId: z.coerce.number(),
   libraryRowId: z.coerce.number(),
@@ -141,7 +139,6 @@ const updateBookSchema = z.object({
 const updateInventorySchema = z.object({
   inventoryId: z.coerce.number(),
   excisionNumber: z.string().optional().nullable(),
-  accessionNo: z.string().optional().nullable(),
   libraryAisleId: z.coerce.number().optional(),
   libraryRackId: z.coerce.number().optional(),
   libraryRowId: z.coerce.number().optional(),
@@ -156,6 +153,21 @@ const updateInventorySchema = z.object({
   netPrice: z.union([z.string(), z.coerce.number()]).optional().nullable(),
   currency: z.string().optional().nullable(),
 });
+
+const newInventoryRowSchema = inventoryRowSchema.extend({
+  libraryBookId: z.coerce.number().optional(),
+});
+
+const inventoryItemSchema = z.union([updateInventorySchema, newInventoryRowSchema]);
+
+const updateBookWithInventorySchema = z
+  .object({
+    book: updateBookSchema.optional(),
+    inventory: z.array(inventoryItemSchema).optional(),
+  })
+  .refine((val) => val.book || (val.inventory && val.inventory.length > 0), {
+    message: "At least one of `book` or `inventory` (non-empty array) must be provided",
+  });
 
 router.post("/", userAuth, validate({ body: addLibrarySchema }), addLibrary);
 
@@ -173,9 +185,12 @@ router.get("/allBook", userAuth, validate({ query: listBooksQuerySchema }), getA
 
 router.get("/singleBook", userAuth, validate({ query: libraryBookQuerySchema }), getSingleBookDetails);
 
-router.patch("/updateBook", userAuth, validate({ body: updateBookSchema }), updateBook);
-
-router.patch("/updateInventory", userAuth, validate({ body: updateInventorySchema }), updateInventory);
+router.patch(
+  "/updateBook",
+  userAuth,
+  validate({ body: updateBookWithInventorySchema }),
+  updateBookWithInventory,
+);
 
 router.delete("/deleteBook", userAuth, validate({ query: libraryBookQuerySchema }), deleteBook);
 

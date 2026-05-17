@@ -67,7 +67,7 @@ export async function addExamRoomCapacity(data, userId) {
     const { uniqueRoomIds, orderedRoomIds, roomOrderLookup } = normalizeRoomIds(validatedData.classRoomSectionIds);
 
     // 1. Fetch Student Count for the Exam
-    const exam = await examScheduleServices.getExamScheduleById(examScheduleId);
+    const exam = await examScheduleServices.getExamScheduleById(validatedData.examScheduleId);
     if (!exam) {
         throw new Error("Exam schedule not found");
     }

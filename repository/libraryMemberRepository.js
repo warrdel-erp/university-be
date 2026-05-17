@@ -29,30 +29,36 @@ export async function addMember(memberData,transaction) {
 export async function getMemberDetails(universityId) {
     try {
         const members = await model.libraryMemberModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","instituteId","createdBy","updatedBy"] },
+            attributes: { exclude: ["createdAt", "updatedAt", "instituteId", "createdBy", "updatedBy"] },
             include: [
-                {
-                    model: model.userModel,
-                    as: "userLibraryMember",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
                 {
                     model: model.studentModel,
                     as: "libraryMemberStudent",
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
                 },
                 {
                     model: model.employeeModel,
                     as: "libraryMemberEmployee",
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
                 },
                 {
                     model: model.libraryCreationModel,
                     as: "libraryMemberCreation",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                    required: true,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+                    include: [
+                        {
+                            model: model.instituteModel,
+                            as: "libraryCreationInstitute",
+                            required: true,
+                            attributes: ["instituteId", "instituteName", "universityId"],
+                            where: { universityId },
+                        },
+                    ],
                 },
-            ]
+            ],
         });
 
         return members;
@@ -63,37 +69,43 @@ export async function getMemberDetails(universityId) {
 }
 
 
-export async function getSingleMemberDetails(libraryCreationId,universityId) {
+export async function getSingleMemberDetails(libraryCreationId, universityId) {
     try {
-        const member = await model.libraryMemberModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
+        const members = await model.libraryMemberModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "instituteId", "createdBy", "updatedBy"] },
             where: { libraryCreationId },
             include: [
                 {
-                    model: model.userModel,
-                    as: "userLibraryMember",
-                    attributes: ["universityId", "userId"],
-                    // where: { universityId }
-                },
-                {
                     model: model.studentModel,
                     as: "libraryMemberStudent",
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
                 },
                 {
                     model: model.employeeModel,
                     as: "libraryMemberEmployee",
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
                 },
                 {
                     model: model.libraryCreationModel,
                     as: "libraryMemberCreation",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
+                    required: true,
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
+                    include: [
+                        {
+                            model: model.instituteModel,
+                            as: "libraryCreationInstitute",
+                            required: true,
+                            attributes: ["instituteId", "instituteName", "universityId"],
+                            where: { universityId },
+                        },
+                    ],
                 },
-            ]
+            ],
         });
 
-        return member;
+        return members;
     } catch (error) {
         console.error(`Error fetching single member details: ${libraryCreationId}`, error);
         throw error;
