@@ -5464,7 +5464,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary** (counts); **GET /all?status=** (all|active|inactive by student assignment)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; create student with feePlanProfileId; dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary** (counts); **GET /all?status=** (all|active|inactive by student assignment)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all** (list); **GET /student?studentId=** (detail); **POST /student** (create); **PATCH /student/:studentId** (update, assign feePlanProfileId); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -6461,7 +6461,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2: **GET /student/feePlanProfiles/all** (paginated, Fee Plan Initiate table) → create student → **studentFeeInvoice** per term. Profile dropdown: **GET /options/feePlans**.",
+          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** (initiate table) → **GET /student/all** (list) → **GET /student?studentId=** (detail) → **POST /student** (create with feePlanProfileId) → **PATCH /student/:studentId** (update). Profile dropdown: **GET /options/feePlans**. Then **studentFeeInvoice** per term.",
           "item": [
             {
               "name": "1 fee plan profiles all (paginated)",
@@ -6544,7 +6544,126 @@
               ]
             },
             {
-              "name": "2 create student (full details + feePlanProfileId)",
+              "name": "2 get all students (list)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "const rows = body.data || body.students || body;",
+                      "const list = Array.isArray(rows) ? rows : (rows && rows.students);",
+                      "if (Array.isArray(list) && list[0] && list[0].studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(list[0].studentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/all?search=all&acedmicYearId={{acedmicYear_id}}&page=1&limit=20",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "all",
+                      "description": "Search term or 'all'"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `acedmicYearId`, `page` (default 1), `limit` (default 10).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
+              },
+              "response": []
+            },
+            {
+              "name": "3 get single student details",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "const student = body.data || body.student || body;",
+                      "const id = student && student.studentId;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('student_id', String(id));",
+                      "  if (student.feePlanProfileId) {",
+                      "    pm.collectionVariables.set('feePlanProfile_id', String(student.feePlanProfileId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student?studentId={{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /student?studentId=**\n\nReturns full student record (addresses, entrance, course, session, **feePlanProfileId**, etc.) for the authenticated university.\n\n404 if not found. Sets `student_id` and `feePlanProfile_id` when present."
+              },
+              "response": []
+            },
+            {
+              "name": "4 create student (full details + feePlanProfileId)",
               "event": [
                 {
                   "listen": "test",
@@ -6597,7 +6716,61 @@
                     }
                   }
                 },
-                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 lookup fee plan profiles** first. Then **studentFeeInvoice → generate** per term."
+                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
+              },
+              "response": []
+            },
+            {
+              "name": "5 update student (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/student/{{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "{{student_id}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe Updated\",\n  \"fatherName\": \"Michael Doe\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"email\": \"student.updated@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**PATCH /student/:studentId**\n\n`studentId` is the **path** param (`{{student_id}}`), not the body.\n\n**Required in body:** universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId.\n\n**Optional:** feePlanProfileId (assign/change fee v2 plan), names, contact fields, addressDetails, entranceDetails, files (multipart if used).\n\nUse after **3 get single** or **4 create** so `student_id` is set."
               },
               "response": []
             }

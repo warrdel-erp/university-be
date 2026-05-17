@@ -819,11 +819,13 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
 
 export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
-  const settingKey = "studentDocument";
-  const getstudentDocuments = await getSettingValue(settingKey);
-  const studentRequiredDocuments = getstudentDocuments.setting_value;
 
   try {
+    const settingKey = "studentDocument";
+    const getstudentDocuments = await getSettingValue(settingKey);
+    const studentRequiredDocuments =
+      getstudentDocuments?.dataValues?.setting_value ??
+      getstudentDocuments?.setting_value;
     // Upload files if present
     if (files && typeof files === "object") {
       for (const key of Object.keys(files)) {

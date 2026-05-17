@@ -89,18 +89,24 @@ export const importStudentData = async (req, res) => {
 
 // update student 
 export const updateStudentDetails = async (req, res) => {
-    const { studentId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId } = req.body;
+    const studentId = Number(req.params.studentId);
     const info = req.body;
     const file = req.files;
+    const { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId } = info;
     try {
-        if (!(studentId && universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)) {
-            res.status(400).send("student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
+        if (
+            !studentId ||
+            !(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)
+        ) {
+            return res.status(400).send(
+                "student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required"
+            );
         }
         const result = await studentService.updateStudentDetails(studentId, info, file);
-        res.status(200).send(result);
+        return res.status(200).send(result);
     } catch (error) {
-        console.error(`Error in updating student Id ${studentId} and ${campusId}:`, error);
-        res.status(500).send("Internal Server Error");
+        console.error(`Error in updating student Id ${studentId}:`, error);
+        return res.status(500).send("Internal Server Error");
     }
 };
 
