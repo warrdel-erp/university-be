@@ -1,6 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
-import additionalFeeModel from "./additionalFeeModel.js";
+import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
 export default sequelize.define(
@@ -29,18 +29,20 @@ export default sequelize.define(
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true,
     },
-    additionalFeeId: {
+    feeTypeCatalogId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "additional_fee_id",
+      field: "fee_type_catalog_id",
       references: {
-        model: additionalFeeModel,
-        key: "additional_fee_id",
+        model: feeTypeCatalogModel,
+        key: "fee_type_catalog_id",
       },
     },
   },
   {
     tableName: "student_invoice_additional_fee",
+    charset: "latin1",
+    collate: "latin1_swedish_ci",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

@@ -100,12 +100,27 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body, instituteId) 
 
 export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId) {
   await sequelize.transaction(async (transaction) => {
-    const ok = await feeTypeCatalogRepo.deleteFeeTypeCatalog(feeTypeCatalogId, instituteId, {
+    const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, instituteId, {
       transaction,
     });
-    if (!ok) {
+    if (!existing) {
       throw new Error("Fee type catalog not found or not in your institute");
     }
+
+    const [planLineCount, invoiceLineCount] = await Promise.all([
+      feeTypeCatalogRepo.countPlanAdditionalFeesForCatalog(feeTypeCatalogId, { transaction }),
+      feeTypeCatalogRepo.countInvoiceAdditionalFeesForCatalog(feeTypeCatalogId, { transaction }),
+    ]);
+    if (planLineCount > 0 || invoiceLineCount > 0) {
+      const parts = [];
+      if (planLineCount > 0) parts.push(`${planLineCount} fee plan line(s)`);
+      if (invoiceLineCount > 0) parts.push(`${invoiceLineCount} invoice line(s)`);
+      throw new Error(`Cannot delete: catalog is referenced by ${parts.join(" and ")}`);
+    }
+
+    await feeTypeCatalogRepo.deleteFeeTypeCatalog(feeTypeCatalogId, instituteId, {
+      transaction,
+    });
   });
 
   return true;

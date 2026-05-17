@@ -10,16 +10,9 @@ const additionalFeeLineInclude = {
   attributes: { exclude: excludeTs },
   include: [
     {
-      model: model.additionalFeeModel,
-      as: "additionalFee",
-      attributes: ["additionalFeeId", "amount", "feeTypeCatalogId", "feePlanItemId"],
-      include: [
-        {
-          model: model.feeTypeCatalogModel,
-          as: "feeTypeCatalog",
-          attributes: ["feeTypeCatalogId", "name", "description", "amount"],
-        },
-      ],
+      model: model.feeTypeCatalogModel,
+      as: "feeTypeCatalog",
+      attributes: ["feeTypeCatalogId", "name", "description", "amount"],
     },
   ],
 };
@@ -100,14 +93,6 @@ export async function bulkCreateStudentInvoiceAdditionalFees(rows, options = {})
   return model.studentInvoiceAdditionalFeeModel.bulkCreate(rows, {
     transaction: options.transaction,
   });
-}
-
-export async function createAdditionalFee(data, options = {}) {
-  return model.additionalFeeModel.create(data, { transaction: options.transaction });
-}
-
-export async function bulkCreateAdditionalFees(rows, options = {}) {
-  return model.additionalFeeModel.bulkCreate(rows, { transaction: options.transaction });
 }
 
 export async function findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId, options = {}) {

@@ -28,6 +28,8 @@ async function validateCourseSession(courseSessionId, instituteId, academicYearI
     throw new Error("courseSessionId not found or not in your institute");
   }
 
+  if (academicYearId === undefined) return;
+
   const withSession = await repo.findSessionCourseMappingWithSession(courseSessionId, instituteId, {
     transaction,
   });
@@ -112,12 +114,6 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
     status: assignedStudentCount > 0 ? "active" : "inactive",
     instituteId: plainProfile.instituteId,
   };
-}
-
-function matchesPlanStatusFilter(assignedStudentCount, planStatus) {
-  if (planStatus === "active") return assignedStudentCount > 0;
-  if (planStatus === "inactive") return assignedStudentCount === 0;
-  return true;
 }
 
 async function buildFeePlanListRows(list, instituteId, transaction) {
@@ -254,14 +250,28 @@ export async function listFeePlanProfiles(instituteId, courseSessionId) {
 
 export async function listAllFeePlanProfiles(instituteId, planStatus = "all") {
   return sequelize.transaction(async (transaction) => {
-    const list = await repo.findFeePlanProfilesByInstitute(instituteId, { transaction });
-    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
-    const filtered =
-      planStatus === "all"
-        ? feePlans
-        : feePlans.filter((row) => matchesPlanStatusFilter(row.assignedStudentCount, planStatus));
+    const assignedProfileIds = await repo.findDistinctAssignedFeePlanProfileIds(instituteId, {
+      transaction,
+    });
 
-    return { status: planStatus, feePlans: filtered };
+    let list;
+    if (planStatus === "active") {
+      list = await repo.findFeePlanProfilesByInstitute(instituteId, {
+        feePlanProfileIds: assignedProfileIds,
+        transaction,
+      });
+    } else if (planStatus === "inactive") {
+      list = await repo.findFeePlanProfilesByInstitute(instituteId, {
+        excludeFeePlanProfileIds: assignedProfileIds,
+        transaction,
+      });
+    } else {
+      list = await repo.findFeePlanProfilesByInstitute(instituteId, { transaction });
+    }
+
+    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
+
+    return { status: planStatus, feePlans };
   });
 }
 

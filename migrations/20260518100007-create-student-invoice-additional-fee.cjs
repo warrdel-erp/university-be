@@ -19,10 +19,10 @@ module.exports = {
       },
       amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
       waiver: { type: Sequelize.DECIMAL(12, 2), allowNull: true },
-      additional_fee_id: {
+      fee_type_catalog_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: { model: 'additional_fee', key: 'additional_fee_id' },
+        references: { model: 'fee_type_catalog', key: 'fee_type_catalog_id' },
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
       },
@@ -36,7 +36,7 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
-    });
+    }, { charset: 'latin1', collate: 'latin1_swedish_ci' });
   },
 
   async down(queryInterface) {

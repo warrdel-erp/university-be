@@ -62,7 +62,7 @@ function formatStudentFeeInvoiceStudent(student) {
 }
 
 function mapAdditionalFeeLine(line) {
-  const catalog = line.additionalFee?.feeTypeCatalog ?? {};
+  const catalog = line.feeTypeCatalog ?? {};
   const amount = toMoneyNumber(line.amount);
   const waiver =
     line.waiver === undefined || line.waiver === null ? null : toMoneyNumber(line.waiver);
@@ -70,8 +70,7 @@ function mapAdditionalFeeLine(line) {
 
   return {
     studentInvoiceAdditionalFeeId: line.studentInvoiceAdditionalFeeId,
-    additionalFeeId: line.additionalFeeId,
-    feeTypeCatalogId: catalog.feeTypeCatalogId ?? line.additionalFee?.feeTypeCatalogId ?? null,
+    feeTypeCatalogId: line.feeTypeCatalogId ?? catalog.feeTypeCatalogId ?? null,
     name: catalog.name ?? null,
     description: catalog.description ?? null,
     catalogAmount: catalog.amount != null ? toMoneyNumber(catalog.amount) : null,
@@ -144,7 +143,10 @@ function formatStudentFeeInvoiceListRow(row) {
   const baseAmount = toMoneyNumber(p.amount);
   const additionalFees = (p.invoiceAdditionalFees ?? []).map(mapAdditionalFeeLine);
   const additionalFeesTotal = decimalSum(additionalFees.map((l) => l.netAmount));
-  const total = decimalSum([baseAmount, additionalFeesTotal]);
+  const isAdhocInvoice = p.feePlanItemId === null;
+  const total = isAdhocInvoice
+    ? toMoneyNumber(p.total)
+    : decimalSum([baseAmount, additionalFeesTotal]);
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
@@ -217,12 +219,15 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
 
     if (additionalFees.length > 0) {
       await repo.bulkCreateStudentInvoiceAdditionalFees(
-        additionalFees.map((af) => ({
-          studentFeeInvoiceId: invoice.studentFeeInvoiceId,
-          additionalFeeId: af.additionalFeeId,
-          amount: toMoneyNumber(af.amount),
-          waiver: null,
-        })),
+        additionalFees.map((af) => {
+          const plain = toPlain(af);
+          return {
+            studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+            feeTypeCatalogId: plain.feeTypeCatalogId,
+            amount: toMoneyNumber(plain.amount),
+            waiver: null,
+          };
+        }),
         { transaction }
       );
     }
@@ -236,8 +241,7 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
 
 /**
  * Adhoc invoice from fee type catalog lines (misconduct, fine, etc.).
- * One additional_fee per fee line; invoice total = sum of (amount - waiver) per line.
- * fee_plan_item_id NULL on student_fee_invoice and additional_fee.
+ * Invoice lines stored on student_invoice_additional_fee with fee_type_catalog_id directly.
  */
 export async function generateStudentFeeInvoiceFromAdditionalFees(
   { studentId, feeTypeCatalogs, total, createDate, dueDate },
@@ -273,16 +277,6 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
       throw new Error("One or more fee type catalog entries not found");
     }
 
-    const additionalFeeRows = await repo.bulkCreateAdditionalFees(
-      feeLines.map((line) => ({
-        amount: line.amount,
-        feeTypeCatalogId: line.feeTypeCatalogId,
-        feePlanItemId: null,
-        instituteId,
-      })),
-      { transaction }
-    );
-
     const invoice = await repo.createStudentFeeInvoice(
       {
         studentId,
@@ -299,11 +293,11 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
     );
 
     await repo.bulkCreateStudentInvoiceAdditionalFees(
-      additionalFeeRows.map((af, index) => ({
+      feeLines.map((line) => ({
         studentFeeInvoiceId: invoice.studentFeeInvoiceId,
-        additionalFeeId: af.additionalFeeId,
-        amount: feeLines[index].amount,
-        waiver: feeLines[index].waiver,
+        feeTypeCatalogId: line.feeTypeCatalogId,
+        amount: line.amount,
+        waiver: line.waiver,
       })),
       { transaction }
     );

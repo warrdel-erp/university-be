@@ -65,6 +65,22 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, instituteId, payloa
   return affected;
 }
 
+export async function countPlanAdditionalFeesForCatalog(feeTypeCatalogId, options = {}) {
+  const { transaction } = options;
+  return model.additionalFeeModel.count({
+    where: { feeTypeCatalogId },
+    transaction,
+  });
+}
+
+export async function countInvoiceAdditionalFeesForCatalog(feeTypeCatalogId, options = {}) {
+  const { transaction } = options;
+  return model.studentInvoiceAdditionalFeeModel.count({
+    where: { feeTypeCatalogId },
+    transaction,
+  });
+}
+
 export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId, options = {}) {
   const { transaction } = options;
   const deleted = await model.feeTypeCatalogModel.destroy({

@@ -47,6 +47,8 @@ export default sequelize.define(
   },
   {
     tableName: "additional_fee",
+    charset: "latin1",
+    collate: "latin1_swedish_ci",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

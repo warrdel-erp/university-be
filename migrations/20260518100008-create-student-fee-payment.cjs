@@ -48,7 +48,7 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
-    });
+    }, { charset: 'latin1', collate: 'latin1_swedish_ci' });
 
     await queryInterface.addIndex('student_fee_payment', ['student_fee_invoice_id'], {
       name: 'idx_student_fee_payment_invoice',

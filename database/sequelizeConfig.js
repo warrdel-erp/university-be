@@ -9,6 +9,10 @@ const sequelize = new Sequelize(
     {
         host: dbConfig.HOST,
         dialect: dbConfig.dialect,
+        define: {
+            charset: 'latin1',
+            collate: 'latin1_swedish_ci',
+        },
         operatorsAliases: false,
         logging: false,
         pool: {

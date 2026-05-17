@@ -62,11 +62,34 @@ export async function createFeePlanProfile(data, options = {}) {
   return model.feePlanProfileModel.create(data, { transaction: options.transaction });
 }
 
+/** Distinct fee_plan_profile_id values assigned on students for this institute. */
+export async function findDistinctAssignedFeePlanProfileIds(instituteId, options = {}) {
+  const { transaction } = options;
+  const rows = await model.studentModel.findAll({
+    attributes: ["feePlanProfileId"],
+    where: {
+      instituteId,
+      feePlanProfileId: { [Op.ne]: null },
+    },
+    group: ["feePlanProfileId"],
+    raw: true,
+    transaction,
+  });
+
+  return rows.map((row) => Number(row.feePlanProfileId)).filter((id) => id > 0);
+}
+
 export async function findFeePlanProfilesByInstitute(instituteId, options = {}) {
-  const { courseSessionId, transaction } = options;
+  const { courseSessionId, feePlanProfileIds, excludeFeePlanProfileIds, transaction } = options;
   const where = { instituteId };
   if (courseSessionId != null) {
     where.courseSessionId = courseSessionId;
+  }
+  if (feePlanProfileIds != null) {
+    if (feePlanProfileIds.length === 0) return [];
+    where.feePlanProfileId = { [Op.in]: feePlanProfileIds };
+  } else if (excludeFeePlanProfileIds?.length) {
+    where.feePlanProfileId = { [Op.notIn]: excludeFeePlanProfileIds };
   }
   return model.feePlanProfileModel.findAll({
     where,
@@ -149,27 +172,10 @@ export async function countFeePlanProfilesByInstitute(instituteId, options = {})
   });
 }
 
-/** Profiles assigned to at least one student (students.fee_plan_profile_id). */
+/** Distinct fee plan profiles linked via students.fee_plan_profile_id. */
 export async function countActiveFeePlanProfilesByInstitute(instituteId, options = {}) {
-  const { transaction } = options;
-  return model.studentModel.count({
-    where: {
-      instituteId,
-      feePlanProfileId: { [Op.ne]: null },
-    },
-    include: [
-      {
-        model: model.feePlanProfileModel,
-        as: "studentFeePlanProfile",
-        where: { instituteId },
-        required: true,
-        attributes: [],
-      },
-    ],
-    distinct: true,
-    col: "fee_plan_profile_id",
-    transaction,
-  });
+  const ids = await findDistinctAssignedFeePlanProfileIds(instituteId, options);
+  return ids.length;
 }
 
 /** fee_plan_profile_id → number of students assigned. */
@@ -181,14 +187,15 @@ export async function countStudentsGroupedByFeePlanProfile(instituteId, options 
       instituteId,
       feePlanProfileId: { [Op.ne]: null },
     },
-    group: ["fee_plan_profile_id"],
+    group: ["feePlanProfileId"],
     raw: true,
     transaction,
   });
 
   const map = new Map();
   for (const row of rows) {
-    map.set(Number(row.feePlanProfileId), Number(row.studentCount));
+    const profileId = Number(row.feePlanProfileId ?? row.fee_plan_profile_id);
+    map.set(profileId, Number(row.studentCount));
   }
   return map;
 }

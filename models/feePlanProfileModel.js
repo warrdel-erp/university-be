@@ -43,6 +43,8 @@ export default sequelize.define(
   },
   {
     tableName: "fee_plan_profile",
+    charset: "latin1",
+    collate: "latin1_swedish_ci",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

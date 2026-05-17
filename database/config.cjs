@@ -9,7 +9,11 @@ module.exports = {
     database: process.env.MYSQL_DATABASE_NAME || "university_db",
     host: process.env.HOST || "localhost",
     dialect: "mysql",
-    logging: false
+    logging: false,
+    define: {
+      charset: "latin1",
+      collate: "latin1_swedish_ci",
+    },
   },
 
   production: {
@@ -17,6 +21,10 @@ module.exports = {
     password: process.env.PROD_DB_PASS,
     database: process.env.PROD_DB_NAME,
     host: process.env.PROD_DB_HOST,
-    dialect: "mysql"
-  }
+    dialect: "mysql",
+    define: {
+      charset: "latin1",
+      collate: "latin1_swedish_ci",
+    },
+  },
 };

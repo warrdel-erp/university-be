@@ -60,7 +60,7 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
-    });
+    }, { charset: 'latin1', collate: 'latin1_swedish_ci' });
   },
 
   async down(queryInterface) {
