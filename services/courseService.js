@@ -34,46 +34,25 @@ export const getCourseWithSubjects = async (universityId, instituteId, acedmicYe
 
 /**
  * Get course with its sessions
- * @param {number} courseId 
- * @param {number} universityId 
- * @param {number} [acedmicYearId]
+ * @param {number} courseId
+ * @param {number} universityId
+ * @param {number} [acedmicYearId] Academic year id (matches DB / Sequelize spelling).
+ * @param {number} [instituteIdFromUser] User default institute id for scoping class sections.
  * @returns {Promise<Object>}
  */
-export const getCourseWithSessions = async (courseId, universityId, acedmicYearId) => {
+export const getCourseWithSessions = async (
+    courseId,
+    universityId,
+    acedmicYearId,
+    instituteIdFromUser
+) => {
     try {
-        const course = await courseRepository.getCourseByIdWithSessions(courseId, universityId, acedmicYearId);
-        if (!course) return null;
-
-        const courseData = course.get({ plain: true });
-        const totalTerms = courseData.totalTerms || 0;
-
-        if (courseData.sessionCourseMappings) {
-            courseData.sessionCourseMappings.forEach(mapping => {
-                if (mapping.session) {
-                    const existingTerms = new Set();
-                    if (mapping.session.classes) {
-                        mapping.session.classes.forEach(cls => {
-                            if (cls.term) {
-                                existingTerms.add(cls.term);
-                            }
-                        });
-                    }
-
-                    const missingTerms = [];
-                    for (let i = 1; i <= totalTerms; i++) {
-                        if (!existingTerms.has(i)) {
-                            missingTerms.push(courseData.termType + " " + i);
-                        }
-                    }
-                    mapping.session.missingTerms = missingTerms;
-
-                    // remove classes from session
-                    delete mapping.session.classes;
-                }
-            });
-        }
-
-        return courseData;
+        return await courseRepository.getCourseWithSessionsData(
+            courseId,
+            universityId,
+            acedmicYearId,
+            instituteIdFromUser
+        );
     } catch (error) {
         console.error('Error in Course Service (getCourseWithSessions):', error);
         throw error;
