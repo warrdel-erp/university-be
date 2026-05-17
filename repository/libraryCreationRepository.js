@@ -201,9 +201,10 @@ export async function getAllBooks(universityId, libraryCreationId, libraryFloorI
   });
 }
 
-export async function getSingleBookDetails(libraryBookId) {
+export async function getSingleBookDetails(libraryBookId, transaction) {
   return await model.libraryBookModel.findOne({
     where: { libraryBookId },
+    transaction,
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
@@ -255,10 +256,11 @@ export async function getSingleBookDetails(libraryBookId) {
   });
 }
 
-export async function updateBook(libraryBookId, data) {
+export async function updateBook(libraryBookId, data, transaction) {
   try {
     const result = await model.libraryBookModel.update(data, {
       where: { libraryBookId },
+      transaction,
     });
 
     if (result[0] === 0) {
@@ -272,10 +274,11 @@ export async function updateBook(libraryBookId, data) {
   }
 }
 
-export async function updateInventory(inventoryId, data) {
+export async function updateInventory(inventoryId, data, transaction) {
   try {
     const result = await model.libraryBookInventoryModel.update(data, {
       where: { inventoryId },
+      transaction,
     });
 
     if (result[0] === 0) {
@@ -335,18 +338,23 @@ export async function deleteInventoryCopy(inventoryId) {
 }
 
 /** Soft-deletes all inventory rows for a book except those in keepInventoryIds. Empty keepInventoryIds deletes every copy for the book. */
-export async function deleteInventoryCopiesForBookExceptIds(libraryBookId, keepInventoryIds) {
+export async function deleteInventoryCopiesForBookExceptIds(
+  libraryBookId,
+  keepInventoryIds,
+  transaction,
+) {
   const keep = [...new Set((keepInventoryIds || []).map(Number).filter((n) => !Number.isNaN(n)))];
   const where = { libraryBookId };
   if (keep.length > 0) {
     where.inventoryId = { [Op.notIn]: keep };
   }
-  return await model.libraryBookInventoryModel.destroy({ where });
+  return await model.libraryBookInventoryModel.destroy({ where, transaction });
 }
 
-export async function getLibraryBookIdByInventoryId(inventoryId) {
+export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
   const row = await model.libraryBookInventoryModel.findByPk(inventoryId, {
     attributes: ["libraryBookId"],
+    transaction,
   });
   return row?.libraryBookId ?? null;
 }

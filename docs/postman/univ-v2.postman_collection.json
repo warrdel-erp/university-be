@@ -4841,12 +4841,12 @@
     },
     {
       "name": "library creation",
-      "description": "Library creation and inventory APIs under `/libraryCreation`.",
+      "description": "Library APIs under `/libraryCreation`. DB: Main Library id=1, Floor 1 id=1, book **Introduction to Algorithms** id=14, inventory **ACC-1001** id=11, aisle/rack/row id=1.",
       "variable": [
-        { "key": "libraryCreation_id", "value": "1", "type": "string" },
-        { "key": "libraryFloor_id", "value": "1", "type": "string" },
-        { "key": "libraryBook_id", "value": "1", "type": "string" },
-        { "key": "inventory_id", "value": "1", "type": "string" }
+        { "key": "libraryCreation_id", "value": "1", "type": "string", "description": "Main Library" },
+        { "key": "libraryFloor_id", "value": "1", "type": "string", "description": "Floor 1" },
+        { "key": "libraryBook_id", "value": "14", "type": "string", "description": "Introduction to Algorithms" },
+        { "key": "inventory_id", "value": "11", "type": "string", "description": "ACC-1001" }
       ],
       "item": [
         {
@@ -5209,6 +5209,282 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"message\": \"Books uploaded successfully\",\n  \"created\": 10,\n  \"failed\": 0\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "library member",
+      "description": "Library member APIs (`/libraryMember`). IDs from DB `production_univeristy_db` (May 2026): library **Main Library** id=1; student **John Doe** id=2153; employee **parul ikka** id=95; member **ASA-L1-STU-00001** id=7; add item **Introduction to Algorithms** id=1. Run **add member** before update/delete if id 7 removed. After **issue book**, set `libraryIssueBook_id` from **get all issued books**.",
+      "variable": [
+        { "key": "libraryCreation_id", "value": "1", "type": "string", "description": "Main Library" },
+        { "key": "libraryMember_id", "value": "7", "type": "string", "description": "ASA-L1-STU-00001" },
+        { "key": "libraryAddItem_id", "value": "1", "type": "string", "description": "Introduction to Algorithms" },
+        { "key": "libraryIssueBook_id", "value": "1", "type": "string", "description": "Set after issue book" },
+        { "key": "student_id", "value": "2153", "type": "string", "description": "John Doe" },
+        { "key": "employee_id", "value": "95", "type": "string", "description": "parul ikka" }
+      ],
+      "item": [
+        {
+          "name": "add member (student)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": 1,\n  \"memberType\": \"Student\",\n  \"studentId\": 2153\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryMember", "host": ["{{baseurl}}"], "path": ["libraryMember"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Member Add Successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "add member (employee)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": 1,\n  \"memberType\": \"Employee\",\n  \"employeeId\": 95\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryMember", "host": ["{{baseurl}}"], "path": ["libraryMember"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Member Add Successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryMember", "host": ["{{baseurl}}"], "path": ["libraryMember"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryMemberId\": 7,\n    \"libraryCreationId\": 1,\n    \"memberType\": \"Student\",\n    \"memberId\": \"ASA-L1-STU-00001\",\n    \"studentId\": 2153,\n    \"employeeId\": null,\n    \"libraryMemberStudent\": {\n      \"student_id\": 2153,\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"scholarNumber\": \"Asa@rj03/BARCH/25/100003\"\n    },\n    \"libraryMemberCreation\": {\n      \"libraryCreationId\": 1,\n      \"name\": \"Main Library\",\n      \"instituteId\": 12\n    }\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get members by library",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember/single?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember", "single"],
+              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"libraryMemberId\": 7,\n    \"libraryCreationId\": 1,\n    \"memberType\": \"Student\",\n    \"memberId\": \"ASA-L1-STU-00001\",\n    \"studentId\": 2153\n  }\n]"
+            },
+            {
+              "name": "404 — not found",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Member not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "update member",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryMemberId\": 7,\n  \"memberType\": \"Student\",\n  \"studentId\": 2152,\n  \"libraryCreationId\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryMember", "host": ["{{baseurl}}"], "path": ["libraryMember"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Member Creation update succesfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember?libraryMemberId={{libraryMember_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"],
+              "query": [{ "key": "libraryMemberId", "value": "{{libraryMember_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Delete successful for Member creation ID 1\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "issue book",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryAddItemId\": 1,\n  \"libraryMemberId\": 7\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryMember/bookIssue", "host": ["{{baseurl}}"], "path": ["libraryMember", "bookIssue"] }
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"book Issue Successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "get all issued books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": { "raw": "{{baseurl}}/libraryMember/getAllIssueBook", "host": ["{{baseurl}}"], "path": ["libraryMember", "getAllIssueBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"issueDate\": \"2026-05-16T10:00:00.000Z\",\n    \"returnDate\": null,\n    \"status\": \"Issue\",\n    \"memberBookIssue\": {\n      \"libraryMemberId\": 7,\n      \"memberId\": \"ASA-L1-STU-00001\",\n      \"memberType\": \"Student\",\n      \"studentId\": 2153\n    },\n    \"addItemBookIssue\": {\n      \"name\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"publisher\": \"MIT Press\"\n    }\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "get books by member",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember/memberBook?libraryMemberId={{libraryMember_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember", "memberBook"],
+              "query": [{ "key": "libraryMemberId", "value": "{{libraryMember_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "[\n  {\n    \"issueDate\": \"2026-05-16T10:00:00.000Z\",\n    \"status\": \"Issue\",\n    \"addItemBookIssue\": { \"name\": \"Introduction to Algorithms\" }\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "update issue status (return)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryIssueBookId\": 1,\n  \"status\": \"returned\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseurl}}/libraryMember/updateStatusBook", "host": ["{{baseurl}}"], "path": ["libraryMember", "updateStatusBook"] }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Book update succesfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "delete issued book",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember/deleteBook?libraryIssueBookId={{libraryIssueBook_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember", "deleteBook"],
+              "query": [{ "key": "libraryIssueBookId", "value": "{{libraryIssueBook_id}}" }]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Delete successful for Member creation ID 1\"\n}"
             }
           ]
         }

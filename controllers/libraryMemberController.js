@@ -29,9 +29,10 @@ export async function getSingleMemberDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const { libraryCreationId } = req.query;
-        const Member = await memberCreation.getSingleMemberDetails(libraryCreationId,universityId);
-        if (Member) {
-            res.status(200).json(Member);
+
+        const members = await memberCreation.getSingleMemberDetails(libraryCreationId, universityId);
+        if (members?.length) {
+            res.status(200).json(members);
         } else {
             res.status(404).json({ message: "Member not found" });
         }

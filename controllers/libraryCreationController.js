@@ -114,7 +114,7 @@ export async function addBookWithInventory(req, res) {
             return res.status(400).json({ message: "At least one inventory row is required" });
         }
 
-        const result = await libraryCreation.addBookWithInventory(
+        const { libraryBookId } = await libraryCreation.addBookWithInventory(
             book,
             inventoryList,
             createdBy,
@@ -123,7 +123,7 @@ export async function addBookWithInventory(req, res) {
 
         res.status(201).json({
             message: "Book & Inventory added successfully",
-            result
+            libraryBookId,
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -203,135 +203,25 @@ export async function updateInventory(req, res) {
 
 export async function updateBookWithInventory(req, res) {
     try {
-        const userId = req.user.userId;
-        const { book, inventory } = req.body;
-
-        const inventoryKeyPresent = "inventory" in req.body;
-        const inventoryList = Array.isArray(inventory)
-            ? inventory
-            : inventory
-                ? [inventory]
-                : [];
-
-        if (!book && inventoryList.length === 0) {
-            return res
-                .status(400)
-                .json({ message: "At least one of `book` or `inventory` must be provided" });
-        }
-
-        const response = {};
-
-        if (book) {
-            const { libraryBookId, ...bookData } = book;
-            if (!libraryBookId) {
-                return res.status(400).json({ message: "book.libraryBookId is required" });
-            }
-            bookData.updatedBy = userId;
-            await libraryCreation.updateBook(libraryBookId, bookData);
-            const bookRow = await libraryCreation.getSingleBookDetails(libraryBookId);
-            response.book = bookRow ? bookRow.get({ plain: true }) : null;
-        }
-
-        let resolvedLibraryBookId = book?.libraryBookId ?? null;
-        if (!resolvedLibraryBookId && inventoryList.length > 0) {
-            for (const inv of inventoryList) {
-                if (inv.libraryBookId) {
-                    resolvedLibraryBookId = inv.libraryBookId;
-                    break;
-                }
-            }
-        }
-        if (!resolvedLibraryBookId && inventoryList.length > 0) {
-            for (const inv of inventoryList) {
-                if (inv.inventoryId) {
-                    resolvedLibraryBookId = await libraryCreation.getLibraryBookIdByInventoryId(
-                        inv.inventoryId,
-                    );
-                    break;
-                }
-            }
-        }
-
-        let removedInventoryCount = 0;
-        if (
-            inventoryKeyPresent &&
-            Array.isArray(req.body.inventory) &&
-            resolvedLibraryBookId
-        ) {
-            const keepIds = [
-                ...new Set(
-                    inventoryList.map((inv) => inv.inventoryId).filter((id) => id != null),
-                ),
-            ];
-            if (req.body.inventory.length === 0) {
-                removedInventoryCount = await libraryCreation.deleteInventoryCopiesForBookExceptIds(
-                    resolvedLibraryBookId,
-                    [],
-                );
-            } else if (keepIds.length > 0) {
-                removedInventoryCount = await libraryCreation.deleteInventoryCopiesForBookExceptIds(
-                    resolvedLibraryBookId,
-                    keepIds,
-                );
-            }
-            if (removedInventoryCount > 0) {
-                response.removedInventoryCount = removedInventoryCount;
-            }
-        }
-
-        if (inventoryList.length > 0) {
-            const inventoryResults = [];
-
-            for (const inv of inventoryList) {
-                // UPDATE path: inventoryId present
-                if (inv.inventoryId) {
-                    const { inventoryId, ...inventoryData } = inv;
-                    inventoryData.updatedBy = userId;
-                    const result = await libraryCreation.updateInventory(
-                        inventoryId,
-                        inventoryData,
-                    );
-                    inventoryResults.push({ action: "updated", inventoryId, result });
-                    continue;
-                }
-
-                // CREATE path: no inventoryId — add a new copy
-                const libraryBookId = inv.libraryBookId ?? book?.libraryBookId;
-                if (!libraryBookId) {
-                    return res.status(400).json({
-                        message:
-                            "New inventory item requires `libraryBookId` (set `book.libraryBookId` or include `libraryBookId` on the inventory item)",
-                    });
-                }
-
-                const created = await libraryCreation.createInventory({
-                    ...inv,
-                    libraryBookId,
-                    createdBy: userId,
-                    updatedBy: userId,
-                });
-
-                inventoryResults.push({
-                    action: "created",
-                    inventoryId: created?.dataValues?.inventoryId ?? created?.inventoryId,
-                    result: created,
-                });
-            }
-
-            response.inventory = inventoryResults;
-        }
-
-        if (inventoryKeyPresent && resolvedLibraryBookId) {
-            const bookRow = await libraryCreation.getSingleBookDetails(resolvedLibraryBookId);
-            response.book = bookRow ? bookRow.get({ plain: true }) : null;
-        }
+        const response = await libraryCreation.updateBookWithInventory(
+            {
+                book: req.body.book,
+                inventory: req.body.inventory,
+                inventoryKeyPresent: "inventory" in req.body,
+            },
+            req.user.userId,
+        );
 
         return res.status(200).json({
             message: "Book and/or inventory processed successfully",
             ...response,
         });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        const status = error.statusCode || 500;
+        if (status === 500) {
+            return res.status(500).json({ error: error.message });
+        }
+        return res.status(status).json({ message: error.message });
     }
 }
 

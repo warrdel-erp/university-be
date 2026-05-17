@@ -100,30 +100,32 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
       transaction
     );
 
-    // Insert Inventory Copies
     for (const inv of inventoryList) {
       await libraryCreationService.createInventory(
         {
-          libraryBookId: newBook.dataValues.libraryBookId,
-
+          libraryBookId: newBook.libraryBookId,
           excisionNumber: inv.excisionNumber ?? null,
-
+          libraryAisleId: inv.libraryAisleId,
+          libraryRackId: inv.libraryRackId,
+          libraryRowId: inv.libraryRowId,
+          status: inv.status ?? "available",
+          studentId: inv.studentId ?? null,
+          employeeId: inv.employeeId ?? null,
+          issueDate: inv.issueDate ?? null,
+          dueDate: inv.dueDate ?? null,
           billNo: inv.billNo ?? null,
           billDate: inv.billDate ?? null,
           itemPrice: inv.itemPrice ?? null,
           netPrice: inv.netPrice ?? null,
           currency: inv.currency ?? null,
         },
-        transaction
+        transaction,
       );
     }
 
     await transaction.commit();
 
-    return {
-      book: newBook,
-      inventory: inventoryList.length,
-    };
+    return { libraryBookId: newBook.libraryBookId };
   } catch (error) {
     await transaction.rollback();
     throw error;
@@ -134,15 +136,15 @@ export async function getAllBooks(universityId, libraryCreationId, libraryFloorI
   return await libraryCreationService.getAllBooks(universityId, libraryCreationId, libraryFloorId);
 }
 
-export async function getSingleBookDetails(libraryBookId) {
-  return await libraryCreationService.getSingleBookDetails(libraryBookId);
+export async function getSingleBookDetails(libraryBookId, transaction) {
+  return await libraryCreationService.getSingleBookDetails(libraryBookId, transaction);
 }
 
-export async function updateBook(libraryBookId, bookData) {
-  return await libraryCreationService.updateBook(libraryBookId, bookData);
+export async function updateBook(libraryBookId, bookData, transaction) {
+  return await libraryCreationService.updateBook(libraryBookId, bookData, transaction);
 }
 
-export async function updateInventory(inventoryId, inventoryData) {
+export async function updateInventory(inventoryId, inventoryData, transaction) {
   if (inventoryData.status === "return") {
     inventoryData.issueDate = null;
     inventoryData.status = "available";
@@ -151,11 +153,11 @@ export async function updateInventory(inventoryId, inventoryData) {
     inventoryData.employeeId = null;
   }
 
-  return await libraryCreationService.updateInventory(inventoryId, inventoryData);
+  return await libraryCreationService.updateInventory(inventoryId, inventoryData, transaction);
 }
 
-export async function createInventory(inventoryData) {
-  return await libraryCreationService.createInventory(inventoryData);
+export async function createInventory(inventoryData, transaction) {
+  return await libraryCreationService.createInventory(inventoryData, transaction);
 }
 
 export async function deleteBook(libraryBookId) {
@@ -166,15 +168,157 @@ export async function deleteInventoryCopy(inventoryId) {
   return await libraryCreationService.deleteInventoryCopy(inventoryId);
 }
 
-export async function deleteInventoryCopiesForBookExceptIds(libraryBookId, keepInventoryIds) {
+export async function deleteInventoryCopiesForBookExceptIds(
+  libraryBookId,
+  keepInventoryIds,
+  transaction,
+) {
   return await libraryCreationService.deleteInventoryCopiesForBookExceptIds(
     libraryBookId,
     keepInventoryIds,
+    transaction,
   );
 }
 
-export async function getLibraryBookIdByInventoryId(inventoryId) {
-  return await libraryCreationService.getLibraryBookIdByInventoryId(inventoryId);
+export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
+  return await libraryCreationService.getLibraryBookIdByInventoryId(inventoryId, transaction);
+}
+
+function toPlainBook(bookRow) {
+  return bookRow ? bookRow.get({ plain: true }) : null;
+}
+
+async function resolveLibraryBookId(book, inventory, transaction) {
+  if (book?.libraryBookId) {
+    return book.libraryBookId;
+  }
+
+  for (const inv of inventory) {
+    if (inv.libraryBookId) {
+      return inv.libraryBookId;
+    }
+    if (inv.inventoryId) {
+      const id = await libraryCreationService.getLibraryBookIdByInventoryId(
+        inv.inventoryId,
+        transaction,
+      );
+      if (id) {
+        return id;
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Client sent `inventory: []` → remove all copies; sent ids → remove copies not listed. */
+async function syncInventoryCopies(libraryBookId, inventory, transaction) {
+  if (inventory.length === 0) {
+    return libraryCreationService.deleteInventoryCopiesForBookExceptIds(
+      libraryBookId,
+      [],
+      transaction,
+    );
+  }
+
+  const keepIds = [...new Set(inventory.map((inv) => inv.inventoryId).filter(Boolean))];
+  if (keepIds.length === 0) {
+    return 0;
+  }
+
+  return libraryCreationService.deleteInventoryCopiesForBookExceptIds(
+    libraryBookId,
+    keepIds,
+    transaction,
+  );
+}
+
+async function upsertInventoryRows(inventory, libraryBookId, userId, transaction) {
+  const results = [];
+
+  for (const inv of inventory) {
+    if (inv.inventoryId) {
+      const { inventoryId, ...inventoryData } = inv;
+      inventoryData.updatedBy = userId;
+      const result = await updateInventory(inventoryId, inventoryData, transaction);
+      results.push({ action: "updated", inventoryId, result });
+      continue;
+    }
+
+    const created = await libraryCreationService.createInventory(
+      {
+        ...inv,
+        libraryBookId: inv.libraryBookId ?? libraryBookId,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+      transaction,
+    );
+
+    results.push({
+      action: "created",
+      inventoryId: created?.dataValues?.inventoryId ?? created?.inventoryId,
+      result: created,
+    });
+  }
+
+  return results;
+}
+
+export async function updateBookWithInventory(
+  { book, inventory, inventoryKeyPresent },
+  userId,
+) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const response = {};
+    let libraryBookId = book?.libraryBookId ?? null;
+
+    if (book) {
+      const { libraryBookId: bookId, ...bookData } = book;
+      libraryBookId = bookId;
+      bookData.updatedBy = userId;
+      await libraryCreationService.updateBook(bookId, bookData, transaction);
+    }
+
+    if (inventoryKeyPresent) {
+      libraryBookId ??= await resolveLibraryBookId(book, inventory ?? [], transaction);
+
+      if (libraryBookId) {
+        const removedCount = await syncInventoryCopies(
+          libraryBookId,
+          inventory ?? [],
+          transaction,
+        );
+        if (removedCount > 0) {
+          response.removedInventoryCount = removedCount;
+        }
+      }
+
+      if (inventory?.length) {
+        response.inventory = await upsertInventoryRows(
+          inventory,
+          libraryBookId,
+          userId,
+          transaction,
+        );
+      }
+    }
+
+    const includeBook = Boolean(book) || (inventoryKeyPresent && libraryBookId);
+    if (includeBook && libraryBookId) {
+      response.book = toPlainBook(
+        await libraryCreationService.getSingleBookDetails(libraryBookId, transaction),
+      );
+    }
+
+    await transaction.commit();
+    return response;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 }
 
 export async function getAllIssuedBooks() {
