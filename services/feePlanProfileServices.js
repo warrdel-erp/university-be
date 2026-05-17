@@ -155,6 +155,65 @@ export function formatFeePlanProfileDetail(row) {
   return toPlain(row);
 }
 
+function formatFeePlanProfileSingleResponse(row, counts) {
+  const p = toPlain(row);
+  const mapping = p.courseSessionMapping ?? {};
+  const course = mapping.courses ?? {};
+  const session = mapping.session ?? {};
+
+  const feePlanItems = (p.feePlanItems ?? []).map((item) => {
+    const termAmount = toMoneyNumber(item.amount);
+    let additionalFees = 0;
+    const itemAdditionalFees = (item.itemAdditionalFees ?? []).map((af) => {
+      const lineAmount = toMoneyNumber(af.amount);
+      additionalFees = decimalAdd(additionalFees, lineAmount);
+      const catalog = af.feeTypeCatalog ?? {};
+
+      return {
+        additionalFeeId: af.additionalFeeId,
+        feeTypeCatalogId: af.feeTypeCatalogId,
+        name: catalog.name ?? null,
+        amount: lineAmount,
+      };
+    });
+
+    return {
+      feePlanItemId: item.feePlanItemId,
+      termName: item.termName ?? null,
+      createDate: item.createDate,
+      dueDate: item.dueDate ?? null,
+      amount: termAmount,
+      additionalFees,
+      total: decimalAdd(termAmount, additionalFees),
+      numberOfInvoices: counts.invoiceCountByItem.get(item.feePlanItemId) ?? 0,
+      itemAdditionalFees,
+    };
+  });
+
+  const termFees = decimalSum(feePlanItems.map((item) => item.amount));
+  const additionalFeesTotal = decimalSum(feePlanItems.map((item) => item.additionalFees));
+
+  return {
+    feePlanProfileId: p.feePlanProfileId,
+    planName: p.name,
+    planType: p.planType,
+    courseSessionId: p.courseSessionId,
+    instituteId: p.instituteId,
+    courseId: mapping.courseId ?? course.courseId ?? null,
+    courseName: course.courseName ?? null,
+    sessionId: mapping.sessionId ?? session.sessionId ?? null,
+    sessionName: session.sessionName ?? null,
+    assignedStudentCount: counts.assignedStudentCount,
+    numberOfInvoices: counts.numberOfInvoices,
+    status: counts.assignedStudentCount > 0 ? "active" : "inactive",
+    term: feePlanItems.length,
+    termFees,
+    additionalFees: additionalFeesTotal,
+    totalFees: decimalAdd(termFees, additionalFeesTotal),
+    feePlanItems,
+  };
+}
+
 export async function addFeePlanProfile(body, instituteId) {
   const mapId = body.courseSessionId;
 
@@ -238,9 +297,20 @@ export async function getFeePlanProfileSummary(instituteId) {
 }
 
 export async function getSingleFeePlanProfile(feePlanProfileId, instituteId) {
-  const row = await repo.findFeePlanProfileById(feePlanProfileId, instituteId);
+  const row = await repo.findFeePlanProfileById(feePlanProfileId, instituteId, { forDetail: true });
   if (!row) return null;
-  return formatFeePlanProfileDetail(row);
+
+  const [studentCountByProfile, invoiceCountByProfile, invoiceCountByItem] = await Promise.all([
+    repo.countStudentsGroupedByFeePlanProfile(instituteId),
+    repo.countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId),
+    repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId),
+  ]);
+
+  return formatFeePlanProfileSingleResponse(row, {
+    assignedStudentCount: studentCountByProfile.get(feePlanProfileId) ?? 0,
+    numberOfInvoices: invoiceCountByProfile.get(feePlanProfileId) ?? 0,
+    invoiceCountByItem,
+  });
 }
 
 export async function updateFeePlanProfile(body, instituteId) {

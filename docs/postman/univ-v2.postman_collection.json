@@ -6073,7 +6073,7 @@
                     }
                   ]
                 },
-                "description": "Query: feePlanProfileId. Returns plain JSON for the profile and nested feePlanItems → itemAdditionalFees → feeTypeCatalog → feeTypeCategory (includes createdAt/updatedAt where the model exposes them)."
+                "description": "**GET /feePlanProfile/single?feePlanProfileId=**\n\nFormatted detail (no raw timestamps on nested catalog).\n\n**Profile:** planName, planType, courseSessionId, **courseName**, **sessionName**, courseId, sessionId, assignedStudentCount, numberOfInvoices, status (active|inactive), term, termFees, additionalFees, totalFees.\n\n**feePlanItems[]:** feePlanItemId, termName, createDate, dueDate, amount, additionalFees, total, numberOfInvoices, itemAdditionalFees[{ name, amount, feeTypeCatalogId }]."
               },
               "response": []
             }

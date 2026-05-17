@@ -12,6 +12,26 @@ const profileIncludes = [
   },
 ];
 
+const profileIncludesForDetail = [
+  {
+    model: model.sessionCouseMappingModel,
+    as: "courseSessionMapping",
+    attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "courses",
+        attributes: ["courseId", "courseName"],
+      },
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName"],
+      },
+    ],
+  },
+];
+
 const feePlanItemsWithAdditionalFeesInclude = {
   model: model.feePlanItemModel,
   as: "feePlanItems",
@@ -61,10 +81,12 @@ export async function findFeePlanProfilesByInstitute(instituteId, options = {}) 
 }
 
 export async function findFeePlanProfileById(feePlanProfileId, instituteId, options = {}) {
-  const { transaction } = options;
+  const { transaction, forDetail } = options;
+  const profileInclude = forDetail ? profileIncludesForDetail : profileIncludes;
+
   return model.feePlanProfileModel.findOne({
     where: { feePlanProfileId, instituteId },
-    include: [...profileIncludes, feePlanItemsWithAdditionalFeesInclude],
+    include: [...profileInclude, feePlanItemsWithAdditionalFeesInclude],
     order: [[{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"]],
     transaction,
   });
