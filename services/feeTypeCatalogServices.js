@@ -69,7 +69,7 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body, instituteId) 
 
     const payload = catalogUpdatePayload(body);
 
-    if (payload.feeTypeCategoryId != null) {
+    if (payload.feeTypeCategoryId !== undefined) {
       const cat = await feeTypeCatalogRepo.findFeeTypeCategoryByIdForInstitute(
         payload.feeTypeCategoryId,
         instituteId,

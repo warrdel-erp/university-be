@@ -1,5 +1,4 @@
-import { Op, QueryTypes } from "sequelize";
-import sequelize from "../database/sequelizeConfig.js";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 
 export const PLAN_TYPES = new Set(["annual", "semester", "trimester"]);
@@ -153,38 +152,39 @@ export async function countFeePlanProfilesByInstitute(instituteId, options = {})
 /** Profiles assigned to at least one student (students.fee_plan_profile_id). */
 export async function countActiveFeePlanProfilesByInstitute(instituteId, options = {}) {
   const { transaction } = options;
-  const [row] = await sequelize.query(
-    `SELECT COUNT(DISTINCT s.fee_plan_profile_id) AS activeCount
-     FROM students s
-     INNER JOIN fee_plan_profile fpp
-       ON fpp.fee_plan_profile_id = s.fee_plan_profile_id
-       AND fpp.institute_id = :instituteId
-     WHERE s.institute_id = :instituteId
-       AND s.fee_plan_profile_id IS NOT NULL`,
-    {
-      replacements: { instituteId },
-      type: QueryTypes.SELECT,
-      transaction,
-    }
-  );
-  return Number(row?.activeCount ?? 0);
+  return model.studentModel.count({
+    where: {
+      instituteId,
+      feePlanProfileId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.feePlanProfileModel,
+        as: "studentFeePlanProfile",
+        where: { instituteId },
+        required: true,
+        attributes: [],
+      },
+    ],
+    distinct: true,
+    col: "fee_plan_profile_id",
+    transaction,
+  });
 }
 
 /** fee_plan_profile_id → number of students assigned. */
 export async function countStudentsGroupedByFeePlanProfile(instituteId, options = {}) {
   const { transaction } = options;
-  const rows = await sequelize.query(
-    `SELECT s.fee_plan_profile_id AS feePlanProfileId, COUNT(*) AS studentCount
-     FROM students s
-     WHERE s.institute_id = :instituteId
-       AND s.fee_plan_profile_id IS NOT NULL
-     GROUP BY s.fee_plan_profile_id`,
-    {
-      replacements: { instituteId },
-      type: QueryTypes.SELECT,
-      transaction,
-    }
-  );
+  const rows = await model.studentModel.findAll({
+    attributes: ["feePlanProfileId", [fn("COUNT", col("student_id")), "studentCount"]],
+    where: {
+      instituteId,
+      feePlanProfileId: { [Op.ne]: null },
+    },
+    group: ["fee_plan_profile_id"],
+    raw: true,
+    transaction,
+  });
 
   const map = new Map();
   for (const row of rows) {
@@ -217,22 +217,29 @@ export async function countStudentFeeInvoicesForFeePlanProfile(
 /** fee_plan_profile_id → term invoice count (student_fee_invoice via fee_plan_item). */
 export async function countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId, options = {}) {
   const { transaction } = options;
-  const rows = await sequelize.query(
-    `SELECT fpi.fee_plan_profile_id AS feePlanProfileId,
-            COUNT(sfi.student_fee_invoice_id) AS invoiceCount
-     FROM student_fee_invoice sfi
-     INNER JOIN fee_plan_item fpi
-       ON fpi.fee_plan_item_id = sfi.fee_plan_item_id
-       AND fpi.institute_id = :instituteId
-     WHERE sfi.institute_id = :instituteId
-       AND sfi.fee_plan_item_id IS NOT NULL
-     GROUP BY fpi.fee_plan_profile_id`,
-    {
-      replacements: { instituteId },
-      type: QueryTypes.SELECT,
-      transaction,
-    }
-  );
+  const rows = await model.studentFeeInvoiceModel.findAll({
+    attributes: [
+      [col("feePlanItem.fee_plan_profile_id"), "feePlanProfileId"],
+      [fn("COUNT", col("student_fee_invoice.student_fee_invoice_id")), "invoiceCount"],
+    ],
+    where: {
+      instituteId,
+      feePlanItemId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItem",
+        where: { instituteId },
+        required: true,
+        attributes: [],
+      },
+    ],
+    group: [col("feePlanItem.fee_plan_profile_id")],
+    subQuery: false,
+    raw: true,
+    transaction,
+  });
 
   const map = new Map();
   for (const row of rows) {
@@ -244,19 +251,16 @@ export async function countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId
 /** fee_plan_item_id → term invoice count for that installment. */
 export async function countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, options = {}) {
   const { transaction } = options;
-  const rows = await sequelize.query(
-    `SELECT sfi.fee_plan_item_id AS feePlanItemId,
-            COUNT(sfi.student_fee_invoice_id) AS invoiceCount
-     FROM student_fee_invoice sfi
-     WHERE sfi.institute_id = :instituteId
-       AND sfi.fee_plan_item_id IS NOT NULL
-     GROUP BY sfi.fee_plan_item_id`,
-    {
-      replacements: { instituteId },
-      type: QueryTypes.SELECT,
-      transaction,
-    }
-  );
+  const rows = await model.studentFeeInvoiceModel.findAll({
+    attributes: ["feePlanItemId", [fn("COUNT", col("student_fee_invoice_id")), "invoiceCount"]],
+    where: {
+      instituteId,
+      feePlanItemId: { [Op.ne]: null },
+    },
+    group: ["fee_plan_item_id"],
+    raw: true,
+    transaction,
+  });
 
   const map = new Map();
   for (const row of rows) {

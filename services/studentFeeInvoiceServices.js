@@ -8,14 +8,12 @@ import {
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 
-function todayDateOnly() {
-  return new Date().toISOString().slice(0, 10);
-}
+
 
 function netLineAmount(amount, waiver) {
   const lineAmount = toMoneyNumber(amount);
-  const lineWaiver = waiver != null ? toMoneyNumber(waiver) : null;
-  return lineWaiver != null ? decimalSubtract(lineAmount, lineWaiver) : lineAmount;
+  if (waiver === undefined || waiver === null) return lineAmount;
+  return decimalSubtract(lineAmount, toMoneyNumber(waiver));
 }
 
 function paymentSummaryFromPlain(p) {
@@ -66,8 +64,9 @@ function formatStudentFeeInvoiceStudent(student) {
 function mapAdditionalFeeLine(line) {
   const catalog = line.additionalFee?.feeTypeCatalog ?? {};
   const amount = toMoneyNumber(line.amount);
-  const waiver = line.waiver != null ? toMoneyNumber(line.waiver) : null;
-  const netAmount = waiver != null ? decimalSubtract(amount, waiver) : amount;
+  const waiver =
+    line.waiver === undefined || line.waiver === null ? null : toMoneyNumber(line.waiver);
+  const netAmount = netLineAmount(line.amount, line.waiver);
 
   return {
     studentInvoiceAdditionalFeeId: line.studentInvoiceAdditionalFeeId,
@@ -95,7 +94,7 @@ export function formatStudentFeeInvoiceResponse(row) {
   const additionalFees = (p.invoiceAdditionalFees ?? []).map(mapAdditionalFeeLine);
   const additionalFeesTotal = decimalSum(additionalFees.map((l) => l.netAmount));
   const storedTotal = toMoneyNumber(p.total);
-  const isAdhocInvoice = p.feePlanItemId == null;
+  const isAdhocInvoice = p.feePlanItemId === null;
 
   const computedTotal = isAdhocInvoice
     ? storedTotal
@@ -172,12 +171,14 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
     const student = await repo.findStudentById(studentId, instituteId, { transaction });
     if (!student) throw new Error("Student not found");
 
-    const studentProfileId = student.feePlanProfileId ?? student.get?.("feePlanProfileId");
-    if (!studentProfileId) throw new Error("Student has no fee plan profile assigned");
+    const studentPlain = toPlain(student);
+    const feePlanItemPlain = toPlain(feePlanItem);
+    const studentProfileId = studentPlain.feePlanProfileId;
+    if (!studentProfileId) {
+      throw new Error("Student has no fee plan profile assigned");
+    }
 
-    const itemProfileId =
-      feePlanItem.feePlanProfileId ?? feePlanItem.get?.("feePlanProfileId");
-    if (itemProfileId !== studentProfileId) {
+    if (feePlanItemPlain.feePlanProfileId !== studentProfileId) {
       throw new Error("Fee plan item does not belong to the student's fee plan profile");
     }
 
@@ -245,13 +246,14 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
   const feeLines = feeTypeCatalogs.map((line) => ({
     feeTypeCatalogId: line.feeTypeCatalogId,
     amount: toMoneyNumber(line.amount),
-    waiver: line.waiver != null ? toMoneyNumber(line.waiver) : null,
+    waiver:
+      line.waiver === undefined || line.waiver === null ? null : toMoneyNumber(line.waiver),
   }));
   const linesNetTotal = decimalSum(
     feeLines.map((line) => netLineAmount(line.amount, line.waiver))
   );
 
-  if (total != null && decimalCompare(linesNetTotal, toMoneyNumber(total)) !== 0) {
+  if (total !== undefined && decimalCompare(linesNetTotal, toMoneyNumber(total)) !== 0) {
     throw new Error("total must equal sum of feeTypeCatalogs amounts after waivers");
   }
 

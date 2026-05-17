@@ -8,16 +8,11 @@ function toPlain(row) {
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
-function httpError(message, statusCode = 400) {
-  const err = new Error(message);
-  err.statusCode = statusCode;
-  return err;
-}
 
 function assertUniqueCatalogIdsPerInstallment(feeTypeCatalogs, installmentName) {
   const ids = (feeTypeCatalogs ?? []).map((c) => c.feeTypeCatalogId);
   if (new Set(ids).size !== ids.length) {
-    throw httpError(
+    throw new Error(
       `Duplicate feeTypeCatalogId in feeTypeCatalogs for installment "${installmentName}"`
     );
   }
@@ -30,18 +25,14 @@ async function validateCourseSession(courseSessionId, instituteId, academicYearI
     { transaction }
   );
   if (!mapping) {
-    throw httpError("courseSessionId not found or not in your institute", 400);
+    throw new Error("courseSessionId not found or not in your institute");
   }
-
-  if (academicYearId == null || academicYearId === "") return;
 
   const withSession = await repo.findSessionCourseMappingWithSession(courseSessionId, instituteId, {
     transaction,
   });
-  const expected = Number(academicYearId);
-  const sessionYear = Number(withSession?.session?.acedmicYearId);
-  if (!withSession?.session || sessionYear !== expected) {
-    throw httpError("academicYearId does not match the session for this courseSessionId", 400);
+  if (withSession.session.acedmicYearId !== academicYearId) {
+    throw new Error("academicYearId does not match the session for this courseSessionId");
   }
 }
 
@@ -53,31 +44,24 @@ async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transact
     assertUniqueCatalogIdsPerInstallment(installment.feeTypeCatalogs, installment.name);
 
     const additionalFees = [];
-    const catalogLines = installment.feeTypeCatalogs;
-    if (Array.isArray(catalogLines) && catalogLines.length > 0) {
-      for (const line of catalogLines) {
-        const catalog = await catalogRepo.findFeeTypeCatalogById(
-          line.feeTypeCatalogId,
-          instituteId,
-          { transaction }
+    for (const line of installment.feeTypeCatalogs ?? []) {
+      const catalog = await catalogRepo.findFeeTypeCatalogById(
+        line.feeTypeCatalogId,
+        instituteId,
+        { transaction }
+      );
+      if (!catalog) {
+        throw new Error(
+          `feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`,
         );
-        if (!catalog) {
-          throw httpError(
-            `feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`,
-            404
-          );
-        }
-        additionalFees.push({
-          feeTypeCatalogId: catalog.feeTypeCatalogId,
-          amount: toMoneyNumber(line.amount),
-        });
       }
+      additionalFees.push({
+        feeTypeCatalogId: catalog.feeTypeCatalogId,
+        amount: toMoneyNumber(line.amount),
+      });
     }
 
-    const dueDate =
-      installment.dueDate && String(installment.dueDate).trim() !== ""
-        ? installment.dueDate
-        : null;
+    const dueDate = installment.dueDate ?? null;
 
     prepared.push({
       name: installment.name,
@@ -230,7 +214,7 @@ export async function addFeePlanProfile(body, instituteId) {
       { transaction }
     );
 
-    if (body.feePlanItems?.length > 0) {
+    if (body.feePlanItems !== undefined) {
       const installments = await prepareInstallmentsForDb(body.feePlanItems, instituteId, transaction);
       await repo.createInstallmentsForProfile(
         profile.feePlanProfileId,
@@ -255,7 +239,7 @@ export async function listFeePlanProfiles(instituteId, courseSessionId) {
       { transaction }
     );
     if (!mapping) {
-      throw httpError("courseSessionId not found or not in your institute", 400);
+      throw new Error("courseSessionId not found or not in your institute");
     }
 
     const list = await repo.findFeePlanProfilesByInstitute(instituteId, {
@@ -321,7 +305,7 @@ export async function updateFeePlanProfile(body, instituteId) {
       transaction,
     });
     if (!existing) {
-      throw httpError("Fee plan profile not found or not in your institute", 404);
+      throw new Error("Fee plan profile not found or not in your institute");
     }
 
     const profilePatch = {};
@@ -331,18 +315,18 @@ export async function updateFeePlanProfile(body, instituteId) {
 
     const mapId = courseSessionId ?? existing.get("courseSessionId");
 
-    if (courseSessionId != null) {
+    if (courseSessionId !== undefined) {
       const mapping = await repo.findSessionCourseMappingForInstitute(
         courseSessionId,
         instituteId,
         { transaction }
       );
       if (!mapping) {
-        throw httpError("courseSessionId not found or not in your institute", 400);
+        throw new Error("courseSessionId not found or not in your institute");
       }
     }
 
-    if (academicYearId != null || Object.keys(profilePatch).length > 0) {
+    if (academicYearId !== undefined || Object.keys(profilePatch).length > 0) {
       await validateCourseSession(mapId, instituteId, academicYearId, transaction);
     }
 
@@ -350,16 +334,15 @@ export async function updateFeePlanProfile(body, instituteId) {
       await repo.updateFeePlanProfile(feePlanProfileId, instituteId, profilePatch, { transaction });
     }
 
-    if ((feePlanItems ?? []).length > 0) {
+    if (feePlanItems !== undefined) {
       const invoiceCount = await repo.countStudentFeeInvoicesForFeePlanProfile(
         feePlanProfileId,
         instituteId,
         { transaction }
       );
       if (invoiceCount > 0) {
-        throw httpError(
+        throw new Error(
           "Cannot replace feePlanItems while student fee invoices exist for this fee plan profile",
-          409
         );
       }
 
