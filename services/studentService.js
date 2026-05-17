@@ -1448,11 +1448,17 @@ export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
   };
 }
 
-export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId) {
+export async function getEmptyFeeDetails(
+  universityId,
+  acedmicYearId,
+  instituteId,
+  filters,
+) {
   return await studentRepository.getEmptyFeeDetails(
     universityId,
     acedmicYearId,
     instituteId,
+    filters,
   );
 }
 

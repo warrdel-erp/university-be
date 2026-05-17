@@ -52,6 +52,12 @@ const acedmicYearIdQuerySchema = z.object({
   acedmicYearId: positiveIntegerId,
 });
 
+const emptyFeeDetailsQuerySchema = z.object({
+  acedmicYearId: positiveIntegerId,
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+});
+
 const studentIdQuerySchema = z.object({
   studentId: positiveIntegerId,
 });
@@ -143,7 +149,7 @@ router.get(
 router.get(
   "/emptyfeeDetails",
   userAuth,
-  validate({ query: acedmicYearIdQuerySchema }),
+  validate({ query: emptyFeeDetailsQuerySchema }),
   getEmptyFeeDetails
 );
 router.get("/:studentId/studentSubject", userAuth, getStudentSubject);

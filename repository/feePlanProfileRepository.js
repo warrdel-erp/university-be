@@ -129,7 +129,7 @@ export async function findSessionCourseMappingForInstitute(
   options = {}
 ) {
   return model.sessionCouseMappingModel.findOne({
-    attributes: ["sessionCourseMappingId", "instituteId"],
+    attributes: ["sessionCourseMappingId", "instituteId", "courseId", "sessionId"],
     where: { sessionCourseMappingId, instituteId },
     transaction: options.transaction,
   });

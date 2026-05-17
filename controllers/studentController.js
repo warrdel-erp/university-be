@@ -249,14 +249,19 @@ export const getFeePlanInitiate = async (req, res) => {
 
 export const getEmptyFeeDetails = async (req, res) => {
     const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query;
+    const { acedmicYearId, courseId, sessionId } = req.query;
     const instituteId = req.user.defaultInstituteId;
     try {
-        const result = await studentService.getEmptyFeeDetails(universityId, acedmicYearId, instituteId);
+        const result = await studentService.getEmptyFeeDetails(
+            universityId,
+            acedmicYearId,
+            instituteId,
+            { courseId, sessionId },
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
-        res.status(500).send("Internal Server Error");
+        res.status(error.statusCode || 500).send(error.message || "Internal Server Error");
     }
 };
 

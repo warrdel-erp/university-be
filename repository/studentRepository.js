@@ -1167,14 +1167,24 @@ export async function findInvoicesByStudentIdsForProfile(
     }
 }
 
-export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId) {
+export async function getEmptyFeeDetails(
+    universityId,
+    acedmicYearId,
+    instituteId,
+    filters = {},
+) {
     try {
+        const { courseId, sessionId } = filters;
+        const where = {
+            acedmicYearId,
+            instituteId,
+            feePlanProfileId: { [Op.is]: null },
+            ...(courseId != null && { courseId }),
+            ...(sessionId != null && { sessionId }),
+        };
+
         const result = await model.studentModel.findAll({
-            where: {
-                acedmicYearId,
-                instituteId,
-                feePlanProfileId: { [Op.is]: null },
-            },
+            where,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             include: [
                 {
