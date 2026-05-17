@@ -1,4 +1,6 @@
 import * as memberCreation  from  "../services/libraryMemberServices.js";
+import { z } from "zod";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addMember(req, res) {
     const {libraryCreationId,memberType} = req.body
@@ -6,12 +8,12 @@ export async function addMember(req, res) {
     const updatedBy = req.user.userId;
     try {
         if(!(libraryCreationId && memberType)){
-           return res.status(400).send('libraryCreationId and memberType is required')
+           return ErrorResponse(res, 400, 'libraryCreationId and memberType is required')
         }
         const newMember = await memberCreation.addMember(req.body,createdBy,updatedBy);
-        res.status(201).json({ message: "Member Add Successfully" });
+        return SuccessResponse(res, 201, "Member Add Successfully", newMember);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -19,9 +21,9 @@ export async function getMemberDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const member = await memberCreation.getMemberDetails(universityId);
-        res.status(200).json(member);
+        return SuccessResponse(res, 200, "Member Details", member);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -32,12 +34,12 @@ export async function getSingleMemberDetails(req, res) {
 
         const members = await memberCreation.getSingleMemberDetails(libraryCreationId, universityId);
         if (members?.length) {
-            res.status(200).json(members);
+            return SuccessResponse(res, 200, "Member Details", members);
         } else {
-            res.status(404).json({ message: "Member not found" });
+            return ErrorResponse(res, 404, "Member not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -45,13 +47,13 @@ export async function updateMember(req, res) {
     try {
         const {libraryMemberId} = req.body
         if(!(libraryMemberId)){
-            return res.status(400).send('library Member Id is required')
+            return ErrorResponse(res, 400, 'library Member Id is required')
          }
          const updatedBy = req.user.userId;
         const updatedMember = await memberCreation.updateMember(libraryMemberId, req.body,updatedBy);
-            res.status(200).json({message: "Member Creation update succesfully" });
+            return SuccessResponse(res, 200, "Member Creation update succesfully", updatedMember);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -59,16 +61,16 @@ export async function deleteMember(req, res) {
     try {
         const { libraryMemberId } = req.query;
         if (!libraryMemberId) {
-            return res.status(400).json({ message: "library Member Id is required" });
+            return ErrorResponse(res, 400, "library Member Id is required");
         }
         const deleted = await memberCreation.deleteMember(libraryMemberId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for Member creation ID ${libraryMemberId}` });
+            return SuccessResponse(res, 200, `Delete successful for Member creation ID ${libraryMemberId}`);
         } else {
-            res.status(404).json({ message: "Member not found" });
+            return ErrorResponse(res, 404, "Member not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -80,12 +82,12 @@ export async function bookIssue(req, res) {
     const updatedBy = req.user.userId;
     try {
         if(!(libraryAddItemId && libraryMemberId)){
-           return res.status(400).send('libraryAddItemId and libraryMemberId is required')
+           return ErrorResponse(res, 400, 'libraryAddItemId and libraryMemberId is required')
         }
         const newMember = await memberCreation.bookIssue(req.body,createdBy,updatedBy);
-        res.status(201).json({ message: "book Issue Successfully" });
+        return SuccessResponse(res, 201, "book Issue Successfully", newMember);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -93,9 +95,9 @@ export async function getAllIssueBooks(req, res) {
     const universityId = req.user.universityId;
     try {
         const member = await memberCreation.getAllIssueBooks(universityId);
-        res.status(200).json(member);
+        return SuccessResponse(res, 200, "Issue Books", member);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -105,9 +107,9 @@ export async function getBookByMemberId(req, res) {
         const { libraryMemberId } = req.query;
         const Member = await memberCreation.getBookByMemberId(libraryMemberId,universityId);
         if (Member) {
-            res.status(200).json(Member);
+            return SuccessResponse(res, 200, "Issue Books", Member);
         } else {
-            res.status(404).json({ message: "Member not found" });
+            return ErrorResponse(res, 404, "Member not found");
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -118,13 +120,13 @@ export async function updateBookAndStatus(req, res) {
     try {
         const {libraryIssueBookId} = req.body
         if(!(libraryIssueBookId)){
-            return res.status(400).send('libraryIssueBookId is required')
+            return ErrorResponse(res, 400, 'libraryIssueBookId is required')
          }
          const updatedBy = req.user.userId;
         const updatedMember = await memberCreation.updateBookAndStatus(libraryIssueBookId, req.body,updatedBy);
-            res.status(200).json({message: "Book update succesfully" });
+            return SuccessResponse(res, 200, "Book update succesfully", updatedMember);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -132,15 +134,15 @@ export async function deleteBook(req, res) {
     try {
         const { libraryIssueBookId } = req.query;
         if (!libraryIssueBookId) {
-            return res.status(400).json({ message: "libraryIssueBookId is required" });
+            return ErrorResponse(res, 400, "libraryIssueBookId is required");
         }
         const deleted = await memberCreation.deleteBook(libraryIssueBookId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for Member creation ID ${libraryIssueBookId}` });
+            return SuccessResponse(res, 200, `Delete successful for Member creation ID ${libraryIssueBookId}`);
         } else {
-            res.status(404).json({ message: "Book Issue not found" });
+            return ErrorResponse(res, 404, "Book Issue not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }

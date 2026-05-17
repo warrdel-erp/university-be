@@ -1,6 +1,8 @@
 import * as libraryCreation  from  "../services/libraryCreationServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+
 export async function addLibrary(req, res) {
     try {
         const { instituteId, name, description, floors,campusId } = req.body;
@@ -8,16 +10,16 @@ export async function addLibrary(req, res) {
         const universityId = req.user.universityId;
 
         if (!instituteId || !name) {
-            return res.status(400).json({ message: "instituteId and name are required" });
+            return ErrorResponse(res, 400, "instituteId and name are required");
         }
 
         if (!Array.isArray(floors) || floors.length === 0) {
-            return res.status(400).json({ message: "At least one floor is required" });
+            return ErrorResponse(res, 400, "At least one floor is required");
         }
 
         for (const f of floors) {
             if (!f.name) {
-                return res.status(400).json({ message: "Each floor must have a name" });
+                return ErrorResponse(res, 400, "Each floor must have a name");
             }
         }
 
@@ -30,14 +32,10 @@ export async function addLibrary(req, res) {
 
         const result = await libraryCreation.addLibrary(payload, createdBy, createdBy,instituteId,universityId,campusId);
 
-        return res.status(201).json({
-            message: "Library and floors added successfully",
-            libraryId: result.libraryCreationId
-        });
-
+        return SuccessResponse(res, 201, "Library and floors added successfully", result.libraryCreationId);
     } catch (error) {
         console.error("Controller Error:", error);
-        return res.status(500).json({ message: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -45,9 +43,9 @@ export async function getLibraryDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const libraries = await libraryCreation.getLibraryDetails(universityId);
-        res.status(200).json(libraries);
+        return SuccessResponse(res, 200, "Library Details", libraries);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -57,12 +55,12 @@ export async function getSingleLibraryDetails(req, res) {
         const { libraryCreationId } = req.query;
         const library = await libraryCreation.getSingleLibraryDetails(libraryCreationId,universityId);
         if (library) {
-            res.status(200).json(library);
+            return SuccessResponse(res, 200, "Library Details", library);
         } else {
-            res.status(404).json({ message: "Library not found" });
+            return ErrorResponse(res, 404, "Library not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -70,13 +68,13 @@ export async function updateLibray(req, res) {
     try {
         const {libraryCreationId} = req.body
         if(!(libraryCreationId)){
-            return res.status(400).send('libraryCreationId is required')
+            return ErrorResponse(res, 400, 'libraryCreationId is required')
          }
          const updatedBy = req.user.userId;
         const updatedLibrary = await libraryCreation.updateLibrary(libraryCreationId, req.body,updatedBy);
-            res.status(200).json({message: "Library Creation  update succesfully" });
+            return SuccessResponse(res, 200, "Library Creation  update succesfully", updatedLibrary);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -84,16 +82,16 @@ export async function deleteLibray(req, res) {
     try {
         const { libraryCreationId } = req.query;
         if (!libraryCreationId) {
-            return res.status(400).json({ message: "LibraryCreationId is required" });
+            return ErrorResponse(res, 400, "LibraryCreationId is required");
         }
         const deleted = await libraryCreation.deleteLibray(libraryCreationId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for library creation ID ${libraryCreationId}` });
+            return SuccessResponse(res, 200, `Delete successful for library creation ID ${libraryCreationId}`);
         } else {
-            res.status(404).json({ message: "Library not found" });
+            return ErrorResponse(res, 404, "Library not found");
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -106,12 +104,12 @@ export async function addBookWithInventory(req, res) {
         const { book, inventory } = req.body;
 
         if (!book || !inventory) {
-            return res.status(400).json({ message: "Book and Inventory details are required" });
+            return ErrorResponse(res, 400, "Book and Inventory details are required");
         }
 
         const inventoryList = Array.isArray(inventory) ? inventory : [inventory];
         if (!inventoryList.length) {
-            return res.status(400).json({ message: "At least one inventory row is required" });
+            return ErrorResponse(res, 400, "At least one inventory row is required");
         }
 
         const { libraryBookId } = await libraryCreation.addBookWithInventory(
@@ -126,7 +124,7 @@ export async function addBookWithInventory(req, res) {
             libraryBookId,
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -135,12 +133,12 @@ export async function getAllBooks(req, res) {
         const universityId = req.user.universityId;
         const {libraryCreationId,libraryFloorId} = req.query
         if (!(libraryCreationId && libraryFloorId))
-            return res.status(400).json({ message: "libraryCreationId,libraryFloorId is required" });
+            return ErrorResponse(res, 400, "libraryCreationId,libraryFloorId is required");
     try {
         const books = await libraryCreation.getAllBooks(universityId,libraryCreationId,libraryFloorId);
-        res.status(200).json(books);
+        return SuccessResponse(res, 200, "Books", books);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -149,16 +147,16 @@ export async function getSingleBookDetails(req, res) {
         const { libraryBookId } = req.query;
 
         if (!libraryBookId)
-            return res.status(400).json({ message: "libraryBookId is required" });
+            return ErrorResponse(res, 400, "libraryBookId is required");
 
         const result = await libraryCreation.getSingleBookDetails(libraryBookId);
 
         if (!result)
-            return res.status(404).json({ message: "Book not found" });
+            return ErrorResponse(res, 404, "Book not found");
 
-        res.status(200).json(result);
+        return SuccessResponse(res, 200, "Book Details", result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -168,7 +166,7 @@ export async function updateBook(req, res) {
         const { libraryBookId, ...bookData } = req.body;
 
         if (!libraryBookId)
-            return res.status(400).json({ message: "libraryBookId is required" });
+            return ErrorResponse(res, 400, "libraryBookId is required");
 
         const updatedBy = req.user.userId;
         bookData.updatedBy = updatedBy;
@@ -178,10 +176,10 @@ export async function updateBook(req, res) {
         const bookRow = await libraryCreation.getSingleBookDetails(libraryBookId);
         const book = bookRow ? bookRow.get({ plain: true }) : null;
 
-        res.status(200).json({ message: "Book updated successfully", book });
+        return SuccessResponse(res, 200, "Book updated successfully", book);
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -190,14 +188,14 @@ export async function updateInventory(req, res) {
         const { inventoryId, ...inventoryData } = req.body;
 
         if (!inventoryId)
-            return res.status(400).json({ message: "inventoryId is required" });
+            return ErrorResponse(res, 400, "inventoryId is required");
 
         const result = await libraryCreation.updateInventory(inventoryId, inventoryData);
 
-        res.status(200).json({ message: "Inventory updated successfully", result });
+        return SuccessResponse(res, 200, "Inventory updated successfully", result);
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -212,16 +210,9 @@ export async function updateBookWithInventory(req, res) {
             req.user.userId,
         );
 
-        return res.status(200).json({
-            message: "Book and/or inventory processed successfully",
-            ...response,
-        });
+        return SuccessResponse(res, 200, "Book and/or inventory processed successfully", response);
     } catch (error) {
-        const status = error.statusCode || 500;
-        if (status === 500) {
-            return res.status(500).json({ error: error.message });
-        }
-        return res.status(status).json({ message: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 }
 
@@ -230,17 +221,17 @@ export async function deleteBook(req, res) {
         const { libraryBookId } = req.query;
 
         if (!libraryBookId)
-            return res.status(400).json({ message: "libraryBookId is required" });
+            return ErrorResponse(res, 400, "libraryBookId is required");
 
         const deleted = await libraryCreation.deleteBook(libraryBookId);
 
         if (!deleted)
-            return res.status(404).json({ message: "Book not found" });
+            return ErrorResponse(res, 404, "Book not found");
 
-        res.status(200).json({ message: "Book deleted successfully" });
+        return SuccessResponse(res, 200, "Book deleted successfully");
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -249,17 +240,17 @@ export async function deleteInventoryCopy(req, res) {
         const { inventoryId } = req.query;
 
         if (!inventoryId)
-            return res.status(400).json({ message: "inventoryId is required" });
+            return ErrorResponse(res, 400, "inventoryId is required");
 
         const deleted = await libraryCreation.deleteInventoryCopy(inventoryId);
 
         if (!deleted)
-            return res.status(404).json({ message: "Copy not found" });
+            return ErrorResponse(res, 404, "Copy not found");
 
-        res.status(200).json({ message: "Inventory copy deleted successfully" });
+        return SuccessResponse(res, 200, "Inventory copy deleted successfully");
 
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -267,13 +258,9 @@ export async function getAllIssuedBooks(req, res) {
     try {
         const issuedBooks = await libraryCreation.getAllIssuedBooks();
 
-        res.status(200).json({
-            message: "Issued books fetched successfully",
-            issuedBooks
-        });
-
+        return SuccessResponse(res, 200, "Issued books fetched successfully", issuedBooks);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
 
@@ -282,12 +269,12 @@ export async function bulkUploadBooks(req, res) {
         const excelFile = req.files?.book;
 
         if (!excelFile) {
-            return res.status(400).json({ error: "Excel file is required" });
+            return ErrorResponse(res, 400, "Excel file is required");
         }
 
         const excelData = fileHandler.readExcelFile(excelFile.data);
         if (!excelData) {
-            return res.status(400).send("Error reading the Excel file");
+            return ErrorResponse(res, 400, "Error reading the Excel file");
         }
 
         const createdBy = req.user.userId;
@@ -299,10 +286,10 @@ export async function bulkUploadBooks(req, res) {
             updatedBy
         );
 
-        return res.status(200).json(result);
+        return SuccessResponse(res, 200, "Bulk upload books successfully", result);
 
     } catch (error) {
         console.error("Bulk Upload Error:", error);
-        res.status(500).json({ error: error.message });
+        return ErrorResponse(res, 500, error.message);
     }
 };
