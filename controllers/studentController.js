@@ -92,15 +92,9 @@ export const updateStudentDetails = async (req, res) => {
     const studentId = Number(req.params.studentId);
     const info = req.body;
     const file = req.files;
-    const { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId } = info;
     try {
-        if (
-            !studentId ||
-            !(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)
-        ) {
-            return res.status(400).send(
-                "student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required"
-            );
+        if (!studentId) {
+            return ErrorResponse(res, 400, "studentId in URL path is required");
         }
         const result = await studentService.updateStudentDetails(studentId, info, file);
         return SuccessResponse(res, 200, "Student updated successfully", result);

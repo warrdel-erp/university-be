@@ -817,36 +817,134 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
   }
 }
 
-const STUDENT_UPDATE_EXCLUDE_KEYS = new Set([
-  "entranceDetails",
-  "addressDetails",
-  "corsAddress",
-  "allDropDownData",
+/** Scalar columns allowed on PATCH — fee v2 does not use semesterId / feePlanId on update. */
+const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
+  "universityId",
+  "campusId",
+  "instituteId",
+  "affiliatedUniversityId",
+  "acedmicYearId",
+  "courseLevelId",
+  "courseId",
+  "specializationId",
+  "sessionId",
+  "classSectionsId",
+  "feePlanProfileId",
+  "scholarNumber",
+  "enrollNumber",
+  "firstName",
+  "middleName",
+  "lastName",
+  "fatherName",
+  "motherName",
+  "annualIncome",
+  "birthDate",
+  "admisssionDate",
+  "enrollDate",
+  "studentAdmissionStatus",
+  "currentClass",
+  "studentPhoto",
+  "signature",
+  "phoneNumber",
+  "mobileNumber",
+  "email",
+  "parentEmail",
+  "parentNumber",
+  "aadharNumber",
+  "panNumber",
+  "AdditionalNotes",
+  "bankName",
+  "accountNumber",
+  "ifscCode",
+  "placeOfBirth",
+  "studentStatus",
+  "cancelDate",
+  "cancelReason",
+  "generalRemark",
+  "preference",
+  "documentStatus",
+  "feeStatus",
+  "pAddress",
+  "pPincode",
+  "pCountry",
+  "pState",
+  "pCity",
+  "contact",
+  "cAddress",
+  "cPincode",
+  "cCountry",
+  "cState",
+  "cCity",
 ]);
 
-/** Optional FK columns — omit empty/0 so MySQL does not get invalid child keys. */
-const STUDENT_OPTIONAL_FK_KEYS = new Set([
-  "semesterId",
+const STUDENT_UPDATE_OPTIONAL_FK_KEYS = new Set([
   "specializationId",
   "feePlanProfileId",
-  "userId",
+]);
+
+const STUDENT_UPDATE_NUMERIC_FIELDS = new Set([
+  "pPincode",
+  "cPincode",
+  "annualIncome",
 ]);
 
 function pickStudentUpdatePayload(info) {
-  const payload = { ...info };
-  for (const key of STUDENT_UPDATE_EXCLUDE_KEYS) {
-    delete payload[key];
-  }
-  // Legacy v1 fee plan — v2 uses feePlanProfileId only
-  delete payload.feePlanId;
-
-  for (const key of STUDENT_OPTIONAL_FK_KEYS) {
-    const value = payload[key];
-    if (value === undefined || value === null || value === "" || value === 0) {
-      delete payload[key];
+  const payload = {};
+  for (const key of STUDENT_SCALAR_UPDATE_FIELDS) {
+    if (!(key in info)) continue;
+    let value = info[key];
+    if (value === undefined) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    if (STUDENT_UPDATE_OPTIONAL_FK_KEYS.has(key) && (value === null || value === 0)) {
+      continue;
     }
+    const shouldCoerceNumber =
+      (key.endsWith("Id") || STUDENT_UPDATE_NUMERIC_FIELDS.has(key)) &&
+      value !== null &&
+      typeof value === "string" &&
+      /^\d+$/.test(value);
+    if (shouldCoerceNumber) {
+      value = Number(value);
+    }
+    payload[key] = value;
   }
   return payload;
+}
+
+async function applyStudentMetaDataUpdates(studentId, info, transaction) {
+  if (
+    !info.allDropDownData ||
+    info.allDropDownData === "" ||
+    info.allDropDownData === "{}"
+  ) {
+    return;
+  }
+
+  try {
+    const data =
+      typeof info.allDropDownData === "string"
+        ? JSON.parse(info.allDropDownData)
+        : info.allDropDownData;
+    const type = data?.type;
+    const code = data?.code;
+    if (!Array.isArray(type) || !Array.isArray(code)) return;
+
+    const len = Math.min(type.length, code.length);
+    for (let i = 0; i < len; i++) {
+      try {
+        await studentRepository.updateStudentMetaData(
+          studentId,
+          type[i],
+          code[i],
+          transaction,
+        );
+      } catch (metaErr) {
+        console.error("Student metaData update skipped:", metaErr.message);
+      }
+    }
+  } catch (parseErr) {
+    console.error("allDropDownData parse skipped:", parseErr.message);
+  }
 }
 
 function updateHttpError(message, statusCode = 400) {
@@ -859,15 +957,6 @@ export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
 
   try {
-    if (info.feePlanProfileId !== undefined) {
-      await assertFeePlanProfileForInstitute(info.feePlanProfileId, info.instituteId);
-    }
-
-    const settingKey = "studentDocument";
-    const getstudentDocuments = await getSettingValue(settingKey);
-    const studentRequiredDocuments =
-      getstudentDocuments?.dataValues?.setting_value ??
-      getstudentDocuments?.setting_value;
     // Upload files if present
     if (files && typeof files === "object") {
       for (const key of Object.keys(files)) {
@@ -879,29 +968,25 @@ export async function updateStudentDetails(StudentId, info, files) {
       }
     }
 
-    // Update documents status
-    const allFilesUploaded = studentRequiredDocuments?.every(
-      (key) => info[key],
-    );
-    if (allFilesUploaded) {
-      info.documentStatus = "Complete Documents";
-    }
-
     const studentPayload = pickStudentUpdatePayload(info);
 
-    // Update student row (Sequelize returns [affectedRows], not the row)
-    const [rowsUpdated] = await studentRepository.updateStudentDetails(
-      StudentId,
-      studentPayload,
-      transaction,
-    );
-    if (!rowsUpdated) {
-      throw updateHttpError("Student not found or no changes applied", 404);
+    let rowsUpdated = 0;
+    if (Object.keys(studentPayload).length > 0) {
+      [rowsUpdated] = await studentRepository.updateStudentDetails(
+        StudentId,
+        studentPayload,
+        transaction,
+      );
     }
 
     // Update entranceDetails
     let entranceDetails = [];
-    if (info.entranceDetails) {
+    if (
+      info.entranceDetails !== undefined &&
+      info.entranceDetails !== null &&
+      info.entranceDetails !== "" &&
+      info.entranceDetails !== "[]"
+    ) {
       const entranceDetailsArray =
         typeof info.entranceDetails === "string"
           ? JSON.parse(info.entranceDetails)
@@ -942,59 +1027,45 @@ export async function updateStudentDetails(StudentId, info, files) {
             transaction,
           );
         }
-      } else {
-        throw new Error("Address details should be an object.");
       }
     }
 
-    // Update Cors AddressDetails
+    // Update Cors AddressDetails (optional)
     let corsAddressDetails = null;
     if (info.corsAddress) {
-      const addressDetailsObject =
-        typeof info.corsAddress === "string"
-          ? JSON.parse(info.corsAddress)
-          : info.corsAddress;
+      try {
+        const addressDetailsObject =
+          typeof info.corsAddress === "string"
+            ? JSON.parse(info.corsAddress)
+            : info.corsAddress;
 
-      if (
-        typeof addressDetailsObject === "object" &&
-        !Array.isArray(addressDetailsObject)
-      ) {
-        const { studentCorAddressId, ...allDetails } = addressDetailsObject;
-        if (studentCorAddressId) {
-          corsAddressDetails =
-            await studentRepository.updateStudentCorsAddressDetails(
-              studentCorAddressId,
-              allDetails,
-              transaction,
-            );
+        if (
+          typeof addressDetailsObject === "object" &&
+          !Array.isArray(addressDetailsObject)
+        ) {
+          const { studentCorAddressId, ...allDetails } = addressDetailsObject;
+          if (studentCorAddressId) {
+            corsAddressDetails =
+              await studentRepository.updateStudentCorsAddressDetails(
+                studentCorAddressId,
+                allDetails,
+                transaction,
+              );
+          }
         }
-      } else {
-        throw new Error("cors Address details should be an object.");
+      } catch (corsErr) {
+        console.error("Cors address update skipped:", corsErr.message);
       }
     }
 
-    // update all dropDown
-    let allDropDownData = null;
-    if (info.allDropDownData) {
-      const data = JSON.parse(info.allDropDownData);
-      const { studentId, type, code } = data;
-      if (type.length !== code.length) {
-        throw new Error("Type and code arrays must be of the same length");
-      }
-      for (let i = 0; i < type.length; i++) {
-        allDropDownData = await studentRepository.updateStudentMetaData(
-          studentId,
-          type[i],
-          code[i],
-          transaction,
-        );
-      }
-    }
+    await applyStudentMetaDataUpdates(StudentId, info, transaction);
+
     await transaction.commit();
 
-    const studentRow = await getSingleStudentDetail(StudentId, info.universityId);
+    const universityId = Number(info.universityId);
+    const studentRow = await getSingleStudentDetail(StudentId, universityId);
     if (!studentRow) {
-      throw updateHttpError("Student not found after update", 404);
+      throw updateHttpError("Student not found", 404);
     }
 
     const plainStudent = toPlainRow(studentRow);
