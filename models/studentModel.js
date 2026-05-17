@@ -137,10 +137,6 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'fee_plan_id',
-            references: {
-                model: feePlanModel,
-                key: 'fee_plan_id'
-            }
         },
         feePlanProfileId: {
             type: DataTypes.INTEGER,

@@ -824,10 +824,27 @@ const STUDENT_UPDATE_EXCLUDE_KEYS = new Set([
   "allDropDownData",
 ]);
 
+/** Optional FK columns — omit empty/0 so MySQL does not get invalid child keys. */
+const STUDENT_OPTIONAL_FK_KEYS = new Set([
+  "semesterId",
+  "specializationId",
+  "feePlanProfileId",
+  "userId",
+]);
+
 function pickStudentUpdatePayload(info) {
   const payload = { ...info };
   for (const key of STUDENT_UPDATE_EXCLUDE_KEYS) {
     delete payload[key];
+  }
+  // Legacy v1 fee plan — v2 uses feePlanProfileId only
+  delete payload.feePlanId;
+
+  for (const key of STUDENT_OPTIONAL_FK_KEYS) {
+    const value = payload[key];
+    if (value === undefined || value === null || value === "" || value === 0) {
+      delete payload[key];
+    }
   }
   return payload;
 }
