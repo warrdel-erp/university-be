@@ -1,11 +1,18 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/feePlanProfileRepository.js";
 import * as catalogRepo from "../repository/feeTypeCatalogRepository.js";
+import * as studentRepo from "../repository/studentRepository.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function toPlain(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function httpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
 }
 
 
@@ -367,4 +374,46 @@ export async function updateFeePlanProfile(body, instituteId) {
 
   const fresh = await repo.findFeePlanProfileById(feePlanProfileId, instituteId);
   return formatFeePlanProfileDetail(fresh);
+}
+
+/** Assign fee v2 plan to student (students.fee_plan_profile_id). */
+export async function assignFeePlanProfileToStudent(body, instituteId) {
+  const { studentId, feePlanProfileId } = body;
+
+  return sequelize.transaction(async (transaction) => {
+    const profile = await repo.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+      instituteId,
+      { transaction }
+    );
+    if (!profile) {
+      throw httpError("Fee plan profile not found for this institute", 404);
+    }
+
+    const student = await studentRepo.findStudentByIdForInstitute(studentId, instituteId, {
+      transaction,
+    });
+    if (!student) {
+      throw httpError("Student not found for this institute", 404);
+    }
+
+    await studentRepo.updateStudentFeePlanProfileId(
+      studentId,
+      instituteId,
+      feePlanProfileId,
+      { transaction }
+    );
+
+    const plainStudent = toPlain(student);
+    const profilePlain = toPlain(profile);
+
+    return {
+      studentId,
+      feePlanProfileId,
+      studentName: [plainStudent.firstName, plainStudent.lastName].filter(Boolean).join(" ").trim() || null,
+      scholarNumber: plainStudent.scholarNumber ?? null,
+      feePlanName: profilePlain.name ?? null,
+      planType: profilePlain.planType ?? null,
+    };
+  });
 }

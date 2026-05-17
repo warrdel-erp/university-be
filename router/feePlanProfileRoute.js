@@ -8,6 +8,7 @@ import {
   getFeePlanProfileSummary,
   getSingleFeePlanProfileDetails,
   updateFeePlanProfile,
+  assignFeePlanProfileToStudent,
 } from "../controllers/feePlanProfileController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -66,7 +67,18 @@ const listAllQuery = z
     status: d.status ?? "all",
   }));
 
+const assignStudentBody = z.object({
+  studentId: id,
+  feePlanProfileId: id,
+});
+
 router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
+router.patch(
+  "/assignStudent",
+  userAuth,
+  validate({ body: assignStudentBody }),
+  assignFeePlanProfileToStudent
+);
 router.get("/summary", userAuth, getFeePlanProfileSummary);
 router.get("/all", userAuth, validate({ query: listAllQuery }), getAllFeePlanProfiles);
 router.get("/", userAuth, validate({ query: listQuery }), getAllFeePlanProfile);

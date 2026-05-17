@@ -409,6 +409,36 @@ export async function getPreviousScholarNumber(instituteCode) {
     }
 };
 
+export async function findStudentByIdForInstitute(studentId, instituteId, options = {}) {
+    const { transaction, attributes } = options;
+    return model.studentModel.findOne({
+        where: { studentId, instituteId },
+        attributes: attributes ?? [
+            "studentId",
+            "instituteId",
+            "feePlanProfileId",
+            "firstName",
+            "lastName",
+            "scholarNumber",
+        ],
+        transaction,
+    });
+}
+
+export async function updateStudentFeePlanProfileId(
+    studentId,
+    instituteId,
+    feePlanProfileId,
+    options = {}
+) {
+    const { transaction } = options;
+    const [affected] = await model.studentModel.update(
+        { feePlanProfileId },
+        { where: { studentId, instituteId }, transaction }
+    );
+    return affected;
+}
+
 export async function updateStudentDetails(studentId, data, transaction) {
     try {
         const result = await model.studentModel.update(data, {

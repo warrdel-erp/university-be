@@ -69,3 +69,13 @@ export async function updateFeePlanProfile(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function assignFeePlanProfileToStudent(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const data = await feePlanProfileService.assignFeePlanProfileToStudent(req.body, instituteId);
+    return SuccessResponse(res, 200, "Fee plan profile assigned to student successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

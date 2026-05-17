@@ -5464,7 +5464,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary** (counts); **GET /all?status=** (all|active|inactive by student assignment)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all** (list); **GET /student?studentId=** (detail); **POST /student** (create); **PATCH /student/:studentId** (update, assign feePlanProfileId); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -5814,7 +5814,7 @@
         },
         {
           "name": "feePlanProfile",
-          "description": "Fee plans v2. **GET /summary** — active/inactive counts (by student assignment). **GET /all?status=** — list plans. **GET /** — by courseSessionId. Dropdown: **GET /options/feePlans** (not /lookup).",
+          "description": "Fee plans v2. **PATCH /assignStudent** — set students.fee_plan_profile_id (body: studentId, feePlanProfileId). **GET /summary**, **GET /all?status=**, **GET /** by courseSessionId, **GET /single**. Dropdown: **GET /options/feePlans**.",
           "item": [
             {
               "name": "create",
@@ -6074,6 +6074,68 @@
                   ]
                 },
                 "description": "**GET /feePlanProfile/single?feePlanProfileId=**\n\nFormatted detail (no raw timestamps on nested catalog).\n\n**Profile:** planName, planType, courseSessionId, **courseName**, **sessionName**, courseId, sessionId, assignedStudentCount, numberOfInvoices, status (active|inactive), term, termFees, additionalFees, totalFees.\n\n**feePlanItems[]:** feePlanItemId, termName, createDate, dueDate, amount, additionalFees, total, numberOfInvoices, itemAdditionalFees[{ name, amount, feeTypeCatalogId }]."
+              },
+              "response": []
+            },
+            {
+              "name": "assign fee plan to student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(data.studentId));",
+                      "}",
+                      "if (data && data.feePlanProfileId) {",
+                      "  pm.collectionVariables.set('feePlanProfile_id', String(data.feePlanProfileId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/assignStudent",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "assignStudent"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": {{student_id}},\n  \"feePlanProfileId\": {{feePlanProfile_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**PATCH /feePlanProfile/assignStudent**\n\nAssigns fee v2 plan to a student (updates `students.fee_plan_profile_id` only).\n\n**Body (required):** `studentId`, `feePlanProfileId`.\n\n**200 data:** studentId, feePlanProfileId, studentName, scholarNumber, feePlanName, planType.\n\nUse instead of **PATCH /student/:id** when you only need to link a plan (no semesterId / full student form).\n\nRun after **create** plan and **student** exists (`student_id`, `feePlanProfile_id` vars)."
               },
               "response": []
             }
@@ -6461,7 +6523,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** (initiate table) → **GET /student/all** (list) → **GET /student?studentId=** (detail) → **POST /student** (create with feePlanProfileId) → **PATCH /student/:studentId** (update). Profile dropdown: **GET /options/feePlans**. Then **studentFeeInvoice** per term.",
+          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** → **GET /student/all** → **GET /student?studentId=** → **POST /student** (create) → **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) → optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
           "item": [
             {
               "name": "1 fee plan profiles all (paginated)",
