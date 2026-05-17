@@ -103,10 +103,10 @@ export const updateStudentDetails = async (req, res) => {
             );
         }
         const result = await studentService.updateStudentDetails(studentId, info, file);
-        return res.status(200).send(result);
+        return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {
         console.error(`Error in updating student Id ${studentId}:`, error);
-        return res.status(500).send("Internal Server Error");
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 

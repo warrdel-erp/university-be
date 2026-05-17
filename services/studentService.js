@@ -817,10 +817,35 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
   }
 }
 
+const STUDENT_UPDATE_EXCLUDE_KEYS = new Set([
+  "entranceDetails",
+  "addressDetails",
+  "corsAddress",
+  "allDropDownData",
+]);
+
+function pickStudentUpdatePayload(info) {
+  const payload = { ...info };
+  for (const key of STUDENT_UPDATE_EXCLUDE_KEYS) {
+    delete payload[key];
+  }
+  return payload;
+}
+
+function updateHttpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
 export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
 
   try {
+    if (info.feePlanProfileId !== undefined) {
+      await assertFeePlanProfileForInstitute(info.feePlanProfileId, info.instituteId);
+    }
+
     const settingKey = "studentDocument";
     const getstudentDocuments = await getSettingValue(settingKey);
     const studentRequiredDocuments =
@@ -845,12 +870,17 @@ export async function updateStudentDetails(StudentId, info, files) {
       info.documentStatus = "Complete Documents";
     }
 
-    // Update student details
-    const student = await studentRepository.updateStudentDetails(
+    const studentPayload = pickStudentUpdatePayload(info);
+
+    // Update student row (Sequelize returns [affectedRows], not the row)
+    const [rowsUpdated] = await studentRepository.updateStudentDetails(
       StudentId,
-      info,
+      studentPayload,
       transaction,
     );
+    if (!rowsUpdated) {
+      throw updateHttpError("Student not found or no changes applied", 404);
+    }
 
     // Update entranceDetails
     let entranceDetails = [];
@@ -944,14 +974,19 @@ export async function updateStudentDetails(StudentId, info, files) {
       }
     }
     await transaction.commit();
-    const result = {
-      student,
-      entranceDetails,
-      addressDetails,
-      corsAddressDetails,
-      allDropDownData,
+
+    const studentRow = await getSingleStudentDetail(StudentId, info.universityId);
+    if (!studentRow) {
+      throw updateHttpError("Student not found after update", 404);
+    }
+
+    const plainStudent = toPlainRow(studentRow);
+
+    return {
+      studentId: StudentId,
+      rowsUpdated,
+      student: plainStudent,
     };
-    return result;
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating student:", error);
