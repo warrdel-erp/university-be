@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import * as invoiceRepo from "../repository/studentFeeInvoiceRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
-import * as studentRepository from "../repository/studentRepository.js";
 import { formatStudentFeeInvoiceResponse } from "./studentFeeInvoiceServices.js";
 import {
   decimalAdd,
@@ -74,54 +73,6 @@ function formatFeePlanProfile(profile) {
     name: p.name ?? null,
     planType: p.planType ?? null,
     courseSessionId: p.courseSessionId ?? null,
-  };
-}
-
-function todayDateOnly() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
-  const startDate = String(feePlanItem.createDate).slice(0, 10);
-
-  if (!invoice) {
-    return startDate > today ? "upcoming" : "pending";
-  }
-
-  if (invoice.paymentStatus === "paid") return "paid";
-  if (invoice.paymentStatus === "partial") return "partial";
-  return "unpaid";
-}
-
-function buildStudentInvoiceMap(invoices) {
-  const byStudent = new Map();
-  for (const inv of invoices) {
-    const p = toPlain(inv);
-    if (!byStudent.has(p.studentId)) {
-      byStudent.set(p.studentId, new Map());
-    }
-    if (p.feePlanItemId != null) {
-      byStudent.get(p.studentId).set(p.feePlanItemId, p);
-    }
-  }
-  return byStudent;
-}
-
-function formatPaymentTermRow(feePlanItem, invoice, index) {
-  const item = toPlain(feePlanItem);
-  const inv = invoice ? toPlain(invoice) : null;
-
-  return {
-    sno: index + 1,
-    feePlanItemId: item.feePlanItemId,
-    termName: item.termName ?? null,
-    startDate: item.createDate,
-    endDate: item.dueDate ?? null,
-    amount: toMoneyNumber(item.amount),
-    status: resolveTermDisplayStatus(item, inv),
-    studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
-    paymentStatus: inv?.paymentStatus ?? null,
-    isCurrentInvoice: false,
   };
 }
 
@@ -242,26 +193,13 @@ export async function listPaymentsByInvoiceId(studentFeeInvoiceId, instituteId) 
     null;
 
   let feePlan = null;
-  let terms = [];
 
   if (feePlanProfileId) {
-    const [profileRow, feePlanItems, studentInvoices] = await Promise.all([
-      feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
-        feePlanProfileId,
-        instituteId,
-      ),
-      studentRepository.findFeePlanItemsByProfileIds([feePlanProfileId], instituteId),
-      studentRepository.findInvoicesByStudentIds([studentId], instituteId),
-    ]);
-
+    const profileRow = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+      instituteId,
+    );
     feePlan = formatFeePlanProfile(profileRow);
-    const invoiceByItem = buildStudentInvoiceMap(studentInvoices).get(studentId) ?? new Map();
-
-    terms = feePlanItems.map((item, index) => {
-      const row = formatPaymentTermRow(item, invoiceByItem.get(toPlain(item).feePlanItemId), index);
-      row.isCurrentInvoice = row.studentFeeInvoiceId === studentFeeInvoiceId;
-      return row;
-    });
   }
 
   const invoiceTotal = invoice?.total ?? toMoneyNumber(invoicePlain.total);
@@ -276,7 +214,6 @@ export async function listPaymentsByInvoiceId(studentFeeInvoiceId, instituteId) 
     student: formatPaymentListStudent(studentRow),
     invoice,
     feePlan,
-    terms,
     invoiceTotal,
     totalPaid,
     balanceDue,
