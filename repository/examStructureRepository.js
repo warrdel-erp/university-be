@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 
 export async function addExamStructure(examDetail) {
   try {
@@ -139,28 +140,53 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, universityId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
   try {
+    const examStructureWhere = {
+      courseId,
+      sessionId,
+      universityId,
+      ...(instituteId && { instituteId }),
+    };
+
+    const examStructures = await model.examStructureModel.findAll({
+      attributes: ["examStructureId"],
+      where: examStructureWhere,
+    });
+
+    const examStructureIds = examStructures.map((row) => row.examStructureId);
+    if (!examStructureIds.length) {
+      return [];
+    }
+
     const examSetupTypeTermsInclude = {
       model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     };
 
-    if (termNumber) {
-      examSetupTypeTermsInclude.where = { term: termNumber, courseId };
-      examSetupTypeTermsInclude.required = true;
+    if (termNumber != null) {
+      examSetupTypeTermsInclude.where = {
+        term: termNumber,
+        courseId,
+        ...(instituteId && { instituteId }),
+      };
     }
 
     const result = await model.examSetupTypeModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        examStructureId: { [Op.in]: examStructureIds },
+        universityId,
+        ...(instituteId && { instituteId }),
+      },
       include: [
-        examSetupTypeTermsInclude,
         {
           model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: { courseId, sessionId, universityId },
+          where: examStructureWhere,
+          required: true,
           include: [
             {
               model: model.courseModel,
@@ -179,7 +205,10 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
             },
           ],
         },
+        examSetupTypeTermsInclude,
       ],
+      subQuery: false,
+      distinct: true,
     });
 
     return result;

@@ -44,7 +44,13 @@ export async function getDetailByExamType(examSetupTypeId) {
 };
 
 export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
-    const result = await examStructureRepository.getSingleExamType(courseId, sessionId, universityId, termNumber);
+    const result = await examStructureRepository.getSingleExamType(
+        courseId,
+        sessionId,
+        universityId,
+        termNumber,
+        instituteId
+    );
 
     return Promise.all((result || []).map(async (row) => {
         const plain = typeof row?.toJSON === "function" ? row.toJSON() : row;
