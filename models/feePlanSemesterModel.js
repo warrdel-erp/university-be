@@ -66,7 +66,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_plan_semester',
+        tableName: 'fee_plan_semester__deprecated',
         timestamps: true,
         paranoid: true
     }

@@ -1,7 +1,7 @@
 import * as model from "../models/index.js";
 
-export async function createHistory(data) {
-    return await model.studentClassSectionsHistoryModel.create(data);
+export async function createHistory(data, transaction) {
+    return await model.studentClassSectionsHistoryModel.create(data, { transaction });
 }
 
 export async function getHistoryByStudentId(studentId) {
@@ -21,6 +21,6 @@ export async function getHistoryByStudentId(studentId) {
     });
 }
 
-export async function bulkCreateHistory(dataList) {
-    return await model.studentClassSectionsHistoryModel.bulkCreate(dataList);
+export async function bulkCreateHistory(dataList, transaction) {
+    return await model.studentClassSectionsHistoryModel.bulkCreate(dataList, { transaction });
 }

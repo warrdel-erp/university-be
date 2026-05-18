@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { UniqueConstraintError } from "sequelize";
 import * as answerSheetQrRepository from "../repository/answerSheetQrRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 
@@ -82,73 +83,78 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
 }
 
 export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteId, universityId) {
-  const resultData = await sequelize.transaction(async (transaction) => {
-    if (!studentId || !examScheduleId) {
-      throw createServiceError("Both studentId and examScheduleId are required for mapping.", 400);
-    }
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const [student, examSchedule] = await Promise.all([
+        answerSheetQrRepository.getScopedStudent(
+          studentId,
+          instituteId,
+          universityId,
+          transaction
+        ),
+        answerSheetQrRepository.getScopedExamSchedule(
+          examScheduleId,
+          instituteId,
+          universityId,
+          transaction
+        ),
+      ]);
 
-    if (studentId) {
-      const student = await answerSheetQrRepository.getScopedStudent(
+      if (!student) throw createServiceError("Student not found in your institute.", 404);
+      if (!examSchedule) throw createServiceError("Exam schedule not found in your institute.", 404);
+
+      const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamTerm(
         studentId,
+        examSchedule.examSetupTypeTermId,
+        examSchedule.sessionId,
         instituteId,
         universityId,
         transaction
       );
-      if (!student) {
-        throw createServiceError("Student not found in your institute.", 404);
+      if (!hasHallTicket) {
+        throw createServiceError(
+          "Student does not have a hall ticket for this exam setup type term.",
+          400
+        );
       }
-    }
 
-    if (examScheduleId) {
-      const examSchedule = await answerSheetQrRepository.getScopedExamSchedule(
+      const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
+        qr,
+        studentId,
         examScheduleId,
         instituteId,
         universityId,
         transaction
       );
-      if (!examSchedule) {
-        throw createServiceError("Exam schedule not found in your institute.", 404);
+
+      if (!result) throw createServiceError("QR code not found.", 404);
+      if (result.answerSheetAlreadyMapped) {
+        throw createServiceError("This answer sheet is already mapped", 409);
       }
+      if (result.studentExamAlreadyMapped) {
+        throw createServiceError("This student is already assigned to this exam schedule", 409);
+      }
+
+      const { row } = result;
+      return {
+        id: row.id,
+        qr: row.qr,
+        requestId: row.requestId ?? null,
+        studentId: row.studentId,
+        examScheduleId: row.examScheduleId,
+        assignedToUser: row.assignedToUser ?? null,
+        evaluatedAt: row.evaluatedAt ?? null,
+        obtainedMarks: row.obtainedMarks ?? null,
+        instituteId: row.instituteId,
+        universityId: row.universityId,
+      };
+    });
+  } catch (error) {
+    if (error instanceof UniqueConstraintError) {
+      throw createServiceError("This student is already assigned to this exam schedule", 409);
     }
-
-    const mappingPayload = {
-      ...(studentId && { studentId }),
-      ...(examScheduleId && { examScheduleId }),
-    };
-
-    const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
-      qr,
-      mappingPayload,
-      instituteId,
-      universityId,
-      transaction
-    );
-
-    if (!result) {
-      throw createServiceError("QR code not found.", 404);
-    }
-
-    if (result.examScheduleAlreadyMapped) {
-      throw createServiceError(
-        "This exam schedule is already mapped to another answer sheet QR.",
-        409
-      );
-    }
-
-    return {
-      id: result.row.id,
-      qr: result.row.qr,
-      requestId: result.row.requestId ?? null,
-      studentId: result.row.studentId,
-      examScheduleId: result.row.examScheduleId,
-      assignedToUser: result.row.assignedToUser ?? null,
-      evaluatedAt: result.row.evaluatedAt ?? null,
-      obtainedMarks: result.row.obtainedMarks ?? null,
-      instituteId: result.row.instituteId,
-      universityId: result.row.universityId,
-    };
-  });
-  return resultData;
+    throw error;
+  }
 }
 
 export async function getAnswerSheetQrDetailById(id, instituteId, universityId) {
@@ -208,34 +214,33 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
     offset
   );
 
-  const selectedRequest = groupedRows[0];
-  let data = {};
+  const data = await Promise.all(
+    groupedRows.map(async (request) => {
+      const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
+        instituteId,
+        universityId,
+        request.requestId
+      );
 
-  if (selectedRequest) {
-    const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
-      instituteId,
-      universityId,
-      selectedRequest.requestId
-    );
-
-    let mappedQrs = 0;
-    for (const row of usageRows) {
-      if (row.studentId != null || row.examScheduleId != null) {
-        mappedQrs++;
+      let mappedQrs = 0;
+      for (const row of usageRows) {
+        if (row.studentId != null || row.examScheduleId != null) {
+          mappedQrs++;
+        }
       }
-    }
 
-    const totalQrs = usageRows.length;
-    const unmappedQrs = totalQrs - mappedQrs;
+      const totalQrs = usageRows.length;
+      const unmappedQrs = totalQrs - mappedQrs;
 
-    data = {
-      requestId: selectedRequest.requestId,
-      totalQrs,
-      mappedQrs,
-      unmappedQrs,
-      generatedAt: selectedRequest.generatedAt,
-    };
-  }
+      return {
+        requestId: request.requestId,
+        totalQrs,
+        mappedQrs,
+        unmappedQrs,
+        generatedAt: request.generatedAt,
+      };
+    })
+  );
 
   return {
     data,
@@ -358,14 +363,14 @@ export async function assignAnswerSheetsToTeachers(
 }
 
 export async function getScriptsAssignedToTeacher(
-  teacherUserId,
+  assignedToUserId,
   instituteId,
   universityId,
   page = 1,
   limit = 20
 ) {
   const teacher = await answerSheetQrRepository.getScopedUser(
-    teacherUserId,
+    assignedToUserId,
     instituteId,
     universityId
   );
@@ -375,14 +380,14 @@ export async function getScriptsAssignedToTeacher(
 
   const offset = (page - 1) * limit;
   const { count, rows } = await answerSheetQrRepository.getScriptsAssignedToTeacher(
-    teacherUserId,
+    assignedToUserId,
     instituteId,
     universityId,
     limit,
     offset
   );
 
-  const data = rows.map((item) => ({
+  const filteredrows = rows.map((item) => ({
     id: item.id,
     qr: item.qr,
     requestId: item.requestId ?? null,
@@ -413,12 +418,13 @@ export async function getScriptsAssignedToTeacher(
   }));
 
   return {
+   data: {
+    filteredrows,
     teacher: {
       userId: teacher.userId,
       userName: teacher.userName,
       email: teacher.email,
-    },
-    data,
+    }},
     pagination: {
       page,
       limit,

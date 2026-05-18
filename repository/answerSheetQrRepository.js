@@ -179,7 +179,7 @@ export async function getScopedStudent(studentId, instituteId, universityId, tra
 export async function getScopedExamSchedule(examScheduleId, instituteId, universityId, transaction) {
   return model.examScheduleModel.findOne({
     where: { examScheduleId },
-    attributes: ["examScheduleId", "examSetupTypeTermId"],
+    attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
     include: [
       {
         model: model.examSetupTypeTermModel,
@@ -193,9 +193,26 @@ export async function getScopedExamSchedule(examScheduleId, instituteId, univers
   });
 }
 
+export async function hasStudentHallTicketForExamTerm(
+  studentId,
+  examSetupTypeTermId,
+  sessionId,
+  instituteId,
+  universityId,
+  transaction
+) {
+  const row = await model.studentHallTicketModel.findOne({
+    where: { studentId, examSetupTypeTermId, sessionId, instituteId, universityId },
+    attributes: ["id"],
+    transaction,
+  });
+  return Boolean(row);
+}
+
 export async function mapAnswerSheetQrOnce(
   qr,
-  mappingPayload,
+  studentId,
+  examScheduleId,
   instituteId,
   universityId,
   transaction
@@ -207,25 +224,28 @@ export async function mapAnswerSheetQrOnce(
 
   if (!row) return null;
 
-  const existingMapping =
-    mappingPayload.examScheduleId &&
-    await model.answerSheetQrModel.findOne({
-      where: {
-        examScheduleId: mappingPayload.examScheduleId,
-        instituteId,
-        universityId,
-        id: { [Op.ne]: row.id },
-      },
-      transaction,
-    });
-
-  if (existingMapping) {
-    return { examScheduleAlreadyMapped: true, row };
+  if (row.studentId && row.examScheduleId) {
+    return { answerSheetAlreadyMapped: true, row };
   }
 
-  await row.update(mappingPayload, { transaction });
+  const existingPair = await model.answerSheetQrModel.findOne({
+    where: {
+      studentId,
+      examScheduleId,
+      instituteId,
+      universityId,
+      id: { [Op.ne]: row.id },
+    },
+    transaction,
+  });
 
-  return { examScheduleAlreadyMapped: false, row };
+  if (existingPair) {
+    return { studentExamAlreadyMapped: true, row };
+  }
+
+  await row.update({ studentId, examScheduleId }, { transaction });
+
+  return { row, answerSheetAlreadyMapped: false, studentExamAlreadyMapped: false };
 }
 
 export async function getScopedUser(userId, instituteId, universityId, transaction) {
@@ -284,7 +304,7 @@ export async function assignMarksByAnswerSheetId(
 }
 
 export async function getScriptsAssignedToTeacher(
-  teacherUserId,
+  assignedToUserId,
   instituteId,
   universityId,
   limit,
@@ -292,7 +312,7 @@ export async function getScriptsAssignedToTeacher(
 ) {
   return model.answerSheetQrModel.findAndCountAll({
     where: {
-      assignedToUser: teacherUserId,
+      assignedToUser:assignedToUserId,
       instituteId,
       universityId,
     },

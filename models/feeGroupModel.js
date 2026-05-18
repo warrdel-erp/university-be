@@ -76,7 +76,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_group',
+        tableName: 'fee_group__deprecated',
         timestamps: true,
         paranoid: true
     }

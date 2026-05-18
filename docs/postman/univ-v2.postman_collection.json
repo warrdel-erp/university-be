@@ -1445,7 +1445,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/student?studentId=1660",
+              "raw": "{{baseurl}}/student?studentId={{student_id}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1455,49 +1455,7 @@
               "query": [
                 {
                   "key": "studentId",
-                  "value": "1660"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "fee",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/fee?courseId=34&semesterId=1&acedmicYearId=59",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "fee"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "34"
-                },
-                {
-                  "key": "semesterId",
-                  "value": "1"
-                },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
+                  "value": "{{student_id}}"
                 }
               ]
             }
@@ -3527,7 +3485,8 @@
                   "value": "6"
                 }
               ]
-            }
+            },
+            "description": "**GET /options/feePlans** — v2 only. Query: courseId, sessionId. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] }"
           },
           "response": []
         },
@@ -4451,7 +4410,7 @@
           "response": []
         },
         {
-          "name": "assign evaluator",
+          "name": "assign evaluator (POST /assign/evaluator)",
           "request": {
             "method": "POST",
             "header": [],
@@ -4485,12 +4444,12 @@
                 "evaluator"
               ]
             },
-            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to an evaluator."
+            "description": "**POST /answerSheetQr/assign/evaluator**\n\nAssigns one or more answer-sheet QR ids to a target user (`assignedToUserId`).\n\nPayload:\n- `assignedToUserId` (number)\n- `answerSheetQrIds` (number[])"
           },
           "response": []
         },
         {
-          "name": "get scripts by evaluator",
+          "name": "get scripts by evaluator (GET /evaluator/:assignedToUserId)",
           "request": {
             "method": "GET",
             "header": [],
@@ -4525,12 +4484,12 @@
                 }
               ]
             },
-            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nReturns scripts assigned to a specific evaluator with pagination."
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nQuery: `page`, `limit` (defaults 1 and 20).\n\n**200 response** (`SuccessResponse`):\n- `data` — object with:\n  - `filteredrows` — array of assigned script rows (id, qr, requestId, student/exam metadata, marks, etc.)\n  - `teacher` — `{ userId, userName, email }` for the user in `:assignedToUserId`\n- `paginationData` — `{ page, limit, total, totalPages }`\n\nAccess:\n- Teacher-only; `assignedToUserId` must match the authenticated user."
           },
           "response": []
         },
         {
-          "name": "assign obtained marks",
+          "name": "assign obtained marks (PATCH /:id/obtainedMarks)",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -4564,7 +4523,7 @@
                 "obtainedMarks"
               ]
             },
-            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR."
+            "description": "**PATCH /answerSheetQr/:id/obtainedMarks**\n\nSets obtained marks for the selected answer-sheet QR.\n\nBody:\n- `obtained_marks` (number, 0 to 999.99)\n\nAccess behavior in current backend:\n- Teacher-only endpoint\n- Only owner teacher can update (answer sheet must be assigned to token user)."
           },
           "response": []
         }
@@ -4843,10 +4802,26 @@
       "name": "library creation",
       "description": "Library creation and inventory APIs under `/libraryCreation`.",
       "variable": [
-        { "key": "libraryCreation_id", "value": "1", "type": "string" },
-        { "key": "libraryFloor_id", "value": "1", "type": "string" },
-        { "key": "libraryBook_id", "value": "1", "type": "string" },
-        { "key": "inventory_id", "value": "1", "type": "string" }
+        {
+          "key": "libraryCreation_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryFloor_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryBook_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "inventory_id",
+          "value": "1",
+          "type": "string"
+        }
       ],
       "item": [
         {
@@ -4854,13 +4829,34 @@
           "request": {
             "method": "POST",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"instituteId\": 12,\n  \"name\": \"Central Library\",\n  \"description\": \"Main campus library\",\n  \"campusId\": 1,\n  \"floors\": [\n    { \"name\": \"Ground Floor\" }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4878,8 +4874,25 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4897,12 +4910,31 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/single?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "single"],
-              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -4921,13 +4953,34 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Central Library Updated\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation", "host": ["{{baseurl}}"], "path": ["libraryCreation"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ]
+            }
           },
           "response": [
             {
@@ -4945,12 +4998,30 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation"],
-              "query": [{ "key": "libraryCreationId", "value": "{{libraryCreation_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation"
+              ],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -4970,13 +5041,35 @@
             "method": "POST",
             "header": [],
             "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/addBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "addBook"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/addBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "addBook"
+              ]
+            }
           },
           "response": [
             {
@@ -4998,8 +5091,13 @@
                 },
                 "url": {
                   "raw": "{{baseurl}}/libraryCreation/addBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryCreation", "addBook"]
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "libraryCreation",
+                    "addBook"
+                  ]
                 }
               },
               "status": "Created",
@@ -5015,14 +5113,34 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "allBook"],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "allBook"
+              ],
               "query": [
-                { "key": "libraryCreationId", "value": "{{libraryCreation_id}}" },
-                { "key": "libraryFloorId", "value": "{{libraryFloor_id}}" }
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                },
+                {
+                  "key": "libraryFloorId",
+                  "value": "{{libraryFloor_id}}"
+                }
               ]
             }
           },
@@ -5042,12 +5160,31 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/singleBook?libraryBookId={{libraryBook_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "singleBook"],
-              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "singleBook"
+              ],
+              "query": [
+                {
+                  "key": "libraryBookId",
+                  "value": "{{libraryBook_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5066,13 +5203,35 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/updateBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateBook"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/updateBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateBook"
+              ]
+            }
           },
           "response": [
             {
@@ -5090,13 +5249,35 @@
           "request": {
             "method": "PATCH",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/updateInventory", "host": ["{{baseurl}}"], "path": ["libraryCreation", "updateInventory"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/updateInventory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateInventory"
+              ]
+            }
           },
           "response": [
             {
@@ -5114,12 +5295,31 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/deleteBook?libraryBookId={{libraryBook_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "deleteBook"],
-              "query": [{ "key": "libraryBookId", "value": "{{libraryBook_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "deleteBook"
+              ],
+              "query": [
+                {
+                  "key": "libraryBookId",
+                  "value": "{{libraryBook_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5138,12 +5338,31 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/deleteInventory?inventoryId={{inventory_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "deleteInventory"],
-              "query": [{ "key": "inventoryId", "value": "{{inventory_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "deleteInventory"
+              ],
+              "query": [
+                {
+                  "key": "inventoryId",
+                  "value": "{{inventory_id}}"
+                }
+              ]
             }
           },
           "response": [
@@ -5162,8 +5381,26 @@
           "request": {
             "method": "GET",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
-            "url": { "raw": "{{baseurl}}/libraryCreation/issuedBook", "host": ["{{baseurl}}"], "path": ["libraryCreation", "issuedBook"] }
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/issuedBook",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "issuedBook"
+              ]
+            }
           },
           "response": [
             {
@@ -5181,14 +5418,36 @@
           "request": {
             "method": "POST",
             "header": [],
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "book", "type": "file", "src": [] }
+                {
+                  "key": "book",
+                  "type": "file",
+                  "src": []
+                }
               ]
             },
-            "url": { "raw": "{{baseurl}}/libraryCreation/bulkUpload", "host": ["{{baseurl}}"], "path": ["libraryCreation", "bulkUpload"] }
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/bulkUpload",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "bulkUpload"
+              ]
+            }
           },
           "response": [
             {
@@ -5198,6 +5457,1384 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"message\": \"Books uploaded successfully\",\n  \"created\": 10,\n  \"failed\": 0\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fee v2",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /additional** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, additional_fee, students.fee_plan_profile_id, student_fee_invoice, student_invoice_additional_fee, student_fee_payment",
+      "item": [
+        {
+          "name": "feeTypeCategory",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCategory"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Miscellaneous\",\n  \"description\": \"Optional description\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCategory"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCategory/single?feeTypeCategoryId={{feeTypeCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCategory",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "feeTypeCategoryId",
+                      "value": "{{feeTypeCategory_id}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCategory"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feeTypeCategoryId\": \"{{feeTypeCategory_id}}\",\n  \"name\": \"Miscellaneous (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCategory?feeTypeCategoryId={{feeTypeCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCategory"
+                  ],
+                  "query": [
+                    {
+                      "key": "feeTypeCategoryId",
+                      "value": "{{feeTypeCategory_id}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "feeTypeCatalog",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCatalog",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCatalog"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sports fee\",\n  \"amount\": \"1200.00\",\n  \"feeTypeCategoryId\": \"{{feeTypeCategory_id}}\",\n  \"description\": null\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCatalog",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCatalog"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCatalog/single?feeTypeCatalogId={{feeTypeCatalog_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCatalog",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "feeTypeCatalogId",
+                      "value": "{{feeTypeCatalog_id}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCatalog",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCatalog"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n  \"amount\": \"1250.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feeTypeCatalog?feeTypeCatalogId={{feeTypeCatalog_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feeTypeCatalog"
+                  ],
+                  "query": [
+                    {
+                      "key": "feeTypeCatalogId",
+                      "value": "{{feeTypeCatalog_id}}",
+                      "disabled": false
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "feePlanProfile",
+          "description": "Fee plans v2. **PATCH /assignStudent** — set students.fee_plan_profile_id (body: studentId, feePlanProfileId). **GET /summary**, **GET /all?status=**, **GET /** by courseSessionId, **GET /single**. Dropdown: **GET /options/feePlans**.",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.feePlanProfileId) {",
+                      "  pm.collectionVariables.set('feePlanProfile_id', String(data.feePlanProfileId));",
+                      "}",
+                      "if (data && data.feePlanItems && data.feePlanItems[0]) {",
+                      "  pm.collectionVariables.set('feePlanItem_id', String(data.feePlanItems[0].feePlanItemId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"semester\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"name\": \"Semester 1\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"amount\": \"50000.00\",\n      \"feeTypeCatalogs\": [\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"5000.00\"\n        }\n      ]\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates fee_plan_profile + feePlanItems (terms) + optional feeTypeCatalogs[] per installment.\n\nEach feeTypeCatalogs[] entry: feeTypeCatalogId + amount (stored on additional_fee).\n\nplanType: annual | semester | trimester (lowercase). academicYearId optional."
+              },
+              "response": []
+            },
+            {
+              "name": "summary (active / inactive / all)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/summary",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "summary"
+                  ]
+                },
+                "description": "**GET /feePlanProfile/summary** — dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactiveFeePlans**: profiles not assigned to any student\n- **allFeePlans**: total profiles for institute"
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (status=all)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=all",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "all",
+                      "description": "all | active | inactive"
+                    }
+                  ]
+                },
+                "description": "**GET /feePlanProfile/all?status=**\n\n- **all** — every fee plan for institute\n- **active** — assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactive** — no student assigned\n\n**data:** { status, feePlans[] }"
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (status=active)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=active",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "Fee plans with ≥1 student assigned. Response: { status: \"active\", feePlans[] }."
+              },
+              "response": []
+            },
+            {
+              "name": "list all plans (status=inactive)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/all?status=inactive",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "inactive"
+                    }
+                  ]
+                },
+                "description": "Fee plans with zero students assigned. Response: { status: \"inactive\", feePlans[] }."
+              },
+              "response": []
+            },
+            {
+              "name": "list by course session",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile?courseSessionId={{courseSession_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseSessionId",
+                      "value": "{{courseSession_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } — each plan: numberOfInvoices (term invoices via fee_plan_item), feePlanItems[{ feePlanItemId, termName, numberOfInvoices }], assignedStudentCount, status, termFees, totalFees, etc."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/single?feePlanProfileId={{feePlanProfile_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "feePlanProfileId",
+                      "value": "{{feePlanProfile_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /feePlanProfile/single?feePlanProfileId=**\n\nFormatted detail (no raw timestamps on nested catalog).\n\n**Profile:** planName, planType, courseSessionId, **courseName**, **sessionName**, courseId, sessionId, assignedStudentCount, numberOfInvoices, status (active|inactive), term, termFees, additionalFees, totalFees.\n\n**feePlanItems[]:** feePlanItemId, termName, createDate, dueDate, amount, additionalFees, total, numberOfInvoices, itemAdditionalFees[{ name, amount, feeTypeCatalogId }]."
+              },
+              "response": []
+            },
+            {
+              "name": "assign fee plan to student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(data.studentId));",
+                      "}",
+                      "if (data && data.feePlanProfileId) {",
+                      "  pm.collectionVariables.set('feePlanProfile_id', String(data.feePlanProfileId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile/assignStudent",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile",
+                    "assignStudent"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": {{student_id}},\n  \"feePlanProfileId\": {{feePlanProfile_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**PATCH /feePlanProfile/assignStudent**\n\nAssigns fee v2 plan to a student (updates `students.fee_plan_profile_id` only).\n\n**Body (required):** `studentId`, `feePlanProfileId`.\n\n**200 data:** studentId, feePlanProfileId, studentName, scholarNumber, feePlanName, planType.\n\nUse instead of **PATCH /student/:id** when you only need to link a plan (no semesterId / full student form).\n\nRun after **create** plan and **student** exists (`student_id`, `feePlanProfile_id` vars)."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "studentFeeInvoice",
+          "description": "Invoices v2. Term: POST / with feePlanItemId. Adhoc: POST /additional with feeTypeCatalogs[] (+ optional waiver). List institute: GET /all?status=all|pending|completed. By student: GET /?studentId= returns { student, invoices[] }. Detail: GET /single.",
+          "item": [
+            {
+              "name": "generate term invoice",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentFeeInvoiceId) {",
+                      "  pm.collectionVariables.set('studentFeeInvoice_id', String(data.studentFeeInvoiceId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"{{student_id}}\",\n  \"feePlanItemId\": \"{{feePlanItem_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**POST /studentFeeInvoice** — term / fee-plan invoice.\n\nBody: studentId, feePlanItemId only. instituteId from auth.\n\nCreates student_fee_invoice (linked to fee_plan_item) + student_invoice_additional_fee rows from plan additional_fee lines.\n\n201 message: \"Invoice generated\". data: studentFeeInvoiceId, amount, total, totalVerified, additionalFees[], feePlanItem, student (if loaded)."
+              },
+              "response": []
+            },
+            {
+              "name": "generate adhoc invoice (additional fees)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "if (data && data.studentFeeInvoiceId) {",
+                      "  pm.collectionVariables.set('studentFeeInvoice_id', String(data.studentFeeInvoiceId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/additional",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "additional"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"{{student_id}}\",\n  \"feeTypeCatalogs\": [\n    { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"5000.00\", \"waiver\": \"500.00\" },\n    { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"3000.00\", \"waiver\": \"500.00\" }\n  ],\n  \"total\": \"7000.00\",\n  \"createDate\": \"2026-05-16\",\n  \"dueDate\": \"2026-06-01\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**POST /studentFeeInvoice/additional** — adhoc invoice (misconduct, fine, etc.). No feePlanItemId.\n\n**Body (required):** studentId, feeTypeCatalogs[] (min 1), createDate (YYYY-MM-DD).\n\n**feeTypeCatalogs[] each line:** feeTypeCatalogId, amount; optional waiver (≥ 0, cannot exceed amount).\n\n**Invoice total** = sum of (amount − waiver) per line. Example: 5000−500 + 3000−500 = **7000** (not 8000 gross).\n\n**Optional:** dueDate (null allowed), total — if sent, must equal net sum after waivers; omit total to auto-compute.\n\n**Stored:** student_invoice_additional_fee.amount (gross), .waiver; student_fee_invoice.amount = total (net).\n\ninstituteId from auth.\n\n201 data (minimal): studentFeeInvoiceId, studentId, total, createDate, dueDate, paymentStatus. Use GET /studentFeeInvoice/single for full detail."
+              },
+              "response": []
+            },
+            {
+              "name": "list all invoices (status=all)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=all",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "all",
+                      "description": "all | pending | completed (alias: paymentTab)"
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeeInvoice/all?status=**\n\n- **all** — every generated invoice\n- **pending** — unpaid + partial\n- **completed** — paid\n\n**data:** { status, invoices[] } — studentFeeInvoiceId, studentName, scholarNumber, amount, paid, balanceDue, paymentStatus, termName, createDate, dueDate."
+              },
+              "response": []
+            },
+            {
+              "name": "list all invoices (status=pending)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=pending",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "pending"
+                    }
+                  ]
+                },
+                "description": "Unpaid and partial invoices only. Same response shape as status=all."
+              },
+              "response": []
+            },
+            {
+              "name": "list all invoices (status=completed)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/all?status=completed",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "completed"
+                    }
+                  ]
+                },
+                "description": "Paid invoices only. Same response shape as status=all."
+              },
+              "response": []
+            },
+            {
+              "name": "list by student (table)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice?studentId={{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeeInvoice?studentId=** — v2 replacement for GET /student/:id/feeDetails.\n\n**data:** { student: { studentId, studentName, scholarNumber }, invoices[] } — each invoice: studentFeeInvoiceId, termName, total, paymentStatus, totalPaid, balanceDue, additionalFees[{ name, amount }]."
+              },
+              "response": []
+            },
+            {
+              "name": "get single (full detail)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeeInvoice/single?studentFeeInvoiceId={{studentFeeInvoice_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeeInvoice",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentFeeInvoiceId",
+                      "value": "{{studentFeeInvoice_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeeInvoice/single?studentFeeInvoiceId=**\n\nFull invoice detail. data includes:\n- studentFeeInvoiceId, studentId, feePlanItemId, instituteId\n- **student** — studentId, firstName, middleName, lastName, studentName, scholarNumber, email, mobileNumber, enrollNumber, feePlanProfileId\n- amount, additionalFeesTotal, total, storedTotal, totalVerified\n- createDate, dueDate, status, paymentStatus, totalPaid, balanceDue\n- feePlanItem (term; null fields for adhoc)\n- additionalFees[] — name, description, amount, netAmount per catalog line"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "studentFeePayment",
+          "item": [
+            {
+              "name": "record payment",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const payment = res && res.data && res.data.payment;",
+                      "if (payment && payment.studentFeePaymentId) {",
+                      "  pm.collectionVariables.set('studentFeePayment_id', String(payment.studentFeePaymentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n  \"paidAmount\": \"5000.00\",\n  \"paymentDate\": \"2026-05-16\",\n  \"paymentMethod\": \"UPI\",\n  \"referenceNumber\": \"TXN-001\",\n  \"notes\": \"Partial payment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Body: studentFeeInvoiceId, paidAmount, paymentDate, paymentMethod; optional referenceNumber, notes. data.payment + data.invoice (updated paymentStatus, totalPaid, balanceDue)."
+              },
+              "response": []
+            },
+            {
+              "name": "list payments by invoice",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment?studentFeeInvoiceId={{studentFeeInvoice_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentFeeInvoiceId",
+                      "value": "{{studentFeeInvoice_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeePayment?studentFeeInvoiceId=**\n\n**data:** studentFeeInvoiceId, **student** { studentId, studentName, scholarNumber, courseId, courseName, sessionId, sessionName }, invoiceTotal, totalPaid, balanceDue, paymentStatus, payments[]."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "student (fee v2)",
+          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** → **GET /student/all** → **GET /student?studentId=** → **POST /student** (create) → **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) → optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
+          "item": [
+            {
+              "name": "1 fee plan profiles all (paginated)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "pm.test('pagination present', () => {",
+                      "  const p = res.paginationData;",
+                      "  pm.expect(p).to.have.property('page');",
+                      "  pm.expect(p).to.have.property('limit');",
+                      "  pm.expect(p).to.have.property('total');",
+                      "  pm.expect(p).to.have.property('totalPages');",
+                      "});",
+                      "const students = res.data && res.data.students;",
+                      "if (Array.isArray(students) && students[0]) {",
+                      "  pm.collectionVariables.set('student_id', String(students[0].studentId));",
+                      "  if (students[0].feePlanProfileId) {",
+                      "    pm.collectionVariables.set('feePlanProfile_id', String(students[0].feePlanProfileId));",
+                      "  }",
+                      "  if (students[0].terms && students[0].terms[0]) {",
+                      "    pm.collectionVariables.set('feePlanItem_id', String(students[0].terms[0].feePlanItemId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/feePlanProfiles/all?page={{feePlanInitiate_page}}&limit={{feePlanInitiate_limit}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "feePlanProfiles",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{feePlanInitiate_page}}",
+                      "description": "1-based page (default 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{feePlanInitiate_limit}}",
+                      "description": "Page size (default 20, max 100)"
+                    }
+                  ]
+                },
+                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` — studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `paginationData` — page, limit, total, totalPages\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
+              },
+              "response": [
+                {
+                  "name": "200 OK — example",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Fee plan initiate data fetched successfully\",\n  \"data\": {\n    \"students\": [\n      {\n        \"studentId\": 2152,\n        \"studentName\": \"Rahul Kumar Sharma\",\n        \"scholarNumber\": \"Asa@rj03/BARCH/25/100002\",\n        \"feePlanProfileId\": 1,\n        \"terms\": [\n          {\n            \"sno\": 1,\n            \"feePlanItemId\": 1,\n            \"feePlanTypeId\": 1,\n            \"termName\": \"Year 1\",\n            \"status\": \"pending\",\n            \"canGenerateInvoice\": true\n          }\n        ]\n      }\n    ]\n  },\n  \"paginationData\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 48,\n    \"totalPages\": 3\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "2 get all students (list)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "const rows = body.data || body.students || body;",
+                      "const list = Array.isArray(rows) ? rows : (rows && rows.students);",
+                      "if (Array.isArray(list) && list[0] && list[0].studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(list[0].studentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/all?search=all&acedmicYearId={{acedmicYear_id}}&page=1&limit=20",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "all",
+                      "description": "Search term or 'all'"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{acedmicYear_id}}"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `acedmicYearId`, `page` (default 1), `limit` (default 10).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
+              },
+              "response": []
+            },
+            {
+              "name": "3 get single student details",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const body = pm.response.json();",
+                      "const student = body.data || body.student || body;",
+                      "const id = student && student.studentId;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('student_id', String(id));",
+                      "  if (student.feePlanProfileId) {",
+                      "    pm.collectionVariables.set('feePlanProfile_id', String(student.feePlanProfileId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student?studentId={{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /student?studentId=**\n\nReturns full student record (addresses, entrance, course, session, **feePlanProfileId**, etc.) for the authenticated university.\n\n404 if not found. Sets `student_id` and `feePlanProfile_id` when present."
+              },
+              "response": []
+            },
+            {
+              "name": "4 create student (full details + feePlanProfileId)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const data = res && res.data;",
+                      "const studentId = data && (data.studentId || (data.student && data.student.studentId));",
+                      "if (studentId) {",
+                      "  pm.collectionVariables.set('student_id', String(studentId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/student",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
+              },
+              "response": []
+            },
+            {
+              "name": "5 update student (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/student/{{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "{{student_id}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe Updated\",\n  \"fatherName\": \"Michael Doe\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"email\": \"student.updated@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**PATCH /student/:studentId**\n\n`studentId` is the **path** param (`{{student_id}}`), not the body.\n\n**Required in body:** universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId.\n\n**Optional:** feePlanProfileId (assign/change fee v2 plan), names, contact fields, addressDetails, entranceDetails, files (multipart if used).\n\nUse after **3 get single** or **4 create** so `student_id` is set."
+              },
+              "response": []
             }
           ]
         }
@@ -5213,6 +6850,66 @@
     {
       "key": "token",
       "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCategory_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCatalog_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCatalog_id_2",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "feePlanProfile_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feePlanItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentFeeInvoice_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentFeePayment_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "courseSession_id",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "acedmicYear_id",
+      "value": "59",
+      "type": "string"
+    },
+    {
+      "key": "student_id",
+      "value": "1513",
+      "type": "string"
+    },
+    {
+      "key": "feePlanInitiate_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feePlanInitiate_limit",
+      "value": "20",
       "type": "string"
     }
   ]

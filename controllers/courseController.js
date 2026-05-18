@@ -80,14 +80,14 @@ export const getCourseSessions = async (req, res) => {
             });
         }
 
-        const result = await courseService.getCourseWithSessions(courseId, universityId, acedmicYearId);
+        const instituteId = req.user.defaultInstituteId;
 
-        if (!result) {
-            return res.status(404).json({
-                status: 'error',
-                message: 'Course not found'
-            });
-        }
+        const result = await courseService.getCourseWithSessions(
+            courseId,
+            universityId,
+            acedmicYearId,
+            instituteId
+        );
 
         return res.status(200).json({
             status: 'success',

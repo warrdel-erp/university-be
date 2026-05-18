@@ -1,48 +1,17 @@
-import { checkEmail, checkEnroll } from '../repository/studentRepository.js';
 import * as studentService from '../services/studentService.js'
 import * as fileHandler from '../utility/fileHandler.js';
-// 1. create student
-
-export const addStudent = async (req, res) => {
-    const file = req.files;
-    const createdBy = req.user.userId;
-    let { universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, email, enrollNumber, roleId, classSectionsId, acedmicYearId, semesterId, sessionId } = req.body;
-
+import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+export const addStudentWithFeePlanProfile = async (req, res) => {
     try {
-        // Check for required fields
-        if (!(universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId && roleId && classSectionsId && acedmicYearId)) {
-            return res.status(400).send("universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, roleId, courseId,acedmicYearId and classSectionsId are required");
-        }
-
-        // Check if email already exists
-        if (email) {
-            const checkExistingEmail = await checkEmail(email);
-            if (checkExistingEmail) {
-                if (email.toLowerCase() === checkExistingEmail.dataValues.email.toLowerCase()) {
-                    return res.status(400).send("Email is already existing");
-                }
-            }
-        } else {
-            return res.status(400).send("Email is required");
-        }
-
-        // Check if enrollment number already exists
-        if (enrollNumber) {
-            const checkExistingEnroll = await checkEnroll(enrollNumber);
-            if (checkExistingEnroll) {
-                if (enrollNumber.toLowerCase() === checkExistingEnroll.dataValues.enroll_number.toLowerCase()) {
-                    return res.status(400).send("Enrollment number is already existing");
-                }
-            }
-        }
-
-        // Add the student
-        const info = req.body;
-        const result = await studentService.addStudent(info, file, createdBy, universityId, roleId, acedmicYearId, classSectionsId, semesterId, sessionId);
-        return res.status(200).send(result);
+        const result = await studentService.addStudentWithFeePlanProfile({
+            info: req.body,
+            files: req.files,
+            createdBy: req.user.userId,
+        });
+        return SuccessResponse(res, 201, "Student created successfully", result);
     } catch (error) {
-        console.error("Error in addStudent:", error);
-        return res.status(500).send("Internal Server Error");
+        console.error("Error in addStudentWithFeePlanProfile:", error);
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 
@@ -70,13 +39,13 @@ export const getAllStudents = async (req, res) => {
 // 3. get single student details
 export const getSingleStudentDetail = async (req, res) => {
     const universityId = req.user.universityId;
-    const studentId = req.query.studentId;
+    const { studentId } = req.query;
     try {
-        if (!studentId) {
-            res.status(400).send("studentId is required");
-        }
         const result = await studentService.getSingleStudentDetail(studentId, universityId);
-        res.status(200).send(result);
+        if (!result) {
+            return res.status(404).send("Student not found");
+        }
+        return res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting ${studentId} details , single student details:`, error);
         res.status(500).send("Internal Server Error");
@@ -120,18 +89,18 @@ export const importStudentData = async (req, res) => {
 
 // update student 
 export const updateStudentDetails = async (req, res) => {
-    const { studentId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId } = req.body;
+    const studentId = Number(req.params.studentId);
     const info = req.body;
     const file = req.files;
     try {
-        if (!(studentId && universityId && campusId && instituteId && affiliatedUniversityId && courseLevelId && courseId)) {
-            res.status(400).send("student Id,universityId,campusId,instituteId,affiliatedUniversityId,courseLevelId and courseId is required");
+        if (!studentId) {
+            return ErrorResponse(res, 400, "studentId in URL path is required");
         }
         const result = await studentService.updateStudentDetails(studentId, info, file);
-        res.status(200).send(result);
+        return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {
-        console.error(`Error in updating student Id ${studentId} and ${campusId}:`, error);
-        res.status(500).send("Internal Server Error");
+        console.error(`Error in updating student Id ${studentId}:`, error);
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 
@@ -261,47 +230,38 @@ export const promoteStudent = async (req, res) => {
     }
 };
 
-export const getFeePlanId = async (req, res) => {
-    const { semesterId, acedmicYearId, courseId } = req.query;
-    const universityId = req.user.universityId;
-
+export const getFeePlanInitiate = async (req, res) => {
     try {
-        const result = await studentService.getFeePlanId(semesterId, acedmicYearId, courseId, universityId);
-
-        if (result && result.success === false) {
-            return res.status(400).json({
-                success: false,
-                message: result.message,
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: result,
-        });
-
+        const instituteId = req.user.defaultInstituteId;
+        const { page, limit } = req.query;
+        const result = await studentService.getFeePlanInitiateAll(instituteId, { page, limit });
+        return SuccessResponse(
+            res,
+            200,
+            "Fee plan initiate data fetched successfully",
+            { students: result.students },
+            result.pagination
+        );
     } catch (error) {
-        console.error("Error in getting fee plan by IDs:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message,
-        });
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
     const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query
+    const { acedmicYearId, courseId, sessionId } = req.query;
     const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     try {
-        const result = await studentService.getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role);
+        const result = await studentService.getEmptyFeeDetails(
+            universityId,
+            acedmicYearId,
+            instituteId,
+            { courseId, sessionId },
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
-        res.status(500).send("Internal Server Error");
+        res.status(error.statusCode || 500).send(error.message || "Internal Server Error");
     }
 };
 

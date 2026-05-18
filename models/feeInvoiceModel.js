@@ -109,7 +109,7 @@ export default sequelize.define(
         }
     },
     {
-        tableName: 'fee_invoice',
+        tableName: 'fee_invoice__deprecated',
         timestamps: true,
         paranoid: true
     }
