@@ -4800,7 +4800,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library creation and inventory APIs under `/libraryCreation`.",
+      "description": "Library creation and inventory APIs under `/libraryCreation`. Bulk Excel upload is in the **bulk upload** subfolder.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -5414,49 +5414,70 @@
           ]
         },
         {
-          "name": "bulk upload books",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "book",
-                  "type": "file",
-                  "src": []
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryCreation/bulkUpload",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "libraryCreation",
-                "bulkUpload"
-              ]
-            }
-          },
-          "response": [
+          "name": "bulk upload",
+          "description": "**POST /libraryCreation/bulkUpload?libraryCreationId=**\n\nUpload an Excel file (`.xlsx`). Each row = one inventory copy.\n\n**Query**\n| Key | Required |\n|-----|----------|\n| `libraryCreationId` | Yes |\n\n**Body (form-data)**\n| Key | Type | Required |\n|-----|------|----------|\n| `book` | file | Yes |\n\n**Required Excel columns (every row)**\n`isbn`, `excisionNumber`, `Aisle`, `Rack`, `Row`\n\n**Required only when ISBN is new in DB**\n`title`, `authors`\n\n**Optional book columns**\n`publisher`, `keywords`, `subtitle`, `barcode`, `itemType`, …\n\n**Logic**\n- ISBN exists → inventory row only\n- ISBN new → book + inventory\n- Same ISBN twice in file → first row creates book, next rows inventory only\n\n**Success**\n```json\n{ \"success\": true, \"message\": \"Data uploaded successfully\" }\n```\n\n**Error**\n```json\n{ \"message\": \"Row 2: Rack is required\" }\n```",
+          "item": [
             {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Books uploaded successfully\",\n  \"created\": 10,\n  \"failed\": 0\n}"
+              "name": "upload excel",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "book",
+                      "description": "Excel file — columns: title, authors, isbn, excisionNumber, Aisle, Rack, Row, publisher, keywords",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryCreation/bulkUpload?libraryCreationId={{libraryCreation_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "libraryCreation",
+                    "bulkUpload"
+                  ],
+                  "query": [
+                    {
+                      "key": "libraryCreationId",
+                      "value": "{{libraryCreation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "200 OK — success",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"success\": true,\n  \"message\": \"Data uploaded successfully\"\n}"
+                },
+                {
+                  "name": "400 — validation error",
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"message\": \"Row 2: excisionNumber is required; Row 3: Rack is required\"\n}"
+                }
+              ]
             }
           ]
         }
