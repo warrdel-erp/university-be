@@ -31,14 +31,14 @@ const profileIncludesForDetail = [
   },
 ];
 
-const feePlanItemsWithAdditionalFeesInclude = {
+const feePlanItemsWithSubItemsInclude = {
   model: model.feePlanItemModel,
   as: "feePlanItems",
   required: false,
   include: [
     {
-      model: model.additionalFeeModel,
-      as: "itemAdditionalFees",
+      model: model.feePlanSubItemsModel,
+      as: "feePlanSubItems",
       required: false,
       include: [
         {
@@ -93,7 +93,7 @@ export async function findFeePlanProfilesByInstitute(instituteId, options = {}) 
   }
   return model.feePlanProfileModel.findAll({
     where,
-    include: [...profileIncludes, feePlanItemsWithAdditionalFeesInclude],
+    include: [...profileIncludes, feePlanItemsWithSubItemsInclude],
     order: [
       ["feePlanProfileId", "ASC"],
       [{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"],
@@ -108,7 +108,7 @@ export async function findFeePlanProfileById(feePlanProfileId, instituteId, opti
 
   return model.feePlanProfileModel.findOne({
     where: { feePlanProfileId, instituteId },
-    include: [...profileInclude, feePlanItemsWithAdditionalFeesInclude],
+    include: [...profileInclude, feePlanItemsWithSubItemsInclude],
     order: [[{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"]],
     transaction,
   });
@@ -155,15 +155,6 @@ export async function findSessionCourseMappingWithSession(
   });
 }
 
-export async function updateFeePlanProfile(feePlanProfileId, instituteId, payload, options = {}) {
-  const { transaction } = options;
-  const [affected] = await model.feePlanProfileModel.update(payload, {
-    where: { feePlanProfileId, instituteId },
-    transaction,
-  });
-  return affected;
-}
-
 export async function countFeePlanProfilesByInstitute(instituteId, options = {}) {
   const { transaction } = options;
   return model.feePlanProfileModel.count({
@@ -198,27 +189,6 @@ export async function countStudentsGroupedByFeePlanProfile(instituteId, options 
     map.set(profileId, Number(row.studentCount));
   }
   return map;
-}
-
-export async function countStudentFeeInvoicesForFeePlanProfile(
-  feePlanProfileId,
-  instituteId,
-  options = {}
-) {
-  const { transaction } = options;
-  return model.studentFeeInvoiceModel.count({
-    where: { instituteId },
-    include: [
-      {
-        model: model.feePlanItemModel,
-        as: "feePlanItem",
-        where: { feePlanProfileId },
-        required: true,
-        attributes: [],
-      },
-    ],
-    transaction,
-  });
 }
 
 /** fee_plan_profile_id → term invoice count (student_fee_invoice via fee_plan_item). */
@@ -276,53 +246,19 @@ export async function countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, o
   return map;
 }
 
-export async function removeInstallmentsForProfile(feePlanProfileId, instituteId, options = {}) {
-  const { transaction } = options;
-  const items = await model.feePlanItemModel.findAll({
-    where: { feePlanProfileId, instituteId },
-    attributes: ["feePlanItemId"],
-    transaction,
-  });
-  const itemIds = items.map((r) => r.feePlanItemId);
-  if (itemIds.length === 0) return;
-
-  const additionalFees = await model.additionalFeeModel.findAll({
-    where: {
-      feePlanItemId: { [Op.in]: itemIds },
-      instituteId,
-    },
-    attributes: ["additionalFeeId"],
-    transaction,
-  });
-
-  for (const af of additionalFees) {
-    await model.additionalFeeModel.destroy({
-      where: { additionalFeeId: af.additionalFeeId, instituteId },
-      transaction,
-    });
-  }
-
-  await model.feePlanItemModel.destroy({
-    where: { feePlanProfileId, instituteId },
-    transaction,
-  });
-}
-
 export async function createFeePlanItem(data, options = {}) {
   return model.feePlanItemModel.create(data, { transaction: options.transaction });
 }
 
-export async function createAdditionalFee(data, options = {}) {
-  return model.additionalFeeModel.create(data, { transaction: options.transaction });
+export async function createFeePlanSubItem(data, options = {}) {
+  return model.feePlanSubItemsModel.create(data, { transaction: options.transaction });
 }
 
 /**
  * @param {Array<{
- *   name: string,
  *   startDate: string,
  *   dueDate: string|null,
- *   amount: number|string,
- *   additionalFees?: Array<{ feeTypeCatalogId: number, amount: number }>
+ *   subItems: Array<{ feeTypeId: number, amount: number, isMainSubItem: boolean }>
  * }>} installments
  */
 export async function createInstallmentsForProfile(
@@ -338,24 +274,20 @@ export async function createInstallmentsForProfile(
       {
         createDate: installment.startDate,
         dueDate: installment.dueDate,
-        termName: installment.name,
-        amount: installment.amount,
         feePlanProfileId,
         instituteId,
       },
       { transaction }
     );
 
-    const lines = installment.additionalFees;
-    if (!Array.isArray(lines) || lines.length === 0) continue;
-
-    for (const line of lines) {
-      await createAdditionalFee(
+    for (const line of installment.subItems) {
+      await createFeePlanSubItem(
         {
           amount: line.amount,
-          feeTypeCatalogId: line.feeTypeCatalogId,
+          feeTypeId: line.feeTypeId,
           feePlanItemId: feePlanItem.feePlanItemId,
           instituteId,
+          isMainSubItem: line.isMainSubItem,
         },
         { transaction }
       );

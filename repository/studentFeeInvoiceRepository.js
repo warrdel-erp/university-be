@@ -3,9 +3,9 @@ import * as model from "../models/index.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
 
-const additionalFeeLineInclude = {
-  model: model.studentInvoiceAdditionalFeeModel,
-  as: "invoiceAdditionalFees",
+const feeInvoiceItemsInclude = {
+  model: model.studentFeeInvoiceItemsModel,
+  as: "feeInvoiceItems",
   required: false,
   attributes: { exclude: excludeTs },
   include: [
@@ -21,6 +21,14 @@ const feePlanItemInclude = {
   model: model.feePlanItemModel,
   as: "feePlanItem",
   attributes: { exclude: excludeTs },
+  include: [
+    {
+      model: model.feePlanSubItemsModel,
+      as: "feePlanSubItems",
+      required: false,
+      attributes: { exclude: excludeTs },
+    },
+  ],
 };
 
 const feePaymentsInclude = {
@@ -63,11 +71,15 @@ export async function findStudentById(studentId, instituteId, options = {}) {
   });
 }
 
-export async function findAdditionalFeesByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
-  const { transaction } = options;
-  return model.additionalFeeModel.findAll({
-    where: { feePlanItemId, instituteId },
-    order: [["additionalFeeId", "ASC"]],
+export async function findFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
+  const { transaction, supplementalOnly } = options;
+  const where = { feePlanItemId, instituteId };
+  if (supplementalOnly) {
+    where.isMainSubItem = false;
+  }
+  return model.feePlanSubItemsModel.findAll({
+    where,
+    order: [["feePlanSubitemId", "ASC"]],
     transaction,
   });
 }
@@ -89,8 +101,8 @@ export async function createStudentFeeInvoice(data, options = {}) {
   return model.studentFeeInvoiceModel.create(data, { transaction: options.transaction });
 }
 
-export async function bulkCreateStudentInvoiceAdditionalFees(rows, options = {}) {
-  return model.studentInvoiceAdditionalFeeModel.bulkCreate(rows, {
+export async function bulkCreateStudentFeeInvoiceItems(rows, options = {}) {
+  return model.studentFeeInvoiceItemsModel.bulkCreate(rows, {
     transaction: options.transaction,
   });
 }
@@ -102,7 +114,7 @@ export async function findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId
     include: [
       studentInclude,
       feePlanItemInclude,
-      additionalFeeLineInclude,
+      feeInvoiceItemsInclude,
       feePaymentsInclude,
     ],
     transaction,
@@ -113,7 +125,7 @@ export async function findStudentFeeInvoicesByStudentId(studentId, instituteId, 
   const { transaction } = options;
   return model.studentFeeInvoiceModel.findAll({
     where: { studentId, instituteId },
-    include: [feePlanItemInclude, additionalFeeLineInclude, feePaymentsInclude],
+    include: [feePlanItemInclude, feeInvoiceItemsInclude, feePaymentsInclude],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction,
   });
@@ -134,7 +146,6 @@ export async function findAllStudentFeeInvoicesByInstitute(instituteId, options 
       "studentId",
       "feePlanItemId",
       "instituteId",
-      "amount",
       "total",
       "createDate",
       "dueDate",

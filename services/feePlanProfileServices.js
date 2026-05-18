@@ -16,15 +16,6 @@ function httpError(message, statusCode = 400) {
 }
 
 
-function assertUniqueCatalogIdsPerInstallment(feeTypeCatalogs, installmentName) {
-  const ids = (feeTypeCatalogs ?? []).map((c) => c.feeTypeCatalogId);
-  if (new Set(ids).size !== ids.length) {
-    throw new Error(
-      `Duplicate feeTypeCatalogId in feeTypeCatalogs for installment "${installmentName}"`
-    );
-  }
-}
-
 async function validateCourseSession(courseSessionId, instituteId, academicYearId, transaction) {
   const mapping = await repo.findSessionCourseMappingForInstitute(
     courseSessionId,
@@ -50,34 +41,29 @@ async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transact
   const prepared = [];
 
   for (const installment of feePlanItemsInput) {
-    assertUniqueCatalogIdsPerInstallment(installment.feeTypeCatalogs, installment.name);
+    const subItems = [];
 
-    const additionalFees = [];
-    for (const line of installment.feeTypeCatalogs ?? []) {
+    for (const line of installment.feeTypeCatalogs) {
       const catalog = await catalogRepo.findFeeTypeCatalogById(
         line.feeTypeCatalogId,
         instituteId,
         { transaction }
       );
       if (!catalog) {
-        throw new Error(
-          `feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`,
-        );
+        throw new Error(`feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`);
       }
-      additionalFees.push({
-        feeTypeCatalogId: catalog.feeTypeCatalogId,
+
+      subItems.push({
+        feeTypeId: catalog.feeTypeCatalogId,
         amount: toMoneyNumber(line.amount),
+        isMainSubItem: line.isMainItem === true,
       });
     }
 
-    const dueDate = installment.dueDate ?? null;
-
     prepared.push({
-      name: installment.name,
       startDate: installment.startDate,
-      dueDate,
-      amount: installment.amount,
-      additionalFees,
+      dueDate: installment.dueDate ?? null,
+      subItems,
     });
   }
 
@@ -85,11 +71,11 @@ async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transact
 }
 
 function buildFeePlanItemInvoiceRows(items, invoiceCountByItem) {
-  return (items ?? []).map((item) => {
+  return (items ?? []).map((item, index) => {
     const plain = toPlain(item);
     return {
+      sno: index + 1,
       feePlanItemId: plain.feePlanItemId,
-      termName: plain.termName ?? null,
       numberOfInvoices: invoiceCountByItem.get(plain.feePlanItemId) ?? 0,
     };
   });
@@ -97,11 +83,13 @@ function buildFeePlanItemInvoiceRows(items, invoiceCountByItem) {
 
 function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invoiceCountByItem) {
   const items = plainProfile.feePlanItems ?? [];
-  const termFees = decimalSum(items.map((i) => toMoneyNumber(i.amount)));
-  let additionalFees = 0;
+  let termFees = 0;
+  let supplementalFees = 0;
   for (const item of items) {
-    for (const af of item.itemAdditionalFees ?? []) {
-      additionalFees = decimalAdd(additionalFees, toMoneyNumber(af.amount));
+    for (const line of item.feePlanSubItems ?? []) {
+      const lineAmount = toMoneyNumber(line.amount);
+      if (line.isMainSubItem) termFees = decimalAdd(termFees, lineAmount);
+      else supplementalFees = decimalAdd(supplementalFees, lineAmount);
     }
   }
 
@@ -112,8 +100,8 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
     courseSessionId: plainProfile.courseSessionId,
     term: items.length,
     termFees,
-    additionalFees,
-    totalFees: decimalAdd(termFees, additionalFees),
+    supplementalFees,
+    totalFees: decimalAdd(termFees, supplementalFees),
     numberOfInvoices,
     totalInvoices: numberOfInvoices,
     feePlanItems: buildFeePlanItemInvoiceRows(items, invoiceCountByItem),
@@ -138,47 +126,43 @@ async function buildFeePlanListRows(list, instituteId, transaction) {
   });
 }
 
-export function formatFeePlanProfileDetail(row) {
-  return toPlain(row);
-}
-
 function formatFeePlanProfileSingleResponse(row, counts) {
   const p = toPlain(row);
   const mapping = p.courseSessionMapping ?? {};
   const course = mapping.courses ?? {};
   const session = mapping.session ?? {};
 
-  const feePlanItems = (p.feePlanItems ?? []).map((item) => {
-    const termAmount = toMoneyNumber(item.amount);
-    let additionalFees = 0;
-    const itemAdditionalFees = (item.itemAdditionalFees ?? []).map((af) => {
+  const feePlanItems = (p.feePlanItems ?? []).map((item, index) => {
+    let amount = 0;
+    let supplementalFees = 0;
+    const feePlanSubItems = (item.feePlanSubItems ?? []).map((af) => {
       const lineAmount = toMoneyNumber(af.amount);
-      additionalFees = decimalAdd(additionalFees, lineAmount);
-      const catalog = af.feeTypeCatalog ?? {};
-
+      if (af.isMainSubItem) amount = lineAmount;
+      else supplementalFees = decimalAdd(supplementalFees, lineAmount);
       return {
-        additionalFeeId: af.additionalFeeId,
-        feeTypeCatalogId: af.feeTypeCatalogId,
-        name: catalog.name ?? null,
+        feePlanSubitemId: af.feePlanSubitemId,
+        feeTypeId: af.feeTypeId,
+        isMainSubItem: af.isMainSubItem,
+        name: (af.feeTypeCatalog ?? {}).name ?? null,
         amount: lineAmount,
       };
     });
 
     return {
+      sno: index + 1,
       feePlanItemId: item.feePlanItemId,
-      termName: item.termName ?? null,
       createDate: item.createDate,
       dueDate: item.dueDate ?? null,
-      amount: termAmount,
-      additionalFees,
-      total: decimalAdd(termAmount, additionalFees),
+      amount,
+      supplementalFees,
+      total: decimalAdd(amount, supplementalFees),
       numberOfInvoices: counts.invoiceCountByItem.get(item.feePlanItemId) ?? 0,
-      itemAdditionalFees,
+      feePlanSubItems,
     };
   });
 
   const termFees = decimalSum(feePlanItems.map((item) => item.amount));
-  const additionalFeesTotal = decimalSum(feePlanItems.map((item) => item.additionalFees));
+  const supplementalFeesTotal = decimalSum(feePlanItems.map((item) => item.supplementalFees));
 
   return {
     feePlanProfileId: p.feePlanProfileId,
@@ -195,8 +179,8 @@ function formatFeePlanProfileSingleResponse(row, counts) {
     status: counts.assignedStudentCount > 0 ? "active" : "inactive",
     term: feePlanItems.length,
     termFees,
-    additionalFees: additionalFeesTotal,
-    totalFees: decimalAdd(termFees, additionalFeesTotal),
+    supplementalFees: supplementalFeesTotal,
+    totalFees: decimalAdd(termFees, supplementalFeesTotal),
     feePlanItems,
   };
 }
@@ -230,8 +214,7 @@ export async function addFeePlanProfile(body, instituteId) {
     return profile.feePlanProfileId;
   });
 
-  const full = await repo.findFeePlanProfileById(feePlanProfileId, instituteId);
-  return formatFeePlanProfileDetail(full);
+  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
 }
 
 export async function listFeePlanProfiles(instituteId, courseSessionId) {
@@ -312,68 +295,6 @@ export async function getSingleFeePlanProfile(feePlanProfileId, instituteId) {
     numberOfInvoices: invoiceCountByProfile.get(feePlanProfileId) ?? 0,
     invoiceCountByItem,
   });
-}
-
-export async function updateFeePlanProfile(body, instituteId) {
-  const { feePlanProfileId, name, planType, courseSessionId, academicYearId, feePlanItems } = body;
-
-  await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findFeePlanProfileById(feePlanProfileId, instituteId, {
-      transaction,
-    });
-    if (!existing) {
-      throw new Error("Fee plan profile not found or not in your institute");
-    }
-
-    const profilePatch = {};
-    if (name !== undefined) profilePatch.name = name;
-    if (planType !== undefined) profilePatch.planType = planType;
-    if (courseSessionId !== undefined) profilePatch.courseSessionId = courseSessionId;
-
-    const mapId = courseSessionId ?? existing.get("courseSessionId");
-
-    if (courseSessionId !== undefined) {
-      const mapping = await repo.findSessionCourseMappingForInstitute(
-        courseSessionId,
-        instituteId,
-        { transaction }
-      );
-      if (!mapping) {
-        throw new Error("courseSessionId not found or not in your institute");
-      }
-    }
-
-    if (academicYearId !== undefined || Object.keys(profilePatch).length > 0) {
-      await validateCourseSession(mapId, instituteId, academicYearId, transaction);
-    }
-
-    if (Object.keys(profilePatch).length > 0) {
-      await repo.updateFeePlanProfile(feePlanProfileId, instituteId, profilePatch, { transaction });
-    }
-
-    if (feePlanItems !== undefined) {
-      const invoiceCount = await repo.countStudentFeeInvoicesForFeePlanProfile(
-        feePlanProfileId,
-        instituteId,
-        { transaction }
-      );
-      if (invoiceCount > 0) {
-        throw new Error(
-          "Cannot replace feePlanItems while student fee invoices exist for this fee plan profile",
-        );
-      }
-
-      await repo.removeInstallmentsForProfile(feePlanProfileId, instituteId, { transaction });
-
-      const installments = await prepareInstallmentsForDb(feePlanItems, instituteId, transaction);
-      await repo.createInstallmentsForProfile(feePlanProfileId, instituteId, installments, {
-        transaction,
-      });
-    }
-  });
-
-  const fresh = await repo.findFeePlanProfileById(feePlanProfileId, instituteId);
-  return formatFeePlanProfileDetail(fresh);
 }
 
 /** Assign fee v2 plan to student (students.fee_plan_profile_id). */

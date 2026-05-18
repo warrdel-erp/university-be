@@ -1,13 +1,6 @@
 'use strict';
 
-/**
- * Fee v2 — production baseline (fresh database). Run in order:
- *   20260518100001 … 20260518100008  (v2 tables)
- *   20260520130000-add-fee-plan-profile-id-to-students
- *   20260520120000-rename-old-fee-tables-deprecated
- *
- * Do NOT run 20260521120000–216000 (removed; were dev/staging repair only).
- */
+/** Fee v2 — create tables 20260518100001–20260518100009 (final schema). */
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {

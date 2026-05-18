@@ -108,8 +108,8 @@ export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId) {
     }
 
     const [planLineCount, invoiceLineCount] = await Promise.all([
-      feeTypeCatalogRepo.countPlanAdditionalFeesForCatalog(feeTypeCatalogId, { transaction }),
-      feeTypeCatalogRepo.countInvoiceAdditionalFeesForCatalog(feeTypeCatalogId, { transaction }),
+      feeTypeCatalogRepo.countPlanSubItemsForCatalog(feeTypeCatalogId, { transaction }),
+      feeTypeCatalogRepo.countInvoiceItemsForCatalog(feeTypeCatalogId, { transaction }),
     ]);
     if (planLineCount > 0 || invoiceLineCount > 0) {
       const parts = [];

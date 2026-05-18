@@ -15,7 +15,6 @@ module.exports = {
         autoIncrement: true,
         allowNull: false,
       },
-      amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
       create_date: { type: Sequelize.DATEONLY, allowNull: false },
       due_date: { type: Sequelize.DATEONLY, allowNull: true },
       total: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
