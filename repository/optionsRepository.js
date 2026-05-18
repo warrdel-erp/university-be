@@ -90,11 +90,36 @@ export async function getTeacherOptions(instituteId, campusId) {
     });
 }
 
-export async function getFeePlanOptions(filters) {
-    return await model.feePlanModel.findAll({
-        attributes: [['name', 'label'], ['fee_plan_id', 'value']],
-        where: filters
+export async function findSessionCourseMappingByCourseAndSession(
+    courseId,
+    sessionId,
+    instituteId
+) {
+    return model.sessionCouseMappingModel.findOne({
+        attributes: ["sessionCourseMappingId"],
+        where: { courseId, sessionId, instituteId },
     });
+}
+
+/** V2 fee plan profiles for course + session (via session_course_mapping). */
+export async function getFeePlanProfileOptions(courseId, sessionId, instituteId) {
+    const mapping = await findSessionCourseMappingByCourseAndSession(
+        courseId,
+        sessionId,
+        instituteId
+    );
+    if (!mapping) {
+        return { courseSessionId: null, rows: [] };
+    }
+
+    const courseSessionId = mapping.get("sessionCourseMappingId");
+    const rows = await model.feePlanProfileModel.findAll({
+        attributes: ["feePlanProfileId", "name"],
+        where: { instituteId, courseSessionId },
+        order: [["feePlanProfileId", "ASC"]],
+    });
+
+    return { courseSessionId, rows };
 }
 
 export async function getTopicOptions(filters) {

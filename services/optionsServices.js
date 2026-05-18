@@ -40,7 +40,25 @@ export async function getTeacherOptions(instituteId, campusId) {
 }
 
 export async function getFeePlanOptions(filters) {
-    return await optionsRepository.getFeePlanOptions(filters);
+    const empty = { courseSessionId: null, profiles: [] };
+    const { courseId, sessionId, instituteId } = filters;
+    if (!courseId || !sessionId || !instituteId) {
+        return empty;
+    }
+
+    const { courseSessionId, rows } = await optionsRepository.getFeePlanProfileOptions(
+        Number(courseId),
+        Number(sessionId),
+        instituteId
+    );
+
+    return {
+        courseSessionId,
+        profiles: rows.map((row) => ({
+            feePlanProfileId: row.feePlanProfileId,
+            name: row.name,
+        })),
+    };
 }
 
 export async function getTopicOptions(filters) {

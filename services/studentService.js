@@ -1,4 +1,7 @@
-import { getCourseCode, getInstituteCode } from "../repository/collegeRepository.js";
+import {
+  getCourseCode,
+  getInstituteCode,
+} from "../repository/collegeRepository.js";
 import * as studentRepository from "../repository/studentRepository.js";
 import * as historyRepository from "../repository/studentClassSectionsHistoryRepository.js";
 import * as fileHandler from "../utility/fileHandler.js";
@@ -7,19 +10,20 @@ import { uploadFile } from "../utility/awsServices.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { getSettingValue } from "../repository/settingRepository.js";
 import { getEmployeeCodesTypesForStudentImport } from "../repository/codeMasterRepository.js";
-import { getCourseByName, getClassByName } from "../repository/courseRepository.js";
+import {
+  getCourseByName,
+  getClassByName,
+} from "../repository/courseRepository.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
-import { findByPlanId, getfeePlanByCourseAndAcedmic } from "../repository/feePlanRepository.js";
+import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
+import * as roleRepository from "../repository/roleRepository.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
-import { getSemesterById } from "./mainServices.js";
-import { getSingleacedmicYearDetails, getSingleacedmicYearDetailsByTitle } from "./acedmicYearServices.js";
-import { getSemesterGroup } from "../utility/semesterGroup.js";
 import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import * as model from '../models/index.js'
-
+import * as model from "../models/index.js";
+import { toMoneyNumber } from "../utility/decimalMoney.js";
 
 export async function addStudent(
   info,
@@ -48,7 +52,8 @@ export async function addStudent(
     // Documents status
     const settingKey = "studentDocument";
     const getstudentDocuments = await getSettingValue(settingKey);
-    const studentRequiredDocuments = getstudentDocuments?.dataValues?.setting_value;
+    const studentRequiredDocuments =
+      getstudentDocuments?.dataValues?.setting_value;
     let allFilesUploaded = true;
     for (let i = 0; i < studentRequiredDocuments?.length; i++) {
       const key = studentRequiredDocuments[i];
@@ -63,18 +68,32 @@ export async function addStudent(
     }
 
     // Scholar number
-    info.scholarNumber = await generateScholarNumber(info.courseId, info.instituteId);
+    info.scholarNumber = await generateScholarNumber(
+      info.courseId,
+      info.instituteId,
+    );
     info.email = info.email.toLowerCase();
     info.createdBy = createdBy;
 
     delete info.semesterId;
 
-    // Save student information
-    const student = await studentRepository.addStudent(info, transaction);
-    const studentId = student.dataValues.studentId;
-    const feePlanId = student.dataValues.feePlanId;
+    const studentPayload = { ...info };
+    for (const key of [
+      "entranceDetails",
+      "addressDetails",
+      "corsAddress",
+      "allDropDownData",
+      "roleId",
+    ]) {
+      delete studentPayload[key];
+    }
 
-    const { email, phoneNumber, mobileNumber, scholarNumber } = student.dataValues;
+    // Save student information
+    const student = await studentRepository.addStudent(studentPayload, transaction);
+    const studentId = student.dataValues.studentId;
+
+    const { email, phoneNumber, mobileNumber, scholarNumber } =
+      student.dataValues;
     const role = "Student";
     const registerStudentData = {
       studentId,
@@ -88,24 +107,39 @@ export async function addStudent(
     };
 
     const data = { studentId, acedmicYearId, createdBy, sessionId };
-    const result = await studentRepository.classStudentMapping(data, transaction);
+    const result = await studentRepository.classStudentMapping(
+      data,
+      transaction,
+    );
 
     // Record in history
-    await historyRepository.createHistory({
-      studentId,
-      classSectionsId: classSectionId,
-      status: "current",
-      createdBy,
-    }, transaction);
+    await historyRepository.createHistory(
+      {
+        studentId,
+        classSectionsId: classSectionId,
+        status: "current",
+        createdBy,
+      },
+      transaction,
+    );
     //  entranceDetails
     let entranceDetails = [];
     if (info.entranceDetails) {
       const entranceDetailsArray =
-        typeof info.entranceDetails === "string" ? JSON.parse(info.entranceDetails) : info.entranceDetails;
+        typeof info.entranceDetails === "string"
+          ? JSON.parse(info.entranceDetails)
+          : info.entranceDetails;
 
       if (Array.isArray(entranceDetailsArray)) {
-        entranceDetails = entranceDetailsArray.map((detail) => ({ ...detail, studentId, createdBy }));
-        await studentRepository.addStudentsEntranceDetail(entranceDetails, transaction);
+        entranceDetails = entranceDetailsArray.map((detail) => ({
+          ...detail,
+          studentId,
+          createdBy,
+        }));
+        await studentRepository.addStudentsEntranceDetail(
+          entranceDetails,
+          transaction,
+        );
       } else {
         throw new Error("Entrance details should be an array.");
       }
@@ -115,12 +149,20 @@ export async function addStudent(
     let addressDetails = null;
     if (info.addressDetails) {
       const addressDetailsObject =
-        typeof info.addressDetails === "string" ? JSON.parse(info.addressDetails) : info.addressDetails;
+        typeof info.addressDetails === "string"
+          ? JSON.parse(info.addressDetails)
+          : info.addressDetails;
 
-      if (typeof addressDetailsObject === "object" && !Array.isArray(addressDetailsObject)) {
+      if (
+        typeof addressDetailsObject === "object" &&
+        !Array.isArray(addressDetailsObject)
+      ) {
         addressDetailsObject.studentId = studentId;
         addressDetailsObject.createdBy = createdBy;
-        addressDetails = await studentRepository.addStudentsAddress(addressDetailsObject, transaction);
+        addressDetails = await studentRepository.addStudentsAddress(
+          addressDetailsObject,
+          transaction,
+        );
       } else {
         throw new Error("Address details should be an object.");
       }
@@ -130,12 +172,20 @@ export async function addStudent(
     let CorsAddressDetails = null;
     if (info.corsAddress) {
       const addressDetailsObject =
-        typeof info.corsAddress === "string" ? JSON.parse(info.corsAddress) : info.corsAddress;
+        typeof info.corsAddress === "string"
+          ? JSON.parse(info.corsAddress)
+          : info.corsAddress;
 
-      if (typeof addressDetailsObject === "object" && !Array.isArray(addressDetailsObject)) {
+      if (
+        typeof addressDetailsObject === "object" &&
+        !Array.isArray(addressDetailsObject)
+      ) {
         addressDetailsObject.studentId = studentId;
         addressDetailsObject.createdBy = createdBy;
-        CorsAddressDetails = await studentRepository.addStudentsCorsAddress(addressDetailsObject, transaction);
+        CorsAddressDetails = await studentRepository.addStudentsCorsAddress(
+          addressDetailsObject,
+          transaction,
+        );
       } else {
         throw new Error("Address details should be an object.");
       }
@@ -144,7 +194,9 @@ export async function addStudent(
     let allDropDownData = null;
     if (info.allDropDownData) {
       const allDropDownDataObject =
-        typeof info.allDropDownData === "string" ? JSON.parse(info.allDropDownData) : info.allDropDownData;
+        typeof info.allDropDownData === "string"
+          ? JSON.parse(info.allDropDownData)
+          : info.allDropDownData;
 
       if (
         typeof allDropDownDataObject === "object" &&
@@ -165,7 +217,10 @@ export async function addStudent(
           codes: code[index],
         }));
 
-        allDropDownData = await studentRepository.studentMetaData(entries, transaction);
+        allDropDownData = await studentRepository.studentMetaData(
+          entries,
+          transaction,
+        );
       } else {
         throw new Error("Invalid format for allDropDownData.");
       }
@@ -175,27 +230,36 @@ export async function addStudent(
     const userId = await studentRegister(registerStudentData, transaction);
 
     // Update student with userId
-    await studentRepository.updateStudentDetails(studentId, { userId }, transaction);
-
-    // student Invoice mapping
-
-    const InvoiceData = { studentId, feePlanId, universityId, createdBy, updatedBy: createdBy };
-    const getInvoice = await findByPlanId(feePlanId);
-
-    const dataToInsert = getInvoice.map((invoice) => ({
+    await studentRepository.updateStudentDetails(
       studentId,
-      universityId,
-      feePlanId,
-      feeNewInvoiceId: invoice.feeNewInvoiceId,
-      invoiceStatus: false,
-      createdBy,
-      updatedBy: createdBy,
-    }));
-
-    await studentRepository.addStudentInvoiceMapper(dataToInsert, transaction);
+      { userId },
+      transaction,
+    );
 
     await transaction.commit();
-    return { student, entranceDetails, addressDetails, CorsAddressDetails, allDropDownData };
+
+    const plainStudent =
+      typeof student.get === "function" ? student.get({ plain: true }) : student;
+
+    return {
+      studentId: plainStudent.studentId,
+      feePlanProfileId: plainStudent.feePlanProfileId,
+      scholarNumber: plainStudent.scholarNumber,
+      enrollNumber: plainStudent.enrollNumber,
+      email: plainStudent.email,
+      firstName: plainStudent.firstName,
+      lastName: plainStudent.lastName,
+      classSectionsId: plainStudent.classSectionsId,
+      courseId: plainStudent.courseId,
+      sessionId: plainStudent.sessionId,
+      acedmicYearId: plainStudent.acedmicYearId,
+      userId,
+      student: plainStudent,
+      entranceDetails,
+      addressDetails,
+      corsAddressDetails: CorsAddressDetails,
+      allDropDownData,
+    };
   } catch (error) {
     await transaction.rollback();
     console.error("Error adding student:", error);
@@ -203,13 +267,90 @@ export async function addStudent(
   }
 }
 
+async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
+  const profile =
+    await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+      instituteId,
+    );
+  if (!profile) {
+    throw new Error("Fee plan profile not found for this institute");
+  }
+}
+
+async function assertStudentEnrollNumberAvailable(enrollNumber) {
+  if (!enrollNumber) return;
+  const existing =
+    await studentRepository.findStudentByEnrollNumber(enrollNumber);
+  if (
+    existing &&
+    enrollNumber.toLowerCase() ===
+      existing.dataValues.enroll_number.toLowerCase()
+  ) {
+    throw new Error("Enrollment number is already existing");
+  }
+}
+
+async function assertStudentEmailAvailable(email) {
+  if (!email) {
+    throw new Error("Email is required");
+  }
+  const existing = await studentRepository.findStudentByEmail(email);
+  if (
+    existing &&
+    email.toLowerCase() === existing.dataValues.email.toLowerCase()
+  ) {
+    throw new Error("Email is already existing");
+  }
+}
+
+async function resolveStudentRoleId() {
+  const roleId = await roleRepository.findStudentRoleId();
+  if (!roleId) throw new Error("STUDENT role not found in role table");
+  return roleId;
+}
+
+export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
+  await assertFeePlanProfileForInstitute(
+    info.feePlanProfileId,
+    info.instituteId,
+  );
+  await assertStudentEmailAvailable(info.email);
+  await assertStudentEnrollNumberAvailable(info.enrollNumber);
+
+  const {
+    universityId,
+    acedmicYearId,
+    classSectionsId: classSectionId,
+    sessionId,
+    semesterId,
+  } = info;
+
+  const roleId = await resolveStudentRoleId();
+
+  return addStudent(
+    info,
+    files,
+    createdBy,
+    universityId,
+    roleId,
+    acedmicYearId,
+    classSectionId,
+    semesterId,
+    sessionId,
+  );
+}
+
 async function generateScholarNumber(courseId, instituteId) {
   const getCourseCodeDetail = await getCourseCode(courseId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
   const courseCode = getCourseCodeDetail.get("course_code");
   const institueCode = getInstitueCodeDetail.get("institute_code");
-  const getPreviousScholarNumber = await studentRepository.getPreviousScholarNumber(institueCode);
-  const previousScholarNumber = getPreviousScholarNumber ? getPreviousScholarNumber.get("scholar_number") : null;
+  const getPreviousScholarNumber =
+    await studentRepository.getPreviousScholarNumber(institueCode);
+  const previousScholarNumber = getPreviousScholarNumber
+    ? getPreviousScholarNumber.get("scholar_number")
+    : null;
   let scholarNumber;
   if (previousScholarNumber) {
     const scholarNumberParts = previousScholarNumber.split("/");
@@ -223,9 +364,25 @@ async function generateScholarNumber(courseId, instituteId) {
   return scholarNumber;
 }
 
-export async function getAllStudents(search, universityId, acedmicYearId, page, limit, instituteId, role) {
+export async function getAllStudents(
+  search,
+  universityId,
+  acedmicYearId,
+  page,
+  limit,
+  instituteId,
+  role,
+) {
   try {
-    return await studentRepository.getAllStudents(search, universityId, acedmicYearId, page, limit, instituteId, role);
+    return await studentRepository.getAllStudents(
+      search,
+      universityId,
+      acedmicYearId,
+      page,
+      limit,
+      instituteId,
+      role,
+    );
   } catch (error) {
     console.error("Error in studentService.getAllStudents:", error);
     throw error;
@@ -233,7 +390,10 @@ export async function getAllStudents(search, universityId, acedmicYearId, page, 
 }
 
 export async function getSingleStudentDetail(studentId, universityId) {
-  return await studentRepository.getSingleStudentDetail(studentId, universityId);
+  return await studentRepository.getSingleStudentDetail(
+    studentId,
+    universityId,
+  );
 }
 
 // export async function importStudentData(excelData, data) {
@@ -355,7 +515,8 @@ export async function importStudentData(excelData, data) {
         const matchedCodeMaster = codeMasterLookup[key.toLowerCase()];
         if (matchedCodeMaster) {
           const matchingCodes = matchedCodeMaster.codes.filter(
-            (codeObj) => codeObj.code.toLowerCase() === convertedData[key].toLowerCase(),
+            (codeObj) =>
+              codeObj.code.toLowerCase() === convertedData[key].toLowerCase(),
           );
 
           for (const matchedCode of matchingCodes) {
@@ -365,7 +526,8 @@ export async function importStudentData(excelData, data) {
             });
 
             if (key.toLowerCase() === "courselevel") {
-              convertedData["courseLevelId"] = matchedCode.employeeCodeMasterTypeId;
+              convertedData["courseLevelId"] =
+                matchedCode.employeeCodeMasterTypeId;
               delete convertedData["CourseLevel"];
             }
           }
@@ -376,28 +538,51 @@ export async function importStudentData(excelData, data) {
       convertedData.annualIncome = 0;
 
       //  Step 6: Generate scholar number BEFORE inserting the student
-      const scholarNumberData = await generateScholarNumber(convertedData.courseId, convertedData.instituteId);
+      const scholarNumberData = await generateScholarNumber(
+        convertedData.courseId,
+        convertedData.instituteId,
+      );
       // convertedData.scholarNumber = scholarNumber;
-      const number = convertedData.scholarNumber ? convertedData.scholarNumber : scholarNumberData;
+      const number = convertedData.scholarNumber
+        ? convertedData.scholarNumber
+        : scholarNumberData;
       convertedData.scholarNumber = number;
 
       const formatDob = await parseCustomDate(convertedData.birthDate);
 
       const formatEnrollDate = await parseCustomDate(convertedData.enrollDate);
 
-      const formatAdmissionDate = await parseCustomDate(convertedData.admissionDate);
+      const formatAdmissionDate = await parseCustomDate(
+        convertedData.admissionDate,
+      );
 
       convertedData.birthDate = formatDob;
       convertedData.enrollDate = formatEnrollDate;
       convertedData.admisssionDate = formatAdmissionDate;
-      // convertedData.feePlanId = convertedData.feePlanId ? Number(convertedData.feePlanId) : null;
+
+      if (convertedData.feePlanProfileId) {
+        await assertFeePlanProfileForInstitute(
+          convertedData.feePlanProfileId,
+          convertedData.instituteId,
+        );
+      }
 
       //  Step 7: Insert student with scholar number
-      const result = await studentRepository.addStudent(convertedData, transaction);
+      const result = await studentRepository.addStudent(
+        convertedData,
+        transaction,
+      );
       // student register
       const role = "Student";
       const roleId = convertedData.roleId || 1;
-      const { studentId, email, phoneNumber, mobileNumber, scholarNumber, universityId } = result.dataValues;
+      const {
+        studentId,
+        email,
+        phoneNumber,
+        mobileNumber,
+        scholarNumber,
+        universityId,
+      } = result.dataValues;
       const registerStudentData = {
         studentId,
         email,
@@ -411,24 +596,11 @@ export async function importStudentData(excelData, data) {
       const userId = await studentRegister(registerStudentData, transaction);
 
       // Update student with userId
-      await studentRepository.updateStudentDetails(studentId, { userId }, transaction);
-
-      // student Invoice mapping
-      const feePlanId = result?.dataValues?.feePlanId;
-
-      if (feePlanId) {
-        const getInvoice = await findByPlanId(feePlanId);
-        const dataToInsert = getInvoice.map((invoice) => ({
-          studentId,
-          universityId,
-          feePlanId,
-          feeNewInvoiceId: invoice.feeNewInvoiceId,
-          invoiceStatus: false,
-          createdBy,
-          updatedBy: createdBy,
-        }));
-        await studentRepository.addStudentInvoiceMapper(dataToInsert, transaction);
-      }
+      await studentRepository.updateStudentDetails(
+        studentId,
+        { userId },
+        transaction,
+      );
 
       // Step 8: Prepare student-class mapping
       studentMapping.push({
@@ -456,7 +628,10 @@ export async function importStudentData(excelData, data) {
 
     // Step 10: Bulk insert student-class mappings
     if (studentMapping.length > 0) {
-      await studentRepository.classStudentMappingExcel(studentMapping, transaction);
+      await studentRepository.classStudentMappingExcel(
+        studentMapping,
+        transaction,
+      );
 
       // Bulk record in history
       const historyEntries = studentMapping.map((mapping) => ({
@@ -598,11 +773,17 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
     let createdBy = "";
 
     for (const bulk of data) {
-      const scholarNumber = await generateScholarNumber(bulk.courseId, bulk.instituteId);
+      const scholarNumber = await generateScholarNumber(
+        bulk.courseId,
+        bulk.instituteId,
+      );
       createdBy = bulk.createdBy;
       const studentData = { ...bulk, scholarNumber };
 
-      const result = await studentRepository.addStudent(studentData, transaction);
+      const result = await studentRepository.addStudent(
+        studentData,
+        transaction,
+      );
 
       for (const pair of matchedPairs) {
         const entries = {
@@ -628,16 +809,152 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
   } catch (error) {
     // If there's an error, roll back the transaction
     await transaction.rollback();
-    console.error("Error in Adding AdmissionNumber in bulk Import:", error.message);
+    console.error(
+      "Error in Adding AdmissionNumber in bulk Import:",
+      error.message,
+    );
     throw error;
   }
 }
 
+/** Scalar columns allowed on PATCH — fee v2 does not use semesterId / feePlanId on update. */
+const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
+  "universityId",
+  "campusId",
+  "instituteId",
+  "affiliatedUniversityId",
+  "acedmicYearId",
+  "courseLevelId",
+  "courseId",
+  "specializationId",
+  "sessionId",
+  "classSectionsId",
+  "feePlanProfileId",
+  "scholarNumber",
+  "enrollNumber",
+  "firstName",
+  "middleName",
+  "lastName",
+  "fatherName",
+  "motherName",
+  "annualIncome",
+  "birthDate",
+  "admisssionDate",
+  "enrollDate",
+  "studentAdmissionStatus",
+  "currentClass",
+  "studentPhoto",
+  "signature",
+  "phoneNumber",
+  "mobileNumber",
+  "email",
+  "parentEmail",
+  "parentNumber",
+  "aadharNumber",
+  "panNumber",
+  "AdditionalNotes",
+  "bankName",
+  "accountNumber",
+  "ifscCode",
+  "placeOfBirth",
+  "studentStatus",
+  "cancelDate",
+  "cancelReason",
+  "generalRemark",
+  "preference",
+  "documentStatus",
+  "feeStatus",
+  "pAddress",
+  "pPincode",
+  "pCountry",
+  "pState",
+  "pCity",
+  "contact",
+  "cAddress",
+  "cPincode",
+  "cCountry",
+  "cState",
+  "cCity",
+]);
+
+const STUDENT_UPDATE_OPTIONAL_FK_KEYS = new Set([
+  "specializationId",
+  "feePlanProfileId",
+]);
+
+const STUDENT_UPDATE_NUMERIC_FIELDS = new Set([
+  "pPincode",
+  "cPincode",
+  "annualIncome",
+]);
+
+function pickStudentUpdatePayload(info) {
+  const payload = {};
+  for (const key of STUDENT_SCALAR_UPDATE_FIELDS) {
+    if (!(key in info)) continue;
+    let value = info[key];
+    if (value === undefined) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    if (STUDENT_UPDATE_OPTIONAL_FK_KEYS.has(key) && (value === null || value === 0)) {
+      continue;
+    }
+    const shouldCoerceNumber =
+      (key.endsWith("Id") || STUDENT_UPDATE_NUMERIC_FIELDS.has(key)) &&
+      value !== null &&
+      typeof value === "string" &&
+      /^\d+$/.test(value);
+    if (shouldCoerceNumber) {
+      value = Number(value);
+    }
+    payload[key] = value;
+  }
+  return payload;
+}
+
+async function applyStudentMetaDataUpdates(studentId, info, transaction) {
+  if (
+    !info.allDropDownData ||
+    info.allDropDownData === "" ||
+    info.allDropDownData === "{}"
+  ) {
+    return;
+  }
+
+  try {
+    const data =
+      typeof info.allDropDownData === "string"
+        ? JSON.parse(info.allDropDownData)
+        : info.allDropDownData;
+    const type = data?.type;
+    const code = data?.code;
+    if (!Array.isArray(type) || !Array.isArray(code)) return;
+
+    const len = Math.min(type.length, code.length);
+    for (let i = 0; i < len; i++) {
+      try {
+        await studentRepository.updateStudentMetaData(
+          studentId,
+          type[i],
+          code[i],
+          transaction,
+        );
+      } catch (metaErr) {
+        console.error("Student metaData update skipped:", metaErr.message);
+      }
+    }
+  } catch (parseErr) {
+    console.error("allDropDownData parse skipped:", parseErr.message);
+  }
+}
+
+function updateHttpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
 export async function updateStudentDetails(StudentId, info, files) {
   const transaction = await sequelize.transaction();
-  const settingKey = "studentDocument";
-  const getstudentDocuments = await getSettingValue(settingKey);
-  const studentRequiredDocuments = getstudentDocuments.setting_value;
 
   try {
     // Upload files if present
@@ -651,30 +968,40 @@ export async function updateStudentDetails(StudentId, info, files) {
       }
     }
 
-    // Update documents status
-    const allFilesUploaded = studentRequiredDocuments?.every((key) => info[key]);
-    if (allFilesUploaded) {
-      info.documentStatus = "Complete Documents";
-    }
+    const studentPayload = pickStudentUpdatePayload(info);
 
-    // Update student details
-    const student = await studentRepository.updateStudentDetails(StudentId, info, transaction);
+    let rowsUpdated = 0;
+    if (Object.keys(studentPayload).length > 0) {
+      [rowsUpdated] = await studentRepository.updateStudentDetails(
+        StudentId,
+        studentPayload,
+        transaction,
+      );
+    }
 
     // Update entranceDetails
     let entranceDetails = [];
-    if (info.entranceDetails) {
+    if (
+      info.entranceDetails !== undefined &&
+      info.entranceDetails !== null &&
+      info.entranceDetails !== "" &&
+      info.entranceDetails !== "[]"
+    ) {
       const entranceDetailsArray =
-        typeof info.entranceDetails === "string" ? JSON.parse(info.entranceDetails) : info.entranceDetails;
+        typeof info.entranceDetails === "string"
+          ? JSON.parse(info.entranceDetails)
+          : info.entranceDetails;
 
       if (Array.isArray(entranceDetailsArray)) {
         for (const detail of entranceDetailsArray) {
           const { studentsEntranceDetailId, ...allDetails } = detail;
           if (studentsEntranceDetailId) {
-            entranceDetails = await studentRepository.updateStudentEntranceDetails(
-              studentsEntranceDetailId,
-              allDetails,
-              transaction,
-            );
+            entranceDetails =
+              await studentRepository.updateStudentEntranceDetails(
+                studentsEntranceDetailId,
+                allDetails,
+                transaction,
+              );
           }
         }
       }
@@ -684,9 +1011,14 @@ export async function updateStudentDetails(StudentId, info, files) {
     let addressDetails = null;
     if (info.addressDetails) {
       const addressDetailsObject =
-        typeof info.addressDetails === "string" ? JSON.parse(info.addressDetails) : info.addressDetails;
+        typeof info.addressDetails === "string"
+          ? JSON.parse(info.addressDetails)
+          : info.addressDetails;
 
-      if (typeof addressDetailsObject === "object" && !Array.isArray(addressDetailsObject)) {
+      if (
+        typeof addressDetailsObject === "object" &&
+        !Array.isArray(addressDetailsObject)
+      ) {
         const { studentsAddressId, ...allDetails } = addressDetailsObject;
         if (studentsAddressId) {
           addressDetails = await studentRepository.updateStudentAddressDetails(
@@ -695,46 +1027,54 @@ export async function updateStudentDetails(StudentId, info, files) {
             transaction,
           );
         }
-      } else {
-        throw new Error("Address details should be an object.");
       }
     }
 
-    // Update Cors AddressDetails
+    // Update Cors AddressDetails (optional)
     let corsAddressDetails = null;
     if (info.corsAddress) {
-      const addressDetailsObject =
-        typeof info.corsAddress === "string" ? JSON.parse(info.corsAddress) : info.corsAddress;
+      try {
+        const addressDetailsObject =
+          typeof info.corsAddress === "string"
+            ? JSON.parse(info.corsAddress)
+            : info.corsAddress;
 
-      if (typeof addressDetailsObject === "object" && !Array.isArray(addressDetailsObject)) {
-        const { studentCorAddressId, ...allDetails } = addressDetailsObject;
-        if (studentCorAddressId) {
-          corsAddressDetails = await studentRepository.updateStudentCorsAddressDetails(
-            studentCorAddressId,
-            allDetails,
-            transaction,
-          );
+        if (
+          typeof addressDetailsObject === "object" &&
+          !Array.isArray(addressDetailsObject)
+        ) {
+          const { studentCorAddressId, ...allDetails } = addressDetailsObject;
+          if (studentCorAddressId) {
+            corsAddressDetails =
+              await studentRepository.updateStudentCorsAddressDetails(
+                studentCorAddressId,
+                allDetails,
+                transaction,
+              );
+          }
         }
-      } else {
-        throw new Error("cors Address details should be an object.");
+      } catch (corsErr) {
+        console.error("Cors address update skipped:", corsErr.message);
       }
     }
 
-    // update all dropDown
-    let allDropDownData = null;
-    if (info.allDropDownData) {
-      const data = JSON.parse(info.allDropDownData);
-      const { studentId, type, code } = data;
-      if (type.length !== code.length) {
-        throw new Error("Type and code arrays must be of the same length");
-      }
-      for (let i = 0; i < type.length; i++) {
-        allDropDownData = await studentRepository.updateStudentMetaData(studentId, type[i], code[i], transaction);
-      }
-    }
+    await applyStudentMetaDataUpdates(StudentId, info, transaction);
+
     await transaction.commit();
-    const result = { student, entranceDetails, addressDetails, corsAddressDetails, allDropDownData };
-    return result;
+
+    const universityId = Number(info.universityId);
+    const studentRow = await getSingleStudentDetail(StudentId, universityId);
+    if (!studentRow) {
+      throw updateHttpError("Student not found", 404);
+    }
+
+    const plainStudent = toPlainRow(studentRow);
+
+    return {
+      studentId: StudentId,
+      rowsUpdated,
+      student: plainStudent,
+    };
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating student:", error);
@@ -751,15 +1091,18 @@ export async function deleteStudentDetail(studentId) {
     ]);
 
     // Extract IDs
-    const entranceIds = entranceDetails.map((detail) => detail.dataValues.students_entrance_detail_id);
+    const entranceIds = entranceDetails.map(
+      (detail) => detail.dataValues.students_entrance_detail_id,
+    );
     const addressId = addressDetails?.dataValues?.students_address_id;
 
     // Perform deletions in parallel
-    const [deleteEntranceResult, deleteAddressResult, deleteStudentResult] = await Promise.all([
-      studentRepository.deleteStudentEntranceDetail(entranceIds),
-      studentRepository.deleteStudentAddressDetail(addressId),
-      studentRepository.deleteStudentDetail(studentId),
-    ]);
+    const [deleteEntranceResult, deleteAddressResult, deleteStudentResult] =
+      await Promise.all([
+        studentRepository.deleteStudentEntranceDetail(entranceIds),
+        studentRepository.deleteStudentAddressDetail(addressId),
+        studentRepository.deleteStudentDetail(studentId),
+      ]);
 
     // Check if all deletions successful
     if (deleteEntranceResult && deleteAddressResult && deleteStudentResult) {
@@ -769,12 +1112,25 @@ export async function deleteStudentDetail(studentId) {
     }
   } catch (error) {
     console.error("Error deleting student:", error);
-    return { message: "An error occurred while trying to delete the student", error: error.message };
+    return {
+      message: "An error occurred while trying to delete the student",
+      error: error.message,
+    };
   }
 }
 
-export async function getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role) {
-  return await studentRepository.getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role);
+export async function getEmptyEnrollNumber(
+  universityId,
+  acedmicYearId,
+  instituteId,
+  role,
+) {
+  return await studentRepository.getEmptyEnrollNumber(
+    universityId,
+    acedmicYearId,
+    instituteId,
+    role,
+  );
 }
 
 export async function studentCourseMapping(data) {
@@ -808,8 +1164,20 @@ export async function classStudentMapping(data, createdBy) {
   }
 }
 
-export async function getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role) {
-  return await studentRepository.getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role);
+export async function getclassStudentMapping(
+  semesterId,
+  universityId,
+  acedmicYearId,
+  instituteId,
+  role,
+) {
+  return await studentRepository.getclassStudentMapping(
+    semesterId,
+    universityId,
+    acedmicYearId,
+    instituteId,
+    role,
+  );
 }
 
 export async function addElectiveSubject(data, createdBy) {
@@ -819,27 +1187,40 @@ export async function addElectiveSubject(data, createdBy) {
 
 export async function promoteStudent(data) {
   if (!data) {
-    return { message: "next acedmic year is active for promate the student and semester is required" };
+    return {
+      message:
+        "next acedmic year is active for promate the student and semester is required",
+    };
   }
 
-  const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
+  const studentDetail = await studentRepository.getStudentForPromate(
+    data.studentId,
+  );
 
   const courseId = studentDetail.dataValues.courseId;
 
   const currentAcademicYearId = studentDetail.dataValues.acedmicYearId;
 
-  const allSemestersRaw = await studentRepository.getSemesterByCourseId(courseId);
+  const allSemestersRaw =
+    await studentRepository.getSemesterByCourseId(courseId);
 
-  const allAcedmicYears = await acedmicYearCreationService.getacedmicYearDetails();
+  const allAcedmicYears =
+    await acedmicYearCreationService.getacedmicYearDetails();
 
   //  Ensure semesters are in array format
-  const allSemesters = Array.isArray(allSemestersRaw) ? allSemestersRaw : [allSemestersRaw];
+  const allSemesters = Array.isArray(allSemestersRaw)
+    ? allSemestersRaw
+    : [allSemestersRaw];
 
   //  Sort semesters by ID (or name if needed)
-  const sortedSemesters = allSemesters.sort((a, b) => a.semesterId - b.semesterId);
+  const sortedSemesters = allSemesters.sort(
+    (a, b) => a.semesterId - b.semesterId,
+  );
 
   //  Find current semester index
-  const currentSemesterIndex = sortedSemesters.findIndex((sem) => sem.semesterId === data.semesterId);
+  const currentSemesterIndex = sortedSemesters.findIndex(
+    (sem) => sem.semesterId === data.semesterId,
+  );
 
   if (currentSemesterIndex === -1) {
     return { message: "Invalid semester ID for student" };
@@ -858,11 +1239,14 @@ export async function promoteStudent(data) {
   //  Check if promotion crosses to next academic year
   if ((currentSemesterIndex + 1) % semPerYear === 0) {
     // Move to next academic year
-    const currentAcedmicYearObj = allAcedmicYears.find((a) => a.dataValues.acedmicYearId === currentAcademicYearId);
+    const currentAcedmicYearObj = allAcedmicYears.find(
+      (a) => a.dataValues.acedmicYearId === currentAcademicYearId,
+    );
     const currentIndex = allAcedmicYears.indexOf(currentAcedmicYearObj);
 
     if (currentIndex !== -1 && currentIndex + 1 < allAcedmicYears.length) {
-      nextAcedmicYearId = allAcedmicYears[currentIndex + 1].dataValues.acedmicYearId;
+      nextAcedmicYearId =
+        allAcedmicYears[currentIndex + 1].dataValues.acedmicYearId;
     } else {
       console.log(`No next academic year found`);
     }
@@ -910,39 +1294,172 @@ function incrementScholarNumber(scholarNumber) {
   const parts = scholarNumber.split("/");
   const lastPart = parts[parts.length - 1];
 
-  const incremented = String(parseInt(lastPart, 10) + 1).padStart(lastPart.length, "0");
+  const incremented = String(parseInt(lastPart, 10) + 1).padStart(
+    lastPart.length,
+    "0",
+  );
 
   parts[parts.length - 1] = incremented;
   return parts.join("/");
 }
 
-export async function getFeePlanId(semesterId, acedmicYearId, courseId, universityId) {
-  const semesterDetail = await getSemesterById(semesterId);
-  const { name, semesterDuration } = semesterDetail.dataValues;
-  const acedmiceBack = getSemesterGroup(name, semesterDuration);
-  const acedmicYearDetail = await getSingleacedmicYearDetails(acedmicYearId, universityId);
-  const { yearTitle, startingDate, endingDate } = acedmicYearDetail.dataValues;
-
-  const [startYear, endYear] = yearTitle.split("-").map(Number);
-
-  const backAcedmicYear = acedmiceBack.group - 1;
-
-  const newStartYear = startYear - backAcedmicYear;
-  const newEndYear = endYear - backAcedmicYear;
-
-  const updatedYearTitle = `${newStartYear}-${newEndYear}`;
-  const previousAcedmicYear = await getSingleacedmicYearDetailsByTitle(updatedYearTitle);
-  const previousAcedmicYearId = previousAcedmicYear.dataValues.acedmicYearId;
-  const isActive = previousAcedmicYear.dataValues.isActive;
-
-  if (!isActive) {
-    return { message: `Please activate academic year ${updatedYearTitle}`, success: false };
-  }
-  return await getfeePlanByCourseAndAcedmic(courseId, previousAcedmicYearId);
+function toPlainRow(row) {
+  if (!row) return null;
+  return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
-export async function getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role) {
-  return await studentRepository.getEmptyFeeDetails(universityId, acedmicYearId, instituteId, role);
+function todayDateOnly() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatStudentDisplayName(student) {
+  return [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
+  const startDate = String(feePlanItem.createDate).slice(0, 10);
+
+  if (!invoice) {
+    return startDate > today ? "upcoming" : "pending";
+  }
+
+  if (invoice.paymentStatus === "paid") return "paid";
+  if (invoice.paymentStatus === "partial") return "partial";
+  return "unpaid";
+}
+
+function formatStudentTermRow(feePlanItem, invoice, index) {
+  const item = toPlainRow(feePlanItem);
+  const inv = invoice ? toPlainRow(invoice) : null;
+  const status = resolveTermDisplayStatus(item, inv);
+
+  return {
+    sno: index + 1,
+    feePlanItemId: item.feePlanItemId,
+    feePlanTypeId: item.feePlanItemId,
+    termName: item.termName ?? null,
+    startDate: item.createDate,
+    endDate: item.dueDate ?? null,
+    amount: toMoneyNumber(item.amount),
+    status,
+    studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
+    paymentStatus: inv?.paymentStatus ?? null,
+    canGenerateInvoice: !inv,
+  };
+}
+
+function formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap) {
+  const s = toPlainRow(student);
+  const profile = s.studentFeePlanProfile ?? {};
+  const course = s.course ?? {};
+  const session = s.studentSession ?? {};
+  const section = s.studentSections ?? {};
+
+  const studentInvoices = invoiceMap.get(s.studentId) ?? new Map();
+
+  return {
+    studentId: s.studentId,
+    date: s.enrollDate ?? s.admisssionDate ?? null,
+    studentName: formatStudentDisplayName(s),
+    scholarNumber: s.scholarNumber,
+    className:
+      [section.class, section.section].filter(Boolean).join("") ||
+      section.section ||
+      section.class ||
+      null,
+    program: course.courseName ?? null,
+    session: session.sessionName ?? null,
+    feePlanName: profile.name ?? null,
+    feePlanProfileId: s.feePlanProfileId,
+    terms: feePlanItems.map((item, index) =>
+      formatStudentTermRow(item, studentInvoices.get(toPlainRow(item).feePlanItemId), index)
+    ),
+  };
+}
+
+function buildInvoiceMap(invoices) {
+  const invoiceMap = new Map();
+  for (const inv of invoices) {
+    const p = toPlainRow(inv);
+    if (!invoiceMap.has(p.studentId)) {
+      invoiceMap.set(p.studentId, new Map());
+    }
+    invoiceMap.get(p.studentId).set(p.feePlanItemId, inv);
+  }
+  return invoiceMap;
+}
+
+function groupFeePlanItemsByProfileId(feePlanItems) {
+  const byProfile = new Map();
+  for (const item of feePlanItems) {
+    const p = toPlainRow(item);
+    const profileId = p.feePlanProfileId;
+    if (!byProfile.has(profileId)) byProfile.set(profileId, []);
+    byProfile.get(profileId).push(item);
+  }
+  return byProfile;
+}
+
+/** GET /student/feePlanProfiles/all — students with fee plan + nested terms (paginated). */
+export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
+  const page = pagination.page ?? 1;
+  const limit = pagination.limit ?? 20;
+
+  const total = await studentRepository.countStudentsWithFeePlanForInitiate(instituteId);
+  const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId, {
+    page,
+    limit,
+  });
+
+  if (!students.length) {
+    return {
+      students: [],
+      pagination: { page, limit, total },
+    };
+  }
+
+  const studentIds = students.map((s) => toPlainRow(s).studentId);
+  const profileIds = [
+    ...new Set(
+      students
+        .map((s) => toPlainRow(s).feePlanProfileId)
+        .filter((id) => id != null)
+    ),
+  ];
+
+  const [feePlanItems, invoices] = await Promise.all([
+    studentRepository.findFeePlanItemsByProfileIds(profileIds, instituteId),
+    studentRepository.findInvoicesByStudentIds(studentIds, instituteId),
+  ]);
+
+  const itemsByProfile = groupFeePlanItemsByProfileId(feePlanItems);
+  const invoiceMap = buildInvoiceMap(invoices);
+
+  return {
+    students: students.map((student) => {
+      const profileId = toPlainRow(student).feePlanProfileId;
+      const items = itemsByProfile.get(profileId) ?? [];
+      return formatFeePlanInitiateStudentRow(student, items, invoiceMap);
+    }),
+    pagination: { page, limit, total },
+  };
+}
+
+export async function getEmptyFeeDetails(
+  universityId,
+  acedmicYearId,
+  instituteId,
+  filters,
+) {
+  return await studentRepository.getEmptyFeeDetails(
+    universityId,
+    acedmicYearId,
+    instituteId,
+    filters,
+  );
 }
 
 export async function getStudentSubject(studentId) {
@@ -1110,7 +1627,8 @@ export async function getStudentSubject(studentId) {
 
 export async function getFeeDetailsByStudentId(studentId) {
   try {
-    const invoices = await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
+    const invoices =
+      await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
 
     // --- Filter only invoiceStatus = true ---
     const filtered = invoices.filter((inv) => inv.invoiceStatus === true);
@@ -1134,7 +1652,8 @@ export async function getFeeDetailsByStudentId(studentId) {
     const student = filtered[0].studentinvoice || {};
 
     const studentInfo = {
-      studentName: `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
+      studentName:
+        `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
       course: student.course?.courseName || "",
       scholarNumber: student.scholarNumber || "",
       classSection: student.studentSemester?.classSections?.[0]?.section || "",
@@ -1156,9 +1675,14 @@ export async function getFeeDetailsByStudentId(studentId) {
 
     // -------- INVOICE LOOP ---------
     const formattedInvoices = filtered.map((inv) => {
-      const hasPlan = inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
+      const hasPlan =
+        inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
       const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
-      const hasFeeTypeGroup = !hasPlan && !hasFeeType && Array.isArray(inv.feeTypeGroup) && inv.feeTypeGroup.length > 0;
+      const hasFeeTypeGroup =
+        !hasPlan &&
+        !hasFeeType &&
+        Array.isArray(inv.feeTypeGroup) &&
+        inv.feeTypeGroup.length > 0;
 
       let invoiceNo = inv.invoiceNumber || "";
       let dueDate = inv.dueDate || "";
@@ -1171,7 +1695,9 @@ export async function getFeeDetailsByStudentId(studentId) {
         const fee = inv.feeInvoicedata;
 
         const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
-        const additionalFees = Array.isArray(fee.additionalFees) ? fee.additionalFees : [];
+        const additionalFees = Array.isArray(fee.additionalFees)
+          ? fee.additionalFees
+          : [];
 
         semesters.forEach((s) => {
           feeItems.push({
@@ -1191,7 +1717,8 @@ export async function getFeeDetailsByStudentId(studentId) {
           });
         });
 
-        total = fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
+        total =
+          fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
         invoiceNo = fee.InvoiceNumber || invoiceNo;
         title = semesters[0]?.name || fee.name || "";
         dueDate = fee.EndDate || dueDate;
@@ -1233,7 +1760,9 @@ export async function getFeeDetailsByStudentId(studentId) {
       }
 
       // -------- PAYMENTS ---------
-      const payments = Array.isArray(inv.studentMakePayment) ? inv.studentMakePayment : [];
+      const payments = Array.isArray(inv.studentMakePayment)
+        ? inv.studentMakePayment
+        : [];
       const isApplied = payments.some((p) => p.isApplyed === true);
 
       return {
@@ -1262,7 +1791,10 @@ export async function getFeeDetailsByStudentId(studentId) {
       });
     });
 
-    const totalDue = formattedInvoices.reduce((sum, f) => sum + (f.total || 0), 0);
+    const totalDue = formattedInvoices.reduce(
+      (sum, f) => sum + (f.total || 0),
+      0,
+    );
     const remainingAmount = totalDue - appliedPayments;
 
     const summary = {
@@ -1326,7 +1858,8 @@ export async function getBooksIssuedToStudent(studentId) {
 
 export async function getStudentTimeTable(studentId) {
   //  Fetch student details
-  const student = await studentRepository.getStudentDetailsRepository(studentId);
+  const student =
+    await studentRepository.getStudentDetailsRepository(studentId);
 
   if (!student) return { formatted: [] };
 
@@ -1341,7 +1874,11 @@ export async function getStudentTimeTable(studentId) {
   if (subjectIds.length === 0) return { formatted: [] };
 
   //  Fetch timetable data
-  const timetable = await timeTableCreateRepository.getStudentTimeTableRepository(classSectionsId, subjectIds);
+  const timetable =
+    await timeTableCreateRepository.getStudentTimeTableRepository(
+      classSectionsId,
+      subjectIds,
+    );
 
   //  Format output
   return formatStudentTimetable(timetable);
@@ -1366,9 +1903,13 @@ function formatStudentTimetable(allData) {
         timeTableTeacherSubject,
       } = period;
 
-      const subjectData = isSameTeacher ? timeTableTeacherSubject?.employeeSubject?.subjects : timeTableSubject;
+      const subjectData = isSameTeacher
+        ? timeTableTeacherSubject?.employeeSubject?.subjects
+        : timeTableSubject;
 
-      const teacherData = isSameTeacher ? timeTableTeacherSubject?.teacherEmployeeData : employeeDetails;
+      const teacherData = isSameTeacher
+        ? timeTableTeacherSubject?.teacherEmployeeData
+        : employeeDetails;
 
       const mappingEntry = {
         timeTableMappingId,
@@ -1424,7 +1965,9 @@ function formatStudentTimetable(allData) {
       rec.sectionRoutine.push(dayObj);
     }
 
-    let periodObj = dayObj.period.find((p) => p.timeTableCreationId === curr.timeTableCreationId);
+    let periodObj = dayObj.period.find(
+      (p) => p.timeTableCreationId === curr.timeTableCreationId,
+    );
     if (!periodObj) {
       dayObj.period.push({
         timeTableCreationId: curr.timeTableCreationId,
@@ -1442,48 +1985,52 @@ function formatStudentTimetable(allData) {
   return { formatted };
 }
 
-
-export async function getStudentsByClassSection(timeTableMappingId, academicYearId, date) {
-
+export async function getStudentsByClassSection(
+  timeTableMappingId,
+  academicYearId,
+  date,
+) {
   try {
-
-    const classScheduleItem = await model.classScheduleModel.findByPk(timeTableMappingId, {
-      attributes: ['timeTableMappingId', 'day', 'timeTableType'],
-      include: [
-        {
-          model: model.timeTableRoutineModel,
-          as: "timeTablecreate",
-          attributes: ['classSectionsId'],
-          include: [
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: ['classSectionsId', 'section']
-            }
-          ]
-        },
-        {
-          model: model.subjectModel,
-          as: 'timeTableSubject',
-          attributes: ['subjectId', 'subjectName'],
-          include: [
-            {
-              model: model.courseModel,
-              as: "courseInfo",
-              attributes: ['courseId', 'courseName', 'courseCode']
-            }
-          ]
-        }
-      ],
-      raw: true,
-      nest: true
-    })
+    const classScheduleItem = await model.classScheduleModel.findByPk(
+      timeTableMappingId,
+      {
+        attributes: ["timeTableMappingId", "day", "timeTableType"],
+        include: [
+          {
+            model: model.timeTableRoutineModel,
+            as: "timeTablecreate",
+            attributes: ["classSectionsId"],
+            include: [
+              {
+                model: model.classSectionModel,
+                as: "timeTableClassSection",
+                attributes: ["classSectionsId", "section"],
+              },
+            ],
+          },
+          {
+            model: model.subjectModel,
+            as: "timeTableSubject",
+            attributes: ["subjectId", "subjectName"],
+            include: [
+              {
+                model: model.courseModel,
+                as: "courseInfo",
+                attributes: ["courseId", "courseName", "courseCode"],
+              },
+            ],
+          },
+        ],
+        raw: true,
+        nest: true,
+      },
+    );
 
     const students = await studentRepository.getStudentsByClassSection(
       classScheduleItem?.timeTablecreate?.classSectionsId,
       timeTableMappingId,
       academicYearId,
-      date
+      date,
     );
 
     if (!students.length) return {};
@@ -1522,13 +2069,11 @@ export async function getStudentsByClassSection(timeTableMappingId, academicYear
 
     // };
 
-    return { students, classScheduleItem }
-
+    return { students, classScheduleItem };
   } catch (error) {
     console.error("Service Error:", error);
     throw error;
   }
-
 }
 
 export async function getAllAnswerSheets(filters, instituteId, universityId) {
@@ -1537,11 +2082,13 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
   const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
     examScheduleId,
     instituteId,
-    universityId
+    universityId,
   );
 
   if (!schedule) {
-    const error = new Error("Exam schedule not found for the selected institute/university");
+    const error = new Error(
+      "Exam schedule not found for the selected institute/university",
+    );
     error.statusCode = 404;
     throw error;
   }
@@ -1558,7 +2105,7 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
     term,
     examScheduleId,
     instituteId,
-    universityId
+    universityId,
   );
 
   const data = studentsdata.map((student) => {

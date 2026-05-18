@@ -168,18 +168,6 @@ export async function deleteInventoryCopy(inventoryId) {
   return await libraryCreationService.deleteInventoryCopy(inventoryId);
 }
 
-export async function deleteInventoryCopiesForBookExceptIds(
-  libraryBookId,
-  keepInventoryIds,
-  transaction,
-) {
-  return await libraryCreationService.deleteInventoryCopiesForBookExceptIds(
-    libraryBookId,
-    keepInventoryIds,
-    transaction,
-  );
-}
-
 export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
   return await libraryCreationService.getLibraryBookIdByInventoryId(inventoryId, transaction);
 }
@@ -209,28 +197,6 @@ async function resolveLibraryBookId(book, inventory, transaction) {
   }
 
   return null;
-}
-
-/** Client sent `inventory: []` → remove all copies; sent ids → remove copies not listed. */
-async function syncInventoryCopies(libraryBookId, inventory, transaction) {
-  if (inventory.length === 0) {
-    return libraryCreationService.deleteInventoryCopiesForBookExceptIds(
-      libraryBookId,
-      [],
-      transaction,
-    );
-  }
-
-  const keepIds = [...new Set(inventory.map((inv) => inv.inventoryId).filter(Boolean))];
-  if (keepIds.length === 0) {
-    return 0;
-  }
-
-  return libraryCreationService.deleteInventoryCopiesForBookExceptIds(
-    libraryBookId,
-    keepIds,
-    transaction,
-  );
 }
 
 async function upsertInventoryRows(inventory, libraryBookId, userId, transaction) {
@@ -284,17 +250,6 @@ export async function updateBookWithInventory(
 
     if (inventoryKeyPresent) {
       libraryBookId ??= await resolveLibraryBookId(book, inventory ?? [], transaction);
-
-      if (libraryBookId) {
-        const removedCount = await syncInventoryCopies(
-          libraryBookId,
-          inventory ?? [],
-          transaction,
-        );
-        if (removedCount > 0) {
-          response.removedInventoryCount = removedCount;
-        }
-      }
 
       if (inventory?.length) {
         response.inventory = await upsertInventoryRows(
