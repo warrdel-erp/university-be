@@ -1,5 +1,4 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
 
 export async function addExamStructure(examDetail) {
   try {
@@ -142,50 +141,25 @@ export async function getDetailByExamType(examSetupTypeId) {
 
 export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
   try {
-    const examStructureWhere = {
-      courseId,
-      sessionId,
-      universityId,
-      ...(instituteId && { instituteId }),
-    };
-
-    const examStructures = await model.examStructureModel.findAll({
-      attributes: ["examStructureId"],
-      where: examStructureWhere,
-    });
-
-    const examStructureIds = examStructures.map((row) => row.examStructureId);
-    if (!examStructureIds.length) {
-      return [];
-    }
-
-    const examSetupTypeTermsInclude = {
+    const termInclude = {
       model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     };
 
     if (termNumber != null) {
-      examSetupTypeTermsInclude.where = {
-        term: termNumber,
-        courseId,
-        ...(instituteId && { instituteId }),
-      };
+      termInclude.where = { term: termNumber, courseId, instituteId };
     }
 
-    const result = await model.examSetupTypeModel.findAll({
+    return await model.examSetupTypeModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: {
-        examStructureId: { [Op.in]: examStructureIds },
-        universityId,
-        ...(instituteId && { instituteId }),
-      },
+      where: { universityId, instituteId },
       include: [
         {
           model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: examStructureWhere,
+          where: { courseId, sessionId, universityId, instituteId },
           required: true,
           include: [
             {
@@ -205,13 +179,11 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
             },
           ],
         },
-        examSetupTypeTermsInclude,
+        termInclude,
       ],
       subQuery: false,
       distinct: true,
     });
-
-    return result;
   } catch (error) {
     console.error("Error fetching exam structure details:", error.message);
     throw error;
