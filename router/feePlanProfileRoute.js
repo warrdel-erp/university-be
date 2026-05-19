@@ -48,8 +48,11 @@ const createBody = z.object({
   feePlanItems: z.array(feePlanItem).min(1).optional(),
 });
 
-const feePlanItemForUpdate = feePlanItem.extend({
-  feePlanItemId: id.optional(),
+const feePlanSubItemLine = z.object({
+  feePlanSubitemId: id,
+  feeTypeCatalogId: id,
+  amount,
+  isMainItem: z.boolean().optional().default(false),
 });
 
 const updateBody = z
@@ -59,7 +62,7 @@ const updateBody = z
     planType: z.enum(["annual", "semester", "trimester"]).optional(),
     courseSessionId: id.optional(),
     academicYearId: id.optional(),
-    feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
+    feePlanSubItems: z.array(feePlanSubItemLine).min(1).optional(),
   })
   .superRefine((body, ctx) => {
     const hasUpdate =
@@ -67,7 +70,7 @@ const updateBody = z
       body.planType !== undefined ||
       body.courseSessionId !== undefined ||
       body.academicYearId !== undefined ||
-      body.feePlanItems !== undefined;
+      body.feePlanSubItems !== undefined;
 
     if (!hasUpdate) {
       ctx.addIssue({

@@ -185,96 +185,45 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   };
 }
 
-async function syncFeePlanItemsForProfile(
+async function updateFeePlanSubItemsForProfile(
   feePlanProfileId,
   instituteId,
-  feePlanItemsInput,
+  feePlanSubItemsInput,
   transaction
 ) {
-  const existingItems = await repo.findFeePlanItemsByProfileId(
-    feePlanProfileId,
-    instituteId,
-    { transaction }
-  );
-  const existingIdSet = new Set(existingItems.map((row) => toPlain(row).feePlanItemId));
+  for (const line of feePlanSubItemsInput) {
+    const catalog = await catalogRepo.findFeeTypeCatalogById(
+      line.feeTypeCatalogId,
+      instituteId,
+      { transaction }
+    );
+    if (!catalog) {
+      throw httpError(`feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`, 404);
+    }
 
-  for (const input of feePlanItemsInput) {
-    if (input.feePlanItemId != null && !existingIdSet.has(input.feePlanItemId)) {
+    const subItem = await repo.findFeePlanSubItemForProfile(
+      line.feePlanSubitemId,
+      feePlanProfileId,
+      instituteId,
+      { transaction }
+    );
+    if (!subItem) {
       throw httpError(
-        `feePlanItemId ${input.feePlanItemId} does not belong to this fee plan profile`,
-        400
-      );
-    }
-  }
-
-  const invoiceCountByItem = await repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, {
-    transaction,
-  });
-
-  const payloadItemIds = new Set(
-    feePlanItemsInput.map((item) => item.feePlanItemId).filter((id) => id != null)
-  );
-
-  for (const existing of existingItems) {
-    const itemId = toPlain(existing).feePlanItemId;
-    if (payloadItemIds.has(itemId)) continue;
-
-    if ((invoiceCountByItem.get(itemId) ?? 0) > 0) {
-      throw httpError(
-        `Cannot remove term (feePlanItemId ${itemId}) that has generated invoices`,
-        409
+        `feePlanSubitemId ${line.feePlanSubitemId} not found for this fee plan profile`,
+        404
       );
     }
 
-    await repo.deleteFeePlanSubItemsByFeePlanItemId(itemId, instituteId, { transaction });
-    await repo.deleteFeePlanItemById(itemId, instituteId, { transaction });
-  }
-
-  const preparedInstallments = await prepareInstallmentsForDb(
-    feePlanItemsInput,
-    instituteId,
-    transaction
-  );
-
-  for (let index = 0; index < feePlanItemsInput.length; index++) {
-    const input = feePlanItemsInput[index];
-    const installment = preparedInstallments[index];
-
-    if (input.feePlanItemId != null) {
-      const itemId = input.feePlanItemId;
-      const invoiceCount = invoiceCountByItem.get(itemId) ?? 0;
-
-      await repo.updateFeePlanItemById(
-        itemId,
-        instituteId,
-        {
-          createDate: installment.startDate,
-          dueDate: installment.dueDate,
-        },
-        { transaction }
-      );
-
-      if (invoiceCount > 0) continue;
-
-      await repo.deleteFeePlanSubItemsByFeePlanItemId(itemId, instituteId, { transaction });
-      for (const line of installment.subItems) {
-        await repo.createFeePlanSubItem(
-          {
-            amount: line.amount,
-            feeTypeId: line.feeTypeId,
-            feePlanItemId: itemId,
-            instituteId,
-            isMainSubItem: line.isMainSubItem,
-          },
-          { transaction }
-        );
-      }
-      continue;
-    }
-
-    await repo.createInstallmentsForProfile(feePlanProfileId, instituteId, [installment], {
-      transaction,
-    });
+    await repo.updateFeePlanSubItemById(
+      line.feePlanSubitemId,
+      instituteId,
+      {
+        amount: toMoneyNumber(line.amount),
+        feeTypeId: catalog.feeTypeCatalogId,
+        isMainSubItem: line.isMainItem === true,
+      },
+      { transaction }
+    );
   }
 }
 
@@ -312,11 +261,11 @@ export async function updateFeePlanProfile(body, instituteId) {
       );
     }
 
-    if (body.feePlanItems !== undefined) {
-      await syncFeePlanItemsForProfile(
+    if (body.feePlanSubItems !== undefined) {
+      await updateFeePlanSubItemsForProfile(
         feePlanProfileId,
         instituteId,
-        body.feePlanItems,
+        body.feePlanSubItems,
         transaction
       );
     }

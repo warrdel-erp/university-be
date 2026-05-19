@@ -91,6 +91,61 @@ export async function updateFeePlanItemById(feePlanItemId, instituteId, fields, 
   });
 }
 
+export async function findFeePlanSubItemById(feePlanSubitemId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.findOne({
+    where: { feePlanSubitemId, instituteId },
+    transaction,
+  });
+}
+
+export async function findFeePlanSubItemForProfile(
+  feePlanSubitemId,
+  feePlanProfileId,
+  instituteId,
+  options = {}
+) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.findOne({
+    where: { feePlanSubitemId, instituteId },
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItem",
+        required: true,
+        where: { feePlanProfileId, instituteId },
+        attributes: ["feePlanItemId", "feePlanProfileId"],
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function findFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.findAll({
+    where: { feePlanItemId, instituteId },
+    attributes: ["feePlanSubitemId"],
+    transaction,
+  });
+}
+
+export async function updateFeePlanSubItemById(feePlanSubitemId, instituteId, fields, options = {}) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.update(fields, {
+    where: { feePlanSubitemId, instituteId },
+    transaction,
+  });
+}
+
+export async function deleteFeePlanSubItemById(feePlanSubitemId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.destroy({
+    where: { feePlanSubitemId, instituteId },
+    transaction,
+  });
+}
+
 export async function deleteFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
   const { transaction } = options;
   return model.feePlanSubItemsModel.destroy({

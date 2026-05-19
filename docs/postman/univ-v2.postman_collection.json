@@ -5918,14 +5918,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"feePlanItems\": [\n    {\n      \"feePlanItemId\": \"{{feePlanItem_id}}\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-06-01\",\n      \"feeTypeCatalogs\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"65000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6500.00\" }\n      ]\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"feePlanSubItems\": [\n    {\n      \"feePlanSubitemId\": 1,\n      \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n      \"amount\": \"4000.00\",\n      \"isMainItem\": true\n    },\n    {\n      \"feePlanSubitemId\": 2,\n      \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\",\n      \"amount\": \"5446.00\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**PATCH /feePlanProfile** — update profile and/or terms.\n\n**Required:** feePlanProfileId. At least one other field.\n\n**Profile:** name, planType, courseSessionId, academicYearId (optional validation).\n\n**feePlanItems[]:** optional full sync. Include feePlanItemId to update existing term; omit id to add new term. Terms not in payload are deleted only if they have no invoices.\n\nTerms with invoices: only startDate/dueDate update; fee lines are not changed."
+                "description": "**PATCH /feePlanProfile** — updates **fee_plan_profile** and/or **fee_plan_sub_items** only (no fee_plan_item changes).\n\n**Profile:** name, planType, courseSessionId, academicYearId.\n\n**feePlanSubItems[]:** each row requires feePlanSubitemId; updates amount, feeTypeCatalogId, isMainItem on that sub-item row."
               },
               "response": []
             },
