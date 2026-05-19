@@ -4,13 +4,36 @@ import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
 export default sequelize.define(
-  "student_invoice_additional_fee",
+  "student_fee_invoice_items",
   {
-    studentInvoiceAdditionalFeeId: {
+    studentFeeInvoiceItemsId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "student_invoice_additional_fee_id",
+      field: "student_fee_invoice_items_id",
+    },
+    amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+    },
+    isMainItem: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_main_item",
+    },
+    waiver: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+    },
+    feeTypeId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "fee_type_catalog_id",
+      references: {
+        model: feeTypeCatalogModel,
+        key: "fee_type_catalog_id",
+      },
     },
     studentFeeInvoiceId: {
       type: DataTypes.INTEGER,
@@ -21,26 +44,9 @@ export default sequelize.define(
         key: "student_fee_invoice_id",
       },
     },
-    amount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-    },
-    waiver: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: true,
-    },
-    feeTypeCatalogId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "fee_type_catalog_id",
-      references: {
-        model: feeTypeCatalogModel,
-        key: "fee_type_catalog_id",
-      },
-    },
   },
   {
-    tableName: "student_invoice_additional_fee",
+    tableName: "student_fee_invoice_items",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

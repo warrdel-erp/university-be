@@ -1,6 +1,6 @@
 'use strict';
 
-/** Fee v2 payment ledger (see 20260518100006 for invoice payment_status). */
+/** Fee v2 payment ledger (line allocation in payment_item). */
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -19,6 +19,27 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
       },
+      payment_type: {
+        type: Sequelize.ENUM('INCOMING', 'OUTGOING'),
+        allowNull: false,
+        defaultValue: 'INCOMING',
+      },
+      payee_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      payee_type: {
+        type: Sequelize.ENUM('STUDENT', 'VENDOR'),
+        allowNull: false,
+        defaultValue: 'STUDENT',
+      },
+      amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
+      payment_method: {
+        type: Sequelize.ENUM('credit_card', 'bank_transfer', 'cash', 'cheque'),
+        allowNull: false,
+      },
+      reference_number: { type: Sequelize.STRING(150), allowNull: true },
+      transaction_id: { type: Sequelize.STRING(150), allowNull: true },
       institute_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -26,11 +47,6 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
       },
-      paid_amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
-      payment_date: { type: Sequelize.DATEONLY, allowNull: false },
-      payment_method: { type: Sequelize.STRING(100), allowNull: false },
-      reference_number: { type: Sequelize.STRING(150), allowNull: true },
-      notes: { type: Sequelize.STRING(500), allowNull: true },
       created_by: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -53,6 +69,7 @@ module.exports = {
     await queryInterface.addIndex('student_fee_payment', ['student_fee_invoice_id'], {
       name: 'idx_student_fee_payment_invoice',
     });
+   
   },
 
   async down(queryInterface) {

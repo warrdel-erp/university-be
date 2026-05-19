@@ -961,10 +961,29 @@ export async function findFeePlanItemsByProfileIds(profileIds, instituteId, opti
             attributes: [
                 "feePlanItemId",
                 "feePlanProfileId",
-                "termName",
                 "createDate",
                 "dueDate",
-                "amount",
+            ],
+            include: [
+                {
+                    model: model.feePlanSubItemsModel,
+                    as: "feePlanSubItems",
+                    required: false,
+                    attributes: [
+                        "feePlanSubitemId",
+                        "feeTypeId",
+                        "amount",
+                        "isMainSubItem",
+                        "feePlanItemId",
+                    ],
+                    include: [
+                        {
+                            model: model.feeTypeCatalogModel,
+                            as: "feeTypeCatalog",
+                            attributes: ["feeTypeCatalogId", "name"],
+                        },
+                    ],
+                },
             ],
             order: [
                 ["feePlanProfileId", "ASC"],
@@ -1103,10 +1122,22 @@ export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId,
             attributes: [
                 "feePlanItemId",
                 "feePlanProfileId",
-                "termName",
                 "createDate",
                 "dueDate",
-                "amount",
+            ],
+            include: [
+                {
+                    model: model.feePlanSubItemsModel,
+                    as: "feePlanSubItems",
+                    required: false,
+                    attributes: [
+                        "feePlanSubitemId",
+                        "feeTypeId",
+                        "amount",
+                        "isMainSubItem",
+                        "feePlanItemId",
+                    ],
+                },
             ],
             order: [
                 ["createDate", "ASC"],

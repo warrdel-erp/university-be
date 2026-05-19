@@ -12,8 +12,6 @@ module.exports = {
       },
       create_date: { type: Sequelize.DATEONLY, allowNull: false },
       due_date: { type: Sequelize.DATEONLY, allowNull: true },
-      term_name: { type: Sequelize.STRING, allowNull: true },
-      amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
       fee_plan_profile_id: {
         type: Sequelize.INTEGER,
         allowNull: true,

@@ -4,7 +4,7 @@ import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
 import {
   generateStudentFeeInvoice,
-  generateStudentFeeInvoiceFromAdditionalFees,
+  generateAdhocStudentFeeInvoice,
   getStudentFeeInvoiceById,
   listStudentFeeInvoicesByStudent,
   listAllStudentFeeInvoices,
@@ -42,15 +42,26 @@ const adhocFeeTypeCatalogLineSchema = z
     }
   });
 
-const generateAdhocInvoiceBodySchema = z.object({
-  studentId: positiveIntegerId,
-  feeTypeCatalogs: z
-    .array(adhocFeeTypeCatalogLineSchema)
-    .min(1, { message: "feeTypeCatalogs must contain at least one item" }),
-  total: z.coerce.number().positive().optional(),
-  createDate: dateOnlyString,
-  dueDate: dateOnlyString.optional().nullable(),
-});
+const adhocInvoiceBodySchema = z
+  .object({
+    studentId: positiveIntegerId,
+    feeTypeCatalogs: z
+      .array(adhocFeeTypeCatalogLineSchema)
+      .min(1, { message: "feeTypeCatalogs must contain at least one item" }),
+    total: z.coerce.number().positive().optional(),
+    createDate: dateOnlyString,
+    dueDate: dateOnlyString.optional().nullable(),
+  })
+  .superRefine((body, ctx) => {
+    const ids = body.feeTypeCatalogs.map((l) => l.feeTypeCatalogId);
+    if (new Set(ids).size !== ids.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "feeTypeCatalogs must not contain duplicate feeTypeCatalogId",
+        path: ["feeTypeCatalogs"],
+      });
+    }
+  });
 
 const studentFeeInvoiceIdQuerySchema = z.object({
   studentFeeInvoiceId: positiveIntegerId,
@@ -77,10 +88,10 @@ router.post(
 );
 
 router.post(
-  "/additional",
+  "/adhoc",
   userAuth,
-  validate({ body: generateAdhocInvoiceBodySchema }),
-  generateStudentFeeInvoiceFromAdditionalFees
+  validate({ body: adhocInvoiceBodySchema }),
+  generateAdhocStudentFeeInvoice
 );
 
 router.get(

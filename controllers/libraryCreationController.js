@@ -279,14 +279,20 @@ export async function bulkUploadBooks(req, res) {
 
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
+        const { libraryCreationId } = req.query;
 
         const result = await libraryCreation.bulkUploadBooks(
             excelData,
             createdBy,
-            updatedBy
+            updatedBy,
+            libraryCreationId
         );
 
-        return SuccessResponse(res, 200, "Bulk upload books successfully", result);
+        if (result.status === "error") {
+            return res.status(400).json({ message: result.message });
+        }
+
+        return SuccessResponse(res, 200, "Data uploaded successfully");
 
     } catch (error) {
         console.error("Bulk Upload Error:", error);

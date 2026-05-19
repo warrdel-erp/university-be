@@ -65,18 +65,18 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, instituteId, payloa
   return affected;
 }
 
-export async function countPlanAdditionalFeesForCatalog(feeTypeCatalogId, options = {}) {
+export async function countPlanSubItemsForCatalog(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  return model.additionalFeeModel.count({
-    where: { feeTypeCatalogId },
+  return model.feePlanSubItemsModel.count({
+    where: { feeTypeId: feeTypeCatalogId },
     transaction,
   });
 }
 
-export async function countInvoiceAdditionalFeesForCatalog(feeTypeCatalogId, options = {}) {
+export async function countInvoiceItemsForCatalog(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  return model.studentInvoiceAdditionalFeeModel.count({
-    where: { feeTypeCatalogId },
+  return model.studentFeeInvoiceItemsModel.count({
+    where: { feeTypeId: feeTypeCatalogId },
     transaction,
   });
 }

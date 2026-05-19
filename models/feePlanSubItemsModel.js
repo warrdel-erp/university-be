@@ -5,19 +5,25 @@ import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
-  "additional_fee",
+  "fee_plan_sub_items",
   {
-    additionalFeeId: {
+    feePlanSubitemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "additional_fee_id",
+      field: "fee_plan_sub_item_id",
     },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
     },
-    feeTypeCatalogId: {
+    isMainSubItem: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_main_sub_item",
+    },
+    feeTypeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       field: "fee_type_catalog_id",
@@ -46,7 +52,7 @@ export default sequelize.define(
     },
   },
   {
-    tableName: "additional_fee",
+    tableName: "fee_plan_sub_items",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

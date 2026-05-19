@@ -1,39 +1,33 @@
 'use strict';
 
-/**
- * Fee v2 additional fee lines (production baseline).
- * fee_plan_item_id nullable — plan term fees or standalone catalog fees (e.g. misconduct).
- */
-
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('additional_fee', {
-      additional_fee_id: {
+    await queryInterface.createTable('student_fee_invoice_items', {
+      student_fee_invoice_items_id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
         autoIncrement: true,
         allowNull: false,
       },
+      student_fee_invoice_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: 'student_fee_invoice', key: 'student_fee_invoice_id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      },
       amount: { type: Sequelize.DECIMAL(12, 2), allowNull: false },
+      is_main_item: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      waiver: { type: Sequelize.DECIMAL(12, 2), allowNull: true },
       fee_type_catalog_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: { model: 'fee_type_catalog', key: 'fee_type_catalog_id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT',
-      },
-      fee_plan_item_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: { model: 'fee_plan_item', key: 'fee_plan_item_id' },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-      },
-      institute_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: { model: 'institute', key: 'institute_id' },
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT',
       },
@@ -51,6 +45,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('additional_fee');
+    await queryInterface.dropTable('student_fee_invoice_items');
   },
 };
