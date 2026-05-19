@@ -105,9 +105,14 @@ export default sequelize.define(
       field: "additional_author",
     },
     subjectId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.JSON,
       allowNull: true,
       field: "subject_id",
+    },
+    categoryId: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: "category_id",
     },
     classSectionsId: {
       type: DataTypes.INTEGER,

@@ -47,45 +47,40 @@ export async function deleteMember(libraryMemberId) {
     return await libraryMemberService.deleteMember(libraryMemberId);
 }
 
-export async function updateMember(libraryMemberId, memberData, updatedBy) {    
-    try {
-        
-        const libraryMember = await libraryMemberService.getPreviousMemberIdByLibraryMemberId(libraryMemberId);
-        
-        const lastMemberId = libraryMember ? libraryMember.dataValues.member_id : '';
+export async function updateMember(libraryMemberId, memberData, updatedBy) {
+    const { libraryMemberId: _id, ...updateFields } = memberData;
 
-        if (lastMemberId) {
-            const newPrefix = memberData.memberType.slice(0, 2).toUpperCase();
-            const numericPart = lastMemberId.slice(2);
-            const updatedMemberId = `${newPrefix}${numericPart}`;
+    const libraryMember = await libraryMemberService.getPreviousMemberIdByLibraryMemberId(
+        libraryMemberId,
+    );
+    const lastMemberId = libraryMember?.memberId ?? libraryMember?.dataValues?.member_id ?? "";
 
-            memberData.memberId = updatedMemberId;
-        }
-
-        memberData.updatedBy = updatedBy;
-        const result = await libraryMemberService.updateMember(libraryMemberId, memberData);
-        return result;
-    } catch (error) {
-        console.error(`Error updating member:`, error);
-        throw error;
+    if (lastMemberId && updateFields.memberType) {
+        const typePrefix = updateFields.memberType.slice(0, 3).toUpperCase();
+        const segments = lastMemberId.split("-");
+        const serial = segments[segments.length - 1];
+        updateFields.memberId = `${segments[0]}-${segments[1]}-${typePrefix}-${serial}`;
     }
-};
+
+    updateFields.updatedBy = updatedBy;
+    return await libraryMemberService.updateMember(libraryMemberId, updateFields);
+}
 
 // Book Issue
 
-export async function bookIssue(bookIssue, createdBy, updatedBy) {
-    try {
+export async function bookIssue(bookIssueData, createdBy, updatedBy, issuerName) {
+    const payload = {
+        libraryAddItemId: bookIssueData.libraryAddItemId,
+        libraryMemberId: bookIssueData.libraryMemberId,
+        createdBy,
+        updatedBy,
+        issuedBy: bookIssueData.issuedBy ?? issuerName,
+        issueDate: moment(bookIssueData.issueDate).toDate(),
+        dueDate: moment(bookIssueData.dueDate).toDate(),
+        status: "Issued",
+    };
 
-        bookIssue.createdBy = createdBy;
-        bookIssue.updatedBy = updatedBy;
-        bookIssue.issueDate =  moment().toDate();
-
-        const bookDetails = await libraryIssueBook.bookIssue(bookIssue);
-        return bookDetails;
-    } catch (error) {
-        console.error('Error Book Issue:', error);
-        throw new Error('Unable to add member');
-    }
+    return await libraryIssueBook.bookIssue(payload);
 }
 
 export async function getAllIssueBooks(universityId) {
@@ -100,16 +95,22 @@ export async function deleteBook(libraryIssueBookId) {
     return await libraryIssueBook.deleteBook(libraryIssueBookId);
 }
 
-export async function updateBookAndStatus(libraryIssueBookId, bookIssue, updatedBy) {    
-    try {
+export async function updateBookAndStatus(libraryIssueBookId, bookIssueData, updatedBy) {
+    const updateData = {
+        updatedBy,
+        status: bookIssueData.status,
+        issueDate: moment(bookIssueData.issueDate).toDate(),
+        dueDate: moment(bookIssueData.dueDate).toDate(),
+        issuedBy: bookIssueData.issuedBy,
+    };
 
-        bookIssue.updatedBy = updatedBy;
-        bookIssue.returnDate =  moment().toDate();
-
-        const bookDetails = await libraryIssueBook.updateBookAndStatus(libraryIssueBookId,bookIssue);
-        return bookDetails;
-    } catch (error) {
-        console.error('Error Book Issue:', error);
-        throw new Error('Unable to add member');
+    if (bookIssueData.status === "Returned") {
+        updateData.returnDate = moment(bookIssueData.returnDate).toDate();
     }
-};
+
+    if (bookIssueData.status === "Renewed") {
+        updateData.returnDate = null;
+    }
+
+    return await libraryIssueBook.updateBookAndStatus(libraryIssueBookId, updateData);
+}

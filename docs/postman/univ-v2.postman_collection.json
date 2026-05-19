@@ -4800,7 +4800,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library creation and inventory APIs under `/libraryCreation`. Bulk Excel upload is in the **bulk upload** subfolder.",
+      "description": "Library APIs under `/libraryCreation` (test in order: library → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -4819,6 +4819,11 @@
         },
         {
           "key": "inventory_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryCategory_id",
           "value": "1",
           "type": "string"
         }
@@ -5036,11 +5041,90 @@
           ]
         },
         {
+          "name": "add library category",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Reference\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/addCategory",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "addCategory"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all library categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/getAllCategories",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "getAllCategories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update library category",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCategoryId\": {{libraryCategory_id}},\n  \"name\": \"Reference Updated\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/updateCategory",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "updateCategory"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete library category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/deleteCategory?libraryCategoryId={{libraryCategory_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "deleteCategory"],
+              "query": [{ "key": "libraryCategoryId", "value": "{{libraryCategory_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "add book with inventory",
           "request": {
             "method": "POST",
             "header": [],
-            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `excisionNumber` and legacy `accessionNo` (mapped to `excisionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
+            "description": "**POST /libraryCreation/addBook**\n\nCreates one `library_book` row from `book` payload and one-or-more `library_book_inventory` rows from `inventory` array in a single transaction.\n\nSupports both `accessionNumber` and legacy `accessionNo` (mapped to `accessionNumber`).\n\n**Full payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"libraryFloorId\": 1,\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}\n```\n\n**Partial payload example:**\n```json\n{\n  \"book\": {\n    \"libraryCreationId\": 1,\n    \"title\": \"Introduction to Algorithms\"\n  },\n  \"inventory\": [\n    {\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"accessionNo\": \"ACC-1002\"\n    }\n  ]\n}\n```",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5053,7 +5137,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": 0,\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"excisionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
+              "raw": "{\n  \"book\": {\n    \"libraryCreationId\": {{libraryCreation_id}},\n    \"libraryFloorId\": {{libraryFloor_id}},\n    \"title\": \"Introduction to Algorithms\",\n    \"subtitle\": \"Third Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"publisher\": \"MIT Press\",\n    \"placeOfPublication\": \"Cambridge\",\n    \"yearOfPublication\": 2009,\n    \"edition\": \"3rd\",\n    \"seriesTitle\": \"MIT Series\",\n    \"volumeNumber\": \"1\",\n    \"language\": \"English\",\n    \"isbn\": \"9780262033848\",\n    \"issn\": null,\n    \"barcode\": \"BK-ALG-0001\",\n    \"physicalDescription\": \"Hardcover\",\n    \"numberOfPages\": 1312,\n    \"illustrations\": true,\n    \"summary\": \"Comprehensive algorithms textbook\",\n    \"keywords\": \"algorithms,data structures,computer science\",\n    \"additionalAuthor\": \"Charles E. Leiserson\",\n    \"subjectId\": [1, 2],\n    \"categoryId\": [{{libraryCategory_id}}],\n    \"classSectionsId\": 0,\n    \"remark\": \"\",\n    \"itemType\": \"print\"\n  },\n  \"inventory\": [\n    {\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5151,7 +5235,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "[\n  {\n    \"libraryBookId\": 51,\n    \"title\": \"Introduction to Algorithms\"\n  }\n]"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 19,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"authors\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n    }\n  ]\n}"
             }
           ]
         },
@@ -5194,101 +5278,53 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"libraryBookId\": 51,\n  \"title\": \"Introduction to Algorithms\",\n  \"subjectId\": 0,\n  \"classSectionsId\": 0,\n  \"remark\": \"\",\n  \"itemType\": \"print\",\n  \"inventoryCopies\": [\n    {\n      \"inventoryId\": 81,\n      \"excisionNumber\": \"ACC-1001\",\n      \"billNo\": \"Bill No.\",\n      \"billDate\": \"2026-05-06\",\n      \"itemPrice\": \"100.00\",\n      \"netPrice\": \"90.00\",\n      \"currency\": \"INR\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Book Details\",\n  \"data\": {\n    \"libraryBookId\": 19,\n    \"title\": \"Introduction to Algorithms\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n    \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n    \"itemType\": \"print\",\n    \"inventoryCopies\": [\n      {\n        \"inventoryId\": 81,\n        \"accessionNumber\": \"ACC-1001\",\n        \"status\": \"available\",\n        \"condition\": \"Good\",\n        \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n        \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n        \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n      }\n    ]\n  }\n}"
             }
           ]
         },
         {
-          "name": "update book",
+          "name": "update book (book only)",
           "request": {
             "method": "PATCH",
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"libraryBookId\": {{libraryBook_id}},\n  \"title\": \"Introduction to Algorithms - 3rd Edition\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"subjectId\": [47],\n    \"categoryId\": [1, 2],\n    \"itemType\": \"print\"\n  },\n  \"inventory\": []\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/updateBook",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "libraryCreation",
-                "updateBook"
-              ]
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "updateBook"]
             }
           },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Book updated successfully\",\n  \"result\": [1]\n}"
-            }
-          ]
+          "response": []
         },
         {
-          "name": "update inventory",
+          "name": "update book with inventory",
           "request": {
             "method": "PATCH",
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"inventoryId\": {{inventory_id}},\n  \"status\": \"available\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": {{inventory_id}},\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{baseurl}}/libraryCreation/updateInventory",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "libraryCreation",
-                "updateInventory"
-              ]
+              "raw": "{{baseurl}}/libraryCreation/updateBook",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryCreation", "updateBook"]
             }
           },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Inventory updated successfully\",\n  \"result\": [1]\n}"
-            }
-          ]
+          "response": []
         },
         {
           "name": "delete book",
@@ -5415,7 +5451,7 @@
         },
         {
           "name": "bulk upload",
-          "description": "**POST /libraryCreation/bulkUpload?libraryCreationId=**\n\nUpload an Excel file (`.xlsx`). Each row = one inventory copy.\n\n**Query**\n| Key | Required |\n|-----|----------|\n| `libraryCreationId` | Yes |\n\n**Body (form-data)**\n| Key | Type | Required |\n|-----|------|----------|\n| `book` | file | Yes |\n\n**Required Excel columns (every row)**\n`isbn`, `excisionNumber`, `Aisle`, `Rack`, `Row`\n\n**Required only when ISBN is new in DB**\n`title`, `authors`\n\n**Optional book columns**\n`publisher`, `keywords`, `subtitle`, `barcode`, `itemType`, …\n\n**Logic**\n- ISBN exists → inventory row only\n- ISBN new → book + inventory\n- Same ISBN twice in file → first row creates book, next rows inventory only\n\n**Success**\n```json\n{ \"success\": true, \"message\": \"Data uploaded successfully\" }\n```\n\n**Error**\n```json\n{ \"message\": \"Row 2: Rack is required\" }\n```",
+          "description": "**POST /libraryCreation/bulkUpload?libraryCreationId=**\n\nUpload an Excel file (`.xlsx`). Each row = one inventory copy.\n\n**Query**\n| Key | Required |\n|-----|----------|\n| `libraryCreationId` | Yes |\n\n**Body (form-data)**\n| Key | Type | Required |\n|-----|------|----------|\n| `book` | file | Yes |\n\n**Required Excel columns (every row)**\n`isbn`, `accessionNumber`, `Aisle`, `Rack`, `Row`\n\n**Required only when ISBN is new in DB**\n`title`, `authors`\n\n**Optional book columns**\n`publisher`, `keywords`, `subtitle`, `barcode`, `itemType`, …\n\n**Logic**\n- ISBN exists → inventory row only\n- ISBN new → book + inventory\n- Same ISBN twice in file → first row creates book, next rows inventory only\n\n**Success**\n```json\n{ \"success\": true, \"message\": \"Data uploaded successfully\" }\n```\n\n**Error**\n```json\n{ \"message\": \"Row 2: Rack is required\" }\n```",
           "item": [
             {
               "name": "upload excel",
@@ -5437,7 +5473,7 @@
                   "formdata": [
                     {
                       "key": "book",
-                      "description": "Excel file — columns: title, authors, isbn, excisionNumber, Aisle, Rack, Row, publisher, keywords",
+                      "description": "Excel file — columns: title, authors, isbn, accessionNumber, Aisle, Rack, Row, publisher, keywords",
                       "type": "file",
                       "src": []
                     }
@@ -5475,11 +5511,395 @@
                   "code": 400,
                   "_postman_previewlanguage": "json",
                   "header": [],
-                  "body": "{\n  \"message\": \"Row 2: excisionNumber is required; Row 3: Rack is required\"\n}"
+                  "body": "{\n  \"message\": \"Row 2: accessionNumber is required; Row 3: Rack is required\"\n}"
                 }
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "library member",
+      "description": "Library member & issue APIs under `/libraryMember`. Test order: add member → get all → get by library → book issue → getAllIssueBook → memberBook → updateStatusBook (Returned/Renewed) → delete. Status enum: Issued | Returned | Renewed | Overdue. Auth: Bearer {{token}}.",
+      "variable": [
+        {
+          "key": "libraryMember_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryIssueBook_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "libraryAddItem_id",
+          "value": "1",
+          "type": "string"
+        }
+      ],
+      "item": [
+        {
+          "name": "add member",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 2103,\n  \"employeeId\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get members by library",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember/single?libraryCreationId={{libraryCreation_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember", "single"],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update member",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 2103,\n  \"employeeId\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember?libraryMemberId={{libraryMember_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"],
+              "query": [
+                {
+                  "key": "libraryMemberId",
+                  "value": "{{libraryMember_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "book issue",
+          "item": [
+            {
+              "name": "issue book",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-06-03T10:00:00.000Z\",\n  \"issuedBy\": \"Admin User\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/bookIssue",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "bookIssue"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get all issued books",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/getAllIssueBook",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "getAllIssueBook"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get books by member",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/memberBook?libraryMemberId={{libraryMember_id}}",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "memberBook"],
+                  "query": [
+                    {
+                      "key": "libraryMemberId",
+                      "value": "{{libraryMember_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update issue book status",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Returned\",\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-06-03T10:00:00.000Z\",\n  \"issuedBy\": \"Admin User\",\n  \"returnDate\": \"2026-05-20T18:00:00.000Z\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/updateStatusBook",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "updateStatusBook"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update issue book status (renewed)",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Renewed\",\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-07-03T10:00:00.000Z\",\n  \"issuedBy\": \"Admin User\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/updateStatusBook",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "updateStatusBook"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete issued book",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseurl}}/libraryMember/deleteBook?libraryIssueBookId={{libraryIssueBook_id}}",
+                  "host": ["{{baseurl}}"],
+                  "path": ["libraryMember", "deleteBook"],
+                  "query": [
+                    {
+                      "key": "libraryIssueBookId",
+                      "value": "{{libraryIssueBook_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "add member (employee)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"employee\",\n  \"studentId\": 0,\n  \"employeeId\": 101\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "issue book (issuedBy from token)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-06-03T10:00:00.000Z\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryMember/bookIssue",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryMember", "bookIssue"]
+            }
+          },
+          "response": []
         }
       ]
     },

@@ -25,10 +25,10 @@ export default sequelize.define(
         key: "library_book_id",
       },
     },
-    excisionNumber: {
+    accessionNumber: {
       type: DataTypes.STRING,
-      allowNull: true,
-      field: "excision_number",
+      allowNull: false,
+      field: "accession_number",
     },
     billNo: {
       type: DataTypes.STRING,
@@ -56,7 +56,7 @@ export default sequelize.define(
     },
     libraryAisleId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "library_aisle_id",
       references: {
         model: libraryAisleModel,
@@ -83,7 +83,7 @@ export default sequelize.define(
     },
     libraryRackId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "library_rack_id",
       references: {
         model: libraryRackModel,
@@ -92,7 +92,7 @@ export default sequelize.define(
     },
     libraryRowId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "library_row_id",
       references: {
         model: libraryRowModel,
@@ -112,6 +112,10 @@ export default sequelize.define(
     status: {
       type: DataTypes.ENUM("available", "issued"),
       defaultValue: "available",
+    },
+    condition: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     createdAt: {
       type: DataTypes.DATE,
