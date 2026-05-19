@@ -47,14 +47,9 @@ function parseBulkCell(raw, field) {
     if (t === "true" || t === "1") return true;
     if (t === "false" || t === "0") return false;
   }
-  if (field === "isbn") {
-    if (typeof raw === "number" && raw > 9999999999) return raw.toFixed(0);
-    const isbn = String(raw).trim();
-    return isbn === "" ? null : isbn;
-  }
-  if (field === "title") {
-    const title = String(raw).trim();
-    return title === "" ? null : title;
+  if (field === "isbn" || field === "title") {
+    const text = String(raw).trim();
+    return text === "" ? null : text;
   }
   return raw;
 }
@@ -82,14 +77,13 @@ function splitBulkUploadRow(row) {
   const book = {};
   const inventory = {};
   const location = {};
-  const unknownKeys = [];
-  const typeErrors = [];
+  const errors = [];
 
   for (const [rawKey, rawValue] of Object.entries(row)) {
     const locField = LOCATION_MAP[normBulkKey(rawKey)];
     if (locField) {
       if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
-        location[locField] = String(rawValue);
+        location[locField] = String(rawValue).trim();
       }
       continue;
     }
@@ -100,7 +94,7 @@ function splitBulkUploadRow(row) {
       if (value === null) continue;
       const err = getBulkTypeError(bookField, value);
       if (err) {
-        typeErrors.push(err);
+        errors.push(err);
         continue;
       }
       book[bookField] = value;
@@ -113,7 +107,7 @@ function splitBulkUploadRow(row) {
       if (value === null) continue;
       const err = getBulkTypeError(invField, value);
       if (err) {
-        typeErrors.push(err);
+        errors.push(err);
         continue;
       }
       inventory[invField] = value;
@@ -121,34 +115,20 @@ function splitBulkUploadRow(row) {
     }
 
     if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
-      unknownKeys.push(rawKey);
+      errors.push(`Unknown column '${rawKey}'`);
     }
   }
 
   applyBulkDefaults(book, BOOK_FIELDS);
   applyBulkDefaults(inventory, INVENTORY_FIELDS);
 
-  const locationOut = {
-    aisleName: location.aisleName || null,
-    rackName: location.rackName || null,
-    rowName: location.rowName || null,
-  };
+  if (!book.isbn && !book.title) errors.push("isbn or title is required");
+  if (!inventory.excisionNumber) errors.push("excisionNumber is required");
+  if (!location.aisleName) errors.push("Aisle is required");
+  if (!location.rackName) errors.push("Rack is required");
+  if (!location.rowName) errors.push("Row is required");
 
-  const rowErrors = [];
-  if (!book.isbn && !book.title) rowErrors.push("isbn or title is required");
-  if (!inventory.excisionNumber) rowErrors.push("excisionNumber is required");
-  if (!locationOut.aisleName) rowErrors.push("Aisle is required");
-  if (!locationOut.rackName) rowErrors.push("Rack is required");
-  if (!locationOut.rowName) rowErrors.push("Row is required");
-
-  return {
-    book,
-    inventory,
-    location: locationOut,
-    unknownKeys,
-    typeErrors,
-    rowErrors,
-  };
+  return { book, inventory, location, errors };
 }
 
 export async function addLibrary(data, createdBy, updatedBy, instituteId, universityId, campusId) {
@@ -439,22 +419,22 @@ function getBookCacheKey(book) {
 }
 
 export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreationId) {
+  const parsedRows = [];
   const errors = [];
-  const parsedRows = rows.map((row, index) => ({
-    rowNumber: index + 2,
-    ...splitBulkUploadRow(row),
-  }));
 
-  for (const item of parsedRows) {
-    for (let i = 0; i < item.unknownKeys.length; i++) {
-      errors.push(buildUploadError(item.rowNumber, `Unknown column '${item.unknownKeys[i]}'`));
+  for (let index = 0; index < rows.length; index++) {
+    const rowNumber = index + 2;
+    const parsed = splitBulkUploadRow(rows[index]);
+
+    for (let i = 0; i < parsed.errors.length; i++) {
+      errors.push(buildUploadError(rowNumber, parsed.errors[i]));
     }
-    for (let i = 0; i < item.typeErrors.length; i++) {
-      errors.push(buildUploadError(item.rowNumber, item.typeErrors[i]));
-    }
-    for (let i = 0; i < item.rowErrors.length; i++) {
-      errors.push(buildUploadError(item.rowNumber, item.rowErrors[i]));
-    }
+
+    parsedRows.push({
+      book: parsed.book,
+      inventory: parsed.inventory,
+      location: parsed.location,
+    });
   }
 
   if (errors.length > 0) {
@@ -465,8 +445,7 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
   const transaction = await sequelize.transaction();
 
   try {
-    for (const item of parsedRows) {
-      const { book, inventory, location } = item;
+    for (const { book, inventory, location } of parsedRows) {
       const cacheKey = getBookCacheKey(book);
 
       let libraryBookId = bookCache[cacheKey];
