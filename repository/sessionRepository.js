@@ -22,6 +22,23 @@ export async function addBulkSession(sessionData) {
     }
 };
 
+export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, universityId) {
+  try {
+    const existingMapping = await model.sessionCouseMappingModel.findOne({
+      where: {
+        sessionId,
+        courseId,
+        instituteId,
+        universityId
+      }
+    });
+    return !!existingMapping;
+  } catch (error) {
+    console.error('Error checking if session is already mapped:', error);
+    throw error;
+  }
+}
+
 export async function courseSectionMapping(sessionData, transaction) {
     try {
         const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
