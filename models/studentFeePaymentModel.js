@@ -22,27 +22,29 @@ export default sequelize.define(
         key: "student_fee_invoice_id",
       },
     },
-    instituteId: {
+    paymentType: {
+      type: DataTypes.ENUM("INCOMING", "OUTGOING"),
+      allowNull: false,
+      defaultValue: "INCOMING",
+      field: "payment_type",
+    },
+    payeeId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "institute_id",
-      references: {
-        model: instituteModel,
-        key: "institute_id",
-      },
+      field: "payee_id",
     },
-    paidAmount: {
+    payeeType: {
+      type: DataTypes.ENUM("STUDENT", "VENDOR"),
+      allowNull: false,
+      defaultValue: "STUDENT",
+      field: "payee_type",
+    },
+    amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
-      field: "paid_amount",
-    },
-    paymentDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: false,
-      field: "payment_date",
     },
     paymentMethod: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.ENUM("credit_card", "bank_transfer", "cash", "cheque"),
       allowNull: false,
       field: "payment_method",
     },
@@ -51,9 +53,19 @@ export default sequelize.define(
       allowNull: true,
       field: "reference_number",
     },
-    notes: {
-      type: DataTypes.STRING(500),
+    transactionId: {
+      type: DataTypes.STRING(150),
       allowNull: true,
+      field: "transaction_id",
+    },
+    instituteId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: "institute_id",
+      references: {
+        model: instituteModel,
+        key: "institute_id",
+      },
     },
     createdBy: {
       type: DataTypes.INTEGER,

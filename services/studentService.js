@@ -23,7 +23,41 @@ import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
-import { toMoneyNumber } from "../utility/decimalMoney.js";
+import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
+
+function isMainFeePlanSubItem(line) {
+  return line?.isMainSubItem === true || line?.isMainSubItem === 1;
+}
+
+function splitFeePlanSubItemAmounts(subItems) {
+  let amount = 0;
+  let supplementalFees = 0;
+
+  for (const line of subItems ?? []) {
+    const lineAmount = toMoneyNumber(line.amount);
+    if (isMainFeePlanSubItem(line)) {
+      amount = decimalAdd(amount, lineAmount);
+    } else {
+      supplementalFees = decimalAdd(supplementalFees, lineAmount);
+    }
+  }
+
+  return {
+    amount,
+    supplementalFees,
+    total: decimalAdd(amount, supplementalFees),
+  };
+}
+
+function mapFeePlanSubItemsForResponse(subItems) {
+  return (subItems ?? []).map((line) => ({
+    feePlanSubitemId: line.feePlanSubitemId,
+    feeTypeId: line.feeTypeId,
+    name: (line.feeTypeCatalog ?? {}).name ?? null,
+    amount: toMoneyNumber(line.amount),
+    isMainItem: isMainFeePlanSubItem(line),
+  }));
+}
 
 export async function addStudent(
   info,
@@ -1320,34 +1354,36 @@ function formatStudentDisplayName(student) {
 }
 
 function resolveTermDisplayStatus(feePlanItem, invoice, today = todayDateOnly()) {
-  const startDate = String(feePlanItem.createDate).slice(0, 10);
-
-  if (!invoice) {
-    return startDate > today ? "upcoming" : "pending";
+  if (invoice) {
+    if (invoice.paymentStatus === "paid") return "paid";
+    if (invoice.paymentStatus === "partial") return "partial";
+    return "unpaid";
   }
 
-  if (invoice.paymentStatus === "paid") return "paid";
-  if (invoice.paymentStatus === "partial") return "partial";
-  return "unpaid";
+  const startDate = String(feePlanItem.createDate).slice(0, 10);
+  return startDate > today ? "upcoming" : "pending";
 }
 
 function formatStudentTermRow(feePlanItem, invoice, index) {
   const item = toPlainRow(feePlanItem);
   const inv = invoice ? toPlainRow(invoice) : null;
-  const status = resolveTermDisplayStatus(item, inv);
+  const subItems = item.feePlanSubItems ?? [];
+  const { amount, supplementalFees, total } = splitFeePlanSubItemAmounts(subItems);
+  const hasFeeLines = subItems.length > 0;
 
   return {
     sno: index + 1,
     feePlanItemId: item.feePlanItemId,
-    feePlanTypeId: item.feePlanItemId,
-    termName: item.termName ?? null,
-    startDate: item.createDate,
+    startDate: item.createDate ?? null,
     endDate: item.dueDate ?? null,
-    amount: toMoneyNumber(item.amount),
-    status,
+    amount,
+    supplementalFees,
+    total,
+    feeTypeCatalogs: mapFeePlanSubItemsForResponse(subItems),
+    status: resolveTermDisplayStatus(item, inv),
     studentFeeInvoiceId: inv?.studentFeeInvoiceId ?? null,
     paymentStatus: inv?.paymentStatus ?? null,
-    canGenerateInvoice: !inv,
+    canGenerateInvoice: !inv && hasFeeLines,
   };
 }
 
@@ -1405,8 +1441,8 @@ function groupFeePlanItemsByProfileId(feePlanItems) {
 
 /** GET /student/feePlanProfiles/all — students with fee plan + nested terms (paginated). */
 export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
-  const page = pagination.page ?? 1;
-  const limit = pagination.limit ?? 20;
+  const page = Number(pagination.page) || 1;
+  const limit = Number(pagination.limit) || 20;
 
   const total = await studentRepository.countStudentsWithFeePlanForInitiate(instituteId);
   const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId, {

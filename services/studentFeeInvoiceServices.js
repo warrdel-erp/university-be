@@ -8,22 +8,36 @@ import {
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 
-
-
-function netLineAmount(amount, waiver) {
+function netInvoiceItemAmount(amount, waiver) {
   const lineAmount = toMoneyNumber(amount);
   if (waiver === undefined || waiver === null) return lineAmount;
   return decimalSubtract(lineAmount, toMoneyNumber(waiver));
 }
 
+function getMainInvoiceItem(items) {
+  return (items ?? []).find((line) => line.isMainItem);
+}
+
+function getMainInvoiceItemNetAmount(items) {
+  const main = getMainInvoiceItem(items);
+  if (!main) return 0;
+  return netInvoiceItemAmount(main.amount, main.waiver);
+}
+
+function getSupplementalInvoiceItems(items) {
+  return (items ?? []).filter((line) => !line.isMainItem);
+}
+
 function paymentSummaryFromPlain(p) {
-  const payments = p.feePayments ?? [];
-  const totalPaid = decimalSum(payments.map((pay) => toMoneyNumber(pay.paidAmount)));
-  const invoiceTotal = toMoneyNumber(p.total);
+  const totalPaid = decimalSum(
+    (p.feePayments ?? [])
+      .filter((pay) => (pay.paymentType ?? "INCOMING") === "INCOMING")
+      .map((pay) => toMoneyNumber(pay.amount ?? pay.paidAmount))
+  );
   return {
     paymentStatus: p.paymentStatus ?? "unpaid",
     totalPaid,
-    balanceDue: decimalSubtract(invoiceTotal, totalPaid),
+    balanceDue: decimalSubtract(toMoneyNumber(p.total), totalPaid),
   };
 }
 
@@ -32,10 +46,45 @@ function toPlain(row) {
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
+function httpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
+function invoiceItemsPlain(p) {
+  return (p.feeInvoiceItems ?? []).map((row) =>
+    mapInvoiceItemLine(typeof row.get === "function" ? row.get({ plain: true }) : row)
+  );
+}
+
+function splitInvoiceAmounts(p) {
+  const feeInvoiceItems = invoiceItemsPlain(p);
+  const supplementalFees = getSupplementalInvoiceItems(feeInvoiceItems);
+  return {
+    isAdhocInvoice: p.feePlanItemId === null,
+    baseAmount: getMainInvoiceItemNetAmount(feeInvoiceItems),
+    feeInvoiceItems,
+    supplementalFees,
+    supplementalFeesTotal: decimalSum(supplementalFees.map((l) => l.netAmount)),
+  };
+}
+
+function termInvoiceTotal(isAdhocInvoice, storedTotal, baseAmount, supplementalFeesTotal) {
+  return isAdhocInvoice ? storedTotal : decimalSum([baseAmount, supplementalFeesTotal]);
+}
+
+function formatStudentDisplayName(student) {
+  if (!student) return "";
+  return [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
 function formatStudentFeeInvoiceListStudent(student) {
   const s = toPlain(student);
   if (!s?.studentId) return null;
-
   return {
     studentId: s.studentId,
     studentName: formatStudentDisplayName(s) || null,
@@ -46,7 +95,6 @@ function formatStudentFeeInvoiceListStudent(student) {
 function formatStudentFeeInvoiceStudent(student) {
   const s = toPlain(student);
   if (!s?.studentId) return null;
-
   return {
     studentId: s.studentId,
     firstName: s.firstName ?? null,
@@ -61,61 +109,47 @@ function formatStudentFeeInvoiceStudent(student) {
   };
 }
 
-function mapAdditionalFeeLine(line) {
+function mapInvoiceItemLine(line) {
   const catalog = line.feeTypeCatalog ?? {};
-  const amount = toMoneyNumber(line.amount);
-  const waiver =
-    line.waiver === undefined || line.waiver === null ? null : toMoneyNumber(line.waiver);
-  const netAmount = netLineAmount(line.amount, line.waiver);
-
   return {
-    studentInvoiceAdditionalFeeId: line.studentInvoiceAdditionalFeeId,
-    feeTypeCatalogId: line.feeTypeCatalogId ?? catalog.feeTypeCatalogId ?? null,
+    studentFeeInvoiceItemsId: line.studentFeeInvoiceItemsId,
+    feeTypeId: line.feeTypeId ?? catalog.feeTypeCatalogId ?? null,
+    isMainItem: Boolean(line.isMainItem),
     name: catalog.name ?? null,
     description: catalog.description ?? null,
     catalogAmount: catalog.amount != null ? toMoneyNumber(catalog.amount) : null,
-    amount,
-    waiver,
-    netAmount,
+    amount: toMoneyNumber(line.amount),
+    waiver: line.waiver == null ? null : toMoneyNumber(line.waiver),
+    netAmount: netInvoiceItemAmount(line.amount, line.waiver),
   };
 }
 
-/**
- * Builds GET/POST response: additionalFees[], computed total, verified against DB total.
- * Frontend should use `total` (computed); `storedTotal` + `totalVerified` for audit.
- */
 export function formatStudentFeeInvoiceResponse(row) {
   const p = toPlain(row);
   if (!p) return null;
 
-  const item = p.feePlanItem ?? {};
-  const baseAmount = toMoneyNumber(p.amount);
-  const additionalFees = (p.invoiceAdditionalFees ?? []).map(mapAdditionalFeeLine);
-  const additionalFeesTotal = decimalSum(additionalFees.map((l) => l.netAmount));
+  const split = splitInvoiceAmounts(p);
   const storedTotal = toMoneyNumber(p.total);
-  const isAdhocInvoice = p.feePlanItemId === null;
-
-  const computedTotal = isAdhocInvoice
-    ? storedTotal
-    : decimalSum([baseAmount, additionalFeesTotal]);
-  const totalVerified = isAdhocInvoice
-    ? decimalCompare(additionalFeesTotal, storedTotal) === 0 &&
-      decimalCompare(baseAmount, storedTotal) === 0
-    : decimalCompare(computedTotal, storedTotal) === 0;
-
-  const student = formatStudentFeeInvoiceStudent(p.studentFeeInvoiceStudent);
+  const total = termInvoiceTotal(
+    split.isAdhocInvoice,
+    storedTotal,
+    split.baseAmount,
+    split.supplementalFeesTotal
+  );
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
     studentId: p.studentId,
-    student,
+    student: formatStudentFeeInvoiceStudent(p.studentFeeInvoiceStudent),
     feePlanItemId: p.feePlanItemId,
     instituteId: p.instituteId,
-    amount: baseAmount,
-    additionalFeesTotal,
-    total: computedTotal,
+    amount: split.isAdhocInvoice ? 0 : split.baseAmount,
+    supplementalFeesTotal: split.supplementalFeesTotal,
+    total,
     storedTotal,
-    totalVerified,
+    totalVerified: split.isAdhocInvoice
+      ? decimalCompare(decimalSum(split.feeInvoiceItems.map((l) => l.netAmount)), storedTotal) === 0
+      : decimalCompare(total, storedTotal) === 0,
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
     status: p.status,
@@ -123,158 +157,139 @@ export function formatStudentFeeInvoiceResponse(row) {
     createdAt: p.createdAt ?? p.created_at ?? null,
     updatedAt: p.updatedAt ?? p.updated_at ?? null,
     feePlanItem: {
-      feePlanItemId: item.feePlanItemId ?? p.feePlanItemId,
-      feePlanProfileId: item.feePlanProfileId ?? null,
-      termName: item.termName ?? null,
-      amount: toMoneyNumber(item.amount ?? p.amount),
-      createDate: item.createDate ?? null,
-      dueDate: item.dueDate ?? null,
+      feePlanItemId: (p.feePlanItem ?? {}).feePlanItemId ?? p.feePlanItemId,
+      feePlanProfileId: (p.feePlanItem ?? {}).feePlanProfileId ?? null,
+      amount: split.baseAmount,
+      createDate: (p.feePlanItem ?? {}).createDate ?? null,
+      dueDate: (p.feePlanItem ?? {}).dueDate ?? null,
     },
-    additionalFees,
+    feeInvoiceItems: split.feeInvoiceItems,
+    supplementalFees: split.supplementalFees,
   };
 }
 
-/** Minimal row for student invoice list / printable table. */
 function formatStudentFeeInvoiceListRow(row) {
   const p = toPlain(row);
   if (!p) return null;
 
-  const item = p.feePlanItem ?? {};
-  const baseAmount = toMoneyNumber(p.amount);
-  const additionalFees = (p.invoiceAdditionalFees ?? []).map(mapAdditionalFeeLine);
-  const additionalFeesTotal = decimalSum(additionalFees.map((l) => l.netAmount));
-  const isAdhocInvoice = p.feePlanItemId === null;
-  const total = isAdhocInvoice
-    ? toMoneyNumber(p.total)
-    : decimalSum([baseAmount, additionalFeesTotal]);
+  const split = splitInvoiceAmounts(p);
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
-    termName: item.termName ?? null,
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
-    amount: baseAmount,
-    additionalFeesTotal,
-    total,
+    amount: split.isAdhocInvoice ? 0 : split.baseAmount,
+    supplementalFeesTotal: split.supplementalFeesTotal,
+    total: termInvoiceTotal(
+      split.isAdhocInvoice,
+      toMoneyNumber(p.total),
+      split.baseAmount,
+      split.supplementalFeesTotal
+    ),
     status: p.status,
     ...paymentSummaryFromPlain(p),
-    additionalFees: additionalFees.map((l) => ({
+    supplementalFees: split.supplementalFees.map((l) => ({
       name: l.name,
       amount: l.netAmount,
     })),
+    feeInvoiceItems: split.feeInvoiceItems,
   };
 }
 
 export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, instituteId) {
   const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
-    const feePlanItem = await repo.findFeePlanItemById(feePlanItemId, instituteId, { transaction });
-    if (!feePlanItem) throw new Error("Fee plan item not found");
-
-    const student = await repo.findStudentById(studentId, instituteId, { transaction });
-    if (!student) throw new Error("Student not found");
-
-    const studentPlain = toPlain(student);
-    const feePlanItemPlain = toPlain(feePlanItem);
-    const studentProfileId = studentPlain.feePlanProfileId;
-    if (!studentProfileId) {
-      throw new Error("Student has no fee plan profile assigned");
-    }
-
-    if (feePlanItemPlain.feePlanProfileId !== studentProfileId) {
-      throw new Error("Fee plan item does not belong to the student's fee plan profile");
-    }
-
-    const existing = await repo.findStudentFeeInvoiceByStudentAndItem(
-      studentId,
-      feePlanItemId,
-      instituteId,
-      { transaction }
+    const feePlanItem = toPlain(
+      await repo.findFeePlanItemById(feePlanItemId, instituteId, { transaction })
     );
-    if (existing) {
-      throw new Error("Invoice already exists for this student and fee plan item");
+    if (!feePlanItem) throw httpError("Fee plan item not found", 404);
+
+    const student = toPlain(await repo.findStudentById(studentId, instituteId, { transaction }));
+    if (!student) throw httpError("Student not found", 404);
+    if (!student.feePlanProfileId) {
+      throw httpError("Student has no fee plan profile assigned", 400);
+    }
+    if (feePlanItem.feePlanProfileId !== student.feePlanProfileId) {
+      throw httpError("Fee plan item does not belong to the student's fee plan profile", 400);
+    }
+    if (
+      await repo.findStudentFeeInvoiceByStudentAndItem(
+        studentId,
+        feePlanItemId,
+        instituteId,
+        { transaction }
+      )
+    ) {
+      throw httpError("Invoice already exists for this student and fee plan item", 409);
     }
 
-    const additionalFees = await repo.findAdditionalFeesByFeePlanItemId(feePlanItemId, instituteId, {
-      transaction,
-    });
-
-    const baseAmount = toMoneyNumber(feePlanItem.amount);
-    const additionalAmounts = additionalFees.map((af) => toMoneyNumber(af.amount));
-    const total = decimalSum([baseAmount, ...additionalAmounts]);
+    const planFeesPlain = (
+      await repo.findFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, { transaction })
+    ).map(toPlain);
 
     const invoice = await repo.createStudentFeeInvoice(
       {
         studentId,
         feePlanItemId,
         instituteId,
-        amount: baseAmount,
-        total,
+        total: decimalSum(planFeesPlain.map((line) => toMoneyNumber(line.amount))),
         createDate: feePlanItem.createDate,
-        dueDate: feePlanItem.dueDate,
+        dueDate: feePlanItem.dueDate ?? null,
         status: "generated",
         paymentStatus: "unpaid",
       },
       { transaction }
     );
 
-    if (additionalFees.length > 0) {
-      await repo.bulkCreateStudentInvoiceAdditionalFees(
-        additionalFees.map((af) => {
-          const plain = toPlain(af);
-          return {
-            studentFeeInvoiceId: invoice.studentFeeInvoiceId,
-            feeTypeCatalogId: plain.feeTypeCatalogId,
-            amount: toMoneyNumber(plain.amount),
-            waiver: null,
-          };
-        }),
-        { transaction }
-      );
-    }
+    await repo.bulkCreateStudentFeeInvoiceItems(
+      planFeesPlain.map((line) => ({
+        studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+        feeTypeId: line.feeTypeId,
+        amount: toMoneyNumber(line.amount),
+        waiver: null,
+        isMainItem: line.isMainSubItem,
+      })),
+      { transaction }
+    );
 
     return invoice.studentFeeInvoiceId;
   });
 
-  const full = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId);
-  return formatStudentFeeInvoiceResponse(full);
+  return formatStudentFeeInvoiceResponse(
+    await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId)
+  );
 }
 
-/**
- * Adhoc invoice from fee type catalog lines (misconduct, fine, etc.).
- * Invoice lines stored on student_invoice_additional_fee with fee_type_catalog_id directly.
- */
-export async function generateStudentFeeInvoiceFromAdditionalFees(
+export async function generateAdhocStudentFeeInvoice(
   { studentId, feeTypeCatalogs, total, createDate, dueDate },
   instituteId
 ) {
   const feeLines = feeTypeCatalogs.map((line) => ({
-    feeTypeCatalogId: line.feeTypeCatalogId,
+    feeTypeId: line.feeTypeCatalogId,
     amount: toMoneyNumber(line.amount),
-    waiver:
-      line.waiver === undefined || line.waiver === null ? null : toMoneyNumber(line.waiver),
+    waiver: line.waiver == null ? null : toMoneyNumber(line.waiver),
   }));
-  const linesNetTotal = decimalSum(
-    feeLines.map((line) => netLineAmount(line.amount, line.waiver))
+  const invoiceTotal = decimalSum(
+    feeLines.map((line) => netInvoiceItemAmount(line.amount, line.waiver))
   );
 
-  if (total !== undefined && decimalCompare(linesNetTotal, toMoneyNumber(total)) !== 0) {
-    throw new Error("total must equal sum of feeTypeCatalogs amounts after waivers");
+  if (total !== undefined && decimalCompare(invoiceTotal, toMoneyNumber(total)) !== 0) {
+    throw httpError("total must equal sum of feeTypeCatalogs amounts after waivers", 400);
   }
 
-  const invoiceTotal = linesNetTotal;
-  const catalogIds = [...new Set(feeLines.map((line) => line.feeTypeCatalogId))];
-
   const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
-    const student = await repo.findStudentById(studentId, instituteId, { transaction });
-    if (!student) throw new Error("Student not found");
+    if (!(await repo.findStudentById(studentId, instituteId, { transaction }))) {
+      throw httpError("Student not found", 404);
+    }
 
-    const catalogs = await feeTypeCatalogRepo.findFeeTypeCatalogsByIds(
-      catalogIds,
-      instituteId,
-      { transaction }
-    );
-    if (catalogs.length !== catalogIds.length) {
-      throw new Error("One or more fee type catalog entries not found");
+    const catalogIds = [...new Set(feeLines.map((line) => line.feeTypeId))];
+    if (
+      (
+        await feeTypeCatalogRepo.findFeeTypeCatalogsByIds(catalogIds, instituteId, {
+          transaction,
+        })
+      ).length !== catalogIds.length
+    ) {
+      throw httpError("One or more fee type catalog entries not found", 404);
     }
 
     const invoice = await repo.createStudentFeeInvoice(
@@ -282,7 +297,6 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
         studentId,
         feePlanItemId: null,
         instituteId,
-        amount: invoiceTotal,
         total: invoiceTotal,
         createDate,
         dueDate: dueDate ?? null,
@@ -292,12 +306,13 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
       { transaction }
     );
 
-    await repo.bulkCreateStudentInvoiceAdditionalFees(
+    await repo.bulkCreateStudentFeeInvoiceItems(
       feeLines.map((line) => ({
         studentFeeInvoiceId: invoice.studentFeeInvoiceId,
-        feeTypeCatalogId: line.feeTypeCatalogId,
+        feeTypeId: line.feeTypeId,
         amount: line.amount,
         waiver: line.waiver,
+        isMainItem: false,
       })),
       { transaction }
     );
@@ -317,7 +332,7 @@ export async function generateStudentFeeInvoiceFromAdditionalFees(
 
 export async function getStudentFeeInvoiceById(studentFeeInvoiceId, instituteId) {
   const row = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId);
-  if (!row) throw new Error("Student fee invoice not found");
+  if (!row) throw httpError("Student fee invoice not found", 404);
   return formatStudentFeeInvoiceResponse(row);
 }
 
@@ -325,61 +340,48 @@ export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) 
   const student = await repo.findStudentById(studentId, instituteId, {
     attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
   });
-  if (!student) throw new Error("Student not found");
+  if (!student) throw httpError("Student not found", 404);
 
-  const rows = await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId);
   return {
     student: formatStudentFeeInvoiceListStudent(student),
-    invoices: rows.map((r) => formatStudentFeeInvoiceListRow(r)),
+    invoices: (await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId)).map(
+      formatStudentFeeInvoiceListRow
+    ),
   };
 }
 
-function formatStudentDisplayName(student) {
-  if (!student) return "";
-  return [student.firstName, student.middleName, student.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-}
-
-function resolvePaymentStatusesFilter(paymentTab) {
-  if (paymentTab === "pending") return ["unpaid", "partial"];
-  if (paymentTab === "completed") return ["paid"];
-  return null;
-}
-
-/** Fees Invoice table: all institute invoices (no student/fee-plan filter). */
 function formatFeesInvoiceTableRow(row) {
   const p = toPlain(row);
-  const student = p.studentFeeInvoiceStudent ?? {};
-  const item = p.feePlanItem ?? {};
   const payment = paymentSummaryFromPlain(p);
-
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
     invoiceNo: p.studentFeeInvoiceId,
     studentId: p.studentId,
-    studentName: formatStudentDisplayName(student) || null,
-    scholarNumber: student.scholarNumber ?? null,
+    studentName: formatStudentDisplayName(p.studentFeeInvoiceStudent ?? {}) || null,
+    scholarNumber: p.studentFeeInvoiceStudent?.scholarNumber ?? null,
     amount: toMoneyNumber(p.total),
     paid: payment.totalPaid,
     deposits: null,
     balanceDue: payment.balanceDue,
     status: (p.paymentStatus ?? "unpaid").toUpperCase(),
     paymentStatus: p.paymentStatus ?? "unpaid",
-    termName: item.termName ?? null,
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
   };
 }
 
 export async function listAllStudentFeeInvoices(instituteId, status = "all") {
-  const paymentStatuses = resolvePaymentStatusesFilter(status);
-  const rows = await repo.findAllStudentFeeInvoicesByInstitute(instituteId, {
-    paymentStatuses,
-  });
   return {
     status,
-    invoices: rows.map((row) => formatFeesInvoiceTableRow(row)),
+    invoices: (
+      await repo.findAllStudentFeeInvoicesByInstitute(instituteId, {
+        paymentStatuses:
+          status === "pending"
+            ? ["unpaid", "partial"]
+            : status === "completed"
+              ? ["paid"]
+              : null,
+      })
+    ).map((row) => formatFeesInvoiceTableRow(row)),
   };
 }

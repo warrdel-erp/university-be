@@ -68,7 +68,7 @@ import userRolePermissionModel from "./userRolePermissionModel.js";
 import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
 import addDormitoryModel from "./addDormitoryModel.js";
-import additionalFeeModel from "./additionalFeeModel.js";
+import feePlanSubItemsModel from "./feePlanSubItemsModel.js";
 import examTypeModel from "./examTypeModel.js";
 import examSetupModel from "./examSetupModel.js";
 import examAttendanceModel from "./examAttendanceModel.js";
@@ -149,7 +149,8 @@ import studentExamSeatModel from "./studentExamSeatModel.js";
 import studentHallTicketModel from "./studentHallTicketModel.js";
 import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 import studentFeePaymentModel from "./studentFeePaymentModel.js";
-import studentInvoiceAdditionalFeeModel from "./studentInvoiceAdditionalFeeModel.js";
+import paymentItemModel from "./paymentItemModel.js";
+import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
  
 
@@ -974,22 +975,22 @@ feePlanItemModel.hasMany(studentFeeInvoiceModel, { foreignKey: "feePlanItemId", 
 studentFeeInvoiceModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteStudentFeeInvoice" });
 instituteModel.hasMany(studentFeeInvoiceModel, { foreignKey: "instituteId", as: "studentFeeInvoiceList" });
 
-additionalFeeModel.belongsTo(feeTypeCatalogModel, { foreignKey: "feeTypeCatalogId", as: "feeTypeCatalog" });
-feeTypeCatalogModel.hasMany(additionalFeeModel, { foreignKey: "feeTypeCatalogId", as: "catalogAdditionalFees" });
+feePlanSubItemsModel.belongsTo(feeTypeCatalogModel, { foreignKey: "feeTypeId", as: "feeTypeCatalog" });
+feeTypeCatalogModel.hasMany(feePlanSubItemsModel, { foreignKey: "feeTypeId", as: "catalogFeePlanSubItems" });
 
-additionalFeeModel.belongsTo(feePlanItemModel, { foreignKey: "feePlanItemId", as: "feePlanItem" });
-feePlanItemModel.hasMany(additionalFeeModel, { foreignKey: "feePlanItemId", as: "itemAdditionalFees" });
+feePlanSubItemsModel.belongsTo(feePlanItemModel, { foreignKey: "feePlanItemId", as: "feePlanItem" });
+feePlanItemModel.hasMany(feePlanSubItemsModel, { foreignKey: "feePlanItemId", as: "feePlanSubItems" });
 
-additionalFeeModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAdditionalFee" });
-instituteModel.hasMany(additionalFeeModel, { foreignKey: "instituteId", as: "additionalFeeList" });
+feePlanSubItemsModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteFeePlanSubItems" });
+instituteModel.hasMany(feePlanSubItemsModel, { foreignKey: "instituteId", as: "feePlanSubItemsList" });
 
-studentInvoiceAdditionalFeeModel.belongsTo(studentFeeInvoiceModel, {
+studentFeeInvoiceItemsModel.belongsTo(studentFeeInvoiceModel, {
   foreignKey: "studentFeeInvoiceId",
   as: "studentFeeInvoice",
 });
-studentFeeInvoiceModel.hasMany(studentInvoiceAdditionalFeeModel, {
+studentFeeInvoiceModel.hasMany(studentFeeInvoiceItemsModel, {
   foreignKey: "studentFeeInvoiceId",
-  as: "invoiceAdditionalFees",
+  as: "feeInvoiceItems",
 });
 
 studentFeePaymentModel.belongsTo(studentFeeInvoiceModel, {
@@ -1010,13 +1011,22 @@ instituteModel.hasMany(studentFeePaymentModel, {
   as: "studentFeePaymentList",
 });
 
-studentInvoiceAdditionalFeeModel.belongsTo(feeTypeCatalogModel, {
-  foreignKey: "feeTypeCatalogId",
+studentFeePaymentModel.hasMany(paymentItemModel, {
+  foreignKey: "paymentId",
+  as: "paymentItems",
+});
+paymentItemModel.belongsTo(studentFeePaymentModel, {
+  foreignKey: "paymentId",
+  as: "payment",
+});
+
+studentFeeInvoiceItemsModel.belongsTo(feeTypeCatalogModel, {
+  foreignKey: "feeTypeId",
   as: "feeTypeCatalog",
 });
-feeTypeCatalogModel.hasMany(studentInvoiceAdditionalFeeModel, {
-  foreignKey: "feeTypeCatalogId",
-  as: "studentInvoiceAdditionalFees",
+feeTypeCatalogModel.hasMany(studentFeeInvoiceItemsModel, {
+  foreignKey: "feeTypeId",
+  as: "studentFeeInvoiceItems",
 });
 
 lessonModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "lessonSubject" });
@@ -1439,7 +1449,7 @@ export {
   roomTypeModel,
   dormitoryListModel,
   addDormitoryModel,
-  additionalFeeModel,
+  feePlanSubItemsModel,
   examTypeModel,
   examSetupModel,
   examAttendanceModel,
@@ -1474,7 +1484,7 @@ export {
   feeInvoiceDetailRecordModel,
   feeNewInvoiceModel,
   studentInvoiceMapperModel,
-  studentInvoiceAdditionalFeeModel,
+  studentFeeInvoiceItemsModel,
   lessonModel,
   topicModel,
   subTopicModel,
@@ -1521,5 +1531,6 @@ export {
   studentExamSeatModel,
   studentFeeInvoiceModel,
   studentFeePaymentModel,
+  paymentItemModel,
   studentHallTicketModel,
 };

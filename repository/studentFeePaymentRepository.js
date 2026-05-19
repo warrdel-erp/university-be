@@ -22,8 +22,8 @@ export async function findStudentFeeInvoiceForPayment(
 }
 
 export async function sumPaidAmountByInvoiceId(studentFeeInvoiceId, instituteId, options = {}) {
-  const total = await model.studentFeePaymentModel.sum("paid_amount", {
-    where: { studentFeeInvoiceId, instituteId },
+  const total = await model.studentFeePaymentModel.sum("amount", {
+    where: { studentFeeInvoiceId, instituteId, paymentType: "INCOMING" },
     transaction: options.transaction,
   });
   return total == null ? 0 : Number(total);
@@ -31,6 +31,10 @@ export async function sumPaidAmountByInvoiceId(studentFeeInvoiceId, instituteId,
 
 export async function createStudentFeePayment(data, options = {}) {
   return model.studentFeePaymentModel.create(data, { transaction: options.transaction });
+}
+
+export async function createPaymentItem(data, options = {}) {
+  return model.paymentItemModel.create(data, { transaction: options.transaction });
 }
 
 export async function updateInvoicePaymentStatus(
@@ -51,6 +55,7 @@ export async function updateInvoicePaymentStatus(
 export async function findStudentFeePaymentById(studentFeePaymentId, instituteId, options = {}) {
   return model.studentFeePaymentModel.findOne({
     where: { studentFeePaymentId, instituteId },
+    include: [{ model: model.paymentItemModel, as: "paymentItems" }],
     transaction: options.transaction,
   });
 }
@@ -58,6 +63,7 @@ export async function findStudentFeePaymentById(studentFeePaymentId, instituteId
 export async function findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId, options = {}) {
   return model.studentFeePaymentModel.findAll({
     where: { studentFeeInvoiceId, instituteId },
+    include: [{ model: model.paymentItemModel, as: "paymentItems" }],
     order: [["studentFeePaymentId", "DESC"]],
     transaction: options.transaction,
   });

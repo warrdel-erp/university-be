@@ -13,10 +13,6 @@ export default sequelize.define(
       autoIncrement: true,
       field: "student_fee_invoice_id",
     },
-    amount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-    },
     createDate: {
       type: DataTypes.DATEONLY,
       allowNull: false,

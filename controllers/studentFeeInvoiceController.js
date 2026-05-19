@@ -11,19 +11,23 @@ export async function generateStudentFeeInvoice(req, res) {
     );
     return SuccessResponse(res, 201, "Invoice generated", data);
   } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
   }
 }
 
-export async function generateStudentFeeInvoiceFromAdditionalFees(req, res) {
+export async function generateAdhocStudentFeeInvoice(req, res) {
   try {
     const instituteId = req.user.defaultInstituteId;
     const { studentId, feeTypeCatalogs, total, createDate, dueDate } = req.body;
-    const data = await studentFeeInvoiceService.generateStudentFeeInvoiceFromAdditionalFees(
+    const data = await studentFeeInvoiceService.generateAdhocStudentFeeInvoice(
       { studentId, feeTypeCatalogs, total, createDate, dueDate },
       instituteId
     );
-    return SuccessResponse(res, 201, "Additional fee invoice generated", data);
+    return SuccessResponse(res, 201, "Adhoc fee invoice generated", data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

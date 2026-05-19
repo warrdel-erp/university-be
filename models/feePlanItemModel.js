@@ -22,15 +22,6 @@ export default sequelize.define(
       allowNull: true,
       field: "due_date",
     },
-    termName: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      field: "term_name",
-    },
-    amount: {
-      type: DataTypes.DECIMAL(12, 2),
-      allowNull: false,
-    },
     feePlanProfileId: {
       type: DataTypes.INTEGER,
       allowNull: true,

@@ -16,13 +16,19 @@ const positiveIntegerId = z.coerce
 
 const moneyAmount = z.coerce.string().trim().min(1);
 
+const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
+const paymentTypeEnum = z.enum(["INCOMING", "OUTGOING"]);
+const payeeTypeEnum = z.enum(["STUDENT", "VENDOR"]);
+
 const recordPaymentBodySchema = z.object({
   studentFeeInvoiceId: positiveIntegerId,
-  paidAmount: moneyAmount,
-  paymentDate: z.string().trim().min(1),
-  paymentMethod: z.string().trim().min(1),
+  amount: moneyAmount,
+  paymentMethod: paymentMethodEnum,
+  paymentType: paymentTypeEnum.optional().default("INCOMING"),
+  payeeId: positiveIntegerId.optional(),
+  payeeType: payeeTypeEnum.optional().default("STUDENT"),
   referenceNumber: z.string().trim().optional(),
-  notes: z.string().trim().optional(),
+  transactionId: z.string().trim().optional(),
 });
 
 const studentFeeInvoiceIdQuerySchema = z.object({

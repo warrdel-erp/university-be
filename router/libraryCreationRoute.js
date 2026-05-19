@@ -198,5 +198,11 @@ router.delete("/deleteInventory", userAuth, validate({ query: inventoryQuerySche
 
 router.get("/issuedBook", userAuth, getAllIssuedBooks);
 
-router.post("/bulkUpload", userAuth, bulkUploadBooks);
+router.post(
+  "/bulkUpload",
+  userAuth,
+  validate({ query: idQuerySchema }),
+  bulkUploadBooks,
+);
+
 export default router;

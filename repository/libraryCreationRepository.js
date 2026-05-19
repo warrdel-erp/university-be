@@ -557,26 +557,33 @@ export async function getBooksIssuedToEmployee(employeeId) {
   }
 }
 
-export async function findOrCreateBook(bookData) {
-  try {
-    let book = await model.libraryBookModel.findOne({
-      where: { isbn: bookData.isbn },
-    });
-
-    // if (!book) {
-    book = await model.libraryBookModel.create(bookData);
-    // }
-
-    return book;
-  } catch (error) {
-    throw new Error("Failed to create/find book: " + error.message);
-  }
+export async function findBookByIsbn(isbn, transaction) {
+  return model.libraryBookModel.findOne({
+    where: { isbn },
+    transaction,
+  });
 }
 
-export async function createInventoryBulk(data) {
-  try {
-    return await model.libraryBookInventoryModel.create(data);
-  } catch (error) {
-    throw new Error("Failed to create inventory copy: " + error.message);
+export async function findBookByTitle(title, libraryCreationId, transaction) {
+  const where = {
+    [Op.and]: [
+      sequelize.where(
+        sequelize.fn("LOWER", sequelize.col("title")),
+        title.trim().toLowerCase(),
+      ),
+    ],
+  };
+
+  if (libraryCreationId != null) {
+    where.libraryCreationId = libraryCreationId;
   }
+
+  return model.libraryBookModel.findOne({
+    where,
+    transaction,
+  });
+}
+
+export async function createInventoryBulk(data, transaction) {
+  return model.libraryBookInventoryModel.create(data, { transaction });
 }
