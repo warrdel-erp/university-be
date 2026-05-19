@@ -185,6 +185,146 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   };
 }
 
+async function syncFeePlanItemsForProfile(
+  feePlanProfileId,
+  instituteId,
+  feePlanItemsInput,
+  transaction
+) {
+  const existingItems = await repo.findFeePlanItemsByProfileId(
+    feePlanProfileId,
+    instituteId,
+    { transaction }
+  );
+  const existingIdSet = new Set(existingItems.map((row) => toPlain(row).feePlanItemId));
+
+  for (const input of feePlanItemsInput) {
+    if (input.feePlanItemId != null && !existingIdSet.has(input.feePlanItemId)) {
+      throw httpError(
+        `feePlanItemId ${input.feePlanItemId} does not belong to this fee plan profile`,
+        400
+      );
+    }
+  }
+
+  const invoiceCountByItem = await repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, {
+    transaction,
+  });
+
+  const payloadItemIds = new Set(
+    feePlanItemsInput.map((item) => item.feePlanItemId).filter((id) => id != null)
+  );
+
+  for (const existing of existingItems) {
+    const itemId = toPlain(existing).feePlanItemId;
+    if (payloadItemIds.has(itemId)) continue;
+
+    if ((invoiceCountByItem.get(itemId) ?? 0) > 0) {
+      throw httpError(
+        `Cannot remove term (feePlanItemId ${itemId}) that has generated invoices`,
+        409
+      );
+    }
+
+    await repo.deleteFeePlanSubItemsByFeePlanItemId(itemId, instituteId, { transaction });
+    await repo.deleteFeePlanItemById(itemId, instituteId, { transaction });
+  }
+
+  const preparedInstallments = await prepareInstallmentsForDb(
+    feePlanItemsInput,
+    instituteId,
+    transaction
+  );
+
+  for (let index = 0; index < feePlanItemsInput.length; index++) {
+    const input = feePlanItemsInput[index];
+    const installment = preparedInstallments[index];
+
+    if (input.feePlanItemId != null) {
+      const itemId = input.feePlanItemId;
+      const invoiceCount = invoiceCountByItem.get(itemId) ?? 0;
+
+      await repo.updateFeePlanItemById(
+        itemId,
+        instituteId,
+        {
+          createDate: installment.startDate,
+          dueDate: installment.dueDate,
+        },
+        { transaction }
+      );
+
+      if (invoiceCount > 0) continue;
+
+      await repo.deleteFeePlanSubItemsByFeePlanItemId(itemId, instituteId, { transaction });
+      for (const line of installment.subItems) {
+        await repo.createFeePlanSubItem(
+          {
+            amount: line.amount,
+            feeTypeId: line.feeTypeId,
+            feePlanItemId: itemId,
+            instituteId,
+            isMainSubItem: line.isMainSubItem,
+          },
+          { transaction }
+        );
+      }
+      continue;
+    }
+
+    await repo.createInstallmentsForProfile(feePlanProfileId, instituteId, [installment], {
+      transaction,
+    });
+  }
+}
+
+export async function updateFeePlanProfile(body, instituteId) {
+  const { feePlanProfileId } = body;
+
+  await sequelize.transaction(async (transaction) => {
+    const profile = await repo.findFeePlanProfileByIdForInstitute(
+      feePlanProfileId,
+      instituteId,
+      { transaction }
+    );
+    if (!profile) {
+      throw httpError("Fee plan profile not found", 404);
+    }
+
+    const profilePlain = toPlain(profile);
+    const courseSessionId = body.courseSessionId ?? profilePlain.courseSessionId;
+
+    if (body.courseSessionId !== undefined || body.academicYearId !== undefined) {
+      await validateCourseSession(courseSessionId, instituteId, body.academicYearId, transaction);
+    }
+
+    const profileUpdates = {};
+    if (body.name !== undefined) profileUpdates.name = body.name;
+    if (body.planType !== undefined) profileUpdates.planType = body.planType;
+    if (body.courseSessionId !== undefined) profileUpdates.courseSessionId = body.courseSessionId;
+
+    if (Object.keys(profileUpdates).length > 0) {
+      await repo.updateFeePlanProfileById(
+        feePlanProfileId,
+        instituteId,
+        profileUpdates,
+        { transaction }
+      );
+    }
+
+    if (body.feePlanItems !== undefined) {
+      await syncFeePlanItemsForProfile(
+        feePlanProfileId,
+        instituteId,
+        body.feePlanItems,
+        transaction
+      );
+    }
+  });
+
+  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
+}
+
 export async function addFeePlanProfile(body, instituteId) {
   const mapId = body.courseSessionId;
 

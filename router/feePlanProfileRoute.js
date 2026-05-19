@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import {
   addFeePlanProfile,
+  updateFeePlanProfile,
   getAllFeePlanProfile,
   getAllFeePlanProfiles,
   getFeePlanProfileSummary,
@@ -47,6 +48,35 @@ const createBody = z.object({
   feePlanItems: z.array(feePlanItem).min(1).optional(),
 });
 
+const feePlanItemForUpdate = feePlanItem.extend({
+  feePlanItemId: id.optional(),
+});
+
+const updateBody = z
+  .object({
+    feePlanProfileId: id,
+    name: z.string().trim().min(1).optional(),
+    planType: z.enum(["annual", "semester", "trimester"]).optional(),
+    courseSessionId: id.optional(),
+    academicYearId: id.optional(),
+    feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
+  })
+  .superRefine((body, ctx) => {
+    const hasUpdate =
+      body.name !== undefined ||
+      body.planType !== undefined ||
+      body.courseSessionId !== undefined ||
+      body.academicYearId !== undefined ||
+      body.feePlanItems !== undefined;
+
+    if (!hasUpdate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one field to update is required besides feePlanProfileId",
+      });
+    }
+  });
+
 const profileIdQuery = z.object({ feePlanProfileId: id });
 const listQuery = z.object({ courseSessionId: id });
 const listAllQuery = z
@@ -63,6 +93,8 @@ const assignStudentBody = z.object({
 });
 
 router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
+router.patch("/", userAuth, validate({ body: updateBody }), updateFeePlanProfile);
+
 router.patch(
   "/assignStudent",
   userAuth,

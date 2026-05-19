@@ -62,6 +62,51 @@ export async function createFeePlanProfile(data, options = {}) {
   return model.feePlanProfileModel.create(data, { transaction: options.transaction });
 }
 
+export async function updateFeePlanProfileById(feePlanProfileId, instituteId, fields, options = {}) {
+  const { transaction } = options;
+  return model.feePlanProfileModel.update(fields, {
+    where: { feePlanProfileId, instituteId },
+    transaction,
+  });
+}
+
+export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanItemModel.findAll({
+    where: { feePlanProfileId, instituteId },
+    attributes: ["feePlanItemId", "feePlanProfileId", "createDate", "dueDate"],
+    order: [
+      ["createDate", "ASC"],
+      ["feePlanItemId", "ASC"],
+    ],
+    transaction,
+  });
+}
+
+export async function updateFeePlanItemById(feePlanItemId, instituteId, fields, options = {}) {
+  const { transaction } = options;
+  return model.feePlanItemModel.update(fields, {
+    where: { feePlanItemId, instituteId },
+    transaction,
+  });
+}
+
+export async function deleteFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanSubItemsModel.destroy({
+    where: { feePlanItemId, instituteId },
+    transaction,
+  });
+}
+
+export async function deleteFeePlanItemById(feePlanItemId, instituteId, options = {}) {
+  const { transaction } = options;
+  return model.feePlanItemModel.destroy({
+    where: { feePlanItemId, instituteId },
+    transaction,
+  });
+}
+
 /** Distinct fee_plan_profile_id values assigned on students for this institute. */
 export async function findDistinctAssignedFeePlanProfileIds(instituteId, options = {}) {
   const { transaction } = options;

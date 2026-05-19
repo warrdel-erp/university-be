@@ -5835,7 +5835,7 @@
         },
         {
           "name": "feePlanProfile",
-          "description": "Fee plans v2. **PATCH /assignStudent** — set students.fee_plan_profile_id (body: studentId, feePlanProfileId). **GET /summary**, **GET /all?status=**, **GET /** by courseSessionId, **GET /single**. Dropdown: **GET /options/feePlans**.",
+          "description": "Fee plans v2. **POST /** create; **PATCH /** update. **PATCH /assignStudent** — set students.fee_plan_profile_id. **GET /summary**, **GET /all?status=**, **GET /** by courseSessionId, **GET /single**. Dropdown: **GET /options/feePlans**.",
           "item": [
             {
               "name": "create",
@@ -5889,6 +5889,43 @@
                   }
                 },
                 "description": "Creates fee_plan_profile + fee_plan_item rows + fee_plan_sub_items.\n\n**feePlanItems[] each term:** startDate, dueDate, feeTypeCatalogs[] (min 1). Each line: feeTypeCatalogId, amount, optional **isMainItem** (default false). When true, saved as is_main_sub_item on fee_plan_sub_items.\n\nplanType: annual | semester | trimester. academicYearId optional."
+              },
+              "response": []
+            },
+            {
+              "name": "update fee plan profile",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/feePlanProfile",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "feePlanProfile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"feePlanItems\": [\n    {\n      \"feePlanItemId\": \"{{feePlanItem_id}}\",\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-06-01\",\n      \"feeTypeCatalogs\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"65000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6500.00\" }\n      ]\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**PATCH /feePlanProfile** — update profile and/or terms.\n\n**Required:** feePlanProfileId. At least one other field.\n\n**Profile:** name, planType, courseSessionId, academicYearId (optional validation).\n\n**feePlanItems[]:** optional full sync. Include feePlanItemId to update existing term; omit id to add new term. Terms not in payload are deleted only if they have no invoices.\n\nTerms with invoices: only startDate/dueDate update; fee lines are not changed."
               },
               "response": []
             },
