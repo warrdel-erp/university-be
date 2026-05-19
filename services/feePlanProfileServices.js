@@ -36,24 +36,28 @@ async function validateCourseSession(courseSessionId, instituteId, academicYearI
   }
 }
 
-/** Validates catalogs and maps request installments to repository shape. */
-async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transaction) {
+/** Validates catalogs and maps feePlanItems to repository installment shape. */
+async function prepareFeePlanItemsForDb(feePlanItemsInput, instituteId, transaction) {
   const prepared = [];
 
   for (const installment of feePlanItemsInput) {
     const subItems = [];
 
-    for (const line of installment.feeTypeCatalogs) {
+    for (const line of installment.feePlanSubItems) {
       const catalog = await catalogRepo.findFeeTypeCatalogById(
         line.feeTypeCatalogId,
         instituteId,
         { transaction }
       );
       if (!catalog) {
-        throw new Error(`feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`);
+        throw httpError(
+          `feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`,
+          404
+        );
       }
 
       subItems.push({
+        feePlanSubitemId: line.feePlanSubitemId ?? null,
         feeTypeId: catalog.feeTypeCatalogId,
         amount: toMoneyNumber(line.amount),
         isMainSubItem: line.isMainItem === true,
@@ -61,7 +65,7 @@ async function prepareInstallmentsForDb(feePlanItemsInput, instituteId, transact
     }
 
     prepared.push({
-      startDate: installment.startDate,
+      startDate: installment.createDate,
       dueDate: installment.dueDate ?? null,
       subItems,
     });
@@ -186,45 +190,104 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   };
 }
 
-async function updateFeePlanSubItemsForProfile(
+async function syncFeePlanItemsForUpdate(
   feePlanProfileId,
   instituteId,
-  feePlanSubItemsInput,
+  feePlanItemsInput,
   transaction
 ) {
-  for (const line of feePlanSubItemsInput) {
-    const catalog = await catalogRepo.findFeeTypeCatalogById(
-      line.feeTypeCatalogId,
-      instituteId,
-      { transaction }
-    );
-    if (!catalog) {
-      throw httpError(`feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`, 404);
-    }
+  const existingItems = await repo.findFeePlanItemsByProfileId(
+    feePlanProfileId,
+    instituteId,
+    { transaction }
+  );
+  const existingIdSet = new Set(existingItems.map((row) => toPlain(row).feePlanItemId));
 
-    const subItem = await repo.findFeePlanSubItemForProfile(
-      line.feePlanSubitemId,
-      feePlanProfileId,
-      instituteId,
-      { transaction }
-    );
-    if (!subItem) {
+  for (const input of feePlanItemsInput) {
+    if (!existingIdSet.has(input.feePlanItemId)) {
       throw httpError(
-        `feePlanSubitemId ${line.feePlanSubitemId} not found for this fee plan profile`,
-        404
+        `feePlanItemId ${input.feePlanItemId} does not belong to this fee plan profile`,
+        400
       );
     }
+  }
 
-    await repo.updateFeePlanSubItemById(
-      line.feePlanSubitemId,
+  const preparedInstallments = await prepareFeePlanItemsForDb(
+    feePlanItemsInput,
+    instituteId,
+    transaction
+  );
+
+  for (let index = 0; index < feePlanItemsInput.length; index++) {
+    const itemId = feePlanItemsInput[index].feePlanItemId;
+    const installment = preparedInstallments[index];
+
+    await repo.updateFeePlanItemById(
+      itemId,
       instituteId,
       {
-        amount: toMoneyNumber(line.amount),
-        feeTypeId: catalog.feeTypeCatalogId,
-        isMainSubItem: line.isMainItem === true,
+        createDate: installment.startDate,
+        dueDate: installment.dueDate,
       },
       { transaction }
     );
+
+    const keptSubItemIds = new Set();
+
+    for (const line of installment.subItems) {
+      if (line.feePlanSubitemId != null) {
+        const subItem = await repo.findFeePlanSubItemForProfile(
+          line.feePlanSubitemId,
+          feePlanProfileId,
+          instituteId,
+          { transaction }
+        );
+        if (!subItem) {
+          throw httpError(`feePlanSubitemId ${line.feePlanSubitemId} not found`, 404);
+        }
+        if (toPlain(subItem).feePlanItemId !== itemId) {
+          throw httpError(
+            `feePlanSubitemId ${line.feePlanSubitemId} does not belong to feePlanItemId ${itemId}`,
+            400
+          );
+        }
+
+        await repo.updateFeePlanSubItemById(
+          line.feePlanSubitemId,
+          instituteId,
+          {
+            amount: line.amount,
+            feeTypeId: line.feeTypeId,
+            isMainSubItem: line.isMainSubItem,
+          },
+          { transaction }
+        );
+        keptSubItemIds.add(line.feePlanSubitemId);
+        continue;
+      }
+
+      const created = await repo.createFeePlanSubItem(
+        {
+          amount: line.amount,
+          feeTypeId: line.feeTypeId,
+          feePlanItemId: itemId,
+          instituteId,
+          isMainSubItem: line.isMainSubItem,
+        },
+        { transaction }
+      );
+      keptSubItemIds.add(toPlain(created).feePlanSubitemId);
+    }
+
+    const existingSubItems = await repo.findFeePlanSubItemsByFeePlanItemId(itemId, instituteId, {
+      transaction,
+    });
+    for (const subItem of existingSubItems) {
+      const subItemId = toPlain(subItem).feePlanSubitemId;
+      if (!keptSubItemIds.has(subItemId)) {
+        await repo.deleteFeePlanSubItemById(subItemId, instituteId, { transaction });
+      }
+    }
   }
 }
 
@@ -262,11 +325,11 @@ export async function updateFeePlanProfile(body, instituteId) {
       );
     }
 
-    if (body.feePlanSubItems !== undefined) {
-      await updateFeePlanSubItemsForProfile(
+    if (body.feePlanItems !== undefined) {
+      await syncFeePlanItemsForUpdate(
         feePlanProfileId,
         instituteId,
-        body.feePlanSubItems,
+        body.feePlanItems,
         transaction
       );
     }
@@ -292,7 +355,7 @@ export async function addFeePlanProfile(body, instituteId) {
     );
 
     if (body.feePlanItems !== undefined) {
-      const installments = await prepareInstallmentsForDb(body.feePlanItems, instituteId, transaction);
+      const installments = await prepareFeePlanItemsForDb(body.feePlanItems, instituteId, transaction);
       await repo.createInstallmentsForProfile(
         profile.feePlanProfileId,
         instituteId,

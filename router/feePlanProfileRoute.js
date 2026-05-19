@@ -17,42 +17,62 @@ const router = Router();
 const id = z.coerce.number().int().positive();
 const amount = z.coerce.string().trim().min(1);
 
-const catalogLine = z.object({
+const feePlanSubItemLineBase = z.object({
   feeTypeCatalogId: id,
   amount,
-  isMainItem: z.boolean().optional().default(false),
+  isMainItem: z.boolean().optional(),
+  isMainSubItem: z.boolean().optional(),
 });
 
-const feePlanItem = z
-  .object({
-    startDate: z.string().trim().min(1),
-    dueDate: z.string().trim().optional(),
-    feeTypeCatalogs: z.array(catalogLine).min(1),
+const mapFeePlanSubItemLine = (line) => ({
+  feePlanSubitemId: line.feePlanSubitemId,
+  feeTypeCatalogId: line.feeTypeCatalogId,
+  amount: line.amount,
+  isMainItem: line.isMainItem === true || line.isMainSubItem === true,
+});
+
+const feePlanSubItemLine = feePlanSubItemLineBase.transform(mapFeePlanSubItemLine);
+
+const feePlanSubItemLineForUpdate = feePlanSubItemLineBase
+  .extend({
+    feePlanSubitemId: id.optional(),
   })
-  .superRefine((item, ctx) => {
-    const ids = item.feeTypeCatalogs.map((line) => line.feeTypeCatalogId);
-    if (new Set(ids).size !== ids.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "feeTypeCatalogs must not contain duplicate feeTypeCatalogId",
-        path: ["feeTypeCatalogs"],
-      });
-    }
-  });
+  .transform(mapFeePlanSubItemLine);
+
+const assertUniqueFeeTypeCatalogIds = (feePlanSubItems, pathPrefix, ctx) => {
+  const ids = feePlanSubItems.map((line) => line.feeTypeCatalogId);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "feePlanSubItems must not contain duplicate feeTypeCatalogId",
+      path: [...pathPrefix, "feePlanSubItems"],
+    });
+  }
+};
+
+const feePlanItemBody = z
+  .object({
+    createDate: z.string().trim().min(1),
+    dueDate: z.string().trim().optional(),
+    feePlanSubItems: z.array(feePlanSubItemLine).min(1),
+  })
+  .superRefine((item, ctx) => assertUniqueFeeTypeCatalogIds(item.feePlanSubItems, [], ctx));
+
+const feePlanItemForUpdate = z
+  .object({
+    feePlanItemId: id,
+    createDate: z.string().trim().min(1),
+    dueDate: z.string().trim().optional(),
+    feePlanSubItems: z.array(feePlanSubItemLineForUpdate).min(1),
+  })
+  .superRefine((item, ctx) => assertUniqueFeeTypeCatalogIds(item.feePlanSubItems, [], ctx));
 
 const createBody = z.object({
   name: z.string().trim().min(1),
   planType: z.enum(["annual", "semester", "trimester"]),
   courseSessionId: id,
   academicYearId: id.optional(),
-  feePlanItems: z.array(feePlanItem).min(1).optional(),
-});
-
-const feePlanSubItemLine = z.object({
-  feePlanSubitemId: id,
-  feeTypeCatalogId: id,
-  amount,
-  isMainItem: z.boolean().optional().default(false),
+  feePlanItems: z.array(feePlanItemBody).min(1).optional(),
 });
 
 const updateBody = z
@@ -62,7 +82,7 @@ const updateBody = z
     planType: z.enum(["annual", "semester", "trimester"]).optional(),
     courseSessionId: id.optional(),
     academicYearId: id.optional(),
-    feePlanSubItems: z.array(feePlanSubItemLine).min(1).optional(),
+    feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
   })
   .superRefine((body, ctx) => {
     const hasUpdate =
@@ -70,7 +90,7 @@ const updateBody = z
       body.planType !== undefined ||
       body.courseSessionId !== undefined ||
       body.academicYearId !== undefined ||
-      body.feePlanSubItems !== undefined;
+      body.feePlanItems !== undefined;
 
     if (!hasUpdate) {
       ctx.addIssue({

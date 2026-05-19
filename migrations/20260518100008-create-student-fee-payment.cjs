@@ -69,13 +69,10 @@ module.exports = {
     await queryInterface.addIndex('student_fee_payment', ['student_fee_invoice_id'], {
       name: 'idx_student_fee_payment_invoice',
     });
-    await queryInterface.addIndex('student_fee_payment', ['institute_id', 'payee_id', 'payee_type'], {
-      name: 'idx_student_fee_payment_payee',
-    });
+   
   },
 
   async down(queryInterface) {
-    await queryInterface.removeIndex('student_fee_payment', 'idx_student_fee_payment_payee');
     await queryInterface.removeIndex('student_fee_payment', 'idx_student_fee_payment_invoice');
     await queryInterface.dropTable('student_fee_payment');
   },

@@ -5835,7 +5835,7 @@
         },
         {
           "name": "feePlanProfile",
-          "description": "Fee plans v2. **POST /** create; **PATCH /** update. **PATCH /assignStudent** — set students.fee_plan_profile_id. **GET /summary**, **GET /all?status=**, **GET /** by courseSessionId, **GET /single**. Dropdown: **GET /options/feePlans**.",
+          "description": "Fee plans v2. **POST /** and **PATCH /** use same feePlanItems shape (createDate, dueDate, feePlanSubItems[]). PATCH adds feePlanProfileId + feePlanItemId per term. **PATCH /assignStudent**. **GET /summary**, **GET /all**, **GET /single**. Dropdown: **GET /options/feePlans**.",
           "item": [
             {
               "name": "create",
@@ -5881,14 +5881,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"feeTypeCatalogs\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    },\n    {\n      \"startDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"feeTypeCatalogs\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    }\n  ]\n}",
+                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"feePlanSubItems\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    },\n    {\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "Creates fee_plan_profile + fee_plan_item rows + fee_plan_sub_items.\n\n**feePlanItems[] each term:** startDate, dueDate, feeTypeCatalogs[] (min 1). Each line: feeTypeCatalogId, amount, optional **isMainItem** (default false). When true, saved as is_main_sub_item on fee_plan_sub_items.\n\nplanType: annual | semester | trimester. academicYearId optional."
+                "description": "Creates fee_plan_profile + fee_plan_item + fee_plan_sub_items.\n\n**feePlanItems[]** (same shape as PATCH/GET): createDate, dueDate, feePlanSubItems[] — feeTypeCatalogId, amount, isMainItem or isMainSubItem.\n\nplanType: annual | semester | trimester. academicYearId optional."
               },
               "response": []
             },
@@ -5918,14 +5918,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"feePlanSubItems\": [\n    {\n      \"feePlanSubitemId\": 1,\n      \"feeTypeCatalogId\": 1,\n      \"amount\": \"65000.00\",\n      \"isMainItem\": true\n    },\n    {\n      \"feePlanSubitemId\": 2,\n      \"feeTypeCatalogId\": 2,\n      \"amount\": \"7000.00\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan 2\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"feePlanItemId\": 1,\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-02-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 1,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"90000.00\",\n          \"isMainItem\": true\n        }\n      ]\n    },\n    {\n      \"feePlanItemId\": 2,\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 3,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"10000.00\",\n          \"isMainSubItem\": true\n        }\n      ]\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**PATCH /feePlanProfile** — updates **fee_plan_profile** and/or **fee_plan_sub_items** only (no fee_plan_item changes).\n\n**Profile:** name, planType, courseSessionId, academicYearId.\n\n**feePlanSubItems[]:** each row requires feePlanSubitemId; updates amount, feeTypeCatalogId, isMainItem on that sub-item row."
+                "description": "**PATCH /feePlanProfile** — same shape as GET single terms.\n\n**feePlanItems[]:** feePlanItemId, createDate, dueDate, feePlanSubItems[] (feePlanSubitemId, feeTypeCatalogId, amount, isMainItem or isMainSubItem). Sub-lines not in feePlanSubItems are deleted for that term. Terms not in feePlanItems are unchanged."
               },
               "response": []
             },
