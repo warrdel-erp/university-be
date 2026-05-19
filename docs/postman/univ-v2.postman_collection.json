@@ -5918,7 +5918,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"feePlanSubItems\": [\n    {\n      \"feePlanSubitemId\": 1,\n      \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n      \"amount\": \"4000.00\",\n      \"isMainItem\": true\n    },\n    {\n      \"feePlanSubitemId\": 2,\n      \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\",\n      \"amount\": \"5446.00\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan (updated)\",\n  \"feePlanSubItems\": [\n    {\n      \"feePlanSubitemId\": 1,\n      \"feeTypeCatalogId\": 1,\n      \"amount\": \"65000.00\",\n      \"isMainItem\": true\n    },\n    {\n      \"feePlanSubitemId\": 2,\n      \"feeTypeCatalogId\": 2,\n      \"amount\": \"7000.00\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -6131,7 +6131,7 @@
                     }
                   ]
                 },
-                "description": "**GET /feePlanProfile/single?feePlanProfileId=**\n\nFormatted detail (no raw timestamps on nested catalog).\n\n**Profile:** planName, planType, courseSessionId, **courseName**, **sessionName**, courseId, sessionId, assignedStudentCount, numberOfInvoices, status (active|inactive), term, termFees, supplementalFees, totalFees.\n\n**feePlanItems[]:** sno, feePlanItemId, createDate, dueDate, amount, supplementalFees, total, numberOfInvoices, feePlanSubItems[{ feePlanSubitemId, name, amount, feeTypeId, isMainSubItem }]."
+                "description": "**GET /feePlanProfile/single?feePlanProfileId=**\n\nFormatted detail (no raw timestamps on nested catalog).\n\n**Profile:** planName, planType, courseSessionId, **courseName**, **sessionName**, courseId, sessionId, assignedStudentCount, numberOfInvoices, status (active|inactive), term, termFees, supplementalFees, totalFees.\n\n**feePlanItems[]:** sno, feePlanItemId, createDate, dueDate, total, numberOfInvoices, feePlanSubItems[{ feePlanSubitemId, name, amount, feeTypeId, isMainSubItem }]."
               },
               "response": []
             },

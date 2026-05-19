@@ -132,13 +132,16 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   const course = mapping.courses ?? {};
   const session = mapping.session ?? {};
 
+  let termFees = 0;
+  let supplementalFeesTotal = 0;
+
   const feePlanItems = (p.feePlanItems ?? []).map((item, index) => {
-    let amount = 0;
-    let supplementalFees = 0;
+    let termAmount = 0;
+    let termSupplemental = 0;
     const feePlanSubItems = (item.feePlanSubItems ?? []).map((af) => {
       const lineAmount = toMoneyNumber(af.amount);
-      if (af.isMainSubItem) amount = lineAmount;
-      else supplementalFees = decimalAdd(supplementalFees, lineAmount);
+      if (af.isMainSubItem) termAmount = lineAmount;
+      else termSupplemental = decimalAdd(termSupplemental, lineAmount);
       return {
         feePlanSubitemId: af.feePlanSubitemId,
         feeTypeId: af.feeTypeId,
@@ -148,21 +151,19 @@ function formatFeePlanProfileSingleResponse(row, counts) {
       };
     });
 
+    termFees = decimalAdd(termFees, termAmount);
+    supplementalFeesTotal = decimalAdd(supplementalFeesTotal, termSupplemental);
+
     return {
       sno: index + 1,
       feePlanItemId: item.feePlanItemId,
       createDate: item.createDate,
       dueDate: item.dueDate ?? null,
-      amount,
-      supplementalFees,
-      total: decimalAdd(amount, supplementalFees),
+      total: decimalAdd(termAmount, termSupplemental),
       numberOfInvoices: counts.invoiceCountByItem.get(item.feePlanItemId) ?? 0,
       feePlanSubItems,
     };
   });
-
-  const termFees = decimalSum(feePlanItems.map((item) => item.amount));
-  const supplementalFeesTotal = decimalSum(feePlanItems.map((item) => item.supplementalFees));
 
   return {
     feePlanProfileId: p.feePlanProfileId,
