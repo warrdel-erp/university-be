@@ -564,6 +564,26 @@ export async function findBookByIsbn(isbn, transaction) {
   });
 }
 
+export async function findBookByTitle(title, libraryCreationId, transaction) {
+  const where = {
+    [Op.and]: [
+      sequelize.where(
+        sequelize.fn("LOWER", sequelize.col("title")),
+        title.trim().toLowerCase(),
+      ),
+    ],
+  };
+
+  if (libraryCreationId != null) {
+    where.libraryCreationId = libraryCreationId;
+  }
+
+  return model.libraryBookModel.findOne({
+    where,
+    transaction,
+  });
+}
+
 export async function createInventoryBulk(data, transaction) {
   return model.libraryBookInventoryModel.create(data, { transaction });
 }

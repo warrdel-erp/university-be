@@ -1,7 +1,155 @@
 import * as libraryCreationService from "../repository/libraryCreationRepository.js";
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
-import { splitBulkUploadRow } from "../utility/libraryBulkUploadMapper.js";
 import sequelize from "../database/sequelizeConfig.js";
+
+const BOOK_FIELDS = [
+  "libraryCreationId", "libraryFloorId", "title", "subtitle", "authors", "publisher",
+  "placeOfPublication", "yearOfPublication", "edition", "seriesTitle", "volumeNumber",
+  "language", "isbn", "issn", "barcode", "physicalDescription", "numberOfPages",
+  "illustrations", "summary", "keywords", "additionalAuthor", "subjectId",
+  "classSectionsId", "remark", "itemType",
+];
+
+const INVENTORY_FIELDS = [
+  "excisionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
+  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate",
+  "itemPrice", "netPrice", "currency",
+];
+
+const NUMBER_FIELDS = [
+  "libraryCreationId", "libraryFloorId", "yearOfPublication", "numberOfPages",
+  "subjectId", "classSectionsId", "libraryAisleId", "libraryRackId", "libraryRowId",
+  "studentId", "employeeId", "itemPrice", "netPrice",
+];
+
+const LOCATION_MAP = { aisle: "aisleName", rack: "rackName", row: "rowName" };
+
+const DEFAULTS = { itemType: "print", status: "available", illustrations: false };
+
+const normBulkKey = (key) => String(key).trim().toLowerCase().replace(/\s+/g, "");
+
+const matchBulkField = (key, fields) => {
+  const n = normBulkKey(key);
+  for (let i = 0; i < fields.length; i++) {
+    if (normBulkKey(fields[i]) === n) return fields[i];
+  }
+  return null;
+};
+
+function parseBulkCell(raw, field) {
+  if (raw === undefined || raw === null || raw === "") {
+    return DEFAULTS[field] !== undefined ? DEFAULTS[field] : null;
+  }
+  if (NUMBER_FIELDS.includes(field)) return Number(raw);
+  if (field === "illustrations") {
+    if (raw === true || raw === false) return raw;
+    const t = String(raw).toLowerCase();
+    if (t === "true" || t === "1") return true;
+    if (t === "false" || t === "0") return false;
+  }
+  if (field === "isbn") {
+    if (typeof raw === "number" && raw > 9999999999) return raw.toFixed(0);
+    const isbn = String(raw).trim();
+    return isbn === "" ? null : isbn;
+  }
+  if (field === "title") {
+    const title = String(raw).trim();
+    return title === "" ? null : title;
+  }
+  return raw;
+}
+
+function getBulkTypeError(field, value) {
+  if (NUMBER_FIELDS.includes(field) && Number.isNaN(Number(value))) {
+    return `${field} must be a number`;
+  }
+  if (field === "itemType" && value && !["print", "Xerox", "Digital"].includes(value)) {
+    return "itemType must be print, Xerox or Digital";
+  }
+  return null;
+}
+
+function applyBulkDefaults(target, fields) {
+  for (let i = 0; i < fields.length; i++) {
+    const field = fields[i];
+    if (target[field] === undefined && DEFAULTS[field] !== undefined) {
+      target[field] = DEFAULTS[field];
+    }
+  }
+}
+
+function splitBulkUploadRow(row) {
+  const book = {};
+  const inventory = {};
+  const location = {};
+  const unknownKeys = [];
+  const typeErrors = [];
+
+  for (const [rawKey, rawValue] of Object.entries(row)) {
+    const locField = LOCATION_MAP[normBulkKey(rawKey)];
+    if (locField) {
+      if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+        location[locField] = String(rawValue);
+      }
+      continue;
+    }
+
+    const bookField = matchBulkField(rawKey, BOOK_FIELDS);
+    if (bookField) {
+      const value = parseBulkCell(rawValue, bookField);
+      if (value === null) continue;
+      const err = getBulkTypeError(bookField, value);
+      if (err) {
+        typeErrors.push(err);
+        continue;
+      }
+      book[bookField] = value;
+      continue;
+    }
+
+    const invField = matchBulkField(rawKey, INVENTORY_FIELDS);
+    if (invField) {
+      const value = parseBulkCell(rawValue, invField);
+      if (value === null) continue;
+      const err = getBulkTypeError(invField, value);
+      if (err) {
+        typeErrors.push(err);
+        continue;
+      }
+      inventory[invField] = value;
+      continue;
+    }
+
+    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
+      unknownKeys.push(rawKey);
+    }
+  }
+
+  applyBulkDefaults(book, BOOK_FIELDS);
+  applyBulkDefaults(inventory, INVENTORY_FIELDS);
+
+  const locationOut = {
+    aisleName: location.aisleName || null,
+    rackName: location.rackName || null,
+    rowName: location.rowName || null,
+  };
+
+  const rowErrors = [];
+  if (!book.isbn && !book.title) rowErrors.push("isbn or title is required");
+  if (!inventory.excisionNumber) rowErrors.push("excisionNumber is required");
+  if (!locationOut.aisleName) rowErrors.push("Aisle is required");
+  if (!locationOut.rackName) rowErrors.push("Rack is required");
+  if (!locationOut.rowName) rowErrors.push("Row is required");
+
+  return {
+    book,
+    inventory,
+    location: locationOut,
+    unknownKeys,
+    typeErrors,
+    rowErrors,
+  };
+}
 
 export async function addLibrary(data, createdBy, updatedBy, instituteId, universityId, campusId) {
   const transaction = await sequelize.transaction();
@@ -285,6 +433,11 @@ function buildUploadError(rowNumber, text) {
   return `Row ${rowNumber}: ${text}`;
 }
 
+function getBookCacheKey(book) {
+  if (book.isbn) return `isbn:${book.isbn}`;
+  return `title:${book.title.toLowerCase()}`;
+}
+
 export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreationId) {
   const errors = [];
   const parsedRows = rows.map((row, index) => ({
@@ -296,25 +449,11 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
     for (let i = 0; i < item.unknownKeys.length; i++) {
       errors.push(buildUploadError(item.rowNumber, `Unknown column '${item.unknownKeys[i]}'`));
     }
-
     for (let i = 0; i < item.typeErrors.length; i++) {
       errors.push(buildUploadError(item.rowNumber, item.typeErrors[i]));
     }
-
-    if (!item.book.isbn) {
-      errors.push(buildUploadError(item.rowNumber, "isbn is required"));
-    }
-    if (!item.inventory.excisionNumber) {
-      errors.push(buildUploadError(item.rowNumber, "excisionNumber is required"));
-    }
-    if (!item.location.aisleName) {
-      errors.push(buildUploadError(item.rowNumber, "Aisle is required"));
-    }
-    if (!item.location.rackName) {
-      errors.push(buildUploadError(item.rowNumber, "Rack is required"));
-    }
-    if (!item.location.rowName) {
-      errors.push(buildUploadError(item.rowNumber, "Row is required"));
+    for (let i = 0; i < item.rowErrors.length; i++) {
+      errors.push(buildUploadError(item.rowNumber, item.rowErrors[i]));
     }
   }
 
@@ -322,48 +461,43 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
     return { status: "error", message: errors.join("; ") };
   }
 
-  const isbnCache = {};
+  const bookCache = {};
   const transaction = await sequelize.transaction();
 
   try {
     for (const item of parsedRows) {
-      const { rowNumber, book, inventory, location } = item;
-      const isbn = String(book.isbn).trim();
+      const { book, inventory, location } = item;
+      const cacheKey = getBookCacheKey(book);
 
-      let libraryBookId = isbnCache[isbn];
+      let libraryBookId = bookCache[cacheKey];
 
       if (!libraryBookId) {
-        const existingBook = await libraryCreationService.findBookByIsbn(isbn, transaction);
+        const existingBook = book.isbn
+          ? await libraryCreationService.findBookByIsbn(book.isbn, transaction)
+          : await libraryCreationService.findBookByTitle(
+              book.title,
+              book.libraryCreationId || libraryCreationId || null,
+              transaction,
+            );
+
         if (existingBook) {
           libraryBookId = existingBook.libraryBookId;
+        } else {
+          const newBook = await libraryCreationService.createBook(
+            {
+              ...book,
+              isbn: book.isbn ?? null,
+              libraryCreationId: book.libraryCreationId || libraryCreationId || null,
+              createdBy,
+              updatedBy,
+            },
+            transaction,
+          );
+          libraryBookId = newBook.libraryBookId;
         }
       }
 
-      const isNewBook = !libraryBookId;
-
-      if (isNewBook) {
-        if (!book.title) {
-          throw new Error(`Row ${rowNumber}: title is required for new book (ISBN ${isbn})`);
-        }
-        if (!book.authors) {
-          throw new Error(`Row ${rowNumber}: authors are required for new book (ISBN ${isbn})`);
-        }
-
-        const newBook = await libraryCreationService.createBook(
-          {
-            ...book,
-            isbn,
-            libraryCreationId: book.libraryCreationId || libraryCreationId || null,
-            createdBy,
-            updatedBy,
-          },
-          transaction,
-        );
-
-        libraryBookId = newBook.libraryBookId;
-      }
-
-      isbnCache[isbn] = libraryBookId;
+      bookCache[cacheKey] = libraryBookId;
 
       const aisleId = await libraryStructureRepository.getAisleIdByName(location.aisleName);
       const rackId = await libraryStructureRepository.getRackIdByName(location.rackName);
@@ -376,7 +510,7 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
           libraryAisleId: aisleId,
           libraryRackId: rackId,
           libraryRowId: rowId,
-          status: inventory.status || "available",
+          status: inventory.status,
         },
         transaction,
       );

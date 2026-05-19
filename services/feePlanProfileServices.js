@@ -15,6 +15,39 @@ function httpError(message, statusCode = 400) {
   return err;
 }
 
+function isMainFeePlanSubItem(line) {
+  return line?.isMainSubItem === true || line?.isMainSubItem === 1;
+}
+
+function splitFeePlanSubItemAmounts(subItems) {
+  let amount = 0;
+  let supplementalFees = 0;
+
+  for (const line of subItems ?? []) {
+    const lineAmount = toMoneyNumber(line.amount);
+    if (isMainFeePlanSubItem(line)) {
+      amount = decimalAdd(amount, lineAmount);
+    } else {
+      supplementalFees = decimalAdd(supplementalFees, lineAmount);
+    }
+  }
+
+  return {
+    amount,
+    supplementalFees,
+    total: decimalAdd(amount, supplementalFees),
+  };
+}
+
+function mapFeePlanSubItemsForResponse(subItems) {
+  return (subItems ?? []).map((line) => ({
+    feePlanSubitemId: line.feePlanSubitemId,
+    feeTypeId: line.feeTypeId,
+    name: (line.feeTypeCatalog ?? {}).name ?? null,
+    amount: toMoneyNumber(line.amount),
+    isMainSubItem: isMainFeePlanSubItem(line),
+  }));
+}
 
 async function validateCourseSession(courseSessionId, instituteId, academicYearId, transaction) {
   const mapping = await repo.findSessionCourseMappingForInstitute(
@@ -90,11 +123,9 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
   let termFees = 0;
   let supplementalFees = 0;
   for (const item of items) {
-    for (const line of item.feePlanSubItems ?? []) {
-      const lineAmount = toMoneyNumber(line.amount);
-      if (line.isMainSubItem) termFees = decimalAdd(termFees, lineAmount);
-      else supplementalFees = decimalAdd(supplementalFees, lineAmount);
-    }
+    const split = splitFeePlanSubItemAmounts(item.feePlanSubItems);
+    termFees = decimalAdd(termFees, split.amount);
+    supplementalFees = decimalAdd(supplementalFees, split.supplementalFees);
   }
 
   return {
@@ -140,32 +171,18 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   let supplementalFeesTotal = 0;
 
   const feePlanItems = (p.feePlanItems ?? []).map((item, index) => {
-    let termAmount = 0;
-    let termSupplemental = 0;
-    const feePlanSubItems = (item.feePlanSubItems ?? []).map((af) => {
-      const lineAmount = toMoneyNumber(af.amount);
-      if (af.isMainSubItem) termAmount = lineAmount;
-      else termSupplemental = decimalAdd(termSupplemental, lineAmount);
-      return {
-        feePlanSubitemId: af.feePlanSubitemId,
-        feeTypeId: af.feeTypeId,
-        isMainSubItem: af.isMainSubItem,
-        name: (af.feeTypeCatalog ?? {}).name ?? null,
-        amount: lineAmount,
-      };
-    });
-
-    termFees = decimalAdd(termFees, termAmount);
-    supplementalFeesTotal = decimalAdd(supplementalFeesTotal, termSupplemental);
+    const split = splitFeePlanSubItemAmounts(item.feePlanSubItems);
+    termFees = decimalAdd(termFees, split.amount);
+    supplementalFeesTotal = decimalAdd(supplementalFeesTotal, split.supplementalFees);
 
     return {
       sno: index + 1,
       feePlanItemId: item.feePlanItemId,
       createDate: item.createDate,
       dueDate: item.dueDate ?? null,
-      total: decimalAdd(termAmount, termSupplemental),
+      total: split.total,
       numberOfInvoices: counts.invoiceCountByItem.get(item.feePlanItemId) ?? 0,
-      feePlanSubItems,
+      feePlanSubItems: mapFeePlanSubItemsForResponse(item.feePlanSubItems),
     };
   });
 

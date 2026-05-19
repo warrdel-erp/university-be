@@ -7,11 +7,26 @@ import {
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
-import {
-  getMainInvoiceItemNetAmount,
-  getSupplementalInvoiceItems,
-  netInvoiceItemAmount,
-} from "../utility/studentFeeInvoiceItems.js";
+
+function netInvoiceItemAmount(amount, waiver) {
+  const lineAmount = toMoneyNumber(amount);
+  if (waiver === undefined || waiver === null) return lineAmount;
+  return decimalSubtract(lineAmount, toMoneyNumber(waiver));
+}
+
+function getMainInvoiceItem(items) {
+  return (items ?? []).find((line) => line.isMainItem);
+}
+
+function getMainInvoiceItemNetAmount(items) {
+  const main = getMainInvoiceItem(items);
+  if (!main) return 0;
+  return netInvoiceItemAmount(main.amount, main.waiver);
+}
+
+function getSupplementalInvoiceItems(items) {
+  return (items ?? []).filter((line) => !line.isMainItem);
+}
 
 function paymentSummaryFromPlain(p) {
   const totalPaid = decimalSum(
