@@ -139,28 +139,28 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, universityId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
   try {
-    const examSetupTypeTermsInclude = {
+    const termInclude = {
       model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     };
 
-    if (termNumber) {
-      examSetupTypeTermsInclude.where = { term: termNumber, courseId };
-      examSetupTypeTermsInclude.required = true;
+    if (termNumber != null) {
+      termInclude.where = { term: termNumber, courseId, instituteId };
     }
 
-    const result = await model.examSetupTypeModel.findAll({
+    return await model.examSetupTypeModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { universityId, instituteId },
       include: [
-        examSetupTypeTermsInclude,
         {
           model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: { courseId, sessionId, universityId },
+          where: { courseId, sessionId, universityId, instituteId },
+          required: true,
           include: [
             {
               model: model.courseModel,
@@ -179,10 +179,11 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
             },
           ],
         },
+        termInclude,
       ],
+      subQuery: false,
+      distinct: true,
     });
-
-    return result;
   } catch (error) {
     console.error("Error fetching exam structure details:", error.message);
     throw error;

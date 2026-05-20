@@ -22,6 +22,23 @@ export async function addBulkSession(sessionData) {
     }
 };
 
+export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, universityId) {
+  try {
+    const existingMapping = await model.sessionCouseMappingModel.findOne({
+      where: {
+        sessionId,
+        courseId,
+        instituteId,
+        universityId
+      }
+    });
+    return !!existingMapping;
+  } catch (error) {
+    console.error('Error checking if session is already mapped:', error);
+    throw error;
+  }
+}
+
 export async function courseSectionMapping(sessionData, transaction) {
     try {
         const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
@@ -141,6 +158,23 @@ export async function updateSession(sessionId, sessionData) {
         return result;
     } catch (error) {
         console.error(`Error updating Session creation ${sessionId}:`, error);
+        throw error;
+    }
+}
+
+export async function isSessionMappedwithcourse(sessionId, instituteId, universityId) {
+    try {
+        const session = await model.sessionCouseMappingModel.findAll({
+            where: {
+                sessionId,
+                instituteId,
+                universityId
+            },
+            attributes: ["sessionCourseMappingId"]
+        });
+        return session;
+    } catch (error) {
+        console.error('Error fetching Session details:', error);
         throw error;
     }
 }

@@ -12,6 +12,45 @@ export async function addLibrary(libraryData, transaction) {
   }
 }
 
+export async function addCategory(categoryData, transaction) {
+  return await model.libraryCategoryModel.create(categoryData, { transaction });
+}
+
+export async function getAllCategories(instituteId) {
+  return await model.libraryCategoryModel.findAll({
+    where: instituteId ? { instituteId } : {},
+    attributes: ["libraryCategoryId", "name", "instituteId", "createdAt"]
+  });
+}
+
+export async function updateCategory(libraryCategoryId, data) {
+  const [updated] = await model.libraryCategoryModel.update(data, { where: { libraryCategoryId } });
+  return updated > 0;
+}
+
+export async function findBooksContainingCategoryId(libraryCategoryId, transaction) {
+  const categoryId = Number(libraryCategoryId);
+
+  return await model.libraryBookModel.findAll({
+    attributes: ["libraryBookId", "categoryId"],
+    where: {
+      [Op.and]: [
+        { categoryId: { [Op.ne]: null } },
+        sequelize.literal(`JSON_CONTAINS(category_id, '${categoryId}', '$')`),
+      ],
+    },
+    transaction,
+  });
+}
+
+export async function deleteCategory(libraryCategoryId, transaction) {
+  const deleted = await model.libraryCategoryModel.destroy({
+    where: { libraryCategoryId },
+    transaction,
+  });
+  return deleted > 0;
+}
+
 export async function addLibraryAuthority(libraryData, transaction) {
   try {
     const result = await model.libraryAuthorityModel.create(libraryData, { transaction });
@@ -151,52 +190,55 @@ export async function createInventory(inventoryData, transaction) {
 }
 
 export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
-  return await model.libraryCreationModel.findAll({
+  const floor = await model.libraryFloorModel.findOne({
+    attributes: ["libraryFloorId"],
+    where: {
+      libraryFloorId,
+      universityId,
+      libraryCreationId,
+    },
+  });
+
+  if (!floor) return [];
+
+  return model.libraryBookModel.findAll({
+    where: { libraryCreationId },
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    where: { libraryCreationId },
     include: [
       {
-        model: model.libraryBookModel,
-        as: "books",
+        model: model.libraryBookInventoryModel,
+        as: "inventoryCopies",
         attributes: {
-          exclude: ["createdAt", "updatedAt", "deletedAt", "studentId", "employeeId"],
-          order: [["libraryBookId", "DESC"]],
+          exclude: ["createdAt", "updatedAt", "deletedAt"],
         },
+        required: true,
         include: [
           {
-            model: model.libraryBookInventoryModel,
-            as: "inventoryCopies",
-            attributes: {
-              exclude: ["createdAt", "updatedAt", "deletedAt", "studentId", "employeeId"],
-            },
+            model: model.libraryAisleModel,
+            as: "aisleDetails",
+            attributes: ["libraryAisleId", "name", "libraryFloorId"],
+            required: false,
+          },
+          {
+            model: model.libraryRackModel,
+            as: "rackDetails",
+            attributes: ["libraryRackId", "name"],
+            required: false,
+          },
+          {
+            model: model.libraryRowModel,
+            as: "rowDetails",
+            attributes: ["libraryRowId", "name"],
+            required: false,
           },
         ],
       },
-      {
-        model: model.libraryFloorModel,
-        as: "floorDetails",
-        attributes: {
-          exclude: [
-            "createdAt",
-            "updatedAt",
-            "deletedAt",
-            "campus_id",
-            "institute_id",
-            "library_creation_id",
-            "campusId",
-            "instituteId",
-            "createdBy",
-            "updatedBy",
-          ],
-        },
-        where: {
-          libraryFloorId,
-          universityId,
-          libraryCreationId,
-        },
-      },
+    ],
+    order: [
+      ["libraryBookId", "DESC"],
+      [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
     ],
   });
 }
@@ -219,17 +261,17 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
           {
             model: model.libraryAisleModel,
             as: "aisleDetails",
-            attributes: ["library_aisle_id", "name", "description"],
+            attributes: ["libraryAisleId", "name", "description", "libraryFloorId"],
           },
           {
             model: model.libraryRackModel,
             as: "rackDetails",
-            attributes: ["library_rack_id", "name", "description"],
+            attributes: ["libraryRackId", "name", "description"],
           },
           {
             model: model.libraryRowModel,
             as: "rowDetails",
-            attributes: ["library_row_id", "name", "description"],
+            attributes: ["libraryRowId", "name", "description"],
           },
           {
             model: model.studentModel,
@@ -380,6 +422,7 @@ export async function getAllIssuedBooks() {
             "issn",
             "barcode",
             "subjectId",
+            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
@@ -443,7 +486,7 @@ export async function getBooksIssuedToStudent(studentId) {
       attributes: [
         "inventoryId",
         "libraryBookId",
-        "excisionNumber",
+        "accessionNumber",
         "billNo",
         "billDate",
         "itemPrice",
@@ -471,6 +514,7 @@ export async function getBooksIssuedToStudent(studentId) {
             "issn",
             "barcode",
             "subjectId",
+            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
@@ -508,7 +552,7 @@ export async function getBooksIssuedToEmployee(employeeId) {
       attributes: [
         "inventoryId",
         "libraryBookId",
-        "excisionNumber",
+        "accessionNumber",
         "billNo",
         "billDate",
         "itemPrice",
@@ -537,6 +581,7 @@ export async function getBooksIssuedToEmployee(employeeId) {
             "issn",
             "barcode",
             "subjectId",
+            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
@@ -586,4 +631,36 @@ export async function findBookByTitle(title, libraryCreationId, transaction) {
 
 export async function createInventoryBulk(data, transaction) {
   return model.libraryBookInventoryModel.create(data, { transaction });
+}
+
+export async function getCategoriesByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+  return await model.libraryCategoryModel.findAll({
+    where: { libraryCategoryId: ids },
+    attributes: ["libraryCategoryId", "name"]
+  });
+}
+
+export async function getSubjectsByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+  return await model.subjectModel.findAll({
+    where: { subjectId: ids },
+    attributes: ["subjectId", "subjectName"]
+  });
+}
+
+export async function getCategoriesByNames(names) {
+  if (!names || names.length === 0) return [];
+  return await model.libraryCategoryModel.findAll({
+    where: { name: names },
+    attributes: ["libraryCategoryId", "name"],
+  });
+}
+
+export async function getSubjectsByNames(names) {
+  if (!names || names.length === 0) return [];
+  return await model.subjectModel.findAll({
+    where: { subjectName: names },
+    attributes: ["subjectId", "subjectName"],
+  });
 }

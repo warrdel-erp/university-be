@@ -21,6 +21,11 @@ export default sequelize.define(
         key: "library_creation_id",
       },
     },
+    bookImage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "book_image",
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -105,9 +110,14 @@ export default sequelize.define(
       field: "additional_author",
     },
     subjectId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.JSON,
       allowNull: true,
       field: "subject_id",
+    },
+    categoryId: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      field: "category_id",
     },
     classSectionsId: {
       type: DataTypes.INTEGER,

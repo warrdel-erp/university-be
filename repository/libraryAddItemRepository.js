@@ -1,5 +1,47 @@
 import * as model from '../models/index.js'
 
+export async function findById(libraryAddItemId, transaction) {
+    return model.libraryAddItemModel.findOne({
+        where: { libraryAddItemId },
+        transaction,
+    });
+}
+
+export async function findByCreationAndTitle(
+    { libraryCreationId, name, author },
+    transaction,
+) {
+    const where = { libraryCreationId, name };
+    if (author) {
+        where.author = author;
+    }
+    return model.libraryAddItemModel.findOne({ where, transaction });
+}
+
+export async function findFirstCodeMasterTypeIds(limit, transaction) {
+    const rows = await model.employeeCodeMasterType.findAll({
+        attributes: ["employeeCodeMasterTypeId"],
+        limit,
+        order: [["employeeCodeMasterTypeId", "ASC"]],
+        transaction,
+    });
+    return rows.map((row) => row.employeeCodeMasterTypeId);
+}
+
+export async function getSingleLibraryItemDetails(libraryCreationId) {
+    try {
+        return await model.libraryAddItemModel.findAll({
+            where: { libraryCreationId },
+            attributes: {
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching library items by creation id:", error);
+        throw error;
+    }
+}
+
 export async function addLibraryItem(data,transaction) {    
     try {
         const result = await model.libraryAddItemModel.create(data,{transaction});

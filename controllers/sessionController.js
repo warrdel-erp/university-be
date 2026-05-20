@@ -63,7 +63,9 @@ export async function deleteSession(req, res) {
         if (!sessionId) {
             return res.status(400).json({ message: "SessionId is required" });
         }
-        const deleted = await sessionCreation.deleteSession(sessionId);
+       const instituteId = req.user.defaultInstituteId;
+       const universityId = req.user.universityId;
+        const deleted = await sessionCreation.deleteSession(sessionId, instituteId, universityId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for session ID ${sessionId}` });
         } else {
