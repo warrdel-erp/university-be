@@ -1,5 +1,7 @@
 import * as answerSheetQrServices from "../services/answerSheetQrServices.js";
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
+import fs from "fs";
+
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -190,5 +192,52 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
   } catch (error) {
     console.error("Error in assignObtainedMarksToAnswerSheet controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+export async function splitAnswerSheetPdf(req, res) {
+  let uploadedFilePath = null;
+
+  try {
+    if (!req.file) {
+      return ErrorResponse(res, 400, "No PDF file uploaded. Please attach a PDF file with field name 'answerSheet'.");
+    }
+
+    const instituteId = req.user.defaultInstituteId;
+    const universityId = req.user.universityId;
+    uploadedFilePath = req.file.path;
+
+    const result = await answerSheetQrServices.splitAnswerSheetPdf(
+      uploadedFilePath,
+      instituteId,
+      universityId
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      `PDF successfully split into ${result.totalStudents} answer sheet(s).`,
+      result
+    );
+  } catch (error) {
+    console.error("Error in splitAnswerSheetPdf controller:", error);
+
+    // Build a structured error response with per-page detail when available
+    const errorData = error.scanErrors || error.validationErrors || null;
+
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "An unexpected error occurred while splitting the answer sheet PDF.",
+      errorData
+    );
+  } finally {
+    // Always delete the uploaded temp file after processing
+    if (uploadedFilePath) {
+      try {
+        fs.unlinkSync(uploadedFilePath);
+      } catch (_) {
+        // best-effort cleanup
+      }
+    }
   }
 }
