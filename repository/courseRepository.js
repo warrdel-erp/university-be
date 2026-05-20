@@ -203,6 +203,22 @@ export async function getAllCourses(universityId, instituteId, campusId) {
                     attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
                     required: false,
                 },
+               {
+                   model: model.sessionCouseMappingModel,
+                   as: 'sessionCourseMappings',
+                   attributes: ['sessionCourseMappingId'],
+                   required: false,
+                   include: [
+                       {
+                           model: model.sessionModel,
+                           as: 'session',
+                           attributes: ['sessionId', 'sessionName'],
+                           required: false,
+                       }
+                   ]
+               }
+
+
             ]
         });
     } catch (error) {
