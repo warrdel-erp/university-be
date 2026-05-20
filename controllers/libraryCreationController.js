@@ -96,6 +96,62 @@ export async function deleteLibray(req, res) {
 };
 
 
+export async function addCategory(req, res) {
+    try {
+        const { name } = req.body;
+        const instituteId = req.user.defaultInstituteId || req.user.instituteId;
+        const createdBy = req.user.userId;
+        const updatedBy = req.user.userId;
+
+        const data = { name, instituteId, createdBy, updatedBy };
+        const result = await libraryCreation.addCategory(data);
+
+        return SuccessResponse(res, 201, "Category added successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function getAllCategories(req, res) {
+    try {
+        const instituteId = req.query.instituteId || req.user.defaultInstituteId || req.user.instituteId;
+        const categories = await libraryCreation.getAllCategories(instituteId);
+        return SuccessResponse(res, 200, "Categories fetched successfully", categories);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function updateCategory(req, res) {
+    try {
+        const { libraryCategoryId, name } = req.body;
+        const updatedBy = req.user.userId;
+        const data = { updatedBy };
+        if (name) data.name = name;
+
+        const updated = await libraryCreation.updateCategory(libraryCategoryId, data);
+        if (!updated) {
+            return ErrorResponse(res, 404, "Category not found");
+        }
+        return SuccessResponse(res, 200, "Category updated successfully");
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
+export async function deleteCategory(req, res) {
+    try {
+        const { libraryCategoryId } = req.query;
+        const deleted = await libraryCreation.deleteCategory(libraryCategoryId);
+        if (deleted) {
+            return SuccessResponse(res, 200, "Category deleted successfully");
+        }
+        return ErrorResponse(res, 404, "Category not found");
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
 export async function addBookWithInventory(req, res) {
     try {
         const createdBy = req.user.userId;
@@ -173,8 +229,7 @@ export async function updateBook(req, res) {
 
         await libraryCreation.updateBook(libraryBookId, bookData);
 
-        const bookRow = await libraryCreation.getSingleBookDetails(libraryBookId);
-        const book = bookRow ? bookRow.get({ plain: true }) : null;
+        const book = await libraryCreation.getSingleBookDetails(libraryBookId);
 
         return SuccessResponse(res, 200, "Book updated successfully", book);
 

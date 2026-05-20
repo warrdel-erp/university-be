@@ -13,13 +13,21 @@ export async function bookIssue(bookIssue,transaction) {
 export async function getAllIssueBooks(universityId) {
     try {
         const bookDetails = await model.libraryIssueBookModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","library_add_item_id","createdBy","updatedBy","library_member_id","library_issue_book_id"] },
+            attributes: {
+                exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt",
+                    "createdBy",
+                    "updatedBy",
+                ],
+            },
             include: [
                 {
                     model: model.userModel,
                     as: "userBookIssue",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
+                    attributes: ["universityId", "userId", "userName"],
+                    where: { universityId },
                 },
                 {
                     model: model.libraryMemberModel,
@@ -62,8 +70,8 @@ export async function getBookByMemberId(libraryMemberId,universityId) {
                 {
                     model: model.userModel,
                     as: "userBookIssue",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
+                    attributes: ["universityId", "userId", "userName"],
+                    where: { universityId },
                 },
                 {
                     model: model.libraryMemberModel,
@@ -92,7 +100,7 @@ export async function getBookByMemberId(libraryMemberId,universityId) {
 
         return bookDetails;
     } catch (error) {
-        console.error(`Error fetching book member details: ${libraryCreationId}`, error);
+        console.error(`Error fetching book member details for member ${libraryMemberId}:`, error);
         throw error;
     }
 };

@@ -15,6 +15,10 @@ import {
   deleteInventoryCopy,
   getAllIssuedBooks,
   bulkUploadBooks,
+  addCategory,
+  getAllCategories,
+  updateCategory,
+  deleteCategory,
 } from "../controllers/libraryCreationController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -54,12 +58,26 @@ const inventoryQuerySchema = z.object({
 
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
-  libraryFloorId: z.coerce.number(),
+  libraryFloorId: z.coerce.number().optional().nullable(),
+});
+
+const addCategorySchema = z.object({
+  name: z.string(),
+});
+
+const updateCategorySchema = z.object({
+  libraryCategoryId: z.coerce.number(),
+  name: z.string().optional(),
+});
+
+const categoryQuerySchema = z.object({
+  libraryCategoryId: z.coerce.number(),
 });
 
 const bookSchema = z.object({
   libraryCreationId: z.coerce.number(),
   libraryFloorId: z.coerce.number().optional(),
+  bookImage: z.string().optional().nullable(),
   title: z.string(),
   subtitle: z.string().optional().nullable(),
   authors: z.string().optional().nullable(),
@@ -79,22 +97,24 @@ const bookSchema = z.object({
   summary: z.string().optional().nullable(),
   keywords: z.string().optional().nullable(),
   additionalAuthor: z.string().optional().nullable(),
-  subjectId: z.coerce.number().optional().nullable(),
+  subjectId: z.array(z.number()).optional().nullable(),
+  categoryId: z.array(z.coerce.number()).optional().nullable(),
   classSectionsId: z.coerce.number().optional().nullable(),
   remark: z.string().optional().nullable(),
   itemType: z.string().optional().nullable(),
 });
 
 const inventoryRowSchema = z.object({
-  excisionNumber: z.string().optional().nullable(),
-  libraryAisleId: z.coerce.number(),
-  libraryRackId: z.coerce.number(),
-  libraryRowId: z.coerce.number(),
+  accessionNumber: z.string(),
+  libraryAisleId: z.coerce.number().optional().nullable(),
+  libraryRackId: z.coerce.number().optional().nullable(),
+  libraryRowId: z.coerce.number().optional().nullable(),
   studentId: z.coerce.number().optional().nullable(),
   employeeId: z.coerce.number().optional().nullable(),
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
   status: z.string().optional(),
+  condition: z.string().optional().nullable(),
   billNo: z.string().optional().nullable(),
   billDate: z.string().optional().nullable(),
   itemPrice: z.union([z.string(), z.coerce.number()]).optional().nullable(),
@@ -111,6 +131,7 @@ const updateBookSchema = z.object({
   libraryBookId: z.coerce.number(),
   libraryCreationId: z.coerce.number().optional(),
   libraryFloorId: z.coerce.number().optional(),
+  bookImage: z.string().optional().nullable(),
   title: z.string().optional(),
   subtitle: z.string().nullable().optional(),
   authors: z.string().nullable().optional(),
@@ -130,7 +151,8 @@ const updateBookSchema = z.object({
   summary: z.string().nullable().optional(),
   keywords: z.string().nullable().optional(),
   additionalAuthor: z.string().nullable().optional(),
-  subjectId: z.coerce.number().nullable().optional(),
+  subjectId: z.array(z.number()).nullable().optional(),
+  categoryId: z.array(z.coerce.number()).nullable().optional(),
   classSectionsId: z.coerce.number().nullable().optional(),
   remark: z.string().nullable().optional(),
   itemType: z.string().nullable().optional(),
@@ -138,15 +160,16 @@ const updateBookSchema = z.object({
 
 const updateInventorySchema = z.object({
   inventoryId: z.coerce.number(),
-  excisionNumber: z.string().optional().nullable(),
-  libraryAisleId: z.coerce.number().optional(),
-  libraryRackId: z.coerce.number().optional(),
-  libraryRowId: z.coerce.number().optional(),
+  accessionNumber: z.string().optional(),
+  libraryAisleId: z.coerce.number().optional().nullable(),
+  libraryRackId: z.coerce.number().optional().nullable(),
+  libraryRowId: z.coerce.number().optional().nullable(),
   studentId: z.coerce.number().optional().nullable(),
   employeeId: z.coerce.number().optional().nullable(),
   issueDate: z.string().optional().nullable(),
   dueDate: z.string().optional().nullable(),
   status: z.string().optional(),
+  condition: z.string().optional().nullable(),
   billNo: z.string().optional().nullable(),
   billDate: z.string().optional().nullable(),
   itemPrice: z.union([z.string(), z.coerce.number()]).optional().nullable(),
@@ -165,8 +188,8 @@ const updateBookWithInventorySchema = z
     book: updateBookSchema.optional(),
     inventory: z.array(inventoryItemSchema).optional(),
   })
-  .refine((val) => val.book || (val.inventory && val.inventory.length > 0), {
-    message: "At least one of `book` or `inventory` (non-empty array) must be provided",
+  .refine((val) => val.book || (val.inventory?.length ?? 0) > 0, {
+    message: "Either `book` or a non-empty `inventory` array must be provided",
   });
 
 router.post("/", userAuth, validate({ body: addLibrarySchema }), addLibrary);
@@ -178,6 +201,12 @@ router.get("/single", userAuth, validate({ query: idQuerySchema }), getSingleLib
 router.patch("/", userAuth, validate({ body: updateLibrarySchema }), updateLibray);
 
 router.delete("/", userAuth, validate({ query: idQuerySchema }), deleteLibray);
+
+router.post("/addCategory", userAuth, validate({ body: addCategorySchema }), addCategory);
+router.get("/getAllCategories", userAuth, getAllCategories);
+router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema }), updateCategory);
+
+router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);
 

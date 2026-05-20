@@ -126,6 +126,7 @@ import libraryRackModel from "./libraryRackModel.js";
 import libraryRowModel from "./libraryRowModel.js";
 import libraryBookInventoryModel from "./libraryBookInventoryModel.js";
 import libraryBookModel from "./libraryBookModel.js";
+import libraryCategoryModel from "./libraryCategoryModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
@@ -1508,6 +1509,7 @@ export {
   libraryRowModel,
   libraryBookInventoryModel,
   libraryBookModel,
+  libraryCategoryModel,
   internalAssessmentModel,
   assessmentEvaluationModel,
   jobSettingModel,
