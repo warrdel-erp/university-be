@@ -7,7 +7,7 @@ const BOOK_FIELDS = [
   "placeOfPublication", "yearOfPublication", "edition", "seriesTitle", "volumeNumber",
   "language", "isbn", "issn", "barcode", "physicalDescription", "numberOfPages",
   "illustrations", "summary", "keywords", "additionalAuthor", "subjectId",
-  "classSectionsId", "remark", "itemType", "categoryId",
+  "classSectionsId", "remark", "itemType", "categoryId", "bookImage",
 ];
 
 const INVENTORY_FIELDS = [
@@ -42,10 +42,24 @@ function parseBulkCell(raw, field) {
   }
   if (NUMBER_FIELDS.includes(field)) return Number(raw);
   if (field === "categoryId" || field === "subjectId") {
-    if (typeof raw === "string") {
-      return raw.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n));
+    const parseToken = (value) => {
+      const text = String(value).trim();
+      if (!text) return null;
+      if (/^\d+$/.test(text)) return Number(text);
+      return text;
+    };
+
+    if (Array.isArray(raw)) {
+      return raw.map(parseToken).filter((value) => value !== null);
     }
-    return [Number(raw)].filter(n => !isNaN(n));
+    if (typeof raw === "string") {
+      return raw
+        .split(",")
+        .map(parseToken)
+        .filter((value) => value !== null);
+    }
+    const parsed = parseToken(raw);
+    return parsed === null ? [] : [parsed];
   }
   if (field === "illustrations") {
     if (raw === true || raw === false) return raw;
@@ -706,6 +720,69 @@ function getBookCacheKey(book) {
   return `title:${book.title.toLowerCase()}`;
 }
 
+function splitIdsAndNames(values) {
+  const rawValues = Array.isArray(values) ? values : values == null ? [] : [values];
+  const ids = [];
+  const names = [];
+
+  for (const value of rawValues) {
+    if (value == null) continue;
+    if (typeof value === "number" && !Number.isNaN(value)) {
+      ids.push(value);
+      continue;
+    }
+
+    const text = String(value).trim();
+    if (!text) continue;
+
+    const parts = text.split(",").map((item) => item.trim()).filter(Boolean);
+    for (const part of parts) {
+      if (/^\d+$/.test(part)) {
+        ids.push(Number(part));
+        continue;
+      }
+      names.push(part);
+    }
+  }
+
+  return {
+    ids: [...new Set(ids)],
+    names: [...new Set(names)],
+  };
+}
+
+async function resolveIdsByName(
+  values,
+  rowNumber,
+  fieldName,
+  fetchByNames,
+  nameKey,
+  idKey,
+) {
+  const { ids, names } = splitIdsAndNames(values);
+  if (names.length === 0) {
+    return ids;
+  }
+
+  const rows = await fetchByNames(names);
+  const idByName = new Map(
+    rows.map((row) => {
+      const plain = row.get ? row.get({ plain: true }) : row;
+      return [String(plain[nameKey]).toLowerCase(), plain[idKey]];
+    }),
+  );
+
+  for (const name of names) {
+    const resolvedId = idByName.get(name.toLowerCase());
+    if (!resolvedId) {
+      throw new Error(buildUploadError(rowNumber, `${fieldName} name '${name}' not found`));
+    }
+    ids.push(resolvedId);
+  }
+
+  return [...new Set(ids)];
+}
+
 export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreationId) {
   const parsedRows = [];
   const errors = [];
@@ -719,6 +796,7 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
     }
 
     parsedRows.push({
+      rowNumber,
       book: parsed.book,
       inventory: parsed.inventory,
       location: parsed.location,
@@ -733,7 +811,7 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
   const transaction = await sequelize.transaction();
 
   try {
-    for (const { book, inventory, location } of parsedRows) {
+    for (const { rowNumber, book, inventory, location } of parsedRows) {
       const cacheKey = getBookCacheKey(book);
 
       let libraryBookId = bookCache[cacheKey];
@@ -750,10 +828,30 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
         if (existingBook) {
           libraryBookId = existingBook.libraryBookId;
         } else {
+          const resolvedSubjectIds = await resolveIdsByName(
+            book.subjectId,
+            rowNumber,
+            "subjectId",
+            libraryCreationService.getSubjectsByNames,
+            "subjectName",
+            "subjectId",
+          );
+
+          const resolvedCategoryIds = await resolveIdsByName(
+            book.categoryId,
+            rowNumber,
+            "categoryId",
+            libraryCreationService.getCategoriesByNames,
+            "name",
+            "libraryCategoryId",
+          );
+
           const newBook = await libraryCreationService.createBook(
             {
               ...book,
               isbn: book.isbn ?? null,
+              subjectId: resolvedSubjectIds.length ? resolvedSubjectIds : null,
+              categoryId: resolvedCategoryIds.length ? resolvedCategoryIds : null,
               libraryCreationId: book.libraryCreationId || libraryCreationId || null,
               createdBy,
               updatedBy,

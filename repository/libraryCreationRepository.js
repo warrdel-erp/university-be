@@ -648,3 +648,19 @@ export async function getSubjectsByIds(ids) {
     attributes: ["subjectId", "subjectName"]
   });
 }
+
+export async function getCategoriesByNames(names) {
+  if (!names || names.length === 0) return [];
+  return await model.libraryCategoryModel.findAll({
+    where: { name: names },
+    attributes: ["libraryCategoryId", "name"],
+  });
+}
+
+export async function getSubjectsByNames(names) {
+  if (!names || names.length === 0) return [];
+  return await model.subjectModel.findAll({
+    where: { subjectName: names },
+    attributes: ["subjectId", "subjectName"],
+  });
+}
