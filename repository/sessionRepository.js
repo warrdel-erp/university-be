@@ -145,6 +145,23 @@ export async function updateSession(sessionId, sessionData) {
     }
 }
 
+export async function isSessionMappedwithcourse(sessionId, instituteId, universityId) {
+    try {
+        const session = await model.sessionCouseMappingModel.findAll({
+            where: {
+                sessionId,
+                instituteId,
+                universityId
+            },
+            attributes: ["sessionCourseMappingId"]
+        });
+        return session;
+    } catch (error) {
+        console.error('Error fetching Session details:', error);
+        throw error;
+    }
+}
+
 export async function deleteSession(sessionId) {
     const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
     return deleted > 0;
