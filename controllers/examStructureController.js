@@ -1,4 +1,6 @@
 import * as examStructureServices from "../services/examStructureServices.js";
+import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+
 
 export async function addExamStructure(req, res) {
   const { acedmicYearId, courseId } = req.body;
@@ -8,12 +10,12 @@ export async function addExamStructure(req, res) {
   const instituteId = req.user.defaultInstituteId;
   try {
     if (!(acedmicYearId && courseId)) {
-      return res.status(400).send("Required fields are missing");
+      return ErrorResponse(res, 400, "Required fields are missing");
     }
     const examStructure = await examStructureServices.addExamStructure(req.body, createdBy, updatedBy, universityId, instituteId);
-    res.status(201).json({ message: "Exam Structure created successfully", examStructure });
+    return SuccessResponse(res, 201, "Exam Structure created successfully", examStructure);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return ErrorResponse(res, 500, error.message);
   }
 };
 
@@ -24,9 +26,9 @@ export async function getAllExamStructure(req, res) {
   const instituteId = req.user.defaultInstituteId;
   try {
     const Structures = await examStructureServices.getExamStructure(universityId, acedmicYearId, role, instituteId);
-    res.status(200).json(Structures);
+    return SuccessResponse(res, 200, "Exam Structures fetched successfully", Structures);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    return ErrorResponse(res, 500, error.message);
   }
 }
 
@@ -132,8 +134,8 @@ export async function getSingleExamType(req, res) {
     const sessionId = parseInt(req.query.sessionId, 10);
     const termNumber = req.query.termNumber ? parseInt(req.query.termNumber, 10) : null;
 
-    if (!courseId && !sessionId) {
-      return res.status(400).json({ success: false, message: "courseId and sessionId are required" });
+    if (!courseId || !sessionId) {
+      return ErrorResponse(res, 400, "courseId and sessionId are required");
     }
 
     const examDetails = await examStructureServices.getSingleExamType(
@@ -144,13 +146,13 @@ export async function getSingleExamType(req, res) {
       instituteId
     );
 
-    if (examDetails) {
-      res.status(200).json({ success: true, data: examDetails });
+    if (examDetails?.length) {
+      return SuccessResponse(res, 200, "Exam Type fetched successfully", examDetails);
     } else {
-      res.status(404).json({ success: false, message: "Exam Type not found" });
+      return SuccessResponse(res, 200, "Exam Type not found", []);
     }
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return ErrorResponse(res, 500, error.message);
   }
 };
 
