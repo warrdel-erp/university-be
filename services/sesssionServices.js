@@ -62,6 +62,11 @@ export async function deleteSession(sessionId, instituteId, universityId) {
 
 export async function couseSessionMapping(data, createdBy, updatedBy, universityId, instituteId) {
   try {
+    const isSessionAlreadyMapped = await sessionCreationService.isSessionAlreadyMapped(data.sessionId, data.courseId, instituteId, universityId);
+    // console.log("isSessionAlreadyMapped ", isSessionAlreadyMapped)
+    if (isSessionAlreadyMapped) {
+      throw new Error('Session already mapped')
+    }
 
     if (!Array.isArray(data.courseId) || data.courseId.length === 0) {
       throw new Error("courseId must be a non-empty array");
