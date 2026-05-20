@@ -65,9 +65,9 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
     try {
         const session = await model.sessionModel.findAll({
             where: {
+                universityId,
+                instituteId,
                 ...(acedmicYearId && { acedmicYearId }),
-                ...(universityId && { universityId }),
-                ...(role === 'Head' && { instituteId })
             },
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             include: [
@@ -79,6 +79,11 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
                 {
                     model: model.sessionCouseMappingModel,
                     as: "courseMappings",
+                    where: {
+                        universityId,
+                        instituteId,
+                    },
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
                         {
