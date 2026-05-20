@@ -187,32 +187,16 @@ export async function addBookWithInventory(req, res) {
 
 export async function getAllBooks(req, res) {
     try {
-        const universityId = req.user.universityId;
         const {
             libraryCreationId,
             libraryFloorId,
             page,
             limit,
-            search,
-            title,
-            authors,
-            isbn,
-            publisher,
-            accessionNumber,
-            status,
+            ...filters
         } = req.query;
 
-        const filters = {};
-        if (search != null) filters.search = search;
-        if (title != null) filters.title = title;
-        if (authors != null) filters.authors = authors;
-        if (isbn != null) filters.isbn = isbn;
-        if (publisher != null) filters.publisher = publisher;
-        if (accessionNumber != null) filters.accessionNumber = accessionNumber;
-        if (status != null) filters.status = status;
-
         const result = await libraryCreation.getAllBooks(
-            universityId,
+            req.user.universityId,
             libraryCreationId,
             libraryFloorId,
             { page, limit },
