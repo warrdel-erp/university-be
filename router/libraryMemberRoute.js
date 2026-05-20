@@ -69,8 +69,8 @@ const addMemberSchema = z
   .object({
     libraryCreationId: z.coerce.number(),
     memberType: z.string().min(1),
-    studentId: z.coerce.number(),
-    employeeId: z.coerce.number(),
+    studentId: z.coerce.number().optional(),
+    employeeId: z.coerce.number().optional(),
   })
   .superRefine(validateMemberIds);
 
@@ -78,14 +78,19 @@ const updateMemberSchema = z
   .object({
     libraryMemberId: z.coerce.number(),
     memberType: z.string().min(1),
-    studentId: z.coerce.number(),
-    employeeId: z.coerce.number(),
+    studentId: z.coerce.number().optional(),
+    employeeId: z.coerce.number().optional(),
   })
   .superRefine(validateMemberIds);
 
 const bookIssueSchema = z.object({
   libraryAddItemId: z.coerce.number(),
   libraryMemberId: z.coerce.number(),
+  libraryBookId: z.coerce.number().optional(),
+  libraryCreationId: z.coerce.number().optional(),
+  genre: z.coerce.number().optional(),
+  aisle: z.coerce.number().optional(),
+  shelf: z.coerce.number().optional(),
   issueDate: z.string().min(1),
   dueDate: z.string().min(1),
   issuedBy: z.string().min(1).optional(),
