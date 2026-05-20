@@ -58,7 +58,7 @@ const inventoryQuerySchema = z.object({
 
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
-  libraryFloorId: z.coerce.number(),
+  libraryFloorId: z.coerce.number().optional().nullable(),
 });
 
 const addCategorySchema = z.object({
@@ -77,6 +77,7 @@ const categoryQuerySchema = z.object({
 const bookSchema = z.object({
   libraryCreationId: z.coerce.number(),
   libraryFloorId: z.coerce.number().optional(),
+  bookImage: z.string().optional().nullable(),
   title: z.string(),
   subtitle: z.string().optional().nullable(),
   authors: z.string().optional().nullable(),
@@ -130,6 +131,7 @@ const updateBookSchema = z.object({
   libraryBookId: z.coerce.number(),
   libraryCreationId: z.coerce.number().optional(),
   libraryFloorId: z.coerce.number().optional(),
+  bookImage: z.string().optional().nullable(),
   title: z.string().optional(),
   subtitle: z.string().nullable().optional(),
   authors: z.string().nullable().optional(),
@@ -203,6 +205,7 @@ router.delete("/", userAuth, validate({ query: idQuerySchema }), deleteLibray);
 router.post("/addCategory", userAuth, validate({ body: addCategorySchema }), addCategory);
 router.get("/getAllCategories", userAuth, getAllCategories);
 router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema }), updateCategory);
+
 router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);

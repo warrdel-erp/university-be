@@ -260,6 +260,7 @@ function mapBooksToAllBookList(enrichedBooks) {
       aisleDetails: pickAisleDetails(firstCopy?.aisleDetails),
       rackDetails: pickRackDetails(firstCopy?.rackDetails),
       rowDetails: pickRowDetails(firstCopy?.rowDetails),
+      inventoryCopies: copies,
     };
   });
 }
@@ -435,8 +436,8 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
           employeeId: inv.employeeId ?? null,
           issueDate: inv.issueDate ?? null,
           dueDate: inv.dueDate ?? null,
-          billNo: inv.billNo ?? null,
-          billDate: inv.billDate ?? null,
+          billNo: inv.billNo ??  null,
+          billDate: inv.billDate == "" ? null : inv.billDate,
           itemPrice: inv.itemPrice ?? null,
           netPrice: inv.netPrice ?? null,
           currency: inv.currency ?? null,

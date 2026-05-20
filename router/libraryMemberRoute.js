@@ -84,10 +84,10 @@ const updateMemberSchema = z
   .superRefine(validateMemberIds);
 
 const bookIssueSchema = z.object({
-  libraryAddItemId: z.coerce.number(),
+  libraryAddItemId: z.coerce.number().optional(),
   libraryMemberId: z.coerce.number(),
-  libraryBookId: z.coerce.number().optional(),
-  libraryCreationId: z.coerce.number().optional(),
+  libraryBookId: z.coerce.number(),
+  libraryCreationId: z.coerce.number(),
   genre: z.coerce.number().optional(),
   aisle: z.coerce.number().optional(),
   shelf: z.coerce.number().optional(),

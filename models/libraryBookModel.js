@@ -21,6 +21,11 @@ export default sequelize.define(
         key: "library_creation_id",
       },
     },
+    bookImage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "book_image",
+    },
     title: {
       type: DataTypes.STRING,
       allowNull: false,
