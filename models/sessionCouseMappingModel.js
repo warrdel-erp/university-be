@@ -90,6 +90,13 @@ export default sequelize.define(
     {
         tableName: 'session_course_mapping',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['course_id', 'session_id'],
+                name: 'unique_course_session_mapping'
+            }
+        ]
     }
 );
