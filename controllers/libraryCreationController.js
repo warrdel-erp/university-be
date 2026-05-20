@@ -186,17 +186,48 @@ export async function addBookWithInventory(req, res) {
 
 
 export async function getAllBooks(req, res) {
-        const universityId = req.user.universityId;
-        const {libraryCreationId,libraryFloorId} = req.query
-        if (!(libraryCreationId && libraryFloorId))
-            return ErrorResponse(res, 400, "libraryCreationId,libraryFloorId is required");
     try {
-        const books = await libraryCreation.getAllBooks(universityId,libraryCreationId,libraryFloorId);
-        return SuccessResponse(res, 200, "Books", books);
+        const universityId = req.user.universityId;
+        const {
+            libraryCreationId,
+            libraryFloorId,
+            page,
+            limit,
+            search,
+            title,
+            authors,
+            isbn,
+            publisher,
+            accessionNumber,
+            status,
+        } = req.query;
+
+        const filters = {};
+        if (search != null) filters.search = search;
+        if (title != null) filters.title = title;
+        if (authors != null) filters.authors = authors;
+        if (isbn != null) filters.isbn = isbn;
+        if (publisher != null) filters.publisher = publisher;
+        if (accessionNumber != null) filters.accessionNumber = accessionNumber;
+        if (status != null) filters.status = status;
+
+        const result = await libraryCreation.getAllBooks(
+            universityId,
+            libraryCreationId,
+            libraryFloorId,
+            { page, limit },
+            filters,
+        );
+
+        return SuccessResponse(res, 200, "Books", result.books, {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+        });
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
-};
+}
 
 export async function getSingleBookDetails(req, res) {
     try {
@@ -319,12 +350,18 @@ export async function getAllIssuedBooks(req, res) {
     }
 };
 
+const MAX_BULK_UPLOAD_FILE_BYTES = 5 * 1024 * 1024;
+
 export async function bulkUploadBooks(req, res) {
     try {
         const excelFile = req.files?.book;
 
         if (!excelFile) {
             return ErrorResponse(res, 400, "Excel file is required");
+        }
+
+        if (excelFile.data?.length > MAX_BULK_UPLOAD_FILE_BYTES) {
+            return ErrorResponse(res, 400, "Excel file must not exceed 5MB");
         }
 
         const excelData = fileHandler.readExcelFile(excelFile.data);
@@ -340,14 +377,24 @@ export async function bulkUploadBooks(req, res) {
             excelData,
             createdBy,
             updatedBy,
-            libraryCreationId
+            libraryCreationId,
+            req.user.defaultInstituteId,
         );
 
         if (result.status === "error") {
-            return res.status(400).json({ message: result.message });
+            return res.status(400).json({
+                message: result.message,
+                ...(result.totalErrors != null && { totalErrors: result.totalErrors }),
+                ...(result.batchNumber != null && { batchNumber: result.batchNumber }),
+                ...(result.committedRows != null && { committedRows: result.committedRows }),
+                ...(result.totalRows != null && { totalRows: result.totalRows }),
+            });
         }
 
-        return SuccessResponse(res, 200, "Data uploaded successfully");
+        return SuccessResponse(res, 200, "Data uploaded successfully", {
+            importedRows: result.importedRows,
+            uniqueBooks: result.uniqueBooks,
+        });
 
     } catch (error) {
         console.error("Bulk Upload Error:", error);

@@ -1,6 +1,7 @@
 import * as libraryCreationService from "../repository/libraryCreationRepository.js";
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { parseCustomDate } from "../utility/dateFormat.js";
 
 const BOOK_FIELDS = [
   "libraryCreationId", "libraryFloorId", "title", "subtitle", "authors", "publisher",
@@ -22,11 +23,18 @@ const NUMBER_FIELDS = [
   "studentId", "employeeId", "itemPrice", "netPrice",
 ];
 
+const DATE_FIELDS = ["billDate", "issueDate", "dueDate"];
+
 const LOCATION_MAP = { aisle: "aisleName", rack: "rackName", row: "rowName" };
 
 const DEFAULTS = { itemType: "print", status: "available", illustrations: false };
 
-const normBulkKey = (key) => String(key).trim().toLowerCase().replace(/\s+/g, "");
+const normBulkKey = (key) =>
+  String(key)
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
 
 const matchBulkField = (key, fields) => {
   const n = normBulkKey(key);
@@ -71,12 +79,22 @@ function parseBulkCell(raw, field) {
     const text = String(raw).trim();
     return text === "" ? null : text;
   }
+  if (field === "accessionNumber") {
+    const text = String(raw).trim();
+    return text === "" ? null : text;
+  }
+  if (DATE_FIELDS.includes(field)) {
+    return parseCustomDate(raw);
+  }
   return raw;
 }
 
-function getBulkTypeError(field, value) {
+function getBulkTypeError(field, value, rawValue) {
   if (NUMBER_FIELDS.includes(field) && Number.isNaN(Number(value))) {
     return `${field} must be a number`;
+  }
+  if (DATE_FIELDS.includes(field) && !isBulkCellEmpty(rawValue) && value === null) {
+    return `${field} has invalid date format`;
   }
   if (field === "itemType" && value && !["print", "Xerox", "Digital"].includes(value)) {
     return "itemType must be print, Xerox or Digital";
@@ -91,6 +109,35 @@ function applyBulkDefaults(target, fields) {
       target[field] = DEFAULTS[field];
     }
   }
+}
+
+function isBulkCellEmpty(rawValue) {
+  return rawValue === undefined || rawValue === null || String(rawValue).trim() === "";
+}
+
+function normalizeBulkUploadRow(row) {
+  const normalized = {};
+  for (const [rawKey, rawValue] of Object.entries(row)) {
+    const cleanKey = String(rawKey).replace(/^\uFEFF/, "").trim();
+    if (!cleanKey || cleanKey.startsWith("__EMPTY")) {
+      continue;
+    }
+    normalized[cleanKey] = rawValue;
+  }
+  return normalized;
+}
+
+/** Skip fully empty Excel rows; first row is always the header (handled by sheet_to_json). */
+function isBulkRowEmpty(row) {
+  if (row == null || typeof row !== "object" || Array.isArray(row)) {
+    return true;
+  }
+  const normalized = normalizeBulkUploadRow(row);
+  const values = Object.values(normalized);
+  if (values.length === 0) {
+    return true;
+  }
+  return values.every((value) => isBulkCellEmpty(value));
 }
 
 function splitBulkUploadRow(row) {
@@ -112,7 +159,7 @@ function splitBulkUploadRow(row) {
     if (bookField) {
       const value = parseBulkCell(rawValue, bookField);
       if (value === null) continue;
-      const err = getBulkTypeError(bookField, value);
+      const err = getBulkTypeError(bookField, value, rawValue);
       if (err) {
         errors.push(err);
         continue;
@@ -124,8 +171,8 @@ function splitBulkUploadRow(row) {
     const invField = matchBulkField(rawKey, INVENTORY_FIELDS);
     if (invField) {
       const value = parseBulkCell(rawValue, invField);
-      if (value === null) continue;
-      const err = getBulkTypeError(invField, value);
+      if (value === null && isBulkCellEmpty(rawValue)) continue;
+      const err = getBulkTypeError(invField, value, rawValue);
       if (err) {
         errors.push(err);
         continue;
@@ -134,15 +181,13 @@ function splitBulkUploadRow(row) {
       continue;
     }
 
-    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
-      errors.push(`Unknown column '${rawKey}'`);
-    }
+    // Unknown columns are ignored so extra Excel headers do not fail the upload.
   }
 
   applyBulkDefaults(book, BOOK_FIELDS);
   applyBulkDefaults(inventory, INVENTORY_FIELDS);
 
-  if (!book.isbn && !book.title) errors.push("isbn or title is required");
+  if (!book.title) errors.push("title is required");
   if (!inventory.accessionNumber) errors.push("accessionNumber is required");
 
   return { book, inventory, location, errors };
@@ -286,9 +331,12 @@ function filterBooksByFloor(books, libraryFloorId) {
   return books
     .map((book) => ({
       ...book,
-      inventoryCopies: (book.inventoryCopies || []).filter(
-        (inv) => Number(inv.aisleDetails?.libraryFloorId) === floorId,
-      ),
+      inventoryCopies: (book.inventoryCopies || []).filter((inv) => {
+        const invFloorId = inv.aisleDetails?.libraryFloorId;
+        // Bulk-uploaded copies often have no aisle; show them on any floor view.
+        if (invFloorId == null) return true;
+        return Number(invFloorId) === floorId;
+      }),
     }))
     .filter((book) => book.inventoryCopies.length > 0);
 }
@@ -523,18 +571,39 @@ async function enrichBooksWithCategoriesAndSubjects(books) {
   });
 }
 
-export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
-  const books = await libraryCreationService.getAllBooks(
+export async function getAllBooks(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  pagination = {},
+  filters = {},
+) {
+  const page = pagination.page ?? 1;
+  const rawLimit = pagination.limit ?? 20;
+  const limit = Math.min(100, Math.max(1, rawLimit));
+  const offset = (page - 1) * limit;
+
+  const { rows, count } = await libraryCreationService.getAllBooks(
     universityId,
     libraryCreationId,
     libraryFloorId,
+    { limit, offset },
+    filters,
   );
 
-  if (!books?.length) return [];
+  if (!rows?.length) {
+    return { books: [], total: count, page, limit };
+  }
 
-  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(books);
+  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(rows);
   const filtered = filterBooksByFloor(enrichedBooks, libraryFloorId);
-  return mapBooksToAllBookList(filtered);
+
+  return {
+    books: mapBooksToAllBookList(filtered),
+    total: count,
+    page,
+    limit,
+  };
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {
@@ -751,6 +820,72 @@ function splitIdsAndNames(values) {
   };
 }
 
+// Bulk upload limits — validated before DB work to avoid long-running requests.
+const BULK_UPLOAD_BATCH_SIZE = 500;
+const BULK_UPLOAD_MAX_ROWS = 50000;
+
+function formatBulkUploadErrors(errors) {
+  const totalErrors = errors.length;
+  const shown = errors.slice(0, 50);
+  let message = shown.join("; ");
+  if (totalErrors > 50) {
+    message += `; ... and ${totalErrors - 50} more error(s)`;
+  }
+  return { status: "error", message, totalErrors };
+}
+
+function chunkArray(items, size) {
+  const chunks = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+/**
+ * Caches aisle/rack/row lookups — previously each row hit DB up to 3 times
+ * for the same location names.
+ */
+async function getCachedLocationId(name, cache, fetchByName) {
+  const key = String(name).trim().toLowerCase();
+  if (cache.has(key)) {
+    return cache.get(key);
+  }
+  const id = await fetchByName(name);
+  cache.set(key, id);
+  return id;
+}
+
+async function resolveBulkUploadLocationIds(location, aisleCache, rackCache, rowCache) {
+  let libraryAisleId = null;
+  let libraryRackId = null;
+  let libraryRowId = null;
+
+  if (location.aisleName) {
+    libraryAisleId = await getCachedLocationId(
+      location.aisleName,
+      aisleCache,
+      libraryStructureRepository.getAisleIdByName,
+    );
+  }
+  if (location.rackName) {
+    libraryRackId = await getCachedLocationId(
+      location.rackName,
+      rackCache,
+      libraryStructureRepository.getRackIdByName,
+    );
+  }
+  if (location.rowName) {
+    libraryRowId = await getCachedLocationId(
+      location.rowName,
+      rowCache,
+      libraryStructureRepository.getRowIdByName,
+    );
+  }
+
+  return { libraryAisleId, libraryRackId, libraryRowId };
+}
+
 async function resolveIdsByName(
   values,
   rowNumber,
@@ -758,10 +893,16 @@ async function resolveIdsByName(
   fetchByNames,
   nameKey,
   idKey,
+  resolveCache,
 ) {
   const { ids, names } = splitIdsAndNames(values);
   if (names.length === 0) {
     return ids;
+  }
+
+  const cacheKey = `${fieldName}|${names.map((name) => name.toLowerCase()).sort().join(",")}`;
+  if (resolveCache?.has(cacheKey)) {
+    return [...new Set([...ids, ...resolveCache.get(cacheKey)])];
   }
 
   const rows = await fetchByNames(names);
@@ -772,27 +913,240 @@ async function resolveIdsByName(
     }),
   );
 
+  const resolvedFromNames = [];
   for (const name of names) {
     const resolvedId = idByName.get(name.toLowerCase());
     if (!resolvedId) {
       throw new Error(buildUploadError(rowNumber, `${fieldName} name '${name}' not found`));
     }
-    ids.push(resolvedId);
+    resolvedFromNames.push(resolvedId);
   }
 
-  return [...new Set(ids)];
+  const fromNames = [...new Set(resolvedFromNames)];
+  if (resolveCache) {
+    resolveCache.set(cacheKey, fromNames);
+  }
+
+  return [...new Set([...ids, ...fromNames])];
 }
 
-export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreationId) {
+function buildNameToIdMap(rows, nameField, idField) {
+  const map = new Map();
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const name = plain[nameField];
+    if (name == null || String(name).trim() === "") continue;
+    map.set(String(name).trim().toLowerCase(), plain[idField]);
+  }
+  return map;
+}
+
+/** Resolve numeric ids + comma-separated names using preloaded maps (one DB read per upload). */
+function resolveBulkSubjectCategoryIds(values, fieldName, nameToIdMap, rowNumber) {
+  const { ids, names } = splitIdsAndNames(values);
+  if (names.length === 0) {
+    return ids.length ? ids : null;
+  }
+
+  const resolved = [...ids];
+  for (const name of names) {
+    const resolvedId = nameToIdMap.get(name.toLowerCase());
+    if (!resolvedId) {
+      throw new Error(buildUploadError(rowNumber, `${fieldName} name '${name}' not found`));
+    }
+    resolved.push(resolvedId);
+  }
+
+  const unique = [...new Set(resolved)];
+  return unique.length ? unique : null;
+}
+
+function buildBulkBookPayload(
+  book,
+  libraryCreationId,
+  createdBy,
+  updatedBy,
+  categoryNameToId,
+  subjectNameToId,
+  rowNumber,
+) {
+  return {
+    ...book,
+    isbn: book.isbn ?? null,
+    subjectId: resolveBulkSubjectCategoryIds(
+      book.subjectId,
+      "subjectId",
+      subjectNameToId,
+      rowNumber,
+    ),
+    categoryId: resolveBulkSubjectCategoryIds(
+      book.categoryId,
+      "categoryId",
+      categoryNameToId,
+      rowNumber,
+    ),
+    libraryCreationId: book.libraryCreationId || libraryCreationId || null,
+    createdBy,
+    updatedBy,
+  };
+}
+
+function buildBookLookupIndexes(existingBooks) {
+  const byTitle = new Map();
+  const byIsbn = new Map();
+
+  for (const book of existingBooks) {
+    const plain = book.get ? book.get({ plain: true }) : book;
+    if (plain.isbn) {
+      byIsbn.set(String(plain.isbn).trim(), plain.libraryBookId);
+    }
+    if (plain.title) {
+      byTitle.set(String(plain.title).trim().toLowerCase(), plain.libraryBookId);
+    }
+  }
+
+  return { byTitle, byIsbn };
+}
+
+function registerBookInIndexes(libraryBookId, payload, bookIndexByTitle, bookIndexByIsbn) {
+  if (payload.isbn) {
+    bookIndexByIsbn.set(String(payload.isbn).trim(), libraryBookId);
+  }
+  if (payload.title) {
+    bookIndexByTitle.set(String(payload.title).trim().toLowerCase(), libraryBookId);
+  }
+}
+
+/**
+ * Two-pass batch: bulk-create new books once, then bulk-create inventory.
+ * Avoids per-row findBookByTitle/createBook queries (main cause of 60s+ uploads).
+ */
+async function processBulkUploadBatch({
+  batch,
+  bookCache,
+  bookIndexByTitle,
+  bookIndexByIsbn,
+  categoryNameToId,
+  subjectNameToId,
+  libraryCreationId,
+  createdBy,
+  updatedBy,
+  aisleCache,
+  rackCache,
+  rowCache,
+  transaction,
+}) {
+  const pendingBooksByKey = new Map();
+
+  for (const { book, rowNumber } of batch) {
+    const cacheKey = getBookCacheKey(book);
+    if (bookCache[cacheKey]) {
+      continue;
+    }
+
+    let libraryBookId = null;
+    if (book.isbn) {
+      libraryBookId = bookIndexByIsbn.get(String(book.isbn).trim());
+    }
+    if (!libraryBookId && book.title) {
+      libraryBookId = bookIndexByTitle.get(book.title.trim().toLowerCase());
+    }
+
+    if (libraryBookId) {
+      bookCache[cacheKey] = libraryBookId;
+      continue;
+    }
+
+    if (!pendingBooksByKey.has(cacheKey)) {
+      pendingBooksByKey.set(
+        cacheKey,
+        buildBulkBookPayload(
+          book,
+          libraryCreationId,
+          createdBy,
+          updatedBy,
+          categoryNameToId,
+          subjectNameToId,
+          rowNumber,
+        ),
+      );
+    }
+  }
+
+  if (pendingBooksByKey.size > 0) {
+    const pendingEntries = [...pendingBooksByKey.entries()];
+    const createdBooks = await libraryCreationService.bulkCreateBooks(
+      pendingEntries.map(([, payload]) => payload),
+      transaction,
+    );
+
+    pendingEntries.forEach(([cacheKey, payload], index) => {
+      const libraryBookId = createdBooks[index].libraryBookId;
+      bookCache[cacheKey] = libraryBookId;
+      registerBookInIndexes(libraryBookId, payload, bookIndexByTitle, bookIndexByIsbn);
+    });
+  }
+
+  const inventoryPayloads = [];
+
+  for (const { book, inventory, location } of batch) {
+    const libraryBookId = bookCache[getBookCacheKey(book)];
+    const { libraryAisleId, libraryRackId, libraryRowId } =
+      await resolveBulkUploadLocationIds(location, aisleCache, rackCache, rowCache);
+
+    inventoryPayloads.push({
+      ...inventory,
+      libraryBookId,
+      libraryAisleId,
+      libraryRackId,
+      libraryRowId,
+      status: inventory.status ?? "available",
+      condition: inventory.condition ?? null,
+    });
+  }
+
+  if (inventoryPayloads.length > 0) {
+    await libraryCreationService.createInventoryBulk(inventoryPayloads, transaction);
+  }
+}
+
+export async function bulkUploadBooks(
+  rows,
+  createdBy,
+  updatedBy,
+  libraryCreationId,
+  instituteId,
+) {
+  const uploadStartedAt = Date.now();
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { status: "error", message: "Excel file has no data rows" };
+  }
+
+  if (rows.length > BULK_UPLOAD_MAX_ROWS) {
+    return {
+      status: "error",
+      message: `Upload exceeds maximum of ${BULK_UPLOAD_MAX_ROWS} rows`,
+    };
+  }
+
   const parsedRows = [];
   const errors = [];
 
   for (let index = 0; index < rows.length; index++) {
-    const rowNumber = index + 2;
-    const parsed = splitBulkUploadRow(rows[index]);
+    const row = normalizeBulkUploadRow(rows[index]);
+    if (isBulkRowEmpty(row)) {
+      continue;
+    }
 
-    for (let i = 0; i < parsed.errors.length; i++) {
-      errors.push(buildUploadError(rowNumber, parsed.errors[i]));
+    const rowNumber = index + 2;
+    const parsed = splitBulkUploadRow(row);
+
+    if (parsed.errors.length > 0) {
+      for (let i = 0; i < parsed.errors.length; i++) {
+        errors.push(buildUploadError(rowNumber, parsed.errors[i]));
+      }
+      continue;
     }
 
     parsedRows.push({
@@ -804,98 +1158,92 @@ export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreatio
   }
 
   if (errors.length > 0) {
-    return { status: "error", message: errors.join("; ") };
+    return formatBulkUploadErrors(errors);
   }
 
+  if (parsedRows.length === 0) {
+    return {
+      status: "error",
+      message:
+        "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, billDate, ...) and data from row 2 onward.",
+    };
+  }
+
+  const preloadStartedAt = Date.now();
+  const [existingBooks, categoryRows, subjectRows] = await Promise.all([
+    libraryCreationService.findBookKeysByLibraryCreationId(libraryCreationId),
+    libraryCreationService.getAllCategories(instituteId),
+    libraryCreationService.findAllSubjectNamesForBulkLookup(),
+  ]);
+  const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
+    buildBookLookupIndexes(existingBooks);
+  const categoryNameToId = buildNameToIdMap(categoryRows, "name", "libraryCategoryId");
+  const subjectNameToId = buildNameToIdMap(subjectRows, "subjectName", "subjectId");
   const bookCache = {};
-  const transaction = await sequelize.transaction();
+  const aisleCache = new Map();
+  const rackCache = new Map();
+  const rowCache = new Map();
 
-  try {
-    for (const { rowNumber, book, inventory, location } of parsedRows) {
-      const cacheKey = getBookCacheKey(book);
+  console.log(
+    `[bulkUploadBooks] preloaded books=${existingBooks.length} categories=${categoryNameToId.size} subjects=${subjectNameToId.size} durationMs=${Date.now() - preloadStartedAt}`,
+  );
 
-      let libraryBookId = bookCache[cacheKey];
+  const batches = chunkArray(parsedRows, BULK_UPLOAD_BATCH_SIZE);
+  let committedRows = 0;
 
-      if (!libraryBookId) {
-        const existingBook = book.isbn
-          ? await libraryCreationService.findBookByIsbn(book.isbn, transaction)
-          : await libraryCreationService.findBookByTitle(
-              book.title,
-              book.libraryCreationId || libraryCreationId || null,
-              transaction,
-            );
+  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+    const batchNumber = batchIndex + 1;
+    const batch = batches[batchIndex];
+    const batchStartedAt = Date.now();
+    const transaction = await sequelize.transaction();
 
-        if (existingBook) {
-          libraryBookId = existingBook.libraryBookId;
-        } else {
-          const resolvedSubjectIds = await resolveIdsByName(
-            book.subjectId,
-            rowNumber,
-            "subjectId",
-            libraryCreationService.getSubjectsByNames,
-            "subjectName",
-            "subjectId",
-          );
-
-          const resolvedCategoryIds = await resolveIdsByName(
-            book.categoryId,
-            rowNumber,
-            "categoryId",
-            libraryCreationService.getCategoriesByNames,
-            "name",
-            "libraryCategoryId",
-          );
-
-          const newBook = await libraryCreationService.createBook(
-            {
-              ...book,
-              isbn: book.isbn ?? null,
-              subjectId: resolvedSubjectIds.length ? resolvedSubjectIds : null,
-              categoryId: resolvedCategoryIds.length ? resolvedCategoryIds : null,
-              libraryCreationId: book.libraryCreationId || libraryCreationId || null,
-              createdBy,
-              updatedBy,
-            },
-            transaction,
-          );
-          libraryBookId = newBook.libraryBookId;
-        }
-      }
-
-      bookCache[cacheKey] = libraryBookId;
-
-      let libraryAisleId = null;
-      let libraryRackId = null;
-      let libraryRowId = null;
-
-      if (location.aisleName) {
-        libraryAisleId = await libraryStructureRepository.getAisleIdByName(location.aisleName);
-      }
-      if (location.rackName) {
-        libraryRackId = await libraryStructureRepository.getRackIdByName(location.rackName);
-      }
-      if (location.rowName) {
-        libraryRowId = await libraryStructureRepository.getRowIdByName(location.rowName);
-      }
-
-      await libraryCreationService.createInventoryBulk(
-        {
-          ...inventory,
-          libraryBookId,
-          libraryAisleId,
-          libraryRackId,
-          libraryRowId,
-          status: inventory.status ?? "available",
-          condition: inventory.condition ?? null,
-        },
+    try {
+      await processBulkUploadBatch({
+        batch,
+        bookCache,
+        bookIndexByTitle,
+        bookIndexByIsbn,
+        categoryNameToId,
+        subjectNameToId,
+        libraryCreationId,
+        createdBy,
+        updatedBy,
+        aisleCache,
+        rackCache,
+        rowCache,
         transaction,
-      );
-    }
+      });
 
-    await transaction.commit();
-    return { status: "success" };
-  } catch (error) {
-    await transaction.rollback();
-    return { status: "error", message: error.message };
+      await transaction.commit();
+      committedRows += batch.length;
+
+      console.log(
+        `[bulkUploadBooks] batch=${batchNumber}/${batches.length} rows=${batch.length} durationMs=${Date.now() - batchStartedAt}`,
+      );
+    } catch (error) {
+      await transaction.rollback();
+      console.error(
+        `[bulkUploadBooks] failed batch=${batchNumber} committedRows=${committedRows} totalRows=${parsedRows.length} durationMs=${Date.now() - uploadStartedAt}`,
+        error.message,
+      );
+      return {
+        status: "error",
+        message: `Batch ${batchNumber} failed: ${error.message}`,
+        batchNumber,
+        committedRows,
+        totalRows: parsedRows.length,
+        failedBatchRows: batch.length,
+      };
+    }
   }
+
+  console.log(
+    `[bulkUploadBooks] complete totalRows=${parsedRows.length} batches=${batches.length} totalDurationMs=${Date.now() - uploadStartedAt}`,
+  );
+
+  return {
+    status: "success",
+    importedRows: parsedRows.length,
+    uniqueBooks: Object.keys(bookCache).length,
+  };
 }

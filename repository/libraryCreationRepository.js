@@ -180,6 +180,22 @@ export async function createBook(bookData, transaction) {
   }
 }
 
+export async function findBookKeysByLibraryCreationId(libraryCreationId) {
+  const where = {};
+  if (libraryCreationId != null) {
+    where.libraryCreationId = libraryCreationId;
+  }
+  return model.libraryBookModel.findAll({
+    where,
+    attributes: ["libraryBookId", "title", "isbn"],
+  });
+}
+
+export async function bulkCreateBooks(bookDataList, transaction) {
+  if (!bookDataList.length) return [];
+  return model.libraryBookModel.bulkCreate(bookDataList, { transaction });
+}
+
 export async function createInventory(inventoryData, transaction) {
   try {
     return await model.libraryBookInventoryModel.create(inventoryData, { transaction });
@@ -189,7 +205,121 @@ export async function createInventory(inventoryData, transaction) {
   }
 }
 
-export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
+function sanitizeBookListFilters(filters = {}) {
+  const allowedKeys = [
+    "search",
+    "title",
+    "authors",
+    "isbn",
+    "publisher",
+    "accessionNumber",
+    "status",
+  ];
+  const sanitized = {};
+
+  for (const key of allowedKeys) {
+    const value = filters[key];
+    if (value == null) continue;
+    const term = String(value).trim();
+    if (!term) continue;
+    sanitized[key] = term;
+  }
+
+  return sanitized;
+}
+
+function buildLikePattern(value) {
+  if (value == null) return null;
+  const term = String(value).trim();
+  if (!term) return null;
+  return { [Op.like]: `%${term}%` };
+}
+
+function buildBookListWhere(libraryCreationId, filters = {}) {
+  const { search, title, authors, isbn, publisher } = filters;
+  const andConditions = [{ libraryCreationId }];
+
+  const titlePattern = buildLikePattern(title);
+  if (titlePattern) andConditions.push({ title: titlePattern });
+
+  const authorsPattern = buildLikePattern(authors);
+  if (authorsPattern) andConditions.push({ authors: authorsPattern });
+
+  const isbnPattern = buildLikePattern(isbn);
+  if (isbnPattern) andConditions.push({ isbn: isbnPattern });
+
+  const publisherPattern = buildLikePattern(publisher);
+  if (publisherPattern) andConditions.push({ publisher: publisherPattern });
+
+  const searchPattern = buildLikePattern(search);
+  if (searchPattern) {
+    andConditions.push({
+      [Op.or]: [
+        { title: searchPattern },
+        { subtitle: searchPattern },
+        { authors: searchPattern },
+        { isbn: searchPattern },
+        { publisher: searchPattern },
+        { keywords: searchPattern },
+      ],
+    });
+  }
+
+  return { [Op.and]: andConditions };
+}
+
+function buildInventoryListWhere(filters = {}) {
+  const { accessionNumber, status } = filters;
+  const inventoryWhere = {};
+
+  const accessionPattern = buildLikePattern(accessionNumber);
+  if (accessionPattern) inventoryWhere.accessionNumber = accessionPattern;
+  if (status) inventoryWhere.status = status;
+
+  return Object.keys(inventoryWhere).length ? inventoryWhere : undefined;
+}
+
+function buildAllBooksQueryInclude(inventoryWhere) {
+  return [
+    {
+      model: model.libraryBookInventoryModel,
+      as: "inventoryCopies",
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt"],
+      },
+      required: true,
+      ...(inventoryWhere && { where: inventoryWhere }),
+      include: [
+        {
+          model: model.libraryAisleModel,
+          as: "aisleDetails",
+          attributes: ["libraryAisleId", "name", "libraryFloorId"],
+          required: false,
+        },
+        {
+          model: model.libraryRackModel,
+          as: "rackDetails",
+          attributes: ["libraryRackId", "name"],
+          required: false,
+        },
+        {
+          model: model.libraryRowModel,
+          as: "rowDetails",
+          attributes: ["libraryRowId", "name"],
+          required: false,
+        },
+      ],
+    },
+  ];
+}
+
+export async function getAllBooks(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  pagination = {},
+  filters = {},
+) {
   const floor = await model.libraryFloorModel.findOne({
     attributes: ["libraryFloorId"],
     where: {
@@ -199,48 +329,39 @@ export async function getAllBooks(universityId, libraryCreationId, libraryFloorI
     },
   });
 
-  if (!floor) return [];
+  if (!floor) {
+    return { rows: [], count: 0 };
+  }
 
-  return model.libraryBookModel.findAll({
-    where: { libraryCreationId },
+  const activeFilters = sanitizeBookListFilters(filters);
+  const { limit, offset } = pagination;
+  const inventoryWhere = buildInventoryListWhere(activeFilters);
+  const queryBase = {
+    where: buildBookListWhere(libraryCreationId, activeFilters),
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    include: [
-      {
-        model: model.libraryBookInventoryModel,
-        as: "inventoryCopies",
-        attributes: {
-          exclude: ["createdAt", "updatedAt", "deletedAt"],
-        },
-        required: true,
-        include: [
-          {
-            model: model.libraryAisleModel,
-            as: "aisleDetails",
-            attributes: ["libraryAisleId", "name", "libraryFloorId"],
-            required: false,
-          },
-          {
-            model: model.libraryRackModel,
-            as: "rackDetails",
-            attributes: ["libraryRackId", "name"],
-            required: false,
-          },
-          {
-            model: model.libraryRowModel,
-            as: "rowDetails",
-            attributes: ["libraryRowId", "name"],
-            required: false,
-          },
-        ],
-      },
-    ],
+    include: buildAllBooksQueryInclude(inventoryWhere),
     order: [
-      ["libraryBookId", "DESC"],
-      [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
+      ["libraryBookId", "ASC"],
+      [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "ASC"],
     ],
-  });
+    subQuery: false,
+  };
+
+  const [count, rows] = await Promise.all([
+    model.libraryBookModel.count({
+      ...queryBase,
+      distinct: true,
+    }),
+    model.libraryBookModel.findAll({
+      ...queryBase,
+      limit,
+      offset,
+    }),
+  ]);
+
+  return { rows, count };
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {
@@ -630,6 +751,10 @@ export async function findBookByTitle(title, libraryCreationId, transaction) {
 }
 
 export async function createInventoryBulk(data, transaction) {
+  if (Array.isArray(data)) {
+    if (data.length === 0) return [];
+    return model.libraryBookInventoryModel.bulkCreate(data, { transaction });
+  }
   return model.libraryBookInventoryModel.create(data, { transaction });
 }
 
@@ -661,6 +786,12 @@ export async function getSubjectsByNames(names) {
   if (!names || names.length === 0) return [];
   return await model.subjectModel.findAll({
     where: { subjectName: names },
+    attributes: ["subjectId", "subjectName"],
+  });
+}
+
+export async function findAllSubjectNamesForBulkLookup() {
+  return model.subjectModel.findAll({
     attributes: ["subjectId", "subjectName"],
   });
 }
