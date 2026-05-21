@@ -1,6 +1,5 @@
 import * as libraryCreation  from  "../services/libraryCreationServices.js";
 import { importLibraryBooksFromExcel } from "../services/libraryBookBulkUploadServices.js";
-import { validateBulkUploadExcelFile } from "../middleware/bulkuploadfileuploader.js";
 import * as fileHandler from '../utility/fileHandler.js';
 
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
@@ -338,14 +337,7 @@ export async function getAllIssuedBooks(req, res) {
 
 export async function bulkUploadBooks(req, res) {
     try {
-        const excelFile = req.files?.book;
-        const fileTypeError = validateBulkUploadExcelFile(excelFile);
-
-        if (fileTypeError) {
-            return ErrorResponse(res, 400, fileTypeError);
-        }
-
-        const excelData = fileHandler.readLibraryBulkUploadExcelFile(excelFile.data);
+        const excelData = fileHandler.readLibraryBulkUploadExcelFile(req.files.book.data);
         if (!excelData) {
             return ErrorResponse(res, 400, "Error reading the Excel file");
         }
