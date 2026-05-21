@@ -209,7 +209,6 @@ router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema 
 router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);
-
 router.get("/allBook", userAuth, validate({ query: listBooksQuerySchema }), getAllBooks);
 
 router.get("/singleBook", userAuth, validate({ query: libraryBookQuerySchema }), getSingleBookDetails);
@@ -233,5 +232,6 @@ router.post(
   validate({ query: idQuerySchema }),
   bulkUploadBooks,
 );
+
 
 export default router;

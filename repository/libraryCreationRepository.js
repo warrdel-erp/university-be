@@ -31,16 +31,6 @@ const bookMappingIncludes = [
   },
 ];
 
-export async function addLibrary(libraryData, transaction) {
-  try {
-    const result = await model.libraryCreationModel.create(libraryData, { transaction });
-    return result;
-  } catch (error) {
-    console.error("Error in add library :", error);
-    throw error;
-  }
-}
-
 export async function addCategory(categoryData, transaction) {
   return await model.libraryCategoryModel.create(categoryData, { transaction });
 }
@@ -152,16 +142,6 @@ export async function deleteCategory(libraryCategoryId, transaction) {
   return deleted > 0;
 }
 
-export async function addLibraryAuthority(libraryData, transaction) {
-  try {
-    const result = await model.libraryAuthorityModel.create(libraryData, { transaction });
-    return result;
-  } catch (error) {
-    console.error("Error in add library Authority:", error);
-    throw error;
-  }
-}
-
 export async function getLibraryDetails(universityId) {
   try {
     const libraries = await model.libraryCreationModel.findAll({
@@ -253,21 +233,6 @@ export async function updateLibrary(libraryCreationId, libraryData) {
     return result;
   } catch (error) {
     console.error(`Error updating library creation ${libraryCreationId}:`, error);
-    throw error;
-  }
-}
-
-export async function updateLibraryAuthority(libraryAuthorityId, libraryData, transaction) {
-  try {
-    const result = await model.libraryAuthorityModel.update(libraryData, {
-      where: {
-        libraryAuthorityId: libraryAuthorityId,
-      },
-      transaction,
-    });
-    return result;
-  } catch (error) {
-    console.error(`Error updating library authority ${libraryAuthorityId}:`, error);
     throw error;
   }
 }
@@ -497,20 +462,6 @@ export async function deleteInventoryCopy(inventoryId) {
   }
 }
 
-/** Soft-deletes all inventory rows for a book except those in keepInventoryIds. Empty keepInventoryIds deletes every copy for the book. */
-export async function deleteInventoryCopiesForBookExceptIds(
-  libraryBookId,
-  keepInventoryIds,
-  transaction,
-) {
-  const keep = [...new Set((keepInventoryIds || []).map(Number).filter((n) => !Number.isNaN(n)))];
-  const where = { libraryBookId };
-  if (keep.length > 0) {
-    where.inventoryId = { [Op.notIn]: keep };
-  }
-  return await model.libraryBookInventoryModel.destroy({ where, transaction });
-}
-
 export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
   const row = await model.libraryBookInventoryModel.findByPk(inventoryId, {
     attributes: ["libraryBookId"],
@@ -717,13 +668,6 @@ export async function getBooksIssuedToEmployee(employeeId) {
   }
 }
 
-export async function findBookByIsbn(isbn, transaction) {
-  return model.libraryBookModel.findOne({
-    where: { isbn },
-    transaction,
-  });
-}
-
 export async function findBookByTitle(title, libraryCreationId, transaction) {
   const where = {
     [Op.and]: [
@@ -744,10 +688,6 @@ export async function findBookByTitle(title, libraryCreationId, transaction) {
   });
 }
 
-export async function createInventoryBulk(data, transaction) {
-  return model.libraryBookInventoryModel.create(data, { transaction });
-}
-
 export async function getCategoriesByIds(ids, transaction) {
   if (!ids || ids.length === 0) return [];
   return await model.libraryCategoryModel.findAll({
@@ -763,21 +703,5 @@ export async function getSubjectsByIds(ids, transaction) {
     where: { subjectId: ids },
     attributes: ["subjectId", "subjectName"],
     transaction,
-  });
-}
-
-export async function getCategoriesByNames(names) {
-  if (!names || names.length === 0) return [];
-  return await model.libraryCategoryModel.findAll({
-    where: { name: names },
-    attributes: ["libraryCategoryId", "name"],
-  });
-}
-
-export async function getSubjectsByNames(names) {
-  if (!names || names.length === 0) return [];
-  return await model.subjectModel.findAll({
-    where: { subjectName: names },
-    attributes: ["subjectId", "subjectName"],
   });
 }

@@ -1,6 +1,8 @@
 import * as libraryCreation from "../services/libraryCreationServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
+import { bulkUploadLibraryBooks } from "../services/libraryBookBulkUploadServices.js";
+
 export async function addLibrary(req, res) {
   try {
     const library = await libraryCreation.addLibrary(req.body, req.user);
@@ -177,9 +179,14 @@ export async function getAllIssuedBooks(req, res) {
 
 export async function bulkUploadBooks(req, res) {
   try {
-    await libraryCreation.bulkUploadBooks(req.files, req.query, req.user);
-    return SuccessResponse(res, 200, "Data uploaded successfully");
+    const data = await bulkUploadLibraryBooks(req.files?.book, req.user, req.query);
+    return SuccessResponse(res, 200, "Data uploaded successfully", data);
   } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error",
+      error.details ?? null,
+    );
   }
 }

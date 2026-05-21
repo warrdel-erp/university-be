@@ -1,20 +1,10 @@
-/**
- * Library book bulk upload — business logic for POST /libraryCreation/bulkUpload
- *
- * Flow (controller reads Excel → calls importLibraryBooksFromExcel):
- *   1. Parse each Excel row → book + inventory + location (aisle/rack/row names)
- *   2. Validate all rows before any DB write (fail fast with row numbers)
- *   3. Preload existing books, categories, subjects (avoid N+1 lookups)
- *   4. Process in batches of 500 inside one DB transaction (full rollback on any error)
- *   5. Per batch: create missing books once, then create inventory rows for every row
- *
- * One Excel row = one inventory copy. Multiple rows with same ISBN/title reuse one book.
- */
+/** Library book bulk upload — POST /libraryCreation/bulkUpload */
 
 import * as libraryBookBulkUploadRepository from "../repository/libraryBookBulkUploadRepository.js";
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
+import { readLibraryBulkUploadFile } from "../utility/fileHandler.js";
 
 // =============================================================================
 // CONFIG — allowed DB columns, Excel aliases, limits
@@ -74,8 +64,8 @@ const BULK_BOOK_FIELD_ALIASES = {
   issn: ["ISSN", "Issn"],
   keywords: ["Keywords", "Keyword", "tags"],
   itemType: ["Item Type", "item type", "ItemType", "type"],
-  subjectId: ["Subject", "Subjects", "subject id", "Subject Id"],
-  categoryId: ["Category", "Categories", "category id", "Category Id"],
+  subjectId: ["Subject", "Subjects", "subject id", "Subject Id", "subjectId"],
+  categoryId: ["Category", "Categories", "category id", "Category Id", "categoryId"],
 };
 
 const BULK_INVENTORY_FIELD_ALIASES = {
@@ -521,41 +511,116 @@ function formatBulkUploadDatabaseError(error) {
     : "Unknown database error during bulk import";
 }
 
+// =============================================================================
+// PRE-UPLOAD VALIDATION (all checks before any transaction)
+// =============================================================================
+
+/** Build Set of valid numeric IDs from preloaded master rows. */
+function buildMasterIdSet(masterRows, idField) {
+  const idSet = new Set();
+  for (const row of masterRows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    if (plain[idField] != null) idSet.add(plain[idField]);
+  }
+  return idSet;
+}
+
 /**
- * Excel validation does not catch DB-only rules: duplicate accessionNumber (unique),
- * invalid FK ids, Sequelize column validators, etc.
+ * Check categoryId / subjectId on each row (comma-separated names or numeric IDs).
+ * Runs after categories/subjects are preloaded — fails before DB transaction.
  */
-async function validateBulkUploadAccessionUniqueness(parsedRows) {
-  const validationErrors = [];
-  const accessionFirstRowInFile = new Map();
+function validateCategoryAndSubjectNamesOnAllRows(
+  parsedRows,
+  categoryNameToIdMap,
+  subjectNameToIdMap,
+  validCategoryIds,
+  validSubjectIds,
+) {
+  const errors = [];
+
+  for (const { rowNumber, book } of parsedRows) {
+    if (book.categoryId != null && book.categoryId !== undefined) {
+      const { ids, names } = splitBulkSubjectAndCategoryCellValues(book.categoryId);
+
+      for (const id of ids) {
+        if (!validCategoryIds.has(id)) {
+          errors.push(
+            formatBulkUploadRowError(rowNumber, `categoryId ${id} not found in library_category`),
+          );
+        }
+      }
+
+      for (const name of names) {
+        if (!categoryNameToIdMap.has(name.toLowerCase())) {
+          errors.push(
+            formatBulkUploadRowError(rowNumber, `categoryId name '${name}' not found`),
+          );
+        }
+      }
+    }
+
+    if (book.subjectId != null && book.subjectId !== undefined) {
+      const { ids, names } = splitBulkSubjectAndCategoryCellValues(book.subjectId);
+
+      for (const id of ids) {
+        if (!validSubjectIds.has(id)) {
+          errors.push(
+            formatBulkUploadRowError(rowNumber, `subjectId ${id} not found in subject table`),
+          );
+        }
+      }
+
+      for (const name of names) {
+        if (!subjectNameToIdMap.has(name.toLowerCase())) {
+          errors.push(
+            formatBulkUploadRowError(rowNumber, `subjectId name '${name}' not found`),
+          );
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Accession rules:
+ * 1) No duplicate accessionNumber inside the Excel file.
+ * 2) accessionNumber must not already exist in DB (only checks accessions in this file).
+ */
+async function validateAccessionNumbersBeforeUpload(parsedRows) {
+  const errors = [];
+  const firstRowByAccession = new Map();
+  const accessionNumbersInFile = [];
 
   for (const row of parsedRows) {
     const accessionNumber = String(row.inventory.accessionNumber).trim();
 
-    if (accessionFirstRowInFile.has(accessionNumber)) {
-      validationErrors.push(
+    if (firstRowByAccession.has(accessionNumber)) {
+      errors.push(
         formatBulkUploadRowError(
           row.rowNumber,
-          `duplicate accessionNumber "${accessionNumber}" in Excel (first at row ${accessionFirstRowInFile.get(accessionNumber)})`,
+          `duplicate accessionNumber "${accessionNumber}" in Excel (first at row ${firstRowByAccession.get(accessionNumber)})`,
         ),
       );
       continue;
     }
 
-    accessionFirstRowInFile.set(accessionNumber, row.rowNumber);
+    firstRowByAccession.set(accessionNumber, row.rowNumber);
+    accessionNumbersInFile.push(accessionNumber);
   }
 
-  const existingRows = await libraryBookBulkUploadRepository.findAllExistingAccessionNumbers();
-  const existingAccessionSet = new Set(
-    existingRows.map((row) =>
-      String(row.accessionNumber ?? row.accession_number ?? "").trim(),
-    ),
+  const existingInDb = await libraryBookBulkUploadRepository.findExistingAccessionNumbersInList(
+    accessionNumbersInFile,
+  );
+  const existingSet = new Set(
+    existingInDb.map((row) => String(row.accessionNumber ?? row.accession_number ?? "").trim()),
   );
 
   for (const row of parsedRows) {
     const accessionNumber = String(row.inventory.accessionNumber).trim();
-    if (existingAccessionSet.has(accessionNumber)) {
-      validationErrors.push(
+    if (existingSet.has(accessionNumber)) {
+      errors.push(
         formatBulkUploadRowError(
           row.rowNumber,
           `accessionNumber "${accessionNumber}" already exists in database`,
@@ -564,11 +629,43 @@ async function validateBulkUploadAccessionUniqueness(parsedRows) {
     }
   }
 
-  if (validationErrors.length > 0) {
-    return { ok: false, result: formatBulkUploadValidationErrors(validationErrors) };
+  return errors;
+}
+
+/**
+ * Run every check that can fail before we open a DB transaction.
+ */
+async function runAllPreUploadValidations(parsedRows, instituteId) {
+  const [categoryRows, subjectRows] = await Promise.all([
+    libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(instituteId),
+    libraryBookBulkUploadRepository.findAllSubjectsForBulkUpload(),
+  ]);
+
+  const categoryNameToIdMap = buildMasterRecordNameToIdMap(categoryRows, "name", "libraryCategoryId");
+  const subjectNameToIdMap = buildMasterRecordNameToIdMap(subjectRows, "subjectName", "subjectId");
+  const validCategoryIds = buildMasterIdSet(categoryRows, "libraryCategoryId");
+  const validSubjectIds = buildMasterIdSet(subjectRows, "subjectId");
+
+  const errors = [
+    ...validateCategoryAndSubjectNamesOnAllRows(
+      parsedRows,
+      categoryNameToIdMap,
+      subjectNameToIdMap,
+      validCategoryIds,
+      validSubjectIds,
+    ),
+    ...(await validateAccessionNumbersBeforeUpload(parsedRows)),
+  ];
+
+  if (errors.length > 0) {
+    return { ok: false, result: formatBulkUploadValidationErrors(errors) };
   }
 
-  return { ok: true };
+  return {
+    ok: true,
+    categoryNameToIdMap,
+    subjectNameToIdMap,
+  };
 }
 
 function splitBulkUploadRowsIntoBatches(rows, batchSize) {
@@ -637,58 +734,172 @@ function buildMasterRecordNameToIdMap(masterRows, nameField, idField) {
 }
 
 /**
- * Resolve subjectId/categoryId array: numeric IDs pass through;
- * names are matched case-insensitively against preloaded master data.
+ * Excel: "Coding,Test Category 1779195012897" or [1, "Math"] → numeric IDs + name tokens.
+ * Names resolve via preloaded map, then getCategoryIdByName (same as addBook mapping tables).
  */
-function resolveBulkUploadSubjectOrCategoryIds(cellValues, fieldName, nameToIdMap, excelRowNumber) {
+async function resolveBulkUploadCategoryIds(
+  cellValues,
+  instituteId,
+  categoryNameToIdMap,
+  excelRowNumber,
+  transaction,
+) {
   const { ids, names } = splitBulkSubjectAndCategoryCellValues(cellValues);
-  if (names.length === 0) {
-    return ids.length ? ids : null;
-  }
-
   const resolvedIds = [...ids];
+
   for (const name of names) {
-    const resolvedId = nameToIdMap.get(name.toLowerCase());
-    if (!resolvedId) {
-      throw new Error(formatBulkUploadRowError(excelRowNumber, `${fieldName} name '${name}' not found`));
+    let libraryCategoryId =
+      categoryNameToIdMap.get(name.toLowerCase()) ??
+      (await libraryBookBulkUploadRepository.getCategoryIdByName(name, instituteId, transaction));
+
+    if (!libraryCategoryId) {
+      throw new Error(
+        formatBulkUploadRowError(excelRowNumber, `categoryId name '${name}' not found`),
+      );
     }
-    resolvedIds.push(resolvedId);
+    resolvedIds.push(libraryCategoryId);
   }
 
   const uniqueIds = [...new Set(resolvedIds)];
   return uniqueIds.length ? uniqueIds : null;
 }
 
-/** Final payload for library_book.bulkCreate — resolves names and audit fields. */
-function buildLibraryBookInsertPayload(
+async function resolveBulkUploadSubjectIds(
+  cellValues,
+  subjectNameToIdMap,
+  excelRowNumber,
+  transaction,
+) {
+  const { ids, names } = splitBulkSubjectAndCategoryCellValues(cellValues);
+  const resolvedIds = [...ids];
+
+  for (const name of names) {
+    let subjectId =
+      subjectNameToIdMap.get(name.toLowerCase()) ??
+      (await libraryBookBulkUploadRepository.getSubjectIdByName(name, transaction));
+
+    if (!subjectId) {
+      throw new Error(
+        formatBulkUploadRowError(excelRowNumber, `subjectId name '${name}' not found`),
+      );
+    }
+    resolvedIds.push(subjectId);
+  }
+
+  const uniqueIds = [...new Set(resolvedIds)];
+  return uniqueIds.length ? uniqueIds : null;
+}
+
+/** Book row for library_book.bulkCreate; subject/category go to mapping tables (same as addBook). */
+async function buildBulkUploadNewBookRecord(
   book,
   libraryCreationId,
+  instituteId,
   createdBy,
   updatedBy,
   categoryNameToIdMap,
   subjectNameToIdMap,
   excelRowNumber,
+  transaction,
 ) {
+  const { subjectId: rawSubjectId, categoryId: rawCategoryId, ...bookFields } = book;
+
+  const subjectId =
+    rawSubjectId !== undefined && rawSubjectId !== null
+      ? await resolveBulkUploadSubjectIds(
+          rawSubjectId,
+          subjectNameToIdMap,
+          excelRowNumber,
+          transaction,
+        )
+      : null;
+
+  const categoryId =
+    rawCategoryId !== undefined && rawCategoryId !== null
+      ? await resolveBulkUploadCategoryIds(
+          rawCategoryId,
+          instituteId,
+          categoryNameToIdMap,
+          excelRowNumber,
+          transaction,
+        )
+      : null;
+
   return {
-    ...book,
-    isbn: book.isbn ?? null,
-    subjectId: resolveBulkUploadSubjectOrCategoryIds(
-      book.subjectId,
-      "subjectId",
-      subjectNameToIdMap,
-      excelRowNumber,
-    ),
-    categoryId: resolveBulkUploadSubjectOrCategoryIds(
-      book.categoryId,
-      "categoryId",
-      categoryNameToIdMap,
-      excelRowNumber,
-    ),
-    // Always use query libraryCreationId (validated before import), not Excel column
-    libraryCreationId,
-    createdBy,
-    updatedBy,
+    bookPayload: {
+      ...bookFields,
+      isbn: book.isbn ?? null,
+      libraryCreationId,
+      createdBy,
+      updatedBy,
+    },
+    subjectId,
+    categoryId,
   };
+}
+
+async function validateBulkUploadBookMappingIds(
+  { subjectId, categoryId, instituteId },
+  transaction,
+) {
+  if (!instituteId && (subjectId?.length || categoryId?.length)) {
+    throw new Error("instituteId is required for book subject/category mappings");
+  }
+
+  if (subjectId?.length) {
+    const subjects = await libraryBookBulkUploadRepository.getSubjectsByIds(subjectId, transaction);
+    const foundIds = new Set(subjects.map((row) => row.subjectId));
+    const missingIds = subjectId.filter((id) => !foundIds.has(id));
+    if (missingIds.length) {
+      throw new Error(
+        `Invalid subjectId(s): ${missingIds.join(", ")}. Must exist in subject table.`,
+      );
+    }
+  }
+
+  if (categoryId?.length) {
+    const categories = await libraryBookBulkUploadRepository.getCategoriesByIds(
+      categoryId,
+      transaction,
+    );
+    const foundIds = new Set(categories.map((row) => row.libraryCategoryId));
+    const missingIds = categoryId.filter((id) => !foundIds.has(id));
+    if (missingIds.length) {
+      throw new Error(
+        `Invalid categoryId(s): ${missingIds.join(", ")}. Must exist in library_category table.`,
+      );
+    }
+  }
+}
+
+async function syncBulkUploadBookMappings(
+  libraryBookId,
+  { subjectId, categoryId, instituteId },
+  transaction,
+) {
+  const hasSubjects = subjectId?.length > 0;
+  const hasCategories = categoryId?.length > 0;
+  if (!hasSubjects && !hasCategories) return;
+
+  await validateBulkUploadBookMappingIds({ subjectId, categoryId, instituteId }, transaction);
+
+  if (hasSubjects) {
+    await libraryBookBulkUploadRepository.replaceBookSubjectMappings(
+      libraryBookId,
+      subjectId,
+      instituteId,
+      transaction,
+    );
+  }
+
+  if (hasCategories) {
+    await libraryBookBulkUploadRepository.replaceBookCategoryMappings(
+      libraryBookId,
+      categoryId,
+      instituteId,
+      transaction,
+    );
+  }
 }
 
 /** Indexes of books already in DB — used to skip insert when ISBN/title matches. */
@@ -766,14 +977,14 @@ async function resolveBulkUploadLocationIdsForRow(location, aisleCache, rackCach
 }
 
 // =============================================================================
-// BATCH PERSISTENCE — all batches share one transaction (commit once or rollback all)
+// STAGE 3 — BATCH EXECUTION (inside transaction)
 // =============================================================================
 
 /**
- * Within a single transaction for one batch:
- *   Phase A — Decide which books to insert (dedupe by cache key + DB indexes)
- *   Phase B — bulkCreate books, update bookCache and indexes
- *   Phase C — bulkCreate inventory for every row in batch (always one inventory per row)
+ * One batch (max 500 rows), same transaction:
+ *   Phase A — unique books to insert (ISBN/title dedupe; existing DB book reuse)
+ *   Phase B — bulkCreate books + category/subject mapping rows
+ *   Phase C — bulkCreate inventory (one accession per Excel row)
  */
 async function persistBulkUploadBatchInTransaction({
   parsedRowBatch,
@@ -783,6 +994,7 @@ async function persistBulkUploadBatchInTransaction({
   categoryNameToIdMap,
   subjectNameToIdMap,
   libraryCreationId,
+  instituteId,
   createdBy,
   updatedBy,
   aisleCache,
@@ -792,16 +1004,15 @@ async function persistBulkUploadBatchInTransaction({
 }) {
   const pendingBooksByCacheKey = new Map();
 
-  // --- Phase A: collect unique new books for this batch ---
+  // --- Phase A: decide library_book per unique ISBN/title ---
+  // Same ISBN or title → reuse one book; only accessionNumber is new per Excel row.
   for (const { book, rowNumber } of parsedRowBatch) {
     const cacheKey = buildBulkUploadBookCacheKey(book);
 
-    // Already linked in this upload (earlier row or batch)
     if (bookCache[cacheKey]) {
       continue;
     }
 
-    // Match existing DB record by ISBN, then title
     let libraryBookId = null;
     if (book.isbn) {
       libraryBookId = bookIndexByIsbn.get(String(book.isbn).trim());
@@ -819,32 +1030,51 @@ async function persistBulkUploadBatchInTransaction({
     if (!pendingBooksByCacheKey.has(cacheKey)) {
       pendingBooksByCacheKey.set(
         cacheKey,
-        buildLibraryBookInsertPayload(
+        await buildBulkUploadNewBookRecord(
           book,
           libraryCreationId,
+          instituteId,
           createdBy,
           updatedBy,
           categoryNameToIdMap,
           subjectNameToIdMap,
           rowNumber,
+          transaction,
         ),
       );
     }
   }
 
   // --- Phase B: insert all new books in one bulkCreate ---
-  if (pendingBooksByCacheKey.size > 0) {
+  const newBooksInserted = pendingBooksByCacheKey.size;
+  if (newBooksInserted > 0) {
     const pendingEntries = [...pendingBooksByCacheKey.entries()];
     const createdBooks = await libraryBookBulkUploadRepository.bulkInsertLibraryBooks(
-      pendingEntries.map(([, payload]) => payload),
+      pendingEntries.map(([, record]) => record.bookPayload),
       transaction,
     );
 
-    pendingEntries.forEach(([cacheKey, payload], index) => {
+    for (let index = 0; index < pendingEntries.length; index++) {
+      const [cacheKey, record] = pendingEntries[index];
       const libraryBookId = createdBooks[index].libraryBookId;
       bookCache[cacheKey] = libraryBookId;
-      registerBookInLookupIndexes(libraryBookId, payload, bookIndexByTitle, bookIndexByIsbn);
-    });
+      registerBookInLookupIndexes(
+        libraryBookId,
+        record.bookPayload,
+        bookIndexByTitle,
+        bookIndexByIsbn,
+      );
+
+      await syncBulkUploadBookMappings(
+        libraryBookId,
+        {
+          subjectId: record.subjectId,
+          categoryId: record.categoryId,
+          instituteId,
+        },
+        transaction,
+      );
+    }
   }
 
   // --- Phase C: every Excel row becomes one inventory row ---
@@ -866,12 +1096,16 @@ async function persistBulkUploadBatchInTransaction({
     });
   }
 
+  let inventoryInserted = 0;
   if (inventoryInsertPayloads.length > 0) {
     await libraryBookBulkUploadRepository.bulkInsertLibraryBookInventory(
       inventoryInsertPayloads,
       transaction,
     );
+    inventoryInserted = inventoryInsertPayloads.length;
   }
+
+  return { newBooksInserted, inventoryInserted };
 }
 
 // =============================================================================
@@ -928,17 +1162,129 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
   return { ok: true, parsedRows };
 }
 
-// =============================================================================
-// PUBLIC API
-// =============================================================================
+async function executeBulkUploadInTransaction({
+  parsedRows,
+  libraryCreationId,
+  instituteId,
+  categoryNameToIdMap,
+  subjectNameToIdMap,
+  createdBy,
+  updatedBy,
+}) {
+  const existingBooks = await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(
+    libraryCreationId,
+  );
+  const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
+    buildExistingBookLookupIndexes(existingBooks);
 
-/**
- * Main entry: import library books + inventory from parsed Excel rows.
- * Called by libraryCreationController.bulkUploadBooks after readExcelFile().
- *
- * @param {object[]} excelRows - JSON rows from sheet_to_json (first row = headers)
- * @returns {{ status: 'success'|'error', message?, importedRows?, uniqueBooks?, ... }}
- */
+  return sequelize.transaction(async (transaction) => {
+    const instituteIdForMappings =
+      instituteId ??
+      (await libraryBookBulkUploadRepository.getInstituteIdByLibraryCreationId(
+        Number(libraryCreationId),
+        transaction,
+      ));
+
+    const bookCache = {};
+    const aisleCache = new Map();
+    const rackCache = new Map();
+    const rowCache = new Map();
+    const rowBatches = splitBulkUploadRowsIntoBatches(parsedRows, BULK_UPLOAD_BATCH_SIZE);
+    const totalBatches = rowBatches.length;
+    const transactionStartedAt = Date.now();
+
+    console.log(
+      `[Library bulk upload] DB transaction started — ${parsedRows.length} row(s), ${totalBatches} batch(es) (max ${BULK_UPLOAD_BATCH_SIZE} rows/batch). Full rollback on any failure.`,
+    );
+
+    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      const parsedRowBatch = rowBatches[batchIndex];
+      const batchStartedAt = Date.now();
+
+      const { newBooksInserted, inventoryInserted } = await persistBulkUploadBatchInTransaction({
+        parsedRowBatch,
+        bookCache,
+        bookIndexByTitle,
+        bookIndexByIsbn,
+        categoryNameToIdMap,
+        subjectNameToIdMap,
+        libraryCreationId,
+        instituteId: instituteIdForMappings,
+        createdBy,
+        updatedBy,
+        aisleCache,
+        rackCache,
+        rowCache,
+        transaction,
+      });
+
+      const batchMs = Date.now() - batchStartedAt;
+      console.log(
+        `[Library bulk upload] Batch ${batchIndex + 1}/${totalBatches} — ${parsedRowBatch.length} row(s), ${newBooksInserted} new book(s), ${inventoryInserted} inventory row(s) — ${batchMs}ms`,
+      );
+    }
+
+    const transactionMs = Date.now() - transactionStartedAt;
+    console.log(
+      `[Library bulk upload] Transaction finished — ${parsedRows.length} row(s), ${Object.keys(bookCache).length} unique book(s) — total ${transactionMs}ms (commit on success)`,
+    );
+
+    return {
+      status: "success",
+      importedRows: parsedRows.length,
+      uniqueBooks: Object.keys(bookCache).length,
+    };
+  });
+}
+
+const bulkUploadHttpError = (message, statusCode = 400, details = null) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  if (details) error.details = details;
+  return error;
+};
+
+function throwIfBulkUploadFailed(result) {
+  if (result.status !== "error") return;
+
+  const details = {};
+  if (result.totalErrors != null) details.totalErrors = result.totalErrors;
+  if (result.totalRows != null) details.totalRows = result.totalRows;
+
+  throw bulkUploadHttpError(
+    result.message,
+    400,
+    Object.keys(details).length ? details : null,
+  );
+}
+
+/** Controller entry: validate upload file, run import, return success payload or throw. */
+export async function bulkUploadLibraryBooks(uploadFile, user, query) {
+  if (!uploadFile) {
+    throw bulkUploadHttpError("File is required (form-data field: book)");
+  }
+
+  const rows = await readLibraryBulkUploadFile(uploadFile);
+  if (!rows.length) {
+    throw bulkUploadHttpError("File has no data rows");
+  }
+
+  const result = await importLibraryBooksFromExcel(
+    rows,
+    user.userId,
+    user.userId,
+    query.libraryCreationId,
+    user.defaultInstituteId,
+  );
+
+  throwIfBulkUploadFailed(result);
+
+  return {
+    importedRows: result.importedRows,
+    uniqueBooks: result.uniqueBooks,
+  };
+}
+
 export async function importLibraryBooksFromExcel(
   excelRows,
   createdBy,
@@ -946,16 +1292,14 @@ export async function importLibraryBooksFromExcel(
   libraryCreationId,
   instituteId,
 ) {
-  const uploadStartedAt = Date.now();
-
   if (libraryCreationId == null || libraryCreationId === "") {
     return { status: "error", message: "libraryCreationId is required" };
   }
 
-  const libraryExists = await libraryBookBulkUploadRepository.findLibraryCreationById(
+  const library = await libraryBookBulkUploadRepository.findLibraryCreationById(
     Number(libraryCreationId),
   );
-  if (!libraryExists) {
+  if (!library) {
     return {
       status: "error",
       message: `Library with libraryCreationId ${libraryCreationId} does not exist`,
@@ -967,8 +1311,7 @@ export async function importLibraryBooksFromExcel(
   }
 
   const dataRows = filterNonEmptyBulkExcelRows(excelRows);
-
-  if (dataRows.length === 0) {
+  if (!dataRows.length) {
     return { status: "error", message: "Excel file has no data rows" };
   }
 
@@ -979,97 +1322,38 @@ export async function importLibraryBooksFromExcel(
     };
   }
 
-  // Validate entire file first — no partial DB writes on bad data
   const parseResult = parseAndValidateBulkUploadExcelRows(dataRows);
   if (!parseResult.ok) {
     return parseResult.result;
   }
 
-  const parsedRows = parseResult.parsedRows;
-
-  const accessionResult = await validateBulkUploadAccessionUniqueness(parsedRows);
-  if (!accessionResult.ok) {
-    return accessionResult.result;
+  const resolvedInstituteId = instituteId ?? library.instituteId ?? null;
+  const preUpload = await runAllPreUploadValidations(
+    parseResult.parsedRows,
+    resolvedInstituteId,
+  );
+  if (!preUpload.ok) {
+    return preUpload.result;
   }
 
-  // Preload masters once (not per row)
-  const preloadStartedAt = Date.now();
-  const [existingBooks, categoryRows, subjectRows] = await Promise.all([
-    libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(libraryCreationId),
-    libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(instituteId),
-    libraryBookBulkUploadRepository.findAllSubjectsForBulkUpload(),
-  ]);
-  const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
-    buildExistingBookLookupIndexes(existingBooks);
-  const categoryNameToIdMap = buildMasterRecordNameToIdMap(categoryRows, "name", "libraryCategoryId");
-  const subjectNameToIdMap = buildMasterRecordNameToIdMap(subjectRows, "subjectName", "subjectId");
-
-  // bookCache: cacheKey → libraryBookId (survives across batches)
-  const bookCache = {};
-  const aisleCache = new Map();
-  const rackCache = new Map();
-  const rowCache = new Map();
-
-  console.log(
-    `[importLibraryBooksFromExcel] preloaded books=${existingBooks.length} categories=${categoryNameToIdMap.size} subjects=${subjectNameToIdMap.size} durationMs=${Date.now() - preloadStartedAt}`,
-  );
-
-  const rowBatches = splitBulkUploadRowsIntoBatches(parsedRows, BULK_UPLOAD_BATCH_SIZE);
-  const transaction = await sequelize.transaction();
-
   try {
-    for (let batchIndex = 0; batchIndex < rowBatches.length; batchIndex++) {
-      const batchNumber = batchIndex + 1;
-      const parsedRowBatch = rowBatches[batchIndex];
-      const batchStartedAt = Date.now();
-
-      await persistBulkUploadBatchInTransaction({
-        parsedRowBatch,
-        bookCache,
-        bookIndexByTitle,
-        bookIndexByIsbn,
-        categoryNameToIdMap,
-        subjectNameToIdMap,
-        libraryCreationId,
-        createdBy,
-        updatedBy,
-        aisleCache,
-        rackCache,
-        rowCache,
-        transaction,
-      });
-
-      console.log(
-        `[importLibraryBooksFromExcel] batch=${batchNumber}/${rowBatches.length} rows=${parsedRowBatch.length} durationMs=${Date.now() - batchStartedAt}`,
-      );
-    }
-
-    await transaction.commit();
+    return await executeBulkUploadInTransaction({
+      parsedRows: parseResult.parsedRows,
+      libraryCreationId,
+      instituteId: resolvedInstituteId,
+      categoryNameToIdMap: preUpload.categoryNameToIdMap,
+      subjectNameToIdMap: preUpload.subjectNameToIdMap,
+      createdBy,
+      updatedBy,
+    });
   } catch (error) {
-    await transaction.rollback();
-    const dbErrorMessage = formatBulkUploadDatabaseError(error);
     console.error(
-      `[importLibraryBooksFromExcel] rolled back full upload totalRows=${parsedRows.length} durationMs=${Date.now() - uploadStartedAt}`,
-      dbErrorMessage,
-      error,
+      `[Library bulk upload] Transaction rolled back — ${parseResult.parsedRows.length} row(s) not saved. ${error.message}`,
     );
     return {
       status: "error",
-      message: `Bulk upload failed — no rows were saved. ${dbErrorMessage}`,
-      totalRows: parsedRows.length,
+      message: `Bulk upload failed — no rows were saved. ${formatBulkUploadDatabaseError(error)}`,
+      totalRows: parseResult.parsedRows.length,
     };
   }
-
-  console.log(
-    `[importLibraryBooksFromExcel] complete totalRows=${parsedRows.length} batches=${rowBatches.length} totalDurationMs=${Date.now() - uploadStartedAt}`,
-  );
-
-  return {
-    status: "success",
-    importedRows: parsedRows.length,
-    uniqueBooks: Object.keys(bookCache).length,
-  };
 }
-
-/** @deprecated Use importLibraryBooksFromExcel — kept for existing controller import name. */
-export const bulkUploadBooks = importLibraryBooksFromExcel;

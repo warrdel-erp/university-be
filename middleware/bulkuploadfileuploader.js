@@ -1,32 +1,55 @@
 import path from "path";
+import multer from "multer";
 import { ErrorResponse } from "../utility/response.js";
 
-const ALLOWED_EXTENSIONS = /\.(xlsx|xls|xlsm)$/i;
+const storage = multer.memoryStorage();
 
-/** Returns error message if file is missing or not Excel; otherwise null. */
-export function validateBulkUploadExcelFile(file) {
-  if (!file?.data) {
-    return "Excel file is required (form field: book)";
+const allowedMimetypes = [
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel.sheet.macroEnabled.12",
+];
+
+const filetypes = /csv|xlsx|xlsm|xls/;
+
+/** Accept CSV / Excel by mimetype or file extension. */
+const excelFileFilter = (_req, file, cb) => {
+  const mimetype = allowedMimetypes.includes(file.mimetype);
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+
+  if (mimetype || extname) {
+    return cb(null, true);
   }
 
-  const fileName = file.name || file.originalname || "";
-  const extension = path.extname(fileName).toLowerCase();
+  cb(new Error("Only .csv, .xlsx, .xlsm, and .xls files are allowed!"));
+};
 
-  if (!ALLOWED_EXTENSIONS.test(extension)) {
-    return "Only Excel files are allowed (.xlsx, .xls, .xlsm). PDF and other formats are not supported.";
+export const uploadCSV = multer({
+  storage,
+  fileFilter: excelFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+/** POST /libraryCreation/bulkUpload — form field: book */
+export const libraryBulkUploadMulter = uploadCSV.single("book");
+
+/** Run after multer; maps errors to API response. */
+export function handleLibraryBulkUploadMulterError(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return ErrorResponse(res, 400, "File too large (max 5 MB)");
+    }
+    return ErrorResponse(res, 400, err.message);
   }
 
-  return null;
-}
+  if (err) {
+    return ErrorResponse(res, 400, err.message);
+  }
 
-/**
- * POST /libraryCreation/bulkUpload — accept Excel only (field name: book).
- * Rejects PDF, CSV, and other file types before parsing.
- */
-export function bulkUploadFileUploader(req, res, next) {
-  const fileError = validateBulkUploadExcelFile(req.files?.book);
-  if (fileError) {
-    return ErrorResponse(res, 400, fileError);
+  if (!req.file?.buffer?.length) {
+    return ErrorResponse(res, 400, "File is required (form-data field: book)");
   }
 
   next();
