@@ -564,11 +564,49 @@ export async function createInventory(inventoryData, transaction) {
   return await libraryCreationService.createInventory(inventoryData, transaction);
 }
 
+function throwLibraryBookBusinessError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+}
+
 export async function deleteBook(libraryBookId) {
+  const copyCount = await libraryCreationService.countInventoryCopiesByLibraryBookId(
+    libraryBookId,
+  );
+
+  if (copyCount === 0) {
+    throwLibraryBookBusinessError("Book not found", 404);
+  }
+
+  if (copyCount <= 1) {
+    throwLibraryBookBusinessError(
+      "Cannot delete a book that has only one copy",
+    );
+  }
+
   return await libraryCreationService.deleteBook(libraryBookId);
 }
 
 export async function deleteInventoryCopy(inventoryId) {
+  const libraryBookId = await libraryCreationService.getLibraryBookIdByInventoryId(
+    inventoryId,
+  );
+
+  if (!libraryBookId) {
+    throwLibraryBookBusinessError("Copy not found", 404);
+  }
+
+  const copyCount = await libraryCreationService.countInventoryCopiesByLibraryBookId(
+    libraryBookId,
+  );
+
+  if (copyCount <= 1) {
+    throwLibraryBookBusinessError(
+      "Cannot delete the only copy of this book",
+    );
+  }
+
   return await libraryCreationService.deleteInventoryCopy(inventoryId);
 }
 

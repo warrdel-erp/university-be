@@ -334,6 +334,13 @@ export async function updateInventory(inventoryId, data, transaction) {
   }
 }
 
+export async function countInventoryCopiesByLibraryBookId(libraryBookId, transaction) {
+  return model.libraryBookInventoryModel.count({
+    where: { libraryBookId },
+    transaction,
+  });
+}
+
 export async function deleteBook(libraryBookId) {
   const t = await sequelize.transaction();
   try {

@@ -174,11 +174,7 @@ export async function addBookWithInventory(req, res) {
             createdBy,
             updatedBy
         );
-
-        res.status(201).json({
-            message: "Book & Inventory added successfully",
-            libraryBookId,
-        });
+        return SuccessResponse(res, 201, "Book & Inventory added successfully", libraryBookId);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
@@ -275,18 +271,13 @@ export async function deleteBook(req, res) {
     try {
         const { libraryBookId } = req.query;
 
-        if (!libraryBookId)
-            return ErrorResponse(res, 400, "libraryBookId is required");
-
-        const deleted = await libraryCreation.deleteBook(libraryBookId);
-
-        if (!deleted)
-            return ErrorResponse(res, 404, "Book not found");
+        await libraryCreation.deleteBook(libraryBookId);
 
         return SuccessResponse(res, 200, "Book deleted successfully");
 
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
     }
 };
 
@@ -294,18 +285,13 @@ export async function deleteInventoryCopy(req, res) {
     try {
         const { inventoryId } = req.query;
 
-        if (!inventoryId)
-            return ErrorResponse(res, 400, "inventoryId is required");
-
-        const deleted = await libraryCreation.deleteInventoryCopy(inventoryId);
-
-        if (!deleted)
-            return ErrorResponse(res, 404, "Copy not found");
+        await libraryCreation.deleteInventoryCopy(inventoryId);
 
         return SuccessResponse(res, 200, "Inventory copy deleted successfully");
 
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        const statusCode = error.statusCode || 500;
+        return ErrorResponse(res, statusCode, error.message);
     }
 };
 
