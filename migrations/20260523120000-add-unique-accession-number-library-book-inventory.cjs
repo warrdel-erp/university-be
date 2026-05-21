@@ -14,18 +14,18 @@ module.exports = {
         AND t2.deleted_at IS NULL
     `);
 
-    // Add unique constraint
-    await queryInterface.addConstraint('library_book_inventory', {
-      fields: ['accession_number'],
-      type: 'unique',
-      name: 'unique_accession_number',
-    });
+    // Add a partial unique index so only non-deleted rows are constrained.
+    // A plain UNIQUE constraint would incorrectly block soft-deleted duplicates.
+    await queryInterface.sequelize.query(`
+      CREATE UNIQUE INDEX unique_accession_number
+      ON library_book_inventory (accession_number)
+      WHERE deleted_at IS NULL
+    `);
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeConstraint(
-      'library_book_inventory',
-      'unique_accession_number'
-    );
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS unique_accession_number ON library_book_inventory
+    `);
   },
 };
