@@ -1,4 +1,5 @@
 import * as examStructureRepository from "../repository/examStructureRepository.js";
+import * as examScheduleRepository from "../repository/examScheduleRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
 export async function addExamStructure(examDetail, createdBy, updatedBy,universityId,instituteId) {
@@ -52,7 +53,32 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
         instituteId
     );
 
-    return Promise.all((result || []).map(async (row) => {
+    const rows = result || [];
+    if (!rows.length) {
+        return [];
+    }
+
+    const firstPlain =
+        typeof rows[0]?.toJSON === "function" ? rows[0].toJSON() : rows[0];
+    const firstTermRows = Array.isArray(firstPlain?.examSetupTypeTerms)
+        ? firstPlain.examSetupTypeTerms
+        : [];
+    const term = termNumber ?? firstTermRows[0]?.term;
+    const acedmicYearId =
+        firstPlain?.examStructure?.acedmicYearId ??
+        firstPlain?.examStructure?.acedmicExam?.acedmicYearId;
+
+    let studentCount = 0;
+    if (sessionId && courseId && term != null && acedmicYearId) {
+        studentCount = await examScheduleRepository.getStudentCountByGroup(
+            sessionId,
+            courseId,
+            term,
+            acedmicYearId,
+        );
+    }
+
+    return Promise.all(rows.map(async (row) => {
         const plain = typeof row?.toJSON === "function" ? row.toJSON() : row;
         const termRows = Array.isArray(plain?.examSetupTypeTerms) ? plain.examSetupTypeTerms : [];
         const termIds = termRows
@@ -76,7 +102,8 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
 
         return {
             ...plain,
-            isHallTicketGenerated
+            isHallTicketGenerated,
+            studentCount,
         };
     }));
 };
