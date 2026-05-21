@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { PDFDocument } from "pdf-lib";
 import { createCanvas, loadImage } from "canvas";
 import jsQR from "jsqr";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
+import pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -104,7 +104,7 @@ export async function extractPageRange(srcPdfBytes, startPage, endPage, outputPa
   }
 
   const newDoc = await PDFDocument.create();
-  const copiedPages = await newDoc.copyPagesFrom(srcDoc, pageIndices);
+  const copiedPages = await newDoc.copyPages(srcDoc, pageIndices);
   copiedPages.forEach((p) => newDoc.addPage(p));
 
   const pdfBytes = await newDoc.save();

@@ -7,6 +7,8 @@ export default async function sendEmail(to, subject, link) {
       throw new Error("Missing email credentials (EMAIL_USER or EMAIL_PASS) in .env file");
     }
 
+    console.log(process.env);
+
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {

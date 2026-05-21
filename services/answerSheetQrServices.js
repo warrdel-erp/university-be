@@ -546,7 +546,7 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
         continue;
       }
 
-      const qrValue = await scanQrFromImage(imagePath);
+      let qrValue = await scanQrFromImage(imagePath);
 
       if (!qrValue) {
         scanErrors.push({
@@ -556,6 +556,10 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
             `Please ensure a valid QR code is printed at the top-right corner of every ${PAGES_PER_STUDENT}th page (pages 1, 31, 61, …).`,
         });
       } else {
+        // If the scanned QR includes a path-like structure (e.g. "answersheet/UUID"), split and extract the UUID.
+        if (qrValue.includes("/")) {
+          qrValue = qrValue.split("/").pop();
+        }
         scannedQrs.push({ pageIndex, qrValue });
       }
     }
