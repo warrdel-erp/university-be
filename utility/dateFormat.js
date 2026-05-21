@@ -9,6 +9,8 @@ const STANDARD_DATE_FORMATS = [
   "YYYY/MM/DD",
   "MM/DD/YYYY",
   "M/D/YYYY",
+  "MM/DD/YY",
+  "M/D/YY",
   "DD-MM-YY",
   "D-M-YY",
   "DD/MM/YY",

@@ -21,6 +21,7 @@ import {
   deleteCategory,
 } from "../controllers/libraryCreationController.js";
 import userAuth from "../middleware/authUser.js";
+import { bulkUploadFileUploader } from "../middleware/bulkuploadfileuploader.js";
 
 const router = Router();
 
@@ -265,6 +266,7 @@ router.post(
   "/bulkUpload",
   userAuth,
   validate({ query: idQuerySchema }),
+  bulkUploadFileUploader,
   bulkUploadBooks,
 );
 

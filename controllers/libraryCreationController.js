@@ -1,4 +1,6 @@
 import * as libraryCreation  from  "../services/libraryCreationServices.js";
+import { importLibraryBooksFromExcel } from "../services/libraryBookBulkUploadServices.js";
+import { validateBulkUploadExcelFile } from "../middleware/bulkuploadfileuploader.js";
 import * as fileHandler from '../utility/fileHandler.js';
 
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
@@ -334,21 +336,16 @@ export async function getAllIssuedBooks(req, res) {
     }
 };
 
-const MAX_BULK_UPLOAD_FILE_BYTES = 5 * 1024 * 1024;
-
 export async function bulkUploadBooks(req, res) {
     try {
         const excelFile = req.files?.book;
+        const fileTypeError = validateBulkUploadExcelFile(excelFile);
 
-        if (!excelFile) {
-            return ErrorResponse(res, 400, "Excel file is required");
+        if (fileTypeError) {
+            return ErrorResponse(res, 400, fileTypeError);
         }
 
-        if (excelFile.data?.length > MAX_BULK_UPLOAD_FILE_BYTES) {
-            return ErrorResponse(res, 400, "Excel file must not exceed 5MB");
-        }
-
-        const excelData = fileHandler.readExcelFile(excelFile.data);
+        const excelData = fileHandler.readLibraryBulkUploadExcelFile(excelFile.data);
         if (!excelData) {
             return ErrorResponse(res, 400, "Error reading the Excel file");
         }
@@ -357,7 +354,7 @@ export async function bulkUploadBooks(req, res) {
         const updatedBy = req.user.userId;
         const { libraryCreationId } = req.query;
 
-        const result = await libraryCreation.bulkUploadBooks(
+        const result = await importLibraryBooksFromExcel(
             excelData,
             createdBy,
             updatedBy,
@@ -369,8 +366,6 @@ export async function bulkUploadBooks(req, res) {
             return res.status(400).json({
                 message: result.message,
                 ...(result.totalErrors != null && { totalErrors: result.totalErrors }),
-                ...(result.batchNumber != null && { batchNumber: result.batchNumber }),
-                ...(result.committedRows != null && { committedRows: result.committedRows }),
                 ...(result.totalRows != null && { totalRows: result.totalRows }),
             });
         }
