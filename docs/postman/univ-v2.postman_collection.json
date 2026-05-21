@@ -5208,7 +5208,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5219,23 +5219,86 @@
               "query": [
                 {
                   "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}"
+                  "value": "{{libraryCreation_id}}",
+                  "description": "Required"
                 },
                 {
                   "key": "libraryFloorId",
-                  "value": "{{libraryFloor_id}}"
+                  "value": "{{libraryFloor_id}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Optional, default 1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Optional, default 20, max 100"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — partial match on title, subtitle, authors, isbn, publisher, keywords",
+                  "disabled": true
+                },
+                {
+                  "key": "title",
+                  "value": "",
+                  "description": "Optional — partial match on book title",
+                  "disabled": true
+                },
+                {
+                  "key": "authors",
+                  "value": "",
+                  "description": "Optional — partial match on authors",
+                  "disabled": true
+                },
+                {
+                  "key": "isbn",
+                  "value": "",
+                  "description": "Optional — partial match on ISBN",
+                  "disabled": true
+                },
+                {
+                  "key": "publisher",
+                  "value": "",
+                  "description": "Optional — partial match on publisher",
+                  "disabled": true
+                },
+                {
+                  "key": "accessionNumber",
+                  "value": "",
+                  "description": "Optional — partial match on inventory accession number",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "available",
+                  "description": "Optional — exact: available | issued",
+                  "disabled": true
                 }
               ]
-            }
+            },
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list for a library floor. Sorted by `libraryBookId` ASC (page 1 → ids 1–20 when limit=20).\n\n**Required query**\n| Key | Type |\n|-----|------|\n| `libraryCreationId` | number |\n| `libraryFloorId` | number |\n\n**Pagination (optional)**\n| Key | Default | Max |\n|-----|---------|-----|\n| `page` | 1 | — |\n| `limit` | 20 | 100 |\n\n**Search filters (optional, partial match unless noted)**\n| Key | Searches |\n|-----|----------|\n| `search` | title, subtitle, authors, isbn, publisher, keywords |\n| `title` | book title |\n| `authors` | authors |\n| `isbn` | ISBN |\n| `publisher` | publisher |\n| `accessionNumber` | inventory accession number |\n| `status` | `available` or `issued` (exact) |\n\nCombine filters with AND. Enable disabled query params in Postman to test search.\n\n**Example**\n`GET .../allBook?libraryCreationId=1&libraryFloorId=1&page=1&limit=20&search=design`\n\n**Success**\n```json\n{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}\n```"
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK — paginated list",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 19,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"authors\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"authors\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
+            },
+            {
+              "name": "200 OK — with search",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"authors\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },

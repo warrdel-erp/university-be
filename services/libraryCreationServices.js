@@ -2,151 +2,7 @@ import * as libraryCreationService from "../repository/libraryCreationRepository
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 
-const BOOK_FIELDS = [
-  "libraryCreationId", "libraryFloorId", "title", "subtitle", "authors", "publisher",
-  "placeOfPublication", "yearOfPublication", "edition", "seriesTitle", "volumeNumber",
-  "language", "isbn", "issn", "barcode", "physicalDescription", "numberOfPages",
-  "illustrations", "summary", "keywords", "additionalAuthor", "subjectId",
-  "classSectionsId", "remark", "itemType", "categoryId", "bookImage",
-];
 
-const INVENTORY_FIELDS = [
-  "accessionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
-  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate",
-  "itemPrice", "netPrice", "currency", "condition"
-];
-
-const NUMBER_FIELDS = [
-  "libraryCreationId", "libraryFloorId", "yearOfPublication", "numberOfPages",
-  "classSectionsId", "libraryAisleId", "libraryRackId", "libraryRowId",
-  "studentId", "employeeId", "itemPrice", "netPrice",
-];
-
-const LOCATION_MAP = { aisle: "aisleName", rack: "rackName", row: "rowName" };
-
-const DEFAULTS = { itemType: "print", status: "available", illustrations: false };
-
-const normBulkKey = (key) => String(key).trim().toLowerCase().replace(/\s+/g, "");
-
-const matchBulkField = (key, fields) => {
-  const n = normBulkKey(key);
-  for (let i = 0; i < fields.length; i++) {
-    if (normBulkKey(fields[i]) === n) return fields[i];
-  }
-  return null;
-};
-
-function parseBulkCell(raw, field) {
-  if (raw === undefined || raw === null || raw === "") {
-    return DEFAULTS[field] !== undefined ? DEFAULTS[field] : null;
-  }
-  if (NUMBER_FIELDS.includes(field)) return Number(raw);
-  if (field === "categoryId" || field === "subjectId") {
-    const parseToken = (value) => {
-      const text = String(value).trim();
-      if (!text) return null;
-      if (/^\d+$/.test(text)) return Number(text);
-      return text;
-    };
-
-    if (Array.isArray(raw)) {
-      return raw.map(parseToken).filter((value) => value !== null);
-    }
-    if (typeof raw === "string") {
-      return raw
-        .split(",")
-        .map(parseToken)
-        .filter((value) => value !== null);
-    }
-    const parsed = parseToken(raw);
-    return parsed === null ? [] : [parsed];
-  }
-  if (field === "illustrations") {
-    if (raw === true || raw === false) return raw;
-    const t = String(raw).toLowerCase();
-    if (t === "true" || t === "1") return true;
-    if (t === "false" || t === "0") return false;
-  }
-  if (field === "isbn" || field === "title") {
-    const text = String(raw).trim();
-    return text === "" ? null : text;
-  }
-  return raw;
-}
-
-function getBulkTypeError(field, value) {
-  if (NUMBER_FIELDS.includes(field) && Number.isNaN(Number(value))) {
-    return `${field} must be a number`;
-  }
-  if (field === "itemType" && value && !["print", "Xerox", "Digital"].includes(value)) {
-    return "itemType must be print, Xerox or Digital";
-  }
-  return null;
-}
-
-function applyBulkDefaults(target, fields) {
-  for (let i = 0; i < fields.length; i++) {
-    const field = fields[i];
-    if (target[field] === undefined && DEFAULTS[field] !== undefined) {
-      target[field] = DEFAULTS[field];
-    }
-  }
-}
-
-function splitBulkUploadRow(row) {
-  const book = {};
-  const inventory = {};
-  const location = {};
-  const errors = [];
-
-  for (const [rawKey, rawValue] of Object.entries(row)) {
-    const locField = LOCATION_MAP[normBulkKey(rawKey)];
-    if (locField) {
-      if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
-        location[locField] = String(rawValue).trim();
-      }
-      continue;
-    }
-
-    const bookField = matchBulkField(rawKey, BOOK_FIELDS);
-    if (bookField) {
-      const value = parseBulkCell(rawValue, bookField);
-      if (value === null) continue;
-      const err = getBulkTypeError(bookField, value);
-      if (err) {
-        errors.push(err);
-        continue;
-      }
-      book[bookField] = value;
-      continue;
-    }
-
-    const invField = matchBulkField(rawKey, INVENTORY_FIELDS);
-    if (invField) {
-      const value = parseBulkCell(rawValue, invField);
-      if (value === null) continue;
-      const err = getBulkTypeError(invField, value);
-      if (err) {
-        errors.push(err);
-        continue;
-      }
-      inventory[invField] = value;
-      continue;
-    }
-
-    if (rawValue !== undefined && rawValue !== null && rawValue !== "") {
-      errors.push(`Unknown column '${rawKey}'`);
-    }
-  }
-
-  applyBulkDefaults(book, BOOK_FIELDS);
-  applyBulkDefaults(inventory, INVENTORY_FIELDS);
-
-  if (!book.isbn && !book.title) errors.push("isbn or title is required");
-  if (!inventory.accessionNumber) errors.push("accessionNumber is required");
-
-  return { book, inventory, location, errors };
-}
 
 function parseIdArray(value) {
   const toValidIds = (nums) =>
@@ -286,9 +142,12 @@ function filterBooksByFloor(books, libraryFloorId) {
   return books
     .map((book) => ({
       ...book,
-      inventoryCopies: (book.inventoryCopies || []).filter(
-        (inv) => Number(inv.aisleDetails?.libraryFloorId) === floorId,
-      ),
+      inventoryCopies: (book.inventoryCopies || []).filter((inv) => {
+        const invFloorId = inv.aisleDetails?.libraryFloorId;
+        // Bulk-uploaded copies often have no aisle; show them on any floor view.
+        if (invFloorId == null) return true;
+        return Number(invFloorId) === floorId;
+      }),
     }))
     .filter((book) => book.inventoryCopies.length > 0);
 }
@@ -523,18 +382,39 @@ async function enrichBooksWithCategoriesAndSubjects(books) {
   });
 }
 
-export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
-  const books = await libraryCreationService.getAllBooks(
+export async function getAllBooks(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  pagination = {},
+  filters = {},
+) {
+  const page = pagination.page ?? 1;
+  const rawLimit = pagination.limit ?? 20;
+  const limit = Math.min(100, Math.max(1, rawLimit));
+  const offset = (page - 1) * limit;
+
+  const { rows, count } = await libraryCreationService.getAllBooks(
     universityId,
     libraryCreationId,
     libraryFloorId,
+    { limit, offset },
+    filters,
   );
 
-  if (!books?.length) return [];
+  if (!rows?.length) {
+    return { books: [], total: count, page, limit };
+  }
 
-  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(books);
+  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(rows);
   const filtered = filterBooksByFloor(enrichedBooks, libraryFloorId);
-  return mapBooksToAllBookList(filtered);
+
+  return {
+    books: mapBooksToAllBookList(filtered),
+    total: count,
+    page,
+    limit,
+  };
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {
@@ -711,191 +591,3 @@ export async function getAllIssuedBooks() {
   return plainInventories;
 }
 
-function buildUploadError(rowNumber, text) {
-  return `Row ${rowNumber}: ${text}`;
-}
-
-function getBookCacheKey(book) {
-  if (book.isbn) return `isbn:${book.isbn}`;
-  return `title:${book.title.toLowerCase()}`;
-}
-
-function splitIdsAndNames(values) {
-  const rawValues = Array.isArray(values) ? values : values == null ? [] : [values];
-  const ids = [];
-  const names = [];
-
-  for (const value of rawValues) {
-    if (value == null) continue;
-    if (typeof value === "number" && !Number.isNaN(value)) {
-      ids.push(value);
-      continue;
-    }
-
-    const text = String(value).trim();
-    if (!text) continue;
-
-    const parts = text.split(",").map((item) => item.trim()).filter(Boolean);
-    for (const part of parts) {
-      if (/^\d+$/.test(part)) {
-        ids.push(Number(part));
-        continue;
-      }
-      names.push(part);
-    }
-  }
-
-  return {
-    ids: [...new Set(ids)],
-    names: [...new Set(names)],
-  };
-}
-
-async function resolveIdsByName(
-  values,
-  rowNumber,
-  fieldName,
-  fetchByNames,
-  nameKey,
-  idKey,
-) {
-  const { ids, names } = splitIdsAndNames(values);
-  if (names.length === 0) {
-    return ids;
-  }
-
-  const rows = await fetchByNames(names);
-  const idByName = new Map(
-    rows.map((row) => {
-      const plain = row.get ? row.get({ plain: true }) : row;
-      return [String(plain[nameKey]).toLowerCase(), plain[idKey]];
-    }),
-  );
-
-  for (const name of names) {
-    const resolvedId = idByName.get(name.toLowerCase());
-    if (!resolvedId) {
-      throw new Error(buildUploadError(rowNumber, `${fieldName} name '${name}' not found`));
-    }
-    ids.push(resolvedId);
-  }
-
-  return [...new Set(ids)];
-}
-
-export async function bulkUploadBooks(rows, createdBy, updatedBy, libraryCreationId) {
-  const parsedRows = [];
-  const errors = [];
-
-  for (let index = 0; index < rows.length; index++) {
-    const rowNumber = index + 2;
-    const parsed = splitBulkUploadRow(rows[index]);
-
-    for (let i = 0; i < parsed.errors.length; i++) {
-      errors.push(buildUploadError(rowNumber, parsed.errors[i]));
-    }
-
-    parsedRows.push({
-      rowNumber,
-      book: parsed.book,
-      inventory: parsed.inventory,
-      location: parsed.location,
-    });
-  }
-
-  if (errors.length > 0) {
-    return { status: "error", message: errors.join("; ") };
-  }
-
-  const bookCache = {};
-  const transaction = await sequelize.transaction();
-
-  try {
-    for (const { rowNumber, book, inventory, location } of parsedRows) {
-      const cacheKey = getBookCacheKey(book);
-
-      let libraryBookId = bookCache[cacheKey];
-
-      if (!libraryBookId) {
-        const existingBook = book.isbn
-          ? await libraryCreationService.findBookByIsbn(book.isbn, transaction)
-          : await libraryCreationService.findBookByTitle(
-              book.title,
-              book.libraryCreationId || libraryCreationId || null,
-              transaction,
-            );
-
-        if (existingBook) {
-          libraryBookId = existingBook.libraryBookId;
-        } else {
-          const resolvedSubjectIds = await resolveIdsByName(
-            book.subjectId,
-            rowNumber,
-            "subjectId",
-            libraryCreationService.getSubjectsByNames,
-            "subjectName",
-            "subjectId",
-          );
-
-          const resolvedCategoryIds = await resolveIdsByName(
-            book.categoryId,
-            rowNumber,
-            "categoryId",
-            libraryCreationService.getCategoriesByNames,
-            "name",
-            "libraryCategoryId",
-          );
-
-          const newBook = await libraryCreationService.createBook(
-            {
-              ...book,
-              isbn: book.isbn ?? null,
-              subjectId: resolvedSubjectIds.length ? resolvedSubjectIds : null,
-              categoryId: resolvedCategoryIds.length ? resolvedCategoryIds : null,
-              libraryCreationId: book.libraryCreationId || libraryCreationId || null,
-              createdBy,
-              updatedBy,
-            },
-            transaction,
-          );
-          libraryBookId = newBook.libraryBookId;
-        }
-      }
-
-      bookCache[cacheKey] = libraryBookId;
-
-      let libraryAisleId = null;
-      let libraryRackId = null;
-      let libraryRowId = null;
-
-      if (location.aisleName) {
-        libraryAisleId = await libraryStructureRepository.getAisleIdByName(location.aisleName);
-      }
-      if (location.rackName) {
-        libraryRackId = await libraryStructureRepository.getRackIdByName(location.rackName);
-      }
-      if (location.rowName) {
-        libraryRowId = await libraryStructureRepository.getRowIdByName(location.rowName);
-      }
-
-      await libraryCreationService.createInventoryBulk(
-        {
-          ...inventory,
-          libraryBookId,
-          libraryAisleId,
-          libraryRackId,
-          libraryRowId,
-          status: inventory.status ?? "available",
-          condition: inventory.condition ?? null,
-        },
-        transaction,
-      );
-    }
-
-    await transaction.commit();
-    return { status: "success" };
-  } catch (error) {
-    await transaction.rollback();
-    return { status: "error", message: error.message };
-  }
-}
