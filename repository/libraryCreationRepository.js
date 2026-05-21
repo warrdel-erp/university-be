@@ -2,6 +2,35 @@ import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 
+const bookMappingIncludes = [
+  {
+    model: model.libraryBookCategoryMappingModel,
+    as: "categoryMappings",
+    attributes: ["libraryCategoryMappingId", "libraryCategoryId"],
+    required: false,
+    include: [
+      {
+        model: model.libraryCategoryModel,
+        as: "category",
+        attributes: ["libraryCategoryId", "name"],
+      },
+    ],
+  },
+  {
+    model: model.libraryBookSubjectMappingModel,
+    as: "subjectMappings",
+    attributes: ["librarySubjectMappingId", "librarySubjectId"],
+    required: false,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subject",
+        attributes: ["subjectId", "subjectName"],
+      },
+    ],
+  },
+];
+
 export async function addLibrary(libraryData, transaction) {
   try {
     const result = await model.libraryCreationModel.create(libraryData, { transaction });
@@ -28,19 +57,91 @@ export async function updateCategory(libraryCategoryId, data) {
   return updated > 0;
 }
 
-export async function findBooksContainingCategoryId(libraryCategoryId, transaction) {
-  const categoryId = Number(libraryCategoryId);
-
-  return await model.libraryBookModel.findAll({
-    attributes: ["libraryBookId", "categoryId"],
-    where: {
-      [Op.and]: [
-        { categoryId: { [Op.ne]: null } },
-        sequelize.literal(`JSON_CONTAINS(category_id, '${categoryId}', '$')`),
-      ],
-    },
+export async function deleteCategoryMappingsByCategoryId(libraryCategoryId, transaction) {
+  return model.libraryBookCategoryMappingModel.destroy({
+    where: { libraryCategoryId },
     transaction,
   });
+}
+
+export async function deleteCategoryMappingsByBookId(libraryBookId, transaction) {
+  return model.libraryBookCategoryMappingModel.destroy({
+    where: { libraryBookId },
+    transaction,
+  });
+}
+
+export async function deleteSubjectMappingsByBookId(libraryBookId, transaction) {
+  return model.libraryBookSubjectMappingModel.destroy({
+    where: { libraryBookId },
+    transaction,
+  });
+}
+
+export async function replaceBookCategoryMappings(
+  libraryBookId,
+  categoryId,
+  instituteId,
+  transaction,
+) {
+  await deleteCategoryMappingsByBookId(libraryBookId, transaction);
+
+  const uniqueId = [...new Set((categoryId || []).map(Number).filter((id) => !Number.isNaN(id) && id > 0))];
+  if (!uniqueId.length) return [];
+
+  return model.libraryBookCategoryMappingModel.bulkCreate(
+    uniqueId.map((libraryCategoryId) => ({
+      libraryBookId,
+      libraryCategoryId,
+      instituteId,
+    })),
+    { transaction },
+  );
+}
+
+export async function replaceBookSubjectMappings(
+  libraryBookId,
+  subjectId,
+  instituteId,
+  transaction,
+) {
+  await deleteSubjectMappingsByBookId(libraryBookId, transaction);
+
+  const uniqueId = [...new Set((subjectId || []).map(Number).filter((id) => !Number.isNaN(id) && id > 0))];
+  if (!uniqueId.length) return [];
+
+  return model.libraryBookSubjectMappingModel.bulkCreate(
+    uniqueId.map((librarySubjectId) => ({
+      libraryBookId,
+      librarySubjectId,
+      instituteId,
+    })),
+    { transaction },
+  );
+}
+
+export async function getInstituteIdByLibraryCreationId(libraryCreationId, transaction) {
+  const row = await model.libraryCreationModel.findByPk(libraryCreationId, {
+    attributes: ["instituteId"],
+    transaction,
+  });
+  return row?.instituteId ?? null;
+}
+
+export async function getInstituteIdByLibraryBookId(libraryBookId, transaction) {
+  const row = await model.libraryBookModel.findByPk(libraryBookId, {
+    attributes: ["libraryCreationId"],
+    include: [
+      {
+        model: model.libraryCreationModel,
+        as: "library",
+        attributes: ["instituteId"],
+      },
+    ],
+    transaction,
+  });
+
+  return row?.library?.instituteId ?? null;
 }
 
 export async function deleteCategory(libraryCategoryId, transaction) {
@@ -180,13 +281,17 @@ export async function createBook(bookData, transaction) {
   }
 }
 
+export async function inventoryExistsByAccessionNumber(accessionNumber, transaction) {
+  const row = await model.libraryBookInventoryModel.findOne({
+    where: { accessionNumber },
+    attributes: ["inventoryId"],
+    transaction,
+  });
+  return Boolean(row);
+}
+
 export async function createInventory(inventoryData, transaction) {
-  try {
-    return await model.libraryBookInventoryModel.create(inventoryData, { transaction });
-  } catch (error) {
-    console.error("Error creating inventory:", error);
-    throw error;
-  }
+  return await model.libraryBookInventoryModel.create(inventoryData, { transaction });
 }
 
 export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
@@ -207,6 +312,7 @@ export async function getAllBooks(universityId, libraryCreationId, libraryFloorI
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
     include: [
+      ...bookMappingIncludes,
       {
         model: model.libraryBookInventoryModel,
         as: "inventoryCopies",
@@ -243,6 +349,14 @@ export async function getAllBooks(universityId, libraryCreationId, libraryFloorI
   });
 }
 
+export async function bookExistsById(libraryBookId, transaction) {
+  const row = await model.libraryBookModel.findByPk(libraryBookId, {
+    attributes: ["libraryBookId"],
+    transaction,
+  });
+  return Boolean(row);
+}
+
 export async function getSingleBookDetails(libraryBookId, transaction) {
   return await model.libraryBookModel.findOne({
     where: { libraryBookId },
@@ -251,6 +365,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
     include: [
+      ...bookMappingIncludes,
       {
         model: model.libraryBookInventoryModel,
         as: "inventoryCopies",
@@ -337,6 +452,9 @@ export async function updateInventory(inventoryId, data, transaction) {
 export async function deleteBook(libraryBookId) {
   const t = await sequelize.transaction();
   try {
+    await deleteCategoryMappingsByBookId(libraryBookId, t);
+    await deleteSubjectMappingsByBookId(libraryBookId, t);
+
     await model.libraryBookInventoryModel.destroy({
       where: { libraryBookId },
       transaction: t,
@@ -421,13 +539,12 @@ export async function getAllIssuedBooks() {
             "isbn",
             "issn",
             "barcode",
-            "subjectId",
-            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
           ],
           include: [
+            ...bookMappingIncludes,
             {
               model: model.libraryCreationModel,
               as: "library",
@@ -513,12 +630,11 @@ export async function getBooksIssuedToStudent(studentId) {
             "isbn",
             "issn",
             "barcode",
-            "subjectId",
-            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
           ],
+          include: bookMappingIncludes,
         },
         {
           model: model.studentModel,
@@ -580,12 +696,11 @@ export async function getBooksIssuedToEmployee(employeeId) {
             "isbn",
             "issn",
             "barcode",
-            "subjectId",
-            "categoryId",
             "classSectionsId",
             "remark",
             "itemType",
           ],
+          include: bookMappingIncludes,
         },
         {
           model: model.employeeModel,
@@ -633,19 +748,21 @@ export async function createInventoryBulk(data, transaction) {
   return model.libraryBookInventoryModel.create(data, { transaction });
 }
 
-export async function getCategoriesByIds(ids) {
+export async function getCategoriesByIds(ids, transaction) {
   if (!ids || ids.length === 0) return [];
   return await model.libraryCategoryModel.findAll({
     where: { libraryCategoryId: ids },
-    attributes: ["libraryCategoryId", "name"]
+    attributes: ["libraryCategoryId", "name"],
+    transaction,
   });
 }
 
-export async function getSubjectsByIds(ids) {
+export async function getSubjectsByIds(ids, transaction) {
   if (!ids || ids.length === 0) return [];
   return await model.subjectModel.findAll({
     where: { subjectId: ids },
-    attributes: ["subjectId", "subjectName"]
+    attributes: ["subjectId", "subjectName"],
+    transaction,
   });
 }
 

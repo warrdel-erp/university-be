@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import moment from "moment";
 import { validate } from "../utility/validation.js";
 import {
   addMember,
@@ -83,18 +84,36 @@ const updateMemberSchema = z
   })
   .superRefine(validateMemberIds);
 
-const bookIssueSchema = z.object({
-  libraryAddItemId: z.coerce.number().optional(),
-  libraryMemberId: z.coerce.number(),
-  libraryBookId: z.coerce.number(),
-  libraryCreationId: z.coerce.number(),
-  genre: z.coerce.number().optional(),
-  aisle: z.coerce.number().optional(),
-  shelf: z.coerce.number().optional(),
-  issueDate: z.string().min(1),
-  dueDate: z.string().min(1),
-  issuedBy: z.string().min(1).optional(),
-});
+const bookIssueSchema = z
+  .object({
+    libraryAddItemId: z.coerce.number().optional(),
+    libraryMemberId: z.coerce.number(),
+    libraryBookId: z.coerce.number(),
+    libraryCreationId: z.coerce.number().optional(),
+    genre: z.coerce.number().optional(),
+    aisle: z.coerce.number().optional(),
+    shelf: z.coerce.number().optional(),
+    issueDate: z.string().min(1),
+    dueDate: z.string().min(1),
+    issuedBy: z.string().min(1).optional(),
+    receivedBy: z.string().min(1).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!moment(data.issueDate).isValid()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid issueDate",
+        path: ["issueDate"],
+      });
+    }
+    if (!moment(data.dueDate).isValid()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid dueDate",
+        path: ["dueDate"],
+      });
+    }
+  });
 
 const updateIssueBookSchema = z
   .object({
@@ -103,9 +122,31 @@ const updateIssueBookSchema = z
     issueDate: z.string().min(1),
     dueDate: z.string().min(1),
     issuedBy: z.string().min(1),
+    receivedBy: z.string().min(1).optional(),
     returnDate: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
+    if (!moment(data.issueDate).isValid()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid issueDate",
+        path: ["issueDate"],
+      });
+    }
+    if (!moment(data.dueDate).isValid()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid dueDate",
+        path: ["dueDate"],
+      });
+    }
+    if (data.returnDate && !moment(data.returnDate).isValid()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid returnDate",
+        path: ["returnDate"],
+      });
+    }
     if (data.status === "Returned" && !data.returnDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -134,6 +175,8 @@ router.delete(
   validate({ query: libraryMemberIdQuerySchema }),
   deleteMember,
 );
+
+
 
 router.post("/bookIssue", userAuth, validate({ body: bookIssueSchema }), bookIssue);
 

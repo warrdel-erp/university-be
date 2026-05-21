@@ -5717,7 +5717,7 @@
     },
     {
       "name": "library member",
-      "description": "Library member & issue APIs under `/libraryMember`. Test order: add member → get all → get by library → book issue → getAllIssueBook → memberBook → updateStatusBook (Returned/Renewed) → delete. Status enum: Issued | Returned | Renewed | Overdue. Auth: Bearer {{token}}.",
+      "description": "Library member & issue APIs under `/libraryMember`.\n\n**Test order:** add member → book issue → getAllIssueBook → memberBook → updateStatusBook → delete issued book.\n\n**POST/PATCH member:** One request body shows all payload types — keep **one** JSON object active; comment out the other variants (Postman JSON with `//` comments).\n\n**Book issue:** `libraryBookId` + `libraryMemberId` + dates required; `libraryAddItemId` optional. `issuedBy` / `receivedBy` optional — default to token `userName`. On return (`status: Returned`), `receivedBy` is set.\n\n**Status enum:** Issued | Returned | Renewed | Overdue\n\nAuth: Bearer {{token}}",
       "variable": [
         {
           "key": "libraryMember_id",
@@ -5738,6 +5738,21 @@
       "item": [
         {
           "name": "add member",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const id = res?.data?.libraryMemberId ?? res?.data?.library_member_id;",
+                  "if (id) {",
+                  "  pm.collectionVariables.set('libraryMember_id', String(id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
@@ -5753,7 +5768,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 2103,\n  \"employeeId\": 0\n}",
+              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — student member (active)\n{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — employee member\n// {\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5764,7 +5779,8 @@
               "raw": "{{baseurl}}/libraryMember",
               "host": ["{{baseurl}}"],
               "path": ["libraryMember"]
-            }
+            },
+            "description": "**POST /libraryMember**\n\n| Field | Student | Employee |\n|-------|---------|----------|\n| `libraryCreationId` | Required | Required |\n| `memberType` | `\"student\"` | `\"employee\"` |\n| `studentId` | Required | Omit |\n| `employeeId` | Omit | Required |\n\nDo not send `employeeId: 0` for students — omit the field. Body includes Payload A (student) and Payload B (employee) as comments; enable only one."
           },
           "response": []
         },
@@ -5837,7 +5853,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 2103,\n  \"employeeId\": 0\n}",
+              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — update student member (active)\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — update employee member\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }\n\n// Payload C — change type to employee (keep same libraryMemberId)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5848,7 +5864,8 @@
               "raw": "{{baseurl}}/libraryMember",
               "host": ["{{baseurl}}"],
               "path": ["libraryMember"]
-            }
+            },
+            "description": "**PATCH /libraryMember**\n\nRequired: `libraryMemberId`, `memberType`, and matching id (`studentId` or `employeeId`). Same rules as POST — one variant active in body."
           },
           "response": []
         },
@@ -5883,9 +5900,25 @@
         },
         {
           "name": "book issue",
+          "description": "Issue book flow. **issue book** request contains all payload variants — keep one JSON object active.",
           "item": [
             {
               "name": "issue book",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const res = pm.response.json();",
+                      "const id = res?.data?.libraryIssueBookId ?? res?.data?.library_issue_book_id;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('libraryIssueBook_id', String(id));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [],
@@ -5901,7 +5934,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\",\n  \"issuedBy\": \"Admin User\"\n}",
+                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — book only (no libraryAddItemId) — active\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"libraryBookId\": {{libraryBook_id}},\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\"\n}\n\n// Payload B — full (add item + codes + issuedBy / receivedBy)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"libraryAddItemId\": {{libraryAddItem_id}},\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"genre\": {{libraryItem_genre_id}},\n//   \"aisle\": {{libraryItem_aisle_id}},\n//   \"shelf\": {{libraryItem_shelf_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }\n\n// Payload C — book only + issuedBy / receivedBy (omit to use token userName)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5913,7 +5946,7 @@
                   "host": ["{{baseurl}}"],
                   "path": ["libraryMember", "bookIssue"]
                 },
-                "description": "**POST /libraryMember/bookIssue**\n\n| Field | Required |\n|-------|----------|\n| `libraryAddItemId` | Yes — id from **library item** add, or `libraryBookId` if item row missing (auto-created) |\n| `libraryMemberId` | Yes |\n| `issueDate`, `dueDate` | Yes — `YYYY-MM-DD` or ISO datetime |\n| `issuedBy` | No — defaults to token user name |\n\n**Prerequisites:** member exists; valid `libraryAddItemId` (POST /libraryItem) or book in library creation."
+                "description": "**POST /libraryMember/bookIssue**\n\n| Field | Required |\n|-------|----------|\n| `libraryMemberId` | Yes |\n| `libraryBookId` | Yes |\n| `issueDate`, `dueDate` | Yes |\n| `libraryAddItemId` | Optional |\n| `libraryCreationId`, `genre`, `aisle`, `shelf` | Optional |\n| `issuedBy` | Optional — defaults to token `userName` |\n| `receivedBy` | Optional — defaults to token `userName` (same as `issuedBy`) |\n\nBody: Payload A (minimal), B (full), C (minimal + issuedBy/receivedBy). Saves `libraryIssueBook_id`."
               },
               "response": []
             },
@@ -5936,7 +5969,8 @@
                   "raw": "{{baseurl}}/libraryMember/getAllIssueBook",
                   "host": ["{{baseurl}}"],
                   "path": ["libraryMember", "getAllIssueBook"]
-                }
+                },
+                "description": "**GET /libraryMember/getAllIssueBook**\n\nReturns issue row with `issuedBy`, `receivedBy`, dates, `status`, nested `memberBookIssue`, `addItemBookIssue` or `libraryBookIssue`, `userBookIssue`."
               },
               "response": []
             },
@@ -5965,7 +5999,8 @@
                       "value": "{{libraryMember_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**GET /libraryMember/memberBook?libraryMemberId=**\n\n**Required query:** `libraryMemberId`.\n\nSame response shape as getAllIssueBook, filtered by member."
               },
               "response": []
             },
@@ -5986,7 +6021,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Returned\",\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-06-03T10:00:00.000Z\",\n  \"issuedBy\": \"Admin User\",\n  \"returnDate\": \"2026-05-20T18:00:00.000Z\"\n}",
+                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — Returned (returnDate required) — active\n{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Returned\",\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\",\n  \"issuedBy\": \"Admin User\",\n  \"receivedBy\": \"Desk Staff\",\n  \"returnDate\": \"2026-05-25\"\n}\n\n// Payload B — Renewed (no returnDate, no receivedBy)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Renewed\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-07-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload C — Issued / Overdue (no returnDate)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Issued\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload D — Returned (omit receivedBy → token userName)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Returned\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"returnDate\": \"2026-05-25\"\n// }",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5997,29 +6032,8 @@
                   "raw": "{{baseurl}}/libraryMember/updateStatusBook",
                   "host": ["{{baseurl}}"],
                   "path": ["libraryMember", "updateStatusBook"]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "update issue book status (renewed)",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
                 },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Renewed\",\n  \"issueDate\": \"2026-05-20T10:00:00.000Z\",\n  \"dueDate\": \"2026-07-03T10:00:00.000Z\",\n  \"issuedBy\": \"Admin User\"\n}",
-                  "options": { "raw": { "language": "json" } }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/updateStatusBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "updateStatusBook"]
-                }
+                "description": "**PATCH /libraryMember/updateStatusBook**\n\n| Field | Required |\n|-------|----------|\n| `libraryIssueBookId` | Yes |\n| `status` | Issued \\| Returned \\| Renewed \\| Overdue |\n| `issueDate`, `dueDate`, `issuedBy` | Yes |\n| `returnDate` | Required when `status` is **Returned** |\n| `receivedBy` | Optional when **Returned** — defaults to token `userName` |\n\nBody: Payload A (Returned + receivedBy), B (Renewed), C (Issued/Overdue), D (Returned, receivedBy from token)."
               },
               "response": []
             },
@@ -6048,55 +6062,12 @@
                       "value": "{{libraryIssueBook_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**DELETE /libraryMember/deleteBook?libraryIssueBookId=**\n\nSoft-deletes the issue row (paranoid)."
               },
               "response": []
             }
           ]
-        },
-        {
-          "name": "add member (employee)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"employee\",\n  \"studentId\": 0,\n  \"employeeId\": 101\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryMember",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "issue book (issuedBy from token)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryMember/bookIssue",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryMember", "bookIssue"]
-            }
-          },
-          "response": []
         }
       ]
     },

@@ -58,7 +58,7 @@ const inventoryQuerySchema = z.object({
 
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
-  libraryFloorId: z.coerce.number().optional().nullable(),
+  libraryFloorId: z.coerce.number(),
 });
 
 const addCategorySchema = z.object({

@@ -117,6 +117,34 @@ export async function deleteMember(libraryMemberId) {
     return deleted > 0;
 }
 
+export async function findMemberById(libraryMemberId, transaction) {
+    return await model.libraryMemberModel.findByPk(libraryMemberId, { transaction });
+}
+
+export async function findByStudentId(studentId, excludeLibraryMemberId, transaction) {
+    const where = { studentId };
+    if (excludeLibraryMemberId) {
+        where.libraryMemberId = { [Op.ne]: excludeLibraryMemberId };
+    }
+    return model.libraryMemberModel.findOne({
+        attributes: ["libraryMemberId"],
+        where,
+        transaction,
+    });
+}
+
+export async function findByEmployeeId(employeeId, excludeLibraryMemberId, transaction) {
+    const where = { employeeId };
+    if (excludeLibraryMemberId) {
+        where.libraryMemberId = { [Op.ne]: excludeLibraryMemberId };
+    }
+    return model.libraryMemberModel.findOne({
+        attributes: ["libraryMemberId"],
+        where,
+        transaction,
+    });
+}
+
 export async function getPreviousMemberIdByLibraryMemberId(libraryMemberId) {
     try {
         const attribute = ["member_id"];

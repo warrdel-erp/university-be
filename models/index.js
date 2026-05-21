@@ -126,6 +126,8 @@ import libraryRackModel from "./libraryRackModel.js";
 import libraryRowModel from "./libraryRowModel.js";
 import libraryBookInventoryModel from "./libraryBookInventoryModel.js";
 import libraryBookModel from "./libraryBookModel.js";
+import libraryBookCategoryMappingModel from "./libraryBookCategoryMappingModel.js";
+import libraryBookSubjectMappingModel from "./libraryBookSubjectMappingModel.js";
 import libraryCategoryModel from "./libraryCategoryModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
@@ -603,8 +605,11 @@ userModel.hasMany(libraryIssueBookModel, { foreignKey: "createdBy", as: "userBoo
 libraryIssueBookModel.belongsTo(libraryAddItemModel, { foreignKey: "libraryAddItemId", as: "addItemBookIssue" });
 libraryAddItemModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryAddItemId", as: "addItemBookIssue" });
 
-libraryIssueBookModel.belongsTo(libraryMemberModel, { foreignKey: "library_member_id", as: "memberBookIssue" });
-libraryMemberModel.hasMany(libraryIssueBookModel, { foreignKey: "library_member_id", as: "memberBookIssue" });
+libraryIssueBookModel.belongsTo(libraryBookModel, { foreignKey: "libraryBookId", as: "libraryBookIssue" });
+libraryBookModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryBookId", as: "libraryBookIssue" });
+
+libraryIssueBookModel.belongsTo(libraryMemberModel, { foreignKey: "libraryMemberId", as: "memberBookIssue" });
+libraryMemberModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryMemberId", as: "memberBookIssue" });
 
 // attendence
 attendanceModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userAttendence" });
@@ -1184,6 +1189,40 @@ libraryBookModel.belongsTo(libraryCreationModel, {
   as: "library",
 });
 
+libraryBookModel.hasMany(libraryBookCategoryMappingModel, {
+  foreignKey: "library_book_id",
+  as: "categoryMappings",
+});
+libraryBookCategoryMappingModel.belongsTo(libraryBookModel, {
+  foreignKey: "library_book_id",
+  as: "book",
+});
+libraryBookCategoryMappingModel.belongsTo(libraryCategoryModel, {
+  foreignKey: "library_category_id",
+  as: "category",
+});
+libraryCategoryModel.hasMany(libraryBookCategoryMappingModel, {
+  foreignKey: "library_category_id",
+  as: "bookMappings",
+});
+
+libraryBookModel.hasMany(libraryBookSubjectMappingModel, {
+  foreignKey: "library_book_id",
+  as: "subjectMappings",
+});
+libraryBookSubjectMappingModel.belongsTo(libraryBookModel, {
+  foreignKey: "library_book_id",
+  as: "book",
+});
+libraryBookSubjectMappingModel.belongsTo(subjectModel, {
+  foreignKey: "library_subject_id",
+  as: "subject",
+});
+subjectModel.hasMany(libraryBookSubjectMappingModel, {
+  foreignKey: "library_subject_id",
+  as: "libraryBookMappings",
+});
+
 libraryAisleModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_aisle_id", as: "inventoryAisle" });
 libraryBookInventoryModel.belongsTo(libraryAisleModel, { foreignKey: "library_aisle_id", as: "aisleDetails" });
 
@@ -1509,6 +1548,8 @@ export {
   libraryRowModel,
   libraryBookInventoryModel,
   libraryBookModel,
+  libraryBookCategoryMappingModel,
+  libraryBookSubjectMappingModel,
   libraryCategoryModel,
   internalAssessmentModel,
   assessmentEvaluationModel,

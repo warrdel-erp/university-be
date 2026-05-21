@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import libraryAddItem from "./libraryAddItemModel.js";
+import libraryBook from "./libraryBookModel.js";
 import libraryMember from "./libraryMemberModel.js";
 
 export default sequelize.define(
@@ -15,11 +16,20 @@ export default sequelize.define(
     },
     libraryAddItemId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "library_add_item_id",
       references: {
         model: libraryAddItem,
         key: "library_add_item_id",
+      },
+    },
+    libraryBookId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "library_book_id",
+      references: {
+        model: libraryBook,
+        key: "library_book_id",
       },
     },
     libraryMemberId: {
@@ -50,6 +60,11 @@ export default sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
       field: "issued_by",
+    },
+    receivedBy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "received_by",
     },
     status: {
       type: DataTypes.ENUM("Issued", "Returned", "Renewed", "Overdue"),
