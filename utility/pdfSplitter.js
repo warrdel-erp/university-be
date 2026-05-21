@@ -1,20 +1,16 @@
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { convert } from "pdf-poppler";
 import { PDFDocument } from "pdf-lib";
 import { createCanvas, loadImage } from "canvas";
 import jsQR from "jsqr";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Convert a single PDF page (0-indexed) to a PNG image using pdf-poppler.
+ * Convert a single PDF page (0-indexed) to a PNG image using pdfjs-dist (pure JS-only).
  * Returns the absolute path of the generated PNG.
- *
- * NOTE: pdf-poppler requires the system utility `poppler` to be installed.
- *   macOS:  brew install poppler
- *   Ubuntu: sudo apt-get install poppler-utils
  *
  * @param {string} pdfPath    - Absolute path to the source PDF
  * @param {number} pageIndex  - 0-indexed page number
@@ -22,31 +18,50 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * @returns {Promise<string>} - Absolute path of the generated PNG
  */
 export async function convertPageToImage(pdfPath, pageIndex, tmpDir) {
-  const opts = {
-    format: "png",
-    out_dir: tmpDir,
-    out_prefix: "page",
-    page: pageIndex + 1, // pdf-poppler uses 1-indexed pages
-    single_file: false,
-    resolution: 150,     // 150 DPI is sufficient for QR scanning
-  };
-
-  await convert(pdfPath, opts);
-
-  // pdf-poppler names output files: page-001.png, page-002.png, …
   const paddedNum = String(pageIndex + 1).padStart(3, "0");
   const imagePath = path.join(tmpDir, `page-${paddedNum}.png`);
 
-  if (!fs.existsSync(imagePath)) {
+  try {
+    // 1. Read PDF file into buffer
+    const data = new Uint8Array(fs.readFileSync(pdfPath));
+
+    // 2. Load PDF document
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdfDoc = await loadingTask.promise;
+
+    // 3. Get the page (1-indexed in PDF.js)
+    const page = await pdfDoc.getPage(pageIndex + 1);
+
+    // 4. Get viewport at scale (1.5 scale is sufficient and corresponds to ~150 DPI)
+    const scale = 1.5;
+    const viewport = page.getViewport({ scale });
+
+    // 5. Create Canvas
+    const canvas = createCanvas(viewport.width, viewport.height);
+    const context = canvas.getContext("2d");
+
+    // 6. Render page context
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+    }).promise;
+
+    // 7. Write the canvas to PNG file
+    const buffer = canvas.toBuffer("image/png");
+    fs.writeFileSync(imagePath, buffer);
+  } catch (error) {
     throw new Error(
-      `Image was not generated for page ${pageIndex + 1}. ` +
-        "Please ensure 'poppler' is installed on this system " +
-        "(macOS: brew install poppler | Ubuntu: sudo apt-get install poppler-utils)."
+      `Failed to convert PDF page ${pageIndex + 1} to image using pure JS: ${error.message}`
     );
+  }
+
+  if (!fs.existsSync(imagePath)) {
+    throw new Error(`Image was not generated for page ${pageIndex + 1}.`);
   }
 
   return imagePath;
 }
+
 
 /**
  * Decode the QR code embedded in a PNG image.

@@ -50,3 +50,8 @@
 1. merge conflict with bhaskar.
 
 ---
+
+
+
+1. Program -> session (make them in single page).
+2. In book then only title and accession number are mandatory.

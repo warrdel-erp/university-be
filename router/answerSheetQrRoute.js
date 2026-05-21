@@ -183,7 +183,7 @@ router.patch(
 // Upload a large answer-sheet PDF; splits it into per-student PDFs using QR codes.
 // Field name: "answerSheet" (single PDF file, max 500 MB)
 router.post(
-  "/split-pdf",
+  "/splitPdf",
   userAuth,
   (req, res, next) => {
     pdfUpload.single("answerSheet")(req, res, (err) => {

@@ -487,7 +487,7 @@ export async function assignObtainedMarksToAnswerSheet(
 }
 
 
-const PAGES_PER_STUDENT = 30;
+const PAGES_PER_STUDENT = 2;
 
 /**
  * Split a large answer-sheet PDF into per-student PDFs by reading the QR code
@@ -658,6 +658,18 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
         examScheduleId: dbMap.get(qrValue).examScheduleId,
       });
     }
+
+    // Mark the corresponding database rows as uploaded
+    await AnswerSheetQrModel.update(
+      { isUploaded: true },
+      {
+        where: {
+          qr: { [Op.in]: scannedValues },
+          instituteId,
+          universityId,
+        },
+      }
+    );
 
     return { totalStudents: results.length, results };
   } finally {

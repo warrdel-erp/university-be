@@ -29,6 +29,7 @@ const listHallTicketsQuerySchema = z.object({
 });
 
 router.post("/generate", userAuth, validate({ body: generateSchema }), studentHallTicketController.generateHallTickets);
+
 router.get("/byQr", userAuth, validate({ query: qrQuerySchema }), studentHallTicketController.getHallTicketByQr);
 
 router.get("/", userAuth, validate({ query: listHallTicketsQuerySchema }), studentHallTicketController.getAllHallTickets);
