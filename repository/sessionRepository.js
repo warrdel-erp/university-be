@@ -183,3 +183,39 @@ export async function deleteSession(sessionId) {
     const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
     return deleted > 0;
 };
+
+export async function getMappingByCourseAndSession(courseId, sessionId) {
+    return await model.sessionCouseMappingModel.findOne({
+        where: { courseId, sessionId }
+    });
+}
+
+export async function getMappingById(sessionCourseMappingId) {
+    return await model.sessionCouseMappingModel.findOne({
+        where: { sessionCourseMappingId }
+    });
+}
+
+export async function countClassSections(courseId, sessionId) {
+    return await model.classSectionModel.count({
+        where: { courseId, sessionId }
+    });
+}
+
+export async function countSyllabusUnits(courseId, sessionId) {
+    return await model.syllabusUnitModel.count({
+        where: { sessionId },
+        include: [{
+            model: model.subjectModel,
+            as: 'subjectUnit',
+            where: { courseId }
+        }]
+    });
+}
+
+export async function deleteCourseSessionMapping(sessionCourseMappingId) {
+    const deleted = await model.sessionCouseMappingModel.destroy({
+        where: { sessionCourseMappingId }
+    });
+    return deleted > 0;
+}

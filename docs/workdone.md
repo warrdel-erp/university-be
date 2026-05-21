@@ -50,3 +50,16 @@
 1. merge conflict with bhaskar.
 
 ---
+
+1. Program -> session (make them in single page).
+2. In book then only title and accession number are mandatory.
+3. user have no option to open sidebar in mobile
+4. error in add values in code master
+5. delete button in inventory copies.
+6. Duplicate session mapping error.
+7. During Hall ticket Scaning show is an exam is already scheduled for this student or not.
+8. Delete session (only is it is not mapped with any programm).
+9. library book copies shown in popup with basic actions.
+10. Problem in first time hall ticket view.
+
+

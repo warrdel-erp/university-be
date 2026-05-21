@@ -1,8 +1,29 @@
 import moment from "moment";
 
-export function parseCustomDate(dateValue) {
+const STANDARD_DATE_FORMATS = [
+  "DD-MM-YYYY",
+  "D-M-YYYY",
+  "DD/MM/YYYY",
+  "D/M/YYYY",
+  "YYYY-MM-DD",
+  "YYYY/MM/DD",
+  "MM/DD/YYYY",
+  "M/D/YYYY",
+  "MM/DD/YY",
+  "M/D/YY",
+  "DD-MM-YY",
+  "D-M-YY",
+  "DD/MM/YY",
+  "D/M/YY",
+  "MMM D, YYYY",
+  "D MMM YYYY",
+  "MMMM D, YYYY",
+];
 
-  if (!dateValue) return null;
+export function parseCustomDate(dateValue) {
+  if (dateValue === undefined || dateValue === null || dateValue === "") {
+    return null;
+  }
 
   let formatted;
 
@@ -12,13 +33,16 @@ export function parseCustomDate(dateValue) {
   } else if (dateValue instanceof Date) {
     formatted = moment(dateValue);
   } else {
-    formatted = moment(dateValue, ["DD-MM-YYYY", "YYYY-MM-DD"], true);
+    const text = String(dateValue).trim();
+    formatted = moment(text, STANDARD_DATE_FORMATS, true);
+    if (!formatted.isValid()) {
+      formatted = moment(text);
+    }
   }
 
   if (!formatted.isValid()) {
     return null;
   }
 
-  //  Log for debugging
   return formatted.format("YYYY-MM-DD");
-};
+}

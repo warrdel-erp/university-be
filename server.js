@@ -98,7 +98,12 @@ import subjectWeightage from "./router/subjectWeightageRoute.js";
 
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 // middleware
-app.use(fileUpload());
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
+    return next();
+  }
+  fileUpload()(req, res, next);
+});
 app.use(json());
 app.use(cors());
 app.use(urlencoded({ extended: true }));

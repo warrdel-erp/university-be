@@ -28,6 +28,7 @@ export default sequelize.define(
     accessionNumber: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
       field: "accession_number",
     },
     billNo: {

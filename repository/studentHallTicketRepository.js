@@ -186,7 +186,23 @@ function getHallTicketIncludes() {
                     as: "acedmicYear",
                     attributes: ["acedmicYearId", "yearTitle"],
                 },
-            ],
+            ]
         },
     ];
 }
+
+export async function getMappedExamScheduleIds(studentId, examScheduleIds, transaction) {
+    if (!examScheduleIds || examScheduleIds.length === 0) {
+        return [];
+    }
+    const answerSheetQrs = await model.answerSheetQrModel.findAll({
+        where: {
+            studentId,
+            examScheduleId: examScheduleIds,
+        },
+        attributes: ["examScheduleId"],
+        transaction,
+    });
+    return answerSheetQrs.map((a) => a.examScheduleId);
+}
+

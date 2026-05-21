@@ -53,7 +53,7 @@ export async function deleteSession(sessionId, instituteId, universityId) {
 
   if (isSessionAlreadyMapped.length > 0) {
     throw new Error('Session already mapped with courses unable to delete')
-  } 
+  }
 
   return await sessionCreationService.deleteSession(sessionId);
 };
@@ -76,14 +76,22 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
       throw new Error("sessionId is required");
     }
 
-    const mappings = data.courseId.map(courseId => ({
-      universityId,
-      instituteId,
-      sessionId: data.sessionId,
-      courseId,
-      createdBy,
-      updatedBy
-    }));
+    const mappings = [];
+    for (const courseId of data.courseId) {
+      const existingMapping = await sessionCreationService.getMappingByCourseAndSession(courseId, data.sessionId);
+      if (existingMapping) {
+        throw new Error(`Course ID ${courseId} is already mapped to Session ID ${data.sessionId}`);
+      }
+
+      mappings.push({
+        universityId,
+        instituteId,
+        sessionId: data.sessionId,
+        courseId,
+        createdBy,
+        updatedBy
+      });
+    }
 
     await sessionCreationService.courseSectionMapping(mappings);
 
@@ -94,6 +102,27 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
     throw error;
   }
 };
+
+export async function deleteCouseSessionMapping(sessionCourseMappingId) {
+  const mapping = await sessionCreationService.getMappingById(sessionCourseMappingId);
+  if (!mapping) {
+    throw new Error("Mapping not found");
+  }
+
+  const { courseId, sessionId } = mapping;
+
+  const classSectionCount = await sessionCreationService.countClassSections(courseId, sessionId);
+  if (classSectionCount > 0) {
+    throw new Error("Cannot remove mapping: Class sections are already created for this course and session.");
+  }
+
+  const syllabusUnitCount = await sessionCreationService.countSyllabusUnits(courseId, sessionId);
+  if (syllabusUnitCount > 0) {
+    throw new Error("Cannot remove mapping: Syllabus units are already created for this course and session.");
+  }
+
+  return await sessionCreationService.deleteCourseSessionMapping(sessionCourseMappingId);
+}
 
 export async function updateCouseSessionMapping(data, updatedBy, universityId, instituteId) {
   data.updatedBy = updatedBy;

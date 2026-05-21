@@ -13,11 +13,17 @@ module.exports = {
     `);
 
     // 2. Add a unique constraint so no duplicate entries can be created in the future
-    await queryInterface.addConstraint('session_course_mapping', {
-      fields: ['course_id', 'session_id'],
-      type: 'unique',
-      name: 'unique_course_session_mapping'
-    });
+    try {
+      await queryInterface.addConstraint('session_course_mapping', {
+        fields: ['course_id', 'session_id'],
+        type: 'unique',
+        name: 'unique_course_session_mapping'
+      });
+    } catch (error) {
+      if (!error.message.includes('Duplicate key name')) {
+        throw error;
+      }
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

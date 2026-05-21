@@ -1,4 +1,5 @@
 import * as libraryCreation  from  "../services/libraryCreationServices.js";
+import { importLibraryBooksFromExcel } from "../services/libraryBookBulkUploadServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
@@ -186,17 +187,32 @@ export async function addBookWithInventory(req, res) {
 
 
 export async function getAllBooks(req, res) {
-        const universityId = req.user.universityId;
-        const {libraryCreationId,libraryFloorId} = req.query
-        if (!(libraryCreationId && libraryFloorId))
-            return ErrorResponse(res, 400, "libraryCreationId,libraryFloorId is required");
     try {
-        const books = await libraryCreation.getAllBooks(universityId,libraryCreationId,libraryFloorId);
-        return SuccessResponse(res, 200, "Books", books);
+        const {
+            libraryCreationId,
+            libraryFloorId,
+            page,
+            limit,
+            ...filters
+        } = req.query;
+
+        const result = await libraryCreation.getAllBooks(
+            req.user.universityId,
+            libraryCreationId,
+            libraryFloorId,
+            { page, limit },
+            filters,
+        );
+
+        return SuccessResponse(res, 200, "Books", result.books, {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+        });
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
     }
-};
+}
 
 export async function getSingleBookDetails(req, res) {
     try {
@@ -321,13 +337,7 @@ export async function getAllIssuedBooks(req, res) {
 
 export async function bulkUploadBooks(req, res) {
     try {
-        const excelFile = req.files?.book;
-
-        if (!excelFile) {
-            return ErrorResponse(res, 400, "Excel file is required");
-        }
-
-        const excelData = fileHandler.readExcelFile(excelFile.data);
+        const excelData = fileHandler.readLibraryBulkUploadExcelFile(req.files.book.data);
         if (!excelData) {
             return ErrorResponse(res, 400, "Error reading the Excel file");
         }
@@ -336,18 +346,26 @@ export async function bulkUploadBooks(req, res) {
         const updatedBy = req.user.userId;
         const { libraryCreationId } = req.query;
 
-        const result = await libraryCreation.bulkUploadBooks(
+        const result = await importLibraryBooksFromExcel(
             excelData,
             createdBy,
             updatedBy,
-            libraryCreationId
+            libraryCreationId,
+            req.user.defaultInstituteId,
         );
 
         if (result.status === "error") {
-            return res.status(400).json({ message: result.message });
+            return res.status(400).json({
+                message: result.message,
+                ...(result.totalErrors != null && { totalErrors: result.totalErrors }),
+                ...(result.totalRows != null && { totalRows: result.totalRows }),
+            });
         }
 
-        return SuccessResponse(res, 200, "Data uploaded successfully");
+        return SuccessResponse(res, 200, "Data uploaded successfully", {
+            importedRows: result.importedRows,
+            uniqueBooks: result.uniqueBooks,
+        });
 
     } catch (error) {
         console.error("Bulk Upload Error:", error);

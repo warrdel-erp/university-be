@@ -108,3 +108,16 @@ export async function updateCouseSessionMapping(req, res) {
         res.status(500).json({ error: error.message });
     }
 };
+
+export async function deleteCouseSessionMapping(req, res) {
+    const { sessionCourseMappingId } = req.query;
+    try {
+        if (!sessionCourseMappingId) {
+            return res.status(400).send('sessionCourseMappingId is required');
+        }
+        await sessionCreation.deleteCouseSessionMapping(sessionCourseMappingId);
+        res.status(200).json({ message: "Mapping deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

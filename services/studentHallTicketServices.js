@@ -122,12 +122,13 @@ export async function generateHallTicketsForUser(payload, user) {
     });
 }
 
-function schedulesToSubjectList(scheduleRows) {
+function schedulesToSubjectList(scheduleRows, mappedScheduleIds = []) {
+    const mappedSet = new Set(mappedScheduleIds || []);
     return (scheduleRows || []).map((row) => {
         const plain = row.get({ plain: true });
         const sub = plain.subjectSchedule;
         const sem = plain.semesterexam;
-        const isMapped = plain.examScheduleId != null;
+        const isMapped = plain.examScheduleId != null && mappedSet.has(plain.examScheduleId);
         return {
             examScheduleId: plain.examScheduleId,
             isMapped,
@@ -147,13 +148,13 @@ function schedulesToSubjectList(scheduleRows) {
     });
 }
 
-function flattenHallTicketDetail(ticket, scheduleRows) {
+function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds = []) {
     const st = ticket.student;
     const sess = ticket.session;
     const est = ticket.examSetupTypeTerm;
     const examType = est?.examSetupType;
 
-    const subjects = schedulesToSubjectList(scheduleRows);
+    const subjects = schedulesToSubjectList(scheduleRows, mappedScheduleIds);
 
     return {
         id: ticket.id,
@@ -204,7 +205,14 @@ export async function getHallTicketById(id, instituteId, universityId) {
             transaction
         );
 
-        return flattenHallTicketDetail(ticket, schedules);
+        const examScheduleIds = schedules.map(s => s.examScheduleId).filter(id => id != null);
+        const mappedScheduleIds = await studentHallTicketRepository.getMappedExamScheduleIds(
+            ticket.studentId,
+            examScheduleIds,
+            transaction
+        );
+
+        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds);
     });
     return result;
 }
@@ -233,7 +241,14 @@ export async function getHallTicketDetailsByQr(qr, instituteId, universityId) {
             transaction
         );
 
-        return flattenHallTicketDetail(ticket, schedules);
+        const examScheduleIds = schedules.map(s => s.examScheduleId).filter(id => id != null);
+        const mappedScheduleIds = await studentHallTicketRepository.getMappedExamScheduleIds(
+            ticket.studentId,
+            examScheduleIds,
+            transaction
+        );
+
+        return flattenHallTicketDetail(ticket, schedules, mappedScheduleIds);
     });
     return result;
 }
@@ -278,3 +293,5 @@ export async function getAllHallTicketsForUser(query = {}, user) {
         limit: query.limit,
     });
 }
+
+
