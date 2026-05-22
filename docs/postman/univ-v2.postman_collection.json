@@ -4800,7 +4800,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library APIs under `/libraryCreation` (test in order: library → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
+      "description": "Library APIs under `/libraryCreation` (test in order: library → get single library (set `libraryFloor_id`) → floor structure POST/GET → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -4950,6 +4950,95 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"libraryCreationId\": 25,\n  \"name\": \"Central Library\",\n  \"floors\": [\n    { \"libraryFloorId\": 1, \"name\": \"Ground Floor\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "bulk generate floor structure",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aisles\": 5,\n  \"racksPerAisle\": 10,\n  \"rowsPerRack\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/floor/{{libraryFloor_id}}/structure",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "floor",
+                "{{libraryFloor_id}}",
+                "structure"
+              ]
+            },
+            "description": "**POST /libraryCreation/floor/:libraryFloorId/structure**\n\nBulk-creates aisles, racks, and rows (shelves) for a floor in one transaction.\n\n- **Aisle** `name` continues from the highest existing numeric aisle on the floor (e.g. day 1: 1–5, day 2 with `aisles: 2` → 6–7).\n- **Rack** / **row** names start at `1` within each new aisle/rack.\n- **description** is auto-set: `aisle 1`, `aisle 1 rack 2`, `aisle 1 rack 2 row 2`.\n\n**Body:** `aisles`, `racksPerAisle`, `rowsPerRack` (all integers ≥ 1).\n\nSet `libraryFloor_id` from **get single library** `floors[].libraryFloorId`."
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Floor structure generated successfully\",\n  \"data\": {\n    \"libraryFloorId\": 1,\n    \"aisleNameStart\": 1,\n    \"aisleNameEnd\": 5,\n    \"aislesCreated\": 5,\n    \"racksCreated\": 50,\n    \"rowsCreated\": 300,\n    \"aisles\": [\n      { \"libraryAisleId\": 1, \"name\": \"1\" },\n      { \"libraryAisleId\": 5, \"name\": \"5\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get floor structure",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/floor/{{libraryFloor_id}}/structure",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "floor",
+                "{{libraryFloor_id}}",
+                "structure"
+              ]
+            },
+            "description": "**GET /libraryCreation/floor/:libraryFloorId/structure**\n\nReturns nested floor layout: **aisles → racks → shelves** (rows). Sorted numerically by `name`. Includes `description` on each level."
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Floor structure fetched successfully\",\n  \"data\": {\n    \"libraryFloorId\": 1,\n    \"libraryCreationId\": 25,\n    \"name\": \"Ground Floor\",\n    \"description\": null,\n    \"aisles\": [\n      {\n        \"libraryAisleId\": 1,\n        \"name\": \"1\",\n        \"description\": \"aisle 1\",\n        \"racks\": [\n          {\n            \"libraryRackId\": 1,\n            \"name\": \"1\",\n            \"description\": \"aisle 1 rack 1\",\n            \"shelves\": [\n              {\n                \"libraryRowId\": 1,\n                \"name\": \"1\",\n                \"description\": \"aisle 1 rack 1 row 1\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}"
             }
           ]
         },

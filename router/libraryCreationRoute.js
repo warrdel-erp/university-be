@@ -7,6 +7,8 @@ import {
   getSingleLibraryDetails,
   updateLibray,
   deleteLibray,
+  bulkGenerateFloorStructure,
+  getFloorStructure,
   addBookWithInventory,
   getAllBooks,
   getSingleBookDetails,
@@ -26,6 +28,22 @@ const router = Router();
 
 const idQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
+});
+
+const libraryFloorIdParamSchema = z.object({
+  libraryFloorId: z.coerce.number(),
+});
+
+const positiveStructureCount = (label) =>
+  z.coerce
+    .number({ invalid_type_error: `${label} must be a number` })
+    .int({ message: `${label} must be a whole number` })
+    .min(1, { message: `${label} must be at least 1` });
+
+const bulkFloorStructureSchema = z.object({
+  aisles: positiveStructureCount("Aisles"),
+  racksPerAisle: positiveStructureCount("Racks per aisle"),
+  rowsPerRack: positiveStructureCount("Rows per rack"),
 });
 
 const floorSchema = z.object({
@@ -213,10 +231,23 @@ router.patch("/", userAuth, validate({ body: updateLibrarySchema }), updateLibra
 
 router.delete("/", userAuth, validate({ query: idQuerySchema }), deleteLibray);
 
+router.post(
+  "/floor/:libraryFloorId/structure",
+  userAuth,
+  validate({ params: libraryFloorIdParamSchema, body: bulkFloorStructureSchema }),
+  bulkGenerateFloorStructure,
+);
+
+router.get(
+  "/floor/:libraryFloorId/structure",
+  userAuth,
+  validate({ params: libraryFloorIdParamSchema }),
+  getFloorStructure,
+);
+
 router.post("/addCategory", userAuth, validate({ body: addCategorySchema }), addCategory);
 router.get("/getAllCategories", userAuth, getAllCategories);
 router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema }), updateCategory);
-
 router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);

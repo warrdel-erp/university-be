@@ -177,6 +177,31 @@ export async function getAllIssuedBooks(req, res) {
   }
 }
 
+export async function bulkGenerateFloorStructure(req, res) {
+  try {
+    const result = await libraryCreation.bulkGenerateFloorStructure(
+      req.params.libraryFloorId,
+      req.body,
+      req.user,
+    );
+    return SuccessResponse(res, 201, "Floor structure generated successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFloorStructure(req, res) {
+  try {
+    const result = await libraryCreation.getFloorStructure(
+      req.params.libraryFloorId,
+      req.user,
+    );
+    return SuccessResponse(res, 200, "Floor structure fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function bulkUploadBooks(req, res) {
   try {
     const data = await bulkUploadLibraryBooks(req.files?.book, req.user, req.query);

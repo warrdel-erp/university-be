@@ -317,6 +317,192 @@ export async function deleteCategory(libraryCategoryId) {
   }
 }
 
+function structureAuditFields(userId) {
+  return {
+    createdBy: userId,
+    updatedBy: userId,
+  };
+}
+
+function buildAislePayloads(libraryFloorId, count, nameStart, audit) {
+  return Array.from({ length: count }, (_, index) => {
+    const aisleName = String(nameStart + index);
+    return {
+      libraryFloorId,
+      name: aisleName,
+      description: `aisle ${aisleName}`,
+      ...audit,
+    };
+  });
+}
+
+function buildRackPayloads(aisles, racksPerAisle, audit) {
+  const total = aisles.length * racksPerAisle;
+  const payloads = new Array(total);
+  let offset = 0;
+
+  for (const aisle of aisles) {
+    for (let rackIndex = 1; rackIndex <= racksPerAisle; rackIndex += 1) {
+      const rackName = String(rackIndex);
+      payloads[offset] = {
+        libraryAisleId: aisle.libraryAisleId,
+        name: rackName,
+        description: `aisle ${aisle.name} rack ${rackName}`,
+        ...audit,
+      };
+      offset += 1;
+    }
+  }
+
+  return payloads;
+}
+
+function buildRowPayloads(racks, rowsPerRack, aisleNameByAisleId, audit) {
+  const total = racks.length * rowsPerRack;
+  const payloads = new Array(total);
+  let offset = 0;
+
+  for (const rack of racks) {
+    const aisleName = aisleNameByAisleId.get(rack.libraryAisleId);
+    for (let rowIndex = 1; rowIndex <= rowsPerRack; rowIndex += 1) {
+      const rowName = String(rowIndex);
+      payloads[offset] = {
+        libraryRackId: rack.libraryRackId,
+        name: rowName,
+        description: `aisle ${aisleName} rack ${rack.name} row ${rowName}`,
+        ...audit,
+      };
+      offset += 1;
+    }
+  }
+
+  return payloads;
+}
+
+export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
+  const { aisles, racksPerAisle, rowsPerRack } = body;
+
+  const floor = await libraryStructureRepository.findFloorById(
+    libraryFloorId,
+    user.universityId,
+  );
+
+  if (!floor) {
+    throw httpError("Library floor not found", 404);
+  }
+
+  const audit = structureAuditFields(user.userId);
+  const transaction = await sequelize.transaction();
+
+  try {
+    const maxAisleName =
+      await libraryStructureRepository.getMaxNumericAisleNameByFloorId(
+        libraryFloorId,
+        transaction,
+      );
+    const aisleNameStart = maxAisleName + 1;
+
+    const createdAisles = await libraryStructureRepository.bulkCreateAisles(
+      buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit),
+      transaction,
+    );
+
+    const createdRacks = await libraryStructureRepository.bulkCreateRacks(
+      buildRackPayloads(createdAisles, racksPerAisle, audit),
+      transaction,
+    );
+
+    const aisleNameByAisleId = new Map(
+      createdAisles.map((aisle) => [aisle.libraryAisleId, aisle.name]),
+    );
+    const rowPayloads = buildRowPayloads(
+      createdRacks,
+      rowsPerRack,
+      aisleNameByAisleId,
+      audit,
+    );
+
+    await libraryStructureRepository.bulkCreateRows(rowPayloads, transaction);
+
+    await transaction.commit();
+
+    return {
+      libraryFloorId,
+      aisleNameStart,
+      aisleNameEnd: aisleNameStart + aisles - 1,
+      aislesCreated: aisles,
+      racksCreated: createdRacks.length,
+      rowsCreated: rowPayloads.length,
+      aisles: createdAisles.map((aisle) => ({
+        libraryAisleId: aisle.libraryAisleId,
+        name: aisle.name,
+      })),
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+function sortByNumericName(a, b) {
+  const diff = Number(a.name) - Number(b.name);
+  return Number.isNaN(diff) || diff === 0 ? String(a.name).localeCompare(String(b.name)) : diff;
+}
+
+function formatFloorStructureShelf(row) {
+  return {
+    libraryRowId: row.libraryRowId,
+    name: row.name,
+    description: row.description,
+  };
+}
+
+function formatFloorStructureRack(rack) {
+  const shelves = (rack.rows ?? []).map(formatFloorStructureShelf).sort(sortByNumericName);
+  return {
+    libraryRackId: rack.libraryRackId,
+    name: rack.name,
+    description: rack.description,
+    shelves,
+  };
+}
+
+function formatFloorStructureAisle(aisle) {
+  const racks = (aisle.racks ?? []).map(formatFloorStructureRack).sort(sortByNumericName);
+  return {
+    libraryAisleId: aisle.libraryAisleId,
+    name: aisle.name,
+    description: aisle.description,
+    racks,
+  };
+}
+
+function formatFloorStructureResponse(floor) {
+  const plain = floor.get({ plain: true });
+  const aisles = (plain.aisles ?? []).map(formatFloorStructureAisle).sort(sortByNumericName);
+
+  return {
+    libraryFloorId: plain.libraryFloorId,
+    libraryCreationId: plain.libraryCreationId,
+    name: plain.name,
+    description: plain.description,
+    aisles,
+  };
+}
+
+export async function getFloorStructure(libraryFloorId, user) {
+  const floor = await libraryStructureRepository.findFloorStructureById(
+    libraryFloorId,
+    user.universityId,
+  );
+
+  if (!floor) {
+    throw httpError("Library floor not found", 404);
+  }
+
+  return formatFloorStructureResponse(floor);
+}
+
 export async function addLibrary(body, user) {
   const { instituteId, name, description, floors, campusId } = body;
   const payload = {
