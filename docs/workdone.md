@@ -62,4 +62,3 @@
 9. library book copies shown in popup with basic actions.
 10. Problem in first time hall ticket view.
 
-

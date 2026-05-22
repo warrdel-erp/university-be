@@ -546,6 +546,7 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
         continue;
       }
 
+
       let qrValue = await scanQrFromImage(imagePath);
 
       if (!qrValue) {

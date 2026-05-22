@@ -1,124 +1,107 @@
 import * as model from '../models/index.js'
 
-export async function bookIssue(bookIssue,transaction) {    
-    try {
-        const result = await model.libraryIssueBookModel.create(bookIssue,{transaction});
-        return result;
-    } catch (error) {
-        console.error("Error in Book Issue:", error);
-        throw error;
-    }
-};
+const issueBookListAttributes = [
+    'libraryIssueBookId',
+    'libraryAddItemId',
+    'libraryBookId',
+    'libraryMemberId',
+    'issueDate',
+    'dueDate',
+    'returnDate',
+    'status',
+    'issuedBy',
+    'receivedBy',
+    'createdBy',
+];
+
+const issueBookListIncludes = (universityId) => [
+    {
+        model: model.userModel,
+        as: 'userBookIssue',
+        attributes: ['userId', 'userName'],
+        where: { universityId },
+    },
+    {
+        model: model.libraryMemberModel,
+        as: 'memberBookIssue',
+        required: false,
+        attributes: [
+            'libraryMemberId',
+            'memberId',
+            'memberType',
+            'studentId',
+            'employeeId',
+        ],
+        include: [
+            {
+                model: model.studentModel,
+                as: 'libraryMemberStudent',
+                required: false,
+                attributes: ['studentId', 'userId', 'firstName', 'middleName', 'lastName'],
+            },
+            {
+                model: model.employeeModel,
+                as: 'libraryMemberEmployee',
+                required: false,
+                attributes: ['employeeId', 'userId', 'employeeName'],
+            },
+        ],
+    },
+    {
+        model: model.libraryAddItemModel,
+        as: 'addItemBookIssue',
+        required: false,
+        attributes: ['libraryAddItemId', 'name', 'author', 'publisher'],
+    },
+    {
+        model: model.libraryBookModel,
+        as: 'libraryBookIssue',
+        required: false,
+        attributes: ['libraryBookId', 'title', 'authors', 'publisher'],
+    },
+];
+
+const findIssueBookList = (where, universityId) =>
+    model.libraryIssueBookModel.findAll({
+        attributes: issueBookListAttributes,
+        where,
+        include: issueBookListIncludes(universityId),
+    });
+
+export async function findIssueBookById(libraryIssueBookId, universityId) {
+    const rows = await findIssueBookList({ libraryIssueBookId }, universityId);
+    return rows[0] ?? null;
+}
+
+export async function bookIssue(bookIssue, transaction) {
+    return model.libraryIssueBookModel.create(bookIssue, { transaction });
+}
 
 export async function getAllIssueBooks(universityId) {
-    try {
-        const bookDetails = await model.libraryIssueBookModel.findAll({
-            attributes: {
-                exclude: [
-                    "createdAt",
-                    "updatedAt",
-                    "deletedAt",
-                    "createdBy",
-                    "updatedBy",
-                ],
-            },
-            include: [
-                {
-                    model: model.userModel,
-                    as: "userBookIssue",
-                    attributes: ["universityId", "userId", "userName"],
-                    where: { universityId },
-                },
-                {
-                    model: model.libraryMemberModel,
-                    as: "memberBookIssue",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","student_id","employee_id","library_creation_id"] },
-                    include:[
-                        {
-                            model: model.studentModel,
-                            as: "libraryMemberStudent",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
-                        },
-                        {
-                            model: model.employeeModel,
-                            as: "libraryMemberEmployee",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
-                        },
-                    ]
-                },
-                {
-                    model: model.libraryAddItemModel,
-                    as: "addItemBookIssue",
-                    attributes :["name","author","publisher"]
-                }
-            ]
-        });
+    return findIssueBookList(undefined, universityId);
+}
 
-        return bookDetails;
-    } catch (error) {
-        console.error('Error fetching all issue book details:', error);
-        throw error;
-    }
-};
+export async function getBookByMemberId(libraryMemberId, universityId) {
+    return findIssueBookList({ libraryMemberId }, universityId);
+}
 
-export async function getBookByMemberId(libraryMemberId,universityId) {
-    try {
-        const bookDetails = await model.libraryIssueBookModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
-            where: { libraryMemberId },
-            include: [
-                {
-                    model: model.userModel,
-                    as: "userBookIssue",
-                    attributes: ["universityId", "userId", "userName"],
-                    where: { universityId },
-                },
-                {
-                    model: model.libraryMemberModel,
-                    as: "memberBookIssue",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","student_id","employee_id","library_creation_id"] },
-                    include:[
-                        {
-                            model: model.studentModel,
-                            as: "libraryMemberStudent",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
-                        },
-                        {
-                            model: model.employeeModel,
-                            as: "libraryMemberEmployee",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy"] },
-                        },
-                    ]
-                },
-                {
-                    model: model.libraryAddItemModel,
-                    as: "addItemBookIssue",
-                    attributes :["name","author","publisher"]
-                }
-            ]
-        });
-
-        return bookDetails;
-    } catch (error) {
-        console.error(`Error fetching book member details for member ${libraryMemberId}:`, error);
-        throw error;
-    }
-};
+export async function countIssuesByMemberId(libraryMemberId) {
+    return model.libraryIssueBookModel.count({
+        where: { libraryMemberId },
+    });
+}
 
 export async function deleteBook(libraryIssueBookId) {
-    const deleted = await model.libraryIssueBookModel.destroy({ where: { libraryIssueBookId: libraryIssueBookId } });
+    const deleted = await model.libraryIssueBookModel.destroy({
+        where: { libraryIssueBookId },
+    });
     return deleted > 0;
-};
+}
 
 export async function updateBookAndStatus(libraryIssueBookId, bookIssue, transaction) {
-    try {
-        const result = await model.libraryIssueBookModel.update(bookIssue, {
-            where: { libraryIssueBookId },
-            transaction
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating member creation ${libraryIssueBookId}:`, error);
-        throw error; 
-    }
-};
+    const [affectedCount] = await model.libraryIssueBookModel.update(bookIssue, {
+        where: { libraryIssueBookId },
+        transaction,
+    });
+    return affectedCount > 0;
+}

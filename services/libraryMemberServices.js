@@ -1,57 +1,107 @@
 import * as libraryMemberService from "../repository/libraryMemberRepository.js";
 import * as libraryIssueBook from "../repository/libraryIssueBookRepository.js";
-import * as libraryAddItemService from "./libraryAddItemServices.js";
+import * as libraryAddItemRepository from "../repository/libraryAddItemRepository.js";
+import * as libraryCreationRepository from "../repository/libraryCreationRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import moment from "moment";
 
-export async function addMember(memberData, createdBy, updatedBy) {
-  try {
-    const staticPrefix = "ASA-L1";
+const httpError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
 
-    const typePrefix = memberData.memberType.slice(0, 3).toUpperCase();
+const assertUniqueLibraryMember = async (
+  { studentId, employeeId },
+  excludeLibraryMemberId,
+  transaction,
+) => {
+  if (studentId) {
+    const existingStudent = await libraryMemberService.findByStudentId(
+      studentId,
+      excludeLibraryMemberId,
+      transaction,
+    );
+    if (existingStudent) {
+      throw httpError(
+        "Student is already registered as a library member",
+        409,
+      );
+    }
+  }
+
+  if (employeeId) {
+    const existingEmployee = await libraryMemberService.findByEmployeeId(
+      employeeId,
+      excludeLibraryMemberId,
+      transaction,
+    );
+    if (existingEmployee) {
+      throw httpError(
+        "Employee is already registered as a library member",
+        409,
+      );
+    }
+  }
+};
+
+const buildMemberCardId = (memberType, lastMemberId) => {
+  const staticPrefix = "ASA-L1";
+  const typePrefix = memberType.slice(0, 3).toUpperCase();
+
+  if (!lastMemberId) {
+    return `${staticPrefix}-${typePrefix}-00001`;
+  }
+
+  const lastNumber = parseInt(lastMemberId.split("-")[3], 10) || 0;
+  return `${staticPrefix}-${typePrefix}-${String(lastNumber + 1).padStart(5, "0")}`;
+};
+
+export async function addMember(memberData, user) {
+  try {
+    await assertUniqueLibraryMember(memberData, null);
 
     const last = await libraryMemberService.getPreviousMemberId();
-    const lastMemberId = last ? last.dataValues.member_id : "";
+    const lastMemberId = last?.dataValues?.member_id ?? last?.memberId ?? "";
 
-    let newMemberId;
+    const payload = {
+      ...memberData,
+      memberId: buildMemberCardId(memberData.memberType, lastMemberId),
+      createdBy: user.userId,
+      updatedBy: user.userId,
+    };
 
-    if (lastMemberId) {
-      const lastNumber = parseInt(lastMemberId.split("-")[3]) || 0;
-      const incrementedNumber = lastNumber + 1;
-
-      newMemberId = `${staticPrefix}-${typePrefix}-${String(incrementedNumber).padStart(5, "0")}`;
-    } else {
-      newMemberId = `${staticPrefix}-${typePrefix}-00001`;
-    }
-
-    memberData.memberId = newMemberId;
-    memberData.createdBy = createdBy;
-    memberData.updatedBy = updatedBy;
-
-    return await libraryMemberService.addMember(memberData);
+    return await libraryMemberService.addMember(payload);
   } catch (error) {
     console.error("Error adding member:", error);
-    throw new Error("Unable to add member");
+    if (error.statusCode) {
+      throw error;
+    }
+    throw httpError("Unable to add member", 500);
   }
 }
 
-export async function getMemberDetails(universityId) {
-  return await libraryMemberService.getMemberDetails(universityId);
+export async function getMemberDetails(user) {
+  return libraryMemberService.getMemberDetails(user.universityId);
 }
 
-export async function getSingleMemberDetails(libraryCreationId, universityId) {
-  return await libraryMemberService.getSingleMemberDetails(
+export async function getSingleMemberDetails(libraryCreationId, user) {
+  const members = await libraryMemberService.getSingleMemberDetails(
     libraryCreationId,
-    universityId,
+    user.universityId,
   );
+
+  if (!members?.length) {
+    throw httpError("Member not found", 404);
+  }
+
+  return members;
 }
 
-export async function deleteMember(libraryMemberId) {
-  return await libraryMemberService.deleteMember(libraryMemberId);
-}
+export async function updateMember(memberData, user) {
+  const { libraryMemberId, ...updateFields } = memberData;
 
-export async function updateMember(libraryMemberId, memberData, updatedBy) {
-  const { libraryMemberId: _id, ...updateFields } = memberData;
+  await assertUniqueLibraryMember(updateFields, libraryMemberId);
 
   const libraryMember =
     await libraryMemberService.getPreviousMemberIdByLibraryMemberId(
@@ -67,47 +117,82 @@ export async function updateMember(libraryMemberId, memberData, updatedBy) {
     updateFields.memberId = `${segments[0]}-${segments[1]}-${typePrefix}-${serial}`;
   }
 
-  updateFields.updatedBy = updatedBy;
-  return await libraryMemberService.updateMember(libraryMemberId, updateFields);
+  updateFields.updatedBy = user.userId;
+  return libraryMemberService.updateMember(libraryMemberId, updateFields);
 }
 
-// Book Issue
+export async function deleteMember(libraryMemberId) {
+  const member = await libraryMemberService.findMemberById(libraryMemberId);
+  if (!member) {
+    throw httpError("Library member not found", 404);
+  }
 
-export async function bookIssue(
-  bookIssueData,
-  createdBy,
-  updatedBy,
-  issuerName,
-) {
+  const issueCount = await libraryIssueBook.countIssuesByMemberId(libraryMemberId);
+  if (issueCount > 0) {
+    throw httpError(
+      "Cannot delete member with issued books. Return or delete all book issues first.",
+      409,
+    );
+  }
+
+  const deleted = await libraryMemberService.deleteMember(libraryMemberId);
+  if (!deleted) {
+    throw httpError("Library member not found", 404);
+  }
+
+  return { libraryMemberId };
+}
+
+export async function bookIssue(bookIssueData, user) {
   const transaction = await sequelize.transaction();
 
   try {
-    const libraryAddItemId = await libraryAddItemService.ensureLibraryAddItemId(
+    const memberExists = await libraryMemberService.findMemberById(
+      bookIssueData.libraryMemberId,
+      transaction,
+    );
+    if (!memberExists) {
+      throw httpError("Library member not found", 404);
+    }
+
+    const bookExists = await libraryCreationRepository.bookExistsById(
+      bookIssueData.libraryBookId,
+      transaction,
+    );
+    if (!bookExists) {
+      throw httpError("Library book not found", 404);
+    }
+
+    const libraryAddItemId = bookIssueData.libraryAddItemId ?? null;
+    if (
+      libraryAddItemId &&
+      !(await libraryAddItemRepository.findById(libraryAddItemId, transaction))
+    ) {
+      throw httpError("Library add item not found", 404);
+    }
+
+    const issueDate = moment(bookIssueData.issueDate);
+    const dueDate = moment(bookIssueData.dueDate);
+    if (!issueDate.isValid() || !dueDate.isValid()) {
+      throw httpError("Invalid issueDate or dueDate", 400);
+    }
+
+    const result = await libraryIssueBook.bookIssue(
       {
-        libraryAddItemId: bookIssueData.libraryAddItemId,
+        libraryAddItemId,
         libraryBookId: bookIssueData.libraryBookId,
-        libraryCreationId: bookIssueData.libraryCreationId,
-        genre: bookIssueData.genre,
-        aisle: bookIssueData.aisle,
-        shelf: bookIssueData.shelf,
+        libraryMemberId: bookIssueData.libraryMemberId,
+        createdBy: user.userId,
+        updatedBy: user.userId,
+        issuedBy: bookIssueData.issuedBy ?? user.userName,
+        receivedBy: bookIssueData.receivedBy ?? user.userName,
+        issueDate: issueDate.toDate(),
+        dueDate: dueDate.toDate(),
+        status: "Issued",
       },
-      createdBy,
-      updatedBy,
       transaction,
     );
 
-    const payload = {
-      libraryAddItemId,
-      libraryMemberId: bookIssueData.libraryMemberId,
-      createdBy,
-      updatedBy,
-      issuedBy: bookIssueData.issuedBy ?? issuerName,
-      issueDate: moment(bookIssueData.issueDate).toDate(),
-      dueDate: moment(bookIssueData.dueDate).toDate(),
-      status: "Issued",
-    };
-
-    const result = await libraryIssueBook.bookIssue(payload, transaction);
     await transaction.commit();
     return result;
   } catch (error) {
@@ -116,44 +201,68 @@ export async function bookIssue(
   }
 }
 
-export async function getAllIssueBooks(universityId) {
-  return await libraryIssueBook.getAllIssueBooks(universityId);
+export async function getAllIssueBooks(user) {
+  return libraryIssueBook.getAllIssueBooks(user.universityId);
 }
 
-export async function getBookByMemberId(libraryMemberId, universityId) {
-  return await libraryIssueBook.getBookByMemberId(
-    libraryMemberId,
-    universityId,
-  );
+export async function getBookByMemberId(libraryMemberId, user) {
+  if (!(await libraryMemberService.findMemberById(libraryMemberId))) {
+    throw httpError("Library member not found", 404);
+  }
+
+  return libraryIssueBook.getBookByMemberId(libraryMemberId, user.universityId);
 }
 
-export async function deleteBook(libraryIssueBookId) {
-  return await libraryIssueBook.deleteBook(libraryIssueBookId);
-}
+export async function updateBookAndStatus(bookIssueData, user) {
+  const { libraryIssueBookId } = bookIssueData;
+  const issueDate = moment(bookIssueData.issueDate);
+  const dueDate = moment(bookIssueData.dueDate);
 
-export async function updateBookAndStatus(
-  libraryIssueBookId,
-  bookIssueData,
-  updatedBy,
-) {
+  if (!issueDate.isValid() || !dueDate.isValid()) {
+    throw httpError("Invalid issueDate or dueDate", 400);
+  }
+
   const updateData = {
-    updatedBy,
+    updatedBy: user.userId,
     status: bookIssueData.status,
-    issueDate: moment(bookIssueData.issueDate).toDate(),
-    dueDate: moment(bookIssueData.dueDate).toDate(),
+    issueDate: issueDate.toDate(),
+    dueDate: dueDate.toDate(),
     issuedBy: bookIssueData.issuedBy,
   };
 
   if (bookIssueData.status === "Returned") {
-    updateData.returnDate = moment(bookIssueData.returnDate).toDate();
+    const returnDate = moment(bookIssueData.returnDate);
+    if (!returnDate.isValid()) {
+      throw httpError("Invalid returnDate", 400);
+    }
+    updateData.returnDate = returnDate.toDate();
+    updateData.receivedBy = bookIssueData.receivedBy ?? user.userName;
   }
 
   if (bookIssueData.status === "Renewed") {
     updateData.returnDate = null;
   }
 
-  return await libraryIssueBook.updateBookAndStatus(
+  const updated = await libraryIssueBook.updateBookAndStatus(
     libraryIssueBookId,
     updateData,
   );
+
+  if (!updated) {
+    throw httpError("Book issue not found", 404);
+  }
+
+  return libraryIssueBook.findIssueBookById(
+    libraryIssueBookId,
+    user.universityId,
+  );
+}
+
+export async function deleteBook(libraryIssueBookId) {
+  const deleted = await libraryIssueBook.deleteBook(libraryIssueBookId);
+  if (!deleted) {
+    throw httpError("Book issue not found", 404);
+  }
+
+  return { libraryIssueBookId };
 }

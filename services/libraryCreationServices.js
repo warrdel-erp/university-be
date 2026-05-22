@@ -2,7 +2,11 @@ import * as libraryCreationService from "../repository/libraryCreationRepository
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 
-
+const httpError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
 
 function parseIdArray(value) {
   const toValidIds = (nums) =>
@@ -60,22 +64,120 @@ function formatInventoryForResponse(inv) {
   };
 }
 
+function applyBookMappingLists(book) {
+  const plain = book.get ? book.get({ plain: true }) : book;
+
+  const categories = (plain.categoryMappings ?? [])
+    .map((mapping) => ({
+      libraryCategoryId: mapping.libraryCategoryId ?? mapping.category?.libraryCategoryId,
+      name: mapping.category?.name,
+    }))
+    .filter((item) => item.libraryCategoryId);
+
+  const subjects = (plain.subjectMappings ?? [])
+    .map((mapping) => ({
+      subjectId: mapping.librarySubjectId ?? mapping.subject?.subjectId,
+      subjectName: mapping.subject?.subjectName,
+    }))
+    .filter((item) => item.subjectId);
+
+  const { categoryMappings, subjectMappings, ...bookFields } = plain;
+
+  return formatBookForResponse({
+    ...bookFields,
+    categories,
+    subjects,
+  });
+}
+
 function formatBookForResponse(book) {
   const {
-    categoryId: _categoryId,
-    subjectId: _subjectId,
-    categoryNames: _categoryNames,
-    subjectNames: _subjectNames,
+    categoryMappings: _categoryMappings,
+    subjectMappings: _subjectMappings,
     inventoryCopies,
     ...bookFields
   } = book;
 
+  const categories = book.categories ?? [];
+  const subjects = book.subjects ?? [];
+
   return {
     ...bookFields,
-    categories: book.categories ?? [],
-    subjects: book.subjects ?? [],
+    categories,
+    subjects,
     inventoryCopies: (inventoryCopies ?? []).map(formatInventoryForResponse),
   };
+}
+
+function splitBookMappingPayload(bookData) {
+  const { subjectId, categoryId, ...bookFields } = bookData;
+
+  return {
+    bookFields,
+    subjectId: subjectId !== undefined ? parseIdArray(subjectId) : undefined,
+    categoryId: categoryId !== undefined ? parseIdArray(categoryId) : undefined,
+  };
+}
+
+async function validateBookMappingIds({ subjectId, categoryId, instituteId }, transaction) {
+  if (!instituteId) {
+    throw httpError("instituteId is required for book subject/category mappings");
+  }
+
+  if (subjectId?.length) {
+    const subjects = await libraryCreationService.getSubjectsByIds(subjectId, transaction);
+    const foundIds = new Set(subjects.map((row) => row.subjectId));
+    const missingIds = subjectId.filter((id) => !foundIds.has(id));
+
+    if (missingIds.length) {
+      throw httpError(
+        `Invalid subjectId(s): ${missingIds.join(", ")}. Must exist in subject table.`,
+      );
+    }
+  }
+
+  if (categoryId?.length) {
+    const categories = await libraryCreationService.getCategoriesByIds(categoryId, transaction);
+    const foundIds = new Set(categories.map((row) => row.libraryCategoryId));
+    const missingIds = categoryId.filter((id) => !foundIds.has(id));
+
+    if (missingIds.length) {
+      throw httpError(
+        `Invalid categoryId(s): ${missingIds.join(", ")}. Must exist in library_category table.`,
+      );
+    }
+  }
+}
+
+async function syncBookMappings(
+  libraryBookId,
+  { subjectId, categoryId, instituteId },
+  transaction,
+) {
+  const syncSubjects = subjectId !== undefined;
+  const syncCategories = categoryId !== undefined;
+
+  if (!syncSubjects && !syncCategories) return;
+
+  await validateBookMappingIds({ subjectId, categoryId, instituteId }, transaction);
+
+  if (syncSubjects) {
+    await libraryCreationService.replaceBookSubjectMappings(
+      libraryBookId,
+      subjectId,
+      instituteId,
+      transaction,
+    );
+  }
+
+  if (syncCategories) {
+    await libraryCreationService.replaceBookCategoryMappings(
+      libraryBookId,
+      categoryId,
+      instituteId,
+      transaction,
+    );
+  }
 }
 
 function pickAisleDetails(aisle) {
@@ -142,26 +244,36 @@ function filterBooksByFloor(books, libraryFloorId) {
   return books
     .map((book) => ({
       ...book,
-      inventoryCopies: (book.inventoryCopies || []).filter((inv) => {
-        const invFloorId = inv.aisleDetails?.libraryFloorId;
-        // Bulk-uploaded copies often have no aisle; show them on any floor view.
-        if (invFloorId == null) return true;
-        return Number(invFloorId) === floorId;
-      }),
+      inventoryCopies: (book.inventoryCopies || []).filter(
+        (inv) => Number(inv.aisleDetails?.libraryFloorId) === floorId,
+      ),
     }))
     .filter((book) => book.inventoryCopies.length > 0);
 }
 
-export async function addCategory(data) {
+export async function addCategory(body, user) {
+  const data = {
+    name: body.name,
+    instituteId: user.defaultInstituteId,
+    createdBy: user.userId,
+    updatedBy: user.userId,
+  };
   return await libraryCreationService.addCategory(data);
 }
 
-export async function getAllCategories(instituteId) {
-  return await libraryCreationService.getAllCategories(instituteId);
+export async function getAllCategories(user) {
+  return await libraryCreationService.getAllCategories(user.defaultInstituteId);
 }
 
-export async function updateCategory(libraryCategoryId, data) {
-  return await libraryCreationService.updateCategory(libraryCategoryId, data);
+export async function updateCategory(body, user) {
+  const { libraryCategoryId, name } = body;
+  const data = { updatedBy: user.userId };
+  if (name !== undefined) data.name = name;
+
+  const updated = await libraryCreationService.updateCategory(libraryCategoryId, data);
+  if (!updated) {
+    throw httpError("Category not found", 404);
+  }
 }
 
 export async function deleteCategory(libraryCategoryId) {
@@ -169,36 +281,41 @@ export async function deleteCategory(libraryCategoryId) {
   const categoryId = Number(libraryCategoryId);
 
   try {
-    const books = await libraryCreationService.findBooksContainingCategoryId(
-      categoryId,
-      transaction,
-    );
-
-    for (const book of books) {
-      const updatedCategoryIds = parseIdArray(book.categoryId).filter((id) => id !== categoryId);
-
-      await libraryCreationService.updateBook(
-        book.libraryBookId,
-        { categoryId: updatedCategoryIds.length ? updatedCategoryIds : null },
-        transaction,
-      );
-    }
+    await libraryCreationService.deleteCategoryMappingsByCategoryId(categoryId, transaction);
 
     const deleted = await libraryCreationService.deleteCategory(categoryId, transaction);
     if (!deleted) {
       await transaction.rollback();
-      return false;
+      throw httpError("Category not found", 404);
     }
 
     await transaction.commit();
-    return true;
   } catch (error) {
     await transaction.rollback();
     throw error;
   }
 }
 
-export async function addLibrary(data, createdBy, updatedBy, instituteId, universityId, campusId) {
+export async function addLibrary(body, user) {
+  const { instituteId, name, description, floors, campusId } = body;
+  const payload = {
+    instituteId,
+    name,
+    description: description ?? null,
+    floors,
+  };
+
+  return createLibraryWithFloors(
+    payload,
+    user.userId,
+    user.userId,
+    instituteId,
+    user.universityId,
+    campusId,
+  );
+}
+
+async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, universityId, campusId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -241,19 +358,35 @@ export async function addLibrary(data, createdBy, updatedBy, instituteId, univer
   }
 }
 
-export async function getLibraryDetails(universityId) {
-  return await libraryCreationService.getLibraryDetails(universityId);
+export async function getLibraryDetails(user) {
+  return await libraryCreationService.getLibraryDetails(user.universityId);
 }
 
-export async function getSingleLibraryDetails(libraryCreationId, universityId) {
-  return await libraryCreationService.getSingleLibraryDetails(libraryCreationId, universityId);
+export async function getSingleLibraryDetails(libraryCreationId, user) {
+  const library = await libraryCreationService.getSingleLibraryDetails(
+    libraryCreationId,
+    user.universityId,
+  );
+  if (!library) {
+    throw httpError("Library not found", 404);
+  }
+  return library;
 }
 
 export async function deleteLibray(libraryCreationId) {
-  return await libraryCreationService.deleteLibray(libraryCreationId);
+  const deleted = await libraryCreationService.deleteLibray(libraryCreationId);
+  if (!deleted) {
+    throw httpError("Library not found", 404);
+  }
+  return { libraryCreationId };
 }
 
-export async function updateLibrary(libraryCreationId, libraryData, updatedBy) {
+export async function updateLibrary(body, user) {
+  const { libraryCreationId, ...libraryData } = body;
+  return updateLibraryRecord(libraryCreationId, libraryData, user.userId);
+}
+
+async function updateLibraryRecord(libraryCreationId, libraryData, updatedBy) {
   // const transaction = await sequelize.transaction();
 
   try {
@@ -282,25 +415,83 @@ export async function updateLibrary(libraryCreationId, libraryData, updatedBy) {
 }
 
 
-export async function addBookWithInventory(bookData, inventoryList, createdBy, updatedBy) {
+export async function addBookWithInventory(body, user) {
+  const { book, inventory } = body;
+  const inventoryList = Array.isArray(inventory) ? inventory : [inventory];
+
+  return addBookWithInventoryRecord(
+    book,
+    inventoryList,
+    user.userId,
+    user.userId,
+    user.defaultInstituteId,
+  );
+}
+
+async function addBookWithInventoryRecord(
+  bookData,
+  inventoryList,
+  createdBy,
+  updatedBy,
+  instituteId,
+) {
   const transaction = await sequelize.transaction();
 
   try {
-    // bookData already validated by zod
+    const { bookFields, subjectId, categoryId } = splitBookMappingPayload(bookData);
+    const resolvedInstituteId =
+      (await libraryCreationService.getInstituteIdByLibraryCreationId(
+        bookFields.libraryCreationId,
+        transaction,
+      )) ?? instituteId;
+
+    const title = bookFields.title?.trim?.() || bookFields.title;
+    if (title) {
+      const existingBook = await libraryCreationService.findBookByTitle(
+        title,
+        bookFields.libraryCreationId,
+        transaction,
+      );
+      if (existingBook) {
+        throw httpError(`Book title '${title}' already exists`, 409);
+      }
+    }
+
     const newBook = await libraryCreationService.createBook(
       {
-        ...bookData,
+        ...bookFields,
         createdBy,
         updatedBy,
       },
-      transaction
+      transaction,
     );
 
+    const bookId = newBook.libraryBookId;
+
+    if (subjectId !== undefined || categoryId !== undefined) {
+      await syncBookMappings(
+        bookId,
+        { subjectId, categoryId, instituteId: resolvedInstituteId },
+        transaction,
+      );
+    }
+
     for (const inv of inventoryList) {
+      const accessionNumber = inv.accessionNumber?.trim?.() || inv.accessionNumber;
+      if (accessionNumber) {
+        const exists = await libraryCreationService.inventoryExistsByAccessionNumber(
+          accessionNumber,
+          transaction,
+        );
+        if (exists) {
+          throw httpError(`Accession number '${accessionNumber}' already exists`, 409);
+        }
+      }
+
       await libraryCreationService.createInventory(
         {
-          libraryBookId: newBook.libraryBookId,
-          accessionNumber: inv.accessionNumber ?? null,
+          libraryBookId: bookId,
+          accessionNumber: accessionNumber ?? null,
           libraryAisleId: inv.libraryAisleId,
           libraryRackId: inv.libraryRackId,
           libraryRowId: inv.libraryRowId,
@@ -322,110 +513,98 @@ export async function addBookWithInventory(bookData, inventoryList, createdBy, u
 
     await transaction.commit();
 
-    return { libraryBookId: newBook.libraryBookId };
+    return { libraryBookId: bookId };
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    if (error.statusCode) throw error;
+    if (error.name === "SequelizeUniqueConstraintError") {
+      const value = error.errors?.[0]?.value;
+      throw httpError(
+        value ? `Accession number '${value}' already exists` : "Duplicate record",
+        409,
+      );
+    }
+    throw httpError(error.message || "Unable to add book and inventory", 500);
   }
 }
 
 async function enrichBooksWithCategoriesAndSubjects(books) {
   if (!books || books.length === 0) return books;
-
-  const categoryIds = new Set();
-  const subjectIds = new Set();
-
-  for (const book of books) {
-    const rawBook = book.get ? book.get({ plain: true }) : book;
-
-    parseIdArray(rawBook.categoryId).forEach((id) => categoryIds.add(id));
-    parseIdArray(rawBook.subjectId).forEach((id) => subjectIds.add(id));
-  }
-
-  const [categories, subjects] = await Promise.all([
-    libraryCreationService.getCategoriesByIds(Array.from(categoryIds)),
-    libraryCreationService.getSubjectsByIds(Array.from(subjectIds))
-  ]);
-
-  const categoryMap = {};
-  categories.forEach(c => {
-    categoryMap[c.libraryCategoryId] = c.name;
-  });
-
-  const subjectMap = {};
-  subjects.forEach(s => {
-    subjectMap[s.subjectId] = s.subjectName;
-  });
-
-  return books.map((book) => {
-    const rawBook = book.get ? book.get({ plain: true }) : book;
-
-    const catList = [];
-    for (const id of parseIdArray(rawBook.categoryId)) {
-      if (categoryMap[id]) {
-        catList.push({ libraryCategoryId: id, name: categoryMap[id] });
-      }
-    }
-
-    const subList = [];
-    for (const id of parseIdArray(rawBook.subjectId)) {
-      if (subjectMap[id]) {
-        subList.push({ subjectId: id, subjectName: subjectMap[id] });
-      }
-    }
-
-    return formatBookForResponse({
-      ...rawBook,
-      categories: catList,
-      subjects: subList,
-    });
-  });
+  return books.map(applyBookMappingLists);
 }
 
-export async function getAllBooks(
-  universityId,
-  libraryCreationId,
-  libraryFloorId,
-  pagination = {},
-  filters = {},
-) {
-  const page = pagination.page ?? 1;
-  const rawLimit = pagination.limit ?? 20;
-  const limit = Math.min(100, Math.max(1, rawLimit));
-  const offset = (page - 1) * limit;
-
-  const { rows, count } = await libraryCreationService.getAllBooks(
-    universityId,
+export async function getAllBooks(query, user) {
+  const { libraryCreationId, libraryFloorId } = query;
+  const books = await libraryCreationService.getAllBooks(
+    user.universityId,
     libraryCreationId,
     libraryFloorId,
-    { limit, offset },
-    filters,
   );
 
-  if (!rows?.length) {
-    return { books: [], total: count, page, limit };
-  }
+  if (!books?.length) return [];
 
-  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(rows);
+  const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(books);
   const filtered = filterBooksByFloor(enrichedBooks, libraryFloorId);
-
-  return {
-    books: mapBooksToAllBookList(filtered),
-    total: count,
-    page,
-    limit,
-  };
+  return mapBooksToAllBookList(filtered);
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {
   const bookRow = await libraryCreationService.getSingleBookDetails(libraryBookId, transaction);
-  if (!bookRow) return null;
+  if (!bookRow) {
+    if (!transaction) {
+      throw httpError("Book not found", 404);
+    }
+    return null;
+  }
   const enriched = await enrichBooksWithCategoriesAndSubjects([bookRow]);
   return enriched[0];
 }
 
-export async function updateBook(libraryBookId, bookData, transaction) {
-  return await libraryCreationService.updateBook(libraryBookId, bookData, transaction);
+export async function updateBookFromRequest(body, user) {
+  const { libraryBookId, ...bookData } = body;
+  bookData.updatedBy = user.userId;
+
+  await updateBook(libraryBookId, bookData, undefined, user.defaultInstituteId);
+  return getSingleBookDetails(libraryBookId);
+}
+
+export async function updateInventoryFromRequest(body) {
+  const { inventoryId, ...inventoryData } = body;
+  return updateInventory(inventoryId, inventoryData);
+}
+
+export async function updateBook(libraryBookId, bookData, transaction, fallbackInstituteId) {
+  const { bookFields, subjectId, categoryId } = splitBookMappingPayload(bookData);
+  const hasBookFields = Object.keys(bookFields).length > 0;
+
+  if (hasBookFields) {
+    await libraryCreationService.updateBook(libraryBookId, bookFields, transaction);
+  }
+
+  if (subjectId !== undefined || categoryId !== undefined) {
+    const instituteId =
+      (await libraryCreationService.getInstituteIdByLibraryBookId(
+        libraryBookId,
+        transaction,
+      )) ??
+      (bookFields.libraryCreationId
+        ? await libraryCreationService.getInstituteIdByLibraryCreationId(
+            bookFields.libraryCreationId,
+            transaction,
+          )
+        : null) ??
+      fallbackInstituteId;
+
+    await syncBookMappings(
+      libraryBookId,
+      { subjectId, categoryId, instituteId },
+      transaction,
+    );
+  }
+
+  if (!hasBookFields && subjectId === undefined && categoryId === undefined) {
+    return await libraryCreationService.updateBook(libraryBookId, bookData, transaction);
+  }
 }
 
 export async function updateInventory(inventoryId, inventoryData, transaction) {
@@ -445,11 +624,17 @@ export async function createInventory(inventoryData, transaction) {
 }
 
 export async function deleteBook(libraryBookId) {
-  return await libraryCreationService.deleteBook(libraryBookId);
+  const deleted = await libraryCreationService.deleteBook(libraryBookId);
+  if (!deleted) {
+    throw httpError("Book not found", 404);
+  }
 }
 
 export async function deleteInventoryCopy(inventoryId) {
-  return await libraryCreationService.deleteInventoryCopy(inventoryId);
+  const deleted = await libraryCreationService.deleteInventoryCopy(inventoryId);
+  if (!deleted) {
+    throw httpError("Copy not found", 404);
+  }
 }
 
 export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
@@ -511,9 +696,24 @@ async function upsertInventoryRows(inventory, libraryBookId, userId, transaction
   return results;
 }
 
-export async function updateBookWithInventory(
+export async function updateBookWithInventory(body, user) {
+  const { book, inventory } = body;
+
+  return updateBookWithInventoryRecord(
+    {
+      book,
+      inventory,
+      inventoryKeyPresent: "inventory" in body,
+    },
+    user.userId,
+    user.defaultInstituteId,
+  );
+}
+
+async function updateBookWithInventoryRecord(
   { book, inventory, inventoryKeyPresent },
   userId,
+  fallbackInstituteId,
 ) {
   const transaction = await sequelize.transaction();
 
@@ -525,7 +725,7 @@ export async function updateBookWithInventory(
       const { libraryBookId: bookId, ...bookData } = book;
       libraryBookId = bookId;
       bookData.updatedBy = userId;
-      await libraryCreationService.updateBook(bookId, bookData, transaction);
+      await updateBook(bookId, bookData, transaction, fallbackInstituteId);
     }
 
     if (inventoryKeyPresent) {
@@ -590,4 +790,3 @@ export async function getAllIssuedBooks() {
 
   return plainInventories;
 }
-

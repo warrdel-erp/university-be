@@ -21,7 +21,6 @@ import {
   deleteCategory,
 } from "../controllers/libraryCreationController.js";
 import userAuth from "../middleware/authUser.js";
-import { bulkUploadFileUploader } from "../middleware/bulkuploadfileuploader.js";
 
 const router = Router();
 
@@ -57,44 +56,10 @@ const inventoryQuerySchema = z.object({
   inventoryId: z.coerce.number(),
 });
 
-const positiveIntQuery = z.coerce
-  .number()
-  .int("must be an integer")
-  .positive("must be a positive number");
-
-const optionalSearchString = z
-  .string()
-  .trim()
-  .transform((value) => (value === "" ? undefined : value))
-  .optional();
-
-/** GET /allBook — validated in route via validate({ query: listBooksQuerySchema }) */
-const listBooksQuerySchema = z
-  .object({
-    libraryCreationId: positiveIntQuery,
-    libraryFloorId: positiveIntQuery,
-    page: z.coerce
-      .number()
-      .int("page must be an integer")
-      .min(1, "page must be at least 1")
-      .optional()
-      .default(1),
-    limit: z.coerce
-      .number()
-      .int("limit must be an integer")
-      .min(1, "limit must be at least 1")
-      .max(100, "limit must be at most 100")
-      .optional()
-      .default(20),
-    search: optionalSearchString,
-    title: optionalSearchString,
-    authors: optionalSearchString,
-    isbn: optionalSearchString,
-    publisher: optionalSearchString,
-    accessionNumber: optionalSearchString,
-    status: z.enum(["available", "issued"]).optional(),
-  })
-  .strict();
+const listBooksQuerySchema = z.object({
+  libraryCreationId: z.coerce.number(),
+  libraryFloorId: z.coerce.number(),
+});
 
 const addCategorySchema = z.object({
   name: z.string(),
@@ -244,7 +209,6 @@ router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema 
 router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);
-
 router.get("/allBook", userAuth, validate({ query: listBooksQuerySchema }), getAllBooks);
 
 router.get("/singleBook", userAuth, validate({ query: libraryBookQuerySchema }), getSingleBookDetails);
@@ -266,8 +230,8 @@ router.post(
   "/bulkUpload",
   userAuth,
   validate({ query: idQuerySchema }),
-  bulkUploadFileUploader,
   bulkUploadBooks,
 );
+
 
 export default router;
