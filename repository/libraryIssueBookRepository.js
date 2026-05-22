@@ -1,4 +1,46 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { Op } from 'sequelize';
+
+function buildIssueBookWhere(filters = {}) {
+    const conditions = [];
+
+    if (filters.libraryCreationId) {
+        conditions.push({ '$memberBookIssue.library_creation_id$': filters.libraryCreationId });
+    }
+
+    if (filters.search) {
+        const term = filters.search.trim();
+        const pattern = { [Op.like]: `%${term}%` };
+        const orConditions = [
+            { issuedBy: pattern },
+            { receivedBy: pattern },
+            { status: pattern },
+            { '$libraryBookIssue.title$': pattern },
+            { '$libraryBookIssue.authors$': pattern },
+            { '$libraryBookIssue.isbn$': pattern },
+            { '$libraryBookIssue.publisher$': pattern },
+            { '$memberBookIssue.member_id$': pattern },
+            { '$memberBookIssue.member_type$': pattern },
+            { '$addItemBookIssue.name$': pattern },
+            { '$addItemBookIssue.author$': pattern },
+        ];
+
+        const numericId = Number(term);
+        if (term !== "" && !Number.isNaN(numericId)) {
+            orConditions.push(
+                { libraryIssueBookId: numericId },
+                { libraryMemberId: numericId },
+                { libraryBookId: numericId },
+                { libraryAddItemId: numericId },
+            );
+        }
+
+        conditions.push({ [Op.or]: orConditions });
+    }
+
+    if (!conditions.length) return {};
+    return conditions.length === 1 ? conditions[0] : { [Op.and]: conditions };
+}
 
 const issueBookListAttributes = [
     'libraryIssueBookId',
@@ -77,8 +119,23 @@ export async function bookIssue(bookIssue, transaction) {
     return model.libraryIssueBookModel.create(bookIssue, { transaction });
 }
 
-export async function getAllIssueBooks(universityId) {
-    return findIssueBookList(undefined, universityId);
+export async function getAllIssueBooks(universityId, filters = {}, pagination = {}) {
+    const { limit, offset } = pagination;
+    const where = buildIssueBookWhere(filters);
+
+    const { count, rows } = await model.libraryIssueBookModel.findAndCountAll({
+        attributes: issueBookListAttributes,
+        where,
+        include: issueBookListIncludes(universityId),
+        limit,
+        offset,
+        subQuery: false,
+        distinct: true,
+        col: 'library_issue_book_id',
+        order: [['libraryIssueBookId', 'DESC']],
+    });
+
+    return { total: count, books: rows };
 }
 
 export async function getBookByMemberId(libraryMemberId, universityId) {

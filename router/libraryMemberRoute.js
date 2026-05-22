@@ -30,6 +30,26 @@ const libraryIssueBookIdQuerySchema = z.object({
   libraryIssueBookId: z.coerce.number(),
 });
 
+const optionalTrimmedString = z
+  .string()
+  .optional()
+  .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()));
+
+const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
+const memberListQuerySchema = paginationQuerySchema.extend({
+  libraryCreationId: z.coerce.number().optional(),
+  search: optionalTrimmedString,
+});
+
+const issueBookListQuerySchema = paginationQuerySchema.extend({
+  libraryCreationId: z.coerce.number().optional(),
+  search: optionalTrimmedString,
+});
+
 const issueBookStatusEnum = z.enum(["Issued", "Returned", "Renewed", "Overdue"]);
 
 function validateMemberIds(data, ctx) {
@@ -158,7 +178,7 @@ const updateIssueBookSchema = z
 
 router.post("/", userAuth, validate({ body: addMemberSchema }), addMember);
 
-router.get("/", userAuth, getMemberDetails);
+router.get("/", userAuth, validate({ query: memberListQuerySchema }), getMemberDetails);
 
 router.get(
   "/single",
@@ -180,7 +200,12 @@ router.delete(
 
 router.post("/bookIssue", userAuth, validate({ body: bookIssueSchema }), bookIssue);
 
-router.get("/getAllIssueBook", userAuth, getAllIssueBooks);
+router.get(
+  "/getAllIssueBook",
+  userAuth,
+  validate({ query: issueBookListQuerySchema }),
+  getAllIssueBooks,
+);
 
 router.get(
   "/memberBook",

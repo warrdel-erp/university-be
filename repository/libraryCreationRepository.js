@@ -259,59 +259,126 @@ export async function createInventory(inventoryData, transaction) {
   return await model.libraryBookInventoryModel.create(inventoryData, { transaction });
 }
 
-export async function getAllBooks(universityId, libraryCreationId, libraryFloorId) {
-  const floor = await model.libraryFloorModel.findOne({
-    attributes: ["libraryFloorId"],
-    where: {
-      libraryFloorId,
-      universityId,
-      libraryCreationId,
+function buildBookListWhere(libraryCreationId, filters = {}) {
+  const where = { libraryCreationId };
+
+  if (!filters.search) {
+    return where;
+  }
+
+  const term = filters.search.trim();
+  const pattern = { [Op.like]: `%${term}%` };
+  const orConditions = [
+    { title: pattern },
+    { subtitle: pattern },
+    { authors: pattern },
+    { isbn: pattern },
+    { publisher: pattern },
+    { keywords: pattern },
+    { '$inventoryCopies.accession_number$': pattern },
+    { '$inventoryCopies.status$': pattern },
+    { '$inventoryCopies.bill_no$': pattern },
+    { '$inventoryCopies.bill_date$': pattern },
+  ];
+
+  const numericId = Number(term);
+  if (term !== "" && !Number.isNaN(numericId)) {
+    orConditions.push({ libraryBookId: numericId });
+  }
+
+  where[Op.and] = [{ [Op.or]: orConditions }];
+  return where;
+}
+
+export async function getAllBooks(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  filters = {},
+  pagination = {},
+) {
+  if (libraryFloorId) {
+    const floor = await model.libraryFloorModel.findOne({
+      attributes: ["libraryFloorId"],
+      where: {
+        libraryFloorId,
+        universityId,
+        libraryCreationId,
+      },
+    });
+
+    if (!floor) {
+      return { total: 0, books: [] };
+    }
+  }
+
+  const inventoryWhere = {};
+
+  if (libraryFloorId) {
+    const aisles = await model.libraryAisleModel.findAll({
+      attributes: ["libraryAisleId"],
+      where: { libraryFloorId },
+      raw: true,
+    });
+
+    const aisleIds = aisles.map((row) => row.libraryAisleId);
+    if (!aisleIds.length) {
+      return { total: 0, books: [] };
+    }
+
+    inventoryWhere.libraryAisleId = { [Op.in]: aisleIds };
+  }
+
+  const inventoryInclude = {
+    model: model.libraryBookInventoryModel,
+    as: "inventoryCopies",
+    attributes: {
+      exclude: ["createdAt", "updatedAt", "deletedAt"],
     },
-  });
+    where: Object.keys(inventoryWhere).length ? inventoryWhere : undefined,
+    required: true,
+    include: [
+      {
+        model: model.libraryAisleModel,
+        as: "aisleDetails",
+        attributes: ["libraryAisleId", "name", "libraryFloorId"],
+        required: false,
+      },
+      {
+        model: model.libraryRackModel,
+        as: "rackDetails",
+        attributes: ["libraryRackId", "name"],
+        required: false,
+      },
+      {
+        model: model.libraryRowModel,
+        as: "rowDetails",
+        attributes: ["libraryRowId", "name"],
+        required: false,
+      },
+    ],
+  };
 
-  if (!floor) return [];
+  const { limit, offset } = pagination;
 
-  return model.libraryBookModel.findAll({
-    where: { libraryCreationId },
+  const { count, rows } = await model.libraryBookModel.findAndCountAll({
+    where: buildBookListWhere(libraryCreationId, filters),
+    subQuery: false,
+    distinct: true,
+    col: "library_book_id",
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    include: [
-      ...bookMappingIncludes,
-      {
-        model: model.libraryBookInventoryModel,
-        as: "inventoryCopies",
-        attributes: {
-          exclude: ["createdAt", "updatedAt", "deletedAt"],
-        },
-        required: true,
-        include: [
-          {
-            model: model.libraryAisleModel,
-            as: "aisleDetails",
-            attributes: ["libraryAisleId", "name", "libraryFloorId"],
-            required: false,
-          },
-          {
-            model: model.libraryRackModel,
-            as: "rackDetails",
-            attributes: ["libraryRackId", "name"],
-            required: false,
-          },
-          {
-            model: model.libraryRowModel,
-            as: "rowDetails",
-            attributes: ["libraryRowId", "name"],
-            required: false,
-          },
-        ],
-      },
-    ],
+    include: [...bookMappingIncludes, inventoryInclude],
+    limit,
+    offset,
     order: [
       ["libraryBookId", "DESC"],
       [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
     ],
   });
+
+  return { total: count, books: rows };
 }
 
 export async function bookExistsById(libraryBookId, transaction) {

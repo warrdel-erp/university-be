@@ -13,8 +13,8 @@ export async function addMember(req, res) {
 
 export async function getMemberDetails(req, res) {
   try {
-    const member = await memberCreation.getMemberDetails(req.user);
-    return SuccessResponse(res, 200, "Member Details", member);
+    const result = await memberCreation.getMemberDetails(req.user, req.query);
+    return SuccessResponse(res, 200, "Member Details", result.members, result.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -66,8 +66,8 @@ export async function bookIssue(req, res) {
 
 export async function getAllIssueBooks(req, res) {
   try {
-    const books = await memberCreation.getAllIssueBooks(req.user);
-    return SuccessResponse(res, 200, "Issue Books", books);
+    const result = await memberCreation.getAllIssueBooks(req.user, req.query);
+    return SuccessResponse(res, 200, "Issue Books", result.books, result.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

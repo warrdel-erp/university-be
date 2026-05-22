@@ -81,8 +81,27 @@ export async function addMember(memberData, user) {
   }
 }
 
-export async function getMemberDetails(user) {
-  return libraryMemberService.getMemberDetails(user.universityId);
+function resolvePagination(query = {}) {
+  const page = Math.max(1, query.page ?? 1);
+  const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
+export async function getMemberDetails(user, query = {}) {
+  const { page, limit, offset } = resolvePagination(query);
+  const { libraryCreationId, search } = query;
+
+  const { total, members } = await libraryMemberService.getMemberDetails(
+    user.universityId,
+    { libraryCreationId, search },
+    { limit, offset },
+  );
+
+  return {
+    members: members ?? [],
+    pagination: { total: total ?? 0, page, limit },
+  };
 }
 
 export async function getSingleMemberDetails(libraryCreationId, user) {
@@ -201,8 +220,20 @@ export async function bookIssue(bookIssueData, user) {
   }
 }
 
-export async function getAllIssueBooks(user) {
-  return libraryIssueBook.getAllIssueBooks(user.universityId);
+export async function getAllIssueBooks(user, query = {}) {
+  const { page, limit, offset } = resolvePagination(query);
+  const { libraryCreationId, search } = query;
+
+  const { total, books } = await libraryIssueBook.getAllIssueBooks(
+    user.universityId,
+    { libraryCreationId, search },
+    { limit, offset },
+  );
+
+  return {
+    books: books ?? [],
+    pagination: { total: total ?? 0, page, limit },
+  };
 }
 
 export async function getBookByMemberId(libraryMemberId, user) {
