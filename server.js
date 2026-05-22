@@ -187,8 +187,6 @@ app.use("/departmentStructure", departmentStructure);
 app.use("/po", po);
 app.use("/co", co);
 
-
-
 app.use("/lesson", lesson);
 app.use("/notice", notice);
 app.use("/examStructure", examStructure);

@@ -1,4 +1,5 @@
 import * as answerSheetQrServices from "../services/answerSheetQrServices.js";
+import * as answerSheetSplitterServices from "../services/answerSheetSplitterServices.js";
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import fs from "fs";
 
@@ -206,7 +207,7 @@ export async function splitAnswerSheetPdf(req, res) {
     const universityId = req.user.universityId;
     uploadedFilePath = req.file.path;
 
-    const result = await answerSheetQrServices.splitAnswerSheetPdf(
+    const result = await answerSheetSplitterServices.splitAnswerSheetPdf(
       uploadedFilePath,
       instituteId,
       universityId

@@ -62,3 +62,7 @@
 9. library book copies shown in popup with basic actions.
 10. Problem in first time hall ticket view.
 
+----
+
+1. change add fee invoice UI.
+2. issue book UI change.
