@@ -7186,7 +7186,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nOutstanding invoices for payment UI (unpaid + partial only).\n\n**Calculated per invoice:**\n- `total` from **student_fee_invoice_items** (not invoice.total)\n- `paidAmount` from **payment_item** SUM (INCOMING)\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, invoices[] }` — each invoice: studentFeeInvoiceId, total, paidAmount, balanceDue, paymentStatus, …\n\nSet `student_id` and `studentFeeInvoice_id` from response before POST."
+                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` — count of generated invoices for this student\n- `lastPayment` — latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentDate`) or `null`\n- `outstandingAmount` — sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` — sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount − waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` from response before POST."
               },
               "response": []
             },
@@ -7228,7 +7228,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"paymentItems\": [\n    {\n      \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\"\n}",
+                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"amount\": \"5000.00\",\n  \"paymentItems\": [\n    {\n      \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\",\n  \"receivedBy\": \"John Admin\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7246,7 +7246,7 @@
                     "details"
                   ]
                 },
-                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"paymentItems\": [\n    { \"studentFeeInvoiceId\": 42, \"amount\": \"5000.00\" },\n    { \"studentFeeInvoiceId\": 43, \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\"\n}\n```\n**Optional:** paymentType (default INCOMING), payeeType (default STUDENT), referenceNumber, transactionId (auto UUID if omitted).\n\nCreates one **student_fee_payment** + one **payment_item** per line. Updates invoice paid_amount from payment_item sum.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — sets `studentFeePayment_id`."
+                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"studentFeeInvoiceId\": 42, \"amount\": \"5000.00\" },\n    { \"studentFeeInvoiceId\": 43, \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\"\n}\n```\n**amount** must equal sum of `paymentItems[].amount` (validated in service with decimalSum; 400 if mismatch).\n\n**Optional:** paymentType (default INCOMING), payeeType (default STUDENT), referenceNumber, transactionId (auto UUID if omitted), **receivedBy** (null if omitted).\n\nCreates one **student_fee_payment** + one **payment_item** per line. Updates invoice paid_amount from payment_item sum.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — sets `studentFeePayment_id`."
               },
               "response": []
             },
@@ -7296,7 +7296,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment**\n\nPaginated list from **student_fee_payment** + payee summary (no invoice math).\n\n**Query:** `page` (default 1), `limit` (default 20, max 100), optional `payeeId`, optional `search`.\n\n**search** matches: referenceNumber, transactionId, studentFeePaymentId, payeeId, or student (first/middle/last name, scholarNumber, enrollNumber, email, mobileNumber).\n\n**data.payments[]:** payment fields + **payee**.\n\n**paginationData:** page, limit, total, totalPages."
+                "description": "**GET /studentFeePayment**\n\nPaginated list from **student_fee_payment** + payee summary (no invoice math).\n\n**Query:** `page` (default 1), `limit` (default 20, max 100), optional `payeeId`, optional `search`.\n\n**search** matches: referenceNumber, transactionId, receivedBy, studentFeePaymentId, payeeId, or student fields.\n\n**data.payments[]:** payment fields (incl. **receivedBy**) + **payee**.\n\n**paginationData:** page, limit, total, totalPages."
               },
               "response": []
             },

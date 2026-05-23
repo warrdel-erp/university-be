@@ -4,6 +4,7 @@ import {
   decimalAdd,
   decimalCompare,
   decimalSubtract,
+  decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 
@@ -95,6 +96,7 @@ export function formatStudentFeePaymentRecord(row, payee = null) {
     paymentMethod: p.paymentMethod,
     referenceNumber: p.referenceNumber ?? null,
     transactionId: p.transactionId ?? null,
+    receivedBy: p.receivedBy ?? null,
     instituteId: p.instituteId,
     createdBy: p.createdBy,
     createdAt: p.createdAt ?? p.created_at ?? null,
@@ -215,6 +217,17 @@ function buildOutstandingInvoiceResponse(invoice, amounts) {
   };
 }
 
+function formatLastPaymentHistory(row) {
+  const payment = toPlain(row);
+  if (!payment) return null;
+
+  return {
+    studentFeePaymentId: payment.studentFeePaymentId,
+    amount: toMoneyNumber(payment.amount),
+    paymentDate: payment.createdAt ?? payment.created_at ?? null,
+  };
+}
+
 function buildVerifiedPaymentItem(line, amountsAfter) {
   return {
     studentFeeInvoiceId: line.studentFeeInvoiceId,
@@ -237,6 +250,21 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
     throw httpError("Duplicate studentFeeInvoiceId in paymentItems", 400);
   }
 
+  const paymentTotal = toMoneyNumber(body.amount);
+  const itemsTotal = decimalSum(
+    body.paymentItems.map((item) => toMoneyNumber(item.amount))
+  );
+
+  if (decimalCompare(paymentTotal, 0) <= 0) {
+    throw httpError("amount must be greater than 0");
+  }
+
+  if (decimalCompare(paymentTotal, itemsTotal) !== 0) {
+    throw httpError(
+      `amount must equal the sum of paymentItems amounts (${itemsTotal})`
+    );
+  }
+
   const { studentFeePaymentId, resolvedLines } = await sequelize.transaction(async (transaction) => {
     const lines = [];
 
@@ -244,11 +272,6 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
       lines.push(
         await resolveInvoiceLineForPayment(line, body.payeeId, instituteId, transaction)
       );
-    }
-
-    let paymentTotal = 0;
-    for (const line of lines) {
-      paymentTotal = decimalAdd(paymentTotal, line.amount);
     }
 
     const payment = await paymentRepo.createStudentFeePayment(
@@ -260,6 +283,7 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
         paymentMethod: body.paymentMethod,
         referenceNumber: body.referenceNumber,
         transactionId: body.transactionId,
+        receivedBy: body.receivedBy ?? null,
         instituteId,
         createdBy,
       },
@@ -302,16 +326,11 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
     verifiedPaymentItems.push(buildVerifiedPaymentItem(line, line.amountsAfterPayment));
   }
 
-  let verifiedTotal = 0;
-  for (const item of verifiedPaymentItems) {
-    verifiedTotal = decimalAdd(verifiedTotal, item.amount);
-  }
-
   return {
     payment: formatStudentFeePayment(payment),
     verified: {
       payeeId: body.payeeId,
-      total: verifiedTotal,
+      total: paymentTotal,
       paymentItems: verifiedPaymentItems,
     },
   };
@@ -377,15 +396,15 @@ export async function listStudentFeePayments(instituteId, query) {
 }
 
 export async function getPaymentDetails(studentId, instituteId) {
-  const studentRow = await paymentRepo.findStudentForPaymentDetails(studentId, instituteId);
+  const [studentRow, invoiceRows, lastPaymentRow] = await Promise.all([
+    paymentRepo.findStudentForPaymentDetails(studentId, instituteId),
+    paymentRepo.findGeneratedInvoicesForPaymentDetails(studentId, instituteId),
+    paymentRepo.findLastIncomingPaymentForStudentPayee(studentId, instituteId),
+  ]);
+
   if (!studentRow) {
     throw httpError("Student not found", 404);
   }
-
-  const invoiceRows = await paymentRepo.findGeneratedInvoicesForPaymentDetails(
-    studentId,
-    instituteId
-  );
 
   const invoices = [];
   const invoiceIds = [];
@@ -401,6 +420,8 @@ export async function getPaymentDetails(studentId, instituteId) {
   ]);
 
   const outstandingInvoices = [];
+  const balanceDueAmounts = [];
+
   for (const invoice of invoices) {
     const paidAmount = paidByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
     const total = totalByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
@@ -409,10 +430,17 @@ export async function getPaymentDetails(studentId, instituteId) {
     if (decimalCompare(amounts.paidAmount, amounts.total) >= 0) continue;
 
     outstandingInvoices.push(buildOutstandingInvoiceResponse(invoice, amounts));
+    balanceDueAmounts.push(amounts.balanceDue);
   }
+
+  const totalPaymentReceived = decimalSum([...paidByInvoiceId.values()]);
 
   return {
     student: formatPaymentListStudent(studentRow),
+    totalInvoices: invoices.length,
+    lastPayment: formatLastPaymentHistory(lastPaymentRow),
+    outstandingAmount: decimalSum(balanceDueAmounts),
+    totalPaymentReceived,
     invoices: outstandingInvoices,
   };
 }

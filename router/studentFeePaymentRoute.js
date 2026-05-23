@@ -30,6 +30,7 @@ const paymentDetailsPaymentItemSchema = z.object({
 
 const recordPaymentDetailsBodySchema = z.object({
   payeeId: positiveIntegerId,
+  amount: moneyAmount,
   paymentItems: z
     .array(paymentDetailsPaymentItemSchema)
     .min(1, "At least one payment item is required"),
@@ -38,6 +39,11 @@ const recordPaymentDetailsBodySchema = z.object({
   payeeType: payeeTypeEnum.optional().default("STUDENT"),
   referenceNumber: z.string().trim().default(() => uuidv4()),
   transactionId: z.string().trim().default(() => uuidv4()),
+  receivedBy: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
 });
 
 const paginationQueryFields = {

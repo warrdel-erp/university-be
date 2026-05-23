@@ -218,7 +218,11 @@ function buildPaymentListWhere(instituteId, filters, matchingStudentIds = []) {
   }
 
   const pattern = { [Op.like]: `%${search}%` };
-  const orConditions = [{ referenceNumber: pattern }, { transactionId: pattern }];
+  const orConditions = [
+    { referenceNumber: pattern },
+    { transactionId: pattern },
+    { receivedBy: pattern },
+  ];
 
   const numericId = Number(search);
   if (search !== "" && !Number.isNaN(numericId)) {
@@ -294,6 +298,23 @@ export async function findStudentForPaymentDetails(studentId, instituteId, optio
 }
 
 // Generated invoices + line items (used to compute total from student_fee_invoice_items).
+export async function findLastIncomingPaymentForStudentPayee(
+  studentId,
+  instituteId,
+  options = {}
+) {
+  return model.studentFeePaymentModel.findOne({
+    where: {
+      payeeId: studentId,
+      payeeType: "STUDENT",
+      paymentType: "INCOMING",
+      instituteId,
+    },
+    order: [["studentFeePaymentId", "DESC"]],
+    transaction: options.transaction,
+  });
+}
+
 export async function findGeneratedInvoicesForPaymentDetails(studentId, instituteId, options = {}) {
   return model.studentFeeInvoiceModel.findAll({
     where: { studentId, instituteId, status: "generated" },

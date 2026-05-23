@@ -48,6 +48,12 @@ export default sequelize.define(
       allowNull: true,
       field: "transaction_id",
     },
+    receivedBy: {
+      type: DataTypes.STRING(150),
+      allowNull: true,
+      defaultValue: null,
+      field: "received_by",
+    },
     instituteId: {
       type: DataTypes.INTEGER,
       allowNull: false,
