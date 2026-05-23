@@ -6147,7 +6147,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — **GET /payment/details?studentId=** → **POST /payment/details** → **GET /** (list/print) → **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -7151,15 +7151,54 @@
         },
         {
           "name": "studentFeePayment",
+          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** — outstanding invoices (pay screen)\n2. **POST /payment/details** — record payment (multi-invoice in one payment)\n3. **GET /** — paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** — one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ← `student_fee_invoice_items` (sum amount − waiver)\n- **paidAmount** ← `payment_item` SUM\n- **dueAmount** = total − paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header) + `payment_item` (per invoice line; referenceId = studentFeeInvoiceId)",
           "item": [
             {
-              "name": "record payment",
+              "name": "1 payment details by student",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/payment/details?studentId={{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "payment",
+                    "details"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nOutstanding invoices for payment UI (unpaid + partial only).\n\n**Calculated per invoice:**\n- `total` from **student_fee_invoice_items** (not invoice.total)\n- `paidAmount` from **payment_item** SUM (INCOMING)\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, invoices[] }` — each invoice: studentFeeInvoiceId, total, paidAmount, balanceDue, paymentStatus, …\n\nSet `student_id` and `studentFeeInvoice_id` from response before POST."
+              },
+              "response": []
+            },
+            {
+              "name": "2 record payment from details",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
                       "const res = pm.response.json();",
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
                       "const payment = res && res.data && res.data.payment;",
                       "if (payment && payment.studentFeePaymentId) {",
                       "  pm.collectionVariables.set('studentFeePayment_id', String(payment.studentFeePaymentId));",
@@ -7181,31 +7220,38 @@
                   ]
                 },
                 "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/studentFeePayment",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "studentFeePayment"
-                  ]
-                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n  \"amount\": \"5000.00\",\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\",\n  \"referenceNumber\": \"TXN-001\",\n  \"transactionId\": \"UTR-20260516-001\"\n}",
+                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"paymentItems\": [\n    {\n      \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "Body: studentFeeInvoiceId, amount, paymentMethod (credit_card|bank_transfer|cash|cheque); optional paymentType (INCOMING), payeeId, payeeType (STUDENT), referenceNumber, transactionId. Creates payment_item for STUDENT_FEE_INVOICE. data.payment + data.invoice (paymentStatus, totalPaid, balanceDue)."
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/payment/details",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "payment",
+                    "details"
+                  ]
+                },
+                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"paymentItems\": [\n    { \"studentFeeInvoiceId\": 42, \"amount\": \"5000.00\" },\n    { \"studentFeeInvoiceId\": 43, \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\"\n}\n```\n**Optional:** paymentType (default INCOMING), payeeType (default STUDENT), referenceNumber, transactionId (auto UUID if omitted).\n\nCreates one **student_fee_payment** + one **payment_item** per line. Updates invoice paid_amount from payment_item sum.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — sets `studentFeePayment_id`."
               },
               "response": []
             },
             {
-              "name": "list payments by invoice",
+              "name": "3 list payments (paginated)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -7220,7 +7266,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/studentFeePayment?studentFeeInvoiceId={{studentFeeInvoice_id}}",
+                  "raw": "{{baseurl}}/studentFeePayment?page=1&limit=20&search=",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -7229,13 +7275,63 @@
                   ],
                   "query": [
                     {
-                      "key": "studentFeeInvoiceId",
-                      "value": "{{studentFeeInvoice_id}}",
-                      "disabled": false
+                      "key": "payeeId",
+                      "value": "{{student_id}}",
+                      "description": "optional filter by student",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "referenceNumber, transactionId, payment id, payee id, student name/scholar/email/mobile/enroll",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment?studentFeeInvoiceId=**\n\n**data:** studentFeeInvoiceId, **student** { studentId, studentName, scholarNumber, courseId, courseName, sessionId, sessionName }, invoiceTotal, totalPaid, balanceDue, paymentStatus, payments[]."
+                "description": "**GET /studentFeePayment**\n\nPaginated list from **student_fee_payment** + payee summary (no invoice math).\n\n**Query:** `page` (default 1), `limit` (default 20, max 100), optional `payeeId`, optional `search`.\n\n**search** matches: referenceNumber, transactionId, studentFeePaymentId, payeeId, or student (first/middle/last name, scholarNumber, enrollNumber, email, mobileNumber).\n\n**data.payments[]:** payment fields + **payee**.\n\n**paginationData:** page, limit, total, totalPages."
+              },
+              "response": []
+            },
+            {
+              "name": "4 get payment by id",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/single?studentFeePaymentId={{studentFeePayment_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentFeePaymentId",
+                      "value": "{{studentFeePayment_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeePayment/single?studentFeePaymentId=**\n\nSingle payment receipt / print view.\n\n**data:** full **student_fee_payment** row + **payee** (student details) + **paymentItems[]** (full **payment_item** rows: paymentItemId, paymentId, referenceId, referenceType, amount, createdAt, updatedAt — no nested invoice).\n\nUse `studentFeePayment_id` from POST step 2."
               },
               "response": []
             }

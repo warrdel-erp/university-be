@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
-import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
@@ -12,15 +11,6 @@ export default sequelize.define(
       primaryKey: true,
       autoIncrement: true,
       field: "student_fee_payment_id",
-    },
-    studentFeeInvoiceId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "student_fee_invoice_id",
-      references: {
-        model: studentFeeInvoiceModel,
-        key: "student_fee_invoice_id",
-      },
     },
     paymentType: {
       type: DataTypes.ENUM("INCOMING", "OUTGOING"),

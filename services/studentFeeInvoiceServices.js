@@ -28,16 +28,14 @@ function getSupplementalInvoiceItems(items) {
   return (items ?? []).filter((line) => !line.isMainItem);
 }
 
-function paymentSummaryFromPlain(p) {
-  const totalPaid = decimalSum(
-    (p.feePayments ?? [])
-      .filter((pay) => (pay.paymentType ?? "INCOMING") === "INCOMING")
-      .map((pay) => toMoneyNumber(pay.amount ?? pay.paidAmount))
-  );
+function paymentSummaryFromPlain(p, invoiceTotal) {
+  const totalPaid = toMoneyNumber(p.paidAmount ?? 0);
+  const total = invoiceTotal ?? toMoneyNumber(p.total);
   return {
     paymentStatus: p.paymentStatus ?? "unpaid",
     totalPaid,
-    balanceDue: decimalSubtract(toMoneyNumber(p.total), totalPaid),
+    paidAmount: totalPaid,
+    balanceDue: decimalSubtract(total, totalPaid),
   };
 }
 
@@ -58,6 +56,10 @@ function invoiceItemsPlain(p) {
   );
 }
 
+function invoiceTotalFromItems(feeInvoiceItems) {
+  return decimalSum((feeInvoiceItems ?? []).map((line) => line.netAmount));
+}
+
 function splitInvoiceAmounts(p) {
   const feeInvoiceItems = invoiceItemsPlain(p);
   const supplementalFees = getSupplementalInvoiceItems(feeInvoiceItems);
@@ -67,11 +69,8 @@ function splitInvoiceAmounts(p) {
     feeInvoiceItems,
     supplementalFees,
     supplementalFeesTotal: decimalSum(supplementalFees.map((l) => l.netAmount)),
+    total: invoiceTotalFromItems(feeInvoiceItems),
   };
-}
-
-function termInvoiceTotal(isAdhocInvoice, storedTotal, baseAmount, supplementalFeesTotal) {
-  return isAdhocInvoice ? storedTotal : decimalSum([baseAmount, supplementalFeesTotal]);
 }
 
 function formatStudentDisplayName(student) {
@@ -130,12 +129,7 @@ export function formatStudentFeeInvoiceResponse(row) {
 
   const split = splitInvoiceAmounts(p);
   const storedTotal = toMoneyNumber(p.total);
-  const total = termInvoiceTotal(
-    split.isAdhocInvoice,
-    storedTotal,
-    split.baseAmount,
-    split.supplementalFeesTotal
-  );
+  const total = split.total;
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
@@ -147,13 +141,11 @@ export function formatStudentFeeInvoiceResponse(row) {
     supplementalFeesTotal: split.supplementalFeesTotal,
     total,
     storedTotal,
-    totalVerified: split.isAdhocInvoice
-      ? decimalCompare(decimalSum(split.feeInvoiceItems.map((l) => l.netAmount)), storedTotal) === 0
-      : decimalCompare(total, storedTotal) === 0,
+    totalVerified: decimalCompare(total, storedTotal) === 0,
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
     status: p.status,
-    ...paymentSummaryFromPlain(p),
+    ...paymentSummaryFromPlain(p, total),
     createdAt: p.createdAt ?? p.created_at ?? null,
     updatedAt: p.updatedAt ?? p.updated_at ?? null,
     feePlanItem: {
@@ -180,14 +172,9 @@ function formatStudentFeeInvoiceListRow(row) {
     dueDate: p.dueDate ?? null,
     amount: split.isAdhocInvoice ? 0 : split.baseAmount,
     supplementalFeesTotal: split.supplementalFeesTotal,
-    total: termInvoiceTotal(
-      split.isAdhocInvoice,
-      toMoneyNumber(p.total),
-      split.baseAmount,
-      split.supplementalFeesTotal
-    ),
+    total: split.total,
     status: p.status,
-    ...paymentSummaryFromPlain(p),
+    ...paymentSummaryFromPlain(p, split.total),
     supplementalFees: split.supplementalFees.map((l) => ({
       name: l.name,
       amount: l.netAmount,

@@ -1,14 +1,9 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
-import * as invoiceRepo from "../repository/studentFeeInvoiceRepository.js";
-import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
-import { formatStudentFeeInvoiceResponse } from "./studentFeeInvoiceServices.js";
 import {
   decimalAdd,
   decimalCompare,
-  decimalGreaterThan,
   decimalSubtract,
-  decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 
@@ -64,18 +59,6 @@ function formatPaymentListStudent(student) {
   };
 }
 
-function formatFeePlanProfile(profile) {
-  const p = toPlain(profile);
-  if (!p?.feePlanProfileId) return null;
-
-  return {
-    feePlanProfileId: p.feePlanProfileId,
-    name: p.name ?? null,
-    planType: p.planType ?? null,
-    courseSessionId: p.courseSessionId ?? null,
-  };
-}
-
 function formatPaymentItem(row) {
   const item = toPlain(row);
   if (!item) return null;
@@ -85,168 +68,351 @@ function formatPaymentItem(row) {
     referenceId: item.referenceId,
     referenceType: item.referenceType,
     amount: toMoneyNumber(item.amount),
+    createdAt: item.createdAt ?? item.created_at ?? null,
+    updatedAt: item.updatedAt ?? item.updated_at ?? null,
   };
 }
 
-export function formatStudentFeePayment(row) {
+function resolvePayeeForPaymentList(payeeType, payeeId, studentById) {
+  if (payeeType !== "STUDENT") {
+    return { payeeId, payeeType };
+  }
+
+  return formatPaymentListStudent(studentById.get(payeeId)) ?? { payeeId, payeeType };
+}
+
+export function formatStudentFeePaymentRecord(row, payee = null) {
   const p = toPlain(row);
   if (!p) return null;
+
   return {
     studentFeePaymentId: p.studentFeePaymentId,
-    studentFeeInvoiceId: p.studentFeeInvoiceId,
     paymentType: p.paymentType,
     payeeId: p.payeeId,
     payeeType: p.payeeType,
+    payee,
     amount: toMoneyNumber(p.amount),
     paymentMethod: p.paymentMethod,
     referenceNumber: p.referenceNumber ?? null,
     transactionId: p.transactionId ?? null,
     instituteId: p.instituteId,
     createdBy: p.createdBy,
-    paymentItems: (p.paymentItems ?? []).map(formatPaymentItem),
     createdAt: p.createdAt ?? p.created_at ?? null,
     updatedAt: p.updatedAt ?? p.updated_at ?? null,
   };
 }
 
-export async function recordStudentFeePayment(body, instituteId, createdBy) {
-  const amount = toMoneyNumber(body.amount);
-  if (decimalCompare(amount, 0) <= 0) {
-    throw httpError("amount must be greater than 0");
+export function formatStudentFeePayment(row) {
+  const p = toPlain(row);
+  if (!p) return null;
+
+  const paymentItems = [];
+  for (const item of p.paymentItems ?? []) {
+    paymentItems.push(formatPaymentItem(item));
   }
 
+  return {
+    ...formatStudentFeePaymentRecord(row),
+    paymentItems,
+  };
+}
+
+function resolveInvoicePaymentAmounts(total, paidAmount) {
+  const paid = toMoneyNumber(paidAmount);
+  const dueAmount = decimalSubtract(total, paid);
+
+  return {
+    total,
+    paidAmount: paid,
+    dueAmount,
+    balanceDue: dueAmount,
+    paymentStatus: resolvePaymentStatus(paid, total),
+  };
+}
+
+function buildAmountsFromTotals(total, paidAmount) {
+  return resolveInvoicePaymentAmounts(total, paidAmount);
+}
+
+async function loadInvoicePaymentTotals(studentFeeInvoiceId, instituteId, transaction) {
+  const result = await paymentRepo.getInvoicePaymentTotals(
+    studentFeeInvoiceId,
+    instituteId,
+    { transaction }
+  );
+  if (!result) return null;
+
+  return {
+    invoicePlain: toPlain(result.invoice),
+    ...buildAmountsFromTotals(result.total, result.paidAmount),
+  };
+}
+
+function assertPaymentAmountAllowed(paymentAmount, total, previousPaidAmount) {
+  const dueAmount = decimalSubtract(total, previousPaidAmount);
+
+  if (decimalCompare(previousPaidAmount, total) >= 0) {
+    throw httpError("Invoice is already fully paid", 400);
+  }
+  if (decimalCompare(paymentAmount, dueAmount) > 0) {
+    throw httpError(
+      `Payment amount exceeds due amount (total - paidAmount). Maximum payable: ${dueAmount}`,
+      400
+    );
+  }
+}
+
+async function resolveInvoiceLineForPayment(line, payeeId, instituteId, transaction) {
+  const amount = toMoneyNumber(line.amount);
+  if (decimalCompare(amount, 0) <= 0) {
+    throw httpError("Each payment item amount must be greater than 0");
+  }
+
+  const totals = await loadInvoicePaymentTotals(
+    line.studentFeeInvoiceId,
+    instituteId,
+    transaction
+  );
+  if (!totals) {
+    throw httpError(`Student fee invoice not found: ${line.studentFeeInvoiceId}`, 404);
+  }
+
+  const { invoicePlain } = totals;
+
+  if (Number(payeeId) !== Number(invoicePlain.studentId)) {
+    throw httpError("payeeId does not match the invoice student", 400);
+  }
+
+  if (invoicePlain.status !== "generated") {
+    throw httpError(
+      `Invoice must be generated before recording payment: ${line.studentFeeInvoiceId}`
+    );
+  }
+
+  assertPaymentAmountAllowed(amount, totals.total, totals.paidAmount);
+
+  return {
+    studentFeeInvoiceId: line.studentFeeInvoiceId,
+    amount,
+    total: totals.total,
+    previousPaidAmount: totals.paidAmount,
+    newPaidAmount: decimalAdd(totals.paidAmount, amount),
+  };
+}
+
+function buildOutstandingInvoiceResponse(invoice, amounts) {
+  return {
+    studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+    studentId: invoice.studentId,
+    feePlanItemId: invoice.feePlanItemId,
+    createDate: invoice.createDate,
+    dueDate: invoice.dueDate ?? null,
+    status: invoice.status,
+    total: amounts.total,
+    paidAmount: amounts.paidAmount,
+    balanceDue: amounts.balanceDue,
+    paymentStatus: amounts.paymentStatus,
+  };
+}
+
+function buildVerifiedPaymentItem(line, amountsAfter) {
+  return {
+    studentFeeInvoiceId: line.studentFeeInvoiceId,
+    amount: toMoneyNumber(line.amount),
+    total: amountsAfter.total,
+    paidAmount: amountsAfter.paidAmount,
+    dueAmount: amountsAfter.dueAmount,
+    paymentStatus: amountsAfter.paymentStatus,
+  };
+}
+
+export async function recordStudentFeePaymentFromDetails(body, instituteId, createdBy) {
   const paymentType = body.paymentType ?? "INCOMING";
   if (paymentType !== "INCOMING") {
     throw httpError("Only INCOMING payments are supported for student fee invoices");
   }
 
-  const studentFeePaymentId = await sequelize.transaction(async (transaction) => {
-    const invoice = await paymentRepo.findStudentFeeInvoiceForPayment(
-      body.studentFeeInvoiceId,
-      instituteId,
-      { transaction }
-    );
-    if (!invoice) {
-      throw httpError("Student fee invoice not found", 404);
+  const invoiceIds = body.paymentItems.map((line) => line.studentFeeInvoiceId);
+  if (new Set(invoiceIds).size !== invoiceIds.length) {
+    throw httpError("Duplicate studentFeeInvoiceId in paymentItems", 400);
+  }
+
+  const { studentFeePaymentId, resolvedLines } = await sequelize.transaction(async (transaction) => {
+    const lines = [];
+
+    for (const line of body.paymentItems) {
+      lines.push(
+        await resolveInvoiceLineForPayment(line, body.payeeId, instituteId, transaction)
+      );
     }
 
-    const invoicePlain = toPlain(invoice);
-    if (invoicePlain.status !== "generated") {
-      throw httpError("Invoice must be generated before recording payment");
-    }
-
-    const invoiceTotal = toMoneyNumber(invoicePlain.total);
-    const alreadyPaid = await paymentRepo.sumPaidAmountByInvoiceId(
-      body.studentFeeInvoiceId,
-      instituteId,
-      { transaction }
-    );
-    const totalAfterPayment = decimalAdd(alreadyPaid, amount);
-
-    if (decimalGreaterThan(totalAfterPayment, invoiceTotal)) {
-      const balanceDue = decimalSubtract(invoiceTotal, alreadyPaid);
-      throw httpError(`Payment exceeds balance due. Maximum payable: ${balanceDue}`, 400);
+    let paymentTotal = 0;
+    for (const line of lines) {
+      paymentTotal = decimalAdd(paymentTotal, line.amount);
     }
 
     const payment = await paymentRepo.createStudentFeePayment(
       {
-        studentFeeInvoiceId: body.studentFeeInvoiceId,
         paymentType,
-        payeeId: body.payeeId ?? invoicePlain.studentId,
+        payeeId: body.payeeId,
         payeeType: body.payeeType ?? "STUDENT",
-        amount,
+        amount: paymentTotal,
         paymentMethod: body.paymentMethod,
-        referenceNumber: body.referenceNumber ?? null,
-        transactionId: body.transactionId ?? null,
+        referenceNumber: body.referenceNumber,
+        transactionId: body.transactionId,
         instituteId,
         createdBy,
       },
       { transaction }
     );
 
-    await paymentRepo.createPaymentItem(
-      {
-        paymentId: payment.studentFeePaymentId,
-        referenceId: body.studentFeeInvoiceId,
-        referenceType: "STUDENT_FEE_INVOICE",
-        amount,
-      },
-      { transaction }
-    );
+    for (const line of lines) {
+      await paymentRepo.createPaymentItem(
+        {
+          paymentId: payment.studentFeePaymentId,
+          referenceId: line.studentFeeInvoiceId,
+          referenceType: "STUDENT_FEE_INVOICE",
+          amount: line.amount,
+        },
+        { transaction }
+      );
 
-    const paymentStatus = resolvePaymentStatus(totalAfterPayment, invoiceTotal);
-    await paymentRepo.updateInvoicePaymentStatus(
-      body.studentFeeInvoiceId,
-      instituteId,
-      paymentStatus,
-      { transaction }
-    );
+      line.amountsAfterPayment = await loadInvoicePaymentTotals(
+        line.studentFeeInvoiceId,
+        instituteId,
+        transaction
+      );
 
-    return payment.studentFeePaymentId;
+      await paymentRepo.updateInvoicePaymentStatus(
+        line.studentFeeInvoiceId,
+        instituteId,
+        line.amountsAfterPayment.paymentStatus,
+        line.amountsAfterPayment.paidAmount,
+        { transaction }
+      );
+    }
+
+    return { studentFeePaymentId: payment.studentFeePaymentId, resolvedLines: lines };
   });
 
   const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId, instituteId);
-  const invoice = await invoiceRepo.findStudentFeeInvoiceById(
-    body.studentFeeInvoiceId,
-    instituteId
-  );
+
+  const verifiedPaymentItems = [];
+  for (const line of resolvedLines) {
+    verifiedPaymentItems.push(buildVerifiedPaymentItem(line, line.amountsAfterPayment));
+  }
+
+  let verifiedTotal = 0;
+  for (const item of verifiedPaymentItems) {
+    verifiedTotal = decimalAdd(verifiedTotal, item.amount);
+  }
 
   return {
     payment: formatStudentFeePayment(payment),
-    invoice: formatStudentFeeInvoiceResponse(invoice),
+    verified: {
+      payeeId: body.payeeId,
+      total: verifiedTotal,
+      paymentItems: verifiedPaymentItems,
+    },
   };
 }
 
-export async function listPaymentsByInvoiceId(studentFeeInvoiceId, instituteId) {
-  const invoiceRow = await invoiceRepo.findStudentFeeInvoiceById(
-    studentFeeInvoiceId,
-    instituteId
-  );
-  if (!invoiceRow) {
-    throw httpError("Student fee invoice not found", 404);
+export async function getStudentFeePaymentById(studentFeePaymentId, instituteId) {
+  const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId, instituteId);
+  if (!payment) {
+    throw httpError("Student fee payment not found", 404);
   }
 
-  const invoicePlain = toPlain(invoiceRow);
-  const invoice = formatStudentFeeInvoiceResponse(invoiceRow);
-  const studentId = invoicePlain.studentId;
+  const plain = toPlain(payment);
+  const studentById = new Map();
 
-  const [paymentRows, studentRow] = await Promise.all([
-    paymentRepo.findPaymentsByInvoiceId(studentFeeInvoiceId, instituteId),
-    paymentRepo.findStudentCourseSessionById(studentId, instituteId),
-  ]);
-
-  const feePlanProfileId =
-    invoicePlain.studentFeeInvoiceStudent?.feePlanProfileId ??
-    toPlain(studentRow)?.feePlanProfileId ??
-    invoice?.feePlanItem?.feePlanProfileId ??
-    null;
-
-  let feePlan = null;
-
-  if (feePlanProfileId) {
-    const profileRow = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
-      feePlanProfileId,
+  if (plain.payeeType === "STUDENT") {
+    const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(
+      [plain.payeeId],
       instituteId
     );
-    feePlan = formatFeePlanProfile(profileRow);
+    if (studentRows[0]) {
+      studentById.set(toPlain(studentRows[0]).studentId, studentRows[0]);
+    }
   }
 
-  const invoiceTotal = invoice?.total ?? toMoneyNumber(invoicePlain.total);
-  const totalPaid =
-    invoice?.totalPaid ??
-    decimalSum(paymentRows.map((r) => toMoneyNumber(toPlain(r).amount)));
-  const balanceDue = invoice?.balanceDue ?? decimalSubtract(invoiceTotal, totalPaid);
-  const paymentStatus = invoice?.paymentStatus ?? invoicePlain.paymentStatus;
+  const payee = resolvePayeeForPaymentList(plain.payeeType, plain.payeeId, studentById);
+  const paymentItems = [];
+  for (const item of plain.paymentItems ?? []) {
+    paymentItems.push(formatPaymentItem(item));
+  }
 
   return {
-    studentFeeInvoiceId,
+    ...formatStudentFeePaymentRecord(payment, payee),
+    paymentItems,
+  };
+}
+
+export async function listStudentFeePayments(instituteId, query) {
+  const { rows, total, page, limit } = await paymentRepo.findAllPaymentsPaginated(
+    instituteId,
+    { payeeId: query.payeeId, search: query.search },
+    { page: query.page, limit: query.limit }
+  );
+
+  const studentIds = paymentRepo.collectStudentPayeeIdsFromPayments(rows);
+  const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(studentIds, instituteId);
+  const studentById = new Map();
+  for (const row of studentRows) {
+    const plain = toPlain(row);
+    studentById.set(plain.studentId, row);
+  }
+
+  const payments = [];
+  for (const row of rows) {
+    const plain = toPlain(row);
+    const payee = resolvePayeeForPaymentList(plain.payeeType, plain.payeeId, studentById);
+    payments.push(formatStudentFeePaymentRecord(row, payee));
+  }
+
+  return {
+    data: { payments },
+    pagination: { page, limit, total },
+  };
+}
+
+export async function getPaymentDetails(studentId, instituteId) {
+  const studentRow = await paymentRepo.findStudentForPaymentDetails(studentId, instituteId);
+  if (!studentRow) {
+    throw httpError("Student not found", 404);
+  }
+
+  const invoiceRows = await paymentRepo.findGeneratedInvoicesForPaymentDetails(
+    studentId,
+    instituteId
+  );
+
+  const invoices = [];
+  const invoiceIds = [];
+  for (const row of invoiceRows) {
+    const invoice = toPlain(row);
+    invoices.push(invoice);
+    invoiceIds.push(invoice.studentFeeInvoiceId);
+  }
+
+  const [paidByInvoiceId, totalByInvoiceId] = await Promise.all([
+    paymentRepo.sumPaidAmountByInvoiceIds(invoiceIds, instituteId),
+    paymentRepo.sumInvoiceTotalsByInvoiceIds(invoiceIds, instituteId),
+  ]);
+
+  const outstandingInvoices = [];
+  for (const invoice of invoices) {
+    const paidAmount = paidByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
+    const total = totalByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
+    const amounts = buildAmountsFromTotals(total, paidAmount);
+
+    if (decimalCompare(amounts.paidAmount, amounts.total) >= 0) continue;
+
+    outstandingInvoices.push(buildOutstandingInvoiceResponse(invoice, amounts));
+  }
+
+  return {
     student: formatPaymentListStudent(studentRow),
-    invoice,
-    feePlan,
-    invoiceTotal,
-    totalPaid,
-    balanceDue,
-    paymentStatus,
-    payments: paymentRows.map((r) => formatStudentFeePayment(r)),
+    invoices: outstandingInvoices,
   };
 }

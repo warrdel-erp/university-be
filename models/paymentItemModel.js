@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import studentFeePaymentModel from "./studentFeePaymentModel.js";
+import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
 export default sequelize.define(
   "payment_item",
@@ -20,14 +21,20 @@ export default sequelize.define(
         key: "student_fee_payment_id",
       },
     },
+    // referenceId (ORM) → student_fee_invoice_id (DB); value = student_fee_invoice.student_fee_invoice_id
     referenceId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "reference_id",
+      field: "student_fee_invoice_id",
+      references: {
+        model: studentFeeInvoiceModel,
+        key: "student_fee_invoice_id",
+      },
     },
     referenceType: {
       type: DataTypes.ENUM("STUDENT_FEE_INVOICE", "STUDENT_LIBRARY_INVOICE"),
       allowNull: false,
+      defaultValue: "STUDENT_FEE_INVOICE",
       field: "reference_type",
     },
     amount: {
