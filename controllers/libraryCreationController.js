@@ -107,8 +107,8 @@ export async function addBookWithInventory(req, res) {
 
 export async function getAllBooks(req, res) {
   try {
-    const books = await libraryCreation.getAllBooks(req.query, req.user);
-    return SuccessResponse(res, 200, "Books", books);
+    const result = await libraryCreation.getAllBooks(req.query, req.user);
+    return SuccessResponse(res, 200, "Books", result.books, result.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

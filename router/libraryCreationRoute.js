@@ -56,9 +56,20 @@ const inventoryQuerySchema = z.object({
   inventoryId: z.coerce.number(),
 });
 
+const optionalTrimmedString = z
+  .string()
+  .optional()
+  .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()));
+
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
-  libraryFloorId: z.coerce.number(),
+  libraryFloorId: z
+    .union([z.coerce.number(), z.literal("")])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  search: optionalTrimmedString,
 });
 
 const addCategorySchema = z.object({

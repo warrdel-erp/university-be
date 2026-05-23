@@ -205,34 +205,55 @@ function pickRowDetails(row) {
   };
 }
 
+function collectUniqueInventoryValues(copies, field) {
+  return [
+    ...new Set(
+      copies
+        .map((inv) => inv[field])
+        .filter((value) => value != null && value !== ""),
+    ),
+  ];
+}
+
+function mapInventoryCopiesForList(copies) {
+  return copies.map((inv) => ({
+    inventoryId: inv.inventoryId,
+    accessionNumber: inv.accessionNumber ?? null,
+    billNo: inv.billNo ?? null,
+    billDate: inv.billDate ?? null,
+    status: inv.status ?? null,
+    condition: inv.condition ?? null,
+    aisleDetails: pickAisleDetails(inv.aisleDetails),
+    rackDetails: pickRackDetails(inv.rackDetails),
+    rowDetails: pickRowDetails(inv.rowDetails),
+  }));
+}
+
 function mapBooksToAllBookList(enrichedBooks) {
   return enrichedBooks.map((book) => {
     const copies = book.inventoryCopies ?? [];
     const firstCopy = copies[0] ?? null;
 
-    const accessionNumber = [
-      ...new Set(
-        copies
-          .map((inv) => inv.accessionNumber)
-          .filter((value) => value != null && value !== ""),
-      ),
-    ];
+    const accessionNumber = collectUniqueInventoryValues(copies, "accessionNumber");
+    const billNo = collectUniqueInventoryValues(copies, "billNo");
+    const billDate = collectUniqueInventoryValues(copies, "billDate");
 
     return {
       libraryBookId: book.libraryBookId,
       libraryCreationId: book.libraryCreationId ?? null,
       title: book.title ?? null,
       author: book.authors ?? null,
-      authors: book.authors ?? null,
       categories: book.categories ?? [],
       subjects: book.subjects ?? [],
       accessionNumber,
+      billNo,
+      billDate,
       status: firstCopy?.status ?? null,
       condition: firstCopy?.condition ?? null,
       aisleDetails: pickAisleDetails(firstCopy?.aisleDetails),
       rackDetails: pickRackDetails(firstCopy?.rackDetails),
       rowDetails: pickRowDetails(firstCopy?.rowDetails),
-      inventoryCopies: copies,
+      inventoryCopies: mapInventoryCopiesForList(copies),
     };
   });
 }
@@ -534,18 +555,42 @@ async function enrichBooksWithCategoriesAndSubjects(books) {
 }
 
 export async function getAllBooks(query, user) {
-  const { libraryCreationId, libraryFloorId } = query;
-  const books = await libraryCreationService.getAllBooks(
+  const {
+    libraryCreationId,
+    libraryFloorId,
+    page = 1,
+    limit = 20,
+    search,
+  } = query;
+
+  const safeLimit = Math.min(100, Math.max(1, limit));
+  const safePage = Math.max(1, page);
+  const offset = (safePage - 1) * safeLimit;
+
+  const filters = { search };
+
+  const { total, books } = await libraryCreationService.getAllBooks(
     user.universityId,
     libraryCreationId,
     libraryFloorId,
+    filters,
+    { limit: safeLimit, offset },
   );
 
-  if (!books?.length) return [];
+  if (!books?.length) {
+    return {
+      books: [],
+      pagination: { total: total ?? 0, page: safePage, limit: safeLimit },
+    };
+  }
 
   const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(books);
-  const filtered = filterBooksByFloor(enrichedBooks, libraryFloorId);
-  return mapBooksToAllBookList(filtered);
+  const floorFiltered = filterBooksByFloor(enrichedBooks, libraryFloorId);
+
+  return {
+    books: mapBooksToAllBookList(floorFiltered),
+    pagination: { total, page: safePage, limit: safeLimit },
+  };
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {

@@ -5208,7 +5208,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20",
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20&search=",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5220,68 +5220,32 @@
                 {
                   "key": "libraryCreationId",
                   "value": "{{libraryCreation_id}}",
-                  "description": "Required"
+                  "description": "Required — library creation ID"
                 },
                 {
                   "key": "libraryFloorId",
                   "value": "{{libraryFloor_id}}",
-                  "description": "Required"
+                  "description": "Optional — filter inventory by floor; omit to list all books for libraryCreationId",
+                  "disabled": true
                 },
                 {
                   "key": "page",
                   "value": "1",
-                  "description": "Optional, default 1"
+                  "description": "Optional — page number (default 1)"
                 },
                 {
                   "key": "limit",
                   "value": "20",
-                  "description": "Optional, default 20, max 100"
+                  "description": "Optional — page size (default 20, max 100)"
                 },
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Optional — partial match on title, subtitle, authors, isbn, publisher, keywords",
-                  "disabled": true
-                },
-                {
-                  "key": "title",
-                  "value": "",
-                  "description": "Optional — partial match on book title",
-                  "disabled": true
-                },
-                {
-                  "key": "authors",
-                  "value": "",
-                  "description": "Optional — partial match on authors",
-                  "disabled": true
-                },
-                {
-                  "key": "isbn",
-                  "value": "",
-                  "description": "Optional — partial match on ISBN",
-                  "disabled": true
-                },
-                {
-                  "key": "publisher",
-                  "value": "",
-                  "description": "Optional — partial match on publisher",
-                  "disabled": true
-                },
-                {
-                  "key": "accessionNumber",
-                  "value": "",
-                  "description": "Optional — partial match on inventory accession number",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "available",
-                  "description": "Optional — exact: available | issued",
-                  "disabled": true
+                  "description": "Single search — title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
                 }
               ]
             },
-            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list for a library floor. Sorted by `libraryBookId` ASC (page 1 → ids 1–20 when limit=20).\n\n**Required query**\n| Key | Type |\n|-----|------|\n| `libraryCreationId` | number |\n| `libraryFloorId` | number |\n\n**Pagination (optional)**\n| Key | Default | Max |\n|-----|---------|-----|\n| `page` | 1 | — |\n| `limit` | 20 | 100 |\n\n**Search filters (optional, partial match unless noted)**\n| Key | Searches |\n|-----|----------|\n| `search` | title, subtitle, authors, isbn, publisher, keywords |\n| `title` | book title |\n| `authors` | authors |\n| `isbn` | ISBN |\n| `publisher` | publisher |\n| `accessionNumber` | inventory accession number |\n| `status` | `available` or `issued` (exact) |\n\nCombine filters with AND. Enable disabled query params in Postman to test search.\n\n**Example**\n`GET .../allBook?libraryCreationId=1&libraryFloorId=1&page=1&limit=20&search=design`\n\n**Success**\n```json\n{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}\n```"
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | — | Library ID |\n| `libraryFloorId` | No | — | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | — | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
           },
           "response": [
             {
@@ -5290,7 +5254,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"authors\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"billNo\": [\"BILL-2024-01\"],\n      \"billDate\": [\"2024-01-15\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 81,\n          \"accessionNumber\": \"ACC-1001\",\n          \"billNo\": \"BILL-2024-01\",\n          \"billDate\": \"2024-01-15\",\n          \"status\": \"available\",\n          \"condition\": \"Good\",\n          \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n          \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n          \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
             },
             {
               "name": "200 OK — with search",
@@ -5298,7 +5262,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"authors\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"billNo\": [],\n      \"billDate\": [],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 120,\n          \"accessionNumber\": \"2036\",\n          \"billNo\": null,\n          \"billDate\": null,\n          \"status\": \"available\",\n          \"condition\": null,\n          \"aisleDetails\": null,\n          \"rackDetails\": null,\n          \"rowDetails\": null\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
@@ -5863,10 +5827,34 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryMember?page=1&limit=20&libraryCreationId={{libraryCreation_id}}&search=",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
-            }
+              "path": ["libraryMember"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Optional — page number (default 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Optional — page size (default 20, max 100)"
+                },
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}",
+                  "description": "Optional — scope to one library (omit for all libraries)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Single search — matches memberId, memberType, student/employee names, scholarNumber, numeric libraryMemberId/studentId/employeeId"
+                }
+              ]
+            },
+            "description": "**GET /libraryMember**\n\nPaginated library members. Use **`search`** only for text/ID lookup (backend matches all relevant fields). Sorted by `libraryMemberId` DESC.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `page` | No | default 1 |\n| `limit` | No | default 20, max 100 |\n| `libraryCreationId` | No | optional library scope |\n| `search` | No | one field for all filters — omit to list all |\n\n**Example:** `GET .../libraryMember?page=1&limit=20&search=rahul`\n\n**Response:** `data` + `paginationData`."
           },
           "response": []
         },
@@ -6029,11 +6017,34 @@
                   ]
                 },
                 "url": {
-                  "raw": "{{baseurl}}/libraryMember/getAllIssueBook",
+                  "raw": "{{baseurl}}/libraryMember/getAllIssueBook?page=1&limit=20&libraryCreationId={{libraryCreation_id}}&search=",
                   "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "getAllIssueBook"]
+                  "path": ["libraryMember", "getAllIssueBook"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Optional — page number (default 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional — page size (default 20, max 100)"
+                    },
+                    {
+                      "key": "libraryCreationId",
+                      "value": "{{libraryCreation_id}}",
+                      "description": "Optional — scope to member's library",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "Single search — status, issuedBy, receivedBy, book title/author/isbn, memberId, add-item name, numeric issue/member/book IDs"
+                    }
+                  ]
                 },
-                "description": "**GET /libraryMember/getAllIssueBook**\n\nReturns issue row with `issuedBy`, `receivedBy`, dates, `status`, nested `memberBookIssue`, `addItemBookIssue` or `libraryBookIssue`, `userBookIssue`."
+                "description": "**GET /libraryMember/getAllIssueBook**\n\nPaginated book issues. Use **`search`** only for lookup (backend matches all relevant fields). Sorted by `libraryIssueBookId` DESC.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `page` | No | default 1 |\n| `limit` | No | default 20, max 100 |\n| `libraryCreationId` | No | optional library scope |\n| `search` | No | one field for all filters — omit to list all |\n\n**Example:** `GET .../getAllIssueBook?page=1&limit=20&search=Issued`\n\n**Response:** `data` + `paginationData`."
               },
               "response": []
             },
