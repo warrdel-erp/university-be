@@ -54,6 +54,11 @@ export default sequelize.define(
       defaultValue: null,
       field: "received_by",
     },
+    remark: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+    },
     instituteId: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -44,6 +44,12 @@ const recordPaymentDetailsBodySchema = z.object({
     .trim()
     .optional()
     .transform((value) => (value === "" ? undefined : value)),
+  remark: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((value) => (value === "" || value == null ? null : value)),
 });
 
 const paginationQueryFields = {

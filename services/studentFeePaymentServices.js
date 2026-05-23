@@ -97,6 +97,7 @@ export function formatStudentFeePaymentRecord(row, payee = null) {
     referenceNumber: p.referenceNumber ?? null,
     transactionId: p.transactionId ?? null,
     receivedBy: p.receivedBy ?? null,
+    remark: p.remark ?? null,
     instituteId: p.instituteId,
     createdBy: p.createdBy,
     createdAt: p.createdAt ?? p.created_at ?? null,
@@ -224,6 +225,7 @@ function formatLastPaymentHistory(row) {
   return {
     studentFeePaymentId: payment.studentFeePaymentId,
     amount: toMoneyNumber(payment.amount),
+    paymentMethod: payment.paymentMethod ?? null,
     paymentDate: payment.createdAt ?? payment.created_at ?? null,
   };
 }
@@ -284,6 +286,7 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
         referenceNumber: body.referenceNumber,
         transactionId: body.transactionId,
         receivedBy: body.receivedBy ?? null,
+        remark: body.remark ?? null,
         instituteId,
         createdBy,
       },
