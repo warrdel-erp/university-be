@@ -98,18 +98,16 @@ export async function getInvoicePaymentTotals(studentFeeInvoiceId, instituteId, 
   return { invoice, total, paidAmount };
 }
 
-// paidAmount = SUM(payment_item.amount) for invoice (INCOMING payments only).
-export async function sumPaidAmountFromPaymentItemsByInvoiceId(
-  studentFeeInvoiceId,
+// paidAmount = SUM(payment_item.amount) for reference_id + reference_type (INCOMING only).
+export async function sumPaidAmountFromPaymentItemsByReference(
+  referenceId,
+  referenceType,
   instituteId,
   options = {}
 ) {
   const row = await model.paymentItemModel.findOne({
     attributes: [[fn("SUM", col("payment_item.amount")), "paidAmount"]],
-    where: {
-      referenceId: studentFeeInvoiceId,
-      referenceType: "STUDENT_FEE_INVOICE",
-    },
+    where: { referenceId, referenceType },
     include: [
       {
         model: model.studentFeePaymentModel,
@@ -127,6 +125,19 @@ export async function sumPaidAmountFromPaymentItemsByInvoiceId(
   });
 
   return toMoneyNumber(row?.paidAmount ?? 0);
+}
+
+export async function sumPaidAmountFromPaymentItemsByInvoiceId(
+  studentFeeInvoiceId,
+  instituteId,
+  options = {}
+) {
+  return sumPaidAmountFromPaymentItemsByReference(
+    studentFeeInvoiceId,
+    "STUDENT_FEE_INVOICE",
+    instituteId,
+    options
+  );
 }
 
 export async function sumPaidAmountByInvoiceId(studentFeeInvoiceId, instituteId, options = {}) {
@@ -331,9 +342,14 @@ export async function findGeneratedInvoicesForPaymentDetails(studentId, institut
   });
 }
 
-// paidAmount per studentFeeInvoiceId from payment_item (INCOMING payments only).
-export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, instituteId, options = {}) {
-  if (!studentFeeInvoiceIds.length) return new Map();
+// paidAmount per reference_id for a given reference_type (INCOMING payments only).
+export async function sumPaidAmountByReferenceIds(
+  referenceIds,
+  referenceType,
+  instituteId,
+  options = {}
+) {
+  if (!referenceIds.length) return new Map();
 
   const rows = await model.paymentItemModel.findAll({
     attributes: [
@@ -341,8 +357,8 @@ export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, instituteI
       [fn("SUM", col("payment_item.amount")), "paidAmount"],
     ],
     where: {
-      referenceType: "STUDENT_FEE_INVOICE",
-      referenceId: { [Op.in]: studentFeeInvoiceIds },
+      referenceType,
+      referenceId: { [Op.in]: referenceIds },
     },
     include: [
       {
@@ -361,11 +377,20 @@ export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, instituteI
     transaction: options.transaction,
   });
 
-  const paidByInvoiceId = new Map();
+  const paidByReferenceId = new Map();
   for (const row of rows) {
-    paidByInvoiceId.set(Number(row.referenceId), toMoneyNumber(row.paidAmount ?? 0));
+    paidByReferenceId.set(Number(row.referenceId), toMoneyNumber(row.paidAmount ?? 0));
   }
-  return paidByInvoiceId;
+  return paidByReferenceId;
+}
+
+export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, instituteId, options = {}) {
+  return sumPaidAmountByReferenceIds(
+    studentFeeInvoiceIds,
+    "STUDENT_FEE_INVOICE",
+    instituteId,
+    options
+  );
 }
 
 export function collectStudentPayeeIdsFromPayments(paymentRows) {

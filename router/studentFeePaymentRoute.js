@@ -21,10 +21,12 @@ const moneyAmount = z.coerce.string().trim().min(1);
 
 const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
 const paymentTypeEnum = z.enum(["INCOMING", "OUTGOING"]);
-const payeeTypeEnum = z.enum(["STUDENT", "VENDOR"]);
+const payeeTypeEnum = z.enum(["STUDENT", "VENDOR", "OTHER"]);
+const referenceTypeEnum = z.enum(["STUDENT_FEE_INVOICE", "STUDENT_LIBRARY_INVOICE","OTHER"]);
 
 const paymentDetailsPaymentItemSchema = z.object({
-  studentFeeInvoiceId: positiveIntegerId,
+  referenceId: positiveIntegerId,
+  referenceType: referenceTypeEnum.optional().default("OTHER"),
   amount: moneyAmount,
 });
 
@@ -36,7 +38,7 @@ const recordPaymentDetailsBodySchema = z.object({
     .min(1, "At least one payment item is required"),
   paymentMethod: paymentMethodEnum.optional().default("cash"),
   paymentType: paymentTypeEnum.optional().default("INCOMING"),
-  payeeType: payeeTypeEnum.optional().default("STUDENT"),
+  payeeType: payeeTypeEnum,
   referenceNumber: z.string().trim().default(() => uuidv4()),
   transactionId: z.string().trim().default(() => uuidv4()),
   receivedBy: z

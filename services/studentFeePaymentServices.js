@@ -19,12 +19,6 @@ function toPlain(row) {
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
-function resolvePaymentStatus(totalPaid, invoiceTotal) {
-  if (decimalCompare(totalPaid, 0) <= 0) return "unpaid";
-  if (decimalCompare(totalPaid, invoiceTotal) < 0) return "partial";
-  return "paid";
-}
-
 function formatStudentDisplayName(student) {
   if (!student) return "";
   return [student.firstName, student.middleName, student.lastName]
@@ -78,7 +72,6 @@ function resolvePayeeForPaymentList(payeeType, payeeId, studentById) {
   if (payeeType !== "STUDENT") {
     return { payeeId, payeeType };
   }
-
   return formatPaymentListStudent(studentById.get(payeeId)) ?? { payeeId, payeeType };
 }
 
@@ -120,136 +113,17 @@ export function formatStudentFeePayment(row) {
   };
 }
 
-function resolveInvoicePaymentAmounts(total, paidAmount) {
-  const paid = toMoneyNumber(paidAmount);
-  const dueAmount = decimalSubtract(total, paid);
-
-  return {
-    total,
-    paidAmount: paid,
-    dueAmount,
-    balanceDue: dueAmount,
-    paymentStatus: resolvePaymentStatus(paid, total),
-  };
-}
-
-function buildAmountsFromTotals(total, paidAmount) {
-  return resolveInvoicePaymentAmounts(total, paidAmount);
-}
-
-async function loadInvoicePaymentTotals(studentFeeInvoiceId, instituteId, transaction) {
-  const result = await paymentRepo.getInvoicePaymentTotals(
-    studentFeeInvoiceId,
-    instituteId,
-    { transaction }
-  );
-  if (!result) return null;
-
-  return {
-    invoicePlain: toPlain(result.invoice),
-    ...buildAmountsFromTotals(result.total, result.paidAmount),
-  };
-}
-
-function assertPaymentAmountAllowed(paymentAmount, total, previousPaidAmount) {
-  const dueAmount = decimalSubtract(total, previousPaidAmount);
-
-  if (decimalCompare(previousPaidAmount, total) >= 0) {
-    throw httpError("Invoice is already fully paid", 400);
-  }
-  if (decimalCompare(paymentAmount, dueAmount) > 0) {
-    throw httpError(
-      `Payment amount exceeds due amount (total - paidAmount). Maximum payable: ${dueAmount}`,
-      400
-    );
-  }
-}
-
-async function resolveInvoiceLineForPayment(line, payeeId, instituteId, transaction) {
-  const amount = toMoneyNumber(line.amount);
-  if (decimalCompare(amount, 0) <= 0) {
-    throw httpError("Each payment item amount must be greater than 0");
-  }
-
-  const totals = await loadInvoicePaymentTotals(
-    line.studentFeeInvoiceId,
-    instituteId,
-    transaction
-  );
-  if (!totals) {
-    throw httpError(`Student fee invoice not found: ${line.studentFeeInvoiceId}`, 404);
-  }
-
-  const { invoicePlain } = totals;
-
-  if (Number(payeeId) !== Number(invoicePlain.studentId)) {
-    throw httpError("payeeId does not match the invoice student", 400);
-  }
-
-  if (invoicePlain.status !== "generated") {
-    throw httpError(
-      `Invoice must be generated before recording payment: ${line.studentFeeInvoiceId}`
-    );
-  }
-
-  assertPaymentAmountAllowed(amount, totals.total, totals.paidAmount);
-
-  return {
-    studentFeeInvoiceId: line.studentFeeInvoiceId,
-    amount,
-    total: totals.total,
-    previousPaidAmount: totals.paidAmount,
-    newPaidAmount: decimalAdd(totals.paidAmount, amount),
-  };
-}
-
-function buildOutstandingInvoiceResponse(invoice, amounts) {
-  return {
-    studentFeeInvoiceId: invoice.studentFeeInvoiceId,
-    studentId: invoice.studentId,
-    feePlanItemId: invoice.feePlanItemId,
-    createDate: invoice.createDate,
-    dueDate: invoice.dueDate ?? null,
-    status: invoice.status,
-    total: amounts.total,
-    paidAmount: amounts.paidAmount,
-    balanceDue: amounts.balanceDue,
-    paymentStatus: amounts.paymentStatus,
-  };
-}
-
-function formatLastPaymentHistory(row) {
-  const payment = toPlain(row);
-  if (!payment) return null;
-
-  return {
-    studentFeePaymentId: payment.studentFeePaymentId,
-    amount: toMoneyNumber(payment.amount),
-    paymentMethod: payment.paymentMethod ?? null,
-    paymentDate: payment.createdAt ?? payment.created_at ?? null,
-  };
-}
-
-function buildVerifiedPaymentItem(line, amountsAfter) {
-  return {
-    studentFeeInvoiceId: line.studentFeeInvoiceId,
-    amount: toMoneyNumber(line.amount),
-    total: amountsAfter.total,
-    paidAmount: amountsAfter.paidAmount,
-    dueAmount: amountsAfter.dueAmount,
-    paymentStatus: amountsAfter.paymentStatus,
-  };
-}
-
 export async function recordStudentFeePaymentFromDetails(body, instituteId, createdBy) {
   const paymentType = body.paymentType ?? "INCOMING";
   if (paymentType !== "INCOMING") {
     throw httpError("Only INCOMING payments are supported for student fee invoices");
   }
 
-  const invoiceIds = body.paymentItems.map((line) => line.studentFeeInvoiceId);
-  if (new Set(invoiceIds).size !== invoiceIds.length) {
-    throw httpError("Duplicate studentFeeInvoiceId in paymentItems", 400);
+  const referenceKeys = body.paymentItems.map(
+    (line) => `${line.referenceType}:${line.referenceId}`
+  );
+  if (new Set(referenceKeys).size !== referenceKeys.length) {
+    throw httpError("Duplicate referenceId and referenceType in paymentItems", 400);
   }
 
   const paymentTotal = toMoneyNumber(body.amount);
@@ -271,16 +145,74 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
     const lines = [];
 
     for (const line of body.paymentItems) {
-      lines.push(
-        await resolveInvoiceLineForPayment(line, body.payeeId, instituteId, transaction)
-      );
+      const referenceId = line.referenceId;
+      const referenceType = line.referenceType;
+      const amount = toMoneyNumber(line.amount);
+
+      if (decimalCompare(amount, 0) <= 0) {
+        throw httpError("Each payment item amount must be greater than 0");
+      }
+
+      if (referenceType === "STUDENT_FEE_INVOICE") {
+        if (body.payeeType !== "STUDENT") {
+          throw httpError("payeeType must be STUDENT for student fee invoice payment items", 400);
+        }
+
+        const invoiceTotals = await paymentRepo.getInvoicePaymentTotals(
+          referenceId,
+          instituteId,
+          { transaction }
+        );
+        if (!invoiceTotals) {
+          throw httpError(`Student fee invoice not found: ${referenceId}`, 404);
+        }
+
+        const invoicePlain = toPlain(invoiceTotals.invoice);
+        const invoiceTotal = invoiceTotals.total;
+        const previousPaidAmount = invoiceTotals.paidAmount;
+        const dueAmount = decimalSubtract(invoiceTotal, previousPaidAmount);
+
+        if (Number(body.payeeId) !== Number(invoicePlain.studentId)) {
+          throw httpError("payeeId does not match the invoice student", 400);
+        }
+
+        if (invoicePlain.status !== "generated") {
+          throw httpError(`Invoice must be generated before recording payment: ${referenceId}`);
+        }
+
+        if (decimalCompare(previousPaidAmount, invoiceTotal) >= 0) {
+          throw httpError("Invoice is already fully paid", 400);
+        }
+        if (decimalCompare(amount, dueAmount) > 0) {
+          throw httpError(
+            `Payment amount exceeds due amount (total - paidAmount). Maximum payable: ${dueAmount}`,
+            400
+          );
+        }
+
+        lines.push({
+          referenceId,
+          referenceType,
+          amount,
+          total: invoiceTotal,
+          previousPaidAmount,
+          newPaidAmount: decimalAdd(previousPaidAmount, amount),
+        });
+        continue;
+      }
+
+      if (referenceType === "STUDENT_LIBRARY_INVOICE") {
+        throw httpError("STUDENT_LIBRARY_INVOICE payment items are not supported yet", 400);
+      }
+
+      lines.push({ referenceId, referenceType, amount });
     }
 
     const payment = await paymentRepo.createStudentFeePayment(
       {
         paymentType,
         payeeId: body.payeeId,
-        payeeType: body.payeeType ?? "STUDENT",
+        payeeType: body.payeeType,
         amount: paymentTotal,
         paymentMethod: body.paymentMethod,
         referenceNumber: body.referenceNumber,
@@ -297,26 +229,41 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
       await paymentRepo.createPaymentItem(
         {
           paymentId: payment.studentFeePaymentId,
-          referenceId: line.studentFeeInvoiceId,
-          referenceType: "STUDENT_FEE_INVOICE",
+          referenceId: line.referenceId,
+          referenceType: line.referenceType,
           amount: line.amount,
         },
         { transaction }
       );
 
-      line.amountsAfterPayment = await loadInvoicePaymentTotals(
-        line.studentFeeInvoiceId,
-        instituteId,
-        transaction
-      );
+      if (line.referenceType === "STUDENT_FEE_INVOICE") {
+        const totalsAfter = await paymentRepo.getInvoicePaymentTotals(
+          line.referenceId,
+          instituteId,
+          { transaction }
+        );
+        const paidAfter = toMoneyNumber(totalsAfter.paidAmount);
+        let paymentStatus = "unpaid";
+        if (decimalCompare(paidAfter, 0) > 0) {
+          paymentStatus =
+            decimalCompare(paidAfter, totalsAfter.total) < 0 ? "partial" : "paid";
+        }
 
-      await paymentRepo.updateInvoicePaymentStatus(
-        line.studentFeeInvoiceId,
-        instituteId,
-        line.amountsAfterPayment.paymentStatus,
-        line.amountsAfterPayment.paidAmount,
-        { transaction }
-      );
+        line.amountsAfterPayment = {
+          total: totalsAfter.total,
+          paidAmount: paidAfter,
+          dueAmount: decimalSubtract(totalsAfter.total, paidAfter),
+          paymentStatus,
+        };
+
+        await paymentRepo.updateInvoicePaymentStatus(
+          line.referenceId,
+          instituteId,
+          paymentStatus,
+          paidAfter,
+          { transaction }
+        );
+      }
     }
 
     return { studentFeePaymentId: payment.studentFeePaymentId, resolvedLines: lines };
@@ -326,7 +273,18 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
 
   const verifiedPaymentItems = [];
   for (const line of resolvedLines) {
-    verifiedPaymentItems.push(buildVerifiedPaymentItem(line, line.amountsAfterPayment));
+    const verified = {
+      referenceId: line.referenceId,
+      referenceType: line.referenceType,
+      amount: toMoneyNumber(line.amount),
+    };
+    if (line.amountsAfterPayment) {
+      verified.total = line.amountsAfterPayment.total;
+      verified.paidAmount = line.amountsAfterPayment.paidAmount;
+      verified.dueAmount = line.amountsAfterPayment.dueAmount;
+      verified.paymentStatus = line.amountsAfterPayment.paymentStatus;
+    }
+    verifiedPaymentItems.push(verified);
   }
 
   return {
@@ -417,8 +375,8 @@ export async function getPaymentDetails(studentId, instituteId) {
     invoiceIds.push(invoice.studentFeeInvoiceId);
   }
 
-  const [paidByInvoiceId, totalByInvoiceId] = await Promise.all([
-    paymentRepo.sumPaidAmountByInvoiceIds(invoiceIds, instituteId),
+  const [paidByReferenceId, totalByInvoiceId] = await Promise.all([
+    paymentRepo.sumPaidAmountByReferenceIds(invoiceIds, "STUDENT_FEE_INVOICE", instituteId),
     paymentRepo.sumInvoiceTotalsByInvoiceIds(invoiceIds, instituteId),
   ]);
 
@@ -426,24 +384,47 @@ export async function getPaymentDetails(studentId, instituteId) {
   const balanceDueAmounts = [];
 
   for (const invoice of invoices) {
-    const paidAmount = paidByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
-    const total = totalByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0;
-    const amounts = buildAmountsFromTotals(total, paidAmount);
+    const paidAmount = toMoneyNumber(paidByReferenceId.get(invoice.studentFeeInvoiceId) ?? 0);
+    const total = toMoneyNumber(totalByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0);
+    const balanceDue = decimalSubtract(total, paidAmount);
 
-    if (decimalCompare(amounts.paidAmount, amounts.total) >= 0) continue;
+    if (decimalCompare(paidAmount, total) >= 0) continue;
 
-    outstandingInvoices.push(buildOutstandingInvoiceResponse(invoice, amounts));
-    balanceDueAmounts.push(amounts.balanceDue);
+    let paymentStatus = "unpaid";
+    if (decimalCompare(paidAmount, 0) > 0) {
+      paymentStatus = decimalCompare(paidAmount, total) < 0 ? "partial" : "paid";
+    }
+
+    outstandingInvoices.push({
+      studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+      studentId: invoice.studentId,
+      feePlanItemId: invoice.feePlanItemId,
+      createDate: invoice.createDate,
+      dueDate: invoice.dueDate ?? null,
+      status: invoice.status,
+      total,
+      paidAmount,
+      balanceDue,
+      paymentStatus,
+    });
+    balanceDueAmounts.push(balanceDue);
   }
 
-  const totalPaymentReceived = decimalSum([...paidByInvoiceId.values()]);
+  const lastPayment = toPlain(lastPaymentRow);
 
   return {
     student: formatPaymentListStudent(studentRow),
     totalInvoices: invoices.length,
-    lastPayment: formatLastPaymentHistory(lastPaymentRow),
+    lastPayment: lastPayment
+      ? {
+          studentFeePaymentId: lastPayment.studentFeePaymentId,
+          amount: toMoneyNumber(lastPayment.amount),
+          paymentMethod: lastPayment.paymentMethod ?? null,
+          paymentDate: lastPayment.createdAt ?? lastPayment.created_at ?? null,
+        }
+      : null,
     outstandingAmount: decimalSum(balanceDueAmounts),
-    totalPaymentReceived,
+    totalPaymentReceived: decimalSum([...paidByReferenceId.values()]),
     invoices: outstandingInvoices,
   };
 }

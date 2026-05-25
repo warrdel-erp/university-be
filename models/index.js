@@ -1017,18 +1017,6 @@ paymentItemModel.belongsTo(studentFeePaymentModel, {
   as: "payment",
 });
 
-paymentItemModel.belongsTo(studentFeeInvoiceModel, {
-  foreignKey: "referenceId",
-  targetKey: "studentFeeInvoiceId",
-  as: "studentFeeInvoice",
-});
-studentFeeInvoiceModel.hasMany(paymentItemModel, {
-  foreignKey: "referenceId",
-  sourceKey: "studentFeeInvoiceId",
-  scope: { referenceType: "STUDENT_FEE_INVOICE" },
-  as: "invoicePaymentItems",
-});
-
 studentFeeInvoiceItemsModel.belongsTo(feeTypeCatalogModel, {
   foreignKey: "feeTypeId",
   as: "feeTypeCatalog",

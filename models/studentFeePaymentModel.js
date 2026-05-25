@@ -26,7 +26,6 @@ export default sequelize.define(
     payeeType: {
       type: DataTypes.ENUM("STUDENT", "VENDOR"),
       allowNull: false,
-      defaultValue: "STUDENT",
       field: "payee_type",
     },
     amount: {

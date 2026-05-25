@@ -7151,7 +7151,7 @@
         },
         {
           "name": "studentFeePayment",
-          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** — outstanding invoices (pay screen)\n2. **POST /payment/details** — record payment (multi-invoice in one payment)\n3. **GET /** — paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** — one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ← `student_fee_invoice_items` (sum amount − waiver)\n- **paidAmount** ← `payment_item` SUM\n- **dueAmount** = total − paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header) + `payment_item` (per invoice line; referenceId = studentFeeInvoiceId)",
+          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** — outstanding invoices (pay screen)\n2. **POST /payment/details** — record payment (multi-invoice in one payment)\n3. **GET /** — paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** — one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ← `student_fee_invoice_items` (sum amount − waiver)\n- **paidAmount** ← `payment_item` SUM\n- **dueAmount** = total − paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header: payeeId, payeeType STUDENT|VENDOR|OTHER) + `payment_item` (referenceId, referenceType; fee invoice uses referenceType `STUDENT_FEE_INVOICE` and referenceId = studentFeeInvoiceId; omit referenceType → saves as `OTHER`)",
           "item": [
             {
               "name": "1 payment details by student",
@@ -7186,7 +7186,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` — count of generated invoices for this student\n- `lastPayment` — latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentMethod`, `paymentDate`) or `null`\n- `outstandingAmount` — sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` — sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount − waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` from response before POST."
+                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` — count of generated invoices for this student\n- `lastPayment` — latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentMethod`, `paymentDate`) or `null`\n- `outstandingAmount` — sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` — sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount − waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` (use as paymentItems[].referenceId) before POST."
               },
               "response": []
             },
@@ -7228,7 +7228,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"amount\": \"5000.00\",\n  \"paymentItems\": [\n    {\n      \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\",\n  \"receivedBy\": \"John Admin\",\n  \"remark\": \"Term fee partial payment\"\n}",
+                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"5000.00\",\n  \"paymentItems\": [\n    {\n      \"referenceId\": \"{{studentFeeInvoice_id}}\",\n      \"referenceType\": \"STUDENT_FEE_INVOICE\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"receivedBy\": \"John Admin\",\n  \"remark\": \"Term fee partial payment\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7246,7 +7246,7 @@
                     "details"
                   ]
                 },
-                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"studentFeeInvoiceId\": 42, \"amount\": \"5000.00\" },\n    { \"studentFeeInvoiceId\": 43, \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\",\n  \"remark\": \"\"\n}\n```\n**amount** must equal sum of `paymentItems[].amount` (validated in service with decimalSum; 400 if mismatch).\n\n**Optional:** paymentType (default INCOMING), payeeType (default STUDENT), referenceNumber, transactionId (auto UUID if omitted), **receivedBy**, **remark** (null if omitted or empty string).\n\nCreates one **student_fee_payment** + one **payment_item** per line. Updates invoice paid_amount from payment_item sum.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — sets `studentFeePayment_id`."
+                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"referenceId\": 42, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"5000.00\" },\n    { \"referenceId\": 43, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\",\n  \"remark\": \"\"\n}\n```\n\n- **payeeType** (required): `STUDENT` | `VENDOR` | `OTHER`. Fee invoices require `STUDENT`.\n- **paymentItems[]**: `referenceId` (required), `amount` (required), `referenceType` (optional — defaults to `OTHER` if omitted).\n- **referenceType** `STUDENT_FEE_INVOICE`: validates invoice, updates `paid_amount` / `payment_status`. `STUDENT_LIBRARY_INVOICE` not supported yet.\n- **amount** must equal sum of `paymentItems[].amount`.\n\n**Optional:** paymentType (default INCOMING), referenceNumber, transactionId (auto UUID if omitted), receivedBy, remark.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — verified items include referenceId, referenceType, and invoice totals when referenceType is STUDENT_FEE_INVOICE. Sets `studentFeePayment_id`."
               },
               "response": []
             },
@@ -7331,7 +7331,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment/single?studentFeePaymentId=**\n\nSingle payment receipt / print view.\n\n**data:** full **student_fee_payment** row + **payee** (student details) + **paymentItems[]** (full **payment_item** rows: paymentItemId, paymentId, referenceId, referenceType, amount, createdAt, updatedAt — no nested invoice).\n\nUse `studentFeePayment_id` from POST step 2."
+                "description": "**GET /studentFeePayment/single?studentFeePaymentId=**\n\nSingle payment receipt / print view.\n\n**data:** full **student_fee_payment** row (payeeType STUDENT|VENDOR|OTHER) + **payee** (expanded student when payeeType is STUDENT; else `{ payeeId, payeeType }`) + **paymentItems[]** (paymentItemId, paymentId, referenceId, referenceType, amount, timestamps).\n\nUse `studentFeePayment_id` from POST step 2."
               },
               "response": []
             }
