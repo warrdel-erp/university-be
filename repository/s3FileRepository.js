@@ -65,3 +65,17 @@ export async function updateS3File(id, data, transaction) {
     throw error;
   }
 }
+
+/**
+ * Retrieves all S3 file records.
+ * @param {Object} [query] - Sequelize query options
+ */
+export async function getAllS3Files(query = {}) {
+  try {
+    const result = await model.s3FileModel.findAll(query);
+    return result;
+  } catch (error) {
+    console.error("Error in getAllS3Files repository:", error);
+    throw error;
+  }
+}

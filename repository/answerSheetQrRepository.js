@@ -20,7 +20,7 @@ export async function bulkCreateAnswerSheetQr(rows, transaction) {
 export async function getAnswerSheetQrById(id, instituteId, universityId, transaction) {
   return model.answerSheetQrModel.findOne({
     where: { id, instituteId, universityId },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "isUploaded", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -118,7 +118,7 @@ export async function getAnswerSheetQrsByRequestId(
 ) {
   return model.answerSheetQrModel.findAndCountAll({
     where: { instituteId, universityId, requestId },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "isUploaded", "instituteId", "universityId", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
         model: model.studentModel,
@@ -263,7 +263,7 @@ export async function getAnswerSheetQrsByIds(ids, instituteId, universityId, tra
       instituteId,
       universityId,
     },
-    attributes: ["id", "qr", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "isUploaded", "instituteId", "universityId"],
+    attributes: ["id", "qr", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId"],
     transaction,
   });
 }
@@ -316,7 +316,7 @@ export async function getScriptsAssignedToTeacher(
       instituteId,
       universityId,
     },
-    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "isUploaded", "createdAt"],
+    attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
     include: [
       {
         model: model.studentModel,

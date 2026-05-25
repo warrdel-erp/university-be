@@ -61,6 +61,32 @@ export async function getUploadSignedUrl(key, mimeType, expiresSec = 3600) {
 }
 
 /**
+ * Generates a pre-signed GET URL for downloading/viewing a file from S3.
+ * @param {string} key - S3 object key
+ * @param {number} expiresSec - Number of seconds until the URL expires (default: 3600)
+ * @returns {Promise<string>} Pre-signed download URL
+ */
+export async function getDownloadSignedUrl(key, expiresSec = 3600) {
+  ensureAwsConfigured();
+
+  const params = {
+    Bucket: AWS_BUCKET_NAME,
+    Key: key,
+    Expires: expiresSec,
+  };
+
+  return new Promise((resolve, reject) => {
+    s3.getSignedUrl("getObject", params, (err, url) => {
+      if (err) {
+        console.error("Error generating S3 pre-signed download URL:", err);
+        return reject(err);
+      }
+      resolve(url);
+    });
+  });
+}
+
+/**
  * Verifies a file in S3 using HeadObject.
  * @param {string} key - S3 object key
  * @returns {Promise<{ size: number, mime: string }>} Object size and type
@@ -121,6 +147,28 @@ export async function downloadFileFromS3(key, localFilePath) {
 }
 
 /**
+ * Downloads a file from S3 directly into memory as a Buffer.
+ * @param {string} key - S3 object key
+ * @returns {Promise<Buffer>} The file buffer
+ */
+export async function getFileBufferFromS3(key) {
+  ensureAwsConfigured();
+
+  const params = {
+    Bucket: AWS_BUCKET_NAME,
+    Key: key,
+  };
+
+  try {
+    const data = await s3.getObject(params).promise();
+    return data.Body;
+  } catch (error) {
+    console.error(`Error downloading file buffer for key ${key}:`, error);
+    throw new Error(`Failed to download file from S3.`);
+  }
+}
+
+/**
  * Uploads a local file or buffer to S3.
  * @param {string|Buffer|Uint8Array} fileSource - Path to the local file, or direct Buffer/Uint8Array
  * @param {string} key - Target S3 object key
@@ -143,4 +191,26 @@ export async function uploadFileToS3(fileSource, key, mimeType) {
 
   await s3.putObject(params).promise();
   return `https://${AWS_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+}
+
+/**
+ * Lists all files in the S3 bucket.
+ * @param {string} prefix - Optional prefix to filter files
+ * @returns {Promise<Array>} List of objects in S3
+ */
+export async function listFilesInS3(prefix = "") {
+  ensureAwsConfigured();
+
+  const params = {
+    Bucket: AWS_BUCKET_NAME,
+    Prefix: prefix,
+  };
+
+  try {
+    const data = await s3.listObjectsV2(params).promise();
+    return data.Contents;
+  } catch (error) {
+    console.error("Error executing S3 ListObjectsV2:", error);
+    throw new Error("Failed to list files from S3 storage.");
+  }
 }

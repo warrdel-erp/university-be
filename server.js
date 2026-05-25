@@ -129,13 +129,11 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
+app.use("/fileUpload", s3FileRoute);
 
 app.use("/studentHallTicket", studentHallTicket);
-
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
-
-
 app.use("/main", main);
 app.use("/setting", setting);
 app.use("/student", student);
@@ -204,8 +202,6 @@ app.use("/grade", grade);
 app.use("/credit", credit);
 app.use("/evalution", evalution);
 app.use("/answerSheetQr", answerSheetQr);
-app.use("/s3-files", s3FileRoute);
-app.use("/file-upload", s3FileRoute);
 
 //New fee management routes
 app.use("/feeTypeCategory", feeTypeCategory);

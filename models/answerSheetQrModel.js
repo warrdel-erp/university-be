@@ -57,14 +57,8 @@ export default sequelize.define(
       allowNull: true,
       field: "obtained_marks",
     },
-    isUploaded: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: "is_uploaded",
-    },
     fileUploadId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: true,
       field: "file_upload_id",
       references: {

@@ -12,3 +12,13 @@
 4. period can be added in time table structure even after creating time table structure automatically.
 5. set selected institute Id in BE
 6. Checkout lesson module.
+
+---
+
+1. Fee invoice payment !! ✅
+2. Library !! ✅
+3. Infrastructure ✅
+4. Book issue.
+5. Answer sheet Pdf Splitting
+6. Annotation
+7. Grading

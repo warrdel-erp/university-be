@@ -171,3 +171,52 @@ export async function confirmUpload(user, fileUploadId) {
   const updatedRecord = await s3FileRepository.getS3FileById(fileUploadId);
   return updatedRecord;
 }
+
+/**
+ * Retrieves all files stored in the DB.
+ */
+export async function getAllFilesFromDB() {
+  return await s3FileRepository.getAllS3Files();
+}
+
+/**
+ * Retrieves all files directly from the S3 bucket.
+ */
+export async function getAllFilesFromS3() {
+  return await s3Helper.listFilesInS3();
+}
+
+/**
+ * Generates a pre-signed URL for downloading/viewing a file from S3.
+ */
+export async function getDownloadUrl(user, fileUploadId) {
+  const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
+  if (!fileRecord) {
+    const err = new Error("File upload record not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Access Control check
+  const targetCompanyId = Number(fileRecord.companyId);
+  const userRole = user.role || "";
+  const isAuthorized =
+    (userRole === "Admin" && !user.defaultInstituteId && !user.universityId) ||
+    Number(user.defaultInstituteId) === targetCompanyId ||
+    Number(user.universityId) === targetCompanyId ||
+    fileRecord.createdBy === user.userId;
+
+  if (!isAuthorized) {
+    const err = new Error("Access Denied: You are not authorized to view this file.");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const downloadUrl = await s3Helper.getDownloadSignedUrl(fileRecord.s3Key);
+  return {
+    fileUploadId: fileRecord.id,
+    downloadUrl,
+    mime: fileRecord.mime,
+    originalName: fileRecord.originalName
+  };
+}

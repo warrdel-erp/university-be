@@ -1,13 +1,8 @@
 import * as answerSheetQrServices from "../services/answerSheetQrServices.js";
 import * as answerSheetSplitterServices from "../services/answerSheetSplitterServices.js";
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
-import fs from "fs";
-import path from "path";
-import { v4 as uuidv4 } from "uuid";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
-
-
 
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
@@ -15,20 +10,12 @@ export async function generateAnswerSheetQrBulk(req, res) {
     const instituteId = req.user.defaultInstituteId;
     const universityId = req.user.universityId;
 
-    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(
-      Number(count),
-      instituteId,
-      universityId
-    );
+    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(Number(count), instituteId, universityId);
 
     return SuccessResponse(res, 201, "Answer sheet QR codes generated successfully", result);
   } catch (error) {
     console.error("Error in generateAnswerSheetQrBulk controller:", error);
-    return ErrorResponse(
-      res,
-      error.statusCode || 500,
-      error.message || "Unable to generate answer sheet QR codes"
-    );
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Unable to generate answer sheet QR codes");
   }
 }
 
@@ -43,7 +30,7 @@ export async function mapAnswerSheetQr(req, res) {
       studentId,
       examScheduleId,
       instituteId,
-      universityId
+      universityId,
     );
 
     return SuccessResponse(res, 200, "QR code mapped successfully", result);
@@ -59,11 +46,7 @@ export async function getAnswerSheetQrById(req, res) {
     const universityId = req.user.universityId;
     const { id } = req.params;
 
-    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(
-      Number(id),
-      instituteId,
-      universityId
-    );
+    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(Number(id), instituteId, universityId);
 
     return SuccessResponse(res, 200, "Answer sheet QR details fetched successfully", result);
   } catch (error) {
@@ -81,7 +64,7 @@ export async function getAnswerSheetQrGenerationRequests(req, res) {
       instituteId,
       universityId,
       page,
-      limit
+      limit,
     );
 
     return SuccessResponse(
@@ -89,19 +72,12 @@ export async function getAnswerSheetQrGenerationRequests(req, res) {
       200,
       "Answer sheet QR generation requests fetched successfully",
       result.data,
-      result.paginationData
+      result.paginationData,
     );
   } catch (error) {
-    console.error(
-      "Error in getAnswerSheetQrGenerationRequests controller:",
-      error
-    );
+    console.error("Error in getAnswerSheetQrGenerationRequests controller:", error);
 
-    return ErrorResponse(
-      res,
-      error.statusCode || 500,
-      error.message || "Internal Server Error"
-    );
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
 
@@ -116,7 +92,7 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
       instituteId,
       universityId,
       page,
-      limit
+      limit,
     );
 
     return SuccessResponse(
@@ -124,7 +100,7 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
       200,
       "Answer sheet QRs fetched by request successfully",
       result.data,
-      result.pagination
+      result.pagination,
     );
   } catch (error) {
     console.error("Error in getAnswerSheetQrsByRequestId controller:", error);
@@ -142,7 +118,7 @@ export async function assignAnswerSheetsToTeachers(req, res) {
       assignedToUserId,
       answerSheetQrIds,
       instituteId,
-      universityId
+      universityId,
     );
 
     return SuccessResponse(res, 200, "Answer sheets assigned to teachers successfully", result);
@@ -164,16 +140,10 @@ export async function getScriptsAssignedToTeacher(req, res) {
       instituteId,
       universityId,
       page,
-      limit
+      limit,
     );
 
-    return SuccessResponse(
-      res,
-      200,
-      "Assigned scripts fetched successfully",
-      result.data,
-      result.pagination
-    );
+    return SuccessResponse(res, 200, "Assigned scripts fetched successfully", result.data, result.pagination);
   } catch (error) {
     console.error("Error in getScriptsAssignedToTeacher controller:", error);
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -191,7 +161,7 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
       Number(id),
       Number(obtained_marks),
       instituteId,
-      universityId
+      universityId,
     );
 
     return SuccessResponse(res, 200, "Obtained marks assigned successfully", result);
@@ -200,10 +170,8 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
-export async function splitAnswerSheetPdf(req, res) {
-  let uploadedFilePath = null;
-  let localTempPath = null;
 
+export async function splitAnswerSheetPdf(req, res) {
   try {
     const instituteId = req.user.defaultInstituteId;
     const universityId = req.user.universityId;
@@ -220,37 +188,25 @@ export async function splitAnswerSheetPdf(req, res) {
       s3Key = fileRecord.s3Key;
     }
 
-    if (s3Key) {
-      const uniqueId = uuidv4();
-      localTempPath = path.join(process.cwd(), "uploads", "tmp", `download-${uniqueId}.pdf`);
-      console.log(`[S3 Split] Downloading PDF from S3 key: ${s3Key} to ${localTempPath}`);
-      await s3Helper.downloadFileFromS3(s3Key, localTempPath);
-      uploadedFilePath = localTempPath;
-    } else if (req.file) {
-      uploadedFilePath = req.file.path;
-    }
-
-    if (!uploadedFilePath) {
+    if (!s3Key) {
       return ErrorResponse(
         res,
         400,
-        "No PDF file source found. Please upload a PDF file with field name 'answerSheet' or specify 'fileUploadId' / 's3Key'."
+        "No PDF file source found. Please specify 'fileUploadId' or 's3Key'.",
       );
     }
 
+    console.log(`[S3 Split] Downloading PDF buffer from S3 key: ${s3Key}`);
+    const pdfBuffer = await s3Helper.getFileBufferFromS3(s3Key);
+
     const result = await answerSheetSplitterServices.splitAnswerSheetPdf(
-      uploadedFilePath,
+      pdfBuffer,
       instituteId,
       universityId,
-      req.user.userId
+      req.user.userId,
     );
 
-    return SuccessResponse(
-      res,
-      200,
-      `PDF successfully split into ${result.totalStudents} answer sheet(s).`,
-      result
-    );
+    return SuccessResponse(res, 200, `PDF successfully split into ${result.totalStudents} answer sheet(s).`, result);
   } catch (error) {
     console.error("Error in splitAnswerSheetPdf controller:", error);
 
@@ -261,27 +217,7 @@ export async function splitAnswerSheetPdf(req, res) {
       res,
       error.statusCode || 500,
       error.message || "An unexpected error occurred while splitting the answer sheet PDF.",
-      errorData
+      errorData,
     );
-  } finally {
-    // Delete local/temp files to keep server clean
-    if (uploadedFilePath) {
-      try {
-        if (fs.existsSync(uploadedFilePath)) {
-          fs.unlinkSync(uploadedFilePath);
-        }
-      } catch (_) {
-        // best-effort cleanup
-      }
-    }
-    if (localTempPath && localTempPath !== uploadedFilePath) {
-      try {
-        if (fs.existsSync(localTempPath)) {
-          fs.unlinkSync(localTempPath);
-        }
-      } catch (_) {
-        // best-effort cleanup
-      }
-    }
   }
 }

@@ -9,21 +9,16 @@ import pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Convert a single PDF page (0-indexed) to a PNG image using pdfjs-dist (pure JS-only).
- * Returns the absolute path of the generated PNG.
+ * Convert a single PDF page (0-indexed) to a PNG image buffer using pdfjs-dist.
  *
- * @param {string} pdfPath    - Absolute path to the source PDF
+ * @param {Uint8Array|Buffer} pdfData - The source PDF as a Buffer or Uint8Array
  * @param {number} pageIndex  - 0-indexed page number
- * @param {string} tmpDir     - Directory to write the PNG into
- * @returns {Promise<string>} - Absolute path of the generated PNG
+ * @returns {Promise<Buffer>} - PNG image buffer
  */
-export async function convertPageToImage(pdfPath, pageIndex, tmpDir) {
-  const paddedNum = String(pageIndex + 1).padStart(3, "0");
-  const imagePath = path.join(tmpDir, `page-${paddedNum}.png`);
-
+export async function convertPageToImage(pdfData, pageIndex) {
   try {
-    // 1. Read PDF file into buffer
-    const data = new Uint8Array(fs.readFileSync(pdfPath));
+    // 1. Convert Buffer to Uint8Array if needed
+    const data = new Uint8Array(pdfData);
 
     // 2. Load PDF document
     const loadingTask = pdfjsLib.getDocument({ data });
@@ -36,42 +31,39 @@ export async function convertPageToImage(pdfPath, pageIndex, tmpDir) {
     const scale = 1.5;
     const viewport = page.getViewport({ scale });
 
-    // 5. Create Canvas
-    const canvas = createCanvas(viewport.width, viewport.height);
+    // We only want the top-right quarter of the page for QR scanning
+    const cropWidth = viewport.width / 2;
+    const cropHeight = viewport.height / 2;
+
+    // 5. Create Canvas (half width, half height)
+    const canvas = createCanvas(cropWidth, cropHeight);
     const context = canvas.getContext("2d");
 
-    // 6. Render page context
+    // 6. Render page context, translating left by cropWidth to capture the top-right
     await page.render({
       canvasContext: context,
       viewport: viewport,
+      transform: [1, 0, 0, 1, -cropWidth, 0],
     }).promise;
 
-    // 7. Write the canvas to PNG file
-    const buffer = canvas.toBuffer("image/png");
-    fs.writeFileSync(imagePath, buffer);
+    // 7. Return the canvas buffer
+    return canvas.toBuffer("image/png");
   } catch (error) {
     throw new Error(
-      `Failed to convert PDF page ${pageIndex + 1} to image using pure JS: ${error.message}`
+      `Failed to convert PDF page ${pageIndex + 1} to image buffer: ${error.message}`
     );
   }
-
-  if (!fs.existsSync(imagePath)) {
-    throw new Error(`Image was not generated for page ${pageIndex + 1}.`);
-  }
-
-  return imagePath;
 }
 
-
 /**
- * Decode the QR code embedded in a PNG image.
+ * Decode the QR code embedded in a PNG image buffer.
  * Uses canvas to read pixel data and jsQR to decode.
  *
- * @param {string} imagePath - Absolute path to the PNG image
+ * @param {Buffer} imageBuffer - Buffer of the PNG image
  * @returns {Promise<string|null>} - Decoded QR string, or null if no QR found
  */
-export async function scanQrFromImage(imagePath) {
-  const img = await loadImage(imagePath);
+export async function scanQrFromImage(imageBuffer) {
+  const img = await loadImage(imageBuffer);
   const canvas = createCanvas(img.width, img.height);
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0);
@@ -138,17 +130,3 @@ export async function extractPageRangeToBuffer(srcPdfBytes, startPage, endPage) 
   return Buffer.from(pdfBytes);
 }
 
-/**
- * Recursively remove a temporary directory (best-effort, never throws).
- *
- * @param {string} dirPath
- */
-export function cleanupTmpDir(dirPath) {
-  try {
-    if (fs.existsSync(dirPath)) {
-      fs.rmSync(dirPath, { recursive: true, force: true });
-    }
-  } catch (_) {
-    // intentional no-op — cleanup failures must not mask the real response
-  }
-}
