@@ -112,6 +112,33 @@ export async function extractPageRange(srcPdfBytes, startPage, endPage, outputPa
 }
 
 /**
+ * Extract a page range [startPage, endPage] (both 0-indexed, inclusive)
+ * from the source PDF bytes and return the resulting PDF document as a Buffer.
+ *
+ * @param {Uint8Array} srcPdfBytes - Raw bytes of the source PDF
+ * @param {number}     startPage   - 0-indexed first page (inclusive)
+ * @param {number}     endPage     - 0-indexed last page (inclusive)
+ * @returns {Promise<Buffer>}      - Buffer containing the split PDF file
+ */
+export async function extractPageRangeToBuffer(srcPdfBytes, startPage, endPage) {
+  const srcDoc = await PDFDocument.load(srcPdfBytes);
+  const totalPages = srcDoc.getPageCount();
+
+  const safeEnd = Math.min(endPage, totalPages - 1);
+  const pageIndices = [];
+  for (let i = startPage; i <= safeEnd; i++) {
+    pageIndices.push(i);
+  }
+
+  const newDoc = await PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(srcDoc, pageIndices);
+  copiedPages.forEach((p) => newDoc.addPage(p));
+
+  const pdfBytes = await newDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+/**
  * Recursively remove a temporary directory (best-effort, never throws).
  *
  * @param {string} dirPath

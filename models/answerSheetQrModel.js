@@ -63,6 +63,15 @@ export default sequelize.define(
       defaultValue: false,
       field: "is_uploaded",
     },
+    fileUploadId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: "file_upload_id",
+      references: {
+        model: "s3_files",
+        key: "id",
+      },
+    },
     instituteId: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -97,6 +97,7 @@ import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 
 import answerSheetQr from "./router/answerSheetQrRoute.js";
+import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
@@ -203,6 +204,8 @@ app.use("/grade", grade);
 app.use("/credit", credit);
 app.use("/evalution", evalution);
 app.use("/answerSheetQr", answerSheetQr);
+app.use("/s3-files", s3FileRoute);
+app.use("/file-upload", s3FileRoute);
 
 //New fee management routes
 app.use("/feeTypeCategory", feeTypeCategory);

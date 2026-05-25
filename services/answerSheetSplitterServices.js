@@ -3,9 +3,16 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
-import { convertPageToImage, scanQrFromImage, extractPageRange, cleanupTmpDir } from "../utility/pdfSplitter.js";
+import {
+  convertPageToImage,
+  scanQrFromImage,
+  extractPageRangeToBuffer,
+  cleanupTmpDir,
+} from "../utility/pdfSplitter.js";
 import AnswerSheetQrModel from "../models/answerSheetQrModel.js";
 import { PDFDocument } from "pdf-lib";
+import * as s3Helper from "../utility/s3Helper.js";
+import * as s3FileRepository from "../repository/s3FileRepository.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +41,7 @@ function createServiceError(message, statusCode = 400) {
  * @param {number} universityId
  * @returns {Promise<{ totalStudents: number, results: Array<{ qr, filePath, studentId, examScheduleId }> }>}
  */
-export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universityId) {
+export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universityId, createdBy) {
   // ─── 1. Determine total page count ───────────────────────────────────────
   const srcPdfBytes = fs.readFileSync(uploadedPdfPath);
   const srcDoc = await PDFDocument.load(srcPdfBytes);
@@ -75,7 +82,6 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
         continue;
       }
 
-
       let qrValue = await scanQrFromImage(imagePath);
 
       if (!qrValue) {
@@ -99,7 +105,7 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
       const details = scanErrors.map((e) => `  - Page ${e.page}: ${e.reason}`).join("\n");
       const error = new Error(
         `QR scanning failed on ${scanErrors.length} of ${totalSegments} page(s). ` +
-        `No files have been created. Please fix the issues and re-upload.\n\n${details}`
+          `No files have been created. Please fix the issues and re-upload.\n\n${details}`,
       );
       error.statusCode = 422;
       error.scanErrors = scanErrors;
@@ -133,7 +139,7 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
             `The QR code on page ${humanPage} ("${qrValue}") was not found in this institute's system. ` +
             `It may belong to a different institute or may not have been generated through this system.`,
         });
-         continue;
+        continue;
       }
 
       if (!row.studentId) {
@@ -162,7 +168,7 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
       const details = validationErrors.map((e) => `  - Page ${e.page}: ${e.reason}`).join("\n");
       const error = new Error(
         `Validation failed for ${validationErrors.length} of ${totalSegments} answer sheet(s). ` +
-        `No files have been created. Please resolve the issues and re-upload.\n\n${details}`
+          `No files have been created. Please resolve the issues and re-upload.\n\n${details}`,
       );
       error.statusCode = 422;
       error.validationErrors = validationErrors;
@@ -170,40 +176,55 @@ export async function splitAnswerSheetPdf(uploadedPdfPath, instituteId, universi
     }
 
     // ─── 6. All validations passed — split and save PDFs ───────────────────
-    const outputDir = path.join(__dirname, "..", "uploads", "answer-sheets");
-    fs.mkdirSync(outputDir, { recursive: true });
-
     const results = [];
 
     for (let seg = 0; seg < scannedQrs.length; seg++) {
       const { pageIndex, qrValue } = scannedQrs[seg];
-      const startPage = pageIndex;                          // 0-indexed, inclusive
-      const endPage = startPage + PAGES_PER_STUDENT - 1;   // 0-indexed, inclusive
+      const startPage = pageIndex; // 0-indexed, inclusive
+      const endPage = startPage + PAGES_PER_STUDENT - 1; // 0-indexed, inclusive
 
       const fileName = `${qrValue}.pdf`;
-      const outputPath = path.join(outputDir, fileName);
 
-      await extractPageRange(srcPdfBytes, startPage, endPage, outputPath);
+      // Extract split PDF page range directly to a Buffer
+      const pdfBuffer = await extractPageRangeToBuffer(srcPdfBytes, startPage, endPage);
+
+      const s3Key = `answer-sheets/${fileName}`;
+      const s3Url = await s3Helper.uploadFileToS3(pdfBuffer, s3Key, "application/pdf");
+
+      const dbRow = dbMap.get(qrValue);
+
+      // Create s3_files record
+      const s3File = await s3FileRepository.createS3FileEntry({
+        id: uuidv4(),
+        entityType: "answer_sheet",
+        entityId: dbRow.id ? String(dbRow.id) : null,
+        companyId: Number(instituteId || universityId || 0) || null,
+        size: pdfBuffer.length,
+        mime: "application/pdf",
+        status: "active",
+        s3Key,
+        originalName: fileName,
+        createdBy,
+      });
+
+      // Update the AnswerSheetQr record with isUploaded: true, fileUploadId: s3File.id
+      await AnswerSheetQrModel.update(
+        { isUploaded: true, fileUploadId: s3File.id },
+        {
+          where: { id: dbRow.id },
+        },
+      );
 
       results.push({
         qr: qrValue,
         filePath: path.join("uploads", "answer-sheets", fileName),
-        studentId: dbMap.get(qrValue).studentId,
-        examScheduleId: dbMap.get(qrValue).examScheduleId,
+        s3Key,
+        s3Url,
+        studentId: dbRow.studentId,
+        examScheduleId: dbRow.examScheduleId,
+        fileUploadId: s3File.id,
       });
     }
-
-    // Mark the corresponding database rows as uploaded
-    await AnswerSheetQrModel.update(
-      { isUploaded: true },
-      {
-        where: {
-          qr: { [Op.in]: scannedValues },
-          instituteId,
-          universityId,
-        },
-      }
-    );
 
     return { totalStudents: results.length, results };
   } finally {

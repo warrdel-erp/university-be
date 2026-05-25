@@ -2,6 +2,11 @@ import * as answerSheetQrServices from "../services/answerSheetQrServices.js";
 import * as answerSheetSplitterServices from "../services/answerSheetSplitterServices.js";
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import fs from "fs";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
+import * as s3Helper from "../utility/s3Helper.js";
+import * as s3FileRepository from "../repository/s3FileRepository.js";
+
 
 
 export async function generateAnswerSheetQrBulk(req, res) {
@@ -197,20 +202,47 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
 }
 export async function splitAnswerSheetPdf(req, res) {
   let uploadedFilePath = null;
+  let localTempPath = null;
 
   try {
-    if (!req.file) {
-      return ErrorResponse(res, 400, "No PDF file uploaded. Please attach a PDF file with field name 'answerSheet'.");
-    }
-
     const instituteId = req.user.defaultInstituteId;
     const universityId = req.user.universityId;
-    uploadedFilePath = req.file.path;
+
+    let s3Key = req.body.s3Key;
+    const fileUploadId = req.body.fileUploadId;
+
+    if (fileUploadId) {
+      // Find FileUpload record to get the S3 key
+      const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
+      if (!fileRecord) {
+        return ErrorResponse(res, 404, "File upload record not found.");
+      }
+      s3Key = fileRecord.s3Key;
+    }
+
+    if (s3Key) {
+      const uniqueId = uuidv4();
+      localTempPath = path.join(process.cwd(), "uploads", "tmp", `download-${uniqueId}.pdf`);
+      console.log(`[S3 Split] Downloading PDF from S3 key: ${s3Key} to ${localTempPath}`);
+      await s3Helper.downloadFileFromS3(s3Key, localTempPath);
+      uploadedFilePath = localTempPath;
+    } else if (req.file) {
+      uploadedFilePath = req.file.path;
+    }
+
+    if (!uploadedFilePath) {
+      return ErrorResponse(
+        res,
+        400,
+        "No PDF file source found. Please upload a PDF file with field name 'answerSheet' or specify 'fileUploadId' / 's3Key'."
+      );
+    }
 
     const result = await answerSheetSplitterServices.splitAnswerSheetPdf(
       uploadedFilePath,
       instituteId,
-      universityId
+      universityId,
+      req.user.userId
     );
 
     return SuccessResponse(
@@ -232,10 +264,21 @@ export async function splitAnswerSheetPdf(req, res) {
       errorData
     );
   } finally {
-    // Always delete the uploaded temp file after processing
+    // Delete local/temp files to keep server clean
     if (uploadedFilePath) {
       try {
-        fs.unlinkSync(uploadedFilePath);
+        if (fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+      } catch (_) {
+        // best-effort cleanup
+      }
+    }
+    if (localTempPath && localTempPath !== uploadedFilePath) {
+      try {
+        if (fs.existsSync(localTempPath)) {
+          fs.unlinkSync(localTempPath);
+        }
       } catch (_) {
         // best-effort cleanup
       }

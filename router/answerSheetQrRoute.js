@@ -186,6 +186,10 @@ router.post(
   "/splitPdf",
   userAuth,
   (req, res, next) => {
+    const contentType = req.headers["content-type"] || "";
+    if (contentType.includes("application/json")) {
+      return next();
+    }
     pdfUpload.single("answerSheet")(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {

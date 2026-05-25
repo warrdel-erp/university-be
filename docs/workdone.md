@@ -62,7 +62,17 @@
 9. library book copies shown in popup with basic actions.
 10. Problem in first time hall ticket view.
 
-----
+---
 
 1. change add fee invoice UI.
 2. issue book UI change.
+3.
+
+---
+
+1. In issue book add date and issued by details.
+2. hall ticket generation Student count.
+3. nested library data (still have some issues).
+4. payment accept UI change for multiple invoices.
+5. pagination from BE in books and some other modules.
+6. bulk generation of library structure.
