@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import campus from "./campusModel.js";
+import { buildingTypes } from "../constant.js";
 
 export default sequelize.define(
     'building',
@@ -24,6 +25,11 @@ export default sequelize.define(
         name: {
             type: DataTypes.STRING,
             allowNull: false,
+        },
+        buildingType: {
+            type: DataTypes.ENUM(...buildingTypes),
+            allowNull: false,
+            field: 'building_type',
         },
         description: {
             type: DataTypes.STRING,

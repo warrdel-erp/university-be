@@ -78,6 +78,8 @@ export const nomineeRelation = ['Aunt', 'Brother', 'Father', 'Mother', 'Sister',
 
 export const itCategory = ['INCOME TAX']
 
+export const buildingTypes = ['Academics', 'Residential'];
+
 export const questionStatus = ['Pending', 'Approved', 'Rejected'];
 
 export const questionTypes = {

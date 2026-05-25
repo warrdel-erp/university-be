@@ -164,6 +164,675 @@
       ]
     },
     {
+      "name": "infrastructure",
+      "description": "Campus infrastructure: **Building → Floor → Class room** (`/building`, `/floor`, `/classRoom`). Auth: Bearer `{{token}}`. Use **get all nested** for the full tree in one call; use flat GETs on `/floor` and `/classRoom` when you only need one level.",
+      "variable": [
+        {
+          "key": "building_id",
+          "value": "1",
+          "type": "string",
+          "description": "building.buildingId — set from create or nested response"
+        },
+        {
+          "key": "floor_id",
+          "value": "1",
+          "type": "string",
+          "description": "floor.floorId — set from floor create or nested floorBuilding[].floorId"
+        },
+        {
+          "key": "class_room_section_id",
+          "value": "1",
+          "type": "string",
+          "description": "class_room_section.classRoomSectionId"
+        },
+        {
+          "key": "campus_id",
+          "value": "1",
+          "type": "string",
+          "description": "campus.campusId for building create"
+        }
+      ],
+      "item": [
+        {
+          "name": "building",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Block\",\n  \"buildingType\": \"Academics\",\n  \"description\": \"Central academic block\",\n  \"openingTime\": \"08:00:00\",\n  \"closingTime\": \"18:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**POST /building**\n\nCreates a building under the logged-in user's campus (resolved from `defaultInstituteId` saved at login).\n\n**Required body:** `name`, `buildingType`, `description`, `openingTime`, `closingTime`\n\n**buildingType** (enum): `Academics` | `Residential`"
+              },
+              "response": [
+                {
+                  "name": "201 Created — example",
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"message\": \"Data added successfully\",\n  \"building\": {\n    \"buildingId\": 1,\n    \"campusId\": 1,\n    \"name\": \"Main Block\",\n    \"buildingType\": \"Academics\",\n    \"description\": \"Central academic block\",\n    \"openingTime\": \"08:00:00\",\n    \"closingTime\": \"18:00:00\"\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**GET /building**\n\nFlat list of buildings with nested `campusbuilding` (campus details). Does not include floors or rooms."
+              },
+              "response": []
+            },
+            {
+              "name": "get all nested",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building/allNested?buildingType=Academics",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building",
+                    "allNested"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingType",
+                      "value": "Academics",
+                      "description": "Optional — `Academics` | `Residential`; omit for all building types"
+                    }
+                  ]
+                },
+                "description": "**GET /building/allNested**\n\nReturns buildings for the authenticated user's university with full infrastructure nesting:\n\n**Building** → `floorBuilding[]` (floors) → `roomFloor[]` (class rooms)\n\n- Scoped by `req.user.universityId` via campus membership\n- Audit fields excluded\n\n**Query (optional)**\n| Key | Values |\n|-----|--------|\n| `buildingType` | `Academics` \\| `Residential` |\n\n**Examples**\n- `GET .../building/allNested` — all types\n- `GET .../building/allNested?buildingType=Academics` — academic buildings and their floors/rooms\n- `GET .../building/allNested?buildingType=Residential` — residential buildings and their floors/rooms"
+              },
+              "response": [
+                {
+                  "name": "200 OK — example",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "[\n  {\n    \"buildingId\": 1,\n    \"campusId\": 2,\n    \"name\": \"Main Block\",\n    \"buildingType\": \"Academics\",\n    \"description\": \"Central academic block\",\n    \"openingTime\": \"08:00:00\",\n    \"closingTime\": \"18:00:00\",\n    \"floorBuilding\": [\n      {\n        \"floorId\": 1,\n        \"buildingId\": 1,\n        \"name\": \"Ground Floor\",\n        \"description\": null,\n        \"roomFloor\": [\n          {\n            \"classRoomSectionId\": 10,\n            \"floorId\": 1,\n            \"roomNumber\": \"101\",\n            \"capacity\": 40,\n            \"examCapacity\": 30,\n            \"examCapacityColumns\": 5\n          }\n        ]\n      }\n    ]\n  }\n]"
+                }
+              ]
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building/single?buildingId={{building_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingId",
+                      "value": "{{building_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /building/single?buildingId=**\n\nSingle building with `campusbuilding` include."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"buildingId\": {{building_id}},\n  \"name\": \"Main Block — North Wing\",\n  \"buildingType\": \"Residential\",\n  \"description\": \"Updated description\",\n  \"openingTime\": \"07:30:00\",\n  \"closingTime\": \"19:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**PATCH /building**\n\n**Required body:** `buildingId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/building?buildingId={{building_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingId",
+                      "value": "{{building_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /building?buildingId=**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "floor",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ground Floor\",\n  \"buildingId\": {{building_id}},\n  \"description\": \"Ground level\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**POST /floor**\n\n**Required body:** `name`, `buildingId`"
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**GET /floor**\n\nFlat list of floors with parent `floorBuilding` (building)."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor/single?floorId={{floor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "floorId",
+                      "value": "{{floor_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /floor/single?floorId=**"
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"floorId\": {{floor_id}},\n  \"name\": \"First Floor\",\n  \"description\": \"Updated\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**PATCH /floor**\n\n**Required body:** `floorId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/floor?floorId={{floor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ],
+                  "query": [
+                    {
+                      "key": "floorId",
+                      "value": "{{floor_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /floor?floorId=**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "class room",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"roomNumber\": \"101\",\n  \"capacity\": 40,\n  \"floorId\": {{floor_id}},\n  \"examCapacity\": 30,\n  \"examCapacityColumns\": 5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**POST /classRoom**\n\n**Required body:** `roomNumber`, `capacity`, `floorId`\n\n**Optional:** `examCapacity`, `examCapacityColumns` (nullable numbers)"
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**GET /classRoom**\n\nFlat list with `roomFloor` → `floorBuilding` includes."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom/single?classRoomSectionId={{class_room_section_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "classRoomSectionId",
+                      "value": "{{class_room_section_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /classRoom/single?classRoomSectionId=**"
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"classRoomSectionId\": {{class_room_section_id}},\n  \"examCapacity\": 34,\n  \"examCapacityColumns\": 3\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**PATCH /classRoom**\n\n**Required body:** `classRoomSectionId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/classRoom?classRoomSectionId={{class_room_section_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ],
+                  "query": [
+                    {
+                      "key": "classRoomSectionId",
+                      "value": "{{class_room_section_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /classRoom?classRoomSectionId=**"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "sessions",
       "item": [
         {
@@ -4125,47 +4794,6 @@
                   "key": "examRoomCapacityId",
                   "value": "1"
                 }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "class room",
-      "item": [
-        {
-          "name": "update",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"examCapacity\": 34,\n    \"examCapacityColumns\": 3\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/classRoom",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "classRoom"
               ]
             }
           },
