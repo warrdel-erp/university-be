@@ -999,15 +999,6 @@ studentFeeInvoiceModel.hasMany(studentFeeInvoiceItemsModel, {
   as: "feeInvoiceItems",
 });
 
-studentFeePaymentModel.belongsTo(studentFeeInvoiceModel, {
-  foreignKey: "studentFeeInvoiceId",
-  as: "studentFeeInvoice",
-});
-studentFeeInvoiceModel.hasMany(studentFeePaymentModel, {
-  foreignKey: "studentFeeInvoiceId",
-  as: "feePayments",
-});
-
 studentFeePaymentModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteStudentFeePayment",

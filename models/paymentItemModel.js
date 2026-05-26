@@ -20,6 +20,7 @@ export default sequelize.define(
         key: "student_fee_payment_id",
       },
     },
+    // referenceId (ORM) → reference_id (DB); target resolved by referenceType
     referenceId: {
       type: DataTypes.INTEGER,
       allowNull: false,

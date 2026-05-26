@@ -1,10 +1,13 @@
 import { Router } from "express";
+import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
 import {
-  recordStudentFeePayment,
+  recordStudentFeePaymentFromDetails,
   listStudentFeePayments,
+  getStudentFeePaymentById,
+  getPaymentDetails,
 } from "../controllers/studentFeePaymentController.js";
 
 const router = Router();
@@ -18,35 +21,99 @@ const moneyAmount = z.coerce.string().trim().min(1);
 
 const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
 const paymentTypeEnum = z.enum(["INCOMING", "OUTGOING"]);
-const payeeTypeEnum = z.enum(["STUDENT", "VENDOR"]);
+const payeeTypeEnum = z.enum(["STUDENT", "VENDOR", "OTHER"]);
+const referenceTypeEnum = z.enum(["STUDENT_FEE_INVOICE", "STUDENT_LIBRARY_INVOICE","OTHER"]);
 
-const recordPaymentBodySchema = z.object({
-  studentFeeInvoiceId: positiveIntegerId,
+const paymentDetailsPaymentItemSchema = z.object({
+  referenceId: positiveIntegerId,
+  referenceType: referenceTypeEnum.optional().default("OTHER"),
   amount: moneyAmount,
-  paymentMethod: paymentMethodEnum,
+});
+
+const recordPaymentDetailsBodySchema = z.object({
+  payeeId: positiveIntegerId,
+  amount: moneyAmount,
+  paymentItems: z
+    .array(paymentDetailsPaymentItemSchema)
+    .min(1, "At least one payment item is required"),
+  paymentMethod: paymentMethodEnum.optional().default("cash"),
   paymentType: paymentTypeEnum.optional().default("INCOMING"),
+  payeeType: payeeTypeEnum,
+  referenceNumber: z.string().trim().default(() => uuidv4()),
+  transactionId: z.string().trim().default(() => uuidv4()),
+  receivedBy: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
+  remark: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((value) => (value === "" || value == null ? null : value)),
+});
+
+const paginationQueryFields = {
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(20),
+};
+
+const listPaymentsQuerySchema = z.object({
   payeeId: positiveIntegerId.optional(),
-  payeeType: payeeTypeEnum.optional().default("STUDENT"),
-  referenceNumber: z.string().trim().optional(),
-  transactionId: z.string().trim().optional(),
+  search: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
+  ...paginationQueryFields,
 });
 
-const studentFeeInvoiceIdQuerySchema = z.object({
-  studentFeeInvoiceId: positiveIntegerId,
+const paymentDetailsQuerySchema = z.object({
+  studentId: positiveIntegerId,
 });
 
-router.post(
-  "/",
-  userAuth,
-  validate({ body: recordPaymentBodySchema }),
-  recordStudentFeePayment
-);
+const studentFeePaymentIdQuerySchema = z.object({
+  studentFeePaymentId: positiveIntegerId,
+});
 
 router.get(
   "/",
   userAuth,
-  validate({ query: studentFeeInvoiceIdQuerySchema }),
+  validate({ query: listPaymentsQuerySchema }),
   listStudentFeePayments
+);
+
+router.get(
+  "/single",
+  userAuth,
+  validate({ query: studentFeePaymentIdQuerySchema }),
+  getStudentFeePaymentById
+);
+
+router.get(
+  "/payment/details",
+  userAuth,
+  validate({ query: paymentDetailsQuerySchema }),
+  getPaymentDetails
+);
+
+router.post(
+  "/payment/details",
+  userAuth,
+  validate({ body: recordPaymentDetailsBodySchema }),
+  recordStudentFeePaymentFromDetails
 );
 
 export default router;
