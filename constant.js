@@ -87,3 +87,5 @@ export const questionTypes = {
     THEORY: 'theory',
     THEORY_CHOICE: 'theoryChoice'
 };
+
+export const feeTypeLedgerTypes = ['Account Receivable', 'Account Payable'];

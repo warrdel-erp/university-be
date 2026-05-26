@@ -12,7 +12,7 @@ const feeInvoiceItemsInclude = {
     {
       model: model.feeTypeCatalogModel,
       as: "feeTypeCatalog",
-      attributes: ["feeTypeCatalogId", "name", "description", "amount"],
+      attributes: ["feeTypeCatalogId", "name", "ledgerType", "description", "amount"],
     },
   ],
 };

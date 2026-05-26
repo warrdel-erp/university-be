@@ -8,7 +8,7 @@ function catalogUpdatePayload(body) {
 
 export async function addFeeTypeCatalog(body, instituteId) {
   const row = await sequelize.transaction(async (transaction) => {
-    const { name, amount, feeTypeCategoryId, description } = body;
+    const { name, amount, feeTypeCategoryId, ledgerType, description } = body;
 
     const category = await feeTypeCatalogRepo.findFeeTypeCategoryByIdForInstitute(
       feeTypeCategoryId,
@@ -24,6 +24,7 @@ export async function addFeeTypeCatalog(body, instituteId) {
         name,
         amount,
         feeTypeCategoryId,
+        ledgerType,
         instituteId,
         description: description ?? null,
       },
