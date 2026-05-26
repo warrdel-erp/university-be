@@ -1,14 +1,10 @@
 import * as buildingCreation  from  "../services/buildingServices.js";
 
 export async function addbuilding(req, res) {
-    const {name,campusId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(name && campusId)){
-           return res.status(400).send('building Name and campusId is required')
-        }
-        const building = await buildingCreation.addbuilding(req.body,createdBy,updatedBy);
+        const building = await buildingCreation.addbuilding(req.body, req.user, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", building });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -42,12 +38,9 @@ export async function getSinglebuildingDetails(req, res) {
 
 export async function updatebuilding(req, res) {
     try {
-        const {buildingId} = req.body
-        if(!(buildingId)){
-            return res.status(400).send('buildingId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updatedbuilding = await buildingCreation.updatebuilding(buildingId, req.body,updatedBy);
+        const { buildingId } = req.body;
+        const updatedBy = req.user.userId;
+        const updatedbuilding = await buildingCreation.updatebuilding(buildingId, req.body, updatedBy);
             res.status(200).json({message: "building update succesfully" ,updatedbuilding});
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -57,15 +50,23 @@ export async function updatebuilding(req, res) {
 export async function deletebuilding(req, res) {
     try {
         const { buildingId } = req.query;
-        if (!buildingId) {
-            return res.status(400).json({ message: "buildingId is required" });
-        }
         const deleted = await buildingCreation.deletebuilding(buildingId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for building ID ${buildingId}` });
         } else {
             res.status(404).json({ message: "building not found" });
         }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function getAllbuildingNested(req, res) {
+    try {
+        const universityId = req.user.universityId;
+        const { buildingType } = req.query;
+        const building = await buildingCreation.getAllbuildingNested(universityId, buildingType);
+        res.status(200).json(building);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
