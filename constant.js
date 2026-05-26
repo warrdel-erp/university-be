@@ -87,3 +87,9 @@ export const questionTypes = {
     THEORY: 'theory',
     THEORY_CHOICE: 'theoryChoice'
 };
+
+export const feeTypeLedgerTypes = ['Account Receivable', 'Account Payable'];
+
+export const assetStatuses = ['ISSUED', 'IN_STOCK', 'MAINTANANCE'];
+
+export const assetConditions = ['GOOD', 'FAIR', 'EXCELLENT', 'BAD'];

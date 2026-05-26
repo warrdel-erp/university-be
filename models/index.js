@@ -57,6 +57,9 @@ import classRoomModel from "./classRoomModel.js";
 import feeGroupModel from "./feeGroupModel.js";
 import feeTypeCategoryModel from "./feeTypeCategoryModel.js";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
+import assetLocationModel from "./assetLocationModel.js";
+import assetCategoryModel from "./assetCategoryModel.js";
+import assetModel from "./assetModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -644,6 +647,21 @@ feeTypeCategoryModel.hasMany(feeTypeCatalogModel, { foreignKey: "feeTypeCategory
 
 feeTypeCatalogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteFeeTypeCatalog" });
 instituteModel.hasMany(feeTypeCatalogModel, { foreignKey: "instituteId", as: "feeTypeCatalogs" });
+
+assetLocationModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetLocation" });
+instituteModel.hasMany(assetLocationModel, { foreignKey: "instituteId", as: "assetLocations" });
+
+assetCategoryModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetCategory" });
+instituteModel.hasMany(assetCategoryModel, { foreignKey: "instituteId", as: "assetCategories" });
+
+assetModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAsset" });
+instituteModel.hasMany(assetModel, { foreignKey: "instituteId", as: "assets" });
+
+assetModel.belongsTo(assetCategoryModel, { foreignKey: "assetCategoryId", as: "assetCategory" });
+assetCategoryModel.hasMany(assetModel, { foreignKey: "assetCategoryId", as: "categoryAssets" });
+
+assetModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "department" });
+departmentModel.hasMany(assetModel, { foreignKey: "departmentId", as: "departmentAssets" });
 
 //fee (fee Invoice)
 feeInvoiceModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userFeeInvoice" });
@@ -1469,6 +1487,9 @@ export {
   feeGroupModel,
   feeTypeCategoryModel,
   feeTypeCatalogModel,
+  assetLocationModel,
+  assetCategoryModel,
+  assetModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,
