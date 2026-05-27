@@ -18,11 +18,9 @@ import user from "./router/auth/userRoute.js";
 import employee from "./router/employeeRoute.js";
 import teacher from "./router/teacherMappingRoute.js";
 import libraryCreation from "./router/libraryCreationRoute.js";
-import libraryItem from "./router/libraryAddItemRoutes.js";
 import timeTable from "./router/timeTableRoute.js";
 import faculityLoad from "./router/faculityLoadRoute.js";
 import timeTableCreate from "./router/timeTableCreateRoute.js";
-import libraryMember from "./router/libraryMemberRoute.js";
 import attendance from "./router/attendanceRoute.js";
 import classRoom from "./router/classRoomRoute.js";
 import feeGroup from "./router/feeGroupRoute.js";
@@ -95,6 +93,7 @@ import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
+import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 // middleware
@@ -134,6 +133,8 @@ app.use("/studentHallTicket", studentHallTicket);
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
+app.use("/libraryIssueBook", libraryIssueBookTransaction);
+
 
 app.use("/main", main);
 app.use("/setting", setting);
@@ -144,11 +145,9 @@ app.use("/user", user);
 app.use("/employee", employee);
 app.use("/teacher", teacher);
 app.use("/libraryCreation", libraryCreation);
-app.use("/libraryItem", libraryItem);
 app.use("/timeTable", timeTable);
 app.use("/faculityLoad", faculityLoad);
 app.use("/timeTableCreate", timeTableCreate);
-app.use("/libraryMember", libraryMember);
 app.use("/classRoom", classRoom);
 
 app.use("/feeGroup", feeGroup);

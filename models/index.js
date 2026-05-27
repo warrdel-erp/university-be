@@ -42,11 +42,6 @@ import teacherSubjectMappingModel from "./teacherSubjectMappingModel.js";
 import teacherSectionMappingModel from "./teacherSectionMappingModel.js";
 import libraryCreationModel from "./libraryCreationModel.js";
 import libraryAuthorityModel from "./libraryAuthorityModel.js";
-import libraryAddItemModel from "./libraryAddItemModel.js";
-import libraryMemberModel from "./libraryMemberModel.js";
-import libraryIssueBookModel from "./libraryIssueBookModel.js";
-import libraryAuthorDetailsModel from "./libraryAuthorDetailsModel.js";
-import libraryMultipleBookDetailsModel from "./libraryMultipleBookDetailsModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js";
 import faculityLoadModel from "./faculityLoadModel.js";
@@ -129,6 +124,8 @@ import libraryBookModel from "./libraryBookModel.js";
 import libraryBookCategoryMappingModel from "./libraryBookCategoryMappingModel.js";
 import libraryBookSubjectMappingModel from "./libraryBookSubjectMappingModel.js";
 import libraryCategoryModel from "./libraryCategoryModel.js";
+import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel.js";
+import libraryBookIssueInventoryItemModel from "./libraryBookIssueInventoryItemModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
@@ -244,18 +241,6 @@ courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: "affiliated_university_id", as: "institut" });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: "affiliated_university_id", as: "institut" });
-
-affiliatedIniversityModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
-  as: "affiliateInstitute",
-});
-instituteModel.hasMany(affiliatedIniversityModel, {
-  foreignKey: "instituteId",
-  as: "affiliateInstitutes",
-});
-
-specializationModel.belongsTo(courseModel, { foreignKey: "course_Id", as: "specializationCourse" });
-courseModel.hasMany(specializationModel, { foreignKey: "course_Id", as: "courseSpecializations" });
 
 instituteModel.belongsTo(campusModel, { foreignKey: "campusId", as: "campues" });
 campusModel.hasMany(instituteModel, { foreignKey: "campusId", as: "campues" });
@@ -530,18 +515,6 @@ employeeModel.hasMany(libraryAuthorityModel, { foreignKey: "employee_id", as: "l
 libraryCreationModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "libraryCreationInstitute" });
 instituteModel.hasMany(libraryCreationModel, { foreignKey: "institute_id", as: "libraryCreationInstitute" });
 
-libraryAddItemModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userLibraryAddItem" });
-userModel.hasMany(libraryAddItemModel, { foreignKey: "createdBy", as: "userLibraryAddItem" });
-
-libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: "genre", as: "genres" });
-employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: "genre", as: "genres" });
-
-libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: "aisle", as: "aisles" });
-employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: "aisle", as: "aisles" });
-
-libraryAddItemModel.belongsTo(employeeCodeMasterType, { foreignKey: "shelf", as: "shelfs" });
-employeeCodeMasterType.hasMany(libraryAddItemModel, { foreignKey: "shelf", as: "shelfs" });
-
 // time table item
 // time table create
 timeTableStructurePeriodsModel.belongsTo(timeTableStructureModel, { foreignKey: "time_table_name_id", as: "timeTableName" });
@@ -596,32 +569,6 @@ electiveSubjectModel.hasMany(classScheduleModel, { foreignKey: "elective_subject
 
 classScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "timeTableSubject" });
 subjectModel.hasMany(classScheduleModel, { foreignKey: "subject_id", as: "timeTableSubject" });
-
-// library member
-libraryMemberModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userLibraryMember" });
-userModel.hasMany(libraryMemberModel, { foreignKey: "createdBy", as: "userLibraryMember" });
-
-libraryMemberModel.belongsTo(studentModel, { foreignKey: "student_id", as: "libraryMemberStudent" });
-studentModel.hasMany(libraryMemberModel, { foreignKey: "student_id", as: "libraryMemberStudent" });
-
-libraryMemberModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "libraryMemberEmployee" });
-employeeModel.hasMany(libraryMemberModel, { foreignKey: "employee_id", as: "libraryMemberEmployee" });
-
-libraryMemberModel.belongsTo(libraryCreationModel, { foreignKey: "library_creation_id", as: "libraryMemberCreation" });
-libraryCreationModel.hasMany(libraryMemberModel, { foreignKey: "library_creation_id", as: "libraryMemberCreation" });
-
-// library Book Issue
-libraryIssueBookModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userBookIssue" });
-userModel.hasMany(libraryIssueBookModel, { foreignKey: "createdBy", as: "userBookIssue" });
-
-libraryIssueBookModel.belongsTo(libraryAddItemModel, { foreignKey: "libraryAddItemId", as: "addItemBookIssue" });
-libraryAddItemModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryAddItemId", as: "addItemBookIssue" });
-
-libraryIssueBookModel.belongsTo(libraryBookModel, { foreignKey: "libraryBookId", as: "libraryBookIssue" });
-libraryBookModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryBookId", as: "libraryBookIssue" });
-
-libraryIssueBookModel.belongsTo(libraryMemberModel, { foreignKey: "libraryMemberId", as: "memberBookIssue" });
-libraryMemberModel.hasMany(libraryIssueBookModel, { foreignKey: "libraryMemberId", as: "memberBookIssue" });
 
 // attendence
 attendanceModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userAttendence" });
@@ -1180,6 +1127,49 @@ libraryRowModel.belongsTo(libraryRackModel, { foreignKey: "library_rack_id", as:
 
 libraryBookModel.hasMany(libraryBookInventoryModel, { foreignKey: "library_book_id", as: "inventoryCopies" });
 libraryBookInventoryModel.belongsTo(libraryBookModel, { foreignKey: "library_book_id", as: "bookDetails" });
+// member_id → students.student_id (STUDENT) or employee.employee_id (TEACHER) per member_type
+studentModel.hasMany(libraryIssueBookTransactionModel, {
+  foreignKey: "memberId",
+  scope: { memberType: "STUDENT" },
+  constraints: false,
+  as: "libraryIssueBookTransactions",
+});
+libraryIssueBookTransactionModel.belongsTo(studentModel, {
+  foreignKey: "memberId",
+  targetKey: "studentId",
+  constraints: false,
+  as: "studentMember",
+});
+
+employeeModel.hasMany(libraryIssueBookTransactionModel, {
+  foreignKey: "memberId",
+  scope: { memberType: "TEACHER" },
+  constraints: false,
+  as: "libraryIssueBookTransactions",
+});
+libraryIssueBookTransactionModel.belongsTo(employeeModel, {
+  foreignKey: "memberId",
+  targetKey: "employeeId",
+  constraints: false,
+  as: "teacherMember",
+});
+
+libraryIssueBookTransactionModel.hasMany(libraryBookIssueInventoryItemModel, {
+  foreignKey: "libraryIssueBookTransactionId",
+  as: "inventoryItems",
+});
+libraryBookIssueInventoryItemModel.belongsTo(libraryIssueBookTransactionModel, {
+  foreignKey: "libraryIssueBookTransactionId",
+  as: "issueBookTransaction",
+});
+libraryBookInventoryModel.hasMany(libraryBookIssueInventoryItemModel, {
+  foreignKey: "inventoryId",
+  as: "issuedTransactionItems",
+});
+libraryBookIssueInventoryItemModel.belongsTo(libraryBookInventoryModel, {
+  foreignKey: "inventoryId",
+  as: "inventory",
+});
 
 libraryCreationModel.hasMany(libraryBookModel, {
   foreignKey: "library_creation_id",
@@ -1465,12 +1455,7 @@ export {
   teacherSectionMappingModel,
   libraryCreationModel,
   libraryAuthorityModel,
-  libraryAddItemModel,
-  libraryMemberModel,
   answerSheetQrModel,
-  libraryIssueBookModel,
-  libraryAuthorDetailsModel,
-  libraryMultipleBookDetailsModel,
   timeTableStructureModel,
   timeTableStructurePeriodsModel,
   faculityLoadModel,
@@ -1554,6 +1539,8 @@ export {
   libraryBookCategoryMappingModel,
   libraryBookSubjectMappingModel,
   libraryCategoryModel,
+  libraryIssueBookTransactionModel,
+  libraryBookIssueInventoryItemModel,
   internalAssessmentModel,
   assessmentEvaluationModel,
   jobSettingModel,
