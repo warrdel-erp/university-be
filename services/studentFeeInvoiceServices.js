@@ -116,6 +116,7 @@ function mapInvoiceItemLine(line) {
     isMainItem: Boolean(line.isMainItem),
     name: catalog.name ?? null,
     description: catalog.description ?? null,
+    ledgerType: catalog.ledgerType ?? null,
     catalogAmount: catalog.amount != null ? toMoneyNumber(catalog.amount) : null,
     amount: toMoneyNumber(line.amount),
     waiver: line.waiver == null ? null : toMoneyNumber(line.waiver),

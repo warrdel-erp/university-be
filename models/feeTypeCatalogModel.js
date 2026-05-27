@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 import feeTypeCategoryModel from "./feeTypeCategoryModel.js";
+import { feeTypeLedgerTypes } from "../constant.js";
 
 /** ERD fee type (name, description, amount, category, institute). Physical table is not `fee_type` because that name is used by feeGroup-linked {@link ./feeTypeModel.js}. */
 export default sequelize.define(
@@ -24,6 +25,11 @@ export default sequelize.define(
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
+    },
+    ledgerType: {
+      type: DataTypes.ENUM(...feeTypeLedgerTypes),
+      allowNull: false,
+      field: "ledger_type",
     },
     feeTypeCategoryId: {
       type: DataTypes.INTEGER,

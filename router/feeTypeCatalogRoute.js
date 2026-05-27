@@ -9,8 +9,15 @@ import {
   deleteFeeTypeCatalog,
 } from "../controllers/feeTypeCatalogController.js";
 import userAuth from "../middleware/authUser.js";
+import { feeTypeLedgerTypes } from "../constant.js";
 
 const router = Router();
+
+const ledgerTypeSchema = z.enum(feeTypeLedgerTypes, {
+  errorMap: () => ({
+    message: `ledgerType must be one of: ${feeTypeLedgerTypes.join(", ")}`,
+  }),
+});
 
 const positiveIntegerId = z.coerce
   .number({ invalid_type_error: "id must be a number" })
@@ -31,6 +38,7 @@ const addFeeTypeCatalogSchema = z.object({
   name: z.string().trim().min(1),
   amount: amountString,
   feeTypeCategoryId: positiveIntegerId,
+  ledgerType: ledgerTypeSchema,
   description: z.string().trim().optional().nullable(),
 });
 
@@ -41,14 +49,19 @@ const updateFeeTypeCatalogSchema = z
     description: z.string().optional().nullable(),
     amount: amountString.optional(),
     feeTypeCategoryId: positiveIntegerId.optional(),
+    ledgerType: ledgerTypeSchema.optional(),
   })
   .refine(
     (d) =>
       d.name !== undefined ||
       d.description !== undefined ||
       d.amount !== undefined ||
-      d.feeTypeCategoryId !== undefined,
-    { message: "At least one of name, description, amount, feeTypeCategoryId is required" }
+      d.feeTypeCategoryId !== undefined ||
+      d.ledgerType !== undefined,
+    {
+      message:
+        "At least one of name, description, amount, feeTypeCategoryId, ledgerType is required",
+    }
   );
 
 router.post("/", userAuth, validate({ body: addFeeTypeCatalogSchema }), addFeeTypeCatalog);
