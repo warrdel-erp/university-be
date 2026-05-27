@@ -245,6 +245,18 @@ courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: "affiliated_university_id", as: "institut" });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: "affiliated_university_id", as: "institut" });
 
+affiliatedIniversityModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "affiliateInstitute",
+});
+instituteModel.hasMany(affiliatedIniversityModel, {
+  foreignKey: "instituteId",
+  as: "affiliateInstitutes",
+});
+
+specializationModel.belongsTo(courseModel, { foreignKey: "course_Id", as: "specializationCourse" });
+courseModel.hasMany(specializationModel, { foreignKey: "course_Id", as: "courseSpecializations" });
+
 instituteModel.belongsTo(campusModel, { foreignKey: "campusId", as: "campues" });
 campusModel.hasMany(instituteModel, { foreignKey: "campusId", as: "campues" });
 
