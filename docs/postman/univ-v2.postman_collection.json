@@ -8375,7 +8375,7 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module (run in order)\n\n1. **assetLocation** — CRUD locations (`asset_locations`)\n2. **assetCategory** — CRUD categories (`asset_categories`)\n3. **asset** — CRUD assets (`asset` table)\n\n**Create** requests save IDs to collection variables. `instituteId` comes from auth token.\n\n**asset status:** `ISSUED` | `IN_STOCK` | `MAINTANANCE`\n\n**asset condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`",
+      "description": "## Asset module (run in order)\n\n1. **assetLocation** — CRUD locations (`asset_locations`)\n2. **assetCategory** — CRUD categories (`asset_categories`)\n3. **asset** — CRUD assets (`asset` table)\n4. **assetIssue** — create/list/single/update issue entries (`asset_issue`, `asset_issue_item`)\n\n**Create** requests save IDs to collection variables. `instituteId` comes from auth token.\n\n**asset status:** `ISSUED` | `IN_STOCK` | `MAINTANANCE`\n\n**asset condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`",
       "item": [
         {
           "name": "assetLocation",
@@ -8937,6 +8937,182 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "assetIssue",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetIssueId) {",
+                      "  pm.collectionVariables.set('assetIssue_id', String(data.assetIssueId));",
+                      "}",
+                      "if (Array.isArray(data?.items) && data.items.length) {",
+                      "  const firstItem = data.items[0];",
+                      "  if (firstItem?.assetIssueItemId) {",
+                      "    pm.collectionVariables.set('assetIssueItem_id', String(firstItem.assetIssueItemId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"remarks\": \"Issued for lab work\",\n  \"items\": [\n    {\n      \"assetId\": {{asset_id}},\n      \"remarks\": \"Keep in good condition\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**POST /assetIssue** — creates issue + issue items, marks issued assets as `ISSUED`. Saves `assetIssue_id` and first `assetIssueItem_id`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue?page={{assetIssue_page}}&limit={{assetIssue_limit}}&search={{assetIssue_search}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{assetIssue_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{assetIssue_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{assetIssue_search}}"
+                    }
+                  ]
+                },
+                "description": "Supports pagination + search over member/remarks/asset fields."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/single?assetIssueId={{assetIssue_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetIssueId",
+                      "value": "{{assetIssue_id}}"
+                    }
+                  ]
+                },
+                "description": "Returns single issue with `member` details + issued `items` and nested `asset` details."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetIssueId\": {{assetIssue_id}},\n  \"dueDate\": \"2026-06-20\",\n  \"remarks\": \"Due date extended\",\n  \"items\": [\n    {\n      \"assetIssueItemId\": {{assetIssueItem_id}},\n      \"returnDate\": \"2026-06-20\",\n      \"remarks\": \"Updated by admin\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**PATCH /assetIssue** — updates issue by `assetIssueId` and item rows by `assetIssueItemId` in one transaction."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }
@@ -9030,6 +9206,31 @@
     {
       "key": "department_id",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssueItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_search",
+      "value": "",
       "type": "string"
     }
   ]
