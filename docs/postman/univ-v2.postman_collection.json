@@ -4055,6 +4055,116 @@
       ]
     },
     {
+      "name": "exam schedule mapping",
+      "description": "Exam date/time scheduling under `/examScheduleMapping`.\n\n**POST /schedule** creates an `exam_schedule` row. `acedmicYearId` is taken from the authenticated user's `defaultAcademicYearId` (not sent in body).\n\n**Student time conflict:** rejects when another exam for the same student cohort (same `sessionId`, academic year, `courseId` + `term` from `examSetupTypeTermId`, and `semesterId` when provided) overlaps on the same `examDate` (`examTime` + `duration`).",
+      "variable": [
+        {
+          "key": "examScheduleMapping_examSetupTypeTermId",
+          "value": "10",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_sessionId",
+          "value": "6",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_subjectId",
+          "value": "129",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_examScheduleId",
+          "value": "1",
+          "type": "string"
+        }
+      ],
+      "item": [
+        {
+          "name": "create exam schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const row = res?.examSchedule ?? res?.data?.examSchedule ?? res?.data;",
+                  "const id = row?.examScheduleId ?? row?.exam_schedule_id;",
+                  "if (id) pm.collectionVariables.set('examScheduleMapping_examScheduleId', String(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeTermId\": {{examScheduleMapping_examSetupTypeTermId}},\n  \"sessionId\": {{examScheduleMapping_sessionId}},\n  \"subjectId\": {{examScheduleMapping_subjectId}},\n  \"examDate\": \"2026-06-15\",\n  \"examTime\": \"10:00:00\",\n  \"duration\": \"120\",\n  \"type\": \"Theory\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/schedule",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "schedule"
+              ]
+            },
+            "description": "**POST /examScheduleMapping/schedule**\n\nCreates an exam schedule (date/time slot for a subject).\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `examSetupTypeTermId` | Links to course + term |\n| `sessionId` | Session for enrolled students |\n| `subjectId` | Subject being scheduled |\n| `examDate` | `YYYY-MM-DD` |\n| `examTime` | e.g. `10:00:00` |\n| `duration` | Minutes as string, e.g. `\"120\"` |\n| `type` | e.g. `Theory` |\n\nOptional: `semesterId` — when set, conflict check is scoped to that semester.\n\n### Server-set\n- `acedmicYearId` from token user's `defaultAcademicYearId`\n- `createdBy` / `updatedBy` from token user\n\n### Conflict rule\nReturns **500** with message like:\n`Cannot schedule exam: {subjectName} is already scheduled at the same time for the same students`\n\nwhen another exam overlaps for the same course/term/session cohort.\n\n### Success\n**201** — `{ message, examSchedule }`. Test script saves `examScheduleId` to `{{examScheduleMapping_examScheduleId}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "get schedule by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/getScheduleById/{{examScheduleMapping_examScheduleId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "getScheduleById",
+                "{{examScheduleMapping_examScheduleId}}"
+              ]
+            },
+            "description": "**GET /examScheduleMapping/getScheduleById/:id**"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "options",
       "item": [
         {
