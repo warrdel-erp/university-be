@@ -109,16 +109,14 @@ export async function deleteCouseSessionMapping(sessionCourseMappingId) {
     throw new Error("Mapping not found");
   }
 
-  const { courseId, sessionId } = mapping;
+  const blocker = await sessionCreationService.getCourseSessionMappingBlocker({
+    courseId: mapping.courseId,
+    sessionId: mapping.sessionId,
+    sessionCourseMappingId,
+  });
 
-  const classSectionCount = await sessionCreationService.countClassSections(courseId, sessionId);
-  if (classSectionCount > 0) {
-    throw new Error("Cannot remove mapping: Class sections are already created for this course and session.");
-  }
-
-  const syllabusUnitCount = await sessionCreationService.countSyllabusUnits(courseId, sessionId);
-  if (syllabusUnitCount > 0) {
-    throw new Error("Cannot remove mapping: Syllabus units are already created for this course and session.");
+  if (blocker) {
+    throw new Error(blocker);
   }
 
   return await sessionCreationService.deleteCourseSessionMapping(sessionCourseMappingId);
