@@ -156,6 +156,7 @@ import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
 import s3FileModel from "./s3FileModel.js";
+import pdfSplitJobModel from "./pdfSplitJobModel.js";
  
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -1414,6 +1415,9 @@ userModel.hasMany(answerSheetQrModel, { foreignKey: "assigned_to_user", as: "ass
 answerSheetQrModel.belongsTo(s3FileModel, { foreignKey: "file_upload_id", as: "s3File" });
 s3FileModel.hasOne(answerSheetQrModel, { foreignKey: "file_upload_id", as: "answerSheetQr" });
 
+examScheduleModel.belongsTo(s3FileModel, { foreignKey: "answerSheetS3FileId", as: "answerSheetS3File" });
+s3FileModel.hasMany(examScheduleModel, { foreignKey: "answerSheetS3FileId", as: "examSchedules" });
+
 studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
 sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
 
@@ -1587,4 +1591,5 @@ export {
   paymentItemModel,
   studentHallTicketModel,
   s3FileModel,
+  pdfSplitJobModel,
 };

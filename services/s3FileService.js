@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as s3Helper from "../utility/s3Helper.js";
+import * as model from "../models/index.js";
 
 // Extensible validation configurations for file size and MIME type by entityType
 export const UPLOAD_CONFIGS = {
@@ -12,6 +13,10 @@ export const UPLOAD_CONFIGS = {
   employee_document: {
     maxSizeBytes: 20 * 1024 * 1024, // 20MB
     allowedMimes: ["application/pdf", "image/jpeg", "image/png", "image/jpg"],
+  },
+  FULL_EXAM_ANSWER_SHEET_PDF: {
+    maxSizeBytes: 10 * 1024 * 1024 * 1024, // 10GB
+    allowedMimes: ["application/pdf"],
   },
   general: {
     maxSizeBytes: 50 * 1024 * 1024, // 50MB
@@ -43,13 +48,31 @@ const MIME_TO_EXT = {
 export async function generateUploadUrl(user, fileData) {
   const { entityType, entityId, fileName, fileSize, mimeType, companyId } = fileData;
 
+  // Check if ExamSchedule already has an answer sheet PDF attached
+  if (entityType === "FULL_EXAM_ANSWER_SHEET_PDF" && entityId) {
+    const examScheduleId = Number(entityId);
+    const examSchedule = await model.examScheduleModel.findByPk(examScheduleId);
+    if (!examSchedule) {
+      const err = new Error(`Exam schedule with ID ${examScheduleId} not found.`);
+      err.statusCode = 404;
+      throw err;
+    }
+    if (examSchedule.answerSheetS3FileId) {
+      const err = new Error(
+        `Exam schedule ID ${examScheduleId} already has an answer sheet PDF attached (S3 File ID: ${examSchedule.answerSheetS3FileId}). Please remove the existing file before uploading a new one.`
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
   // 1. Resolve validation rules for entityType
   const config = UPLOAD_CONFIGS[entityType] || UPLOAD_CONFIGS.general;
 
   // 2. Validate file size
   if (fileSize > config.maxSizeBytes) {
     const err = new Error(
-      `File size (${(fileSize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size for ${entityType} (${(config.maxSizeBytes / (1024 * 1024)).toFixed(0)} MB)`
+      `File size (${(fileSize / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed size for ${entityType} (${(config.maxSizeBytes / (1024 * 1024)).toFixed(0)} MB)`,
     );
     err.statusCode = 400;
     throw err;
@@ -71,7 +94,6 @@ export async function generateUploadUrl(user, fileData) {
     Number(user.defaultInstituteId) === targetCompanyId ||
     Number(user.universityId) === targetCompanyId;
 
-
   if (!isAuthorized) {
     const err = new Error("Access Denied: You do not have permissions for the specified company/institute context.");
     err.statusCode = 403;
@@ -89,7 +111,6 @@ export async function generateUploadUrl(user, fileData) {
 
   // 7. Save record in database with state "pending"
   const fileRecord = await s3FileRepository.createS3FileEntry({
-    id: uniqueId,
     entityType,
     entityId: entityId ? String(entityId) : null,
     companyId: targetCompanyId,
@@ -140,7 +161,6 @@ export async function confirmUpload(user, fileUploadId) {
     Number(user.universityId) === targetCompanyId ||
     fileRecord.createdBy === user.userId;
 
-
   if (!isAuthorized) {
     const err = new Error("Access Denied: You are not authorized to confirm this upload.");
     err.statusCode = 403;
@@ -154,10 +174,29 @@ export async function confirmUpload(user, fileUploadId) {
   const config = UPLOAD_CONFIGS[fileRecord.entityType] || UPLOAD_CONFIGS.general;
   if (s3Metadata.size > config.maxSizeBytes) {
     const err = new Error(
-      `Actual file size in storage (${(s3Metadata.size / (1024 * 1024)).toFixed(2)} MB) exceeds allowed limit.`
+      `Actual file size in storage (${(s3Metadata.size / (1024 * 1024)).toFixed(2)} MB) exceeds allowed limit.`,
     );
     err.statusCode = 400;
     throw err;
+  }
+
+  // If this is a main answer sheet PDF, check if the ExamSchedule already has an answer sheet
+  let examSchedule = null;
+  if (fileRecord.entityType === "FULL_EXAM_ANSWER_SHEET_PDF" && fileRecord.entityId) {
+    const examScheduleId = Number(fileRecord.entityId);
+    examSchedule = await model.examScheduleModel.findByPk(examScheduleId);
+    if (!examSchedule) {
+      const err = new Error(`Exam schedule with ID ${examScheduleId} not found.`);
+      err.statusCode = 404;
+      throw err;
+    }
+    if (examSchedule.answerSheetS3FileId) {
+      const err = new Error(
+        `Exam schedule ID ${examScheduleId} already has an answer sheet PDF attached (S3 File ID: ${examSchedule.answerSheetS3FileId}). Please remove the existing file before uploading a new one.`
+      );
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   // 5. Update database record with final size, type and mark status as active
@@ -166,6 +205,14 @@ export async function confirmUpload(user, fileUploadId) {
     size: s3Metadata.size, // override size with actual verified storage size
     mime: s3Metadata.mime || fileRecord.mime, // use verified mime if returned, or keep original
   });
+
+  // Attach to ExamSchedule if applicable
+  if (examSchedule) {
+    await examSchedule.update({ answerSheetS3FileId: fileUploadId });
+    console.log(
+      `[confirmUpload] Successfully attached S3 File ID ${fileUploadId} to Exam Schedule ID ${examSchedule.examScheduleId}`,
+    );
+  }
 
   // Fetch and return the updated record
   const updatedRecord = await s3FileRepository.getS3FileById(fileUploadId);
@@ -217,6 +264,6 @@ export async function getDownloadUrl(user, fileUploadId) {
     fileUploadId: fileRecord.id,
     downloadUrl,
     mime: fileRecord.mime,
-    originalName: fileRecord.originalName
+    originalName: fileRecord.originalName,
   };
 }

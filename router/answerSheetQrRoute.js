@@ -12,6 +12,7 @@ import {
   getScriptsAssignedToTeacher,
   assignObtainedMarksToAnswerSheet,
   splitAnswerSheetPdf,
+  getSplitPdfJobStatus,
 } from "../controllers/answerSheetQrController.js";
 
 const router = Router();
@@ -148,12 +149,29 @@ router.patch(
   assignObtainedMarksToAnswerSheet
 );
 
-// ─── POST /answerSheetQr/split-pdf ────────────────────────────────────────────
-// Splits a large answer-sheet PDF into per-student PDFs using QR codes.
+const splitPdfSchema = z.object({
+  answerSheetS3FileId: z
+    .number({ required_error: "answerSheetS3FileId is required." })
+    .int("answerSheetS3FileId must be an integer.")
+    .positive("answerSheetS3FileId must be a positive integer."),
+});
+
+// ─── POST /answerSheetQr/splitPdf ───────────────────────────────────────────────────────
+// Queues a large answer-sheet PDF split job (BullMQ + Redis).
+// Returns 202 { jobId, jobDbId, statusUrl }.
 router.post(
   "/splitPdf",
   userAuth,
+  validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
+);
+
+// ─── GET /answerSheetQr/splitPdf/job/:jobDbId ─────────────────────────────────────────
+// Poll the status of a queued PDF split job (reads from DB — persistent).
+router.get(
+  "/splitPdf/job/:jobDbId",
+  userAuth,
+  getSplitPdfJobStatus
 );
 
 export default router;

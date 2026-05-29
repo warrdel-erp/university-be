@@ -176,48 +176,97 @@ export async function splitAnswerSheetPdf(req, res) {
     const instituteId = req.user.defaultInstituteId;
     const universityId = req.user.universityId;
 
-    let s3Key = req.body.s3Key;
-    const fileUploadId = req.body.fileUploadId;
+    const fileUploadId = req.body.answerSheetS3FileId;
 
-    if (fileUploadId) {
-      // Find FileUpload record to get the S3 key
-      const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
-      if (!fileRecord) {
-        return ErrorResponse(res, 404, "File upload record not found.");
-      }
-      s3Key = fileRecord.s3Key;
+    // Find FileUpload record to get the S3 key
+    const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
+    if (!fileRecord) {
+      return ErrorResponse(res, 404, "File upload record not found.");
     }
 
-    if (!s3Key) {
+    // ── Pre-flight Check 0: Ensure the file is actually a PDF ──────────────
+    if (fileRecord.mime !== "application/pdf") {
       return ErrorResponse(
         res,
         400,
-        "No PDF file source found. Please specify 'fileUploadId' or 's3Key'.",
+        `The specified file is not a PDF (detected MIME: ${fileRecord.mime}). ` +
+          `Please upload a valid PDF and confirm the upload before splitting.`,
       );
     }
 
-    console.log(`[S3 Split] Downloading PDF buffer from S3 key: ${s3Key}`);
-    const pdfBuffer = await s3Helper.getFileBufferFromS3(s3Key);
+    const s3Key = fileRecord.s3Key;
 
-    const result = await answerSheetSplitterServices.splitAnswerSheetPdf(
-      pdfBuffer,
+    // ── Pre-flight Check 1: No other split job currently in progress ─────────
+    const activeTempFiles = answerSheetSplitterServices.checkActiveSplitTempFiles();
+    if (activeTempFiles) {
+      return ErrorResponse(
+        res,
+        409,
+        "Another PDF split job is currently in progress. " +
+          "Please wait for it to complete before submitting a new one.",
+      );
+    }
+
+    // ── Pre-flight Check 2: Verify file exists in S3 + get its size ──────────
+    console.log(`[splitAnswerSheetPdf] Verifying file in S3: ${s3Key}`);
+    let fileInfo;
+    try {
+      fileInfo = await s3Helper.verifyFileInS3(s3Key);
+    } catch {
+      return ErrorResponse(res, 404, "The specified PDF file was not found in storage.");
+    }
+
+    // ── Pre-flight Check 3: Ensure ≥ 2× file size of free disk space ─────────
+    const requiredBytes = fileInfo.size * 2;
+    const diskCheck = await answerSheetSplitterServices.checkDiskSpace(requiredBytes);
+    if (!diskCheck.sufficient) {
+      const freeMB = Math.round(diskCheck.freeBytes / (1024 * 1024));
+      const requiredMB = Math.round(requiredBytes / (1024 * 1024));
+      return ErrorResponse(
+        res,
+        507,
+        `Insufficient disk space to process this PDF. ` +
+          `Required: ${requiredMB} MB, Available: ${freeMB} MB. ` +
+          `Please free up space and try again.`,
+      );
+    }
+
+    // ── Enqueue the job ───────────────────────────────────────────────────────
+    const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
+      s3Key,
       instituteId,
       universityId,
       req.user.userId,
     );
 
-    return SuccessResponse(res, 200, `PDF successfully split into ${result.totalStudents} answer sheet(s).`, result);
+    return SuccessResponse(res, 202, "PDF split job queued successfully. Poll the status endpoint to track progress.", {
+      jobId,
+      jobDbId,
+      statusUrl: `/answerSheetQr/splitPdf/job/${jobDbId}`,
+    });
   } catch (error) {
     console.error("Error in splitAnswerSheetPdf controller:", error);
-
-    // Build a structured error response with per-page detail when available
-    const errorData = error.scanErrors || error.validationErrors || null;
-
     return ErrorResponse(
       res,
       error.statusCode || 500,
-      error.message || "An unexpected error occurred while splitting the answer sheet PDF.",
-      errorData,
+      error.message || "An unexpected error occurred while queuing the PDF split job.",
     );
+  }
+}
+
+export async function getSplitPdfJobStatus(req, res) {
+  try {
+    const { jobDbId } = req.params;
+
+    const jobStatus = await answerSheetSplitterServices.getPdfSplitJobStatus(jobDbId);
+
+    if (!jobStatus) {
+      return ErrorResponse(res, 404, `No PDF split job found with ID: ${jobDbId}`);
+    }
+
+    return SuccessResponse(res, 200, "PDF split job status fetched successfully.", jobStatus);
+  } catch (error) {
+    console.error("Error in getSplitPdfJobStatus controller:", error);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }

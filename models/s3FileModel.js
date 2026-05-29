@@ -11,7 +11,13 @@ export default sequelize.define(
       allowNull: false,
     },
     entityType: {
-      type: DataTypes.STRING(50),
+      type: DataTypes.ENUM(
+        "student_photo",
+        "employee_document",
+        "FULL_EXAM_ANSWER_SHEET_PDF",
+        "answer_sheet",
+        "student"
+      ),
       allowNull: false,
       field: "entity_type",
     },

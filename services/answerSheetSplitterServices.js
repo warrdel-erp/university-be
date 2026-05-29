@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import os from "os";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
@@ -8,6 +9,8 @@ import AnswerSheetQrModel from "../models/answerSheetQrModel.js";
 import { PDFDocument } from "pdf-lib";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
+import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
+import { getPdfSplitQueue, getPdfSplitBatchQueue } from "../queue/pdfSplitQueue.js";
 import sequelize from "../database/sequelizeConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,6 +23,158 @@ function createServiceError(message, statusCode = 400) {
   error.statusCode = statusCode;
   return error;
 }
+
+// ─── Pre-flight Disk Checks ─────────────────────────────────────────────────
+
+/**
+ * Check if another PDF split job temp file is already present in /tmp.
+ * Returns the filenames if found, otherwise null.
+ */
+export function checkActiveSplitTempFiles() {
+  try {
+    const tmpDir = os.tmpdir();
+    const existing = fs.readdirSync(tmpDir).filter(
+      (f) => f.startsWith("pdf-split-") && f.endsWith(".pdf")
+    );
+    return existing.length > 0 ? existing : null;
+  } catch {
+    return null; // If we can't read /tmp, don't block
+  }
+}
+
+/**
+ * Check whether at least `requiredBytes` of free disk space is available in /tmp.
+ * Uses `fs.statfs` (Node 18.15+), falls back to allowing if unsupported.
+ *
+ * @param {number} requiredBytes
+ * @returns {Promise<{ sufficient: boolean, freeBytes: number, requiredBytes: number }>}
+ */
+export async function checkDiskSpace(requiredBytes) {
+  try {
+    const tmpDir = os.tmpdir();
+    // fs.promises.statfs available in Node 18.15+
+    if (typeof fs.promises.statfs === "function") {
+      const stats = await fs.promises.statfs(tmpDir);
+      const freeBytes = stats.bavail * stats.bsize;
+      return { sufficient: freeBytes >= requiredBytes, freeBytes, requiredBytes };
+    }
+    // Fallback: allow if statfs unavailable
+    return { sufficient: true, freeBytes: -1, requiredBytes };
+  } catch {
+    return { sufficient: true, freeBytes: -1, requiredBytes };
+  }
+}
+
+// ─── Queue Producer ──────────────────────────────────────────────────────────
+
+/**
+ * Enqueues a PDF split job.
+ *
+ * @param {string} s3Key
+ * @param {number} instituteId
+ * @param {number} universityId
+ * @param {number} createdBy
+ * @returns {Promise<{ jobId: string, jobDbId: string }>}
+ */
+export async function enqueuePdfSplitJob(s3Key, instituteId, universityId, createdBy) {
+  // Create DB audit record first (PENDING)
+  const dbJob = await pdfSplitJobRepository.createJob({
+    s3Key,
+    instituteId,
+    universityId,
+    createdBy,
+    status: "PENDING",
+    progress: 0,
+    processedStudents: 0,
+  });
+
+  const queue = getPdfSplitQueue();
+  const bullmqJob = await queue.add(
+    "split-pdf",
+    {
+      s3Key,
+      jobDbId: dbJob.id,
+      instituteId,
+      universityId,
+      createdBy,
+    },
+    { jobId: uuidv4() }
+  );
+
+  // Persist BullMQ job id back to DB record
+  await pdfSplitJobRepository.updateJob(dbJob.id, { bullmqJobId: bullmqJob.id });
+
+  return { jobId: bullmqJob.id, jobDbId: dbJob.id };
+}
+
+// ─── Job Status (reads from DB — persistent) ─────────────────────────────────
+
+/**
+ * Get the current status of a PDF split job.
+ * Also queries BullMQ for per-batch job states so the FE can see exactly
+ * which batches are pending / active / completed / failed.
+ *
+ * @param {string} jobDbId - UUID of the pdf_split_jobs record
+ * @returns {Promise<Object|null>}
+ */
+export async function getPdfSplitJobStatus(jobDbId) {
+  const job = await pdfSplitJobRepository.getJobById(jobDbId);
+  if (!job) return null;
+
+  // Build per-batch detail array (optional — only available while SPLITTING)
+  let batchDetails = null;
+  if (job.batchJobIds && job.batchJobIds.length > 0) {
+    try {
+      const batchQueue = getPdfSplitBatchQueue();
+      batchDetails = await Promise.all(
+        job.batchJobIds.map(async (batchJobId, idx) => {
+          const batchJob = await batchQueue.getJob(batchJobId);
+          if (!batchJob) return { batchIndex: idx, jobId: batchJobId, state: "unknown" };
+          const state = await batchJob.getState();
+          return {
+            batchIndex: idx,
+            jobId: batchJobId,
+            state,                                     // waiting | active | completed | failed | delayed
+            attemptsMade: batchJob.attemptsMade,
+            failedReason: batchJob.failedReason || null,
+            processedOn: batchJob.processedOn || null,
+            finishedOn: batchJob.finishedOn || null,
+          };
+        })
+      );
+    } catch {
+      batchDetails = null; // Non-fatal — batch queue may not be running
+    }
+  }
+
+  // Compute a clean progress percentage for the FE
+  let progress = job.progress;
+  if (job.status === "COMPLETED" || job.status === "PARTIALLY_COMPLETED") progress = 100;
+
+  return {
+    id: job.id,
+    bullmqJobId: job.bullmqJobId,
+    s3Key: job.s3Key,
+    status: job.status,
+    progress,
+    // Student-level counters
+    totalStudents: job.totalStudents,
+    processedStudents: job.processedStudents,
+    // Batch-level counters
+    totalBatches: job.totalBatches,
+    completedBatches: job.completedBatches,
+    failedBatches: job.failedBatches,
+    batchDetails,             // Per-batch BullMQ state (null if not yet fanned-out)
+    // Error / result
+    errorMessage: job.errorMessage,
+    errorDetails: job.errorDetails,
+    resultSummary: job.resultSummary,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+  };
+}
+
+// ─── Legacy synchronous split (kept for small PDFs / backward compat) ─────────
 
 async function getPdfPageCount(pdfBuffer) {
   const srcPdfBytes = new Uint8Array(pdfBuffer);
@@ -40,11 +195,11 @@ async function scanQrCodesFromPdf(srcPdfBytes, totalPages) {
   }
 
   const totalSegments = qrPageIndices.length;
-  const scannedQrs = []; // [{ pageIndex, qrValue }]
-  const scanErrors = []; // [{ page, reason }]
+  const scannedQrs = [];
+  const scanErrors = [];
 
   for (const pageIndex of qrPageIndices) {
-    const humanPage = pageIndex + 1; // 1-indexed for user messages
+    const humanPage = pageIndex + 1;
     let imageBuffer;
 
     try {
@@ -67,7 +222,6 @@ async function scanQrCodesFromPdf(srcPdfBytes, totalPages) {
           `Please ensure a valid QR code is printed at the top-right quarter of every ${PAGES_PER_STUDENT}th page (pages 1, 31, 61, …).`,
       });
     } else {
-      // If the scanned QR includes a path-like structure (e.g. "answersheet/UUID"), split and extract the UUID.
       if (qrValue.includes("/")) {
         qrValue = qrValue.split("/").pop();
       }
@@ -79,7 +233,7 @@ async function scanQrCodesFromPdf(srcPdfBytes, totalPages) {
     const details = scanErrors.map((e) => `  - Page ${e.page}: ${e.reason}`).join("\n");
     const error = new Error(
       `QR scanning failed on ${scanErrors.length} of ${totalSegments} page(s). ` +
-        `No files have been created. Please fix the issues and re-upload.\n\n${details}`,
+        `No files have been created. Please fix the issues and re-upload.\n\n${details}`
     );
     error.statusCode = 422;
     error.scanErrors = scanErrors;
@@ -157,7 +311,7 @@ async function validateScannedQrsAgainstDb(scannedQrs, instituteId, universityId
     const details = validationErrors.map((e) => `  - Page ${e.page}: ${e.reason}`).join("\n");
     const error = new Error(
       `Validation failed for ${validationErrors.length} of ${totalSegments} answer sheet(s). ` +
-        `No files have been created. Please resolve the issues and re-upload.\n\n${details}`,
+        `No files have been created. Please resolve the issues and re-upload.\n\n${details}`
     );
     error.statusCode = 422;
     error.validationErrors = validationErrors;
@@ -174,21 +328,17 @@ async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, institut
   try {
     for (let seg = 0; seg < scannedQrs.length; seg++) {
       const { pageIndex, qrValue } = scannedQrs[seg];
-      const startPage = pageIndex; // 0-indexed, inclusive
-      const endPage = startPage + PAGES_PER_STUDENT - 1; // 0-indexed, inclusive
+      const startPage = pageIndex;
+      const endPage = startPage + PAGES_PER_STUDENT - 1;
 
       const fileName = `${qrValue}.pdf`;
-
-      // Extract split PDF page range directly to a Buffer
       const pdfBuffer = await extractPageRangeToBuffer(srcPdfBytes, startPage, endPage);
-
       const uniquePrefix = uuidv4();
       const s3Key = `answer-sheets/${uniquePrefix}-${fileName}`;
       const s3Url = await s3Helper.uploadFileToS3(pdfBuffer, s3Key, "application/pdf");
 
       const dbRow = dbMap.get(qrValue);
 
-      // Create s3_files record
       const s3File = await s3FileRepository.createS3FileEntry(
         {
           entityType: "answer_sheet",
@@ -204,13 +354,9 @@ async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, institut
         transaction,
       );
 
-      // Update the AnswerSheetQr record with fileUploadId: s3File.id
       const [updatedRows] = await AnswerSheetQrModel.update(
         { fileUploadId: s3File.id },
-        {
-          where: { id: dbRow.id },
-          transaction,
-        },
+        { where: { id: dbRow.id }, transaction },
       );
 
       if (updatedRows === 0) {
@@ -237,20 +383,8 @@ async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, institut
 }
 
 /**
- * Split a large answer-sheet PDF into per-student PDFs by reading the QR code
- * on every 30th page (pages 1, 31, 61, … — 1-indexed).
- *
- * Abort conditions (nothing is written to disk):
- *  - Any QR page has no scannable QR code
- *  - Any scanned QR UUID is not found in answer_sheet_qr for this institute/university
- *  - Any matched row has a null studentId or null examScheduleId
- *
- * On success: one PDF per student is saved to uploads/answer-sheets/<uuid>.pdf
- *
- * @param {Buffer} pdfBuffer - The uploaded PDF file buffer
- * @param {number} instituteId
- * @param {number} universityId
- * @returns {Promise<{ totalStudents: number, results: Array<{ qr, filePath, studentId, examScheduleId }> }>}
+ * @deprecated Use enqueuePdfSplitJob for large PDFs.
+ * Legacy synchronous split — suitable only for small PDFs.
  */
 export async function splitAnswerSheetPdf(pdfBuffer, instituteId, universityId, createdBy) {
   try {

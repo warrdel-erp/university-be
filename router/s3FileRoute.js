@@ -2,18 +2,21 @@ import { Router } from "express";
 import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
-import { 
-  requestUploadUrl, 
+import {
+  requestUploadUrl,
   confirmUpload,
   getAllFilesFromDB,
   getAllFilesFromS3,
-  getDownloadUrl
+  getDownloadUrl,
 } from "../controllers/s3FileController.js";
 
 const router = Router();
 
 const idParamSchema = z.object({
-  id: z.string().uuid("id must be a valid UUID"),
+  id: z.coerce
+    .number({ required_error: "id is required" })
+    .int("id must be an integer")
+    .positive("id must be a positive integer"),
 });
 
 // Zod schema for signed URL request validation
@@ -38,7 +41,10 @@ const requestUploadUrlSchema = z.object({
 
 // Zod schema for upload confirmation validation
 const confirmUploadSchema = z.object({
-  fileUploadId: z.string({ required_error: "fileUploadId is required" }).uuid("fileUploadId must be a valid UUID"),
+  fileUploadId: z
+    .number({ required_error: "fileUploadId is required." })
+    .int("fileUploadId must be an integer.")
+    .positive("fileUploadId must be a positive integer."),
 });
 
 // Authenticated route to request S3 signed URL

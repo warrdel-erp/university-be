@@ -1,5 +1,4 @@
 import "dotenv/config";
-
 import express, { json, urlencoded } from "express";
 import cors from "cors";
 const app = express();
@@ -213,3 +212,6 @@ app.use("/studentFeePayment", studentFeePayment);
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
 });
+
+// Auto-spawn PDF Split Worker via worker_threads
+import "./workers/pdfSplitWorkerLauncher.js";
