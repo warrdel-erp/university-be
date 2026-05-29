@@ -2,23 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 
-// Exam overlap SQL: column refs only; startMinutes/endMinutes are bound via sequelize.where (not string-interpolated).
-// TODO(schema): prefer exam_schedule.slot_start_minutes / slot_end_minutes or generated columns when migrating.
-const EXAM_SCHEDULE_JOIN_ALIAS = "examSchedule";
-const EXAM_SLOT_START_MINUTES_SQL = `(TIME_TO_SEC(\`${EXAM_SCHEDULE_JOIN_ALIAS}\`.\`exam_time\`) / 60)`;
-const EXAM_SLOT_END_MINUTES_SQL = `(${EXAM_SLOT_START_MINUTES_SQL} + CAST(\`${EXAM_SCHEDULE_JOIN_ALIAS}\`.\`duration\` AS UNSIGNED))`;
-const EFFECTIVE_EXAM_CAPACITY_SQL =
-    "COALESCE(`class_room_section`.`exam_capacity`, `class_room_section`.`capacity`)";
-
-function examSlotOverlapsMinutesWhere(startMinutes, endMinutes) {
-    return {
-        [Op.and]: [
-            sequelize.where(sequelize.literal(EXAM_SLOT_END_MINUTES_SQL), { [Op.gt]: startMinutes }),
-            sequelize.where(sequelize.literal(EXAM_SLOT_START_MINUTES_SQL), { [Op.lt]: endMinutes }),
-        ],
-    };
-}
-
 const activeRoomHierarchyInclude = (universityId) => ({
     model: model.floorModel,
     as: "roomFloor",
@@ -123,7 +106,18 @@ export async function findOverlappingExamBusyRoomIds(
                 where: {
                     examDate,
                     examScheduleId: { [Op.ne]: excludeExamScheduleId },
-                    ...examSlotOverlapsMinutesWhere(startMinutes, endMinutes),
+                    [Op.and]: [
+                        sequelize.where(
+                            sequelize.literal(
+                                "((TIME_TO_SEC(`examSchedule`.`exam_time`) / 60) + CAST(`examSchedule`.`duration` AS UNSIGNED))"
+                            ),
+                            { [Op.gt]: startMinutes }
+                        ),
+                        sequelize.where(
+                            sequelize.literal("(TIME_TO_SEC(`examSchedule`.`exam_time`) / 60)"),
+                            { [Op.lt]: endMinutes }
+                        ),
+                    ],
                 },
                 required: true,
                 paranoid: true,
@@ -201,7 +195,12 @@ export async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
             "capacity",
             "examCapacity",
             "examCapacityColumns",
-            [sequelize.literal(EFFECTIVE_EXAM_CAPACITY_SQL), "effectiveExamCapacity"],
+            [
+                sequelize.literal(
+                    "COALESCE(`class_room_section`.`exam_capacity`, `class_room_section`.`capacity`)"
+                ),
+                "effectiveExamCapacity",
+            ],
         ],
         paranoid: true,
         include: [activeRoomHierarchyInclude(universityId)],
