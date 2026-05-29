@@ -6264,234 +6264,61 @@
       ]
     },
     {
-      "name": "library item",
-      "description": "Library add-item APIs under `/libraryItem` (`library_add_item` table). Used by member book-issue (`libraryAddItemId`). Test order: add item → get all → get by library → update → delete. `genre`, `aisle`, `shelf` are `employee_code_master_type_id` values. Auth: Bearer {{token}}.",
+      "name": "library issue book",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n\nAuth: Bearer {{token}}",
       "variable": [
         {
-          "key": "libraryAddItem_id",
+          "key": "libraryIssueBookTransaction_id",
           "value": "1",
           "type": "string"
         },
         {
-          "key": "libraryItem_genre_id",
+          "key": "member_id",
           "value": "1",
           "type": "string"
         },
         {
-          "key": "libraryItem_aisle_id",
+          "key": "inventory_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "inventory_id_2",
           "value": "2",
           "type": "string"
         },
         {
-          "key": "libraryItem_shelf_id",
-          "value": "3",
+          "key": "libraryBookIssueInventoryItem_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "page",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "limit",
+          "value": "20",
+          "type": "string"
+        },
+        {
+          "key": "search",
+          "value": "",
           "type": "string"
         }
       ],
       "item": [
         {
-          "name": "add library item",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Introduction to Algorithms\",\n  \"author\": \"Thomas H. Cormen\",\n  \"publisher\": \"MIT Press\",\n  \"genre\": {{libraryItem_genre_id}},\n  \"aisle\": {{libraryItem_aisle_id}},\n  \"shelf\": {{libraryItem_shelf_id}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**POST /libraryItem**\n\nCreates a row in `library_add_item`.\n\n| Field | Required |\n|-------|----------|\n| `libraryCreationId` | Yes |\n| `publisher` | Yes |\n| `genre`, `aisle`, `shelf` | Yes — `employee_code_master_type_id` |\n| `name`, `author` | No |"
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Library item added successfully!\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "get all library items",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**GET /libraryItem**\n\nReturns all `library_add_item` rows for the authenticated user's university (includes genre/aisle/shelf code master details)."
-          },
-          "response": []
-        },
-        {
-          "name": "get items by library",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem/single?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem", "single"],
-              "query": [
-                {
-                  "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}"
-                }
-              ]
-            },
-            "description": "**GET /libraryItem/single?libraryCreationId=**\n\nReturns all add-items for one library."
-          },
-          "response": []
-        },
-        {
-          "name": "update library item",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Introduction to Algorithms - 3rd Edition\",\n  \"author\": \"Thomas H. Cormen\",\n  \"publisher\": \"MIT Press\",\n  \"genre\": {{libraryItem_genre_id}},\n  \"aisle\": {{libraryItem_aisle_id}},\n  \"shelf\": {{libraryItem_shelf_id}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**PATCH /libraryItem**\n\nRequires `libraryAddItemId` and `libraryCreationId` in body."
-          },
-          "response": []
-        },
-        {
-          "name": "delete library item",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem?libraryAddItemId={{libraryAddItem_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"],
-              "query": [
-                {
-                  "key": "libraryAddItemId",
-                  "value": "{{libraryAddItem_id}}"
-                }
-              ]
-            },
-            "description": "**DELETE /libraryItem?libraryAddItemId=**\n\nSoft-deletes the add-item row."
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Delete successful for library creation ID 12\"\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "library member",
-      "description": "Library member & issue APIs under `/libraryMember`.\n\n**Test order:** add member → book issue → getAllIssueBook → memberBook → updateStatusBook → delete issued book.\n\n**POST/PATCH member:** One request body shows all payload types — keep **one** JSON object active; comment out the other variants (Postman JSON with `//` comments).\n\n**Book issue:** `libraryBookId` + `libraryMemberId` + dates required; `libraryAddItemId` optional. `issuedBy` / `receivedBy` optional — default to token `userName`. On return (`status: Returned`), `receivedBy` is set.\n\n**Status enum:** Issued | Returned | Renewed | Overdue\n\nAuth: Bearer {{token}}",
-      "variable": [
-        {
-          "key": "libraryMember_id",
-          "value": "1",
-          "type": "string"
-        },
-        {
-          "key": "libraryIssueBook_id",
-          "value": "1",
-          "type": "string"
-        },
-        {
-          "key": "libraryAddItem_id",
-          "value": "1",
-          "type": "string"
-        }
-      ],
-      "item": [
-        {
-          "name": "add member",
+          "name": "create issue transaction",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "const id = res?.data?.libraryMemberId ?? res?.data?.library_member_id;",
-                  "if (id) {",
-                  "  pm.collectionVariables.set('libraryMember_id', String(id));",
-                  "}"
+                  "const id = res?.data?.libraryIssueBookTransactionId ?? res?.data?.library_issue_book_transaction_id;",
+                  "if (id) pm.collectionVariables.set('libraryIssueBookTransaction_id', String(id));"
                 ],
                 "type": "text/javascript"
               }
@@ -6512,7 +6339,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — student member (active)\n{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — employee member\n// {\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
+              "raw": "{\n  \"memberId\": {{member_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-27\",\n  \"dueDate\": \"2026-06-10\",\n  \"inventoryItems\": [\n    { \"inventoryId\": {{inventory_id}} },\n    { \"inventoryId\": {{inventory_id_2}} }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6520,16 +6347,16 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryIssueBook",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
+              "path": ["libraryIssueBook"]
             },
-            "description": "**POST /libraryMember**\n\n| Field | Student | Employee |\n|-------|---------|----------|\n| `libraryCreationId` | Required | Required |\n| `memberType` | `\"student\"` | `\"employee\"` |\n| `studentId` | Required | Omit |\n| `employeeId` | Omit | Required |\n\nDo not send `employeeId: 0` for students — omit the field. Body includes Payload A (student) and Payload B (employee) as comments; enable only one."
+            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (`returnDate` null). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
           },
           "response": []
         },
         {
-          "name": "get all members",
+          "name": "get all issue transactions",
           "request": {
             "method": "GET",
             "header": [],
@@ -6544,39 +6371,30 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember?page=1&limit=20&libraryCreationId={{libraryCreation_id}}&search=",
+              "raw": "{{baseurl}}/libraryIssueBook?page={{page}}&limit={{limit}}&search={{search}}",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"],
+              "path": ["libraryIssueBook"],
               "query": [
                 {
                   "key": "page",
-                  "value": "1",
-                  "description": "Optional — page number (default 1)"
+                  "value": "{{page}}"
                 },
                 {
                   "key": "limit",
-                  "value": "20",
-                  "description": "Optional — page size (default 20, max 100)"
-                },
-                {
-                  "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}",
-                  "description": "Optional — scope to one library (omit for all libraries)",
-                  "disabled": true
+                  "value": "{{limit}}"
                 },
                 {
                   "key": "search",
-                  "value": "",
-                  "description": "Single search — matches memberId, memberType, student/employee names, scholarNumber, numeric libraryMemberId/studentId/employeeId"
+                  "value": "{{search}}"
                 }
               ]
             },
-            "description": "**GET /libraryMember**\n\nPaginated library members. Use **`search`** only for text/ID lookup (backend matches all relevant fields). Sorted by `libraryMemberId` DESC.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `page` | No | default 1 |\n| `limit` | No | default 20, max 100 |\n| `libraryCreationId` | No | optional library scope |\n| `search` | No | one field for all filters — omit to list all |\n\n**Example:** `GET .../libraryMember?page=1&limit=20&search=rahul`\n\n**Response:** `data` + `paginationData`."
+            "description": "**GET /libraryIssueBook**\n\nList issue transactions with pagination and common search.\n\n### Params type (frontend)\n\n```ts\ntype GetAllIssueTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // max 100\n  search?: string; // optional common search\n};\n```\n\n### Notes\n- Send params in query string (no request body)\n- `search` works across member/date/book related fields"
           },
           "response": []
         },
         {
-          "name": "get members by library",
+          "name": "get issue transaction by id",
           "request": {
             "method": "GET",
             "header": [],
@@ -6591,13 +6409,13 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember/single?libraryCreationId={{libraryCreation_id}}",
+              "raw": "{{baseurl}}/libraryIssueBook/single?libraryIssueBookTransactionId={{libraryIssueBookTransaction_id}}",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember", "single"],
+              "path": ["libraryIssueBook", "single"],
               "query": [
                 {
-                  "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}"
+                  "key": "libraryIssueBookTransactionId",
+                  "value": "{{libraryIssueBookTransaction_id}}"
                 }
               ]
             }
@@ -6605,7 +6423,7 @@
           "response": []
         },
         {
-          "name": "update member",
+          "name": "update issue transaction",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -6621,7 +6439,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — update student member (active)\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — update employee member\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }\n\n// Payload C — change type to employee (keep same libraryMemberId)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
+              "raw": "{\n  \"libraryIssueBookTransactionId\": {{libraryIssueBookTransaction_id}},\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": {{libraryBookIssueInventoryItem_id}}, \"returnDate\": \"2026-06-02\" }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6629,236 +6447,13 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryIssueBook",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
+              "path": ["libraryIssueBook"]
             },
-            "description": "**PATCH /libraryMember**\n\nRequired: `libraryMemberId`, `memberType`, and matching id (`studentId` or `employeeId`). Same rules as POST — one variant active in body."
+            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
           },
           "response": []
-        },
-        {
-          "name": "delete member",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryMember?libraryMemberId={{libraryMember_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryMember"],
-              "query": [
-                {
-                  "key": "libraryMemberId",
-                  "value": "{{libraryMember_id}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "book issue",
-          "description": "Issue book flow. **issue book** request contains all payload variants — keep one JSON object active.",
-          "item": [
-            {
-              "name": "issue book",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const res = pm.response.json();",
-                      "const id = res?.data?.libraryIssueBookId ?? res?.data?.library_issue_book_id;",
-                      "if (id) {",
-                      "  pm.collectionVariables.set('libraryIssueBook_id', String(id));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — book only (no libraryAddItemId) — active\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"libraryBookId\": {{libraryBook_id}},\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\"\n}\n\n// Payload B — full (add item + codes + issuedBy / receivedBy)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"libraryAddItemId\": {{libraryAddItem_id}},\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"genre\": {{libraryItem_genre_id}},\n//   \"aisle\": {{libraryItem_aisle_id}},\n//   \"shelf\": {{libraryItem_shelf_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }\n\n// Payload C — book only + issuedBy / receivedBy (omit to use token userName)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/bookIssue",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "bookIssue"]
-                },
-                "description": "**POST /libraryMember/bookIssue**\n\n| Field | Required |\n|-------|----------|\n| `libraryMemberId` | Yes |\n| `libraryBookId` | Yes |\n| `issueDate`, `dueDate` | Yes |\n| `libraryAddItemId` | Optional |\n| `libraryCreationId`, `genre`, `aisle`, `shelf` | Optional |\n| `issuedBy` | Optional — defaults to token `userName` |\n| `receivedBy` | Optional — defaults to token `userName` (same as `issuedBy`) |\n\nBody: Payload A (minimal), B (full), C (minimal + issuedBy/receivedBy). Saves `libraryIssueBook_id`."
-              },
-              "response": []
-            },
-            {
-              "name": "get all issued books",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/getAllIssueBook?page=1&limit=20&libraryCreationId={{libraryCreation_id}}&search=",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "getAllIssueBook"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1",
-                      "description": "Optional — page number (default 1)"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "20",
-                      "description": "Optional — page size (default 20, max 100)"
-                    },
-                    {
-                      "key": "libraryCreationId",
-                      "value": "{{libraryCreation_id}}",
-                      "description": "Optional — scope to member's library",
-                      "disabled": true
-                    },
-                    {
-                      "key": "search",
-                      "value": "",
-                      "description": "Single search — status, issuedBy, receivedBy, book title/author/isbn, memberId, add-item name, numeric issue/member/book IDs"
-                    }
-                  ]
-                },
-                "description": "**GET /libraryMember/getAllIssueBook**\n\nPaginated book issues. Use **`search`** only for lookup (backend matches all relevant fields). Sorted by `libraryIssueBookId` DESC.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `page` | No | default 1 |\n| `limit` | No | default 20, max 100 |\n| `libraryCreationId` | No | optional library scope |\n| `search` | No | one field for all filters — omit to list all |\n\n**Example:** `GET .../getAllIssueBook?page=1&limit=20&search=Issued`\n\n**Response:** `data` + `paginationData`."
-              },
-              "response": []
-            },
-            {
-              "name": "get books by member",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/memberBook?libraryMemberId={{libraryMember_id}}",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "memberBook"],
-                  "query": [
-                    {
-                      "key": "libraryMemberId",
-                      "value": "{{libraryMember_id}}"
-                    }
-                  ]
-                },
-                "description": "**GET /libraryMember/memberBook?libraryMemberId=**\n\n**Required query:** `libraryMemberId`.\n\nSame response shape as getAllIssueBook, filtered by member."
-              },
-              "response": []
-            },
-            {
-              "name": "update issue book status",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — Returned (returnDate required) — active\n{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Returned\",\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\",\n  \"issuedBy\": \"Admin User\",\n  \"receivedBy\": \"Desk Staff\",\n  \"returnDate\": \"2026-05-25\"\n}\n\n// Payload B — Renewed (no returnDate, no receivedBy)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Renewed\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-07-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload C — Issued / Overdue (no returnDate)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Issued\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload D — Returned (omit receivedBy → token userName)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Returned\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"returnDate\": \"2026-05-25\"\n// }",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/updateStatusBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "updateStatusBook"]
-                },
-                "description": "**PATCH /libraryMember/updateStatusBook**\n\n| Field | Required |\n|-------|----------|\n| `libraryIssueBookId` | Yes |\n| `status` | Issued \\| Returned \\| Renewed \\| Overdue |\n| `issueDate`, `dueDate`, `issuedBy` | Yes |\n| `returnDate` | Required when `status` is **Returned** |\n| `receivedBy` | Optional when **Returned** — defaults to token `userName` |\n\nBody: Payload A (Returned + receivedBy), B (Renewed), C (Issued/Overdue), D (Returned, receivedBy from token)."
-              },
-              "response": []
-            },
-            {
-              "name": "delete issued book",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/deleteBook?libraryIssueBookId={{libraryIssueBook_id}}",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "deleteBook"],
-                  "query": [
-                    {
-                      "key": "libraryIssueBookId",
-                      "value": "{{libraryIssueBook_id}}"
-                    }
-                  ]
-                },
-                "description": "**DELETE /libraryMember/deleteBook?libraryIssueBookId=**\n\nSoft-deletes the issue row (paranoid)."
-              },
-              "response": []
-            }
-          ]
         }
       ]
     },
@@ -7068,7 +6663,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Sports fee\",\n  \"amount\": \"1200.00\",\n  \"feeTypeCategoryId\": \"{{feeTypeCategory_id}}\",\n  \"ledgerType\": \"Account Receivable\",\n  \"description\": null\n}",
+                  "raw": "{\n  \"name\": \"Sports fee\",\n  \"amount\": \"1200.00\",\n  \"feeTypeCategoryId\": \"{{feeTypeCategory_id}}\",\n  \"description\": null\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7166,7 +6761,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n  \"amount\": \"1250.00\",\n  \"ledgerType\": \"Account Receivable\"\n}",
+                  "raw": "{\n  \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n  \"amount\": \"1250.00\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8125,7 +7720,7 @@
                     }
                   ]
                 },
-                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` — studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `terms[]` each: sno, feePlanItemId, startDate, endDate, **amount** (sum of isMainItem lines), **supplementalFees**, **total**, **feeTypeCatalogs[]** (feePlanSubitemId, feeTypeId, name, ledgerType, amount, isMainItem), status, canGenerateInvoice, studentFeeInvoiceId, paymentStatus\n- `paginationData` — page, limit, total, totalPages\n\nAmounts come from **fee_plan_sub_items** (not fee_plan_item.amount).\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
+                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` — studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `terms[]` each: sno, feePlanItemId, startDate, endDate, **amount** (sum of isMainItem lines), **supplementalFees**, **total**, **feeTypeCatalogs[]** (feePlanSubitemId, feeTypeId, name, amount, isMainItem), status, canGenerateInvoice, studentFeeInvoiceId, paymentStatus\n- `paginationData` — page, limit, total, totalPages\n\nAmounts come from **fee_plan_sub_items** (not fee_plan_item.amount).\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
               },
               "response": [
                 {
