@@ -217,32 +217,20 @@ export async function getAvailableRoomsForExamSchedule(examScheduleId, universit
         examSchedule.duration
     );
 
-    const [allRooms, examAssignments, classBusyRoomIds, currentExamRoomIds] = await Promise.all([
-        examRoomCapacityRepository.getClassRoomsByUniversity(universityId),
-        examRoomCapacityRepository.findExamRoomAssignmentsOnDate(examSchedule.examDate, examScheduleId),
-        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examSchedule.examDate),
-        examRoomCapacityRepository.findAssignedRoomIdsForExam(examScheduleId),
-    ]);
+    const busyRoomIds = await examRoomCapacityRepository.collectBusyRoomIdsForExamSlot({
+        examScheduleId,
+        examDate: examSchedule.examDate,
+        day,
+        startTime,
+        endTime,
+        startMinutes,
+        endMinutes,
+    });
 
-    const busyRoomIds = new Set([...classBusyRoomIds, ...currentExamRoomIds]);
-    for (const { classRoomSectionId, examTime, duration } of examAssignments) {
-        const otherStart = toMinutes(examTime);
-        const otherEnd = otherStart + Number(duration);
-        if (startMinutes < otherEnd && endMinutes > otherStart) {
-            busyRoomIds.add(classRoomSectionId);
-        }
-    }
-
-    const availableRooms = allRooms
-        .filter((room) => !busyRoomIds.has(room.classRoomSectionId))
-        .map((room) => ({
-            classRoomSectionId: room.classRoomSectionId,
-            roomNumber: room.roomNumber,
-            capacity: room.capacity,
-            examCapacity: room.examCapacity,
-            examCapacityColumns: room.examCapacityColumns,
-            effectiveExamCapacity: room.examCapacity ?? room.capacity,
-        }));
+    const availableRooms = await examRoomCapacityRepository.findAvailableRoomsForExamSlot(
+        universityId,
+        busyRoomIds
+    );
 
     return {
         examScheduleId: examSchedule.examScheduleId,
