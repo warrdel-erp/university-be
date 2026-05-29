@@ -74,23 +74,7 @@ export async function getExamScheduleSlot(examScheduleId) {
     });
 }
 
-export async function getClassRoomsByUniversity(universityId) {
-    return await model.classRoomModel.findAll({
-        attributes: [
-            "classRoomSectionId",
-            "roomNumber",
-            "capacity",
-            "examCapacity",
-            "examCapacityColumns",
-        ],
-        paranoid: true,
-        include: [activeRoomHierarchyInclude(universityId)],
-        order: [["roomNumber", "ASC"]],
-        raw: true,
-    });
-}
-
-export async function findOverlappingExamBusyRoomIds(
+async function findOverlappingExamBusyRoomIds(
     examDate,
     excludeExamScheduleId,
     startMinutes,
@@ -137,7 +121,7 @@ export async function findOverlappingExamBusyRoomIds(
     return rows.map((row) => row.classRoomSectionId);
 }
 
-export async function findAssignedRoomIdsForExam(examScheduleId) {
+async function findAssignedRoomIdsForExam(examScheduleId) {
     const rows = await model.examScheduleRoomCapacityModel.findAll({
         attributes: ["classRoomSectionId"],
         where: { examScheduleId },
@@ -147,41 +131,7 @@ export async function findAssignedRoomIdsForExam(examScheduleId) {
     return rows.map((row) => row.classRoomSectionId);
 }
 
-export async function collectBusyRoomIdsForExamSlot({
-    examScheduleId,
-    examDate,
-    day,
-    startTime,
-    endTime,
-    startMinutes,
-    endMinutes,
-}) {
-    const busyRoomIds = new Set();
-
-    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
-        findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
-        findAssignedRoomIdsForExam(examScheduleId),
-        findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
-    ]);
-
-    for (const roomId of classBusyRoomIds) {
-        busyRoomIds.add(roomId);
-    }
-    for (const roomId of assignedRoomIds) {
-        busyRoomIds.add(roomId);
-    }
-    for (const roomId of overlappingExamRoomIds) {
-        busyRoomIds.add(roomId);
-    }
-
-    const result = [];
-    for (const roomId of busyRoomIds) {
-        result.push(roomId);
-    }
-    return result;
-}
-
-export async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
+async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
     const where = {};
     if (busyRoomIds.length) {
         where.classRoomSectionId = { [Op.notIn]: busyRoomIds };
@@ -209,7 +159,34 @@ export async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
     });
 }
 
-export async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate) {
+export async function getAvailableRoomsPayload(examScheduleId, universityId, examSchedule, slot) {
+    const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
+        examDate: examSchedule.examDate,
+        ...slot,
+    };
+
+    const [classBusyRoomIds, assignedRoomIds, overlappingExamRoomIds] = await Promise.all([
+        findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate),
+        findAssignedRoomIdsForExam(examScheduleId),
+        findOverlappingExamBusyRoomIds(examDate, examScheduleId, startMinutes, endMinutes),
+    ]);
+
+    const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
+    const availableRooms = await findAvailableRoomsForExamSlot(universityId, busyRoomIds);
+
+    return {
+        examScheduleId: examSchedule.examScheduleId,
+        examDate: examSchedule.examDate,
+        examTime: examSchedule.examTime,
+        duration: examSchedule.duration,
+        slotStartTime: startTime,
+        slotEndTime: endTime,
+        day,
+        availableRooms,
+    };
+}
+
+async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examDate) {
     const schedules = await model.classScheduleModel.findAll({
         attributes: ["classRoomSectionId"],
         where: {

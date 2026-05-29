@@ -207,39 +207,8 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
 
 export async function getAvailableRoomsForExamSchedule(examScheduleId, universityId) {
     const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
-    if (!examSchedule) {
-        throw new Error("Exam schedule not found");
-    }
+    if (!examSchedule) throw new Error("Exam schedule not found");
 
-    const { day, startTime, endTime, startMinutes, endMinutes } = getExamSlot(
-        examSchedule.examDate,
-        examSchedule.examTime,
-        examSchedule.duration
-    );
-
-    const busyRoomIds = await examRoomCapacityRepository.collectBusyRoomIdsForExamSlot({
-        examScheduleId,
-        examDate: examSchedule.examDate,
-        day,
-        startTime,
-        endTime,
-        startMinutes,
-        endMinutes,
-    });
-
-    const availableRooms = await examRoomCapacityRepository.findAvailableRoomsForExamSlot(
-        universityId,
-        busyRoomIds
-    );
-
-    return {
-        examScheduleId: examSchedule.examScheduleId,
-        examDate: examSchedule.examDate,
-        examTime: examSchedule.examTime,
-        duration: examSchedule.duration,
-        slotStartTime: startTime,
-        slotEndTime: endTime,
-        day,
-        availableRooms,
-    };
+    const slot = getExamSlot(examSchedule.examDate, examSchedule.examTime, examSchedule.duration);
+    return examRoomCapacityRepository.getAvailableRoomsPayload(examScheduleId, universityId, examSchedule, slot);
 }

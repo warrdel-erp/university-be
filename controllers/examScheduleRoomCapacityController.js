@@ -31,15 +31,16 @@ export async function updateExamRoomCapacity(req, res) {
 
 export async function getAvailableRoomsForExamSchedule(req, res) {
     try {
-        const { examScheduleId } = req.query;
-        const result = await examRoomCapacityServices.getAvailableRoomsForExamSchedule(
-            examScheduleId,
+        const data = await examRoomCapacityServices.getAvailableRoomsForExamSchedule(
+            req.query.examScheduleId,
             req.user.universityId
         );
-        return SuccessResponse(res, 200, "Available rooms fetched successfully", result);
+        return SuccessResponse(res, 200, "Available rooms fetched successfully", data);
     } catch (error) {
-        return ErrorResponse(res, 400, error.message);
-}}
+        const status = error.message === "Exam schedule not found" ? 404 : 400;
+        return ErrorResponse(res, status, error.message);
+    }
+}
 
 export async function deleteExamRoomCapacity(req, res) {
     try {
