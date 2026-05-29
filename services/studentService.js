@@ -53,7 +53,8 @@ function mapFeePlanSubItemsForResponse(subItems) {
   return (subItems ?? []).map((line) => ({
     feePlanSubitemId: line.feePlanSubitemId,
     feeTypeId: line.feeTypeId,
-    name: (line.feeTypeCatalog ?? {}).name ?? null,
+    name: line.feeTypeCatalog?.name ?? null,
+    ledgerType: line.feeTypeCatalog?.ledgerType ?? null,
     amount: toMoneyNumber(line.amount),
     isMainItem: isMainFeePlanSubItem(line),
   }));

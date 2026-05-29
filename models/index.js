@@ -160,6 +160,8 @@ import studentFeePaymentModel from "./studentFeePaymentModel.js";
 import paymentItemModel from "./paymentItemModel.js";
 import studentFeeInvoiceItemsModel from "./studentFeeInvoiceItemsModel.js";
 import answerSheetQrModel from "./answerSheetQrModel.js";
+import s3FileModel from "./s3FileModel.js";
+import pdfSplitJobModel from "./pdfSplitJobModel.js";
  
 
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
@@ -249,6 +251,18 @@ courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as
 
 affiliatedIniversityModel.belongsTo(instituteModel, { foreignKey: "affiliated_university_id", as: "institut" });
 instituteModel.hasMany(affiliatedIniversityModel, { foreignKey: "affiliated_university_id", as: "institut" });
+
+affiliatedIniversityModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "affiliateInstitute",
+});
+instituteModel.hasMany(affiliatedIniversityModel, {
+  foreignKey: "instituteId",
+  as: "affiliateInstitutes",
+});
+
+specializationModel.belongsTo(courseModel, { foreignKey: "course_Id", as: "specializationCourse" });
+courseModel.hasMany(specializationModel, { foreignKey: "course_Id", as: "courseSpecializations" });
 
 instituteModel.belongsTo(campusModel, { foreignKey: "campusId", as: "campues" });
 campusModel.hasMany(instituteModel, { foreignKey: "campusId", as: "campues" });
@@ -1427,6 +1441,12 @@ examScheduleModel.hasMany(answerSheetQrModel, { foreignKey: "exam_schedule_id", 
 answerSheetQrModel.belongsTo(userModel, { foreignKey: "assigned_to_user", as: "assignedTeacher" });
 userModel.hasMany(answerSheetQrModel, { foreignKey: "assigned_to_user", as: "assignedAnswerSheetQrs" });
 
+answerSheetQrModel.belongsTo(s3FileModel, { foreignKey: "file_upload_id", as: "s3File" });
+s3FileModel.hasOne(answerSheetQrModel, { foreignKey: "file_upload_id", as: "answerSheetQr" });
+
+examScheduleModel.belongsTo(s3FileModel, { foreignKey: "answerSheetS3FileId", as: "answerSheetS3File" });
+s3FileModel.hasMany(examScheduleModel, { foreignKey: "answerSheetS3FileId", as: "examSchedules" });
+
 studentHallTicketModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
 sessionModel.hasMany(studentHallTicketModel, { foreignKey: "session_id", as: "hallTickets" });
 
@@ -1438,6 +1458,9 @@ instituteModel.hasMany(studentHallTicketModel, { foreignKey: "institute_id", as:
 
 studentHallTicketModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
 universityModel.hasMany(studentHallTicketModel, { foreignKey: "university_id", as: "hallTickets" });
+
+s3FileModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 export {
   settingModel,
   universityModel,
@@ -1601,4 +1624,6 @@ export {
   studentFeePaymentModel,
   paymentItemModel,
   studentHallTicketModel,
+  s3FileModel,
+  pdfSplitJobModel,
 };

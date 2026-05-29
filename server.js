@@ -1,5 +1,4 @@
 import "dotenv/config";
-
 import express, { json, urlencoded } from "express";
 import cors from "cors";
 const app = express();
@@ -101,6 +100,7 @@ import options from "./router/optionsRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 
 import answerSheetQr from "./router/answerSheetQrRoute.js";
+import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
@@ -132,13 +132,11 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
+app.use("/fileUpload", s3FileRoute);
 
 app.use("/studentHallTicket", studentHallTicket);
-
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
-
-
 app.use("/main", main);
 app.use("/setting", setting);
 app.use("/student", student);
@@ -223,3 +221,6 @@ app.use("/assetIssue", assetIssue);
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
 });
+
+// Auto-spawn PDF Split Worker via worker_threads
+import "./workers/pdfSplitWorkerLauncher.js";

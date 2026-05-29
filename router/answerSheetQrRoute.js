@@ -1,9 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import multer from "multer";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
 import {
@@ -16,34 +12,8 @@ import {
   getScriptsAssignedToTeacher,
   assignObtainedMarksToAnswerSheet,
   splitAnswerSheetPdf,
+  getSplitPdfJobStatus,
 } from "../controllers/answerSheetQrController.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ─── Multer: disk storage for large PDF uploads ───────────────────────────────
-const uploadDir = path.join(__dirname, "..", "uploads", "tmp", "pdf-uploads");
-fs.mkdirSync(uploadDir, { recursive: true });
-
-const pdfStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${unique}-${file.originalname}`);
-  },
-});
-
-const pdfUpload = multer({
-  storage: pdfStorage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
-      cb(null, true);
-    } else {
-      cb(new Error("Only PDF files are accepted. Please upload a valid PDF."));
-    }
-  },
-});
 
 const router = Router();
 
@@ -179,39 +149,29 @@ router.patch(
   assignObtainedMarksToAnswerSheet
 );
 
-// ─── POST /answerSheetQr/split-pdf ────────────────────────────────────────────
-// Upload a large answer-sheet PDF; splits it into per-student PDFs using QR codes.
-// Field name: "answerSheet" (single PDF file, max 500 MB)
+const splitPdfSchema = z.object({
+  answerSheetS3FileId: z
+    .number({ required_error: "answerSheetS3FileId is required." })
+    .int("answerSheetS3FileId must be an integer.")
+    .positive("answerSheetS3FileId must be a positive integer."),
+});
+
+// ─── POST /answerSheetQr/splitPdf ───────────────────────────────────────────────────────
+// Queues a large answer-sheet PDF split job (BullMQ + Redis).
+// Returns 202 { jobId, jobDbId, statusUrl }.
 router.post(
   "/splitPdf",
   userAuth,
-  (req, res, next) => {
-    pdfUpload.single("answerSheet")(req, res, (err) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(400).json({
-            success: false,
-            message: "The uploaded file is too large. Maximum allowed size is 500 MB.",
-            errors: null,
-          });
-        }
-        return res.status(400).json({
-          success: false,
-          message: `File upload error: ${err.message}`,
-          errors: null,
-        });
-      }
-      if (err) {
-        return res.status(400).json({
-          success: false,
-          message: err.message || "File upload failed.",
-          errors: null,
-        });
-      }
-      next();
-    });
-  },
+  validate({ body: splitPdfSchema }),
   splitAnswerSheetPdf
+);
+
+// ─── GET /answerSheetQr/splitPdf/job/:jobDbId ─────────────────────────────────────────
+// Poll the status of a queued PDF split job (reads from DB — persistent).
+router.get(
+  "/splitPdf/job/:jobDbId",
+  userAuth,
+  getSplitPdfJobStatus
 );
 
 export default router;

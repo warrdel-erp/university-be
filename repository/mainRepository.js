@@ -60,11 +60,18 @@ export async function getAllAffiliatedUniversity(universityId, instituteId, head
             ...(instituteId && { institute_id: instituteId }),
             ...(role === 'Head' && { institute_id: headInstituteId })
         };
-        const result = await model.affiliatedIniversityModel.findAll({
+        return model.affiliatedIniversityModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             where: whereClause,
+            include: [
+                {
+                    model: model.instituteModel,
+                    as: "affiliateInstitute",
+                    attributes: ["instituteId", "instituteName"],
+                    required: false,
+                },
+            ],
         });
-        return result;
     } catch (error) {
         console.error("Error in get all Affiliated University details:", error);
         throw error;
@@ -149,11 +156,18 @@ export async function getAllSpecialization(universityId, acedmicYearId, institut
             ...(acedmicYearId && { acedmicYearId }),
             ...(role === 'Head' && { institute_id: instituteId })
         };
-        const result = await model.specializationModel.findAll({
+        return model.specializationModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             where: whereClause,
+            include: [
+                {
+                    model: model.courseModel,
+                    as: "specializationCourse",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                    required: false,
+                },
+            ],
         });
-        return result;
     } catch (error) {
         console.error("Error in get all Specialization details:", error);
         throw error;
