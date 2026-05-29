@@ -106,6 +106,15 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
+        answerSheetS3FileId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'answer_sheet_s3_file_id',
+            references: {
+                model: 's3_files',
+                key: 'id'
+            }
+        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

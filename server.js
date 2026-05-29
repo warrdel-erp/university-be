@@ -1,5 +1,4 @@
 import "dotenv/config";
-
 import express, { json, urlencoded } from "express";
 import cors from "cors";
 const app = express();
@@ -27,6 +26,10 @@ import feeGroup from "./router/feeGroupRoute.js";
 import feeType from "./router/feeTypeRoute.js";
 import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
 import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
+import assetLocation from "./router/assetLocationRoute.js";
+import assetCategory from "./router/assetCategoryRoute.js";
+import asset from "./router/assetRoute.js";
+import assetIssue from "./router/assetIssueRoute.js";
 import feeInvoice from "./router/feeInvoiceRoute.js";
 import feeInvoiceDetails from "./router/feeInvoiceDetailRoute.js";
 import role from "./router/roleRoute.js";
@@ -96,6 +99,7 @@ import subjectWeightage from "./router/subjectWeightageRoute.js";
 import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 
 import answerSheetQr from "./router/answerSheetQrRoute.js";
+import s3FileRoute from "./router/s3FileRoute.js";
 // middleware
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
@@ -127,14 +131,13 @@ app.use("/questionPaperBlueprint", questionPaperBlueprint);
 app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
 app.use("/examSchedule", examSchedule);
+app.use("/fileUpload", s3FileRoute);
 
 app.use("/studentHallTicket", studentHallTicket);
-
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
 app.use("/libraryIssueBook", libraryIssueBookTransaction);
-
 
 app.use("/main", main);
 app.use("/setting", setting);
@@ -210,6 +213,14 @@ app.use("/feePlanProfile", feePlanProfile);
 app.use("/studentFeeInvoice", studentFeeInvoice);
 app.use("/studentFeePayment", studentFeePayment);
 
+app.use("/assetLocation", assetLocation);
+app.use("/assetCategory", assetCategory);
+app.use("/asset", asset);
+app.use("/assetIssue", assetIssue);
+
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);
 });
+
+// Auto-spawn PDF Split Worker via worker_threads
+import "./workers/pdfSplitWorkerLauncher.js";
