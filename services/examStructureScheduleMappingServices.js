@@ -140,9 +140,53 @@ export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) 
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 };
 
+function getExamSlotMinutes(examTime, duration) {
+  const [h = 0, m = 0] = String(examTime).split(":").map(Number);
+  const startMinutes = h * 60 + m;
+  const durationMinutes = Number(duration);
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    throw new Error("Invalid exam duration");
+  }
+  return { startMinutes, endMinutes: startMinutes + durationMinutes };
+}
+
+async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId) {
+  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
+    examDetail.examSetupTypeTermId
+  );
+  if (!termDetail) {
+    throw new Error("Exam setup type term not found");
+  }
+
+  const acedmicYearId = examDetail.acedmicYearId ?? termDetail.acedmicYearId;
+  const { startMinutes, endMinutes } = getExamSlotMinutes(examDetail.examTime, examDetail.duration);
+
+  const conflict = await examStructureScheduleRepository.findConflictingExamForStudentCohort({
+    examDate: examDetail.examDate,
+    startMinutes,
+    endMinutes,
+    sessionId: examDetail.sessionId,
+    acedmicYearId,
+    courseId: termDetail.courseId,
+    term: termDetail.term,
+    semesterId: examDetail.semesterId ?? null,
+    excludeExamScheduleId,
+  });
+
+  if (conflict) {
+    const subjectName = conflict.subjectSchedule?.subjectName ?? "another subject";
+    throw new Error(
+      `Cannot schedule exam: ${subjectName} is already scheduled at the same time for the same students`
+    );
+  }
+}
+
 export async function addExamSchedule(examDetail, createdBy, updatedBy, universityId, instituteId) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
+
+  await assertNoStudentExamTimeConflict(examDetail);
+
   const result = await examStructureScheduleRepository.addExamSchedule(examDetail);
   return result;
 };

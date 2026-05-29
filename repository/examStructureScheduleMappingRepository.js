@@ -1,4 +1,6 @@
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 
 export async function addExamStructureSchedule(examDetailSchedule) {
     try {
@@ -128,6 +130,55 @@ export async function publishExamSchedule(examSetupTypeId, data) {
         throw error;
     }
 };
+
+export async function findConflictingExamForStudentCohort({
+    examDate,
+    startMinutes,
+    endMinutes,
+    sessionId,
+    acedmicYearId,
+    courseId,
+    term,
+    semesterId,
+    excludeExamScheduleId,
+}) {
+    const examStartMinutesSql = "(TIME_TO_SEC(`exam_schedule`.`exam_time`) / 60)";
+    const examEndMinutesSql = `(${examStartMinutesSql} + CAST(\`exam_schedule\`.\`duration\` AS UNSIGNED))`;
+
+    return model.examScheduleModel.findOne({
+        attributes: ["examScheduleId", "examDate", "examTime", "duration", "subjectId"],
+        where: {
+            examDate,
+            sessionId,
+            acedmicYearId,
+            ...(semesterId != null && { semesterId }),
+            ...(excludeExamScheduleId && {
+                examScheduleId: { [Op.ne]: excludeExamScheduleId },
+            }),
+            [Op.and]: [
+                sequelize.where(sequelize.literal(examEndMinutesSql), { [Op.gt]: startMinutes }),
+                sequelize.where(sequelize.literal(examStartMinutesSql), { [Op.lt]: endMinutes }),
+            ],
+        },
+        include: [
+            {
+                model: model.examSetupTypeTermModel,
+                as: "examSetupTypeTerm",
+                attributes: ["courseId", "term"],
+                where: { courseId, term },
+                required: true,
+            },
+            {
+                model: model.subjectModel,
+                as: "subjectSchedule",
+                attributes: ["subjectName"],
+                required: false,
+            },
+        ],
+        raw: true,
+        nest: true,
+    });
+}
 
 export async function addExamSchedule(examDetail) {
     try {
