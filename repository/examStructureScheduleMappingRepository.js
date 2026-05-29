@@ -292,15 +292,41 @@ export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term,
                     where: {
                         ...(sessionId && { sessionId })
                     },
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    attributes: {
+                        exclude: [
+                            "createdAt",
+                            "updatedAt",
+                            "deletedAt",
+                            "answerSheetS3FileId",
+                        ],
+                    },
                     include: [
                         {
                             model: model.examSetupTypeTermModel,
                             where: { examSetupTypeTermId },
                             as: "examSetupTypeTerm",
-                            attributes: { exclude: ["createdAt", "updatedAt"] }
+                            attributes: { exclude: ["createdAt", "updatedAt"] },
                         },
-                    ]
+                        {
+                            model: model.examScheduleRoomCapacityModel,
+                            as: "roomCapacities",
+                            required: false,
+                            attributes: [
+                                "examScheduleRoomCapacityId",
+                                "classRoomSectionId",
+                                "capacity",
+                                "columns",
+                                "orderKey",
+                            ],
+                            include: [
+                                {
+                                    model: model.classRoomModel,
+                                    as: "classRoom",
+                                    attributes: ["classRoomSectionId", "roomNumber"],
+                                },
+                            ],
+                        },
+                    ],
                 }
             ]
         });

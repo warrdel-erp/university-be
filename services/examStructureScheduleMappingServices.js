@@ -182,6 +182,39 @@ export async function getExamScheduleById(examScheduleId) {
   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
 }
 
+const formatExamScheduleWithRooms = (schedule) => {
+  const roomCapacities = schedule.roomCapacities ?? [];
+  const rooms = roomCapacities
+    .map((assignment) => ({
+      examScheduleRoomCapacityId: assignment.examScheduleRoomCapacityId,
+      classRoomSectionId: assignment.classRoomSectionId,
+      roomNumber: assignment.classRoom?.roomNumber ?? null,
+      capacity: assignment.capacity,
+      columns: assignment.columns,
+      orderKey: assignment.orderKey,
+    }))
+    .sort((a, b) => (a.orderKey ?? 0) - (b.orderKey ?? 0));
+
+  const { roomCapacities: _roomCapacities, ...scheduleDetails } = schedule;
+
+  return {
+    ...scheduleDetails,
+    isRoomAllocated: rooms.length > 0,
+    roomNames: rooms.map((room) => room.roomNumber).filter(Boolean),
+    rooms,
+  };
+};
+
+const formatSubjectWithExamSchedule = (subject) => {
+  const plain = subject.get ? subject.get({ plain: true }) : subject;
+  const schedules = plain.scheduleSubject ?? [];
+
+  return {
+    ...plain,
+    scheduleSubject: schedules.map(formatExamScheduleWithRooms),
+  };
+};
+
 export async function getSubjectsWithExamSchedule(
   examSetupTypeTermId,
   acedmicYearId,
@@ -215,6 +248,6 @@ export async function getSubjectsWithExamSchedule(
   return {
     studentCount: studentList.length,
     studentList,
-    subjects,
+    subjects: subjects.map(formatSubjectWithExamSchedule),
   };
 }

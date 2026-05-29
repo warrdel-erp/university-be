@@ -1173,7 +1173,7 @@
                 }
               ]
             },
-            "description": "**GET /subject/withExamSchedule**\n\nQuery: `examSetupTypeTermId` (required), `sessionId` (optional).\n\nReturns:\n- `studentCount` — same count as `studentList.length`\n- `studentList` — students for the course + term (+ session when provided). Each item: `studentId`, `name`, `courseName`, `termName`, `enrollNumber`, `scholarNumber`, `fatherName`, `email`, `phoneNumber`, `mobileNumber`\n- `subjects[]` — subjects with exam schedule mapping for that term"
+            "description": "**GET /subject/withExamSchedule**\n\nQuery: `examSetupTypeTermId` (required), `sessionId` (optional).\n\nReturns:\n- `studentCount` / `studentList` — enrolled students for course + term\n- `subjects[]` — each subject includes `scheduleSubject[]` (exam schedule rows). Per schedule: `isRoomAllocated` (true when rooms assigned), `roomNames` (e.g. `[\"A-101\",\"B-202\"]`), `rooms` (room assignment details with `roomNumber`, `capacity`, `orderKey`)"
           },
           "response": []
         },
