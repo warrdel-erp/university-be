@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults } from "../../controllers/userController.js";
+import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup } from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
@@ -25,10 +25,28 @@ const saveUserDefaultsSchema = z.object({
     })
 });
 
+const initialSetupSchema = z.object({
+    universityName: z.string().optional(),
+    campusName: z.string().optional(),
+    campusCode: z.string().optional(),
+    instituteName: z.string().optional(),
+    instituteCode: z.string().optional(),
+    userName: z.string().optional(),
+    email: z.string({ required_error: "email is required" }).email("Invalid email format"),
+    password: z.string({ required_error: "password is required" }).min(6, "Password must be at least 6 characters"),
+    phone: z.string().optional(),
+    yearTitle: z.string().optional(),
+    startingDate: z.string().optional(),
+    endingDate: z.string().optional()
+});
+
 // Endpoints -------------------------------
 
 // for first time register
 router.post('/register', register)
+
+// for initial setup of new client
+router.post('/setup', validate({ body: initialSetupSchema }), initialSetup);
 
 // for login
 router.post("/login", login);

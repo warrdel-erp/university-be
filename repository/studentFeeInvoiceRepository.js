@@ -12,7 +12,7 @@ const feeInvoiceItemsInclude = {
     {
       model: model.feeTypeCatalogModel,
       as: "feeTypeCatalog",
-      attributes: ["feeTypeCatalogId", "name", "description", "amount"],
+      attributes: ["feeTypeCatalogId", "name", "ledgerType", "description", "amount"],
     },
   ],
 };
@@ -29,13 +29,6 @@ const feePlanItemInclude = {
       attributes: { exclude: excludeTs },
     },
   ],
-};
-
-const feePaymentsInclude = {
-  model: model.studentFeePaymentModel,
-  as: "feePayments",
-  required: false,
-  attributes: { exclude: excludeTs },
 };
 
 const studentInclude = {
@@ -115,7 +108,6 @@ export async function findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId
       studentInclude,
       feePlanItemInclude,
       feeInvoiceItemsInclude,
-      feePaymentsInclude,
     ],
     transaction,
   });
@@ -125,7 +117,7 @@ export async function findStudentFeeInvoicesByStudentId(studentId, instituteId, 
   const { transaction } = options;
   return model.studentFeeInvoiceModel.findAll({
     where: { studentId, instituteId },
-    include: [feePlanItemInclude, feeInvoiceItemsInclude, feePaymentsInclude],
+    include: [feePlanItemInclude, feeInvoiceItemsInclude],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction,
   });
@@ -151,6 +143,7 @@ export async function findAllStudentFeeInvoicesByInstitute(instituteId, options 
       "dueDate",
       "status",
       "paymentStatus",
+      "paidAmount",
     ],
     include: [
       {
@@ -160,7 +153,6 @@ export async function findAllStudentFeeInvoicesByInstitute(instituteId, options 
         required: true,
       },
       feePlanItemInclude,
-      feePaymentsInclude,
     ],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction,

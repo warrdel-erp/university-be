@@ -10,6 +10,9 @@ import { getEmployeeRolePermissionByUserId } from "../repository/userRolePermiss
 import jwt from "jsonwebtoken";
 import sendEmail from "../utility/sendEmail.js";
 import 'dotenv/config';
+import * as model from '../models/index.js';
+import { PERMISSIONS } from '../const/permissions.js';
+
 
 //register
 
@@ -513,6 +516,162 @@ export async function saveUserDefaults(userId, data) {
     return await registerRepository.updateUser(userId, data);
   } catch (error) {
     console.error('Error in saveUserDefaults service:', error);
+    throw error;
+  }
+}
+
+async function assignNewRolesAndPermissions(userId, transaction) {
+  // Add Role in new user_roles table
+  await model.userRoleModel.create({
+    userId,
+    role: 'ADMIN'
+  }, { transaction });
+
+  // Add all permissions in new user_permissions table
+  const permissionRows = Object.values(PERMISSIONS).map(p => ({
+    userId,
+    permission: p.value
+  }));
+  await model.userPermissionModel.bulkCreate(permissionRows, { transaction });
+}
+
+async function seedLegacyRoleAndPermissions(userId, transaction) {
+  // Get or create the 'ADMIN' role in roleModel
+  let adminRole = await model.roleModel.findOne({ where: { role: 'ADMIN' }, transaction });
+  if (!adminRole) {
+    adminRole = await model.roleModel.create({ role: 'ADMIN' }, { transaction });
+  }
+
+  // Populate permissionModel with all PERMISSIONS values if they don't exist
+  const existingPerms = await model.permissionModel.findAll({ transaction });
+  const existingPermSet = new Set(existingPerms.map(p => p.permission));
+
+  const newPermissionsToInsert = [];
+  for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+    if (!existingPermSet.has(valueObj.value)) {
+      newPermissionsToInsert.push({
+        moduleName: key,
+        permission: valueObj.value
+      });
+    }
+  }
+  if (newPermissionsToInsert.length > 0) {
+    await model.permissionModel.bulkCreate(newPermissionsToInsert, { transaction });
+  }
+
+  // Now populate userRolePermissionModel (the user_role_permission table)
+  const allPermissions = await model.permissionModel.findAll({ transaction });
+  const userRolePermissionRows = allPermissions.map(p => ({
+    userId,
+    roleId: adminRole.roleId,
+    permissionId: p.permissionId
+  }));
+  await model.userRolePermissionModel.bulkCreate(userRolePermissionRows, { transaction });
+}
+
+export async function initialSetup(info) {
+  const {
+    universityName = "Warrdel University",
+    campusName = "Main Campus",
+    campusCode = "MC01",
+    instituteName = "Institute of Technology",
+    instituteCode = "IOT01",
+    userName = "superadmin",
+    email = "admin@warrdel.com",
+    password = "Admin@123",
+    phone = "9999999990",
+    yearTitle = "2026-2027",
+    startingDate = "2026-06-01",
+    endingDate = "2027-05-31"
+  } = info;
+
+  // 1. Check if email already exists
+  const existingEmail = await registerRepository.findEmailByEmail(email);
+  if (existingEmail) {
+    throw new Error("Email already exists");
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 2. Create University
+    const university = await model.universityModel.create({
+      universityName
+    }, { transaction });
+
+    // 3. Hash Password & Create User
+    const hashedPassword = await bcrypt.hashSync(password, salt);
+    const user = await model.userModel.create({
+      userName,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      phone,
+      role: 'ADMIN',
+      defaultRole: 'ADMIN',
+      uniqueId: uuidv4(),
+      status: 'active',
+      universityId: university.universityId
+    }, { transaction });
+
+    // 4. Create Campus
+    const campus = await model.campusModel.create({
+      universityId: university.universityId,
+      campusName,
+      campusCode,
+      createdBy: user.userId
+    }, { transaction });
+
+    // 5. Create Institute
+    const institute = await model.instituteModel.create({
+      campusId: campus.campusId,
+      universityId: university.universityId,
+      instituteName,
+      instituteCode,
+      createdBy: user.userId
+    }, { transaction });
+
+    // 6. Create Academic Year
+    const academicYear = await model.acedmicYearModel.create({
+      yearTitle,
+      startingDate,
+      endingDate,
+      isActive: true,
+      updatedBy: user.userId
+    }, { transaction });
+
+    // 7. Update User Defaults
+    await user.update({
+      defaultInstituteId: institute.instituteId,
+      defaultAcademicYearId: academicYear.acedmicYearId
+    }, { transaction });
+
+    // 8. Assign new roles and permissions
+    await assignNewRolesAndPermissions(user.userId, transaction);
+
+    // 9. Assign legacy role, permissions, and role-permissions mapping
+    await seedLegacyRoleAndPermissions(user.userId, transaction);
+
+    await transaction.commit();
+
+    // Prepare return data (safe)
+    const userData = user.toJSON();
+    delete userData.password;
+    delete userData.dummyPassword;
+
+    return {
+      success: true,
+      message: "Initial client space setup completed successfully",
+      data: {
+        university,
+        campus,
+        institute,
+        academicYear,
+        user: userData
+      }
+    };
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error in initialSetup service:", error);
     throw error;
   }
 }

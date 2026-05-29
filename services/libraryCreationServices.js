@@ -205,34 +205,55 @@ function pickRowDetails(row) {
   };
 }
 
+function collectUniqueInventoryValues(copies, field) {
+  return [
+    ...new Set(
+      copies
+        .map((inv) => inv[field])
+        .filter((value) => value != null && value !== ""),
+    ),
+  ];
+}
+
+function mapInventoryCopiesForList(copies) {
+  return copies.map((inv) => ({
+    inventoryId: inv.inventoryId,
+    accessionNumber: inv.accessionNumber ?? null,
+    billNo: inv.billNo ?? null,
+    billDate: inv.billDate ?? null,
+    status: inv.status ?? null,
+    condition: inv.condition ?? null,
+    aisleDetails: pickAisleDetails(inv.aisleDetails),
+    rackDetails: pickRackDetails(inv.rackDetails),
+    rowDetails: pickRowDetails(inv.rowDetails),
+  }));
+}
+
 function mapBooksToAllBookList(enrichedBooks) {
   return enrichedBooks.map((book) => {
     const copies = book.inventoryCopies ?? [];
     const firstCopy = copies[0] ?? null;
 
-    const accessionNumber = [
-      ...new Set(
-        copies
-          .map((inv) => inv.accessionNumber)
-          .filter((value) => value != null && value !== ""),
-      ),
-    ];
+    const accessionNumber = collectUniqueInventoryValues(copies, "accessionNumber");
+    const billNo = collectUniqueInventoryValues(copies, "billNo");
+    const billDate = collectUniqueInventoryValues(copies, "billDate");
 
     return {
       libraryBookId: book.libraryBookId,
       libraryCreationId: book.libraryCreationId ?? null,
       title: book.title ?? null,
       author: book.authors ?? null,
-      authors: book.authors ?? null,
       categories: book.categories ?? [],
       subjects: book.subjects ?? [],
       accessionNumber,
+      billNo,
+      billDate,
       status: firstCopy?.status ?? null,
       condition: firstCopy?.condition ?? null,
       aisleDetails: pickAisleDetails(firstCopy?.aisleDetails),
       rackDetails: pickRackDetails(firstCopy?.rackDetails),
       rowDetails: pickRowDetails(firstCopy?.rowDetails),
-      inventoryCopies: copies,
+      inventoryCopies: mapInventoryCopiesForList(copies),
     };
   });
 }
@@ -294,6 +315,192 @@ export async function deleteCategory(libraryCategoryId) {
     await transaction.rollback();
     throw error;
   }
+}
+
+function structureAuditFields(userId) {
+  return {
+    createdBy: userId,
+    updatedBy: userId,
+  };
+}
+
+function buildAislePayloads(libraryFloorId, count, nameStart, audit) {
+  return Array.from({ length: count }, (_, index) => {
+    const aisleName = String(nameStart + index);
+    return {
+      libraryFloorId,
+      name: aisleName,
+      description: `aisle ${aisleName}`,
+      ...audit,
+    };
+  });
+}
+
+function buildRackPayloads(aisles, racksPerAisle, audit) {
+  const total = aisles.length * racksPerAisle;
+  const payloads = new Array(total);
+  let offset = 0;
+
+  for (const aisle of aisles) {
+    for (let rackIndex = 1; rackIndex <= racksPerAisle; rackIndex += 1) {
+      const rackName = String(rackIndex);
+      payloads[offset] = {
+        libraryAisleId: aisle.libraryAisleId,
+        name: rackName,
+        description: `aisle ${aisle.name} rack ${rackName}`,
+        ...audit,
+      };
+      offset += 1;
+    }
+  }
+
+  return payloads;
+}
+
+function buildRowPayloads(racks, rowsPerRack, aisleNameByAisleId, audit) {
+  const total = racks.length * rowsPerRack;
+  const payloads = new Array(total);
+  let offset = 0;
+
+  for (const rack of racks) {
+    const aisleName = aisleNameByAisleId.get(rack.libraryAisleId);
+    for (let rowIndex = 1; rowIndex <= rowsPerRack; rowIndex += 1) {
+      const rowName = String(rowIndex);
+      payloads[offset] = {
+        libraryRackId: rack.libraryRackId,
+        name: rowName,
+        description: `aisle ${aisleName} rack ${rack.name} row ${rowName}`,
+        ...audit,
+      };
+      offset += 1;
+    }
+  }
+
+  return payloads;
+}
+
+export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
+  const { aisles, racksPerAisle, rowsPerRack } = body;
+
+  const floor = await libraryStructureRepository.findFloorById(
+    libraryFloorId,
+    user.universityId,
+  );
+
+  if (!floor) {
+    throw httpError("Library floor not found", 404);
+  }
+
+  const audit = structureAuditFields(user.userId);
+  const transaction = await sequelize.transaction();
+
+  try {
+    const maxAisleName =
+      await libraryStructureRepository.getMaxNumericAisleNameByFloorId(
+        libraryFloorId,
+        transaction,
+      );
+    const aisleNameStart = maxAisleName + 1;
+
+    const createdAisles = await libraryStructureRepository.bulkCreateAisles(
+      buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit),
+      transaction,
+    );
+
+    const createdRacks = await libraryStructureRepository.bulkCreateRacks(
+      buildRackPayloads(createdAisles, racksPerAisle, audit),
+      transaction,
+    );
+
+    const aisleNameByAisleId = new Map(
+      createdAisles.map((aisle) => [aisle.libraryAisleId, aisle.name]),
+    );
+    const rowPayloads = buildRowPayloads(
+      createdRacks,
+      rowsPerRack,
+      aisleNameByAisleId,
+      audit,
+    );
+
+    await libraryStructureRepository.bulkCreateRows(rowPayloads, transaction);
+
+    await transaction.commit();
+
+    return {
+      libraryFloorId,
+      aisleNameStart,
+      aisleNameEnd: aisleNameStart + aisles - 1,
+      aislesCreated: aisles,
+      racksCreated: createdRacks.length,
+      rowsCreated: rowPayloads.length,
+      aisles: createdAisles.map((aisle) => ({
+        libraryAisleId: aisle.libraryAisleId,
+        name: aisle.name,
+      })),
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+function sortByNumericName(a, b) {
+  const diff = Number(a.name) - Number(b.name);
+  return Number.isNaN(diff) || diff === 0 ? String(a.name).localeCompare(String(b.name)) : diff;
+}
+
+function formatFloorStructureShelf(row) {
+  return {
+    libraryRowId: row.libraryRowId,
+    name: row.name,
+    description: row.description,
+  };
+}
+
+function formatFloorStructureRack(rack) {
+  const shelves = (rack.rows ?? []).map(formatFloorStructureShelf).sort(sortByNumericName);
+  return {
+    libraryRackId: rack.libraryRackId,
+    name: rack.name,
+    description: rack.description,
+    shelves,
+  };
+}
+
+function formatFloorStructureAisle(aisle) {
+  const racks = (aisle.racks ?? []).map(formatFloorStructureRack).sort(sortByNumericName);
+  return {
+    libraryAisleId: aisle.libraryAisleId,
+    name: aisle.name,
+    description: aisle.description,
+    racks,
+  };
+}
+
+function formatFloorStructureResponse(floor) {
+  const plain = floor.get({ plain: true });
+  const aisles = (plain.aisles ?? []).map(formatFloorStructureAisle).sort(sortByNumericName);
+
+  return {
+    libraryFloorId: plain.libraryFloorId,
+    libraryCreationId: plain.libraryCreationId,
+    name: plain.name,
+    description: plain.description,
+    aisles,
+  };
+}
+
+export async function getFloorStructure(libraryFloorId, user) {
+  const floor = await libraryStructureRepository.findFloorStructureById(
+    libraryFloorId,
+    user.universityId,
+  );
+
+  if (!floor) {
+    throw httpError("Library floor not found", 404);
+  }
+
+  return formatFloorStructureResponse(floor);
 }
 
 export async function addLibrary(body, user) {
@@ -534,18 +741,42 @@ async function enrichBooksWithCategoriesAndSubjects(books) {
 }
 
 export async function getAllBooks(query, user) {
-  const { libraryCreationId, libraryFloorId } = query;
-  const books = await libraryCreationService.getAllBooks(
+  const {
+    libraryCreationId,
+    libraryFloorId,
+    page = 1,
+    limit = 20,
+    search,
+  } = query;
+
+  const safeLimit = Math.min(100, Math.max(1, limit));
+  const safePage = Math.max(1, page);
+  const offset = (safePage - 1) * safeLimit;
+
+  const filters = { search };
+
+  const { total, books } = await libraryCreationService.getAllBooks(
     user.universityId,
     libraryCreationId,
     libraryFloorId,
+    filters,
+    { limit: safeLimit, offset },
   );
 
-  if (!books?.length) return [];
+  if (!books?.length) {
+    return {
+      books: [],
+      pagination: { total: total ?? 0, page: safePage, limit: safeLimit },
+    };
+  }
 
   const enrichedBooks = await enrichBooksWithCategoriesAndSubjects(books);
-  const filtered = filterBooksByFloor(enrichedBooks, libraryFloorId);
-  return mapBooksToAllBookList(filtered);
+  const floorFiltered = filterBooksByFloor(enrichedBooks, libraryFloorId);
+
+  return {
+    books: mapBooksToAllBookList(floorFiltered),
+    pagination: { total, page: safePage, limit: safeLimit },
+  };
 }
 
 export async function getSingleBookDetails(libraryBookId, transaction) {

@@ -107,8 +107,8 @@ export async function addBookWithInventory(req, res) {
 
 export async function getAllBooks(req, res) {
   try {
-    const books = await libraryCreation.getAllBooks(req.query, req.user);
-    return SuccessResponse(res, 200, "Books", books);
+    const result = await libraryCreation.getAllBooks(req.query, req.user);
+    return SuccessResponse(res, 200, "Books", result.books, result.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -172,6 +172,31 @@ export async function getAllIssuedBooks(req, res) {
   try {
     const issuedBooks = await libraryCreation.getAllIssuedBooks();
     return SuccessResponse(res, 200, "Issued books fetched successfully", issuedBooks);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function bulkGenerateFloorStructure(req, res) {
+  try {
+    const result = await libraryCreation.bulkGenerateFloorStructure(
+      req.params.libraryFloorId,
+      req.body,
+      req.user,
+    );
+    return SuccessResponse(res, 201, "Floor structure generated successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFloorStructure(req, res) {
+  try {
+    const result = await libraryCreation.getFloorStructure(
+      req.params.libraryFloorId,
+      req.user,
+    );
+    return SuccessResponse(res, 200, "Floor structure fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

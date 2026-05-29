@@ -1,5 +1,6 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
+import sequelize from '../database/sequelizeConfig.js';
 
 export async function createLibrary(payload, transaction) {
     try {
@@ -117,6 +118,73 @@ export async function updateFloor(libraryFloorId, floorData) {
 export async function deleteFloor(libraryFloorId) {
     const deleted = await model.libraryFloorModel.destroy({ where: { libraryFloorId: libraryFloorId } });
     return deleted > 0;
+}
+
+export async function findFloorById(libraryFloorId, universityId, transaction) {
+    return model.libraryFloorModel.findOne({
+        where: { libraryFloorId, universityId },
+        attributes: ["libraryFloorId", "libraryCreationId", "campusId", "instituteId", "universityId"],
+        transaction,
+    });
+}
+
+export async function findFloorStructureById(libraryFloorId, universityId) {
+    return model.libraryFloorModel.findOne({
+        attributes: ["libraryFloorId", "libraryCreationId", "name", "description"],
+        where: { libraryFloorId, universityId },
+        include: [
+            {
+                model: model.libraryAisleModel,
+                as: "aisles",
+                attributes: ["libraryAisleId", "libraryFloorId", "name", "description"],
+                required: false,
+                include: [
+                    {
+                        model: model.libraryRackModel,
+                        as: "racks",
+                        attributes: ["libraryRackId", "libraryAisleId", "name", "description"],
+                        required: false,
+                        include: [
+                            {
+                                model: model.libraryRowModel,
+                                as: "rows",
+                                attributes: ["libraryRowId", "libraryRackId", "name", "description"],
+                                required: false,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    });
+}
+
+export async function getMaxNumericAisleNameByFloorId(libraryFloorId, transaction) {
+    const row = await model.libraryAisleModel.findOne({
+        attributes: [
+          [
+            sequelize.literal("MAX(CAST(`name` AS UNSIGNED))"),
+            "maxName",
+          ],
+        ],
+        where: { libraryFloorId },
+        transaction,
+        raw: true,
+      });
+    const maxName = Number(row?.maxName);
+    return Number.isNaN(maxName) ? 0 : maxName;
+}
+
+export async function bulkCreateAisles(rows, transaction) {
+    return model.libraryAisleModel.bulkCreate(rows, { transaction });
+}
+
+export async function bulkCreateRacks(rows, transaction) {
+    return model.libraryRackModel.bulkCreate(rows, { transaction });
+}
+
+export async function bulkCreateRows(rows, transaction) {
+    return model.libraryRowModel.bulkCreate(rows, { transaction });
 }
 
 // ------------------------ AISLE ------------------------

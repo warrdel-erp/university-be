@@ -46,13 +46,15 @@ export const validate = (schemas) => (req, res, next) => {
         issues = [];
       }
 
+      const errors = issues.map((err) => ({
+        path: Array.isArray(err.path) ? err.path.join(".") : "unknown",
+        message: err.message,
+      }));
+
       return res.status(400).json({
         status: "error",
-        message: "Validation failed",
-        errors: issues.map((err) => ({
-          path: Array.isArray(err.path) ? err.path.join(".") : "unknown",
-          message: err.message,
-        })),
+        message: errors[0]?.message ?? "Validation failed",
+        errors,
       });
     }
 

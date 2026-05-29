@@ -1,6 +1,19 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 
+export async function getCampusIdByInstituteId(instituteId) {
+    const institute = await model.instituteModel.findOne({
+        where: { instituteId },
+        attributes: ['campusId'],
+    });
+
+    if (!institute?.campusId) {
+        throw new Error('Campus not found for user default institute');
+    }
+
+    return institute.campusId;
+}
+
 export async function addbuilding(buildingData) {    
     try {
         const result = await model.buildingModel.create(buildingData);
@@ -67,4 +80,49 @@ export async function updatebuilding(buildingId, buildingData) {
 export async function deletebuilding(buildingId) {
     const deleted = await model.buildingModel.destroy({ where: { buildingId: buildingId } });
     return deleted > 0;
+}
+
+
+
+
+export async function getAllbuildingNested(universityId, buildingType) {
+    try {
+        const campuses = await model.campusModel.findAll({
+            where: { universityId },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        });
+        const campusIds = campuses.map((campus) => campus.campusId);
+
+        if (!campusIds.length) {
+            return [];
+        }
+
+        const building = await model.buildingModel.findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                campusId: { [Op.in]: campusIds },
+                ...(buildingType && { buildingType }),
+            },
+            include: [
+                {
+                    model: model.floorModel,
+                    as: "floorBuilding",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    required: false,
+                    include: [
+                        {
+                            model: model.classRoomModel,
+                            as: "roomFloor",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            required: false,
+                        },
+                    ],
+                },
+            ],
+        });
+        return building;
+    } catch (error) {
+        console.error("Error fetching nested building details:", error);
+        throw error;
+    }
 }

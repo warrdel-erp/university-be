@@ -116,20 +116,24 @@ University
 - `fee_new_invoice` - New invoice system
 - `fee_type_group` - Fee type grouping
 
-### 7. **Library Management** (15 tables)
+### 7. **Library Management** (13 tables)
 - `library_creation` - Library setup
 - `library_authority` - Library authorities
-- `library_add_item` - Library items/books
-- `library_member` - Library members
-- `library_issue_book` - Book issue records
-- `library_author_details` - Author information
-- `library_multiple_book_details` - Multiple book details
 - `library_floor` - Library floors
 - `library_aisle` - Library aisles
 - `library_rack` - Library racks
 - `library_row` - Library rows
 - `library_book` - Book catalog
-- `library_book_inventory` - Book inventory
+- `library_category` - Book categories
+- `library_book_category_mappings` - Book–category links
+- `library_book_subject_mappings` - Book–subject links
+- `library_book_inventory` - Physical copies (accession, location, status)
+- `library_issue_book_transaction` - Issue transaction (member, `issue_date`, `due_date`)
+- `library_book_issue_inventory_item` - Copies per transaction (`return_date` NULL = out)
+
+**Book issue/return flow:** Create transaction → child rows with `return_date` NULL → `library_book_inventory.status` = `issued`. Return via `PATCH /libraryIssueBook/return` sets item `return_date` and inventory `status` = `available`. Active issue = item with `return_date` IS NULL.
+
+**Removed (legacy):** `library_add_item`, `library_member`, `library_issue_book`, `library_author_details`, `library_multiple_book_details` — dropped by migration `20260530140000-drop-legacy-library-old-flow-tables.cjs`.
 
 ### 8. **Timetable & Attendance** (6 tables)
 - `time_table_name` - Timetable names
@@ -282,17 +286,17 @@ University
 ### Library
 65. `library_creation`
 66. `library_authority`
-67. `library_add_item`
-68. `library_member`
-69. `library_issue_book`
-70. `library_author_details`
-71. `library_multiple_book_details`
-72. `library_floor`
-73. `library_aisle`
-74. `library_rack`
-75. `library_row`
-76. `library_book`
-77. `library_book_inventory`
+67. `library_floor`
+68. `library_aisle`
+69. `library_rack`
+70. `library_row`
+71. `library_book`
+72. `library_category`
+73. `library_book_category_mappings`
+74. `library_book_subject_mappings`
+75. `library_book_inventory`
+76. `library_issue_book_transaction`
+77. `library_book_issue_inventory_item`
 
 ### Timetable & Attendance
 78. `time_table_name`
@@ -400,7 +404,6 @@ student (1) ──→ (M) student_meta_data
 student (1) ──→ (M) attendance
 student (1) ──→ (M) exam_attendance
 student (1) ──→ (M) fee_invoice
-student (1) ──→ (M) library_member
 student (1) ──→ (M) library_book_inventory
 ```
 
@@ -428,7 +431,6 @@ employee (1) ──→ (M) teacher_section_mapping
 employee (1) ──→ (M) leave_request
 employee (1) ──→ (M) schedule_assign
 employee (1) ──→ (M) teacher_attendence
-employee (1) ──→ (M) library_member
 employee (1) ──→ (M) library_book_inventory
 ```
 
@@ -450,16 +452,25 @@ fee_type (1) ──→ (M) fee_type_group
 
 ```
 library_creation (1) ──→ (M) library_authority
-library_creation (1) ──→ (M) library_member
 library_creation (1) ──→ (M) library_floor
 library_creation (1) ──→ (M) library_book
 library_floor (1) ──→ (M) library_aisle
 library_aisle (1) ──→ (M) library_rack
 library_rack (1) ──→ (M) library_row
 library_book (1) ──→ (M) library_book_inventory
-library_member (1) ──→ (M) library_issue_book
-library_add_item (1) ──→ (M) library_issue_book
+library_book (1) ──→ (M) library_book_category_mappings
+library_book (1) ──→ (M) library_book_subject_mappings
+library_category (1) ──→ (M) library_book_category_mappings
+library_issue_book_transaction (1) ──→ (M) library_book_issue_inventory_item
+library_book_inventory (1) ──→ (M) library_book_issue_inventory_item
+library_aisle (1) ──→ (M) library_book_inventory
+library_rack (1) ──→ (M) library_book_inventory
+library_row (1) ──→ (M) library_book_inventory
+student (1) ──→ (M) library_book_inventory
+employee (1) ──→ (M) library_book_inventory
 ```
+
+`library_issue_book_transaction.member_id` + `member_type` identify the borrower: `member_id` → `students.student_id` when `member_type` = STUDENT, or `employee.employee_id` when `member_type` = TEACHER (polymorphic; enforced in application, not a single DB FK).
 
 ### Timetable Relationships
 

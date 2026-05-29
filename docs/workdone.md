@@ -62,3 +62,34 @@
 9. library book copies shown in popup with basic actions.
 10. Problem in first time hall ticket view.
 
+---
+
+1. change add fee invoice UI.
+2. issue book UI change.
+3.
+
+---
+
+1. In issue book add date and issued by details.
+2. hall ticket generation Student count.
+3. nested library data (still have some issues).
+4. payment accept UI change for multiple invoices.
+5. pagination from BE in books and some other modules.
+6. bulk generation of library structure.
+
+---
+
+1. Show draft and published status of time table routine.
+2. Organogram: Export to pdf functionality.
+3. Master Data add new item issue.
+4. Create campus giving error even all fields are filled.
+5. Dashboard scroll reset issue.
+6. Library Floor show structure in nested Tables.
+7. Payment accept UI.
+8. Add-edit session data persisting issue.
+9. Bulk creation of library structure.
+10. Student invoice Payment
+11. Nested structure in UI table of building
+12. Added Building Type (Academics, Residential).
+13. Ledger type in Create fee type.
+14. Asset management Basic BE setup.

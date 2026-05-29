@@ -164,6 +164,675 @@
       ]
     },
     {
+      "name": "infrastructure",
+      "description": "Campus infrastructure: **Building → Floor → Class room** (`/building`, `/floor`, `/classRoom`). Auth: Bearer `{{token}}`. Use **get all nested** for the full tree in one call; use flat GETs on `/floor` and `/classRoom` when you only need one level.",
+      "variable": [
+        {
+          "key": "building_id",
+          "value": "1",
+          "type": "string",
+          "description": "building.buildingId — set from create or nested response"
+        },
+        {
+          "key": "floor_id",
+          "value": "1",
+          "type": "string",
+          "description": "floor.floorId — set from floor create or nested floorBuilding[].floorId"
+        },
+        {
+          "key": "class_room_section_id",
+          "value": "1",
+          "type": "string",
+          "description": "class_room_section.classRoomSectionId"
+        },
+        {
+          "key": "campus_id",
+          "value": "1",
+          "type": "string",
+          "description": "campus.campusId for building create"
+        }
+      ],
+      "item": [
+        {
+          "name": "building",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Block\",\n  \"buildingType\": \"Academics\",\n  \"description\": \"Central academic block\",\n  \"openingTime\": \"08:00:00\",\n  \"closingTime\": \"18:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**POST /building**\n\nCreates a building under the logged-in user's campus (resolved from `defaultInstituteId` saved at login).\n\n**Required body:** `name`, `buildingType`, `description`, `openingTime`, `closingTime`\n\n**buildingType** (enum): `Academics` | `Residential`"
+              },
+              "response": [
+                {
+                  "name": "201 Created — example",
+                  "status": "Created",
+                  "code": 201,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "{\n  \"message\": \"Data added successfully\",\n  \"building\": {\n    \"buildingId\": 1,\n    \"campusId\": 1,\n    \"name\": \"Main Block\",\n    \"buildingType\": \"Academics\",\n    \"description\": \"Central academic block\",\n    \"openingTime\": \"08:00:00\",\n    \"closingTime\": \"18:00:00\"\n  }\n}"
+                }
+              ]
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**GET /building**\n\nFlat list of buildings with nested `campusbuilding` (campus details). Does not include floors or rooms."
+              },
+              "response": []
+            },
+            {
+              "name": "get all nested",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building/allNested?buildingType=Academics",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building",
+                    "allNested"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingType",
+                      "value": "Academics",
+                      "description": "Optional — `Academics` | `Residential`; omit for all building types"
+                    }
+                  ]
+                },
+                "description": "**GET /building/allNested**\n\nReturns buildings for the authenticated user's university with full infrastructure nesting:\n\n**Building** → `floorBuilding[]` (floors) → `roomFloor[]` (class rooms)\n\n- Scoped by `req.user.universityId` via campus membership\n- Audit fields excluded\n\n**Query (optional)**\n| Key | Values |\n|-----|--------|\n| `buildingType` | `Academics` \\| `Residential` |\n\n**Examples**\n- `GET .../building/allNested` — all types\n- `GET .../building/allNested?buildingType=Academics` — academic buildings and their floors/rooms\n- `GET .../building/allNested?buildingType=Residential` — residential buildings and their floors/rooms"
+              },
+              "response": [
+                {
+                  "name": "200 OK — example",
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "json",
+                  "header": [],
+                  "body": "[\n  {\n    \"buildingId\": 1,\n    \"campusId\": 2,\n    \"name\": \"Main Block\",\n    \"buildingType\": \"Academics\",\n    \"description\": \"Central academic block\",\n    \"openingTime\": \"08:00:00\",\n    \"closingTime\": \"18:00:00\",\n    \"floorBuilding\": [\n      {\n        \"floorId\": 1,\n        \"buildingId\": 1,\n        \"name\": \"Ground Floor\",\n        \"description\": null,\n        \"roomFloor\": [\n          {\n            \"classRoomSectionId\": 10,\n            \"floorId\": 1,\n            \"roomNumber\": \"101\",\n            \"capacity\": 40,\n            \"examCapacity\": 30,\n            \"examCapacityColumns\": 5\n          }\n        ]\n      }\n    ]\n  }\n]"
+                }
+              ]
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building/single?buildingId={{building_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingId",
+                      "value": "{{building_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /building/single?buildingId=**\n\nSingle building with `campusbuilding` include."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"buildingId\": {{building_id}},\n  \"name\": \"Main Block — North Wing\",\n  \"buildingType\": \"Residential\",\n  \"description\": \"Updated description\",\n  \"openingTime\": \"07:30:00\",\n  \"closingTime\": \"19:00:00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/building",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ]
+                },
+                "description": "**PATCH /building**\n\n**Required body:** `buildingId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/building?buildingId={{building_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "building"
+                  ],
+                  "query": [
+                    {
+                      "key": "buildingId",
+                      "value": "{{building_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /building?buildingId=**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "floor",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ground Floor\",\n  \"buildingId\": {{building_id}},\n  \"description\": \"Ground level\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**POST /floor**\n\n**Required body:** `name`, `buildingId`"
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**GET /floor**\n\nFlat list of floors with parent `floorBuilding` (building)."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor/single?floorId={{floor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "floorId",
+                      "value": "{{floor_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /floor/single?floorId=**"
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"floorId\": {{floor_id}},\n  \"name\": \"First Floor\",\n  \"description\": \"Updated\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/floor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ]
+                },
+                "description": "**PATCH /floor**\n\n**Required body:** `floorId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/floor?floorId={{floor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "floor"
+                  ],
+                  "query": [
+                    {
+                      "key": "floorId",
+                      "value": "{{floor_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /floor?floorId=**"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "class room",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"roomNumber\": \"101\",\n  \"capacity\": 40,\n  \"floorId\": {{floor_id}},\n  \"examCapacity\": 30,\n  \"examCapacityColumns\": 5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**POST /classRoom**\n\n**Required body:** `roomNumber`, `capacity`, `floorId`\n\n**Optional:** `examCapacity`, `examCapacityColumns` (nullable numbers)"
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**GET /classRoom**\n\nFlat list with `roomFloor` → `floorBuilding` includes."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom/single?classRoomSectionId={{class_room_section_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "classRoomSectionId",
+                      "value": "{{class_room_section_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /classRoom/single?classRoomSectionId=**"
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"classRoomSectionId\": {{class_room_section_id}},\n  \"examCapacity\": 34,\n  \"examCapacityColumns\": 3\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/classRoom",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ]
+                },
+                "description": "**PATCH /classRoom**\n\n**Required body:** `classRoomSectionId`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/classRoom?classRoomSectionId={{class_room_section_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "classRoom"
+                  ],
+                  "query": [
+                    {
+                      "key": "classRoomSectionId",
+                      "value": "{{class_room_section_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /classRoom?classRoomSectionId=**"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "sessions",
       "item": [
         {
@@ -4133,47 +4802,6 @@
       ]
     },
     {
-      "name": "class room",
-      "item": [
-        {
-          "name": "update",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"classRoomSectionId\": 6,\n    \"examCapacity\": 34,\n    \"examCapacityColumns\": 3\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/classRoom",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "classRoom"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
       "name": "answer sheet qr",
       "description": "Answer sheet QR APIs. Folder variables use `answersheetqr_*` prefix. Auth uses global `{{token}}` and `{{baseurl}}`.",
       "variable": [
@@ -4800,7 +5428,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library APIs under `/libraryCreation` (test in order: library → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
+      "description": "Library APIs under `/libraryCreation` (test in order: library → get single library (set `libraryFloor_id`) → floor structure POST/GET → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -4950,6 +5578,95 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"libraryCreationId\": 25,\n  \"name\": \"Central Library\",\n  \"floors\": [\n    { \"libraryFloorId\": 1, \"name\": \"Ground Floor\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "bulk generate floor structure",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aisles\": 5,\n  \"racksPerAisle\": 10,\n  \"rowsPerRack\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/floor/{{libraryFloor_id}}/structure",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "floor",
+                "{{libraryFloor_id}}",
+                "structure"
+              ]
+            },
+            "description": "**POST /libraryCreation/floor/:libraryFloorId/structure**\n\nBulk-creates aisles, racks, and rows (shelves) for a floor in one transaction.\n\n- **Aisle** `name` continues from the highest existing numeric aisle on the floor (e.g. day 1: 1–5, day 2 with `aisles: 2` → 6–7).\n- **Rack** / **row** names start at `1` within each new aisle/rack.\n- **description** is auto-set: `aisle 1`, `aisle 1 rack 2`, `aisle 1 rack 2 row 2`.\n\n**Body:** `aisles`, `racksPerAisle`, `rowsPerRack` (all integers ≥ 1).\n\nSet `libraryFloor_id` from **get single library** `floors[].libraryFloorId`."
+          },
+          "response": [
+            {
+              "name": "201 Created — example",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Floor structure generated successfully\",\n  \"data\": {\n    \"libraryFloorId\": 1,\n    \"aisleNameStart\": 1,\n    \"aisleNameEnd\": 5,\n    \"aislesCreated\": 5,\n    \"racksCreated\": 50,\n    \"rowsCreated\": 300,\n    \"aisles\": [\n      { \"libraryAisleId\": 1, \"name\": \"1\" },\n      { \"libraryAisleId\": 5, \"name\": \"5\" }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get floor structure",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/floor/{{libraryFloor_id}}/structure",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "floor",
+                "{{libraryFloor_id}}",
+                "structure"
+              ]
+            },
+            "description": "**GET /libraryCreation/floor/:libraryFloorId/structure**\n\nReturns nested floor layout: **aisles → racks → shelves** (rows). Sorted numerically by `name`. Includes `description` on each level."
+          },
+          "response": [
+            {
+              "name": "200 OK — example",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Floor structure fetched successfully\",\n  \"data\": {\n    \"libraryFloorId\": 1,\n    \"libraryCreationId\": 25,\n    \"name\": \"Ground Floor\",\n    \"description\": null,\n    \"aisles\": [\n      {\n        \"libraryAisleId\": 1,\n        \"name\": \"1\",\n        \"description\": \"aisle 1\",\n        \"racks\": [\n          {\n            \"libraryRackId\": 1,\n            \"name\": \"1\",\n            \"description\": \"aisle 1 rack 1\",\n            \"shelves\": [\n              {\n                \"libraryRowId\": 1,\n                \"name\": \"1\",\n                \"description\": \"aisle 1 rack 1 row 1\"\n              }\n            ]\n          }\n        ]\n      }\n    ]\n  }\n}"
             }
           ]
         },
@@ -5208,7 +5925,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20",
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20&search=",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5220,68 +5937,32 @@
                 {
                   "key": "libraryCreationId",
                   "value": "{{libraryCreation_id}}",
-                  "description": "Required"
+                  "description": "Required — library creation ID"
                 },
                 {
                   "key": "libraryFloorId",
                   "value": "{{libraryFloor_id}}",
-                  "description": "Required"
+                  "description": "Optional — filter inventory by floor; omit to list all books for libraryCreationId",
+                  "disabled": true
                 },
                 {
                   "key": "page",
                   "value": "1",
-                  "description": "Optional, default 1"
+                  "description": "Optional — page number (default 1)"
                 },
                 {
                   "key": "limit",
                   "value": "20",
-                  "description": "Optional, default 20, max 100"
+                  "description": "Optional — page size (default 20, max 100)"
                 },
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Optional — partial match on title, subtitle, authors, isbn, publisher, keywords",
-                  "disabled": true
-                },
-                {
-                  "key": "title",
-                  "value": "",
-                  "description": "Optional — partial match on book title",
-                  "disabled": true
-                },
-                {
-                  "key": "authors",
-                  "value": "",
-                  "description": "Optional — partial match on authors",
-                  "disabled": true
-                },
-                {
-                  "key": "isbn",
-                  "value": "",
-                  "description": "Optional — partial match on ISBN",
-                  "disabled": true
-                },
-                {
-                  "key": "publisher",
-                  "value": "",
-                  "description": "Optional — partial match on publisher",
-                  "disabled": true
-                },
-                {
-                  "key": "accessionNumber",
-                  "value": "",
-                  "description": "Optional — partial match on inventory accession number",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "available",
-                  "description": "Optional — exact: available | issued",
-                  "disabled": true
+                  "description": "Single search — title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
                 }
               ]
             },
-            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list for a library floor. Sorted by `libraryBookId` ASC (page 1 → ids 1–20 when limit=20).\n\n**Required query**\n| Key | Type |\n|-----|------|\n| `libraryCreationId` | number |\n| `libraryFloorId` | number |\n\n**Pagination (optional)**\n| Key | Default | Max |\n|-----|---------|-----|\n| `page` | 1 | — |\n| `limit` | 20 | 100 |\n\n**Search filters (optional, partial match unless noted)**\n| Key | Searches |\n|-----|----------|\n| `search` | title, subtitle, authors, isbn, publisher, keywords |\n| `title` | book title |\n| `authors` | authors |\n| `isbn` | ISBN |\n| `publisher` | publisher |\n| `accessionNumber` | inventory accession number |\n| `status` | `available` or `issued` (exact) |\n\nCombine filters with AND. Enable disabled query params in Postman to test search.\n\n**Example**\n`GET .../allBook?libraryCreationId=1&libraryFloorId=1&page=1&limit=20&search=design`\n\n**Success**\n```json\n{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}\n```"
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | — | Library ID |\n| `libraryFloorId` | No | — | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | — | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
           },
           "response": [
             {
@@ -5290,7 +5971,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"authors\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"billNo\": [\"BILL-2024-01\"],\n      \"billDate\": [\"2024-01-15\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 81,\n          \"accessionNumber\": \"ACC-1001\",\n          \"billNo\": \"BILL-2024-01\",\n          \"billDate\": \"2024-01-15\",\n          \"status\": \"available\",\n          \"condition\": \"Good\",\n          \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n          \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n          \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
             },
             {
               "name": "200 OK — with search",
@@ -5298,7 +5979,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"authors\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": []\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 42,\n      \"libraryCreationId\": 1,\n      \"title\": \"Interior Design Basics\",\n      \"author\": \"Jane Doe\",\n      \"categories\": [],\n      \"subjects\": [],\n      \"accessionNumber\": [\"2036\"],\n      \"billNo\": [],\n      \"billDate\": [],\n      \"status\": \"available\",\n      \"condition\": null,\n      \"aisleDetails\": null,\n      \"rackDetails\": null,\n      \"rowDetails\": null,\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 120,\n          \"accessionNumber\": \"2036\",\n          \"billNo\": null,\n          \"billDate\": null,\n          \"status\": \"available\",\n          \"condition\": null,\n          \"aisleDetails\": null,\n          \"rackDetails\": null,\n          \"rowDetails\": null\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 12,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 1\n  }\n}"
             }
           ]
         },
@@ -5583,234 +6264,61 @@
       ]
     },
     {
-      "name": "library item",
-      "description": "Library add-item APIs under `/libraryItem` (`library_add_item` table). Used by member book-issue (`libraryAddItemId`). Test order: add item → get all → get by library → update → delete. `genre`, `aisle`, `shelf` are `employee_code_master_type_id` values. Auth: Bearer {{token}}.",
+      "name": "library issue book",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n\nAuth: Bearer {{token}}",
       "variable": [
         {
-          "key": "libraryAddItem_id",
+          "key": "libraryIssueBookTransaction_id",
           "value": "1",
           "type": "string"
         },
         {
-          "key": "libraryItem_genre_id",
+          "key": "member_id",
           "value": "1",
           "type": "string"
         },
         {
-          "key": "libraryItem_aisle_id",
+          "key": "inventory_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "inventory_id_2",
           "value": "2",
           "type": "string"
         },
         {
-          "key": "libraryItem_shelf_id",
-          "value": "3",
+          "key": "libraryBookIssueInventoryItem_id",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "page",
+          "value": "1",
+          "type": "string"
+        },
+        {
+          "key": "limit",
+          "value": "20",
+          "type": "string"
+        },
+        {
+          "key": "search",
+          "value": "",
           "type": "string"
         }
       ],
       "item": [
         {
-          "name": "add library item",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Introduction to Algorithms\",\n  \"author\": \"Thomas H. Cormen\",\n  \"publisher\": \"MIT Press\",\n  \"genre\": {{libraryItem_genre_id}},\n  \"aisle\": {{libraryItem_aisle_id}},\n  \"shelf\": {{libraryItem_shelf_id}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**POST /libraryItem**\n\nCreates a row in `library_add_item`.\n\n| Field | Required |\n|-------|----------|\n| `libraryCreationId` | Yes |\n| `publisher` | Yes |\n| `genre`, `aisle`, `shelf` | Yes — `employee_code_master_type_id` |\n| `name`, `author` | No |"
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Library item added successfully!\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "get all library items",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**GET /libraryItem**\n\nReturns all `library_add_item` rows for the authenticated user's university (includes genre/aisle/shelf code master details)."
-          },
-          "response": []
-        },
-        {
-          "name": "get items by library",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem/single?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem", "single"],
-              "query": [
-                {
-                  "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}"
-                }
-              ]
-            },
-            "description": "**GET /libraryItem/single?libraryCreationId=**\n\nReturns all add-items for one library."
-          },
-          "response": []
-        },
-        {
-          "name": "update library item",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"libraryAddItemId\": {{libraryAddItem_id}},\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"name\": \"Introduction to Algorithms - 3rd Edition\",\n  \"author\": \"Thomas H. Cormen\",\n  \"publisher\": \"MIT Press\",\n  \"genre\": {{libraryItem_genre_id}},\n  \"aisle\": {{libraryItem_aisle_id}},\n  \"shelf\": {{libraryItem_shelf_id}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"]
-            },
-            "description": "**PATCH /libraryItem**\n\nRequires `libraryAddItemId` and `libraryCreationId` in body."
-          },
-          "response": []
-        },
-        {
-          "name": "delete library item",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryItem?libraryAddItemId={{libraryAddItem_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryItem"],
-              "query": [
-                {
-                  "key": "libraryAddItemId",
-                  "value": "{{libraryAddItem_id}}"
-                }
-              ]
-            },
-            "description": "**DELETE /libraryItem?libraryAddItemId=**\n\nSoft-deletes the add-item row."
-          },
-          "response": [
-            {
-              "name": "200 OK — example",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Delete successful for library creation ID 12\"\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "library member",
-      "description": "Library member & issue APIs under `/libraryMember`.\n\n**Test order:** add member → book issue → getAllIssueBook → memberBook → updateStatusBook → delete issued book.\n\n**POST/PATCH member:** One request body shows all payload types — keep **one** JSON object active; comment out the other variants (Postman JSON with `//` comments).\n\n**Book issue:** `libraryBookId` + `libraryMemberId` + dates required; `libraryAddItemId` optional. `issuedBy` / `receivedBy` optional — default to token `userName`. On return (`status: Returned`), `receivedBy` is set.\n\n**Status enum:** Issued | Returned | Renewed | Overdue\n\nAuth: Bearer {{token}}",
-      "variable": [
-        {
-          "key": "libraryMember_id",
-          "value": "1",
-          "type": "string"
-        },
-        {
-          "key": "libraryIssueBook_id",
-          "value": "1",
-          "type": "string"
-        },
-        {
-          "key": "libraryAddItem_id",
-          "value": "1",
-          "type": "string"
-        }
-      ],
-      "item": [
-        {
-          "name": "add member",
+          "name": "create issue transaction",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "const res = pm.response.json();",
-                  "const id = res?.data?.libraryMemberId ?? res?.data?.library_member_id;",
-                  "if (id) {",
-                  "  pm.collectionVariables.set('libraryMember_id', String(id));",
-                  "}"
+                  "const id = res?.data?.libraryIssueBookTransactionId ?? res?.data?.library_issue_book_transaction_id;",
+                  "if (id) pm.collectionVariables.set('libraryIssueBookTransaction_id', String(id));"
                 ],
                 "type": "text/javascript"
               }
@@ -5831,7 +6339,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — student member (active)\n{\n  \"libraryCreationId\": {{libraryCreation_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — employee member\n// {\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
+              "raw": "{\n  \"memberId\": {{member_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-27\",\n  \"dueDate\": \"2026-06-10\",\n  \"inventoryItems\": [\n    { \"inventoryId\": {{inventory_id}} },\n    { \"inventoryId\": {{inventory_id_2}} }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5839,16 +6347,16 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryIssueBook",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
+              "path": ["libraryIssueBook"]
             },
-            "description": "**POST /libraryMember**\n\n| Field | Student | Employee |\n|-------|---------|----------|\n| `libraryCreationId` | Required | Required |\n| `memberType` | `\"student\"` | `\"employee\"` |\n| `studentId` | Required | Omit |\n| `employeeId` | Omit | Required |\n\nDo not send `employeeId: 0` for students — omit the field. Body includes Payload A (student) and Payload B (employee) as comments; enable only one."
+            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (`returnDate` null). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
           },
           "response": []
         },
         {
-          "name": "get all members",
+          "name": "get all issue transactions",
           "request": {
             "method": "GET",
             "header": [],
@@ -5863,36 +6371,51 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryIssueBook?page={{page}}&limit={{limit}}&search={{search}}",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "get members by library",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryMember/single?libraryCreationId={{libraryCreation_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryMember", "single"],
+              "path": ["libraryIssueBook"],
               "query": [
                 {
-                  "key": "libraryCreationId",
-                  "value": "{{libraryCreation_id}}"
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                }
+              ]
+            },
+            "description": "**GET /libraryIssueBook**\n\nList issue transactions with pagination and common search.\n\n### Params type (frontend)\n\n```ts\ntype GetAllIssueTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // max 100\n  search?: string; // optional common search\n};\n```\n\n### Notes\n- Send params in query string (no request body)\n- `search` works across member/date/book related fields"
+          },
+          "response": []
+        },
+        {
+          "name": "get issue transaction by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/single?libraryIssueBookTransactionId={{libraryIssueBookTransaction_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryIssueBook", "single"],
+              "query": [
+                {
+                  "key": "libraryIssueBookTransactionId",
+                  "value": "{{libraryIssueBookTransaction_id}}"
                 }
               ]
             }
@@ -5900,7 +6423,7 @@
           "response": []
         },
         {
-          "name": "update member",
+          "name": "update issue transaction",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -5916,7 +6439,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — update student member (active)\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"memberType\": \"student\",\n  \"studentId\": 1660\n}\n\n// Payload B — update employee member\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }\n\n// Payload C — change type to employee (keep same libraryMemberId)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"memberType\": \"employee\",\n//   \"employeeId\": 101\n// }",
+              "raw": "{\n  \"libraryIssueBookTransactionId\": {{libraryIssueBookTransaction_id}},\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": {{libraryBookIssueInventoryItem_id}}, \"returnDate\": \"2026-06-02\" }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5924,219 +6447,19 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}/libraryMember",
+              "raw": "{{baseurl}}/libraryIssueBook",
               "host": ["{{baseurl}}"],
-              "path": ["libraryMember"]
+              "path": ["libraryIssueBook"]
             },
-            "description": "**PATCH /libraryMember**\n\nRequired: `libraryMemberId`, `memberType`, and matching id (`studentId` or `employeeId`). Same rules as POST — one variant active in body."
+            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
           },
           "response": []
-        },
-        {
-          "name": "delete member",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseurl}}/libraryMember?libraryMemberId={{libraryMember_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryMember"],
-              "query": [
-                {
-                  "key": "libraryMemberId",
-                  "value": "{{libraryMember_id}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "book issue",
-          "description": "Issue book flow. **issue book** request contains all payload variants — keep one JSON object active.",
-          "item": [
-            {
-              "name": "issue book",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const res = pm.response.json();",
-                      "const id = res?.data?.libraryIssueBookId ?? res?.data?.library_issue_book_id;",
-                      "if (id) {",
-                      "  pm.collectionVariables.set('libraryIssueBook_id', String(id));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — book only (no libraryAddItemId) — active\n{\n  \"libraryMemberId\": {{libraryMember_id}},\n  \"libraryBookId\": {{libraryBook_id}},\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\"\n}\n\n// Payload B — full (add item + codes + issuedBy / receivedBy)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"libraryAddItemId\": {{libraryAddItem_id}},\n//   \"libraryCreationId\": {{libraryCreation_id}},\n//   \"genre\": {{libraryItem_genre_id}},\n//   \"aisle\": {{libraryItem_aisle_id}},\n//   \"shelf\": {{libraryItem_shelf_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }\n\n// Payload C — book only + issuedBy / receivedBy (omit to use token userName)\n// {\n//   \"libraryMemberId\": {{libraryMember_id}},\n//   \"libraryBookId\": {{libraryBook_id}},\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"receivedBy\": \"Admin User\"\n// }",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/bookIssue",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "bookIssue"]
-                },
-                "description": "**POST /libraryMember/bookIssue**\n\n| Field | Required |\n|-------|----------|\n| `libraryMemberId` | Yes |\n| `libraryBookId` | Yes |\n| `issueDate`, `dueDate` | Yes |\n| `libraryAddItemId` | Optional |\n| `libraryCreationId`, `genre`, `aisle`, `shelf` | Optional |\n| `issuedBy` | Optional — defaults to token `userName` |\n| `receivedBy` | Optional — defaults to token `userName` (same as `issuedBy`) |\n\nBody: Payload A (minimal), B (full), C (minimal + issuedBy/receivedBy). Saves `libraryIssueBook_id`."
-              },
-              "response": []
-            },
-            {
-              "name": "get all issued books",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/getAllIssueBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "getAllIssueBook"]
-                },
-                "description": "**GET /libraryMember/getAllIssueBook**\n\nReturns issue row with `issuedBy`, `receivedBy`, dates, `status`, nested `memberBookIssue`, `addItemBookIssue` or `libraryBookIssue`, `userBookIssue`."
-              },
-              "response": []
-            },
-            {
-              "name": "get books by member",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/memberBook?libraryMemberId={{libraryMember_id}}",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "memberBook"],
-                  "query": [
-                    {
-                      "key": "libraryMemberId",
-                      "value": "{{libraryMember_id}}"
-                    }
-                  ]
-                },
-                "description": "**GET /libraryMember/memberBook?libraryMemberId=**\n\n**Required query:** `libraryMemberId`.\n\nSame response shape as getAllIssueBook, filtered by member."
-              },
-              "response": []
-            },
-            {
-              "name": "update issue book status",
-              "request": {
-                "method": "PATCH",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "// Use ONE payload below. Comment out the others before Send.\n\n// Payload A — Returned (returnDate required) — active\n{\n  \"libraryIssueBookId\": {{libraryIssueBook_id}},\n  \"status\": \"Returned\",\n  \"issueDate\": \"2026-05-20\",\n  \"dueDate\": \"2026-06-05\",\n  \"issuedBy\": \"Admin User\",\n  \"receivedBy\": \"Desk Staff\",\n  \"returnDate\": \"2026-05-25\"\n}\n\n// Payload B — Renewed (no returnDate, no receivedBy)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Renewed\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-07-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload C — Issued / Overdue (no returnDate)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Issued\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\"\n// }\n\n// Payload D — Returned (omit receivedBy → token userName)\n// {\n//   \"libraryIssueBookId\": {{libraryIssueBook_id}},\n//   \"status\": \"Returned\",\n//   \"issueDate\": \"2026-05-20\",\n//   \"dueDate\": \"2026-06-05\",\n//   \"issuedBy\": \"Admin User\",\n//   \"returnDate\": \"2026-05-25\"\n// }",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/updateStatusBook",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "updateStatusBook"]
-                },
-                "description": "**PATCH /libraryMember/updateStatusBook**\n\n| Field | Required |\n|-------|----------|\n| `libraryIssueBookId` | Yes |\n| `status` | Issued \\| Returned \\| Renewed \\| Overdue |\n| `issueDate`, `dueDate`, `issuedBy` | Yes |\n| `returnDate` | Required when `status` is **Returned** |\n| `receivedBy` | Optional when **Returned** — defaults to token `userName` |\n\nBody: Payload A (Returned + receivedBy), B (Renewed), C (Issued/Overdue), D (Returned, receivedBy from token)."
-              },
-              "response": []
-            },
-            {
-              "name": "delete issued book",
-              "request": {
-                "method": "DELETE",
-                "header": [],
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseurl}}/libraryMember/deleteBook?libraryIssueBookId={{libraryIssueBook_id}}",
-                  "host": ["{{baseurl}}"],
-                  "path": ["libraryMember", "deleteBook"],
-                  "query": [
-                    {
-                      "key": "libraryIssueBookId",
-                      "value": "{{libraryIssueBook_id}}"
-                    }
-                  ]
-                },
-                "description": "**DELETE /libraryMember/deleteBook?libraryIssueBookId=**\n\nSoft-deletes the issue row (paranoid)."
-              },
-              "response": []
-            }
-          ]
         }
       ]
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — record payment\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — **GET /payment/details?studentId=** → **POST /payment/details** → **GET /** (list/print) → **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -7140,15 +7463,54 @@
         },
         {
           "name": "studentFeePayment",
+          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** — outstanding invoices (pay screen)\n2. **POST /payment/details** — record payment (multi-invoice in one payment)\n3. **GET /** — paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** — one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ← `student_fee_invoice_items` (sum amount − waiver)\n- **paidAmount** ← `payment_item` SUM\n- **dueAmount** = total − paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header: payeeId, payeeType STUDENT|VENDOR|OTHER) + `payment_item` (referenceId, referenceType; fee invoice uses referenceType `STUDENT_FEE_INVOICE` and referenceId = studentFeeInvoiceId; omit referenceType → saves as `OTHER`)",
           "item": [
             {
-              "name": "record payment",
+              "name": "1 payment details by student",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/payment/details?studentId={{student_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "payment",
+                    "details"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentId",
+                      "value": "{{student_id}}",
+                      "disabled": false
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` — count of generated invoices for this student\n- `lastPayment` — latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentMethod`, `paymentDate`) or `null`\n- `outstandingAmount` — sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` — sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount − waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` (use as paymentItems[].referenceId) before POST."
+              },
+              "response": []
+            },
+            {
+              "name": "2 record payment from details",
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
                       "const res = pm.response.json();",
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
                       "const payment = res && res.data && res.data.payment;",
                       "if (payment && payment.studentFeePaymentId) {",
                       "  pm.collectionVariables.set('studentFeePayment_id', String(payment.studentFeePaymentId));",
@@ -7170,31 +7532,38 @@
                   ]
                 },
                 "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/studentFeePayment",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "studentFeePayment"
-                  ]
-                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"studentFeeInvoiceId\": \"{{studentFeeInvoice_id}}\",\n  \"amount\": \"5000.00\",\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"payeeType\": \"STUDENT\",\n  \"referenceNumber\": \"TXN-001\",\n  \"transactionId\": \"UTR-20260516-001\"\n}",
+                  "raw": "{\n  \"payeeId\": \"{{student_id}}\",\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"5000.00\",\n  \"paymentItems\": [\n    {\n      \"referenceId\": \"{{studentFeeInvoice_id}}\",\n      \"referenceType\": \"STUDENT_FEE_INVOICE\",\n      \"amount\": \"5000.00\"\n    }\n  ],\n  \"paymentMethod\": \"bank_transfer\",\n  \"paymentType\": \"INCOMING\",\n  \"receivedBy\": \"John Admin\",\n  \"remark\": \"Term fee partial payment\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "Body: studentFeeInvoiceId, amount, paymentMethod (credit_card|bank_transfer|cash|cheque); optional paymentType (INCOMING), payeeId, payeeType (STUDENT), referenceNumber, transactionId. Creates payment_item for STUDENT_FEE_INVOICE. data.payment + data.invoice (paymentStatus, totalPaid, balanceDue)."
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/payment/details",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "payment",
+                    "details"
+                  ]
+                },
+                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"referenceId\": 42, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"5000.00\" },\n    { \"referenceId\": 43, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\",\n  \"remark\": \"\"\n}\n```\n\n- **payeeType** (required): `STUDENT` | `VENDOR` | `OTHER`. Fee invoices require `STUDENT`.\n- **paymentItems[]**: `referenceId` (required), `amount` (required), `referenceType` (optional — defaults to `OTHER` if omitted).\n- **referenceType** `STUDENT_FEE_INVOICE`: validates invoice, updates `paid_amount` / `payment_status`. `STUDENT_LIBRARY_INVOICE` not supported yet.\n- **amount** must equal sum of `paymentItems[].amount`.\n\n**Optional:** paymentType (default INCOMING), referenceNumber, transactionId (auto UUID if omitted), receivedBy, remark.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — verified items include referenceId, referenceType, and invoice totals when referenceType is STUDENT_FEE_INVOICE. Sets `studentFeePayment_id`."
               },
               "response": []
             },
             {
-              "name": "list payments by invoice",
+              "name": "3 list payments (paginated)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -7209,7 +7578,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/studentFeePayment?studentFeeInvoiceId={{studentFeeInvoice_id}}",
+                  "raw": "{{baseurl}}/studentFeePayment?page=1&limit=20&search=",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -7218,13 +7587,63 @@
                   ],
                   "query": [
                     {
-                      "key": "studentFeeInvoiceId",
-                      "value": "{{studentFeeInvoice_id}}",
-                      "disabled": false
+                      "key": "payeeId",
+                      "value": "{{student_id}}",
+                      "description": "optional filter by student",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "referenceNumber, transactionId, payment id, payee id, student name/scholar/email/mobile/enroll",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment?studentFeeInvoiceId=**\n\n**data:** studentFeeInvoiceId, **student** { studentId, studentName, scholarNumber, courseId, courseName, sessionId, sessionName }, invoiceTotal, totalPaid, balanceDue, paymentStatus, payments[]."
+                "description": "**GET /studentFeePayment**\n\nPaginated list from **student_fee_payment** + payee summary (no invoice math).\n\n**Query:** `page` (default 1), `limit` (default 20, max 100), optional `payeeId`, optional `search`.\n\n**search** matches: referenceNumber, transactionId, receivedBy, studentFeePaymentId, payeeId, or student fields.\n\n**data.payments[]:** payment fields (incl. **receivedBy**) + **payee**.\n\n**paginationData:** page, limit, total, totalPages."
+              },
+              "response": []
+            },
+            {
+              "name": "4 get payment by id",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/studentFeePayment/single?studentFeePaymentId={{studentFeePayment_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "studentFeePayment",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "studentFeePaymentId",
+                      "value": "{{studentFeePayment_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /studentFeePayment/single?studentFeePaymentId=**\n\nSingle payment receipt / print view.\n\n**data:** full **student_fee_payment** row (payeeType STUDENT|VENDOR|OTHER) + **payee** (expanded student when payeeType is STUDENT; else `{ payeeId, payeeType }`) + **paymentItems[]** (paymentItemId, paymentId, referenceId, referenceType, amount, timestamps).\n\nUse `studentFeePayment_id` from POST step 2."
               },
               "response": []
             }
@@ -7548,6 +7967,749 @@
           ]
         }
       ]
+    },
+    {
+      "name": "asset",
+      "description": "## Asset module (run in order)\n\n1. **assetLocation** — CRUD locations (`asset_locations`)\n2. **assetCategory** — CRUD categories (`asset_categories`)\n3. **asset** — CRUD assets (`asset` table)\n4. **assetIssue** — create/list/single/update issue entries (`asset_issue`, `asset_issue_item`)\n\n**Create** requests save IDs to collection variables. `instituteId` comes from auth token.\n\n**asset status:** `ISSUED` | `IN_STOCK` | `MAINTANANCE`\n\n**asset condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`",
+      "item": [
+        {
+          "name": "assetLocation",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetLocationId) {",
+                      "  pm.collectionVariables.set('assetLocation_id', String(data.assetLocationId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Store\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                },
+                "description": "**POST /assetLocation** — create location. Sets `assetLocation_id` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation/single?assetLocationId={{assetLocation_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetLocationId",
+                      "value": "{{assetLocation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"name\": \"Main Store (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation?assetLocationId={{assetLocation_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetLocationId",
+                      "value": "{{assetLocation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "assetCategory",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetCategoryId) {",
+                      "  pm.collectionVariables.set('assetCategory_id', String(data.assetCategoryId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Electronics\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                },
+                "description": "**POST /assetCategory** — create category. Sets `assetCategory_id` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory/single?assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetCategoryId\": {{assetCategory_id}},\n  \"name\": \"Electronics (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory?assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}"
+                    }
+                  ]
+                },
+                "description": "Fails if any **asset** rows still reference this category."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "asset",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetId) {",
+                      "  pm.collectionVariables.set('asset_id', String(data.assetId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"status\": \"IN_STOCK\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "**POST /asset** — create asset. Requires valid `department_id` and `assetCategory_id` (run category create first). Sets `asset_id`. Code is unique per institute."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "Returns assets with nested `assetCategory` and `department`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset/single?assetId={{asset_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetId",
+                      "value": "{{asset_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"status\": \"ISSUED\",\n  \"condition\": \"FAIR\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "**PATCH /asset** — send `assetId` plus at least one field to update."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset?assetId={{asset_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetId",
+                      "value": "{{asset_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "assetIssue",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetIssueId) {",
+                      "  pm.collectionVariables.set('assetIssue_id', String(data.assetIssueId));",
+                      "}",
+                      "if (Array.isArray(data?.items) && data.items.length) {",
+                      "  const firstItem = data.items[0];",
+                      "  if (firstItem?.assetIssueItemId) {",
+                      "    pm.collectionVariables.set('assetIssueItem_id', String(firstItem.assetIssueItemId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"remarks\": \"Issued for lab work\",\n  \"items\": [\n    {\n      \"assetId\": {{asset_id}},\n      \"remarks\": \"Keep in good condition\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**POST /assetIssue** — creates issue + issue items, marks issued assets as `ISSUED`. Saves `assetIssue_id` and first `assetIssueItem_id`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue?page={{assetIssue_page}}&limit={{assetIssue_limit}}&search={{assetIssue_search}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{assetIssue_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{assetIssue_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{assetIssue_search}}"
+                    }
+                  ]
+                },
+                "description": "Supports pagination + search over member/remarks/asset fields."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/single?assetIssueId={{assetIssue_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetIssueId",
+                      "value": "{{assetIssue_id}}"
+                    }
+                  ]
+                },
+                "description": "Returns single issue with `member` details + issued `items` and nested `asset` details."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetIssueId\": {{assetIssue_id}},\n  \"dueDate\": \"2026-06-20\",\n  \"remarks\": \"Due date extended\",\n  \"items\": [\n    {\n      \"assetIssueItemId\": {{assetIssueItem_id}},\n      \"returnDate\": \"2026-06-20\",\n      \"remarks\": \"Updated by admin\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**PATCH /assetIssue** — updates issue by `assetIssueId` and item rows by `assetIssueItemId` in one transaction."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -7619,6 +8781,51 @@
     {
       "key": "feePlanInitiate_limit",
       "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetLocation_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetCategory_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssueItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_search",
+      "value": "",
       "type": "string"
     }
   ]
