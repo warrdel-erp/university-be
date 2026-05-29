@@ -381,4 +381,18 @@ export const saveUserDefaults = async (req, res) => {
   }
 };
 
+export const initialSetup = async (req, res) => {
+  try {
+    const result = await userService.initialSetup(req.body);
+    res.status(201).json(result);
+  } catch (error) {
+    console.error("Error during initial setup:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Failed to complete initial setup"
+    });
+  }
+};
+
+
 
