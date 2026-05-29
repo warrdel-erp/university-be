@@ -1,3 +1,4 @@
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 
 export async function addExamStructureSchedule(examDetailSchedule) {
@@ -311,43 +312,134 @@ export async function getSubjectsWithExamSchedule(courseId, acedmicYearId, term,
     }
 }
 
-/**
- * Fetches the total count of students enrolled in a specific course, academic year, term, and session.
- * @param {number} courseId - The ID of the course.
- * @param {number} acedmicYearId - The ID of the academic year.
- * @param {number} term - The term/semester number.
- * @param {number} sessionId - The ID of the session.
- * @returns {Promise<number>} - The total count of students.
- */
+const studentTermEnrollmentInclude = (courseId, acedmicYearId, term, sessionId) => [
+    {
+        model: model.classSectionModel,
+        as: "studentSections",
+        required: true,
+        attributes: [],
+        where: {
+            courseId,
+            acedmicYearId,
+            ...(sessionId && { sessionId }),
+        },
+        include: [
+            {
+                model: model.classModel,
+                as: "classGroup",
+                required: true,
+                attributes: [],
+                where: { term },
+            },
+        ],
+    },
+];
+
 export async function getStudentCountForTerm(courseId, acedmicYearId, term, sessionId) {
     try {
-        const count = await model.studentModel.count({
-            include: [
-                {
-                    model: model.classSectionModel,
-                    as: 'studentSections',
-                    required: true,
-                    where: {
-                        courseId,
-                        acedmicYearId,
-                        ...(sessionId && { sessionId })
-                    },
-                    include: [
-                        {
-                            model: model.classModel,
-                            as: 'classGroup',
-                            required: true,
-                            where: {
-                                term
-                            }
-                        }
-                    ]
-                }
-            ]
+        return await model.studentModel.count({
+            include: studentTermEnrollmentInclude(courseId, acedmicYearId, term, sessionId),
         });
-        return count;
     } catch (error) {
         console.error("Error fetching student count for term:", error.message);
+        throw error;
+    }
+}
+
+const studentTermEnrollmentIncludeForList = (courseId, acedmicYearId, term, sessionId) => [
+    {
+        model: model.classSectionModel,
+        as: "studentSections",
+        required: true,
+        attributes: [],
+        where: {
+            courseId,
+            acedmicYearId,
+            ...(sessionId && { sessionId }),
+        },
+        include: [
+            {
+                model: model.courseModel,
+                as: "courseSection",
+                required: true,
+                attributes: [],
+            },
+            {
+                model: model.semesterModel,
+                as: "semesterDetail",
+                required: false,
+                attributes: [],
+            },
+            {
+                model: model.classModel,
+                as: "classGroup",
+                required: true,
+                attributes: [],
+                where: { term },
+            },
+        ],
+    },
+];
+
+const studentListFields = [
+    "studentId",
+    "name",
+    "enrollNumber",
+    "scholarNumber",
+    "fatherName",
+    "email",
+    "phoneNumber",
+    "mobileNumber",
+    "courseName",
+    "termName",
+];
+
+export async function getStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
+    try {
+        const rows = await model.studentModel.findAll({
+            attributes: [
+                "studentId",
+                [
+                    sequelize.fn(
+                        "TRIM",
+                        sequelize.fn(
+                            "CONCAT_WS",
+                            " ",
+                            sequelize.col("students.first_name"),
+                            sequelize.col("students.middle_name"),
+                            sequelize.col("students.last_name")
+                        )
+                    ),
+                    "name",
+                ],
+                "enrollNumber",
+                "scholarNumber",
+                "fatherName",
+                "email",
+                "phoneNumber",
+                "mobileNumber",
+                [sequelize.col("studentSections->courseSection.course_name"), "courseName"],
+                [
+                    sequelize.literal(
+                        "COALESCE(`studentSections->semesterDetail`.`name`, `studentSections->classGroup`.`class_name`, CONCAT('Term ', `studentSections->classGroup`.`term`))"
+                    ),
+                    "termName",
+                ],
+            ],
+            include: studentTermEnrollmentIncludeForList(courseId, acedmicYearId, term, sessionId),
+            order: [
+                [sequelize.col("students.first_name"), "ASC"],
+                [sequelize.col("students.student_id"), "ASC"],
+            ],
+            subQuery: false,
+            raw: true,
+        });
+
+        return rows.map((row) =>
+            Object.fromEntries(studentListFields.map((field) => [field, row[field] ?? null]))
+        );
+    } catch (error) {
+        console.error("Error fetching students for term:", error.message);
         throw error;
     }
 }

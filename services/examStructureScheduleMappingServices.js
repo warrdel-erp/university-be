@@ -202,12 +202,19 @@ export async function getSubjectsWithExamSchedule(
     sessionId ? parseInt(sessionId) : null
   );
 
-  const studentCount = await examStructureScheduleRepository.getStudentCountForTerm(
+  const parsedAcedmicYearId = acedmicYearId ? parseInt(acedmicYearId) : null;
+  const parsedSessionId = sessionId ? parseInt(sessionId) : null;
+
+  const studentList = await examStructureScheduleRepository.getStudentsForTerm(
     courseId,
-    acedmicYearId ? parseInt(acedmicYearId) : null,
+    parsedAcedmicYearId,
     term,
-    sessionId ? parseInt(sessionId) : null
+    parsedSessionId
   );
 
-  return { studentCount, subjects };
+  return {
+    studentCount: studentList.length,
+    studentList,
+    subjects,
+  };
 }
