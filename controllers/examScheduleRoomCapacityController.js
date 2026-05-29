@@ -29,6 +29,25 @@ export async function updateExamRoomCapacity(req, res) {
     }
 }
 
+export async function getAvailableRoomsForExamSchedule(req, res) {
+    try {
+        const { examScheduleId } = req.query;
+        const result = await examRoomCapacityServices.getAvailableRoomsForExamSchedule(
+            examScheduleId,
+            req.user.universityId
+        );
+        return SuccessResponse(res, 200, "Available rooms fetched successfully", result);
+    } catch (error) {
+        if (error instanceof ZodError) {
+            return ErrorResponse(res, 400, "Validation Error", error.errors);
+        }
+        if (error.message === "Exam schedule not found") {
+            return ErrorResponse(res, 404, error.message);
+        }
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
 export async function deleteExamRoomCapacity(req, res) {
     try {
         const { examScheduleRoomCapacityId } = req.params;

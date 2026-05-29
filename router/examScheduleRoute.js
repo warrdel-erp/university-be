@@ -46,7 +46,21 @@ const allocateSeatsSchema = z.object({
     examScheduleId: z.number({ required_error: "examScheduleId is required" })
 });
 
+const availableRoomsQuerySchema = z.object({
+    examScheduleId: z.coerce.number({
+        required_error: "examScheduleId is required",
+        invalid_type_error: "examScheduleId must be a number",
+    }),
+});
+
 router.get('/', userAuth, examScheduleController.getExamSchedules);
+
+router.get(
+    '/availableRooms',
+    userAuth,
+    validate({ query: availableRoomsQuerySchema }),
+    examRoomCapacityController.getAvailableRoomsForExamSchedule
+);
 
 router.get('/:id', userAuth, examScheduleController.getExamScheduleById);
 

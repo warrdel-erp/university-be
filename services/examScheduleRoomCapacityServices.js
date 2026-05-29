@@ -1,6 +1,35 @@
+import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
 import { z } from "zod";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+const toMinutes = (time) => {
+    const [h = 0, m = 0] = String(time).split(":").map(Number);
+    return h * 60 + m;
+};
+
+const toTime = (mins) => {
+    const n = ((mins % 1440) + 1440) % 1440;
+    return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}:00`;
+};
+
+const getExamSlot = (examDate, examTime, duration) => {
+    const startMinutes = toMinutes(examTime);
+    const durationMinutes = Number(duration);
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+        throw new Error("Invalid exam duration");
+    }
+    const endMinutes = startMinutes + durationMinutes;
+    return {
+        day: DAYS[new Date(`${examDate}T00:00:00`).getDay()],
+        startTime: toTime(startMinutes),
+        endTime: toTime(endMinutes),
+        startMinutes,
+        endMinutes,
+    };
+};
 
 const examRoomCapacitySchema = z.object({
     classRoomSectionIds: z.array(
@@ -109,7 +138,16 @@ export async function addExamRoomCapacity(data, userId) {
         throw new Error(`Selected rooms have a total capacity of ${totalCapacity}, but ${studentCount} students are enrolled. Please select more or larger rooms.`);
     }
 
-    return await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments);
+    const transaction = await sequelize.transaction();
+
+    try {
+        const result = await examRoomCapacityRepository.bulkAddExamRoomCapacity(assignments, transaction);
+        await transaction.commit();
+        return result;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 
@@ -129,7 +167,21 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     // In the new implementation, it IS an assignment to a schedule.
 
     updatePayload.updatedBy = userId;
-    return await examRoomCapacityRepository.updateExamRoomCapacity(examScheduleRoomCapacityId, updatePayload);
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const result = await examRoomCapacityRepository.updateExamRoomCapacity(
+            examScheduleRoomCapacityId,
+            updatePayload,
+            transaction
+        );
+        await transaction.commit();
+        return result;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
@@ -137,5 +189,69 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
     if (!existing) {
         throw new Error("Exam room capacity not found");
     }
-    return await examRoomCapacityRepository.deleteExamRoomCapacity(examScheduleRoomCapacityId);
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const result = await examRoomCapacityRepository.deleteExamRoomCapacity(
+            examScheduleRoomCapacityId,
+            transaction
+        );
+        await transaction.commit();
+        return result;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
+
+export async function getAvailableRoomsForExamSchedule(examScheduleId, universityId) {
+    const examSchedule = await examRoomCapacityRepository.getExamScheduleSlot(examScheduleId);
+    if (!examSchedule) {
+        throw new Error("Exam schedule not found");
+    }
+
+    const { day, startTime, endTime, startMinutes, endMinutes } = getExamSlot(
+        examSchedule.examDate,
+        examSchedule.examTime,
+        examSchedule.duration
+    );
+
+    const [allRooms, examAssignments, classBusyRoomIds, currentExamRoomIds] = await Promise.all([
+        examRoomCapacityRepository.getClassRoomsByUniversity(universityId),
+        examRoomCapacityRepository.findExamRoomAssignmentsOnDate(examSchedule.examDate, examScheduleId),
+        examRoomCapacityRepository.findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examSchedule.examDate),
+        examRoomCapacityRepository.findAssignedRoomIdsForExam(examScheduleId),
+    ]);
+
+    const busyRoomIds = new Set([...classBusyRoomIds, ...currentExamRoomIds]);
+    for (const { classRoomSectionId, examTime, duration } of examAssignments) {
+        const otherStart = toMinutes(examTime);
+        const otherEnd = otherStart + Number(duration);
+        if (startMinutes < otherEnd && endMinutes > otherStart) {
+            busyRoomIds.add(classRoomSectionId);
+        }
+    }
+
+    const availableRooms = allRooms
+        .filter((room) => !busyRoomIds.has(room.classRoomSectionId))
+        .map((room) => ({
+            classRoomSectionId: room.classRoomSectionId,
+            roomNumber: room.roomNumber,
+            capacity: room.capacity,
+            examCapacity: room.examCapacity,
+            examCapacityColumns: room.examCapacityColumns,
+            effectiveExamCapacity: room.examCapacity ?? room.capacity,
+        }));
+
+    return {
+        examScheduleId: examSchedule.examScheduleId,
+        examDate: examSchedule.examDate,
+        examTime: examSchedule.examTime,
+        duration: examSchedule.duration,
+        slotStartTime: startTime,
+        slotEndTime: endTime,
+        day,
+        availableRooms,
+    };
 }
