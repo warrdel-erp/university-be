@@ -44,3 +44,17 @@ export async function updateLibraryIssueBookTransaction(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getLibraryBookInventoryIssueHistory(req, res) {
+  try {
+    const data = await services.getLibraryBookInventoryIssueHistory(req.query.inventoryId);
+    return SuccessResponse(
+      res,
+      200,
+      "Library book inventory issue history fetched successfully",
+      data,
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

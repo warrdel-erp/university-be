@@ -481,3 +481,87 @@ export async function updateLibraryIssueBookTransaction(
     transaction,
   });
 }
+
+export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId) {
+  const inventoryRow = await model.libraryBookInventoryModel.findOne({
+    where: { inventoryId },
+    attributes: ["inventoryId", "accessionNumber", "status", "condition"],
+    include: [
+      {
+        model: model.libraryBookModel,
+        as: "bookDetails",
+        attributes: ["libraryBookId", "title", "authors", "isbn", "publisher"],
+      },
+    ],
+  });
+
+  if (!inventoryRow) {
+    return null;
+  }
+
+  const issueRows = await model.libraryBookIssueInventoryItemModel.findAll({
+    where: { inventoryId },
+    attributes: [
+      "libraryBookIssueInventoryItemId",
+      "inventoryId",
+      "returnDate",
+      "libraryIssueBookTransactionId",
+      "createdAt",
+    ],
+    include: [
+      {
+        model: model.libraryIssueBookTransactionModel,
+        as: "issueBookTransaction",
+        attributes: [
+          "libraryIssueBookTransactionId",
+          "memberId",
+          "memberType",
+          "issueDate",
+          "dueDate",
+        ],
+        include: [
+          {
+            model: model.studentModel,
+            as: "studentMember",
+            attributes: [
+              "studentId",
+              "firstName",
+              "middleName",
+              "lastName",
+              "scholarNumber",
+              "enrollNumber",
+              "email",
+              "phoneNumber",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+              },
+            ],
+          },
+          {
+            model: model.employeeModel,
+            as: "teacherMember",
+            attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [["libraryBookIssueInventoryItemId", "DESC"]],
+  });
+
+  const issueHistory = [];
+  for (const row of issueRows) {
+    issueHistory.push(row.get({ plain: true }));
+  }
+
+  return {
+    book: inventoryRow.get({ plain: true }),
+    issueCount: issueHistory.length,
+    issueHistory,
+  };
+}
