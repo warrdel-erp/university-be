@@ -8372,6 +8372,749 @@
           ]
         }
       ]
+    },
+    {
+      "name": "asset",
+      "description": "## Asset module (run in order)\n\n1. **assetLocation** — CRUD locations (`asset_locations`)\n2. **assetCategory** — CRUD categories (`asset_categories`)\n3. **asset** — CRUD assets (`asset` table)\n4. **assetIssue** — create/list/single/update issue entries (`asset_issue`, `asset_issue_item`)\n\n**Create** requests save IDs to collection variables. `instituteId` comes from auth token.\n\n**asset status:** `ISSUED` | `IN_STOCK` | `MAINTANANCE`\n\n**asset condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`",
+      "item": [
+        {
+          "name": "assetLocation",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetLocationId) {",
+                      "  pm.collectionVariables.set('assetLocation_id', String(data.assetLocationId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Main Store\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                },
+                "description": "**POST /assetLocation** — create location. Sets `assetLocation_id` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation/single?assetLocationId={{assetLocation_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetLocationId",
+                      "value": "{{assetLocation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"name\": \"Main Store (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetLocation?assetLocationId={{assetLocation_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetLocation"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetLocationId",
+                      "value": "{{assetLocation_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "assetCategory",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetCategoryId) {",
+                      "  pm.collectionVariables.set('assetCategory_id', String(data.assetCategoryId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Electronics\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                },
+                "description": "**POST /assetCategory** — create category. Sets `assetCategory_id` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory/single?assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetCategoryId\": {{assetCategory_id}},\n  \"name\": \"Electronics (updated)\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetCategory?assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetCategory"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}"
+                    }
+                  ]
+                },
+                "description": "Fails if any **asset** rows still reference this category."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "asset",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetId) {",
+                      "  pm.collectionVariables.set('asset_id', String(data.assetId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"status\": \"IN_STOCK\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "**POST /asset** — create asset. Requires valid `department_id` and `assetCategory_id` (run category create first). Sets `asset_id`. Code is unique per institute."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "Returns assets with nested `assetCategory` and `department`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset/single?assetId={{asset_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetId",
+                      "value": "{{asset_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"status\": \"ISSUED\",\n  \"condition\": \"FAIR\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "**PATCH /asset** — send `assetId` plus at least one field to update."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset?assetId={{asset_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetId",
+                      "value": "{{asset_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "assetIssue",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.assetIssueId) {",
+                      "  pm.collectionVariables.set('assetIssue_id', String(data.assetIssueId));",
+                      "}",
+                      "if (Array.isArray(data?.items) && data.items.length) {",
+                      "  const firstItem = data.items[0];",
+                      "  if (firstItem?.assetIssueItemId) {",
+                      "    pm.collectionVariables.set('assetIssueItem_id', String(firstItem.assetIssueItemId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"remarks\": \"Issued for lab work\",\n  \"items\": [\n    {\n      \"assetId\": {{asset_id}},\n      \"remarks\": \"Keep in good condition\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**POST /assetIssue** — creates issue + issue items, marks issued assets as `ISSUED`. Saves `assetIssue_id` and first `assetIssueItem_id`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue?page={{assetIssue_page}}&limit={{assetIssue_limit}}&search={{assetIssue_search}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{assetIssue_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{assetIssue_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{assetIssue_search}}"
+                    }
+                  ]
+                },
+                "description": "Supports pagination + search over member/remarks/asset fields."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/single?assetIssueId={{assetIssue_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetIssueId",
+                      "value": "{{assetIssue_id}}"
+                    }
+                  ]
+                },
+                "description": "Returns single issue with `member` details + issued `items` and nested `asset` details."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetIssueId\": {{assetIssue_id}},\n  \"dueDate\": \"2026-06-20\",\n  \"remarks\": \"Due date extended\",\n  \"items\": [\n    {\n      \"assetIssueItemId\": {{assetIssueItem_id}},\n      \"returnDate\": \"2026-06-20\",\n      \"remarks\": \"Updated by admin\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**PATCH /assetIssue** — updates issue by `assetIssueId` and item rows by `assetIssueItemId` in one transaction."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -8443,6 +9186,51 @@
     {
       "key": "feePlanInitiate_limit",
       "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetLocation_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetCategory_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssueItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_search",
+      "value": "",
       "type": "string"
     }
   ]
