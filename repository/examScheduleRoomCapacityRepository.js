@@ -34,6 +34,34 @@ export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
     });
 }
 
+export async function getRoomsByExamScheduleId(examScheduleId) {
+    return await model.examScheduleRoomCapacityModel.findAll({
+        where: { examScheduleId },
+        attributes: [
+            "examScheduleRoomCapacityId",
+            "examScheduleId",
+            "classRoomSectionId",
+            "capacity",
+            "columns",
+            "orderKey"
+        ],
+        include: [
+            {
+                model: model.classRoomModel,
+                as: "classRoom",
+                attributes: [
+                    "classRoomSectionId",
+                    "roomNumber",
+                    "capacity",
+                    "examCapacity",
+                    "examCapacityColumns"
+                ]
+            }
+        ],
+        order: [["orderKey", "ASC"]]
+    });
+}
+
 export async function getRoomsForAllocationLookup(classRoomSectionIds) {
     const rooms = await model.classRoomModel.findAll({
         where: { classRoomSectionId: { [Op.in]: classRoomSectionIds } },

@@ -132,6 +132,20 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
     return await examRoomCapacityRepository.updateExamRoomCapacity(examScheduleRoomCapacityId, updatePayload);
 }
 
+export async function getExamScheduleRooms(examScheduleId) {
+    const examSchedule = await examScheduleServices.getExamScheduleExists(examScheduleId);
+    if (!examSchedule) {
+        throw new Error("Exam schedule not found");
+    }
+
+    const rooms = await examRoomCapacityRepository.getRoomsByExamScheduleId(examScheduleId);
+    if (!rooms.length) {
+        throw new Error("No rooms assigned to this exam schedule");
+    }
+
+    return rooms;
+}
+
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId) {
     const existing = await examRoomCapacityRepository.getExamRoomCapacityById(examScheduleRoomCapacityId);
     if (!existing) {

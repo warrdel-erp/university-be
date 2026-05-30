@@ -3729,10 +3729,7 @@
           "response": []
         },
         {
-          "name": "room assignments",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
+          "name": "get room assignments by exam schedule",
           "request": {
             "auth": {
               "type": "bearer",
@@ -3746,27 +3743,113 @@
             },
             "method": "GET",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "description": "**GET /examSchedule/roomAssignments**\n\nReturns assigned room details for a scheduled exam.\n\n**Query params**\n- `examScheduleId` (required): Exam schedule ID with rooms already assigned.\n\n**Notes**\n- Returns 404 if the exam schedule does not exist.\n- Returns 404 if the exam schedule exists but has no rooms assigned.\n- Rooms are ordered by `orderKey` (same order used for seat allocation).",
             "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignments",
+              "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=45",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examSchedule",
                 "roomAssignments"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "45"
+                }
               ]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=45",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "45"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Exam schedule rooms fetched successfully\",\n  \"data\": [\n    {\n      \"examScheduleRoomCapacityId\": 1,\n      \"examScheduleId\": 45,\n      \"classRoomSectionId\": 101,\n      \"capacity\": 40,\n      \"columns\": 4,\n      \"orderKey\": 1,\n      \"classRoom\": {\n        \"classRoomSectionId\": 101,\n        \"roomNumber\": \"A-101\",\n        \"capacity\": 50,\n        \"examCapacity\": 40,\n        \"examCapacityColumns\": 4\n      }\n    },\n    {\n      \"examScheduleRoomCapacityId\": 2,\n      \"examScheduleId\": 45,\n      \"classRoomSectionId\": 102,\n      \"capacity\": 35,\n      \"columns\": 5,\n      \"orderKey\": 2,\n      \"classRoom\": {\n        \"classRoomSectionId\": 102,\n        \"roomNumber\": \"A-102\",\n        \"capacity\": 45,\n        \"examCapacity\": 35,\n        \"examCapacityColumns\": 5\n      }\n    }\n  ]\n}"
+            },
+            {
+              "name": "Exam schedule not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=99999",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "99999"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Exam schedule not found\",\n  \"errors\": null\n}"
+            },
+            {
+              "name": "No rooms assigned",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=46",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "46"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"No rooms assigned to this exam schedule\",\n  \"errors\": null\n}"
+            }
+          ]
         },
         {
           "name": "get by id (old)",
