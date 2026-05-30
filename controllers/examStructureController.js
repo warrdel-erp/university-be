@@ -91,7 +91,7 @@ export async function addExamType(req, res) {
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    // if (!(examStructureId)) {
+    // if (!examStructureId) {
     //   return ErrorResponse(res, 400, "examStructureId Required fields are missing");
     // }
     const universityId = req.user.universityId;
