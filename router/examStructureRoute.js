@@ -42,7 +42,6 @@ router.get(
   validate({ query: getSingleExamStructureQuerySchema }),
   getSingleExamStructure,
 );
-x;
 
 router.patch("/examRule", userAuth, updateExamStructure);
 
