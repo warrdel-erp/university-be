@@ -100,11 +100,13 @@ export async function generateUploadUrl(user, fileData) {
     throw err;
   }
 
-  // 5. Generate a unique flat S3 key using UUID
+  // 5. Generate a unique S3 key with prefix based on environment and client
   const rawExt = path.extname(fileName || "");
   const ext = rawExt || MIME_TO_EXT[mimeType] || ".bin";
-  const uniqueId = uuidv4();
-  const s3Key = `${uniqueId}${ext}`; // Flat UUID-based key
+  const envPrefix = process.env.NODE_ENV === "production" ? "prod" : "stage";
+  const uuid = uuidv4();
+  const clientId = user.clientId || user.universityId || "unknown";
+  const s3Key = `${envPrefix}/${clientId}/${uuid}${ext}`;
 
   // 6. Request pre-signed URL from S3 helper
   const uploadUrl = await s3Helper.getUploadSignedUrl(s3Key, mimeType);

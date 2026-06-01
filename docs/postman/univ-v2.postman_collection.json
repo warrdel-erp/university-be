@@ -1294,7 +1294,7 @@
                 }
               ]
             },
-            "description": "**GET /subject/withExamSchedule**\n\nReturns `studentCount`, `subjects[]` (all subjects for the course/term), and **`isHallTicketGenerated`** (true if any `student_hall_ticket` row exists for this examSetupTypeTermId + sessionId + institute + university)."
+            "description": "**GET /subject/withExamSchedule**\n\nQuery: `examSetupTypeTermId` (required), `sessionId` (optional).\n\nReturns:\n- `studentCount` / `studentList` — enrolled students for course + term\n- `subjects[]` — each subject includes `scheduleSubject[]` (exam schedule rows). Per schedule: `isRoomAllocated` (true when rooms assigned), `roomNames` (e.g. `[\"A-101\",\"B-202\"]`), `rooms` (room assignment details with `roomNumber`, `capacity`, `orderKey`)"
           },
           "response": []
         },
@@ -3892,10 +3892,7 @@
           "response": []
         },
         {
-          "name": "room assignments",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
+          "name": "get room assignments by exam schedule",
           "request": {
             "auth": {
               "type": "bearer",
@@ -3909,27 +3906,113 @@
             },
             "method": "GET",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "description": "**GET /examSchedule/roomAssignments**\n\nReturns assigned room details for a scheduled exam.\n\n**Query params**\n- `examScheduleId` (required): Exam schedule ID with rooms already assigned.\n\n**Notes**\n- Returns 404 if the exam schedule does not exist.\n- Returns 404 if the exam schedule exists but has no rooms assigned.\n- Rooms are ordered by `orderKey` (same order used for seat allocation).",
             "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignments",
+              "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=45",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "examSchedule",
                 "roomAssignments"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "45"
+                }
               ]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=45",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "45"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Exam schedule rooms fetched successfully\",\n  \"data\": [\n    {\n      \"examScheduleRoomCapacityId\": 1,\n      \"examScheduleId\": 45,\n      \"classRoomSectionId\": 101,\n      \"capacity\": 40,\n      \"columns\": 4,\n      \"orderKey\": 1,\n      \"classRoom\": {\n        \"classRoomSectionId\": 101,\n        \"roomNumber\": \"A-101\",\n        \"capacity\": 50,\n        \"examCapacity\": 40,\n        \"examCapacityColumns\": 4\n      }\n    },\n    {\n      \"examScheduleRoomCapacityId\": 2,\n      \"examScheduleId\": 45,\n      \"classRoomSectionId\": 102,\n      \"capacity\": 35,\n      \"columns\": 5,\n      \"orderKey\": 2,\n      \"classRoom\": {\n        \"classRoomSectionId\": 102,\n        \"roomNumber\": \"A-102\",\n        \"capacity\": 45,\n        \"examCapacity\": 35,\n        \"examCapacityColumns\": 5\n      }\n    }\n  ]\n}"
+            },
+            {
+              "name": "Exam schedule not found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=99999",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "99999"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Exam schedule not found\",\n  \"errors\": null\n}"
+            },
+            {
+              "name": "No rooms assigned",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId=46",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "examSchedule",
+                    "roomAssignments"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "46"
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": false,\n  \"message\": \"No rooms assigned to this exam schedule\",\n  \"errors\": null\n}"
+            }
+          ]
         },
         {
           "name": "get by id (old)",
@@ -6538,7 +6621,7 @@
     },
     {
       "name": "library issue book",
-      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n\nAuth: Bearer {{token}}",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → **get inventory issue history** (by `inventoryId`) → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** — accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
       "variable": [
         {
           "key": "libraryIssueBookTransaction_id",
@@ -6692,6 +6775,36 @@
                 }
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "get inventory issue history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/inventoryIssueHistory?inventoryId={{inventory_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryIssueBook", "inventoryIssueHistory"],
+              "query": [
+                {
+                  "key": "inventoryId",
+                  "value": "{{inventory_id}}"
+                }
+              ]
+            },
+            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) — `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` — inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, …)\n- `issueCount` — total issue entries for this copy\n- `issueHistory[]` — each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and `returnDate` on the item\n\n404 when `inventoryId` not found."
           },
           "response": []
         },

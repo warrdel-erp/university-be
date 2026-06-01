@@ -65,9 +65,9 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
     try {
         const session = await model.sessionModel.findAll({
             where: {
+                instituteId,
                 ...(acedmicYearId && { acedmicYearId }),
                 ...(universityId && { universityId }),
-                ...(role === 'Head' && { instituteId })
             },
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             include: [
@@ -79,6 +79,8 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
                 {
                     model: model.sessionCouseMappingModel,
                     as: "courseMappings",
+                    where: { instituteId },
+                    required: false,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
                         {
@@ -196,21 +198,107 @@ export async function getMappingById(sessionCourseMappingId) {
     });
 }
 
-export async function countClassSections(courseId, sessionId) {
-    return await model.classSectionModel.count({
-        where: { courseId, sessionId }
-    });
-}
+const courseSessionMappingBlockers = (courseId, sessionId, sessionCourseMappingId) => [
+    {
+        label: "class sections",
+        count: () => model.classSectionModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "classes",
+        count: () => model.classModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "syllabus",
+        count: () => model.syllabusModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "syllabus units",
+        count: () => model.syllabusUnitModel.count({
+            where: { sessionId },
+            include: [{
+                model: model.subjectModel,
+                as: "subjectUnit",
+                where: { courseId },
+                required: true,
+            }],
+        }),
+    },
+    {
+        label: "students",
+        count: () => model.studentModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "fee plans",
+        count: () => model.feePlanModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "fee plan profiles",
+        count: () => model.feePlanProfileModel.count({
+            where: { courseSessionId: sessionCourseMappingId },
+        }),
+    },
+    {
+        label: "credits",
+        count: () => model.creditModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "grade courses",
+        count: () => model.gradeCourseModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "exam structures",
+        count: () => model.examStructureModel.count({ where: { courseId, sessionId } }),
+    },
+    {
+        label: "lessons",
+        count: () => model.lessonModel.count({
+            where: { sessionId },
+            include: [{
+                model: model.subjectModel,
+                as: "lessonSubject",
+                where: { courseId },
+                required: true,
+            }],
+        }),
+    },
+    {
+        label: "exam schedules",
+        count: () => model.examScheduleModel.count({
+            where: { sessionId },
+            include: [{
+                model: model.subjectModel,
+                as: "subjectSchedule",
+                where: { courseId },
+                required: true,
+            }],
+        }),
+    },
+    {
+        label: "subject weightages",
+        count: () => model.subjectWeightageModel.count({
+            where: { sessionId },
+            include: [{
+                model: model.subjectModel,
+                as: "subject",
+                where: { courseId },
+                required: true,
+            }],
+        }),
+    },
+];
 
-export async function countSyllabusUnits(courseId, sessionId) {
-    return await model.syllabusUnitModel.count({
-        where: { sessionId },
-        include: [{
-            model: model.subjectModel,
-            as: 'subjectUnit',
-            where: { courseId }
-        }]
-    });
+export async function getCourseSessionMappingBlocker({ courseId, sessionId, sessionCourseMappingId }) {
+    const blockers = courseSessionMappingBlockers(courseId, sessionId, sessionCourseMappingId);
+    const results = await Promise.all(
+        blockers.map(async ({ label, count }) => ({ label, total: await count() }))
+    );
+
+    const blocker = results.find(({ total }) => total > 0);
+    if (!blocker) {
+        return null;
+    }
+
+    return `Cannot remove mapping: ${blocker.label} are already created for this course and session.`;
 }
 
 export async function deleteCourseSessionMapping(sessionCourseMappingId) {

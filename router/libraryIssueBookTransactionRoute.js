@@ -7,6 +7,7 @@ import {
   getLibraryIssueBookTransactions,
   getLibraryIssueBookTransactionById,
   updateLibraryIssueBookTransaction,
+  getLibraryBookInventoryIssueHistory,
 } from "../controllers/libraryIssueBookTransactionController.js";
 
 const router = Router();
@@ -74,6 +75,10 @@ const listIssueBookTransactionQuerySchema = z.object({
   search: z.string().trim().optional(),
 });
 
+const inventoryIssueHistoryQuerySchema = z.object({
+  inventoryId: positiveId,
+});
+
 router.post(
   "/",
   userAuth,
@@ -91,6 +96,12 @@ router.get(
   userAuth,
   validate({ query: libraryIssueBookTransactionIdQuerySchema }),
   getLibraryIssueBookTransactionById,
+);
+router.get(
+  "/inventoryIssueHistory",
+  userAuth,
+  validate({ query: inventoryIssueHistoryQuerySchema }),
+  getLibraryBookInventoryIssueHistory,
 );
 router.patch(
   "/",
