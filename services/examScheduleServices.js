@@ -37,6 +37,10 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
     return result;
 }
 
+export async function getExamScheduleExists(examScheduleId) {
+    return await examScheduleRepository.getExamScheduleExists(examScheduleId);
+}
+
 export async function getExamScheduleById(examScheduleId) {
     const result = await examScheduleRepository.getExamScheduleById(examScheduleId);
 

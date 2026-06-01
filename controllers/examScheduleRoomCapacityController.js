@@ -29,6 +29,16 @@ export async function updateExamRoomCapacity(req, res) {
     }
 }
 
+export async function getExamScheduleRooms(req, res) {
+    try {
+        const { examScheduleId } = req.query;
+        const result = await examRoomCapacityServices.getExamScheduleRooms(examScheduleId);
+        return SuccessResponse(res, 200, "Exam schedule rooms fetched successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, 500, error.message);
+    }
+}
+
 export async function deleteExamRoomCapacity(req, res) {
     try {
         const { examScheduleRoomCapacityId } = req.params;

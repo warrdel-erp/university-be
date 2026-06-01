@@ -90,6 +90,12 @@ export async function getExamSchedules(universityId, acedmicYearId, instituteId,
     }
 }
 
+export async function getExamScheduleExists(examScheduleId) {
+    return await model.examScheduleModel.findByPk(examScheduleId, {
+        attributes: ["examScheduleId"]
+    });
+}
+
 export async function getExamScheduleById(examScheduleId) {
     try {
         const result = await model.examScheduleModel.findByPk(examScheduleId, {
