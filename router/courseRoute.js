@@ -11,6 +11,7 @@ const getCourseSessionsSchema = z.object({
 });
 
 const listCoursesSchema = z.object({
+    instituteId: z.string().regex(/^\d+$/, "Institute Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
     acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
     campusId: z.string().regex(/^\d+$/, "Campus Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
 });

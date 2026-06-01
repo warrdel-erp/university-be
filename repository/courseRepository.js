@@ -169,21 +169,19 @@ export async function getEmployeeByemployeeId(employeeId) {
 };
 
 /**
- * List courses for university + institute with sessions in the given academic year.
- * @param {{ universityId: number, instituteId: number, acedmicYearId: number, campusId?: number }} scope
+ * List courses scoped to university and institute; sessions optionally filtered by academic year.
+ * @param {{ universityId: number, instituteId: number, acedmicYearId?: number, campusId?: number }} scope
  */
 export async function getAllCourses({ universityId, instituteId, acedmicYearId, campusId }) {
     try {
-        const whereClause = { universityId, instituteId };
-
         return await model.courseModel.findAll({
-            where: whereClause,
+            where: { universityId, instituteId },
             include: [
                 {
                     model: model.instituteModel,
                     as: 'instituted',
                     attributes: ['instituteId', 'instituteName', 'instituteCode', 'campusId'],
-                    ...(campusId && { where: { campusId } }),
+                    where: campusId ? { campusId } : {},
                 },
                 {
                     model: model.affiliatedIniversityModel,
@@ -201,15 +199,18 @@ export async function getAllCourses({ universityId, instituteId, acedmicYearId, 
                     model: model.sessionCouseMappingModel,
                     as: 'sessionCourseMappings',
                     attributes: ['sessionCourseMappingId'],
-                    where: whereClause,
-                    required: true,
+                    where: { instituteId },
+                    required: false,
                     include: [
                         {
                             model: model.sessionModel,
                             as: 'session',
                             attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
-                            where: { ...whereClause, acedmicYearId },
-                            required: true,
+                            where: {
+                                instituteId,
+                                ...(acedmicYearId && { acedmicYearId }),
+                            },
+                            required: false,
                         },
                     ],
                 },
