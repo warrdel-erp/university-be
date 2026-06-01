@@ -179,10 +179,6 @@ export async function publishExamSchedule(publishExamStructureSchedule) {
   return await examStructureScheduleRepository.publishExamSchedule(examSetupTypeId, data);
 }
 
-export async function deleteExamSchedule(examScheduleId) {
-  return await examStructureScheduleRepository.deleteExamSchedule(examScheduleId);
-}
-
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
