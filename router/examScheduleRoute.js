@@ -49,6 +49,10 @@ const availableRoomsQuerySchema = z.object({
   examScheduleId: z.coerce.number().int().positive(),
 });
 
+const getExamScheduleRoomsSchema = z.object({
+  examScheduleId: z.coerce.number().int().positive(),
+});
+
 router.get("/", userAuth, examScheduleController.getExamSchedules);
 router.get(
   "/availableRooms",

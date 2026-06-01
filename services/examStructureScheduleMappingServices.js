@@ -179,11 +179,6 @@ export async function publishExamSchedule(publishExamStructureSchedule) {
   return await examStructureScheduleRepository.publishExamSchedule(examSetupTypeId, data);
 }
 
-export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
-  examDetail.updatedBy = updatedBy;
-  await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
-}
-
 function getExamSlotMinutes(examTime, duration) {
   const [h = 0, m = 0] = String(examTime).split(":").map(Number);
   const startMinutes = h * 60 + m;
@@ -231,44 +226,40 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy, universi
   return result;
 }
 
-export async function getDetailByExamType(examSetupTypeId) {
-  return await examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);
-}
+// export async function getDetailByExamType(examSetupTypeId) {
+//   return await examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);
+// }
 
-export async function getExamDetailByStudentId(studentId) {
-  const data = await examStructureScheduleRepository.getExamDetailByStudentId(studentId);
+// export async function getExamDetailByStudentId(studentId) {
+//   const data = await examStructureScheduleRepository.getExamDetailByStudentId(studentId);
 
-  if (!data || !data.studentSemester) {
-    return null;
-  }
+//   if (!data || !data.studentSemester) {
+//     return null;
+//   }
 
-  const studentInfo = {
-    studentId: data.studentId,
-    studentName: data.firstName,
-    semesterId: data.studentSemester.semesterId,
-    semesterName: data.studentSemester.name,
-    exams: data.studentSemester.examSchedules.map((exam) => ({
-      subjectId: exam.subjectId,
-      subjectName: exam.subjectSchedule?.subjectName,
-      subjectCode: exam.subjectSchedule?.subjectCode,
-      subjectType: exam.subjectSchedule?.subjectType,
-      type: exam.type,
-      examDate: exam.examDate,
-      examTime: exam.examTime,
-      duration: exam.duration,
-    })),
-  };
+//   const studentInfo = {
+//     studentId: data.studentId,
+//     studentName: data.firstName,
+//     semesterId: data.studentSemester.semesterId,
+//     semesterName: data.studentSemester.name,
+//     exams: data.studentSemester.examSchedules.map((exam) => ({
+//       subjectId: exam.subjectId,
+//       subjectName: exam.subjectSchedule?.subjectName,
+//       subjectCode: exam.subjectSchedule?.subjectCode,
+//       subjectType: exam.subjectSchedule?.subjectType,
+//       type: exam.type,
+//       examDate: exam.examDate,
+//       examTime: exam.examTime,
+//       duration: exam.duration,
+//     })),
+//   };
 
-  return studentInfo;
-}
+//   return studentInfo;
+// }
 
-export async function getExamScheduleById(examScheduleId) {
-  return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
-}
-
-export async function deleteExamSchedule(examScheduleId) {
-  return examStructureScheduleRepository.deleteExamSchedule(examScheduleId);
-}
+// export async function getExamScheduleById(examScheduleId) {
+//   return await examStructureScheduleRepository.getExamScheduleById(examScheduleId);
+// }
 
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
@@ -276,12 +267,12 @@ export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) 
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 }
 
-export async function addExamSchedule(examDetail, createdBy, updatedBy, universityId, instituteId) {
-  examDetail.createdBy = createdBy;
-  examDetail.updatedBy = updatedBy;
-  await resolveAcedmicYearId(examDetail);
-  return examStructureScheduleRepository.addExamSchedule(examDetail);
-}
+// export async function addExamSchedule(examDetail, createdBy, updatedBy, universityId, instituteId) {
+//   examDetail.createdBy = createdBy;
+//   examDetail.updatedBy = updatedBy;
+//   await resolveAcedmicYearId(examDetail);
+//   return examStructureScheduleRepository.addExamSchedule(examDetail);
+// }
 
 export async function getDetailByExamType(examSetupTypeId) {
   return examStructureScheduleRepository.getDetailByExamType(examSetupTypeId);

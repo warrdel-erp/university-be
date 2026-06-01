@@ -44,6 +44,18 @@ export async function getAvailableRoomsForExamSchedule(req, res) {
   }
 }
 
+export async function getExamScheduleRooms(req, res) {
+  try {
+    const data = await examRoomCapacityServices.getExamScheduleRooms(
+      req.query.examScheduleId,
+    );
+    return SuccessResponse(res, 200, "Assigned rooms fetched successfully", data);
+  } catch (error) {
+    const status = error.message === "Exam schedule not found" ? 404 : 400;
+    return ErrorResponse(res, status, error.message);
+  }
+}
+
 export async function deleteExamRoomCapacity(req, res) {
   try {
     const { examScheduleRoomCapacityId } = req.params;
@@ -53,3 +65,4 @@ export async function deleteExamRoomCapacity(req, res) {
     return ErrorResponse(res, 400, error.message);
   }
 }
+
