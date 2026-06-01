@@ -21,11 +21,14 @@ export async function createFloor(payload, transaction) {
 }
 
 
-export async function getFloorDetails(universityId) {    
+export async function getFloorDetails(universityId, instituteId) {    
     try {
         const Floor = await model.libraryFloorModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:{universityId},
+            where: {
+                universityId,
+                ...(instituteId && { instituteId }),
+            },
             include:[
                 {
                     model: model.campusModel,
@@ -47,13 +50,17 @@ export async function getFloorDetails(universityId) {
     }
 }
 
-export async function getSingleFloorDetails(libraryFloorId, universityId) {
+export async function getSingleFloorDetails(libraryFloorId, universityId, instituteId) {
     try {
         return await model.libraryFloorModel.findOne({
             attributes: { 
                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
             },
-            where: { libraryFloorId, universityId },
+            where: {
+                libraryFloorId,
+                universityId,
+                ...(instituteId && { instituteId }),
+            },
 
             include: [
                 {
@@ -120,18 +127,26 @@ export async function deleteFloor(libraryFloorId) {
     return deleted > 0;
 }
 
-export async function findFloorById(libraryFloorId, universityId, transaction) {
+export async function findFloorById(libraryFloorId, universityId, instituteId, transaction) {
     return model.libraryFloorModel.findOne({
-        where: { libraryFloorId, universityId },
+        where: {
+            libraryFloorId,
+            universityId,
+            ...(instituteId && { instituteId }),
+        },
         attributes: ["libraryFloorId", "libraryCreationId", "campusId", "instituteId", "universityId"],
         transaction,
     });
 }
 
-export async function findFloorStructureById(libraryFloorId, universityId) {
+export async function findFloorStructureById(libraryFloorId, universityId, instituteId) {
     return model.libraryFloorModel.findOne({
         attributes: ["libraryFloorId", "libraryCreationId", "name", "description"],
-        where: { libraryFloorId, universityId },
+        where: {
+            libraryFloorId,
+            universityId,
+            ...(instituteId && { instituteId }),
+        },
         include: [
             {
                 model: model.libraryAisleModel,
@@ -192,7 +207,7 @@ export async function addAisle(data) {
     return await model.libraryAisleModel.create(data);
 }
 
-export async function getAisleDetails(universityId) {
+export async function getAisleDetails(universityId, instituteId) {
     return await model.libraryAisleModel.findAll({
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         include: [
@@ -200,13 +215,17 @@ export async function getAisleDetails(universityId) {
                 model: model.libraryFloorModel,
                 as: "floor",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                where:{universityId}
-            }
-        ]
+                where: {
+                    universityId,
+                    ...(instituteId && { instituteId }),
+                },
+                required: true,
+            },
+        ],
     });
 }
 
-export async function getSingleAisle(libraryAisleId) {
+export async function getSingleAisle(libraryAisleId, universityId, instituteId) {
     return await model.libraryAisleModel.findOne({
         where: { libraryAisleId },
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -214,9 +233,14 @@ export async function getSingleAisle(libraryAisleId) {
             {
                 model: model.libraryFloorModel,
                 as: "floor",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-            }
-        ]
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                where: {
+                    universityId,
+                    ...(instituteId && { instituteId }),
+                },
+                required: true,
+            },
+        ],
     });
 }
 
@@ -235,29 +259,55 @@ export async function addRack(data) {
     return await model.libraryRackModel.create(data);
 }
 
-export async function getRackDetails() {
+export async function getRackDetails(universityId, instituteId) {
     return await model.libraryRackModel.findAll({
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         include: [
             {
                 model: model.libraryAisleModel,
                 as: "aisle",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-            }
-        ]
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                required: true,
+                include: [
+                    {
+                        model: model.libraryFloorModel,
+                        as: "floor",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        where: {
+                            universityId,
+                            ...(instituteId && { instituteId }),
+                        },
+                        required: true,
+                    },
+                ],
+            },
+        ],
     });
 }
 
-export async function getSingleRack(libraryRackId) {
+export async function getSingleRack(libraryRackId, universityId, instituteId) {
     return await model.libraryRackModel.findOne({
         where: { libraryRackId },
         include: [
             {
                 model: model.libraryAisleModel,
                 as: "aisle",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-            }
-        ]
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                required: true,
+                include: [
+                    {
+                        model: model.libraryFloorModel,
+                        as: "floor",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        where: {
+                            universityId,
+                            ...(instituteId && { instituteId }),
+                        },
+                        required: true,
+                    },
+                ],
+            },
+        ],
     });
 }
 
@@ -274,29 +324,71 @@ export async function addRow(data) {
     return await model.libraryRowModel.create(data);
 }
 
-export async function getRowDetails() {
+export async function getRowDetails(universityId, instituteId) {
     return await model.libraryRowModel.findAll({
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         include: [
             {
                 model: model.libraryRackModel,
                 as: "rack",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-            }
-        ]
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                required: true,
+                include: [
+                    {
+                        model: model.libraryAisleModel,
+                        as: "aisle",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        required: true,
+                        include: [
+                            {
+                                model: model.libraryFloorModel,
+                                as: "floor",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                where: {
+                                    universityId,
+                                    ...(instituteId && { instituteId }),
+                                },
+                                required: true,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
     });
 }
 
-export async function getSingleRow(libraryRowId) {
+export async function getSingleRow(libraryRowId, universityId, instituteId) {
     return await model.libraryRowModel.findOne({
         where: { libraryRowId },
         include: [
             {
                 model: model.libraryRackModel,
                 as: "rack",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-            }
-        ]
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                required: true,
+                include: [
+                    {
+                        model: model.libraryAisleModel,
+                        as: "aisle",
+                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                        required: true,
+                        include: [
+                            {
+                                model: model.libraryFloorModel,
+                                as: "floor",
+                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                where: {
+                                    universityId,
+                                    ...(instituteId && { instituteId }),
+                                },
+                                required: true,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
     });
 }
 

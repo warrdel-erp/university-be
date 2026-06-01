@@ -4,36 +4,40 @@ export const addAssignVehicle = async (assignVehicleData) => {
     return await model.assignVehicleModel.create(assignVehicleData);
 };
 
-export const getAssignVehicle = async (universityId, acedmicYearId,role,instituteId) => {
+export const getAssignVehicle = async (universityId, acedmicYearId, instituteId) => {
     try {
+        const transportRouteWhere = {
+            universityId,
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(instituteId && { instituteId }),
+        };
+
         const result = await model.assignVehicleModel.findAll({
             attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
             },
             include: [
                 {
                     model: model.transportRouteModel,
-                    as: 'transportRoute',
-                    attributes: ["routeTitle", "fare"],
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId })
-                    }
+                    as: "transportRoute",
+                    attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
+                    where: transportRouteWhere,
+                    required: true,
                 },
                 {
                     model: model.vehicleModel,
-                    as: 'vehicle',
-                    attributes: ["vehicleNumber", "vehicleModel"],
+                    as: "vehicle",
+                    attributes: ["vehicleNumber", "vehicleModel", "instituteId"],
+                    ...(instituteId && { where: { instituteId }, required: true }),
                 },
                 {
                     model: model.userModel,
-                    as: 'assignVehicleUser',
+                    as: "assignVehicleUser",
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
-            ]
+                    where: { universityId },
+                    required: true,
+                },
+            ],
         });
 
         return result;
@@ -43,31 +47,35 @@ export const getAssignVehicle = async (universityId, acedmicYearId,role,institut
     }
 };
 
-export const getSingleAssignVehicle = async (assignVehicleId, universityId) => {
+export const getSingleAssignVehicle = async (assignVehicleId, universityId, instituteId) => {
     return await model.assignVehicleModel.findOne({
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        where: { assignVehicleId },
         include: [
             {
                 model: model.transportRouteModel,
-                as: 'transportRoute',
-                attributes: ["routeTitle", "fare"],
-
+                as: "transportRoute",
+                attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
+                where: {
+                    universityId,
+                    ...(instituteId && { instituteId }),
+                },
+                required: true,
             },
             {
                 model: model.vehicleModel,
-                as: 'vehicle',
-                attributes: ["vehicleNumber", "vehicleModel"],
+                as: "vehicle",
+                attributes: ["vehicleNumber", "vehicleModel", "instituteId"],
+                ...(instituteId && { where: { instituteId }, required: true }),
             },
             {
                 model: model.userModel,
-                as: 'assignVehicleUser',
+                as: "assignVehicleUser",
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
-            }
+                where: { universityId },
+                required: true,
+            },
         ],
-        where: { assignVehicleId },
     });
 };
 

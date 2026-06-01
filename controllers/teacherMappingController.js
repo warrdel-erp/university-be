@@ -41,8 +41,8 @@ export const getTeacherSubjectMapping = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
-    let { employeeId, acedmicYearId } = req.query
-    employeeId = employeeId || 0
+    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
+    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
         const result = await teacherMapping.getTeacherSubjectMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);
@@ -56,8 +56,8 @@ export const getTeacherSectionMapping = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
-    let { employeeId, acedmicYearId } = req.query
-    employeeId = employeeId || 0
+    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
+    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
         const result = await teacherMapping.getTeacherSectionMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
         res.status(200).send(result);

@@ -9,12 +9,12 @@ export async function addFloor(floorData, createdBy, updatedBy,universityId) {
         return Floor;
 };
 
-export async function getFloorDetails(universityId) {
-    return await libraryStructureRepository.getFloorDetails(universityId);
+export async function getFloorDetails(universityId, instituteId) {
+    return await libraryStructureRepository.getFloorDetails(universityId, instituteId);
 }
 
-export async function getSingleFloorDetails(libraryFloorId,universityId) {
-    return await libraryStructureRepository.getSingleFloorDetails(libraryFloorId,universityId);
+export async function getSingleFloorDetails(libraryFloorId, universityId, instituteId) {
+    return await libraryStructureRepository.getSingleFloorDetails(libraryFloorId, universityId, instituteId);
 }
 
 export async function updateFloor(libraryFloorId, floorData, updatedBy) {    
@@ -33,12 +33,12 @@ export async function addAisle(aisleData, createdBy, updatedBy) {
     return await libraryStructureRepository.addAisle(aisleData);
 }
 
-export async function getAisleDetails(universityId) {
-    return await libraryStructureRepository.getAisleDetails(universityId);
+export async function getAisleDetails(universityId, instituteId) {
+    return await libraryStructureRepository.getAisleDetails(universityId, instituteId);
 }
 
-export async function getSingleAisle(libraryAisleId) {
-    return await libraryStructureRepository.getSingleAisle(libraryAisleId);
+export async function getSingleAisle(libraryAisleId, universityId, instituteId) {
+    return await libraryStructureRepository.getSingleAisle(libraryAisleId, universityId, instituteId);
 }
 
 export async function updateAisle(libraryAisleId, aisleData, updatedBy) {
@@ -59,12 +59,12 @@ export async function addRack(rackData, createdBy, updatedBy) {
     return await libraryStructureRepository.addRack(rackData);
 }
 
-export async function getRackDetails() {
-    return await libraryStructureRepository.getRackDetails();
+export async function getRackDetails(universityId, instituteId) {
+    return await libraryStructureRepository.getRackDetails(universityId, instituteId);
 }
 
-export async function getSingleRack(libraryRackId) {
-    return await libraryStructureRepository.getSingleRack(libraryRackId);
+export async function getSingleRack(libraryRackId, universityId, instituteId) {
+    return await libraryStructureRepository.getSingleRack(libraryRackId, universityId, instituteId);
 }
 
 export async function updateRack(libraryRackId, rackData, updatedBy) {
@@ -85,12 +85,12 @@ export async function addRow(rowData, createdBy, updatedBy) {
     return await libraryStructureRepository.addRow(rowData);
 }
 
-export async function getRowDetails() {
-    return await libraryStructureRepository.getRowDetails();
+export async function getRowDetails(universityId, instituteId) {
+    return await libraryStructureRepository.getRowDetails(universityId, instituteId);
 }
 
-export async function getSingleRow(libraryRowId) {
-    return await libraryStructureRepository.getSingleRow(libraryRowId);
+export async function getSingleRow(libraryRowId, universityId, instituteId) {
+    return await libraryStructureRepository.getSingleRow(libraryRowId, universityId, instituteId);
 }
 
 export async function updateRow(libraryRowId, rowData, updatedBy) {
