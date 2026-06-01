@@ -392,23 +392,34 @@ export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
   }
 
   const audit = structureAuditFields(user.userId);
+  const maxAisleName =
+    await libraryStructureRepository.getMaxNumericAisleNameByFloorId(libraryFloorId);
+  const aisleNameStart = maxAisleName + 1;
+  const aislePayloads = buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit);
+
+  for (const { name } of aislePayloads) {
+    if (await libraryStructureRepository.findAisleByFloorAndName(libraryFloorId, name)) {
+      throw httpError(`Aisle name '${name}' already exists`, 409);
+    }
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
-    const maxAisleName =
-      await libraryStructureRepository.getMaxNumericAisleNameByFloorId(
-        libraryFloorId,
-        transaction,
-      );
-    const aisleNameStart = maxAisleName + 1;
-
     const createdAisles = await libraryStructureRepository.bulkCreateAisles(
-      buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit),
+      aislePayloads,
       transaction,
     );
 
+    const rackPayloads = buildRackPayloads(createdAisles, racksPerAisle, audit);
+    for (const { libraryAisleId, name } of rackPayloads) {
+      if (await libraryStructureRepository.findRackByAisleAndName(libraryAisleId, name)) {
+        throw httpError(`Rack name '${name}' already exists in this aisle`, 409);
+      }
+    }
+
     const createdRacks = await libraryStructureRepository.bulkCreateRacks(
-      buildRackPayloads(createdAisles, racksPerAisle, audit),
+      rackPayloads,
       transaction,
     );
 
@@ -421,6 +432,12 @@ export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
       aisleNameByAisleId,
       audit,
     );
+
+    for (const { libraryRackId, name } of rowPayloads) {
+      if (await libraryStructureRepository.findRowByRackAndName(libraryRackId, name)) {
+        throw httpError(`Row name '${name}' already exists in this rack`, 409);
+      }
+    }
 
     await libraryStructureRepository.bulkCreateRows(rowPayloads, transaction);
 
