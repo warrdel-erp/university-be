@@ -137,7 +137,6 @@ app.use("/studentHallTicket", studentHallTicket);
 app.use("/options", options);
 app.use("/subjectWeightage", subjectWeightage);
 
-app.use("/libraryIssueBook", libraryIssueBookTransaction);
 
 app.use("/main", main);
 app.use("/setting", setting);
@@ -147,7 +146,10 @@ app.use("/codeMaster", codeMaster);
 app.use("/user", user);
 app.use("/employee", employee);
 app.use("/teacher", teacher);
+
 app.use("/libraryCreation", libraryCreation);
+app.use("/libraryIssueBook", libraryIssueBookTransaction);
+
 app.use("/timeTable", timeTable);
 app.use("/faculityLoad", faculityLoad);
 app.use("/timeTableCreate", timeTableCreate);
