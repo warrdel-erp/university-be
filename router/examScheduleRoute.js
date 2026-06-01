@@ -1,63 +1,108 @@
-import { Router } from 'express';
-import { z } from 'zod';
-import * as examScheduleController from '../controllers/examScheduleController.js';
-import * as examRoomCapacityController from '../controllers/examScheduleRoomCapacityController.js';
-import userAuth from '../middleware/authUser.js';
-import { validate } from '../utility/validation.js';
+import { Router } from "express";
+import { z } from "zod";
+import * as examScheduleController from "../controllers/examScheduleController.js";
+import * as examRoomCapacityController from "../controllers/examScheduleRoomCapacityController.js";
+import userAuth from "../middleware/authUser.js";
+import { validate } from "../utility/validation.js";
 
 const router = Router();
 
 const classRoomSectionIdsSchema = z.object({
-    examScheduleId: z.coerce.number(),
+  examScheduleId: z.coerce.number(),
 
-    classRoomSectionIds: z
-        .array(
-            z.object({
-                classRoomSectionId: z.coerce.number(),
-                orderKey: z.coerce.number().optional()
-            })
-        )
-        .transform((items) =>
-            items.map((item) => item.classRoomSectionId)
-        )
+  classRoomSectionIds: z
+    .array(
+      z.object({
+        classRoomSectionId: z.coerce.number(),
+        orderKey: z.coerce.number().optional(),
+      }),
+    )
+    .transform((items) => items.map((item) => item.classRoomSectionId)),
 });
 
-
 const addExamRoomCapacitySchema = z.object({
-    classRoomSectionIds: z.array(
-        z.union([
-            z.number(),
-            z.object({
-                classRoomSectionId: z.number(),
-                orderKey: z.number().int().positive().optional()
-            })
-        ])
-    ).min(1, "At least one room is required"),
-    examScheduleId: z.number({ required_error: "examScheduleId is required" })
+  classRoomSectionIds: z
+    .array(
+      z.union([
+        z.number(),
+        z.object({
+          classRoomSectionId: z.number(),
+          orderKey: z.number().int().positive().optional(),
+        }),
+      ]),
+    )
+    .min(1, "At least one room is required"),
+  examScheduleId: z.number({ required_error: "examScheduleId is required" }),
 });
 
 const updateExamRoomCapacitySchema = z.object({
-    examScheduleRoomCapacityId: z.number({ required_error: "examScheduleRoomCapacityId is required" }),
-    capacity: z.number(),
-    columns: z.number()
+  examScheduleRoomCapacityId: z.number({ required_error: "examScheduleRoomCapacityId is required" }),
+  capacity: z.number(),
+  columns: z.number(),
 });
 
 const allocateSeatsSchema = z.object({
-    examScheduleId: z.number({ required_error: "examScheduleId is required" })
+  examScheduleId: z.number({ required_error: "examScheduleId is required" }),
 });
 
-router.get('/', userAuth, examScheduleController.getExamSchedules);
+const availableRoomsQuerySchema = z.object({
+  examScheduleId: z.coerce.number().int().positive(),
+});
 
-router.get('/:id', userAuth, examScheduleController.getExamScheduleById);
+const getExamScheduleRoomsSchema = z.object({
+  examScheduleId: z.coerce.number().int().positive(),
+});
 
-router.post('/assignRoom', userAuth, validate({ body: addExamRoomCapacitySchema }), examRoomCapacityController.addExamRoomCapacity);
+router.get("/", userAuth, examScheduleController.getExamSchedules);
+router.get(
+  "/availableRooms",
+  userAuth,
+  validate({ query: availableRoomsQuerySchema }),
+  examRoomCapacityController.getAvailableRoomsForExamSchedule,
+);
 
-router.put('/roomAssignment', userAuth, validate({ body: updateExamRoomCapacitySchema }), examRoomCapacityController.updateExamRoomCapacity);
+router.get(
+  "/roomAssignments",
+  userAuth,
+  validate({ query: getExamScheduleRoomsSchema }),
+  examRoomCapacityController.getExamScheduleRooms,
+);
 
-router.post('/allocateSeats/randomly', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeats);
+router.get("/:id", userAuth, examScheduleController.getExamScheduleById);
 
-router.post('/allocateSeats/ascending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsAscending);
+router.post(
+  "/assignRoom",
+  userAuth,
+  validate({ body: addExamRoomCapacitySchema }),
+  examRoomCapacityController.addExamRoomCapacity,
+);
 
-router.post('/allocateSeats/descending', userAuth, validate({ body: allocateSeatsSchema }), examScheduleController.allocateSeatsDescending);
+router.put(
+  "/roomAssignment",
+  userAuth,
+  validate({ body: updateExamRoomCapacitySchema }),
+  examRoomCapacityController.updateExamRoomCapacity,
+);
+
+router.post(
+  "/allocateSeats/randomly",
+  userAuth,
+  validate({ body: allocateSeatsSchema }),
+  examScheduleController.allocateSeats,
+);
+
+router.post(
+  "/allocateSeats/ascending",
+  userAuth,
+  validate({ body: allocateSeatsSchema }),
+  examScheduleController.allocateSeatsAscending,
+);
+
+router.post(
+  "/allocateSeats/descending",
+  userAuth,
+  validate({ body: allocateSeatsSchema }),
+  examScheduleController.allocateSeatsDescending,
+);
 
 export default router;

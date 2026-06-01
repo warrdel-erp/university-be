@@ -1,7 +1,6 @@
 import * as examStructureServices from "../services/examStructureServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
-
 export async function addExamStructure(req, res) {
   const { acedmicYearId, courseId } = req.body;
   const createdBy = req.user.userId;
@@ -12,16 +11,22 @@ export async function addExamStructure(req, res) {
     if (!(acedmicYearId && courseId)) {
       return ErrorResponse(res, 400, "Required fields are missing");
     }
-    const examStructure = await examStructureServices.addExamStructure(req.body, createdBy, updatedBy, universityId, instituteId);
+    const examStructure = await examStructureServices.addExamStructure(
+      req.body,
+      createdBy,
+      updatedBy,
+      universityId,
+      instituteId,
+    );
     return SuccessResponse(res, 201, "Exam Structure created successfully", examStructure);
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function getAllExamStructure(req, res) {
   const universityId = req.user.universityId;
-  const { acedmicYearId } = req.query
+  const { acedmicYearId } = req.query;
   const role = req.user.role;
   const instituteId = req.user.defaultInstituteId;
   try {
@@ -48,7 +53,7 @@ export async function getSingleExamStructure(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function updateExamStructure(req, res) {
   try {
@@ -62,7 +67,7 @@ export async function updateExamStructure(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function deleteExamStructure(req, res) {
   try {
@@ -79,24 +84,30 @@ export async function deleteExamStructure(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function addExamType(req, res) {
   const { examStructureId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    if (!(examStructureId)) {
-      return ErrorResponse(res, 400, "examStructureId Required fields are missing");
-    }
+    // if (!examStructureId) {
+    //   return ErrorResponse(res, 400, "examStructureId Required fields are missing");
+    // }
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
-    const examStructure = await examStructureServices.addExamType(req.body, createdBy, updatedBy, universityId, instituteId);
+    const examStructure = await examStructureServices.addExamType(
+      req.body,
+      createdBy,
+      updatedBy,
+      universityId,
+      instituteId,
+    );
     return SuccessResponse(res, 201, "Exam setup type created successfully", examStructure);
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function getDetailByExamType(req, res) {
   const universityId = req.user.universityId;
@@ -114,7 +125,7 @@ export async function getDetailByExamType(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function getSingleExamType(req, res) {
   const universityId = req.user.universityId;
@@ -128,7 +139,7 @@ export async function getSingleExamType(req, res) {
       sessionId,
       universityId,
       termNumber ?? null,
-      instituteId
+      instituteId,
     );
 
     if (examDetails?.length) {
@@ -139,7 +150,7 @@ export async function getSingleExamType(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function updateExamType(req, res) {
   try {
@@ -153,7 +164,7 @@ export async function updateExamType(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}
 
 export async function deleteExamType(req, res) {
   try {
@@ -171,4 +182,4 @@ export async function deleteExamType(req, res) {
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
   }
-};
+}

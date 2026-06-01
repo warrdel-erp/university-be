@@ -16,7 +16,7 @@ export default sequelize.define(
         },
         examStructureId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'exam_structure_id',
             references: {
                 model: examStructureModel,

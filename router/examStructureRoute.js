@@ -2,12 +2,16 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import {
-    addExamStructure,
-    getAllExamStructure,
-    getSingleExamStructure,
-    updateExamStructure,
-    deleteExamStructure,
-    addExamType, getDetailByExamType, getSingleExamType, updateExamType, deleteExamType
+  addExamStructure,
+  getAllExamStructure,
+  getSingleExamStructure,
+  updateExamStructure,
+  deleteExamStructure,
+  addExamType,
+  getDetailByExamType,
+  getSingleExamType,
+  updateExamType,
+  deleteExamType,
 } from "../controllers/examStructureController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -45,19 +49,9 @@ router.delete("/examRule", userAuth, deleteExamStructure);
 
 router.post("/examType", userAuth, addExamType);
 
-router.get(
-  "/examType",
-  userAuth,
-  validate({ query: getDetailByExamTypeQuerySchema }),
-  getDetailByExamType,
-);
+router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 
-router.get(
-  "/examType/single",
-  userAuth,
-  validate({ query: getSingleExamTypeQuerySchema }),
-  getSingleExamType,
-);
+router.get("/examType/single", userAuth, validate({ query: getSingleExamTypeQuerySchema }), getSingleExamType);
 
 router.patch("/examType", userAuth, updateExamType);
 
