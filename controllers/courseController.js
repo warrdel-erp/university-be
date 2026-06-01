@@ -6,29 +6,18 @@ import { ErrorResponse, SuccessResponse } from '../utility/response.js';
  */
 export const listCourses = async (req, res) => {
     try {
-        const universityId = req.user.universityId;
-        const { instituteId, campusId } = req.query;
+        const scope = {
+            universityId: req.user.universityId,
+            instituteId: req.user.defaultInstituteId,
+            acedmicYearId: req.query.acedmicYearId ?? req.user.defaultAcademicYearId,
+            campusId: req.query.campusId,
+        };
 
-        if (!universityId) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'University Id is missing from user session'
-            });
-        }
-
-        const result = await courseService.listCourses(universityId, instituteId, campusId);
-
-        return res.status(200).json({
-            status: 'success',
-            data: result
-        });
+        const result = await courseService.listCourses(scope);
+        return SuccessResponse(res, 200, 'Courses fetched successfully', result);
     } catch (error) {
-        console.error("Error in List Course Controller:", error);
-        return res.status(500).json({
-            status: 'error',
-            message: "Internal Server Error",
-            error: error.message
-        });
+        console.error('Error in List Course Controller:', error);
+        return ErrorResponse(res, 500, 'Internal Server Error', error);
     }
 };
 

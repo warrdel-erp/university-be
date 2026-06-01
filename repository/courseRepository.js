@@ -169,18 +169,12 @@ export async function getEmployeeByemployeeId(employeeId) {
 };
 
 /**
- * Get all courses for a university
- * @param {number} universityId 
- * @param {number} [instituteId] 
- * @param {number} [campusId]
- * @returns {Promise<Array>}
+ * List courses for university + institute with sessions in the given academic year.
+ * @param {{ universityId: number, instituteId: number, acedmicYearId: number, campusId?: number }} scope
  */
-export async function getAllCourses(universityId, instituteId, campusId) {
+export async function getAllCourses({ universityId, instituteId, acedmicYearId, campusId }) {
     try {
-        const whereClause = {
-            universityId,
-            ...(instituteId && { instituteId })
-        };
+        const whereClause = { universityId, instituteId };
 
         return await model.courseModel.findAll({
             where: whereClause,
@@ -188,8 +182,8 @@ export async function getAllCourses(universityId, instituteId, campusId) {
                 {
                     model: model.instituteModel,
                     as: 'instituted',
-                    attributes: ["instituteId", "instituteName", "instituteCode", "campusId"],
-                    where: campusId ? { campusId } : {},
+                    attributes: ['instituteId', 'instituteName', 'instituteCode', 'campusId'],
+                    ...(campusId && { where: { campusId } }),
                 },
                 {
                     model: model.affiliatedIniversityModel,
@@ -203,26 +197,26 @@ export async function getAllCourses(universityId, instituteId, campusId) {
                     attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
                     required: false,
                 },
-               {
-                   model: model.sessionCouseMappingModel,
-                   as: 'sessionCourseMappings',
-                   attributes: ['sessionCourseMappingId'],
-                   required: false,
-                   include: [
-                       {
-                           model: model.sessionModel,
-                           as: 'session',
-                           attributes: ['sessionId', 'sessionName'],
-                           required: false,
-                       }
-                   ]
-               }
-
-
-            ]
+                {
+                    model: model.sessionCouseMappingModel,
+                    as: 'sessionCourseMappings',
+                    attributes: ['sessionCourseMappingId'],
+                    where: whereClause,
+                    required: true,
+                    include: [
+                        {
+                            model: model.sessionModel,
+                            as: 'session',
+                            attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
+                            where: { ...whereClause, acedmicYearId },
+                            required: true,
+                        },
+                    ],
+                },
+            ],
         });
     } catch (error) {
-        console.error("Error in Course Repository (getAllCourses):", error);
+        console.error('Error in Course Repository (getAllCourses):', error);
         throw error;
     }
 }
