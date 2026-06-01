@@ -836,7 +836,7 @@
       "name": "sessions",
       "item": [
         {
-          "name": "get",
+          "name": "get all (institute scoped)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -851,14 +851,135 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/session",
+              "raw": "{{baseurl}}/session?acedmicYearId=59",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "session"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "59",
+                  "description": "Optional academic year filter"
+                }
               ]
-            }
+            },
+            "description": "**GET /session**\n\nReturns sessions for the authenticated user's **default institute only** (not other institutes). Includes `courseMappings` for that institute.\n\nOptional query: `acedmicYearId`."
+          },
+          "response": []
+        },
+        {
+          "name": "post course session mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": 6,\n  \"courseId\": [34, 35]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/session/courseSessionMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session",
+                "courseSessionMapping"
+              ]
+            },
+            "description": "**POST /session/courseSessionMapping**\n\nMaps one or more courses to a session for the user's institute."
+          },
+          "response": []
+        },
+        {
+          "name": "patch course session mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionCourseMappingId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/session/courseSessionMapping/update",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session",
+                "courseSessionMapping",
+                "update"
+              ]
+            },
+            "description": "**PATCH /session/courseSessionMapping/update**\n\nRequires `sessionCourseMappingId` in body."
+          },
+          "response": []
+        },
+        {
+          "name": "delete course session mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/session/courseSessionMapping?sessionCourseMappingId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session",
+                "courseSessionMapping"
+              ],
+              "query": [
+                {
+                  "key": "sessionCourseMappingId",
+                  "value": "1",
+                  "description": "Required. Fails if related data exists (class sections, syllabus, students, fee plans, etc.)."
+                }
+              ]
+            },
+            "description": "**DELETE /session/courseSessionMapping**\n\nUnmaps a course from a session. Blocked when dependent data already exists for that course–session pair."
           },
           "response": []
         }
@@ -3545,6 +3666,42 @@
       "name": "exam schedule",
       "item": [
         {
+          "name": "get available rooms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examSchedule/availableRooms?examScheduleId=45",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examSchedule",
+                "availableRooms"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "45",
+                  "description": "Required. Returns rooms free for this exam slot (no other exam or class conflict)."
+                }
+              ]
+            },
+            "description": "**GET /examSchedule/availableRooms**\n\nReturns rooms available for room assignment for the given `examScheduleId`.\n\nEach room includes: `roomNumber`, `capacity`, `examCapacity`, `examCapacityColumns`, `effectiveExamCapacity` (`examCapacity` or fallback `capacity`).\n\nExcludes rooms that are:\n- Assigned to another overlapping exam on the same date\n- Used by a class on that day/time (timetable)\n- Already assigned to this exam\n- Soft-deleted or under inactive building hierarchy\n\nResponse also includes slot info: `examDate`, `examTime`, `duration`, `slotStartTime`, `slotEndTime`, `day`."
+          },
+          "response": []
+        },
+        {
           "name": "assign room",
           "request": {
             "auth": {
@@ -3561,7 +3718,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"examScheduleId\": 45,\n    \"classRoomSectionIds\": [101, 102, 105]\n}",
+              "raw": "{\n  \"examScheduleId\": 45,\n  \"classRoomSectionIds\": [\n    { \"classRoomSectionId\": 101, \"orderKey\": 1 },\n    { \"classRoomSectionId\": 102, \"orderKey\": 2 }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3569,14 +3726,16 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}examSchedule/assignRoom",
+              "raw": "{{baseurl}}/examSchedule/assignRoom",
               "host": [
-                "{{baseurl}}examSchedule"
+                "{{baseurl}}"
               ],
               "path": [
+                "examSchedule",
                 "assignRoom"
               ]
-            }
+            },
+            "description": "**POST /examSchedule/assignRoom**\n\nAssigns rooms to an exam schedule. `classRoomSectionIds` accepts room IDs or `{ classRoomSectionId, orderKey }` objects (order 1..n, no gaps).\n\nTotal `effectiveExamCapacity` must be >= enrolled student count. Uses a DB transaction for writes.\n\nCall **GET /examSchedule/availableRooms** first to list conflict-free rooms."
           },
           "response": []
         },
@@ -3605,11 +3764,12 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}examSchedule/allocateSeats/randomly",
+              "raw": "{{baseurl}}/examSchedule/allocateSeats/randomly",
               "host": [
-                "{{baseurl}}examSchedule"
+                "{{baseurl}}"
               ],
               "path": [
+                "examSchedule",
                 "allocateSeats",
                 "randomly"
               ]
@@ -3642,11 +3802,12 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}examSchedule/allocateSeats/ascending",
+              "raw": "{{baseurl}}/examSchedule/allocateSeats/ascending",
               "host": [
-                "{{baseurl}}examSchedule"
+                "{{baseurl}}"
               ],
               "path": [
+                "examSchedule",
                 "allocateSeats",
                 "ascending"
               ]
@@ -3679,11 +3840,12 @@
               }
             },
             "url": {
-              "raw": "{{baseurl}}examSchedule/allocateSeats/descending",
+              "raw": "{{baseurl}}/examSchedule/allocateSeats/descending",
               "host": [
-                "{{baseurl}}examSchedule"
+                "{{baseurl}}"
               ],
               "path": [
+                "examSchedule",
                 "allocateSeats",
                 "descending"
               ]
@@ -3724,7 +3886,8 @@
                 "examSchedule",
                 "roomAssignment"
               ]
-            }
+            },
+            "description": "**PUT /examSchedule/roomAssignment**\n\nUpdates capacity/columns for an existing room assignment. Uses a DB transaction."
           },
           "response": []
         },
@@ -3969,6 +4132,116 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "exam schedule mapping",
+      "description": "Exam date/time scheduling under `/examScheduleMapping`.\n\n**POST /schedule** creates an `exam_schedule` row. `acedmicYearId` is taken from the authenticated user's `defaultAcademicYearId` (not sent in body).\n\n**Student time conflict:** rejects when another exam for the same student cohort (same `sessionId`, academic year, `courseId` + `term` from `examSetupTypeTermId`, and `semesterId` when provided) overlaps on the same `examDate` (`examTime` + `duration`).",
+      "variable": [
+        {
+          "key": "examScheduleMapping_examSetupTypeTermId",
+          "value": "10",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_sessionId",
+          "value": "6",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_subjectId",
+          "value": "129",
+          "type": "string"
+        },
+        {
+          "key": "examScheduleMapping_examScheduleId",
+          "value": "1",
+          "type": "string"
+        }
+      ],
+      "item": [
+        {
+          "name": "create exam schedule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const row = res?.examSchedule ?? res?.data?.examSchedule ?? res?.data;",
+                  "const id = row?.examScheduleId ?? row?.exam_schedule_id;",
+                  "if (id) pm.collectionVariables.set('examScheduleMapping_examScheduleId', String(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examSetupTypeTermId\": {{examScheduleMapping_examSetupTypeTermId}},\n  \"sessionId\": {{examScheduleMapping_sessionId}},\n  \"subjectId\": {{examScheduleMapping_subjectId}},\n  \"examDate\": \"2026-06-15\",\n  \"examTime\": \"10:00:00\",\n  \"duration\": \"120\",\n  \"type\": \"Theory\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/schedule",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "schedule"
+              ]
+            },
+            "description": "**POST /examScheduleMapping/schedule**\n\nCreates an exam schedule (date/time slot for a subject).\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `examSetupTypeTermId` | Links to course + term |\n| `sessionId` | Session for enrolled students |\n| `subjectId` | Subject being scheduled |\n| `examDate` | `YYYY-MM-DD` |\n| `examTime` | e.g. `10:00:00` |\n| `duration` | Minutes as string, e.g. `\"120\"` |\n| `type` | e.g. `Theory` |\n\nOptional: `semesterId` — when set, conflict check is scoped to that semester.\n\n### Server-set\n- `acedmicYearId` from token user's `defaultAcademicYearId`\n- `createdBy` / `updatedBy` from token user\n\n### Conflict rule\nReturns **500** with message like:\n`Cannot schedule exam: {subjectName} is already scheduled at the same time for the same students`\n\nwhen another exam overlaps for the same course/term/session cohort.\n\n### Success\n**201** — `{ message, examSchedule }`. Test script saves `examScheduleId` to `{{examScheduleMapping_examScheduleId}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "get schedule by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/getScheduleById/{{examScheduleMapping_examScheduleId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "getScheduleById",
+                "{{examScheduleMapping_examScheduleId}}"
+              ]
+            },
+            "description": "**GET /examScheduleMapping/getScheduleById/:id**"
           },
           "response": []
         }
