@@ -6348,7 +6348,7 @@
     },
     {
       "name": "library issue book",
-      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n\nAuth: Bearer {{token}}",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → **get inventory issue history** (by `inventoryId`) → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** — accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
       "variable": [
         {
           "key": "libraryIssueBookTransaction_id",
@@ -6502,6 +6502,36 @@
                 }
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "get inventory issue history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/inventoryIssueHistory?inventoryId={{inventory_id}}",
+              "host": ["{{baseurl}}"],
+              "path": ["libraryIssueBook", "inventoryIssueHistory"],
+              "query": [
+                {
+                  "key": "inventoryId",
+                  "value": "{{inventory_id}}"
+                }
+              ]
+            },
+            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) — `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` — inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, …)\n- `issueCount` — total issue entries for this copy\n- `issueHistory[]` — each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and `returnDate` on the item\n\n404 when `inventoryId` not found."
           },
           "response": []
         },

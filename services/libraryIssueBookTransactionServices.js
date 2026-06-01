@@ -248,3 +248,13 @@ export async function updateLibraryIssueBookTransaction(body) {
     throw error;
   }
 }
+
+export async function getLibraryBookInventoryIssueHistory(inventoryId) {
+  const data = await repo.getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId);
+
+  if (!data) {
+    throw httpError("Book inventory not found for the given inventoryId", 404);
+  }
+
+  return data;
+}
