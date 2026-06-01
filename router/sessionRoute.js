@@ -14,6 +14,13 @@ const sessionSchema = z.object({
     courseId: z.array(z.number()).optional()
 });
 
+const deleteCourseSessionMappingSchema = z.object({
+    sessionCourseMappingId: z.coerce.number({
+        required_error: "sessionCourseMappingId is required",
+        invalid_type_error: "sessionCourseMappingId must be a number",
+    }),
+});
+
 router.post('/', userAuth, validate({ body: sessionSchema }), addSession);
 
 router.get('/', userAuth, getAllSession);
@@ -28,6 +35,6 @@ router.post('/courseSessionMapping', userAuth, couseSessionMapping);
 
 router.patch('/courseSessionMapping/update', userAuth, updateCouseSessionMapping);
 
-router.delete('/courseSessionMapping', userAuth, deleteCouseSessionMapping);
+router.delete('/courseSessionMapping', userAuth, validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 
 export default router; 
