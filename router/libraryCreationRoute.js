@@ -268,10 +268,14 @@ router.delete("/deleteInventory", userAuth, validate({ query: inventoryQuerySche
 
 router.get("/issuedBook", userAuth, getAllIssuedBooks);
 
+const bulkUploadQuerySchema = z.object({
+  libraryCreationId: z.coerce.number().optional(),
+});
+
 router.post(
   "/bulkUpload",
   userAuth,
-  validate({ query: idQuerySchema }),
+  validate({ query: bulkUploadQuerySchema }),
   bulkUploadBooks,
 );
 

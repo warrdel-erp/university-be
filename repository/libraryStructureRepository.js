@@ -371,50 +371,47 @@ export async function deleteRow(libraryRowId) {
 }
 
 
-export async function getAisleIdByName(name) {
-    try {
-        const aisle = await model.libraryAisleModel.findOne({
-            where: { [Op.and]: [caseInsensitiveName(name)] },
-        });
-
-        if (!aisle) throw new Error(`Aisle not found: ${name}`);
-
-        return aisle.libraryAisleId;
-
-    } catch (error) {
-        console.error("Error finding aisle:", error);
-        throw new Error(error.message);
-    }
+export async function getLibraryCreationIdByInstituteAndName(instituteId, name) {
+    const library = await findLibraryByInstituteAndName(instituteId, name);
+    if (!library) throw new Error(`Library not found: ${name}`);
+    return library.libraryCreationId;
 }
 
-export async function getRackIdByName(name) {
-    try {
-        const rack = await model.libraryRackModel.findOne({
-            where: { [Op.and]: [caseInsensitiveName(name)] },
-        });
-
-        if (!rack) throw new Error(`Rack not found: ${name}`);
-
-        return rack.libraryRackId;
-
-    } catch (error) {
-        console.error("Error finding rack:", error);
-        throw new Error(error.message);
-    }
+export async function getFloorIdByLibraryAndName(libraryCreationId, name) {
+    const floor = await findFloorByLibraryAndName(libraryCreationId, name);
+    if (!floor) throw new Error(`Floor not found: ${name}`);
+    return floor.libraryFloorId;
 }
 
-export async function getRowIdByName(name) {
-    try {
-        const row = await model.libraryRowModel.findOne({
-            where: { [Op.and]: [caseInsensitiveName(name)] },
-        });
+export async function getAisleIdByFloorAndName(libraryFloorId, name) {
+    const aisle = await findAisleByFloorAndName(libraryFloorId, name);
+    if (!aisle) throw new Error(`Aisle not found: ${name}`);
+    return aisle.libraryAisleId;
+}
 
-        if (!row) throw new Error(`Row not found: ${name}`);
+export async function getAisleIdByLibraryAndName(libraryCreationId, name) {
+    const aisle = await model.libraryAisleModel.findOne({
+        where: { [Op.and]: [caseInsensitiveName(name)] },
+        include: [{
+            model: model.libraryFloorModel,
+            as: "floor",
+            where: { libraryCreationId },
+            required: true,
+            attributes: [],
+        }],
+    });
+    if (!aisle) throw new Error(`Aisle not found: ${name}`);
+    return aisle.libraryAisleId;
+}
 
-        return row.libraryRowId;
+export async function getRackIdByAisleAndName(libraryAisleId, name) {
+    const rack = await findRackByAisleAndName(libraryAisleId, name);
+    if (!rack) throw new Error(`Rack not found: ${name}`);
+    return rack.libraryRackId;
+}
 
-    } catch (error) {
-        console.error("Error finding row:", error);
-        throw new Error(error.message);
-    }
-};
+export async function getRowIdByRackAndName(libraryRackId, name) {
+    const row = await findRowByRackAndName(libraryRackId, name);
+    if (!row) throw new Error(`Row not found: ${name}`);
+    return row.libraryRowId;
+}
