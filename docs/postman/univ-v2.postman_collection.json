@@ -6736,6 +6736,16 @@
           "type": "string"
         },
         {
+          "key": "libraryBookIssueInventoryItem_id_2",
+          "value": "2",
+          "type": "string"
+        },
+        {
+          "key": "return_date",
+          "value": "2026-06-02",
+          "type": "string"
+        },
+        {
           "key": "page",
           "value": "1",
           "type": "string"
@@ -6840,12 +6850,33 @@
                 }
               ]
             },
-            "description": "**GET /libraryIssueBook**\n\nList issue transactions with pagination and common search.\n\n### Params type (frontend)\n\n```ts\ntype GetAllIssueTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // max 100\n  search?: string; // optional common search\n};\n```\n\n### Notes\n- Send params in query string (no request body)\n- `search` works across member/date/book related fields"
+            "description": "**GET /libraryIssueBook**\n\nList issue transactions with pagination and common search.\n\n### Params type (frontend)\n\n```ts\ntype GetAllIssueTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // default 20\n  search?: string; // optional common search\n};\n```\n\n### Notes\n- Send params in query string (no request body)\n- `search` works across member/date/book related fields"
           },
           "response": []
         },
         {
           "name": "get issue transaction by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const items = res?.data?.inventoryItems ?? [];",
+                  "const active = items.filter((i) => !i.libraryReturnBookTransactionId);",
+                  "if (active[0]?.libraryBookIssueInventoryItemId) {",
+                  "  pm.collectionVariables.set('libraryBookIssueInventoryItem_id', String(active[0].libraryBookIssueInventoryItemId));",
+                  "}",
+                  "if (active[1]?.libraryBookIssueInventoryItemId) {",
+                  "  pm.collectionVariables.set('libraryBookIssueInventoryItem_id_2', String(active[1].libraryBookIssueInventoryItemId));",
+                  "}",
+                  "if (active[0]?.inventoryId) pm.collectionVariables.set('inventory_id', String(active[0].inventoryId));",
+                  "if (active[1]?.inventoryId) pm.collectionVariables.set('inventory_id_2', String(active[1].inventoryId));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -6930,7 +6961,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"libraryIssueBookTransactionId\": {{libraryIssueBookTransaction_id}},\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": {{libraryBookIssueInventoryItem_id}}, \"returnDate\": \"2026-06-02\" }\n  ]\n}",
+              "raw": "{\n  \"libraryIssueBookTransactionId\": {{libraryIssueBookTransaction_id}},\n  \"returnItems\": [\n    {\n      \"libraryBookIssueInventoryItemId\": {{libraryBookIssueInventoryItem_id}},\n      \"returnDate\": \"{{return_date}}\"\n    },\n    {\n      \"libraryBookIssueInventoryItemId\": {{libraryBookIssueInventoryItem_id_2}},\n      \"returnDate\": \"{{return_date}}\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6946,7 +6977,7 @@
                 "libraryIssueBook"
               ]
             },
-            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- For same `returnDate`, API reuses one `library_return_book_transaction` row and assigns its `libraryReturnBookTransactionId` to all matched items\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
+            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{ inventoryId: number }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD, required per item\n  }>;\n};\n```\n\n### Return multiple books\n\nSend **one object per book** in `returnItems[]`. Repeat the same `returnDate` when all copies are returned on the same day — the API creates **one** `library_return_book_transaction` per calendar date (`findOrCreate` on `returnDate`) and links every matched issue item to it.\n\n**Example A — same returnDate (this request body)**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example B — by inventoryId**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"inventoryId\": 101, \"returnDate\": \"2026-06-02\" },\n    { \"inventoryId\": 102, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example C — mixed return dates** (creates two return transaction rows)\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-05\" }\n  ]\n}\n```\n\n### Test flow\n1. **POST** create with 2+ `inventoryItems`\n2. **GET /single** — saves `libraryBookIssueInventoryItem_id` / `_id_2` from active rows\n3. **PATCH** (this request) with both ids and same `{{return_date}}`\n4. **GET /returnTransactions** — one row per `returnDate`, `totalReturnedBooks` = 2\n\n### Other usage\n- Update member/dates: `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: `inventoryItems[]` (auto-returns active items first)"
           },
           "response": []
         },
@@ -6966,16 +6997,30 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryIssueBook/returnTransactions",
+              "raw": "{{baseurl}}/libraryIssueBook/returnTransactions?page={{page}}&limit={{limit}}&search={{search}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "libraryIssueBook",
                 "returnTransactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "{{page}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}"
+                },
+                {
+                  "key": "search",
+                  "value": "{{search}}"
+                }
               ]
             },
-            "description": "**GET /libraryIssueBook/returnTransactions**\n\nFetch all grouped return transactions.\n\nEach record includes:\n- `libraryReturnBookTransactionId`\n- `returnDate`\n- `totalReturnedBooks`\n- `returnItems[]` with returned `book` details, linked `issueBookTransaction`, and `member` details."
+            "description": "**GET /libraryIssueBook/returnTransactions**\n\nLists return batches grouped by `library_return_book_transaction` (one row per **returnDate**). Multiple books returned on the same date appear under the same record.\n\n### Query params\n\n```ts\ntype GetReturnTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // default 20\n  search?: string; // returnDate, member, accession, title, isbn, …\n};\n```\n\n`{{baseurl}}/libraryIssueBook/returnTransactions?page={{page}}&limit={{limit}}&search={{search}}`\n\n### Response shape (per row)\n\n| Field | Description |\n|-------|-------------|\n| `libraryReturnBookTransactionId` | PK of return batch |\n| `returnDate` | Shared date for all books in this batch |\n| `totalReturnedBooks` | Count of copies in this batch |\n| `totalIssueTransactions` | Distinct issue transactions involved |\n| `issueTransactions[]` | Grouped by original issue |\n\nEach `issueTransactions[]` entry:\n- `libraryIssueBookTransactionId`, `memberId`, `memberType`, `issueDate`, `dueDate`, `member`\n- `returnedBooks[]` — `{ libraryBookIssueInventoryItemId, inventoryId, book }` (`book` includes `bookDetails`)\n\n### Example (two books, same returnDate)\n\n```json\n{\n  \"libraryReturnBookTransactionId\": 3,\n  \"returnDate\": \"2026-06-02\",\n  \"totalReturnedBooks\": 2,\n  \"totalIssueTransactions\": 1,\n  \"issueTransactions\": [\n    {\n      \"libraryIssueBookTransactionId\": 12,\n      \"memberType\": \"STUDENT\",\n      \"returnedBooks\": [\n        { \"libraryBookIssueInventoryItemId\": 5, \"inventoryId\": 101, \"book\": { } },\n        { \"libraryBookIssueInventoryItemId\": 6, \"inventoryId\": 102, \"book\": { } }\n      ]\n    }\n  ]\n}\n```\n\nRun after **PATCH** with multiple `returnItems` sharing `{{return_date}}` to verify grouping."
           },
           "response": []
         },
