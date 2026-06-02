@@ -73,7 +73,7 @@ const libraryIssueBookTransactionIdQuerySchema = z.object({
 
 const listIssueBookTransactionQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
+  limit: z.coerce.number().int().positive().max().optional(),
   search: z.string().trim().optional(),
 });
 
@@ -88,6 +88,7 @@ const memberListQuerySchema = z.object({
 const returnTransactionsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max().optional().default(20),
+  search: z.string().trim().optional(),
 });
 
 router.post(

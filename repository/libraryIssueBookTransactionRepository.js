@@ -672,6 +672,7 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 20);
   const offset = (page - 1) * limit;
+  const search = query.search?.trim().toLowerCase();
   const rows = await model.libraryReturnBookTransactionModel.findAll({
     attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
     include: [
@@ -775,19 +776,90 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
     });
   }
 
+  const filteredReturnTransactions = [];
+  if (!search) {
+    for (const returnTransaction of returnTransactions) {
+      filteredReturnTransactions.push(returnTransaction);
+    }
+  } else {
+    for (const returnTransaction of returnTransactions) {
+      let isMatched = false;
+
+      if (
+        String(returnTransaction.libraryReturnBookTransactionId).toLowerCase().includes(search) ||
+        String(returnTransaction.returnDate ?? "").toLowerCase().includes(search)
+      ) {
+        isMatched = true;
+      }
+
+      if (!isMatched) {
+        for (const issueTransaction of returnTransaction.issueTransactions) {
+          if (
+            String(issueTransaction.libraryIssueBookTransactionId).toLowerCase().includes(search) ||
+            String(issueTransaction.memberId).toLowerCase().includes(search) ||
+            String(issueTransaction.memberType ?? "").toLowerCase().includes(search) ||
+            String(issueTransaction.issueDate ?? "").toLowerCase().includes(search) ||
+            String(issueTransaction.dueDate ?? "").toLowerCase().includes(search)
+          ) {
+            isMatched = true;
+            break;
+          }
+
+          const member = issueTransaction.member;
+          if (member) {
+            if (
+              String(member.firstName ?? "").toLowerCase().includes(search) ||
+              String(member.middleName ?? "").toLowerCase().includes(search) ||
+              String(member.lastName ?? "").toLowerCase().includes(search) ||
+              String(member.employeeName ?? "").toLowerCase().includes(search) ||
+              String(member.scholarNumber ?? "").toLowerCase().includes(search) ||
+              String(member.employeeCode ?? "").toLowerCase().includes(search)
+            ) {
+              isMatched = true;
+              break;
+            }
+          }
+
+          for (const returnedBook of issueTransaction.returnedBooks) {
+            const book = returnedBook.book;
+            const bookDetails = book?.bookDetails;
+            if (
+              String(returnedBook.libraryBookIssueInventoryItemId).toLowerCase().includes(search) ||
+              String(returnedBook.inventoryId).toLowerCase().includes(search) ||
+              String(book?.accessionNumber ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.title ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.subtitle ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.authors ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.isbn ?? "").toLowerCase().includes(search)
+            ) {
+              isMatched = true;
+              break;
+            }
+          }
+
+          if (isMatched) break;
+        }
+      }
+
+      if (isMatched) {
+        filteredReturnTransactions.push(returnTransaction);
+      }
+    }
+  }
+
   const data = [];
   for (
     let index = offset;
-    index < offset + limit && index < returnTransactions.length;
+    index < offset + limit && index < filteredReturnTransactions.length;
     index += 1
   ) {
-    data.push(returnTransactions[index]);
+    data.push(filteredReturnTransactions[index]);
   }
 
   return {
     data,
     paginationData: {
-      total: returnTransactions.length,
+      total: filteredReturnTransactions.length,
       page,
       limit,
     },
