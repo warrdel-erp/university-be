@@ -72,8 +72,8 @@ const libraryIssueBookTransactionIdQuerySchema = z.object({
 });
 
 const listIssueBookTransactionQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max().optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(20),
   search: z.string().trim().optional(),
 });
 
@@ -83,11 +83,11 @@ const inventoryIssueHistoryQuerySchema = z.object({
 const memberListQuerySchema = z.object({
   memberType: memberTypeEnum.optional(),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max().optional().default(20),
+  limit: z.coerce.number().int().positive().optional().default(20),
 });
 const returnTransactionsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max().optional().default(20),
+  limit: z.coerce.number().int().positive().optional().default(20),
   search: z.string().trim().optional(),
 });
 
