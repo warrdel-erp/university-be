@@ -79,6 +79,15 @@ const optionalTrimmedString = z
   .optional()
   .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()));
 
+const bookListSortByValues = [
+  "accessionNumber",
+  "title",
+  "author",
+  "type",
+  "condition",
+  "status",
+];
+
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
   libraryFloorId: z
@@ -88,6 +97,11 @@ const listBooksQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   search: optionalTrimmedString,
+  sortBy: z.enum(bookListSortByValues).optional(),
+  sortOrder: z
+    .enum(["asc", "desc", "ASC", "DESC"])
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : undefined)),
 });
 
 const addCategorySchema = z.object({

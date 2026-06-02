@@ -290,6 +290,34 @@ function buildBookListWhere(libraryCreationId, filters = {}) {
   return where;
 }
 
+const DEFAULT_BOOK_LIST_ORDER = [
+  ["libraryBookId", "DESC"],
+  [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
+];
+
+function buildBookListOrder(sortBy, sortOrder) {
+  if (!sortBy) return DEFAULT_BOOK_LIST_ORDER;
+
+  const dir = String(sortOrder ?? "asc").toUpperCase() === "DESC" ? "DESC" : "ASC";
+  const inventoryOrder = (attribute) => [
+    [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, attribute, dir],
+  ];
+
+  const sorts = {
+    title: [["title", dir]],
+    author: [["authors", dir]],
+    type: [["itemType", dir]],
+    accessionNumber: inventoryOrder("accessionNumber"),
+    status: inventoryOrder("status"),
+    condition: inventoryOrder("condition"),
+  };
+
+  const sort = sorts[sortBy];
+  if (!sort) return DEFAULT_BOOK_LIST_ORDER;
+
+  return [...sort, ...DEFAULT_BOOK_LIST_ORDER];
+}
+
 export async function getAllBooks(
   universityId,
   libraryCreationId,
@@ -313,7 +341,6 @@ export async function getAllBooks(
   }
 
   const inventoryWhere = {};
-
   if (libraryFloorId) {
     const aisles = await model.libraryAisleModel.findAll({
       attributes: ["libraryAisleId"],
@@ -372,10 +399,7 @@ export async function getAllBooks(
     include: [...bookMappingIncludes, inventoryInclude],
     limit,
     offset,
-    order: [
-      ["libraryBookId", "DESC"],
-      [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
-    ],
+    order: buildBookListOrder(filters.sortBy, filters.sortOrder),
   });
 
   return { total: count, books: rows };

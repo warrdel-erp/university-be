@@ -783,13 +783,15 @@ export async function getAllBooks(query, user) {
     page = 1,
     limit = 20,
     search,
+    sortBy,
+    sortOrder,
   } = query;
 
   const safeLimit = Math.min(100, Math.max(1, limit));
   const safePage = Math.max(1, page);
   const offset = (safePage - 1) * safeLimit;
 
-  const filters = { search };
+  const filters = { search, sortBy, sortOrder };
 
   const { total, books } = await libraryCreationService.getAllBooks(
     user.universityId,
