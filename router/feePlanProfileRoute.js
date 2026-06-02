@@ -70,7 +70,7 @@ const feePlanItemForUpdate = z
 const createBody = z.object({
   name: z.string().trim().min(1),
   planType: z.enum(["annual", "semester", "trimester"]),
-  category: z.enum(["scholarship", "non-scholarship", "other"]),
+  category: z.enum(["scholarship", "non-scholarship"]),
   courseSessionId: id,
   academicYearId: id.optional(),
   feePlanItems: z.array(feePlanItemBody).min(1).optional(),
@@ -81,7 +81,7 @@ const updateBody = z
     feePlanProfileId: id,
     name: z.string().trim().min(1).optional(),
     planType: z.enum(["annual", "semester", "trimester"]).optional(),
-    category: z.enum(["scholarship", "non-scholarship", "other"]).optional(),
+    category: z.enum(["scholarship", "non-scholarship"]).optional(),
     courseSessionId: id.optional(),
     academicYearId: id.optional(),
     feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
