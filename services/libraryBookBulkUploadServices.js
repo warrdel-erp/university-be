@@ -630,8 +630,8 @@ async function validateAccessionNumbersBeforeUpload(parsedRows) {
 /**
  * Run every check that can fail before we open a DB transaction.
  */
-function validateLibraryNameOnAllRows(parsedRows, defaultLibraryCreationId) {
-  if (defaultLibraryCreationId) {
+function validateLibraryNameOnAllRows(parsedRows, libraryCreationId) {
+  if (libraryCreationId) {
     return [];
   }
   const errors = [];
@@ -645,7 +645,7 @@ function validateLibraryNameOnAllRows(parsedRows, defaultLibraryCreationId) {
   return errors;
 }
 
-async function runAllPreUploadValidations(parsedRows, instituteId, defaultLibraryCreationId) {
+async function runAllPreUploadValidations(parsedRows, instituteId, libraryCreationId) {
   const [categoryRows, subjectRows] = await Promise.all([
     libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(instituteId),
     libraryBookBulkUploadRepository.findAllSubjectsForBulkUpload(),
@@ -657,7 +657,7 @@ async function runAllPreUploadValidations(parsedRows, instituteId, defaultLibrar
   const validSubjectIds = buildMasterIdSet(subjectRows, "subjectId");
 
   const errors = [
-    ...validateLibraryNameOnAllRows(parsedRows, defaultLibraryCreationId),
+    ...validateLibraryNameOnAllRows(parsedRows, libraryCreationId),
     ...validateCategoryAndSubjectNamesOnAllRows(
       parsedRows,
       categoryNameToIdMap,
@@ -959,16 +959,16 @@ async function fetchCachedId(cache, cacheKey, fetchId) {
 /** Resolve libraryName / floorName from sheet (query libraryCreationId is fallback). */
 async function resolveBulkUploadContextIds(
   context,
-  defaultLibraryCreationId,
+  libraryCreationId,
   instituteId,
   libraryCache,
   floorCache,
 ) {
-  let libraryCreationId = defaultLibraryCreationId ?? null;
+  let resolvedLibraryCreationId = libraryCreationId ?? null;
 
   if (context.libraryName) {
     const libraryKey = `${instituteId}:${context.libraryName.toLowerCase()}`;
-    libraryCreationId = await fetchCachedId(libraryCache, libraryKey, () =>
+    resolvedLibraryCreationId = await fetchCachedId(libraryCache, libraryKey, () =>
       libraryStructureRepository.getLibraryCreationIdByInstituteAndName(
         instituteId,
         context.libraryName,
@@ -976,22 +976,22 @@ async function resolveBulkUploadContextIds(
     );
   }
 
-  if (!libraryCreationId) {
+  if (!resolvedLibraryCreationId) {
     throw new Error("libraryName is required when libraryCreationId is not provided in query");
   }
 
   let libraryFloorId = null;
   if (context.floorName) {
-    const floorKey = `${libraryCreationId}:${context.floorName.toLowerCase()}`;
+    const floorKey = `${resolvedLibraryCreationId}:${context.floorName.toLowerCase()}`;
     libraryFloorId = await fetchCachedId(floorCache, floorKey, () =>
       libraryStructureRepository.getFloorIdByLibraryAndName(
-        libraryCreationId,
+        resolvedLibraryCreationId,
         context.floorName,
       ),
     );
   }
 
-  return { libraryCreationId, libraryFloorId };
+  return { libraryCreationId: resolvedLibraryCreationId, libraryFloorId };
 }
 
 /** Resolve aisleName / rackName / rowName under the resolved floor (case-insensitive). */
@@ -1060,6 +1060,8 @@ async function persistBulkUploadBatchInTransaction({
   instituteId,
   createdBy,
   updatedBy,
+  libraryCache,
+  floorCache,
   aisleCache,
   rackCache,
   rowCache,
@@ -1069,8 +1071,16 @@ async function persistBulkUploadBatchInTransaction({
 
   // --- Phase A: decide library_book per unique ISBN/title ---
   // Same ISBN or title → reuse one book; only accessionNumber is new per Excel row.
-  for (const { book, rowNumber } of parsedRowBatch) {
-    const cacheKey = buildBulkUploadBookCacheKey(book);
+  for (const { book, context, rowNumber } of parsedRowBatch) {
+    const contextIds = await resolveBulkUploadContextIds(
+      context,
+      libraryCreationId,
+      instituteId,
+      libraryCache,
+      floorCache,
+    );
+    const { libraryCreationId: rowLibraryCreationId, libraryFloorId } = contextIds;
+    const cacheKey = buildBulkUploadBookCacheKey(book, rowLibraryCreationId);
 
     if (bookCache[cacheKey]) {
       continue;
@@ -1095,7 +1105,8 @@ async function persistBulkUploadBatchInTransaction({
         cacheKey,
         await buildBulkUploadNewBookRecord(
           book,
-          libraryCreationId,
+          rowLibraryCreationId,
+          libraryFloorId,
           instituteId,
           createdBy,
           updatedBy,
@@ -1144,19 +1155,20 @@ async function persistBulkUploadBatchInTransaction({
   const inventoryInsertPayloads = [];
 
   for (const { book, inventory, context } of parsedRowBatch) {
-    const { libraryCreationId, libraryFloorId } = await resolveBulkUploadContextIds(
+    const contextIds = await resolveBulkUploadContextIds(
       context,
-      defaultLibraryCreationId,
+      libraryCreationId,
       instituteId,
       libraryCache,
       floorCache,
     );
-    const libraryBookId = bookCache[buildBulkUploadBookCacheKey(book, libraryCreationId)];
+    const { libraryCreationId: rowLibraryCreationId, libraryFloorId } = contextIds;
+    const libraryBookId = bookCache[buildBulkUploadBookCacheKey(book, rowLibraryCreationId)];
     const { libraryAisleId, libraryRackId, libraryRowId } =
       await resolveBulkUploadLocationIdsForRow(
         context,
         libraryFloorId,
-        libraryCreationId,
+        rowLibraryCreationId,
         aisleCache,
         rackCache,
         rowCache,
@@ -1241,15 +1253,15 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
 
 async function executeBulkUploadInTransaction({
   parsedRows,
-  defaultLibraryCreationId,
+  libraryCreationId,
   instituteId,
   categoryNameToIdMap,
   subjectNameToIdMap,
   createdBy,
   updatedBy,
 }) {
-  const existingBooks = defaultLibraryCreationId
-    ? await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(defaultLibraryCreationId)
+  const existingBooks = libraryCreationId
+    ? await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(libraryCreationId)
     : [];
   const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
     buildExistingBookLookupIndexes(existingBooks);
@@ -1257,9 +1269,9 @@ async function executeBulkUploadInTransaction({
   return sequelize.transaction(async (transaction) => {
     const instituteIdForMappings =
       instituteId ??
-      (defaultLibraryCreationId
+      (libraryCreationId
         ? await libraryBookBulkUploadRepository.getInstituteIdByLibraryCreationId(
-            defaultLibraryCreationId,
+            libraryCreationId,
             transaction,
           )
         : null);
@@ -1289,7 +1301,7 @@ async function executeBulkUploadInTransaction({
         bookIndexByIsbn,
         categoryNameToIdMap,
         subjectNameToIdMap,
-        defaultLibraryCreationId,
+        libraryCreationId,
         instituteId: instituteIdForMappings,
         createdBy,
         updatedBy,
@@ -1375,16 +1387,16 @@ export async function importLibraryBooksFromExcel(
   libraryCreationId,
   instituteId,
 ) {
-  const defaultLibraryCreationId =
+  const resolvedLibraryCreationId =
     libraryCreationId != null && libraryCreationId !== "" ? Number(libraryCreationId) : null;
 
   let library = null;
-  if (defaultLibraryCreationId) {
-    library = await libraryBookBulkUploadRepository.findLibraryCreationById(defaultLibraryCreationId);
+  if (resolvedLibraryCreationId) {
+    library = await libraryBookBulkUploadRepository.findLibraryCreationById(resolvedLibraryCreationId);
     if (!library) {
       return {
         status: "error",
-        message: `Library with libraryCreationId ${defaultLibraryCreationId} does not exist`,
+        message: `Library with libraryCreationId ${resolvedLibraryCreationId} does not exist`,
       };
     }
   }
@@ -1421,7 +1433,7 @@ export async function importLibraryBooksFromExcel(
   const preUpload = await runAllPreUploadValidations(
     parseResult.parsedRows,
     resolvedInstituteId,
-    defaultLibraryCreationId,
+    resolvedLibraryCreationId,
   );
   if (!preUpload.ok) {
     return preUpload.result;
@@ -1430,7 +1442,7 @@ export async function importLibraryBooksFromExcel(
   try {
     return await executeBulkUploadInTransaction({
       parsedRows: parseResult.parsedRows,
-      defaultLibraryCreationId,
+      libraryCreationId: resolvedLibraryCreationId,
       instituteId: resolvedInstituteId,
       categoryNameToIdMap: preUpload.categoryNameToIdMap,
       subjectNameToIdMap: preUpload.subjectNameToIdMap,
