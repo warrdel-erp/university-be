@@ -590,7 +590,11 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
   };
 }
 
-export async function getLibraryMembersList(memberType) {
+export async function getLibraryMembersList(query = {}) {
+  const memberType = query.memberType;
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const offset = (page - 1) * limit;
   const members = [];
 
   if (!memberType || memberType === "STUDENT") {
@@ -649,10 +653,25 @@ export async function getLibraryMembersList(memberType) {
     );
   }
 
-  return members;
+  const data = [];
+  for (let index = offset; index < offset + limit && index < members.length; index += 1) {
+    data.push(members[index]);
+  }
+
+  return {
+    data,
+    paginationData: {
+      total: members.length,
+      page,
+      limit,
+    },
+  };
 }
 
-export async function getLibraryReturnBookTransactions(instituteId) {
+export async function getLibraryReturnBookTransactions(query = {}, instituteId) {
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const offset = (page - 1) * limit;
   const rows = await model.libraryReturnBookTransactionModel.findAll({
     attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
     include: [
@@ -756,5 +775,21 @@ export async function getLibraryReturnBookTransactions(instituteId) {
     });
   }
 
-  return returnTransactions;
+  const data = [];
+  for (
+    let index = offset;
+    index < offset + limit && index < returnTransactions.length;
+    index += 1
+  ) {
+    data.push(returnTransactions[index]);
+  }
+
+  return {
+    data,
+    paginationData: {
+      total: returnTransactions.length,
+      page,
+      limit,
+    },
+  };
 }

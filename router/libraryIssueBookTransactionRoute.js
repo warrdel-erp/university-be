@@ -82,6 +82,12 @@ const inventoryIssueHistoryQuerySchema = z.object({
 });
 const memberListQuerySchema = z.object({
   memberType: memberTypeEnum.optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max().optional().default(20),
+});
+const returnTransactionsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max().optional().default(20),
 });
 
 router.post(
@@ -124,6 +130,7 @@ router.get(
 router.get(
   "/returnTransactions",
   userAuth,
+  validate({ query: returnTransactionsQuerySchema }),
   getLibraryReturnBookTransactions,
 );
 
