@@ -34,11 +34,9 @@ export const addTransportRoute = async (req, res) => {
 export const getAllTransportRoute = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-
-    const { acedmicYearId } = req.query;
+    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
-        const result = await getAllTransportRouteService(universityId, acedmicYearId, instituteId, role);
+        const result = await getAllTransportRouteService(universityId, acedmicYearId, instituteId);
         res.status(200).json(result);
     } catch (error) {
         console.error("Error in getAllTransportRoute:", error);
@@ -48,9 +46,10 @@ export const getAllTransportRoute = async (req, res) => {
 
 export const getSingleTransportRoute = async (req, res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         const { transportRouteId } = req.query;
-        const result = await getSingleTransportRouteService(transportRouteId, universityId);
+        const result = await getSingleTransportRouteService(transportRouteId, universityId, instituteId);
         if (result) {
             res.status(200).json(result);
         } else {

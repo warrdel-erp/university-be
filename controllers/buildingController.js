@@ -65,7 +65,8 @@ export async function getAllbuildingNested(req, res) {
     try {
         const universityId = req.user.universityId;
         const { buildingType } = req.query;
-        const building = await buildingCreation.getAllbuildingNested(universityId, buildingType);
+        const instituteId = req.user.defaultInstituteId;
+        const building = await buildingCreation.getAllbuildingNested(universityId, buildingType, instituteId);
         res.status(200).json(building);
     } catch (error) {
         res.status(500).json({ error: error.message });

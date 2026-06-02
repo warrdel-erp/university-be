@@ -622,23 +622,44 @@ export async function addClassSubjectMapper(data) {
 
 export async function getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role) {
     try {
+        const mapperWhere = {
+            ...(semesterId && { semesterId }),
+            ...(instituteId && { instituteId }),
+        };
+
+        const semesterWhere = {
+            universityId,
+            ...(instituteId && { instituteId }),
+            ...(acedmicYearId && { acedmicYearId }),
+        };
+
+        const courseWhere = {
+            universityId,
+            ...(instituteId && { instituteId }),
+        };
+
+        const subjectWhere = {
+            universityId,
+            ...(instituteId && { instituteId }),
+            ...(acedmicYearId && { acedmicYearId }),
+        };
+
         const queryOptions = {
             attributes: ['classSubjectMapperId'],
-            where: {
-                ...(semesterId && { semesterId }),
-                ...(role === 'Head' && { instituteId }),
-            },
+            where: mapperWhere,
             include: [
                 {
                     model: model.userModel,
                     as: "userClassSubjectMapper",
                     attributes: ["universityId", "userId"],
                     where: { universityId },
+                    required: true,
                 },
                 {
                     model: model.semesterModel,
                     as: "semestermapping",
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: semesterWhere,
+                    required: true,
                     attributes: {
                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
                     },
@@ -663,6 +684,8 @@ export async function getClassSubjectMapper(semesterId, universityId, acedmicYea
                             model: model.courseModel,
                             as: "semesterCourse",
                             attributes: ["courseName", "capacity", "courseId"],
+                            where: courseWhere,
+                            required: true,
                             include: [
                                 {
                                     model: model.affiliatedIniversityModel,
@@ -673,13 +696,15 @@ export async function getClassSubjectMapper(semesterId, universityId, acedmicYea
                                             model: model.instituteModel,
                                             as: "institut",
                                             attributes: ["instituteName", "instituteId"],
-                                            required: false,
+                                            ...(instituteId && {
+                                                where: { instituteId },
+                                                required: true,
+                                            }),
                                             include: [
                                                 {
                                                     model: model.campusModel,
                                                     as: "campues",
                                                     attributes: ["campusName", "campusId"],
-                                                    required: false,
                                                 },
                                             ],
                                         },
@@ -698,7 +723,8 @@ export async function getClassSubjectMapper(semesterId, universityId, acedmicYea
                     model: model.subjectModel,
                     as: "subjects",
                     attributes: ["subjectName", "subjectId", "subjectType", "subjectCode"],
-                    where: acedmicYearId ? { acedmicYearId } : undefined,
+                    where: subjectWhere,
+                    required: true,
                 },
             ],
         };

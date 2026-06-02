@@ -85,13 +85,26 @@ export async function deletebuilding(buildingId) {
 
 
 
-export async function getAllbuildingNested(universityId, buildingType) {
+export async function getAllbuildingNested(universityId, buildingType, instituteId) {
     try {
-        const campuses = await model.campusModel.findAll({
-            where: { universityId },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-        });
-        const campusIds = campuses.map((campus) => campus.campusId);
+        let campusIds = [];
+
+        if (instituteId) {
+            const campusId = await getCampusIdByInstituteId(instituteId);
+            const campus = await model.campusModel.findOne({
+                where: { campusId, universityId },
+                attributes: ["campusId"],
+            });
+            if (campus) {
+                campusIds = [campus.campusId];
+            }
+        } else {
+            const campuses = await model.campusModel.findAll({
+                where: { universityId },
+                attributes: ["campusId"],
+            });
+            campusIds = campuses.map((campus) => campus.campusId);
+        }
 
         if (!campusIds.length) {
             return [];
@@ -104,6 +117,13 @@ export async function getAllbuildingNested(universityId, buildingType) {
                 ...(buildingType && { buildingType }),
             },
             include: [
+                {
+                    model: model.campusModel,
+                    as: "campusbuilding",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    where: { universityId },
+                    required: true,
+                },
                 {
                     model: model.floorModel,
                     as: "floorBuilding",

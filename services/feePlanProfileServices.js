@@ -133,6 +133,7 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
     feePlanProfileId: plainProfile.feePlanProfileId,
     planName: plainProfile.name,
     planType: plainProfile.planType,
+    category: plainProfile.category,
     courseSessionId: plainProfile.courseSessionId,
     term: items.length,
     termFees,
@@ -191,6 +192,7 @@ function formatFeePlanProfileSingleResponse(row, counts) {
     feePlanProfileId: p.feePlanProfileId,
     planName: p.name,
     planType: p.planType,
+    category: p.category,
     courseSessionId: p.courseSessionId,
     instituteId: p.instituteId,
     courseId: mapping.courseId ?? course.courseId ?? null,
@@ -332,6 +334,7 @@ export async function updateFeePlanProfile(body, instituteId) {
     const profileUpdates = {};
     if (body.name !== undefined) profileUpdates.name = body.name;
     if (body.planType !== undefined) profileUpdates.planType = body.planType;
+    if (body.category !== undefined) profileUpdates.category = body.category;
     if (body.courseSessionId !== undefined) profileUpdates.courseSessionId = body.courseSessionId;
 
     if (Object.keys(profileUpdates).length > 0) {
@@ -366,6 +369,7 @@ export async function addFeePlanProfile(body, instituteId) {
       {
         name: body.name,
         planType: body.planType,
+        category: body.category,
         courseSessionId: mapId,
         instituteId,
       },
@@ -506,6 +510,7 @@ export async function assignFeePlanProfileToStudent(body, instituteId) {
       scholarNumber: plainStudent.scholarNumber ?? null,
       feePlanName: profilePlain.name ?? null,
       planType: profilePlain.planType ?? null,
+      category: profilePlain.category ?? null,
     };
   });
 }

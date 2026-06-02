@@ -163,12 +163,19 @@ export async function createLibraryIssueBookTransaction(body) {
   }
 }
 
-export async function getLibraryIssueBookTransactions(query) {
-  return repo.getLibraryIssueBookTransactions(query);
+export async function getLibraryIssueBookTransactions(query, instituteId) {
+  return repo.getLibraryIssueBookTransactions(query, instituteId);
 }
 
-export async function getLibraryIssueBookTransactionById(libraryIssueBookTransactionId) {
-  const row = await repo.getLibraryIssueBookTransactionById(libraryIssueBookTransactionId);
+export async function getLibraryIssueBookTransactionById(
+  libraryIssueBookTransactionId,
+  instituteId,
+) {
+  const row = await repo.getLibraryIssueBookTransactionById(
+    libraryIssueBookTransactionId,
+    undefined,
+    instituteId,
+  );
   if (!row) throw httpError("Library issue book transaction not found", 404);
   return row;
 }
@@ -249,12 +256,19 @@ export async function updateLibraryIssueBookTransaction(body) {
   }
 }
 
-export async function getLibraryBookInventoryIssueHistory(inventoryId) {
-  const data = await repo.getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId);
+export async function getLibraryBookInventoryIssueHistory(inventoryId, instituteId) {
+  const data = await repo.getLibraryBookInventoryIssueHistoryByInventoryId(
+    inventoryId,
+    instituteId,
+  );
 
   if (!data) {
     throw httpError("Book inventory not found for the given inventoryId", 404);
   }
 
   return data;
+}
+
+export async function getLibraryMembersList(query) {
+  return repo.getLibraryMembersList(query.memberType);
 }

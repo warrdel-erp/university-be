@@ -15,18 +15,18 @@ export const addTransportRouteService = async (data) => {
     }
 };
 
-export const getAllTransportRouteService = async (universityId,acedmicYearId,instituteId,role) => {
+export const getAllTransportRouteService = async (universityId, acedmicYearId, instituteId) => {
     try {
-        return await findAllTransportRoutes(universityId,acedmicYearId,instituteId,role);
+        return await findAllTransportRoutes(universityId, acedmicYearId, instituteId);
     } catch (error) {
         console.error("Error in getAllTransportRouteService:", error);
         throw error;
     }
 };
 
-export const getSingleTransportRouteService = async (id, universityId) => {
+export const getSingleTransportRouteService = async (id, universityId, instituteId) => {
     try {
-        return await findTransportRouteById(id, universityId);
+        return await findTransportRouteById(id, universityId, instituteId);
     } catch (error) {
         console.error(`Error in getSingleTransportRouteService for ID ${id}:`, error);
         throw error;

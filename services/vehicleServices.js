@@ -8,17 +8,17 @@ const createVehicle = async (vehicleData) => {
     }
 };
 
-const getAllVehicles = async (universityId,acedmicYearId,role,instituteId) => {
+const getAllVehicles = async (universityId, acedmicYearId, instituteId) => {
     try {
-        return await transportVehicleRepository.getAllVehicles(universityId,acedmicYearId,role,instituteId);
+        return await transportVehicleRepository.getAllVehicles(universityId, acedmicYearId, instituteId);
     } catch (error) {
         throw new Error(`Failed to fetch vehicles: ${error.message}`);
     }
 };
 
-const getVehicleById = async (vehicleId, universityId) => {
+const getVehicleById = async (vehicleId, universityId, instituteId) => {
     try {
-        const vehicle = await transportVehicleRepository.getVehicleById(vehicleId, universityId);
+        const vehicle = await transportVehicleRepository.getVehicleById(vehicleId, universityId, instituteId);
         if (!vehicle) throw new Error('Vehicle not found');
         return vehicle;
     } catch (error) {

@@ -385,6 +385,7 @@ export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
   const floor = await libraryStructureRepository.findFloorById(
     libraryFloorId,
     user.universityId,
+    user.defaultInstituteId,
   );
 
   if (!floor) {
@@ -494,6 +495,7 @@ export async function getFloorStructure(libraryFloorId, user) {
   const floor = await libraryStructureRepository.findFloorStructureById(
     libraryFloorId,
     user.universityId,
+    user.defaultInstituteId,
   );
 
   if (!floor) {
@@ -566,13 +568,17 @@ async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, 
 }
 
 export async function getLibraryDetails(user) {
-  return await libraryCreationService.getLibraryDetails(user.universityId);
+  return await libraryCreationService.getLibraryDetails(
+    user.universityId,
+    user.defaultInstituteId,
+  );
 }
 
 export async function getSingleLibraryDetails(libraryCreationId, user) {
   const library = await libraryCreationService.getSingleLibraryDetails(
     libraryCreationId,
     user.universityId,
+    user.defaultInstituteId,
   );
   if (!library) {
     throw httpError("Library not found", 404);
@@ -761,6 +767,7 @@ export async function getAllBooks(query, user) {
     libraryFloorId,
     filters,
     { limit: safeLimit, offset },
+    user.defaultInstituteId,
   );
 
   if (!books?.length) {
@@ -992,8 +999,10 @@ async function updateBookWithInventoryRecord(
   }
 }
 
-export async function getAllIssuedBooks() {
-  const issuedInventories = await libraryCreationService.getAllIssuedBooks();
+export async function getAllIssuedBooks(user) {
+  const issuedInventories = await libraryCreationService.getAllIssuedBooks(
+    user.defaultInstituteId,
+  );
   const plainInventories = [];
   const books = [];
 

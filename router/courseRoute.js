@@ -12,10 +12,8 @@ const getCourseSessionsSchema = z.object({
 
 const listCoursesSchema = z.object({
     instituteId: z.string().regex(/^\d+$/, "Institute Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
+    acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
     campusId: z.string().regex(/^\d+$/, "Campus Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
-}).refine(data => !(data.instituteId && data.campusId), {
-    message: "Only one of instituteId or campusId can be provided",
-    path: ["instituteId"]
 });
 
 const courseListWithSubjectsSchema = z.object({

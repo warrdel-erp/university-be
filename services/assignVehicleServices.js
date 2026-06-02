@@ -15,17 +15,17 @@ export const addAssignVehicle = async (assignVehicleData) => {
     }
 };
  
-export const getAssignVehicle = async (universityId,acedmicYearId,role,instituteId) => {
+export const getAssignVehicle = async (universityId, acedmicYearId, instituteId) => {
     try {
-        return await getAssignVehicleRepo(universityId,acedmicYearId,role,instituteId);
+        return await getAssignVehicleRepo(universityId, acedmicYearId, instituteId);
     } catch (error) {
         throw new Error(`Failed to fetch vehicles: ${error.message}`);
     }
 };
  
-export const getSingleAssignVehicle = async (assignVehicleId, universityId) => {
+export const getSingleAssignVehicle = async (assignVehicleId, universityId, instituteId) => {
     try {
-        const vehicle = await getSingleAssignVehicleRepo(assignVehicleId, universityId);
+        const vehicle = await getSingleAssignVehicleRepo(assignVehicleId, universityId, instituteId);
         if (!vehicle) throw new Error('Vehicle not found');
         return vehicle;
     } catch (error) {
