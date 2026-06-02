@@ -6708,7 +6708,7 @@
     },
     {
       "name": "library issue book",
-      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → **get inventory issue history** (by `inventoryId`) → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Item: `returnDate` per copy (`NULL` = still out)\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- Active issue = item row with `returnDate` NULL; same `inventoryId` can be re-issued after return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** — accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → **get inventory issue history** (by `inventoryId`) → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Return is stored in `library_return_book_transaction`; inventory item links via `libraryReturnBookTransactionId`\n- Active issue = item row with `libraryReturnBookTransactionId` NULL; same `inventoryId` can be re-issued after return\n- For same `returnDate`, one return transaction can be reused for multiple returned items\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** — accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
       "variable": [
         {
           "key": "libraryIssueBookTransaction_id",
@@ -6798,7 +6798,7 @@
                 "libraryIssueBook"
               ]
             },
-            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (`returnDate` null). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
+            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (initially `libraryReturnBookTransactionId` is `null`). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
           },
           "response": []
         },
@@ -6909,7 +6909,7 @@
                 }
               ]
             },
-            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) — `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` — inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, …)\n- `issueCount` — total issue entries for this copy\n- `issueHistory[]` — each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and `returnDate` on the item\n\n404 when `inventoryId` not found."
+            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) — `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` — inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, …)\n- `issueCount` — total issue entries for this copy\n- `issueHistory[]` — each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and optional `returnBookTransaction` (`libraryReturnBookTransactionId`, `returnDate`)\n\n404 when `inventoryId` not found."
           },
           "response": []
         },
@@ -6946,7 +6946,36 @@
                 "libraryIssueBook"
               ]
             },
-            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
+            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- For same `returnDate`, API reuses one `library_return_book_transaction` row and assigns its `libraryReturnBookTransactionId` to all matched items\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
+          },
+          "response": []
+        },
+        {
+          "name": "get return transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/returnTransactions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook",
+                "returnTransactions"
+              ]
+            },
+            "description": "**GET /libraryIssueBook/returnTransactions**\n\nFetch all grouped return transactions.\n\nEach record includes:\n- `libraryReturnBookTransactionId`\n- `returnDate`\n- `totalReturnedBooks`\n- `returnItems[]` with returned `book` details, linked `issueBookTransaction`, and `member` details."
           },
           "response": []
         },
@@ -9258,7 +9287,7 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTUsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjYwLCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwicm9sZSI6IkFkbWluIiwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0wMVQxODo0NDo0Mi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJpbnN0aXR1dGVOYW1lIjoiVWRhaXB1ciBDb2xsZWdlICYgSW5mb3JtYXRpb24gSW5zdGl0dXRlIE9mIFRlY2hub2xvZ3kiLCJpYXQiOjE3ODAzODc1NTAsImV4cCI6MTc4MDQ3Mzk1MH0.XZQz1PelTrydZQU8OffYvaQ8UJJ8MrJuTba8aBjwm7g",
       "type": "string"
     },
     {

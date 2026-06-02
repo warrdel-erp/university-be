@@ -76,3 +76,12 @@ export async function getLibraryMembersList(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getLibraryReturnBookTransactions(req, res) {
+  try {
+    const data = await services.getLibraryReturnBookTransactions(req.user.defaultInstituteId);
+    return SuccessResponse(res, 200, "Library return book transactions fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

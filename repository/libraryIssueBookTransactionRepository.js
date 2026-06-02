@@ -46,7 +46,11 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
   return {
     model: model.libraryBookIssueInventoryItemModel,
     as: "inventoryItems",
-    attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "returnDate"],
+    attributes: [
+      "libraryBookIssueInventoryItemId",
+      "inventoryId",
+      "libraryReturnBookTransactionId",
+    ],
     ...(forList ? {} : { separate: true, order: [["libraryBookIssueInventoryItemId", "DESC"]] }),
     required: Boolean(instituteId),
     include: [
@@ -56,6 +60,12 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
         attributes: inventoryListAttributes,
         required: Boolean(instituteId),
         include: [buildBookDetailsInclude(instituteId)],
+      },
+      {
+        model: model.libraryReturnBookTransactionModel,
+        as: "returnBookTransaction",
+        attributes: ["libraryReturnBookTransactionId", "returnDate"],
+        required: false,
       },
     ],
   };
@@ -104,7 +114,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   const pendingRows = await model.libraryBookIssueInventoryItemModel.findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
-      returnDate: null,
+      libraryReturnBookTransactionId: null,
     },
     attributes: [
       "libraryIssueBookTransactionId",
@@ -117,7 +127,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   const returnedRows = await model.libraryBookIssueInventoryItemModel.findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
-      returnDate: { [Op.ne]: null },
+      libraryReturnBookTransactionId: { [Op.ne]: null },
     },
     attributes: [
       "libraryIssueBookTransactionId",
@@ -199,7 +209,7 @@ export async function findActiveIssueItemsByTransactionId(
   transaction,
 ) {
   return model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     transaction,
   });
 }
@@ -211,7 +221,7 @@ export async function findActiveIssueItemsForReturn(
 ) {
   const where = {
     libraryIssueBookTransactionId,
-    returnDate: null,
+    libraryReturnBookTransactionId: null,
   };
 
   if (libraryBookIssueInventoryItemIds?.length) {
@@ -231,7 +241,7 @@ export async function returnAllActiveIssueItemsForTransaction(
   transaction,
 ) {
   const activeItems = await model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
     transaction,
   });
@@ -240,8 +250,16 @@ export async function returnAllActiveIssueItemsForTransaction(
 
   const itemIds = activeItems.map((item) => item.libraryBookIssueInventoryItemId);
   const inventoryIds = activeItems.map((item) => item.inventoryId);
+  const returnBookTransaction = await createLibraryReturnBookTransaction(
+    { returnDate },
+    transaction,
+  );
 
-  await markIssueItemsReturned(itemIds, returnDate, transaction);
+  await markIssueItemsReturned(
+    itemIds,
+    returnBookTransaction.libraryReturnBookTransactionId,
+    transaction,
+  );
   await markInventoriesAvailable(inventoryIds, transaction);
 
   return { matchedCount: itemIds.length };
@@ -255,9 +273,10 @@ export async function returnIssueItemsForTransaction(
   if (!returnItems.length) return { matchedCount: 0 };
 
   let matchedCount = 0;
+  const returnTransactionIdByDate = new Map();
 
   for (const returnItem of returnItems) {
-    const where = { libraryIssueBookTransactionId, returnDate: null };
+    const where = { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null };
 
     if (returnItem.libraryBookIssueInventoryItemId) {
       where.libraryBookIssueInventoryItemId = returnItem.libraryBookIssueInventoryItemId;
@@ -273,9 +292,21 @@ export async function returnIssueItemsForTransaction(
 
     if (!issueItem) continue;
 
+    const returnDate = returnItem.returnDate;
+    let libraryReturnBookTransactionId = returnTransactionIdByDate.get(returnDate);
+
+    if (!libraryReturnBookTransactionId) {
+      const returnBookTransaction = await createLibraryReturnBookTransaction(
+        { returnDate },
+        transaction,
+      );
+      libraryReturnBookTransactionId = returnBookTransaction.libraryReturnBookTransactionId;
+      returnTransactionIdByDate.set(returnDate, libraryReturnBookTransactionId);
+    }
+
     await markIssueItemsReturned(
       [issueItem.libraryBookIssueInventoryItemId],
-      returnItem.returnDate,
+      libraryReturnBookTransactionId,
       transaction,
     );
     await markInventoriesAvailable([issueItem.inventoryId], transaction);
@@ -314,14 +345,18 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
   );
 }
 
-export async function markIssueItemsReturned(libraryBookIssueInventoryItemIds, returnDate, transaction) {
+export async function markIssueItemsReturned(
+  libraryBookIssueInventoryItemIds,
+  libraryReturnBookTransactionId,
+  transaction,
+) {
   if (!libraryBookIssueInventoryItemIds.length) return;
   return model.libraryBookIssueInventoryItemModel.update(
-    { returnDate },
+    { libraryReturnBookTransactionId },
     {
       where: {
         libraryBookIssueInventoryItemId: { [Op.in]: libraryBookIssueInventoryItemIds },
-        returnDate: null,
+        libraryReturnBookTransactionId: null,
       },
       transaction,
     },
@@ -334,7 +369,7 @@ export async function syncOutstandingInventoryDueDate(
   transaction,
 ) {
   const activeInventoryRows = await model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["inventoryId"],
     raw: true,
     transaction,
@@ -353,6 +388,15 @@ export async function syncOutstandingInventoryDueDate(
 
 export async function createLibraryIssueBookTransaction(data, transaction) {
   return model.libraryIssueBookTransactionModel.create(data, { transaction });
+}
+
+export async function createLibraryReturnBookTransaction(data, transaction) {
+  const [row] = await model.libraryReturnBookTransactionModel.findOrCreate({
+    where: { returnDate: data.returnDate },
+    defaults: { returnDate: data.returnDate },
+    transaction,
+  });
+  return row;
 }
 
 export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction) {
@@ -478,11 +522,17 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     attributes: [
       "libraryBookIssueInventoryItemId",
       "inventoryId",
-      "returnDate",
+      "libraryReturnBookTransactionId",
       "libraryIssueBookTransactionId",
       "createdAt",
     ],
     include: [
+      {
+        model: model.libraryReturnBookTransactionModel,
+        as: "returnBookTransaction",
+        attributes: ["libraryReturnBookTransactionId", "returnDate"],
+        required: false,
+      },
       {
         model: model.libraryIssueBookTransactionModel,
         as: "issueBookTransaction",
@@ -600,4 +650,109 @@ export async function getLibraryMembersList(memberType) {
   }
 
   return members;
+}
+
+export async function getLibraryReturnBookTransactions(instituteId) {
+  const rows = await model.libraryReturnBookTransactionModel.findAll({
+    attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
+    include: [
+      {
+        model: model.libraryBookIssueInventoryItemModel,
+        as: "inventoryItems",
+        attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "libraryIssueBookTransactionId"],
+        required: true,
+        include: [
+          {
+            model: model.libraryBookInventoryModel,
+            as: "inventory",
+            attributes: ["inventoryId", "accessionNumber", "status", "condition"],
+            required: true,
+            include: [buildBookDetailsInclude(instituteId)],
+          },
+          {
+            model: model.libraryIssueBookTransactionModel,
+            as: "issueBookTransaction",
+            attributes: ["libraryIssueBookTransactionId", "memberId", "memberType", "issueDate", "dueDate"],
+            required: true,
+            include: [
+              {
+                model: model.studentModel,
+                as: "studentMember",
+                attributes: studentMemberAttributes,
+                include: [
+                  {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                  },
+                ],
+                required: false,
+              },
+              {
+                model: model.employeeModel,
+                as: "teacherMember",
+                attributes: teacherMemberAttributes,
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ["libraryReturnBookTransactionId", "DESC"],
+      [{ model: model.libraryBookIssueInventoryItemModel, as: "inventoryItems" }, "libraryBookIssueInventoryItemId", "DESC"],
+    ],
+  });
+
+  const returnTransactions = [];
+
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const issueTransactions = [];
+    const issueTransactionIndexById = {};
+    let totalReturnedBooks = 0;
+
+    for (const item of plain.inventoryItems) {
+      const transaction = item.issueBookTransaction;
+      const issueTransactionId = transaction?.libraryIssueBookTransactionId;
+
+      if (issueTransactionId === undefined || issueTransactionId === null) continue;
+
+      let issueTransactionEntryIndex = issueTransactionIndexById[issueTransactionId];
+      if (issueTransactionEntryIndex === undefined) {
+        issueTransactions.push({
+          libraryIssueBookTransactionId: issueTransactionId,
+          memberId: transaction.memberId,
+          memberType: transaction.memberType,
+          issueDate: transaction.issueDate,
+          dueDate: transaction.dueDate,
+          member:
+            transaction.memberType === "STUDENT"
+              ? transaction.studentMember ?? null
+              : transaction.teacherMember ?? null,
+          returnedBooks: [],
+        });
+        issueTransactionEntryIndex = issueTransactions.length - 1;
+        issueTransactionIndexById[issueTransactionId] = issueTransactionEntryIndex;
+      }
+
+      issueTransactions[issueTransactionEntryIndex].returnedBooks.push({
+        libraryBookIssueInventoryItemId: item.libraryBookIssueInventoryItemId,
+        inventoryId: item.inventoryId,
+        book: item.inventory,
+      });
+      totalReturnedBooks += 1;
+    }
+
+    returnTransactions.push({
+      libraryReturnBookTransactionId: plain.libraryReturnBookTransactionId,
+      returnDate: plain.returnDate,
+      totalReturnedBooks,
+      totalIssueTransactions: issueTransactions.length,
+      issueTransactions,
+    });
+  }
+
+  return returnTransactions;
 }

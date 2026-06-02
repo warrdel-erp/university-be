@@ -9,6 +9,7 @@ import {
   updateLibraryIssueBookTransaction,
   getLibraryBookInventoryIssueHistory,
   getLibraryMembersList,
+  getLibraryReturnBookTransactions,
 } from "../controllers/libraryIssueBookTransactionController.js";
 
 const router = Router();
@@ -119,6 +120,11 @@ router.get(
   userAuth,
   validate({ query: memberListQuerySchema }),
   getLibraryMembersList,
+);
+router.get(
+  "/returnTransactions",
+  userAuth,
+  getLibraryReturnBookTransactions,
 );
 
 export default router;
