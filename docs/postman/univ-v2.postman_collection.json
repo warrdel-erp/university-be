@@ -6120,17 +6120,32 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Reference\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/addCategory",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "addCategory"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "addCategory"
+              ]
             }
           },
           "response": []
@@ -6142,12 +6157,23 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/getAllCategories",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "getAllCategories"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "getAllCategories"
+              ]
             }
           },
           "response": []
@@ -6159,17 +6185,32 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"libraryCategoryId\": {{libraryCategory_id}},\n  \"name\": \"Reference Updated\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/updateCategory",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "updateCategory"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateCategory"
+              ]
             }
           },
           "response": []
@@ -6181,13 +6222,29 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/deleteCategory?libraryCategoryId={{libraryCategory_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "deleteCategory"],
-              "query": [{ "key": "libraryCategoryId", "value": "{{libraryCategory_id}}" }]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "deleteCategory"
+              ],
+              "query": [
+                {
+                  "key": "libraryCategoryId",
+                  "value": "{{libraryCategory_id}}"
+                }
+              ]
             }
           },
           "response": []
@@ -6389,17 +6446,32 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\",\n    \"authors\": \"Thomas H. Cormen\",\n    \"subjectId\": [47],\n    \"categoryId\": [1, 2],\n    \"itemType\": \"print\"\n  },\n  \"inventory\": []\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/updateBook",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "updateBook"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateBook"
+              ]
             }
           },
           "response": []
@@ -6411,17 +6483,32 @@
             "header": [],
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
             },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"book\": {\n    \"libraryBookId\": {{libraryBook_id}},\n    \"title\": \"Introduction to Algorithms - 3rd Edition\"\n  },\n  \"inventory\": [\n    {\n      \"inventoryId\": {{inventory_id}},\n      \"accessionNumber\": \"ACC-1001\",\n      \"libraryAisleId\": 1,\n      \"libraryRackId\": 1,\n      \"libraryRowId\": 1,\n      \"status\": \"available\",\n      \"condition\": \"Good\"\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseurl}}/libraryCreation/updateBook",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryCreation", "updateBook"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "updateBook"
+              ]
             }
           },
           "response": []
@@ -6704,8 +6791,12 @@
             },
             "url": {
               "raw": "{{baseurl}}/libraryIssueBook",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryIssueBook"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook"
+              ]
             },
             "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (`returnDate` null). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
           },
@@ -6728,8 +6819,12 @@
             },
             "url": {
               "raw": "{{baseurl}}/libraryIssueBook?page={{page}}&limit={{limit}}&search={{search}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryIssueBook"],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -6766,8 +6861,13 @@
             },
             "url": {
               "raw": "{{baseurl}}/libraryIssueBook/single?libraryIssueBookTransactionId={{libraryIssueBookTransaction_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryIssueBook", "single"],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook",
+                "single"
+              ],
               "query": [
                 {
                   "key": "libraryIssueBookTransactionId",
@@ -6795,8 +6895,13 @@
             },
             "url": {
               "raw": "{{baseurl}}/libraryIssueBook/inventoryIssueHistory?inventoryId={{inventory_id}}",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryIssueBook", "inventoryIssueHistory"],
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook",
+                "inventoryIssueHistory"
+              ],
               "query": [
                 {
                   "key": "inventoryId",
@@ -6834,10 +6939,57 @@
             },
             "url": {
               "raw": "{{baseurl}}/libraryIssueBook",
-              "host": ["{{baseurl}}"],
-              "path": ["libraryIssueBook"]
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook"
+              ]
             },
             "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{\n    inventoryId: number;\n  }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD\n  }>;\n};\n```\n\n### Usage\n- Return books: pass `returnItems[]` (each item must include `returnDate` and either `libraryBookIssueInventoryItemId` or `inventoryId`)\n- Update member/dates: pass `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: pass `inventoryItems[]`"
+          },
+          "response": []
+        },
+        {
+          "name": "get members list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryIssueBook/membersList?memberType=STUDENT",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryIssueBook",
+                "membersList"
+              ],
+              "query": [
+                {
+                  "key": "memberType",
+                  "value": "STUDENT",
+                  "description": "Selected (active). Use one memberType at a time.",
+                  "disabled": false
+                },
+                {
+                  "key": "memberType",
+                  "value": "TEACHER",
+                  "description": "Alternative option (disabled / not selected).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /libraryIssueBook/membersList**\n\nReturns library members list.\n\nUse only one `memberType` at a time.\n- Active: `memberType=STUDENT`\n- Alternate (disabled): `memberType=TEACHER`\n- Remove both to fetch all members"
           },
           "response": []
         }
@@ -7241,14 +7393,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"feePlanSubItems\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    },\n    {\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\", \"amount\": \"60000.00\", \"isMainItem\": true },\n        { \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\", \"amount\": \"6000.00\" }\n      ]\n    }\n  ]\n}",
+                  "raw": "{\n  \"name\": \"B.Tech 2026 plan\",\n  \"planType\": \"annual\",\n  \"category\": \"non-scholarship\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-05-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"60000.00\",\n          \"isMainItem\": true\n        },\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\",\n          \"amount\": \"6000.00\"\n        }\n      ]\n    },\n    {\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"60000.00\",\n          \"isMainItem\": true\n        },\n        {\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id_2}}\",\n          \"amount\": \"6000.00\"\n        }\n      ]\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "Creates fee_plan_profile + fee_plan_item + fee_plan_sub_items.\n\n**feePlanItems[]** (same shape as PATCH/GET): createDate, dueDate, feePlanSubItems[] — feeTypeCatalogId, amount, isMainItem or isMainSubItem.\n\nplanType: annual | semester | trimester. academicYearId optional."
+                "description": "Creates fee_plan_profile + fee_plan_item + fee_plan_sub_items.\n\n**Required:** `name`, `planType`, `category`, `courseSessionId`.\n\n**category:** `scholarship` | `non-scholarship` | `other`.\n\n**feePlanItems[]** (same shape as PATCH/GET): createDate, dueDate, feePlanSubItems[] ? feeTypeCatalogId, amount, isMainItem or isMainSubItem.\n\nplanType: annual | semester | trimester. academicYearId optional."
               },
               "response": []
             },
@@ -7278,14 +7430,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan 2\",\n  \"planType\": \"annual\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"feePlanItemId\": 1,\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-02-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 1,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"90000.00\",\n          \"isMainItem\": true\n        }\n      ]\n    },\n    {\n      \"feePlanItemId\": 2,\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 3,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"10000.00\",\n          \"isMainSubItem\": true\n        }\n      ]\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": \"{{feePlanProfile_id}}\",\n  \"name\": \"B.Tech 2026 plan 2\",\n  \"planType\": \"annual\",\n  \"category\": \"other\",\n  \"courseSessionId\": \"{{courseSession_id}}\",\n  \"academicYearId\": \"{{acedmicYear_id}}\",\n  \"feePlanItems\": [\n    {\n      \"feePlanItemId\": 1,\n      \"createDate\": \"2026-01-15\",\n      \"dueDate\": \"2026-02-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 1,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"90000.00\",\n          \"isMainItem\": true\n        }\n      ]\n    },\n    {\n      \"feePlanItemId\": 2,\n      \"createDate\": \"2027-01-15\",\n      \"dueDate\": \"2027-05-01\",\n      \"feePlanSubItems\": [\n        {\n          \"feePlanSubitemId\": 3,\n          \"feeTypeCatalogId\": \"{{feeTypeCatalog_id}}\",\n          \"amount\": \"10000.00\",\n          \"isMainSubItem\": true\n        }\n      ]\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**PATCH /feePlanProfile** — same shape as GET single terms.\n\n**feePlanItems[]:** feePlanItemId, createDate, dueDate, feePlanSubItems[] (feePlanSubitemId, feeTypeCatalogId, amount, isMainItem or isMainSubItem). Sub-lines not in feePlanSubItems are deleted for that term. Terms not in feePlanItems are unchanged."
+                "description": "**PATCH /feePlanProfile** ? same shape as GET single terms.\n\nUpdatable fields: `name`, `planType`, `category`, `courseSessionId`, `academicYearId`, `feePlanItems`.\n\n`category` enum: `scholarship` | `non-scholarship` | `other`.\n\n**feePlanItems[]:** feePlanItemId, createDate, dueDate, feePlanSubItems[] (feePlanSubitemId, feeTypeCatalogId, amount, isMainItem or isMainSubItem). Sub-lines not in feePlanSubItems are deleted for that term. Terms not in feePlanItems are unchanged."
               },
               "response": []
             },
@@ -7553,7 +7705,7 @@
                     }
                   }
                 },
-                "description": "**PATCH /feePlanProfile/assignStudent**\n\nAssigns fee v2 plan to a student (updates `students.fee_plan_profile_id` only).\n\n**Body (required):** `studentId`, `feePlanProfileId`.\n\n**200 data:** studentId, feePlanProfileId, studentName, scholarNumber, feePlanName, planType.\n\nUse instead of **PATCH /student/:id** when you only need to link a plan (no semesterId / full student form).\n\nRun after **create** plan and **student** exists (`student_id`, `feePlanProfile_id` vars)."
+                "description": "**PATCH /feePlanProfile/assignStudent**\n\nAssigns fee v2 plan to a student (updates `students.fee_plan_profile_id` only).\n\n**Body (required):** `studentId`, `feePlanProfileId`.\n\n**200 data:** studentId, feePlanProfileId, studentName, scholarNumber, feePlanName, planType, category.\n\nUse instead of **PATCH /student/:id** when you only need to link a plan (no semesterId / full student form).\n\nRun after **create** plan and **student** exists (`student_id`, `feePlanProfile_id` vars)."
               },
               "response": []
             }

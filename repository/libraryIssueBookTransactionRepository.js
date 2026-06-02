@@ -565,3 +565,52 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     issueHistory,
   };
 }
+
+export async function getLibraryMembersList(memberType) {
+  const members = [];
+
+  if (!memberType || memberType === "STUDENT") {
+    const students = await model.studentModel.findAll({
+      attributes: studentMemberAttributes,
+      include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode"],
+        },
+      ],
+      order: [["studentId", "DESC"]],
+    });
+
+    members.push(
+      ...students.map((student) => {
+        const plain = student.get({ plain: true });
+        return {
+          memberType: "STUDENT",
+          memberId: plain.studentId,
+          ...plain,
+        };
+      }),
+    );
+  }
+
+  if (!memberType || memberType === "TEACHER") {
+    const teachers = await model.employeeModel.findAll({
+      attributes: teacherMemberAttributes,
+      order: [["employeeId", "DESC"]],
+    });
+
+    members.push(
+      ...teachers.map((teacher) => {
+        const plain = teacher.get({ plain: true });
+        return {
+          memberType: "TEACHER",
+          memberId: plain.employeeId,
+          ...plain,
+        };
+      }),
+    );
+  }
+
+  return members;
+}
