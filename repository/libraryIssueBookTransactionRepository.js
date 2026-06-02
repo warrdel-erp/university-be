@@ -710,18 +710,16 @@ export async function getLibraryReturnBookTransactions(instituteId) {
   for (const row of rows) {
     const plain = row.get({ plain: true });
     const issueTransactions = [];
-    const issueTransactionIndexById = {};
-    let totalReturnedBooks = 0;
+    const issueTransactionById = new Map();
 
     for (const item of plain.inventoryItems) {
       const transaction = item.issueBookTransaction;
       const issueTransactionId = transaction?.libraryIssueBookTransactionId;
-
       if (issueTransactionId === undefined || issueTransactionId === null) continue;
 
-      let issueTransactionEntryIndex = issueTransactionIndexById[issueTransactionId];
-      if (issueTransactionEntryIndex === undefined) {
-        issueTransactions.push({
+      let issueTransactionEntry = issueTransactionById.get(issueTransactionId);
+      if (!issueTransactionEntry) {
+        issueTransactionEntry = {
           libraryIssueBookTransactionId: issueTransactionId,
           memberId: transaction.memberId,
           memberType: transaction.memberType,
@@ -732,17 +730,21 @@ export async function getLibraryReturnBookTransactions(instituteId) {
               ? transaction.studentMember ?? null
               : transaction.teacherMember ?? null,
           returnedBooks: [],
-        });
-        issueTransactionEntryIndex = issueTransactions.length - 1;
-        issueTransactionIndexById[issueTransactionId] = issueTransactionEntryIndex;
+        };
+        issueTransactionById.set(issueTransactionId, issueTransactionEntry);
+        issueTransactions.push(issueTransactionEntry);
       }
 
-      issueTransactions[issueTransactionEntryIndex].returnedBooks.push({
+      issueTransactionEntry.returnedBooks.push({
         libraryBookIssueInventoryItemId: item.libraryBookIssueInventoryItemId,
         inventoryId: item.inventoryId,
         book: item.inventory,
       });
-      totalReturnedBooks += 1;
+    }
+
+    let totalReturnedBooks = 0;
+    for (const issueTransaction of issueTransactions) {
+      totalReturnedBooks += issueTransaction.returnedBooks.length;
     }
 
     returnTransactions.push({
