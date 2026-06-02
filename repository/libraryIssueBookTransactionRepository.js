@@ -539,3 +539,65 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     issueHistory,
   };
 }
+
+export async function getLibraryMembersList(memberType) {
+  const members = [];
+
+  if (!memberType || memberType === "STUDENT") {
+    const students = await model.studentModel.findAll({
+      attributes: studentMemberAttributes,
+      include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode"],
+        },
+      ],
+      order: [["studentId", "DESC"]],
+    });
+
+    members.push(
+      ...students.map((student) => {
+        const plain = student.get({ plain: true });
+        return {
+          memberType: "STUDENT",
+          memberId: plain.studentId,
+          ...plain,
+        };
+      }),
+    );
+  }
+
+  if (!memberType || memberType === "TEACHER") {
+    const teachers = await model.employeeModel.findAll({
+      attributes: [...teacherMemberAttributes, "userId"],
+      order: [["employeeId", "DESC"]],
+    });
+
+    const userIds = teachers.map((teacher) => teacher.userId).filter(Boolean);
+    const users = userIds.length
+      ? await model.userModel.findAll({
+          attributes: ["userId", "email", "phone"],
+          where: { userId: { [Op.in]: userIds } },
+        })
+      : [];
+    const userById = new Map(users.map((user) => [user.userId, user]));
+
+    members.push(
+      ...teachers.map((teacher) => {
+        const plain = teacher.get({ plain: true });
+        const user = userById.get(plain.userId);
+        const { userId, ...teacherData } = plain;
+        return {
+          memberType: "TEACHER",
+          memberId: plain.employeeId,
+          email: user?.email ?? null,
+          mobile: user?.phone ?? null,
+          ...teacherData,
+        };
+      }),
+    );
+  }
+
+  return members;
+}

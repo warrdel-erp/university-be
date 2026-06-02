@@ -8,6 +8,7 @@ import {
   getLibraryIssueBookTransactionById,
   updateLibraryIssueBookTransaction,
   getLibraryBookInventoryIssueHistory,
+  getLibraryMembersList,
 } from "../controllers/libraryIssueBookTransactionController.js";
 
 const router = Router();
@@ -78,6 +79,9 @@ const listIssueBookTransactionQuerySchema = z.object({
 const inventoryIssueHistoryQuerySchema = z.object({
   inventoryId: positiveId,
 });
+const memberListQuerySchema = z.object({
+  memberType: memberTypeEnum.optional(),
+});
 
 router.post(
   "/",
@@ -109,5 +113,13 @@ router.patch(
   validate({ body: issueBookTransactionUpdateSchema }),
   updateLibraryIssueBookTransaction,
 );
+
+router.get(
+  "/membersList",
+  userAuth,
+  validate({ query: memberListQuerySchema }),
+  getLibraryMembersList,
+);
+
 export default router;
 

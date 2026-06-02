@@ -268,3 +268,7 @@ export async function getLibraryBookInventoryIssueHistory(inventoryId, institute
 
   return data;
 }
+
+export async function getLibraryMembersList(query) {
+  return repo.getLibraryMembersList(query.memberType);
+}

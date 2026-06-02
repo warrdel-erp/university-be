@@ -18,6 +18,11 @@ export default sequelize.define(
       allowNull: false,
       field: "plan_type",
     },
+    category: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: "category",
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
