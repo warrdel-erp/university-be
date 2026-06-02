@@ -27,10 +27,9 @@ export async function updateEmployee(employeeId, data, transaction) {
 export async function getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role) {
     try {
         const whereClause = {
-            ...(campusId && { campusId }),
-            ...(instituteId && { instituteId }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && headInstituteId && { instituteId: headInstituteId }),
+            campusId: campusId,
+            acedmicYearId: acedmicYearId,
+            instituteId: instituteId,
         };
         const result = await model.employeeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },

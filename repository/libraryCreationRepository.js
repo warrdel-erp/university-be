@@ -142,22 +142,27 @@ export async function deleteCategory(libraryCategoryId, transaction) {
   return deleted > 0;
 }
 
-export async function getLibraryDetails(universityId) {
+export async function getLibraryDetails(universityId, instituteId) {
   try {
     const libraries = await model.libraryCreationModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
+      where: instituteId ? { instituteId } : undefined,
       include: [
         {
           model: model.userModel,
           as: "userLibraryCreation",
           attributes: ["universityId", "userId"],
           where: { universityId },
+          required: true,
         },
         {
           model: model.libraryFloorModel,
           as: "floorDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
-          where: { universityId },
+          where: {
+            universityId,
+            ...(instituteId && { instituteId }),
+          },
         },
         {
           model: model.instituteModel,
@@ -181,22 +186,27 @@ export async function getLibraryDetails(universityId) {
   }
 }
 
-export async function getSingleLibraryDetails(libraryCreationId, universityId) {
+export async function getSingleLibraryDetails(libraryCreationId, universityId, instituteId) {
   try {
     const library = await model.libraryCreationModel.findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
-      where: { libraryCreationId },
+      where: {
+        libraryCreationId,
+        ...(instituteId && { instituteId }),
+      },
       include: [
         {
           model: model.userModel,
           as: "userLibraryCreation",
           attributes: ["universityId", "userId"],
-          // where: { universityId }
+          where: { universityId },
+          required: true,
         },
         {
           model: model.libraryFloorModel,
           as: "floorDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
+          where: instituteId ? { instituteId } : undefined,
         },
         {
           model: model.instituteModel,
@@ -296,7 +306,18 @@ export async function getAllBooks(
   libraryFloorId,
   filters = {},
   pagination = {},
+  instituteId,
 ) {
+  if (libraryCreationId && instituteId) {
+    const library = await model.libraryCreationModel.findOne({
+      attributes: ["libraryCreationId"],
+      where: { libraryCreationId, instituteId },
+    });
+    if (!library) {
+      return { total: 0, books: [] };
+    }
+  }
+
   if (libraryFloorId) {
     const floor = await model.libraryFloorModel.findOne({
       attributes: ["libraryFloorId"],
@@ -304,6 +325,7 @@ export async function getAllBooks(
         libraryFloorId,
         universityId,
         libraryCreationId,
+        ...(instituteId && { instituteId }),
       },
     });
 
@@ -361,6 +383,18 @@ export async function getAllBooks(
 
   const { limit, offset } = pagination;
 
+  const libraryScopeInclude = instituteId
+    ? [
+        {
+          model: model.libraryCreationModel,
+          as: "library",
+          attributes: ["libraryCreationId", "instituteId"],
+          where: { instituteId },
+          required: true,
+        },
+      ]
+    : [];
+
   const { count, rows } = await model.libraryBookModel.findAndCountAll({
     where: buildBookListWhere(libraryCreationId, filters),
     subQuery: false,
@@ -369,7 +403,7 @@ export async function getAllBooks(
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    include: [...bookMappingIncludes, inventoryInclude],
+    include: [...bookMappingIncludes, ...libraryScopeInclude, inventoryInclude],
     limit,
     offset,
     order: [
@@ -537,7 +571,7 @@ export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
   return row?.libraryBookId ?? null;
 }
 
-export async function getAllIssuedBooks() {
+export async function getAllIssuedBooks(instituteId) {
   try {
     const result = await model.libraryBookInventoryModel.findAll({
       where: { status: "issued" },
@@ -547,6 +581,7 @@ export async function getAllIssuedBooks() {
         {
           model: model.libraryBookModel,
           as: "bookDetails",
+          required: true,
           attributes: [
             "libraryBookId",
             "title",
@@ -569,6 +604,7 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
+              ...(instituteId && { where: { instituteId }, required: true }),
             },
           ],
         },
@@ -601,6 +637,7 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
+              ...(instituteId && { where: { instituteId }, required: true }),
             },
           ],
         },

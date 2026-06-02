@@ -19,96 +19,72 @@ const inventoryListAttributes = [
   "status",
 ];
 
-const inventoryItemInclude = {
-  model: model.libraryBookIssueInventoryItemModel,
-  as: "inventoryItems",
-  attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "returnDate"],
-  separate: true,
-  order: [["libraryBookIssueInventoryItemId", "DESC"]],
-  include: [
+function buildBookDetailsInclude(instituteId) {
+  const bookInclude = {
+    model: model.libraryBookModel,
+    as: "bookDetails",
+    attributes: ["libraryBookId", "title", "subtitle", "authors", "isbn"],
+  };
+
+  if (instituteId) {
+    bookInclude.required = true;
+    bookInclude.include = [
+      {
+        model: model.libraryCreationModel,
+        as: "library",
+        attributes: ["libraryCreationId", "instituteId"],
+        where: { instituteId },
+        required: true,
+      },
+    ];
+  }
+
+  return bookInclude;
+}
+
+function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
+  return {
+    model: model.libraryBookIssueInventoryItemModel,
+    as: "inventoryItems",
+    attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "returnDate"],
+    ...(forList ? {} : { separate: true, order: [["libraryBookIssueInventoryItemId", "DESC"]] }),
+    required: Boolean(instituteId),
+    include: [
+      {
+        model: model.libraryBookInventoryModel,
+        as: "inventory",
+        attributes: inventoryListAttributes,
+        required: Boolean(instituteId),
+        include: [buildBookDetailsInclude(instituteId)],
+      },
+    ],
+  };
+}
+
+function buildTransactionInclude(instituteId, { forList = false } = {}) {
+  return [
     {
-      model: model.libraryBookInventoryModel,
-      as: "inventory",
-      attributes: inventoryListAttributes,
+      model: model.studentModel,
+      as: "studentMember",
+      attributes: studentMemberAttributes,
       include: [
         {
-          model: model.libraryBookModel,
-          as: "bookDetails",
-          attributes: ["libraryBookId", "title", "subtitle", "authors", "isbn"],
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode"],
         },
       ],
-    },
-  ],
-};
-
-const inventoryItemIncludeForList = {
-  model: model.libraryBookIssueInventoryItemModel,
-  as: "inventoryItems",
-  attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "returnDate"],
-  required: false,
-  include: [
-    {
-      model: model.libraryBookInventoryModel,
-      as: "inventory",
-      attributes: inventoryListAttributes,
       required: false,
-      include: [
-        {
-          model: model.libraryBookModel,
-          as: "bookDetails",
-          attributes: ["libraryBookId", "title", "subtitle", "authors", "isbn"],
-          required: false,
-        },
-      ],
     },
-  ],
-};
-
-const transactionInclude = [
-  {
-    model: model.studentModel,
-    as: "studentMember",
-    attributes: studentMemberAttributes,
-    include: [
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-      },
-    ],
-    required: false,
-  },
-  {
-    model: model.employeeModel,
-    as: "teacherMember",
-    attributes: teacherMemberAttributes,
-    required: false,
-  },
-  inventoryItemInclude,
-];
-
-const transactionIncludeForList = [
-  {
-    model: model.studentModel,
-    as: "studentMember",
-    attributes: studentMemberAttributes,
-    include: [
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-      },
-    ],
-    required: false,
-  },
-  {
-    model: model.employeeModel,
-    as: "teacherMember",
-    attributes: teacherMemberAttributes,
-    required: false,
-  },
-  inventoryItemIncludeForList,
-];
+    {
+      model: model.employeeModel,
+      as: "teacherMember",
+      attributes: teacherMemberAttributes,
+      required: false,
+    },
+    buildInventoryItemInclude(instituteId, { forList }),
+  ];
+}
 
 function toPlainTransaction(row) {
   if (!row) return null;
@@ -384,7 +360,7 @@ export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction
   return model.libraryBookIssueInventoryItemModel.bulkCreate(rows, { transaction });
 }
 
-export async function getLibraryIssueBookTransactions(query = {}) {
+export async function getLibraryIssueBookTransactions(query = {}, instituteId) {
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 20);
   const offset = (page - 1) * limit;
@@ -417,7 +393,7 @@ export async function getLibraryIssueBookTransactions(query = {}) {
 
   const { rows, count } = await model.libraryIssueBookTransactionModel.findAndCountAll({
     where,
-    include: transactionIncludeForList,
+    include: buildTransactionInclude(instituteId, { forList: true }),
     order: [["libraryIssueBookTransactionId", "DESC"]],
     distinct: true,
     subQuery: false,
@@ -448,10 +424,14 @@ export async function getLibraryIssueBookTransactions(query = {}) {
   };
 }
 
-export async function getLibraryIssueBookTransactionById(libraryIssueBookTransactionId, transaction) {
+export async function getLibraryIssueBookTransactionById(
+  libraryIssueBookTransactionId,
+  transaction,
+  instituteId,
+) {
   const row = await model.libraryIssueBookTransactionModel.findOne({
     where: { libraryIssueBookTransactionId },
-    include: transactionInclude,
+    include: buildTransactionInclude(instituteId),
     transaction,
   });
   const plain = toPlainTransaction(row);
@@ -482,17 +462,11 @@ export async function updateLibraryIssueBookTransaction(
   });
 }
 
-export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId) {
+export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId, instituteId) {
   const inventoryRow = await model.libraryBookInventoryModel.findOne({
     where: { inventoryId },
     attributes: ["inventoryId", "accessionNumber", "status", "condition"],
-    include: [
-      {
-        model: model.libraryBookModel,
-        as: "bookDetails",
-        attributes: ["libraryBookId", "title", "authors", "isbn", "publisher"],
-      },
-    ],
+    include: [buildBookDetailsInclude(instituteId)],
   });
 
   if (!inventoryRow) {

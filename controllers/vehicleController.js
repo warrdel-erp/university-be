@@ -19,11 +19,10 @@ export const addVehicle = async (req, res) => {
 
 export const getVehicle = async (req, res) => {
     const universityId = req.user.universityId;
-    const role = req.user.role;
     const instituteId = req.user.defaultInstituteId;
-    const { acedmicYearId } = req.query
+    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
-        const vehicles = await transportVehicleService.getAllVehicles(universityId, acedmicYearId, role, instituteId);
+        const vehicles = await transportVehicleService.getAllVehicles(universityId, acedmicYearId, instituteId);
         res.status(200).json(vehicles);
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -32,9 +31,10 @@ export const getVehicle = async (req, res) => {
 
 export const getSingleVehicle = async (req, res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
     try {
         const { vehicleId } = req.query;
-        const vehicle = await transportVehicleService.getVehicleById(vehicleId, universityId);
+        const vehicle = await transportVehicleService.getVehicleById(vehicleId, universityId, instituteId);
         res.status(200).json(vehicle);
     } catch (error) {
         res.status(404).json({ success: false, message: error.message });

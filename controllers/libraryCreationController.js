@@ -170,7 +170,7 @@ export async function deleteInventoryCopy(req, res) {
 
 export async function getAllIssuedBooks(req, res) {
   try {
-    const issuedBooks = await libraryCreation.getAllIssuedBooks();
+    const issuedBooks = await libraryCreation.getAllIssuedBooks(req.user);
     return SuccessResponse(res, 200, "Issued books fetched successfully", issuedBooks);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
