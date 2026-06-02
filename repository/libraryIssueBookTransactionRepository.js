@@ -596,17 +596,30 @@ export async function getLibraryMembersList(memberType) {
 
   if (!memberType || memberType === "TEACHER") {
     const teachers = await model.employeeModel.findAll({
-      attributes: teacherMemberAttributes,
+      attributes: [...teacherMemberAttributes, "userId"],
       order: [["employeeId", "DESC"]],
     });
+
+    const userIds = teachers.map((teacher) => teacher.userId).filter(Boolean);
+    const users = userIds.length
+      ? await model.userModel.findAll({
+          attributes: ["userId", "email", "phone"],
+          where: { userId: { [Op.in]: userIds } },
+        })
+      : [];
+    const userById = new Map(users.map((user) => [user.userId, user]));
 
     members.push(
       ...teachers.map((teacher) => {
         const plain = teacher.get({ plain: true });
+        const user = userById.get(plain.userId);
+        const { userId, ...teacherData } = plain;
         return {
           memberType: "TEACHER",
           memberId: plain.employeeId,
-          ...plain,
+          email: user?.email ?? null,
+          mobile: user?.phone ?? null,
+          ...teacherData,
         };
       }),
     );
