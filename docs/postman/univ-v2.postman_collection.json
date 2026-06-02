@@ -8544,7 +8544,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Main Store\"\n}",
+                  "raw": "{\n  \"assetId\": \"{{asset_id}}\",\n  \"classRoomSectionId\": \"{{class_room_section_id}}\",\n  \"count\": 2\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8560,7 +8560,7 @@
                     "assetLocation"
                   ]
                 },
-                "description": "**POST /assetLocation** — create location. Sets `assetLocation_id` from response."
+                "description": "**POST /assetLocation** ? link asset to class room.\n\nRequired: `assetId`, `classRoomSectionId`, `count`.\nOne asset can have multiple location rows (different rooms)."
               },
               "response": []
             },
@@ -8642,7 +8642,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"name\": \"Main Store (updated)\"\n}",
+                  "raw": "{\n  \"assetLocationId\": \"{{assetLocation_id}}\",\n  \"assetId\": \"{{asset_id}}\",\n  \"classRoomSectionId\": \"{{class_room_section_id}}\",\n  \"count\": 3\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8657,7 +8657,8 @@
                   "path": [
                     "assetLocation"
                   ]
-                }
+                },
+                "description": "**PATCH /assetLocation** ? update by `assetLocationId`.\n\nUpdatable: `assetId`, `classRoomSectionId`, `count`."
               },
               "response": []
             },
@@ -8917,7 +8918,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"status\": \"IN_STOCK\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}}\n}",
+                  "raw": "{\n  \"name\": \"Projector Unit A\",\n  \"code\": \"PRJ-001\",\n  \"status\": \"AVAILABLE\",\n  \"condition\": \"GOOD\",\n  \"description\": \"Seminar hall projector\",\n  \"departmentId\": \"{{department_id}}\",\n  \"assetCategoryId\": \"{{assetCategory_id}}\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8933,7 +8934,7 @@
                     "asset"
                   ]
                 },
-                "description": "**POST /asset** — create asset. Requires valid `department_id` and `assetCategory_id` (run category create first). Sets `asset_id`. Code is unique per institute."
+                "description": "**POST /asset** ? create asset only (no locations).\n\nUse **POST /assetLocation** separately to assign rooms."
               },
               "response": []
             },
@@ -9016,7 +9017,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"status\": \"ISSUED\",\n  \"condition\": \"FAIR\"\n}",
+                  "raw": "{\n  \"assetId\": \"{{asset_id}}\",\n  \"name\": \"Projector Unit A - Updated\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9032,7 +9033,7 @@
                     "asset"
                   ]
                 },
-                "description": "**PATCH /asset** — send `assetId` plus at least one field to update."
+                "description": "**PATCH /asset** ? update asset fields only.\n\nDoes not create or update locations. Use **PATCH /assetLocation** for rooms."
               },
               "response": []
             },
@@ -9246,6 +9247,20 @@
               "response": []
             }
           ]
+        }
+      ],
+      "variable": [
+        {
+          "key": "class_room_section_id",
+          "value": "1",
+          "type": "string",
+          "description": "Class room section id for asset location mapping"
+        },
+        {
+          "key": "class_room_section_id_2",
+          "value": "2",
+          "type": "string",
+          "description": "Second class room section id for replacement example"
         }
       ]
     }

@@ -21,21 +21,35 @@ const assetLocationIdQuerySchema = z.object({
   assetLocationId: positiveIntegerId,
 });
 
+const listAssetLocationQuerySchema = z.object({
+  assetId: positiveIntegerId.optional(),
+});
+
 const addAssetLocationSchema = z.object({
-  name: z.string().trim().min(1),
+  assetId: positiveIntegerId,
+  classRoomSectionId: positiveIntegerId,
+  count: positiveIntegerId,
 });
 
 const updateAssetLocationSchema = z
   .object({
     assetLocationId: positiveIntegerId,
-    name: z.string().trim().min(1).optional(),
+    assetId: positiveIntegerId.optional(),
+    classRoomSectionId: positiveIntegerId.optional(),
+    count: positiveIntegerId.optional(),
   })
-  .refine((d) => d.name !== undefined, {
-    message: "At least one of name is required",
+  .refine((d) => {
+    return (
+      d.assetId !== undefined ||
+      d.classRoomSectionId !== undefined ||
+      d.count !== undefined
+    );
+  }, {
+    message: "At least one of assetId, classRoomSectionId, or count is required",
   });
 
 router.post("/", userAuth, validate({ body: addAssetLocationSchema }), addAssetLocation);
-router.get("/", userAuth, getAllAssetLocation);
+router.get("/", userAuth, validate({ query: listAssetLocationQuerySchema }), getAllAssetLocation);
 router.get(
   "/single",
   userAuth,

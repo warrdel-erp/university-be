@@ -23,18 +23,7 @@ export async function findAssetsByInstitute(instituteId, options = {}) {
   return model.assetModel.findAll({
     attributes: { exclude: excludeTs },
     where: { instituteId },
-    include: [
-      {
-        model: model.assetCategoryModel,
-        as: "assetCategory",
-        attributes: ["assetCategoryId", "name"],
-      },
-      {
-        model: model.departmentModel,
-        as: "department",
-        attributes: ["departmentId", "departmentName"],
-      },
-    ],
+    include: assetIncludes,
     order: [["assetId", "ASC"]],
     transaction: options.transaction,
   });
@@ -44,18 +33,7 @@ export async function findAssetById(assetId, instituteId, options = {}) {
   return model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
-    include: [
-      {
-        model: model.assetCategoryModel,
-        as: "assetCategory",
-        attributes: ["assetCategoryId", "name"],
-      },
-      {
-        model: model.departmentModel,
-        as: "department",
-        attributes: ["departmentId", "departmentName"],
-      },
-    ],
+    include: assetIncludes,
     transaction: options.transaction,
   });
 }

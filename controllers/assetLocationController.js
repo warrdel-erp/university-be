@@ -12,7 +12,10 @@ export async function addAssetLocation(req, res) {
 
 export async function getAllAssetLocation(req, res) {
   try {
-    const rows = await assetLocationService.listAssetLocations(req.user.defaultInstituteId);
+    const rows = await assetLocationService.listAssetLocations(
+      req.user.defaultInstituteId,
+      req.query
+    );
     return SuccessResponse(res, 200, "Asset locations fetched successfully", rows);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
