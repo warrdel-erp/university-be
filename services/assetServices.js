@@ -1,9 +1,33 @@
 import { randomUUID } from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/assetRepository.js";
-import { syncAssetStatusFromInventory } from "../utility/syncAssetStatusFromInventory.js";
 
 const INVENTORY_CODE_PREFIX = "AST-";
+
+/** ISSUED only when every inventory copy has an open issue; otherwise IN_STOCK. */
+export function deriveAssetStatusFromInventory(openIssues, totalInventory) {
+  if (totalInventory === 0) {
+    return "IN_STOCK";
+  }
+  return openIssues >= totalInventory ? "ISSUED" : "IN_STOCK";
+}
+
+export async function syncAssetStatusFromInventory(assetId, instituteId, options = {}) {
+  const { transaction } = options;
+
+  const asset = await repo.findAssetStatusById(assetId, instituteId, { transaction });
+  if (!asset || asset.status === "MAINTANANCE") {
+    return;
+  }
+
+  const totalInventory = await repo.countInventoryItemsByAsset(assetId, instituteId, { transaction });
+  const openIssues = await repo.countOpenIssuesForAsset(assetId, instituteId, { transaction });
+  const nextStatus = deriveAssetStatusFromInventory(openIssues, totalInventory);
+
+  if (asset.status !== nextStatus) {
+    await repo.updateAsset(assetId, instituteId, { status: nextStatus }, { transaction });
+  }
+}
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -46,10 +70,10 @@ async function validateAssetReferences(body, instituteId, transaction) {
   }
 }
 
-async function validateLocationId(locationId, instituteId, transaction) {
-  const location = await repo.findAssetLocationById(locationId, instituteId, { transaction });
-  if (!location) {
-    throw httpError("locationId not found or not in your institute", 404);
+async function validateClassRoomSectionId(classRoomSectionId, transaction) {
+  const room = await repo.findClassRoomSectionById(classRoomSectionId, { transaction });
+  if (!room) {
+    throw httpError("classRoomSectionId not found", 404);
   }
 }
 
@@ -58,25 +82,117 @@ async function nextInventoryCode(instituteId, transaction) {
   return `${INVENTORY_CODE_PREFIX}${maxSeq + 1}`;
 }
 
-async function buildNewInventoryPayload(locationId, assetId, instituteId, transaction) {
-  if (locationId != null) {
-    await validateLocationId(locationId, instituteId, transaction);
+function inventoryStatusForRoom(classRoomSectionId) {
+  return classRoomSectionId != null ? "ASSIGNED" : "NOT_ASSIGNED";
+}
+
+async function buildNewInventoryPayload(classRoomSectionId, assetId, instituteId, transaction) {
+  if (classRoomSectionId != null) {
+    await validateClassRoomSectionId(classRoomSectionId, transaction);
   }
 
   return {
     code: await nextInventoryCode(instituteId, transaction),
     barcode: randomUUID(),
-    locationId: locationId ?? null,
+    classRoomSectionId: classRoomSectionId ?? null,
+    status: inventoryStatusForRoom(classRoomSectionId),
     assetId,
     instituteId,
   };
 }
 
+async function appendBulkInventoryPayloads(
+  count,
+  classRoomSectionId,
+  assetId,
+  instituteId,
+  transaction,
+  startSeq
+) {
+  const roomId = classRoomSectionId ?? null;
+  if (roomId != null) {
+    await validateClassRoomSectionId(roomId, transaction);
+  }
+
+  let maxSeq =
+    startSeq ?? (await repo.getNextInventoryCodeSequence(instituteId, { transaction }));
+  const status = inventoryStatusForRoom(roomId);
+  const rows = [];
+
+  for (let i = 0; i < count; i++) {
+    maxSeq += 1;
+    rows.push({
+      code: `${INVENTORY_CODE_PREFIX}${maxSeq}`,
+      barcode: randomUUID(),
+      classRoomSectionId: roomId,
+      status,
+      assetId,
+      instituteId,
+    });
+  }
+
+  return { rows, nextSeq: maxSeq };
+}
+
 async function createInventoryRows(inventoryList, assetId, instituteId, transaction) {
   for (const item of inventoryList) {
-    const payload = await buildNewInventoryPayload(item.locationId, assetId, instituteId, transaction);
+    const payload = await buildNewInventoryPayload(item.classRoomSectionId, assetId, instituteId, transaction);
     await repo.createInventoryItem(payload, { transaction });
   }
+}
+
+async function createInventoryRowsByBulkGroups(groups, assetId, instituteId, transaction) {
+  let maxSeq = await repo.getNextInventoryCodeSequence(instituteId, { transaction });
+  const allRows = [];
+
+  for (const group of groups) {
+    const { rows, nextSeq } = await appendBulkInventoryPayloads(
+      group.count,
+      group.classRoomSectionId,
+      assetId,
+      instituteId,
+      transaction,
+      maxSeq
+    );
+    allRows.push(...rows);
+    maxSeq = nextSeq;
+  }
+
+  if (allRows.length) {
+    await repo.bulkCreateInventoryItems(allRows, { transaction });
+  }
+}
+
+async function createInventoryRowsByCount(
+  count,
+  classRoomSectionId,
+  assetId,
+  instituteId,
+  transaction
+) {
+  await createInventoryRowsByBulkGroups(
+    [{ count, classRoomSectionId }],
+    assetId,
+    instituteId,
+    transaction
+  );
+}
+
+function buildInventoryItemUpdatePayload(item) {
+  const payload = {};
+
+  if (item.classRoomSectionId !== undefined) {
+    payload.classRoomSectionId = item.classRoomSectionId;
+    if (item.status === undefined) {
+      payload.status = inventoryStatusForRoom(item.classRoomSectionId);
+    }
+  }
+
+  if (item.status !== undefined) {
+    payload.status = item.status;
+  }
+
+  return payload;
 }
 
 async function upsertInventoryRows(inventoryList, assetId, instituteId, transaction) {
@@ -92,31 +208,35 @@ async function upsertInventoryRows(inventoryList, assetId, instituteId, transact
         );
       }
 
-      if (item.locationId === undefined) {
-        throw httpError("locationId is required when updating an inventory item", 400);
+      const inventoryPayload = buildInventoryItemUpdatePayload(item);
+      if (!Object.keys(inventoryPayload).length) {
+        throw httpError(
+          "classRoomSectionId or status is required when updating an inventory item",
+          400
+        );
       }
 
-      if (item.locationId !== null) {
-        await validateLocationId(item.locationId, instituteId, transaction);
+      if (inventoryPayload.classRoomSectionId != null) {
+        await validateClassRoomSectionId(inventoryPayload.classRoomSectionId, transaction);
       }
 
       await repo.updateInventoryItem(
         item.assetInventoryItemId,
         instituteId,
         assetId,
-        { locationId: item.locationId },
+        inventoryPayload,
         { transaction }
       );
       continue;
     }
 
-    const payload = await buildNewInventoryPayload(item.locationId, assetId, instituteId, transaction);
+    const payload = await buildNewInventoryPayload(item.classRoomSectionId, assetId, instituteId, transaction);
     await repo.createInventoryItem(payload, { transaction });
   }
 }
 
 export async function addAsset(body, instituteId) {
-  const inventoryList = normalizeInventoryList(body.inventory);
+  const inventoryList = body.inventory !== undefined ? normalizeInventoryList(body.inventory) : [];
 
   const row = await sequelize.transaction(async (transaction) => {
     await validateAssetReferences(body, instituteId, transaction);
@@ -135,7 +255,22 @@ export async function addAsset(body, instituteId) {
       { transaction }
     );
 
-    if (inventoryList.length) {
+    if (body.inventoryBulk !== undefined) {
+      await createInventoryRowsByBulkGroups(
+        body.inventoryBulk,
+        created.assetId,
+        instituteId,
+        transaction
+      );
+    } else if (body.count !== undefined) {
+      await createInventoryRowsByCount(
+        body.count,
+        body.classRoomSectionId,
+        created.assetId,
+        instituteId,
+        transaction
+      );
+    } else if (inventoryList.length) {
       await createInventoryRows(inventoryList, created.assetId, instituteId, transaction);
     }
 

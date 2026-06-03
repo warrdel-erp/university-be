@@ -8508,198 +8508,8 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module\n\n**Auth:** Bearer `{{token}}` — `instituteId` from token on all routes.\n\n### Run order\n1. **assetLocation** — room-based storage (`classRoomSectionId` → `asset_locations`)\n2. **assetCategory** — categories (`asset_categories`)\n3. **asset** — master + inventory copies (`asset` + `asset_inventory_item`)\n4. **assetIssue** — issue / return (`asset_issue_transaction`, `asset_issue_inventory_item`, `asset_return_transaction`)\n\n### Tables\n| Table | Notes |\n|-------|--------|\n| `asset_locations` | `assetLocationId`, `classRoomSectionId` (no `name`) |\n| `asset` | Master: `name`, `code`, `status`, `condition`, category, department |\n| `asset_inventory_item` | Copies: auto `code` `AST-1`…, UUID `barcode`; user sends `locationId` only |\n| `asset_issue_transaction` | One per issue POST: `memberId`, `memberType`, `issueDate`, `dueDate` |\n| `asset_issue_inventory_item` | Links issue ↔ inventory; `assetReturnTransactionId` when returned |\n| `student_fee_payment` + `payment_item` | Optional security on issue (`referenceType` `ASSET_SECURITY`) |\n\n### Enums\n- **asset.status:** `IN_STOCK` | `ISSUED` | `MAINTANANCE`\n- **asset.condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`\n- **memberType:** `STUDENT` | `TEACHER`\n\n### Collection variables (auto-set by tests)\n`assetLocation_id`, `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`\n\n**Prerequisites:** `{{student_id}}`, `{{class_room_section_id}}`, `{{department_id}}`",
+      "description": "## Asset module\n\n**Auth:** Bearer `{{token}}` — `instituteId` from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** (create master + inventory) → 3. **assetIssue** (issue / return)\n\n### POST /asset — single **create** request\nOpen **asset → create** for all 3 `inventoryBulk` payload types (Type 1 active in Body; Types 2–3 commented in request docs). Use `inventoryBulk[]` only on create.\n\n### PATCH /asset — inventory line\n```json\n{\n  \"assetId\": 1,\n  \"inventory\": [\n    { \"assetInventoryItemId\": 5, \"classRoomSectionId\": 12 }\n  ]\n}\n```\nSets room → inventory `ASSIGNED`. Use `inMaintenance: true` on asset for `MAINTANANCE`.\n\n### Enums\n- **asset.status:** `IN_STOCK` | `ISSUED` | `MAINTANANCE` (auto)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` | `ASSIGNED`\n- **asset.condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `class_room_section_id`, `class_room_section_id_2`, `department_id`, `student_id`",
       "item": [
-        {
-          "name": "assetLocation",
-          "item": [
-            {
-              "name": "create",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const data = pm.response.json()?.data;",
-                      "if (data?.assetLocationId) {",
-                      "  pm.collectionVariables.set('assetLocation_id', String(data.assetLocationId));",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
-              ],
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"classRoomSectionId\": {{class_room_section_id}}\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/assetLocation",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "assetLocation"
-                  ]
-                },
-                "description": "**POST /assetLocation** — body: `{ \"classRoomSectionId\": number }`. One location per room per institute. Sets `assetLocation_id`."
-              },
-              "response": []
-            },
-            {
-              "name": "get all",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/assetLocation",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "assetLocation"
-                  ]
-                },
-                "description": "**GET /assetLocation** — list all locations for the institute. Each row includes `classRoom` hierarchy."
-              },
-              "response": []
-            },
-            {
-              "name": "get single",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/assetLocation/single?assetLocationId={{assetLocation_id}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "assetLocation",
-                    "single"
-                  ],
-                  "query": [
-                    {
-                      "key": "assetLocationId",
-                      "value": "{{assetLocation_id}}"
-                    }
-                  ]
-                },
-                "description": "**GET /assetLocation/single?assetLocationId=** — fetch one location with `classRoom` hierarchy."
-              },
-              "response": []
-            },
-            {
-              "name": "update",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"classRoomSectionId\": {{class_room_section_id}}\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseurl}}/assetLocation",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "assetLocation"
-                  ]
-                },
-                "description": "**PATCH /assetLocation** — `assetLocationId` + `classRoomSectionId`."
-              },
-              "response": []
-            },
-            {
-              "name": "delete",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{token}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/assetLocation?assetLocationId={{assetLocation_id}}",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "assetLocation"
-                  ],
-                  "query": [
-                    {
-                      "key": "assetLocationId",
-                      "value": "{{assetLocation_id}}"
-                    }
-                  ]
-                },
-                "description": "**DELETE /assetLocation?assetLocationId=**"
-              },
-              "response": []
-            }
-          ]
-        },
         {
           "name": "assetCategory",
           "item": [
@@ -8931,7 +8741,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}},\n  \"inventory\": [\n    { \"locationId\": {{assetLocation_id}} }\n  ]\n}",
+                  "raw": "// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id_2}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2 }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 3 }\n//   ]\n// }",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8947,7 +8757,7 @@
                     "asset"
                   ]
                 },
-                "description": "**POST /asset** — master fields + optional `inventory[]` with `locationId` only. `status` is derived from inventory issues (`IN_STOCK` / `ISSUED`). Server assigns `AST-1`, `AST-2`… and UUID `barcode`. Sets `asset_id`, `assetInventoryItem_id`."
+                "description": "**POST /asset** — Create asset + `inventoryBulk[]`. See **Body** for 4 payload examples (1 active, 3 commented).\n\n| # | `inventoryBulk` | Result |\n|---|-----------------|--------|\n| **1** | 2 in room A + 2 in room B | 4 copies, all `ASSIGNED` |\n| **2** | `[{ count: 2 }]` only | 2 copies, `NOT_ASSIGNED` |\n| **3** | `[{ count: 2, classRoomSectionId }]` | 2 copies, one room, `ASSIGNED` |\n| **4** | 2 in room + `{ count: 3 }` | 2 `ASSIGNED` + 3 `NOT_ASSIGNED` |\n\nAll 4 examples are in **Body** (commented). **Frontend:** Uncomment exactly one block to test or copy into app code (remove `//` lines).\n\nRequired: `name`, `code`, `condition`, `departmentId`, `assetCategoryId`. Do not send master `status`."
               },
               "response": []
             },
@@ -8975,7 +8785,7 @@
                     "asset"
                   ]
                 },
-                "description": "Returns assets with `assetCategory`, `department`, and `inventoryItems` (each with nested `assetLocation`)."
+                "description": "**GET /asset** — `inventoryItems[]` with `code`, `barcode`, `status` (`NOT_ASSIGNED`|`ASSIGNED`), `classRoomSectionId`, nested `classRoom` hierarchy."
               },
               "response": []
             },
@@ -9010,12 +8820,12 @@
                     }
                   ]
                 },
-                "description": "**GET /asset/single?assetId=** — includes `inventoryItems` + `assetLocation`."
+                "description": "**GET /asset/single?assetId=** — includes `inventoryItems` + `classRoom`."
               },
               "response": []
             },
             {
-              "name": "update",
+              "name": "update (assign room)",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -9031,7 +8841,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"inventory\": [\n    { \"assetInventoryItemId\": {{assetInventoryItem_id}}, \"locationId\": {{assetLocation_id}} },\n    { \"locationId\": {{assetLocation_id}} }\n  ]\n}",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"inventory\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}},\n      \"classRoomSectionId\": {{class_room_section_id}}\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9047,7 +8857,44 @@
                     "asset"
                   ]
                 },
-                "description": "**PATCH /asset** — update inventory: existing row needs `assetInventoryItemId` + `locationId`; new row only `locationId` (auto `code`/`barcode`)."
+                "description": "**PATCH /asset** — Assign room to existing copy: `assetInventoryItemId` + `classRoomSectionId` → inventory `ASSIGNED`."
+              },
+              "response": []
+            },
+            {
+              "name": "update (master fields)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"name\": \"Dell Laptop (updated)\",\n  \"condition\": \"FAIR\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/asset",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset"
+                  ]
+                },
+                "description": "**PATCH /asset** — Update master only (`name`, `code`, `condition`, `description`, `departmentId`, `assetCategoryId`). Or `inMaintenance: true`."
               },
               "response": []
             },
@@ -9124,6 +8971,7 @@
         },
         {
           "name": "assetIssue",
+          "description": "## Asset issue / return\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n**Prerequisite:** Create asset + inventory via **asset → create** (`inventoryBulk`). Issue uses `assetInventoryItemId` from `asset_inventory_item` (room on copy via `classRoomSectionId`, not `asset_locations`).\n\n### Routes (unchanged)\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/assetIssue` | Issue copies to student/teacher |\n| GET | `/assetIssue` | List issues (paginated) |\n| GET | `/assetIssue/single` | Single issue |\n| PATCH | `/assetIssue` | Update dates/member |\n| POST | `/assetIssue/return` | Return issued copies |\n| GET | `/assetIssue/return` | List return transactions |\n\n### Item fields in responses\n`classRoomSectionId`, `inventoryStatus` (`NOT_ASSIGNED`|`ASSIGNED`), nested `classRoom` → `roomFloor` → `floorBuilding` on each issued inventory line.",
           "item": [
             {
               "name": "create",
@@ -9182,7 +9030,7 @@
                     "assetIssue"
                   ]
                 },
-                "description": "**POST /assetIssue**\n\n| Field | Notes |\n|-------|--------|\n| `memberId`, `memberType` | `STUDENT` or `TEACHER` |\n| `issueDate`, `dueDate` | `dueDate` >= `issueDate` |\n| `items[]` | `{ assetInventoryItemId }` — must be available |\n| `securityAmount` | Optional — creates payment + `payment_item` (`ASSET_SECURITY`) |\n| `paymentMethod` | Default `cash` |\n\nSets `assetIssueTransaction_id`, `assetIssueInventoryItem_id`."
+                "description": "**POST /assetIssue**\n\n| Field | Notes |\n|-------|--------|\n| `memberId`, `memberType` | `STUDENT` or `TEACHER` |\n| `issueDate`, `dueDate` | `dueDate` >= `issueDate` |\n| `items[]` | `{ assetInventoryItemId }` — institute inventory copy (not issued yet) |\n| `securityAmount` | Optional — `ASSET_SECURITY` payment |\n| `paymentMethod` | Default `cash` |\n\nResponse items include `classRoomSectionId`, `inventoryStatus`, `classRoom` hierarchy. Sets `assetIssueTransaction_id`, `assetIssueInventoryItem_id`."
               },
               "response": []
             },
@@ -9224,7 +9072,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue** — each row includes `memberBasicDetails`, `items[]` (inventory + asset name/code/status), and `securityPayment` (if ASSET_SECURITY payment exists)."
+                "description": "**GET /assetIssue** — `memberBasicDetails`, `items[]` (inventory code/barcode, `classRoomSectionId`, `inventoryStatus`, `classRoom`, asset), `securityPayment` when present."
               },
               "response": []
             },
@@ -9259,7 +9107,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/single** — `memberBasicDetails`, `items[]` with asset basics, `securityPayment` when present."
+                "description": "**GET /assetIssue/single?assetIssueTransactionId=** — same shape as list row (inventory room on copy, not `assetLocation`)."
               },
               "response": []
             },
@@ -9351,7 +9199,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/return** — paginated return transactions (`asset_return_transaction`). Each row has `returnDate` and `items[]` (returned inventory + asset + issue/member details)."
+                "description": "**GET /assetIssue/return** — paginated `asset_return_transaction` rows: `returnDate`, `items[]` with inventory `classRoomSectionId`/`classRoom`, asset, issue/member details."
               },
               "response": []
             },
@@ -9469,8 +9317,8 @@
       "type": "string"
     },
     {
-      "key": "assetLocation_id",
-      "value": "1",
+      "key": "class_room_section_id_2",
+      "value": "10",
       "type": "string"
     },
     {

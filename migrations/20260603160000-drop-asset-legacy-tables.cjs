@@ -62,7 +62,6 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
 
     try {
-      await dropTableIfExists(queryInterface, 'asset_locations', transaction);
       await dropTableIfExists(queryInterface, 'asset_issue_item', transaction);
       await dropTableIfExists(queryInterface, 'asset_issue', transaction);
       await removeIncomingForeignKeys(queryInterface, 'asset', transaction);

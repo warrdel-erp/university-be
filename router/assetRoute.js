@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
-import { assetConditions } from "../constant.js";
+import { assetConditions, assetInventoryStatuses } from "../constant.js";
 import {
   addAsset,
   getAllAsset,
@@ -23,6 +23,12 @@ const assetConditionSchema = z.enum(assetConditions, {
   errorMap: () => ({ message: `condition must be one of: ${assetConditions.join(", ")}` }),
 });
 
+const assetInventoryStatusSchema = z.enum(assetInventoryStatuses, {
+  errorMap: () => ({
+    message: `status must be one of: ${assetInventoryStatuses.join(", ")}`,
+  }),
+});
+
 const assetIdQuerySchema = z.object({
   assetId: positiveIntegerId,
 });
@@ -32,25 +38,58 @@ const assetInventoryItemIdQuerySchema = z.object({
 });
 
 const inventoryRowSchema = z.object({
-  locationId: positiveIntegerId.optional().nullable(),
+  classRoomSectionId: positiveIntegerId.optional().nullable(),
 });
 
 const updateInventoryRowSchema = z.object({
   assetInventoryItemId: positiveIntegerId,
-  locationId: z.union([positiveIntegerId, z.null()]),
+  classRoomSectionId: z.union([positiveIntegerId, z.null()]),
 });
 
 const inventoryItemSchema = z.union([updateInventoryRowSchema, inventoryRowSchema]);
 
-const addAssetSchema = z.object({
-  name: z.string().trim().min(1),
-  code: z.string().trim().min(1),
-  condition: assetConditionSchema,
-  description: z.string().trim().optional().nullable(),
-  departmentId: positiveIntegerId,
-  assetCategoryId: positiveIntegerId,
-  inventory: z.union([inventoryRowSchema, z.array(inventoryRowSchema)]).optional(),
+const inventoryBulkRowSchema = z.object({
+  count: z.coerce
+    .number({ invalid_type_error: "count must be a number" })
+    .int({ message: "count must be an integer" })
+    .min(1, { message: "count must be at least 1" })
+    .max(500, { message: "count cannot exceed 500" }),
+  classRoomSectionId: z.union([positiveIntegerId, z.null()]).optional(),
 });
+
+const addAssetSchema = z
+  .object({
+    name: z.string().trim().min(1),
+    code: z.string().trim().min(1),
+    condition: assetConditionSchema,
+    description: z.string().trim().optional().nullable(),
+    departmentId: positiveIntegerId,
+    assetCategoryId: positiveIntegerId,
+    count: z.coerce
+      .number({ invalid_type_error: "count must be a number" })
+      .int({ message: "count must be an integer" })
+      .min(1, { message: "count must be at least 1" })
+      .max(5000, { message: "count cannot exceed 500" })
+      .optional(),
+    classRoomSectionId: z.union([positiveIntegerId, z.null()]).optional(),
+    inventoryBulk: z.array(inventoryBulkRowSchema).min(1).max(50).optional(),
+    inventory: z.union([inventoryRowSchema, z.array(inventoryRowSchema)]).optional(),
+  })
+  .refine(
+    (data) => {
+      const modes = [
+        data.inventoryBulk !== undefined,
+        data.count !== undefined,
+        data.inventory !== undefined,
+      ].filter(Boolean).length;
+      return modes <= 1;
+    },
+    { message: "Use only one of: inventoryBulk, count, or inventory" }
+  )
+  .refine(
+    (data) => data.classRoomSectionId === undefined || data.count !== undefined,
+    { message: "classRoomSectionId on create is only allowed with count (single batch)" }
+  );
 
 const updateAssetSchema = z
   .object({

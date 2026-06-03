@@ -4,7 +4,7 @@ import * as repo from "../repository/assetIssueRepository.js";
 import * as assetRepo from "../repository/assetRepository.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import { decimalCompare, toMoneyNumber } from "../utility/decimalMoney.js";
-import { syncAssetStatusFromInventory } from "../utility/syncAssetStatusFromInventory.js";
+import { syncAssetStatusFromInventory } from "./assetServices.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -61,6 +61,22 @@ async function getMemberDetails(memberType, memberId, instituteId, transaction) 
   return buildMemberDetailsFromEmployee(memberId, employee);
 }
 
+function formatInventoryLocationFields(inventory) {
+  if (!inventory) {
+    return {
+      classRoomSectionId: null,
+      inventoryStatus: null,
+      classRoom: null,
+    };
+  }
+
+  return {
+    classRoomSectionId: inventory.classRoomSectionId ?? null,
+    inventoryStatus: inventory.status ?? null,
+    classRoom: inventory.classRoom ? toPlain(inventory.classRoom) : null,
+  };
+}
+
 function formatIssueItemBasic(item) {
   const plain = toPlain(item);
   if (!plain) return null;
@@ -73,6 +89,7 @@ function formatIssueItemBasic(item) {
     assetInventoryItemId: plain.assetInventoryItemId,
     inventoryCode: inventory?.code ?? null,
     inventoryBarcode: inventory?.barcode ?? null,
+    ...formatInventoryLocationFields(inventory),
     asset: asset
       ? {
           assetId: asset.assetId,
@@ -139,6 +156,7 @@ function formatReturnedIssueItem(itemPlain, memberBasicDetails) {
     assetInventoryItemId: itemPlain.assetInventoryItemId,
     inventoryCode: inventory?.code ?? null,
     inventoryBarcode: inventory?.barcode ?? null,
+    ...formatInventoryLocationFields(inventory),
     asset: asset
       ? {
           assetId: asset.assetId,
@@ -359,9 +377,8 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
     }
 
-    let securityPayment = null;
     if (body.securityAmount !== undefined) {
-      securityPayment = await createSecurityPaymentForAssetIssue(
+      await createSecurityPaymentForAssetIssue(
         {
           assetIssueTransactionId: issue.assetIssueTransactionId,
           memberId: body.memberId,
@@ -380,11 +397,20 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       instituteId,
       { transaction }
     );
-    const plain = toPlain(issueRow);
-    if (securityPayment) {
-      plain.securityPayment = securityPayment;
-    }
-    return plain;
+    const issuePlain = toPlain(issueRow);
+    const memberBasicDetails = await getMemberDetails(
+      issuePlain.memberType,
+      issuePlain.memberId,
+      instituteId,
+      transaction
+    );
+    const securityPaymentRow = await repo.findAssetSecurityPaymentByIssueId(
+      issue.assetIssueTransactionId,
+      instituteId,
+      { transaction }
+    );
+
+    return formatAssetIssueRecord(issuePlain, memberBasicDetails, securityPaymentRow);
   });
 
   return row;

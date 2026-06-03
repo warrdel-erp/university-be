@@ -3,27 +3,21 @@ import * as model from "../models/index.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
 
-const assetLocationInclude = {
-  model: model.assetLocationModel,
-  as: "assetLocation",
-  attributes: ["assetLocationId", "classRoomSectionId", "instituteId"],
+const classRoomHierarchyInclude = {
+  model: model.classRoomModel,
+  as: "classRoom",
+  attributes: ["classRoomSectionId", "roomNumber", "floorId"],
+  required: false,
   include: [
     {
-      model: model.classRoomModel,
-      as: "classRoom",
-      attributes: ["classRoomSectionId", "roomNumber", "floorId"],
+      model: model.floorModel,
+      as: "roomFloor",
+      attributes: ["floorId", "name", "buildingId"],
       include: [
         {
-          model: model.floorModel,
-          as: "roomFloor",
-          attributes: ["floorId", "name", "buildingId"],
-          include: [
-            {
-              model: model.buildingModel,
-              as: "floorBuilding",
-              attributes: ["buildingId", "name", "buildingType", "campusId"],
-            },
-          ],
+          model: model.buildingModel,
+          as: "floorBuilding",
+          attributes: ["buildingId", "name", "buildingType", "campusId"],
         },
       ],
     },
@@ -34,7 +28,7 @@ const inventoryItemsInclude = {
   model: model.assetInventoryItemModel,
   as: "inventoryItems",
   attributes: { exclude: excludeTs },
-  include: [assetLocationInclude],
+  include: [classRoomHierarchyInclude],
 };
 
 const assetDetailIncludes = [
@@ -98,10 +92,10 @@ export async function findDepartmentById(departmentId, options = {}) {
   });
 }
 
-export async function findAssetLocationById(assetLocationId, instituteId, options = {}) {
-  return model.assetLocationModel.findOne({
-    attributes: ["assetLocationId"],
-    where: { assetLocationId, instituteId },
+export async function findClassRoomSectionById(classRoomSectionId, options = {}) {
+  return model.classRoomModel.findOne({
+    attributes: ["classRoomSectionId"],
+    where: { classRoomSectionId },
     transaction: options.transaction,
   });
 }
@@ -136,6 +130,10 @@ export async function findInventoryItemById(assetInventoryItemId, instituteId, o
 
 export async function createInventoryItem(data, options = {}) {
   return model.assetInventoryItemModel.create(data, { transaction: options.transaction });
+}
+
+export async function bulkCreateInventoryItems(rows, options = {}) {
+  return model.assetInventoryItemModel.bulkCreate(rows, { transaction: options.transaction });
 }
 
 export async function updateInventoryItem(

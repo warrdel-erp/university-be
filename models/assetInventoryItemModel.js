@@ -2,7 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 import assetModel from "./assetModel.js";
-import assetLocationModel from "./assetLocationModel.js";
+import classRoomModel from "./classRoomModel.js";
+import { assetInventoryStatuses } from "../constant.js";
 
 export default sequelize.define(
   "asset_inventory_item",
@@ -39,14 +40,19 @@ export default sequelize.define(
         key: "institute_id",
       },
     },
-    locationId: {
+    classRoomSectionId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "location_id",
+      field: "class_room_section_id",
       references: {
-        model: assetLocationModel,
-        key: "asset_location_id",
+        model: classRoomModel,
+        key: "class_room_section_id",
       },
+    },
+    status: {
+      type: DataTypes.ENUM(...assetInventoryStatuses),
+      allowNull: false,
+      defaultValue: "NOT_ASSIGNED",
     },
   },
   {

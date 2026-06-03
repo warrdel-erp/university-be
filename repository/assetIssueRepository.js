@@ -1,17 +1,39 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
+const classRoomHierarchyInclude = {
+  model: model.classRoomModel,
+  as: "classRoom",
+  attributes: ["classRoomSectionId", "roomNumber", "floorId"],
+  required: false,
+  include: [
+    {
+      model: model.floorModel,
+      as: "roomFloor",
+      attributes: ["floorId", "name", "buildingId"],
+      include: [
+        {
+          model: model.buildingModel,
+          as: "floorBuilding",
+          attributes: ["buildingId", "name", "buildingType", "campusId"],
+        },
+      ],
+    },
+  ],
+};
+
 const issueInventoryItemIncludes = [
   {
     model: model.assetInventoryItemModel,
     as: "inventoryItem",
-    attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "locationId"],
+    attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "classRoomSectionId", "status"],
     include: [
       {
         model: model.assetModel,
         as: "asset",
         attributes: ["assetId", "name", "code", "status", "condition"],
       },
+      classRoomHierarchyInclude,
     ],
   },
   {
@@ -351,7 +373,7 @@ const returnedIssueItemDetailIncludes = [
   {
     model: model.assetInventoryItemModel,
     as: "inventoryItem",
-    attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "locationId"],
+    attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "classRoomSectionId", "status"],
     required: true,
     include: [
       {
@@ -360,6 +382,7 @@ const returnedIssueItemDetailIncludes = [
         attributes: ["assetId", "name", "code", "status", "condition"],
         required: true,
       },
+      classRoomHierarchyInclude,
     ],
   },
   {

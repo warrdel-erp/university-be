@@ -52,7 +52,6 @@ import classRoomModel from "./classRoomModel.js";
 import feeGroupModel from "./feeGroupModel.js";
 import feeTypeCategoryModel from "./feeTypeCategoryModel.js";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
-import assetLocationModel from "./assetLocationModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
 import assetModel from "./assetModel.js";
 import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
@@ -623,12 +622,6 @@ feeTypeCategoryModel.hasMany(feeTypeCatalogModel, { foreignKey: "feeTypeCategory
 feeTypeCatalogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteFeeTypeCatalog" });
 instituteModel.hasMany(feeTypeCatalogModel, { foreignKey: "instituteId", as: "feeTypeCatalogs" });
 
-assetLocationModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetLocation" });
-instituteModel.hasMany(assetLocationModel, { foreignKey: "instituteId", as: "assetLocations" });
-
-assetLocationModel.belongsTo(classRoomModel, { foreignKey: "classRoomSectionId", as: "classRoom" });
-classRoomModel.hasMany(assetLocationModel, { foreignKey: "classRoomSectionId", as: "assetLocations" });
-
 assetCategoryModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetCategory" });
 instituteModel.hasMany(assetCategoryModel, { foreignKey: "instituteId", as: "assetCategories" });
 
@@ -683,13 +676,13 @@ instituteModel.hasMany(assetInventoryItemModel, { foreignKey: "instituteId", as:
 assetInventoryItemModel.belongsTo(assetModel, { foreignKey: "assetId", as: "asset" });
 assetModel.hasMany(assetInventoryItemModel, { foreignKey: "assetId", as: "inventoryItems" });
 
-assetInventoryItemModel.belongsTo(assetLocationModel, {
-  foreignKey: "locationId",
-  as: "assetLocation",
+assetInventoryItemModel.belongsTo(classRoomModel, {
+  foreignKey: "classRoomSectionId",
+  as: "classRoom",
 });
-assetLocationModel.hasMany(assetInventoryItemModel, {
-  foreignKey: "locationId",
-  as: "inventoryItems",
+classRoomModel.hasMany(assetInventoryItemModel, {
+  foreignKey: "classRoomSectionId",
+  as: "assetInventoryItems",
 });
 
 //fee (fee Invoice)
@@ -1568,7 +1561,6 @@ export {
   feeGroupModel,
   feeTypeCategoryModel,
   feeTypeCatalogModel,
-  assetLocationModel,
   assetCategoryModel,
   assetModel,
   assetIssueTransactionModel,

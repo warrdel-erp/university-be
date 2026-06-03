@@ -34,12 +34,17 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'RESTRICT',
         },
-        location_id: {
+        class_room_section_id: {
           type: Sequelize.INTEGER,
           allowNull: true,
-          references: { model: 'asset_locations', key: 'asset_location_id' },
+          references: { model: 'class_room_section', key: 'class_room_section_id' },
           onUpdate: 'CASCADE',
           onDelete: 'SET NULL',
+        },
+        status: {
+          type: Sequelize.ENUM('NOT_ASSIGNED', 'ASSIGNED'),
+          allowNull: false,
+          defaultValue: 'NOT_ASSIGNED',
         },
         created_at: {
           type: Sequelize.DATE,
