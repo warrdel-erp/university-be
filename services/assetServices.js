@@ -274,9 +274,13 @@ export async function addAsset(body, instituteId) {
   return toPlain(row);
 }
 
-export async function listAssets(instituteId) {
+export async function listAssets(instituteId, query = {}) {
   const rows = await sequelize.transaction(async (transaction) =>
-    repo.findAssetsByInstitute(instituteId, { transaction })
+    repo.findAssetsByInstitute(
+      instituteId,
+      { inventoryStatus: query.status },
+      { transaction }
+    )
   );
   return rows.map(toPlain);
 }

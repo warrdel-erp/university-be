@@ -33,6 +33,17 @@ const assetIdQuerySchema = z.object({
   assetId: positiveIntegerId,
 });
 
+const listAssetQuerySchema = z.object({
+  status: z
+    .enum(["all", "assigned", "unassigned"], {
+      errorMap: () => ({
+        message: 'status must be one of: all, assigned, unassigned',
+      }),
+    })
+    .optional()
+    .default("all"),
+});
+
 const assetInventoryItemIdQuerySchema = z.object({
   assetInventoryItemId: positiveIntegerId,
 });
@@ -114,7 +125,7 @@ const updateAssetSchema = z
   );
 
 router.post("/", userAuth, validate({ body: addAssetSchema }), addAsset);
-router.get("/", userAuth, getAllAsset);
+router.get("/", userAuth, validate({ query: listAssetQuerySchema }), getAllAsset);
 router.get("/single", userAuth, validate({ query: assetIdQuerySchema }), getSingleAssetDetails);
 router.patch("/", userAuth, validate({ body: updateAssetSchema }), updateAsset);
 router.delete("/", userAuth, validate({ query: assetIdQuerySchema }), deleteAsset);

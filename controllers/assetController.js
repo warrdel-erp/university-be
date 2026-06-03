@@ -12,7 +12,7 @@ export async function addAsset(req, res) {
 
 export async function getAllAsset(req, res) {
   try {
-    const rows = await assetService.listAssets(req.user.defaultInstituteId);
+    const rows = await assetService.listAssets(req.user.defaultInstituteId, req.query);
     return SuccessResponse(res, 200, "Assets fetched successfully", rows);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

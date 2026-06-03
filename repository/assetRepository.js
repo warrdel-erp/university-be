@@ -24,31 +24,47 @@ const classRoomHierarchyInclude = {
   ],
 };
 
-const inventoryItemsInclude = {
-  model: model.assetInventoryItemModel,
-  as: "inventoryItems",
-  attributes: { exclude: excludeTs },
-  include: [classRoomHierarchyInclude],
-};
+function buildInventoryItemsInclude(inventoryStatus = "all") {
+  const where = {};
 
-const assetDetailIncludes = [
-  {
-    model: model.assetCategoryModel,
-    as: "assetCategory",
-    attributes: ["assetCategoryId", "name"],
-  },
-  inventoryItemsInclude,
-];
+  if (inventoryStatus === "assigned") {
+    where.classRoomSectionId = { [Op.ne]: null };
+  } else if (inventoryStatus === "unassigned") {
+    where.classRoomSectionId = null;
+  }
+
+  return {
+    model: model.assetInventoryItemModel,
+    as: "inventoryItems",
+    attributes: { exclude: excludeTs },
+    where: Object.keys(where).length ? where : undefined,
+    required: false,
+    include: [classRoomHierarchyInclude],
+  };
+}
+
+function buildAssetDetailIncludes(inventoryStatus = "all") {
+  return [
+    {
+      model: model.assetCategoryModel,
+      as: "assetCategory",
+      attributes: ["assetCategoryId", "name"],
+    },
+    buildInventoryItemsInclude(inventoryStatus),
+  ];
+}
 
 export async function createAsset(data, options = {}) {
   return model.assetModel.create(data, { transaction: options.transaction });
 }
 
-export async function findAssetsByInstitute(instituteId, options = {}) {
+export async function findAssetsByInstitute(instituteId, filters = {}, options = {}) {
+  const inventoryStatus = filters.inventoryStatus ?? "all";
+
   return model.assetModel.findAll({
     attributes: { exclude: excludeTs },
     where: { instituteId },
-    include: assetDetailIncludes,
+    include: buildAssetDetailIncludes(inventoryStatus),
     order: [["assetId", "ASC"]],
     transaction: options.transaction,
   });
@@ -58,7 +74,7 @@ export async function findAssetById(assetId, instituteId, options = {}) {
   return model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
-    include: assetDetailIncludes,
+    include: buildAssetDetailIncludes("all"),
     transaction: options.transaction,
   });
 }

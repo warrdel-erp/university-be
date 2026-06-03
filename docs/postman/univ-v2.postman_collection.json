@@ -8777,15 +8777,22 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/asset",
+                  "raw": "{{baseurl}}/asset?status=all",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "asset"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "all",
+                      "description": "all | assigned (has classRoomSectionId) | unassigned (no room)"
+                    }
                   ]
                 },
-                "description": "**GET /asset** — `inventoryItems[]` with `code`, `barcode`, `status` (`NOT_ASSIGNED`|`ASSIGNED`), `classRoomSectionId`, nested `classRoom` hierarchy."
+                "description": "**GET /asset?status=**\n\n| status | `inventoryItems` returned |\n|--------|---------------------------|\n| `all` (default) | Every copy |\n| `assigned` | Only copies with `classRoomSectionId` set |\n| `unassigned` | Only copies with `classRoomSectionId` null |\n\nAssets are always listed; filtering applies to nested `inventoryItems` only."
               },
               "response": []
             },
