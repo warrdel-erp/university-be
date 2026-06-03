@@ -60,6 +60,24 @@ async function getMemberDetails(memberType, memberId, instituteId, transaction) 
   return buildMemberDetailsFromEmployee(memberId, employee);
 }
 
+function formatAssetBasicForReturn(asset) {
+  if (!asset) return null;
+
+  const plain = toPlain(asset);
+  const category = plain.assetCategory ? toPlain(plain.assetCategory) : null;
+
+  return {
+    assetId: plain.assetId,
+    name: plain.name,
+    code: plain.code,
+    status: plain.status,
+    condition: plain.condition,
+    description: plain.description ?? null,
+    assetCategoryId: plain.assetCategoryId ?? null,
+    assetCategoryName: category?.name ?? null,
+  };
+}
+
 function formatInventoryLocationFields(inventory) {
   if (!inventory) {
     return {
@@ -98,6 +116,8 @@ function formatIssueItemBasic(item) {
           condition: asset.condition,
         }
       : null,
+    damageNotes: plain.damageNotes ?? null,
+    returnCondition: plain.returnCondition ?? null,
     returnTransaction: plain.returnTransaction
       ? {
           assetReturnTransactionId: plain.returnTransaction.assetReturnTransactionId,
@@ -153,18 +173,12 @@ function formatReturnedIssueItem(itemPlain, memberBasicDetails) {
   return {
     assetIssueInventoryItemId: itemPlain.assetIssueInventoryItemId,
     assetInventoryItemId: itemPlain.assetInventoryItemId,
+    damageNotes: itemPlain.damageNotes ?? null,
+    returnCondition: itemPlain.returnCondition ?? null,
     inventoryCode: inventory?.code ?? null,
     inventoryBarcode: inventory?.barcode ?? null,
     ...formatInventoryLocationFields(inventory),
-    asset: asset
-      ? {
-          assetId: asset.assetId,
-          name: asset.name,
-          code: asset.code,
-          status: asset.status,
-          condition: asset.condition,
-        }
-      : null,
+    asset: formatAssetBasicForReturn(asset),
     assetIssueTransactionId: transaction?.assetIssueTransactionId ?? null,
     issueDate: transaction?.issueDate ?? null,
     dueDate: transaction?.dueDate ?? null,
@@ -264,8 +278,8 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
   }
 
   const returnTxn = await repo.createAssetReturnTransaction(returnDate, { transaction });
-  const affected = await repo.linkIssueItemsToReturnTransaction(
-    uniqueItemIds,
+  const affected = await repo.returnIssueInventoryItems(
+    items,
     returnTxn.assetReturnTransactionId,
     { transaction }
   );

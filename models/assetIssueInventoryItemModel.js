@@ -3,6 +3,7 @@ import { DataTypes } from "sequelize";
 import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
 import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
+import { assetConditions } from "../constant.js";
 
 export default sequelize.define(
   "asset_issue_inventory_item",
@@ -39,6 +40,16 @@ export default sequelize.define(
         model: assetReturnTransactionModel,
         key: "asset_return_transaction_id",
       },
+    },
+    damageNotes: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "damage_notes",
+    },
+    returnCondition: {
+      type: DataTypes.ENUM(...assetConditions),
+      allowNull: true,
+      field: "return_condition",
     },
   },
   {

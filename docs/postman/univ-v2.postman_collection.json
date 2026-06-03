@@ -9060,7 +9060,7 @@
         },
         {
           "name": "assetIssue",
-          "description": "## Asset issue / return\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n**Prerequisite:** Create asset + inventory via **asset → create** (`inventoryBulk`). Issue uses `assetInventoryItemId` from `asset_inventory_item` (room on copy via `classRoomSectionId`, not `asset_locations`).\n\n### Routes (unchanged)\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/assetIssue` | Issue copies to student/teacher |\n| GET | `/assetIssue` | List issues (paginated) |\n| GET | `/assetIssue/single` | Single issue |\n| PATCH | `/assetIssue` | Update dates/member |\n| POST | `/assetIssue/return` | Return issued copies |\n| GET | `/assetIssue/return` | List return transactions |\n\n### Item fields in responses\n`classRoomSectionId`, `inventoryStatus` (`NOT_ASSIGNED`|`ASSIGNED`), nested `classRoom` → `roomFloor` → `floorBuilding` on each issued inventory line.",
+          "description": "## Asset issue / return\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n**Prerequisite:** Create asset + inventory via **asset → create** (`inventoryBulk`). Issue uses `assetInventoryItemId` from `asset_inventory_item` (room on copy via `classRoomSectionId`, not `asset_locations`).\n\n### Routes (unchanged)\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/assetIssue` | Issue copies to student/teacher |\n| GET | `/assetIssue` | List issues (paginated) |\n| GET | `/assetIssue/single` | Single issue |\n| PATCH | `/assetIssue` | Update dates/member |\n| POST | `/assetIssue/return` | Return issued copies (`returnCondition` required per item) |\n| GET | `/assetIssue/return` | List return transactions |\n\n### POST return body\n`returnDate` + `items[]` with `assetIssueInventoryItemId`, `returnCondition` (`GOOD`/`FAIR`/`EXCELLENT`/`BAD`), optional `damageNotes`.\n\n### Item fields in responses\n`classRoomSectionId`, `inventoryStatus`, `classRoom` hierarchy. On return: `damageNotes`, `returnCondition` per `asset_issue_inventory_item` line.",
           "item": [
             {
               "name": "create",
@@ -9232,7 +9232,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"returnDate\": \"2026-06-02\",\n  \"items\": [\n    { \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}} }\n  ]\n}",
+                  "raw": "{\n  \"returnDate\": \"2026-06-03\",\n  \"items\": [\n    {\n      \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}},\n      \"returnCondition\": \"GOOD\",\n      \"damageNotes\": null\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9249,7 +9249,7 @@
                     "return"
                   ]
                 },
-                "description": "**POST /assetIssue/return**\n\n```json\n{ \"returnDate\": \"2026-06-02\", \"items\": [{ \"assetIssueInventoryItemId\": 1 }] }\n```\n\nOne `returnDate` for all items → one `asset_return_transaction`. All lines get same `assetReturnTransactionId`. Asset → `IN_STOCK` when all copies returned."
+                "description": "**POST /assetIssue/return** (`returnAssetIssueSchema`)\n\nRun **assetIssue → create** first — uses `{{assetIssueInventoryItem_id}}` from the issue line.\n\n```json\n{\n  \"returnDate\": \"2026-06-03\",\n  \"items\": [\n    {\n      \"assetIssueInventoryItemId\": 1,\n      \"returnCondition\": \"GOOD\",\n      \"damageNotes\": null\n    }\n  ]\n}\n```\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `returnDate` | yes | `YYYY-MM-DD`; must be >= each line `issueDate` |\n| `items` | yes | Min 1; no duplicate `assetIssueInventoryItemId` |\n| `items[].assetIssueInventoryItemId` | yes | Open issue line (not returned yet) |\n| `items[].returnCondition` | yes | `GOOD`, `FAIR`, `EXCELLENT`, or `BAD` |\n| `items[].damageNotes` | no | String or `null`; omit if none |\n\n**Multiple items example:** add more objects in `items[]` with different `returnCondition` / `damageNotes` (e.g. `\"damageNotes\": \"Minor scratch\"`).\n\nOne `returnDate` → one `asset_return_transaction`. Sets `assetReturnTransaction_id`."
               },
               "response": []
             },
@@ -9288,7 +9288,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/return** — paginated `asset_return_transaction` rows: `returnDate`, `items[]` with inventory `classRoomSectionId`/`classRoom`, asset, issue/member details."
+                "description": "**GET /assetIssue/return** — paginated return batches: `returnDate`, `items[]` each with `damageNotes`, `returnCondition`, inventory, asset, member details."
               },
               "response": []
             },

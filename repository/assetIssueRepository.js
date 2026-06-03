@@ -136,21 +136,27 @@ export async function createAssetReturnTransaction(returnDate, options = {}) {
   );
 }
 
-export async function linkIssueItemsToReturnTransaction(
-  assetIssueInventoryItemIds,
-  assetReturnTransactionId,
-  options = {}
-) {
-  const [affected] = await model.assetIssueInventoryItemModel.update(
-    { assetReturnTransactionId },
-    {
-      where: {
-        assetIssueInventoryItemId: assetIssueInventoryItemIds,
-        assetReturnTransactionId: null,
+export async function returnIssueInventoryItems(items, assetReturnTransactionId, options = {}) {
+  let affected = 0;
+
+  for (const item of items) {
+    const [count] = await model.assetIssueInventoryItemModel.update(
+      {
+        assetReturnTransactionId,
+        returnCondition: item.returnCondition,
+        damageNotes: item.damageNotes ?? null,
       },
-      transaction: options.transaction,
-    }
-  );
+      {
+        where: {
+          assetIssueInventoryItemId: item.assetIssueInventoryItemId,
+          assetReturnTransactionId: null,
+        },
+        transaction: options.transaction,
+      }
+    );
+    affected += count;
+  }
+
   return affected;
 }
 
@@ -379,8 +385,24 @@ const returnedIssueItemDetailIncludes = [
       {
         model: model.assetModel,
         as: "asset",
-        attributes: ["assetId", "name", "code", "status", "condition"],
+        attributes: [
+          "assetId",
+          "name",
+          "code",
+          "status",
+          "condition",
+          "description",
+          "assetCategoryId",
+        ],
         required: true,
+        include: [
+          {
+            model: model.assetCategoryModel,
+            as: "assetCategory",
+            attributes: ["assetCategoryId", "name"],
+            required: false,
+          },
+        ],
       },
       classRoomHierarchyInclude,
     ],
@@ -453,6 +475,8 @@ export async function findReturnedIssueItemsByReturnTransactionIds(
       "assetInventoryItemId",
       "assetReturnTransactionId",
       "assetIssueTransactionId",
+      "damageNotes",
+      "returnCondition",
     ],
     where: {
       assetReturnTransactionId: assetReturnTransactionIds,

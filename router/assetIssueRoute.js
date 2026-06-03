@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
+import { assetConditions } from "../constant.js";
 import {
   addAssetIssue,
   getAllAssetIssues,
@@ -20,6 +21,12 @@ const positiveIntegerId = z.coerce
 
 const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
 const moneyAmount = z.coerce.string().trim().min(1);
+
+const assetReturnConditionSchema = z.enum(assetConditions, {
+  errorMap: () => ({
+    message: `returnCondition must be one of: ${assetConditions.join(", ")}`,
+  }),
+});
 
 const createAssetIssueSchema = z.object({
   memberId: positiveIntegerId,
@@ -43,6 +50,8 @@ const returnAssetIssueSchema = z.object({
     .array(
       z.object({
         assetIssueInventoryItemId: positiveIntegerId,
+        returnCondition: assetReturnConditionSchema,
+        damageNotes: z.string().trim().optional().nullable(),
       })
     )
     .min(1),
