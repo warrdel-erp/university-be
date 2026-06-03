@@ -46,7 +46,11 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
   return {
     model: model.libraryBookIssueInventoryItemModel,
     as: "inventoryItems",
-    attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "returnDate"],
+    attributes: [
+      "libraryBookIssueInventoryItemId",
+      "inventoryId",
+      "libraryReturnBookTransactionId",
+    ],
     ...(forList ? {} : { separate: true, order: [["libraryBookIssueInventoryItemId", "DESC"]] }),
     required: Boolean(instituteId),
     include: [
@@ -56,6 +60,12 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
         attributes: inventoryListAttributes,
         required: Boolean(instituteId),
         include: [buildBookDetailsInclude(instituteId)],
+      },
+      {
+        model: model.libraryReturnBookTransactionModel,
+        as: "returnBookTransaction",
+        attributes: ["libraryReturnBookTransactionId", "returnDate"],
+        required: false,
       },
     ],
   };
@@ -104,7 +114,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   const pendingRows = await model.libraryBookIssueInventoryItemModel.findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
-      returnDate: null,
+      libraryReturnBookTransactionId: null,
     },
     attributes: [
       "libraryIssueBookTransactionId",
@@ -117,7 +127,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   const returnedRows = await model.libraryBookIssueInventoryItemModel.findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
-      returnDate: { [Op.ne]: null },
+      libraryReturnBookTransactionId: { [Op.ne]: null },
     },
     attributes: [
       "libraryIssueBookTransactionId",
@@ -199,7 +209,7 @@ export async function findActiveIssueItemsByTransactionId(
   transaction,
 ) {
   return model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     transaction,
   });
 }
@@ -211,7 +221,7 @@ export async function findActiveIssueItemsForReturn(
 ) {
   const where = {
     libraryIssueBookTransactionId,
-    returnDate: null,
+    libraryReturnBookTransactionId: null,
   };
 
   if (libraryBookIssueInventoryItemIds?.length) {
@@ -231,7 +241,7 @@ export async function returnAllActiveIssueItemsForTransaction(
   transaction,
 ) {
   const activeItems = await model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
     transaction,
   });
@@ -240,8 +250,16 @@ export async function returnAllActiveIssueItemsForTransaction(
 
   const itemIds = activeItems.map((item) => item.libraryBookIssueInventoryItemId);
   const inventoryIds = activeItems.map((item) => item.inventoryId);
+  const returnBookTransaction = await createLibraryReturnBookTransaction(
+    { returnDate },
+    transaction,
+  );
 
-  await markIssueItemsReturned(itemIds, returnDate, transaction);
+  await markIssueItemsReturned(
+    itemIds,
+    returnBookTransaction.libraryReturnBookTransactionId,
+    transaction,
+  );
   await markInventoriesAvailable(inventoryIds, transaction);
 
   return { matchedCount: itemIds.length };
@@ -255,9 +273,10 @@ export async function returnIssueItemsForTransaction(
   if (!returnItems.length) return { matchedCount: 0 };
 
   let matchedCount = 0;
+  const returnTransactionIdByDate = new Map();
 
   for (const returnItem of returnItems) {
-    const where = { libraryIssueBookTransactionId, returnDate: null };
+    const where = { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null };
 
     if (returnItem.libraryBookIssueInventoryItemId) {
       where.libraryBookIssueInventoryItemId = returnItem.libraryBookIssueInventoryItemId;
@@ -273,9 +292,21 @@ export async function returnIssueItemsForTransaction(
 
     if (!issueItem) continue;
 
+    const returnDate = returnItem.returnDate;
+    let libraryReturnBookTransactionId = returnTransactionIdByDate.get(returnDate);
+
+    if (!libraryReturnBookTransactionId) {
+      const returnBookTransaction = await createLibraryReturnBookTransaction(
+        { returnDate },
+        transaction,
+      );
+      libraryReturnBookTransactionId = returnBookTransaction.libraryReturnBookTransactionId;
+      returnTransactionIdByDate.set(returnDate, libraryReturnBookTransactionId);
+    }
+
     await markIssueItemsReturned(
       [issueItem.libraryBookIssueInventoryItemId],
-      returnItem.returnDate,
+      libraryReturnBookTransactionId,
       transaction,
     );
     await markInventoriesAvailable([issueItem.inventoryId], transaction);
@@ -314,14 +345,18 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
   );
 }
 
-export async function markIssueItemsReturned(libraryBookIssueInventoryItemIds, returnDate, transaction) {
+export async function markIssueItemsReturned(
+  libraryBookIssueInventoryItemIds,
+  libraryReturnBookTransactionId,
+  transaction,
+) {
   if (!libraryBookIssueInventoryItemIds.length) return;
   return model.libraryBookIssueInventoryItemModel.update(
-    { returnDate },
+    { libraryReturnBookTransactionId },
     {
       where: {
         libraryBookIssueInventoryItemId: { [Op.in]: libraryBookIssueInventoryItemIds },
-        returnDate: null,
+        libraryReturnBookTransactionId: null,
       },
       transaction,
     },
@@ -334,7 +369,7 @@ export async function syncOutstandingInventoryDueDate(
   transaction,
 ) {
   const activeInventoryRows = await model.libraryBookIssueInventoryItemModel.findAll({
-    where: { libraryIssueBookTransactionId, returnDate: null },
+    where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["inventoryId"],
     raw: true,
     transaction,
@@ -353,6 +388,15 @@ export async function syncOutstandingInventoryDueDate(
 
 export async function createLibraryIssueBookTransaction(data, transaction) {
   return model.libraryIssueBookTransactionModel.create(data, { transaction });
+}
+
+export async function createLibraryReturnBookTransaction(data, transaction) {
+  const [row] = await model.libraryReturnBookTransactionModel.findOrCreate({
+    where: { returnDate: data.returnDate },
+    defaults: { returnDate: data.returnDate },
+    transaction,
+  });
+  return row;
 }
 
 export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction) {
@@ -478,11 +522,17 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     attributes: [
       "libraryBookIssueInventoryItemId",
       "inventoryId",
-      "returnDate",
+      "libraryReturnBookTransactionId",
       "libraryIssueBookTransactionId",
       "createdAt",
     ],
     include: [
+      {
+        model: model.libraryReturnBookTransactionModel,
+        as: "returnBookTransaction",
+        attributes: ["libraryReturnBookTransactionId", "returnDate"],
+        required: false,
+      },
       {
         model: model.libraryIssueBookTransactionModel,
         as: "issueBookTransaction",
@@ -540,7 +590,11 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
   };
 }
 
-export async function getLibraryMembersList(memberType) {
+export async function getLibraryMembersList(query = {}) {
+  const memberType = query.memberType;
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const offset = (page - 1) * limit;
   const members = [];
 
   if (!memberType || memberType === "STUDENT") {
@@ -599,5 +653,215 @@ export async function getLibraryMembersList(memberType) {
     );
   }
 
-  return members;
+  const data = [];
+  for (let index = offset; index < offset + limit && index < members.length; index += 1) {
+    data.push(members[index]);
+  }
+
+  return {
+    data,
+    paginationData: {
+      total: members.length,
+      page,
+      limit,
+    },
+  };
+}
+
+export async function getLibraryReturnBookTransactions(query = {}, instituteId) {
+  const page = Number(query.page ?? 1);
+  const limit = Number(query.limit ?? 20);
+  const offset = (page - 1) * limit;
+  const search = query.search?.trim().toLowerCase();
+  const rows = await model.libraryReturnBookTransactionModel.findAll({
+    attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
+    include: [
+      {
+        model: model.libraryBookIssueInventoryItemModel,
+        as: "inventoryItems",
+        attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "libraryIssueBookTransactionId"],
+        required: true,
+        include: [
+          {
+            model: model.libraryBookInventoryModel,
+            as: "inventory",
+            attributes: ["inventoryId", "accessionNumber", "status", "condition"],
+            required: true,
+            include: [buildBookDetailsInclude(instituteId)],
+          },
+          {
+            model: model.libraryIssueBookTransactionModel,
+            as: "issueBookTransaction",
+            attributes: ["libraryIssueBookTransactionId", "memberId", "memberType", "issueDate", "dueDate"],
+            required: true,
+            include: [
+              {
+                model: model.studentModel,
+                as: "studentMember",
+                attributes: studentMemberAttributes,
+                include: [
+                  {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                  },
+                ],
+                required: false,
+              },
+              {
+                model: model.employeeModel,
+                as: "teacherMember",
+                attributes: teacherMemberAttributes,
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ["libraryReturnBookTransactionId", "DESC"],
+      [{ model: model.libraryBookIssueInventoryItemModel, as: "inventoryItems" }, "libraryBookIssueInventoryItemId", "DESC"],
+    ],
+  });
+
+  const returnTransactions = [];
+
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const issueTransactions = [];
+    const issueTransactionById = new Map();
+
+    for (const item of plain.inventoryItems) {
+      const transaction = item.issueBookTransaction;
+      const issueTransactionId = transaction?.libraryIssueBookTransactionId;
+      if (issueTransactionId === undefined || issueTransactionId === null) continue;
+
+      let issueTransactionEntry = issueTransactionById.get(issueTransactionId);
+      if (!issueTransactionEntry) {
+        issueTransactionEntry = {
+          libraryIssueBookTransactionId: issueTransactionId,
+          memberId: transaction.memberId,
+          memberType: transaction.memberType,
+          issueDate: transaction.issueDate,
+          dueDate: transaction.dueDate,
+          member:
+            transaction.memberType === "STUDENT"
+              ? transaction.studentMember ?? null
+              : transaction.teacherMember ?? null,
+          returnedBooks: [],
+        };
+        issueTransactionById.set(issueTransactionId, issueTransactionEntry);
+        issueTransactions.push(issueTransactionEntry);
+      }
+
+      issueTransactionEntry.returnedBooks.push({
+        libraryBookIssueInventoryItemId: item.libraryBookIssueInventoryItemId,
+        inventoryId: item.inventoryId,
+        book: item.inventory,
+      });
+    }
+
+    let totalReturnedBooks = 0;
+    for (const issueTransaction of issueTransactions) {
+      totalReturnedBooks += issueTransaction.returnedBooks.length;
+    }
+
+    returnTransactions.push({
+      libraryReturnBookTransactionId: plain.libraryReturnBookTransactionId,
+      returnDate: plain.returnDate,
+      totalReturnedBooks,
+      totalIssueTransactions: issueTransactions.length,
+      issueTransactions,
+    });
+  }
+
+  const filteredReturnTransactions = [];
+  if (!search) {
+    for (const returnTransaction of returnTransactions) {
+      filteredReturnTransactions.push(returnTransaction);
+    }
+  } else {
+    for (const returnTransaction of returnTransactions) {
+      let isMatched = false;
+
+      if (
+        String(returnTransaction.libraryReturnBookTransactionId).toLowerCase().includes(search) ||
+        String(returnTransaction.returnDate ?? "").toLowerCase().includes(search)
+      ) {
+        isMatched = true;
+      }
+
+      if (!isMatched) {
+        for (const issueTransaction of returnTransaction.issueTransactions) {
+          if (
+            String(issueTransaction.libraryIssueBookTransactionId).toLowerCase().includes(search) ||
+            String(issueTransaction.memberId).toLowerCase().includes(search) ||
+            String(issueTransaction.memberType ?? "").toLowerCase().includes(search) ||
+            String(issueTransaction.issueDate ?? "").toLowerCase().includes(search) ||
+            String(issueTransaction.dueDate ?? "").toLowerCase().includes(search)
+          ) {
+            isMatched = true;
+            break;
+          }
+
+          const member = issueTransaction.member;
+          if (member) {
+            if (
+              String(member.firstName ?? "").toLowerCase().includes(search) ||
+              String(member.middleName ?? "").toLowerCase().includes(search) ||
+              String(member.lastName ?? "").toLowerCase().includes(search) ||
+              String(member.employeeName ?? "").toLowerCase().includes(search) ||
+              String(member.scholarNumber ?? "").toLowerCase().includes(search) ||
+              String(member.employeeCode ?? "").toLowerCase().includes(search)
+            ) {
+              isMatched = true;
+              break;
+            }
+          }
+
+          for (const returnedBook of issueTransaction.returnedBooks) {
+            const book = returnedBook.book;
+            const bookDetails = book?.bookDetails;
+            if (
+              String(returnedBook.libraryBookIssueInventoryItemId).toLowerCase().includes(search) ||
+              String(returnedBook.inventoryId).toLowerCase().includes(search) ||
+              String(book?.accessionNumber ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.title ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.subtitle ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.authors ?? "").toLowerCase().includes(search) ||
+              String(bookDetails?.isbn ?? "").toLowerCase().includes(search)
+            ) {
+              isMatched = true;
+              break;
+            }
+          }
+
+          if (isMatched) break;
+        }
+      }
+
+      if (isMatched) {
+        filteredReturnTransactions.push(returnTransaction);
+      }
+    }
+  }
+
+  const data = [];
+  for (
+    let index = offset;
+    index < offset + limit && index < filteredReturnTransactions.length;
+    index += 1
+  ) {
+    data.push(filteredReturnTransactions[index]);
+  }
+
+  return {
+    data,
+    paginationData: {
+      total: filteredReturnTransactions.length,
+      page,
+      limit,
+    },
+  };
 }

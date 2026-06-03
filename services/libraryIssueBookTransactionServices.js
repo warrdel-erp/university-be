@@ -139,7 +139,6 @@ export async function createLibraryIssueBookTransaction(body) {
         inventoryIds.map((inventoryId) => ({
           libraryIssueBookTransactionId: created.libraryIssueBookTransactionId,
           inventoryId,
-          returnDate: null,
         })),
         transaction,
       );
@@ -223,7 +222,6 @@ export async function updateLibraryIssueBookTransaction(body) {
           inventoryIds.map((inventoryId) => ({
             libraryIssueBookTransactionId,
             inventoryId,
-            returnDate: null,
           })),
           transaction,
         );
@@ -270,5 +268,9 @@ export async function getLibraryBookInventoryIssueHistory(inventoryId, institute
 }
 
 export async function getLibraryMembersList(query) {
-  return repo.getLibraryMembersList(query.memberType);
+  return repo.getLibraryMembersList(query);
+}
+
+export async function getLibraryReturnBookTransactions(query, instituteId) {
+  return repo.getLibraryReturnBookTransactions(query, instituteId);
 }
