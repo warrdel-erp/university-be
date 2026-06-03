@@ -268,21 +268,21 @@ export async function addAsset(body, instituteId) {
 
     await syncAssetStatusFromInventory(created.assetId, instituteId, { transaction });
 
-    return repo.findAssetById(created.assetId, instituteId, { transaction });
+    return await repo.findAssetById(created.assetId, instituteId, { transaction });
   });
 
   return toPlain(row);
 }
 
 export async function listAssets(instituteId, query = {}) {
-  const { rows, total, page, limit } = await sequelize.transaction(async (transaction) =>
-    repo.findAssetsByInstitutePaginated(
+  const { rows, total, page, limit } = await sequelize.transaction(async (transaction) => {
+    return await repo.findAssetsByInstitutePaginated(
       instituteId,
       { inventoryStatus: query.status },
       { page: query.page, limit: query.limit },
       { transaction }
-    )
-  );
+    );
+  });
 
   return {
     data: { assets: rows.map(toPlain) },
@@ -291,9 +291,9 @@ export async function listAssets(instituteId, query = {}) {
 }
 
 export async function getSingleAsset(assetId, instituteId) {
-  const row = await sequelize.transaction(async (transaction) =>
-    repo.findAssetById(assetId, instituteId, { transaction })
-  );
+  const row = await sequelize.transaction(async (transaction) => {
+    return await repo.findAssetById(assetId, instituteId, { transaction });
+  });
   return toPlain(row);
 }
 
@@ -325,7 +325,7 @@ export async function updateAsset(assetId, body, instituteId) {
       await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
     }
 
-    return repo.findAssetById(assetId, instituteId, { transaction });
+    return await repo.findAssetById(assetId, instituteId, { transaction });
   });
 
   return toPlain(updated);

@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/assetIssueRepository.js";
-import * as assetRepo from "../repository/assetRepository.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import { decimalCompare, toMoneyNumber } from "../utility/decimalMoney.js";
 import { syncAssetStatusFromInventory } from "./assetServices.js";
@@ -552,9 +551,9 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
 }
 
 export async function returnAssetIssueItems(body, instituteId) {
-  return sequelize.transaction(async (transaction) =>
-    processAssetReturnItems(body.returnDate, body.items, instituteId, transaction)
-  );
+  return await sequelize.transaction(async (transaction) => {
+    return await processAssetReturnItems(body.returnDate, body.items, instituteId, transaction);
+  });
 }
 
 export async function listAssetReturnTransactions(instituteId, query) {

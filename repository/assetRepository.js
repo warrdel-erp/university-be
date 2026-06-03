@@ -24,33 +24,39 @@ const classRoomHierarchyInclude = {
   ],
 };
 
-function buildInventoryItemsInclude(inventoryStatus = "all") {
-  const where = {};
-
+function buildInventoryWhere(inventoryStatus) {
   if (inventoryStatus === "assigned") {
-    where.classRoomSectionId = { [Op.ne]: null };
-  } else if (inventoryStatus === "unassigned") {
-    where.classRoomSectionId = null;
+    return { status: "ASSIGNED" };
   }
+  if (inventoryStatus === "unassigned") {
+    return { status: "NOT_ASSIGNED" };
+  }
+  return undefined;
+}
+
+function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
+  const { separate = false } = options;
+  const where = buildInventoryWhere(inventoryStatus);
 
   return {
     model: model.assetInventoryItemModel,
     as: "inventoryItems",
     attributes: { exclude: excludeTs },
-    where: Object.keys(where).length ? where : undefined,
+    where,
     required: false,
+    separate: separate || undefined,
     include: [classRoomHierarchyInclude],
   };
 }
 
-function buildAssetDetailIncludes(inventoryStatus = "all") {
+function buildAssetDetailIncludes(inventoryStatus = "all", options = {}) {
   return [
     {
       model: model.assetCategoryModel,
       as: "assetCategory",
       attributes: ["assetCategoryId", "name"],
     },
-    buildInventoryItemsInclude(inventoryStatus),
+    buildInventoryItemsInclude(inventoryStatus, options),
   ];
 }
 
@@ -68,28 +74,43 @@ export async function findAssetsByInstitutePaginated(
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
   const inventoryStatus = filters.inventoryStatus ?? "all";
+  const assetWhere = { instituteId };
 
-  const { count, rows } = await model.assetModel.findAndCountAll({
-    attributes: { exclude: excludeTs },
-    where: { instituteId },
-    include: buildAssetDetailIncludes(inventoryStatus),
-    order: [["assetId", "ASC"]],
-    limit,
-    offset,
-    distinct: true,
-    col: "asset_id",
-    subQuery: false,
+  const total = await model.assetModel.count({
+    where: assetWhere,
     transaction: options.transaction,
   });
 
-  return { rows, total: count, page, limit };
+  const idRows = await model.assetModel.findAll({
+    attributes: ["assetId"],
+    where: assetWhere,
+    order: [["assetId", "ASC"]],
+    limit,
+    offset,
+    transaction: options.transaction,
+  });
+
+  const assetIds = idRows.map((row) => row.assetId);
+  if (!assetIds.length) {
+    return { rows: [], total, page, limit };
+  }
+
+  const rows = await model.assetModel.findAll({
+    attributes: { exclude: excludeTs },
+    where: { assetId: assetIds, instituteId },
+    include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
+    order: [["assetId", "ASC"]],
+    transaction: options.transaction,
+  });
+
+  return { rows, total, page, limit };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {
   return model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
-    include: buildAssetDetailIncludes("all"),
+    include: buildAssetDetailIncludes("all", { separate: true }),
     transaction: options.transaction,
   });
 }
