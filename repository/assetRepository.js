@@ -58,16 +58,31 @@ export async function createAsset(data, options = {}) {
   return model.assetModel.create(data, { transaction: options.transaction });
 }
 
-export async function findAssetsByInstitute(instituteId, filters = {}, options = {}) {
+export async function findAssetsByInstitutePaginated(
+  instituteId,
+  filters = {},
+  pagination = {},
+  options = {}
+) {
+  const page = Number(pagination.page) || 1;
+  const limit = Number(pagination.limit) || 20;
+  const offset = (page - 1) * limit;
   const inventoryStatus = filters.inventoryStatus ?? "all";
 
-  return model.assetModel.findAll({
+  const { count, rows } = await model.assetModel.findAndCountAll({
     attributes: { exclude: excludeTs },
     where: { instituteId },
     include: buildAssetDetailIncludes(inventoryStatus),
     order: [["assetId", "ASC"]],
+    limit,
+    offset,
+    distinct: true,
+    col: "asset_id",
+    subQuery: false,
     transaction: options.transaction,
   });
+
+  return { rows, total: count, page, limit };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {

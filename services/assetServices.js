@@ -275,14 +275,19 @@ export async function addAsset(body, instituteId) {
 }
 
 export async function listAssets(instituteId, query = {}) {
-  const rows = await sequelize.transaction(async (transaction) =>
-    repo.findAssetsByInstitute(
+  const { rows, total, page, limit } = await sequelize.transaction(async (transaction) =>
+    repo.findAssetsByInstitutePaginated(
       instituteId,
       { inventoryStatus: query.status },
+      { page: query.page, limit: query.limit },
       { transaction }
     )
   );
-  return rows.map(toPlain);
+
+  return {
+    data: { assets: rows.map(toPlain) },
+    pagination: { page, limit, total },
+  };
 }
 
 export async function getSingleAsset(assetId, instituteId) {

@@ -8777,7 +8777,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/asset?status=all",
+                  "raw": "{{baseurl}}/asset?page={{asset_page}}&limit={{asset_limit}}&status=all",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -8786,13 +8786,21 @@
                   ],
                   "query": [
                     {
+                      "key": "page",
+                      "value": "{{asset_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{asset_limit}}"
+                    },
+                    {
                       "key": "status",
                       "value": "all",
-                      "description": "all | assigned (has classRoomSectionId) | unassigned (no room)"
+                      "description": "all | assigned | unassigned"
                     }
                   ]
                 },
-                "description": "**GET /asset?status=**\n\n| status | `inventoryItems` returned |\n|--------|---------------------------|\n| `all` (default) | Every copy |\n| `assigned` | Only copies with `classRoomSectionId` set |\n| `unassigned` | Only copies with `classRoomSectionId` null |\n\nAssets are always listed; filtering applies to nested `inventoryItems` only."
+                "description": "**GET /asset** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `status` | `all` — filters nested `inventoryItems` only |\n\n**Response:** `data.assets[]`, `pagination` (`page`, `limit`, `total`)."
               },
               "response": []
             },
@@ -9336,6 +9344,16 @@
     {
       "key": "asset_id",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_limit",
+      "value": "20",
       "type": "string"
     },
     {

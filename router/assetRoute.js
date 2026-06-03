@@ -34,6 +34,14 @@ const assetIdQuerySchema = z.object({
 });
 
 const listAssetQuerySchema = z.object({
+  page: z.coerce.number().int("page must be an integer").min(1).optional().default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1)
+    .max(100)
+    .optional()
+    .default(20),
   status: z
     .enum(["all", "assigned", "unassigned"], {
       errorMap: () => ({
