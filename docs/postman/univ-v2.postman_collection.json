@@ -8741,7 +8741,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id_2}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2 }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"departmentId\": {{department_id}},\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 3 }\n//   ]\n// }",
+                  "raw": "// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id_2}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2 }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 3 }\n//   ]\n// }",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8757,7 +8757,7 @@
                     "asset"
                   ]
                 },
-                "description": "**POST /asset** — Create asset + `inventoryBulk[]`. See **Body** for 4 payload examples (1 active, 3 commented).\n\n| # | `inventoryBulk` | Result |\n|---|-----------------|--------|\n| **1** | 2 in room A + 2 in room B | 4 copies, all `ASSIGNED` |\n| **2** | `[{ count: 2 }]` only | 2 copies, `NOT_ASSIGNED` |\n| **3** | `[{ count: 2, classRoomSectionId }]` | 2 copies, one room, `ASSIGNED` |\n| **4** | 2 in room + `{ count: 3 }` | 2 `ASSIGNED` + 3 `NOT_ASSIGNED` |\n\nAll 4 examples are in **Body** (commented). **Frontend:** Uncomment exactly one block to test or copy into app code (remove `//` lines).\n\nRequired: `name`, `code`, `condition`, `departmentId`, `assetCategoryId`. Do not send master `status`."
+                "description": "**POST /asset** — Create asset + `inventoryBulk[]`. See **Body** for 4 payload examples (1 active, 3 commented).\n\n| # | `inventoryBulk` | Result |\n|---|-----------------|--------|\n| **1** | 2 in room A + 2 in room B | 4 copies, all `ASSIGNED` |\n| **2** | `[{ count: 2 }]` only | 2 copies, `NOT_ASSIGNED` |\n| **3** | `[{ count: 2, classRoomSectionId }]` | 2 copies, one room, `ASSIGNED` |\n| **4** | 2 in room + `{ count: 3 }` | 2 `ASSIGNED` + 3 `NOT_ASSIGNED` |\n\nAll 4 examples are in **Body** (commented). **Frontend:** Uncomment exactly one block to test or copy into app code (remove `//` lines).\n\nRequired: `name`, `code`, `condition`, `assetCategoryId`. Do not send master `status`."
               },
               "response": []
             },
@@ -8894,7 +8894,7 @@
                     "asset"
                   ]
                 },
-                "description": "**PATCH /asset** — Update master only (`name`, `code`, `condition`, `description`, `departmentId`, `assetCategoryId`). Or `inMaintenance: true`."
+                "description": "**PATCH /asset** — Update master only (`name`, `code`, `condition`, `description`, `assetCategoryId`). Or `inMaintenance: true`."
               },
               "response": []
             },
@@ -9328,11 +9328,6 @@
     },
     {
       "key": "asset_id",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "department_id",
       "value": "1",
       "type": "string"
     },

@@ -631,9 +631,6 @@ instituteModel.hasMany(assetModel, { foreignKey: "instituteId", as: "assets" });
 assetModel.belongsTo(assetCategoryModel, { foreignKey: "assetCategoryId", as: "assetCategory" });
 assetCategoryModel.hasMany(assetModel, { foreignKey: "assetCategoryId", as: "categoryAssets" });
 
-assetModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "department" });
-departmentModel.hasMany(assetModel, { foreignKey: "departmentId", as: "departmentAssets" });
-
 assetIssueTransactionModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteAssetIssueTransaction",

@@ -63,7 +63,6 @@ const addAssetSchema = z
     code: z.string().trim().min(1),
     condition: assetConditionSchema,
     description: z.string().trim().optional().nullable(),
-    departmentId: positiveIntegerId,
     assetCategoryId: positiveIntegerId,
     count: z.coerce
       .number({ invalid_type_error: "count must be a number" })
@@ -98,7 +97,6 @@ const updateAssetSchema = z
     code: z.string().trim().min(1).optional(),
     condition: assetConditionSchema.optional(),
     description: z.string().optional().nullable(),
-    departmentId: positiveIntegerId.optional(),
     assetCategoryId: positiveIntegerId.optional(),
     inMaintenance: z.boolean().optional(),
     inventory: z.array(inventoryItemSchema).optional(),
@@ -109,7 +107,6 @@ const updateAssetSchema = z
       d.code !== undefined ||
       d.condition !== undefined ||
       d.description !== undefined ||
-      d.departmentId !== undefined ||
       d.assetCategoryId !== undefined ||
       d.inMaintenance !== undefined ||
       (d.inventory !== undefined && d.inventory.length > 0),

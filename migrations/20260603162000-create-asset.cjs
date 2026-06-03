@@ -29,13 +29,6 @@ module.exports = {
           allowNull: false,
         },
         description: { type: Sequelize.STRING, allowNull: true },
-        department_id: {
-          type: Sequelize.INTEGER,
-          allowNull: false,
-          references: { model: 'department', key: 'department_id' },
-          onUpdate: 'CASCADE',
-          onDelete: 'RESTRICT',
-        },
         asset_category_id: {
           type: Sequelize.INTEGER,
           allowNull: false,

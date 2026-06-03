@@ -37,11 +37,6 @@ const assetDetailIncludes = [
     as: "assetCategory",
     attributes: ["assetCategoryId", "name"],
   },
-  {
-    model: model.departmentModel,
-    as: "department",
-    attributes: ["departmentId", "departmentName"],
-  },
   inventoryItemsInclude,
 ];
 
@@ -80,14 +75,6 @@ export async function findAssetCategoryByIdForInstitute(assetCategoryId, institu
   return model.assetCategoryModel.findOne({
     attributes: ["assetCategoryId", "instituteId"],
     where: { assetCategoryId, instituteId },
-    transaction: options.transaction,
-  });
-}
-
-export async function findDepartmentById(departmentId, options = {}) {
-  return model.departmentModel.findOne({
-    attributes: ["departmentId"],
-    where: { departmentId },
     transaction: options.transaction,
   });
 }

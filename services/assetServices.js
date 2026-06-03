@@ -61,13 +61,6 @@ async function validateAssetReferences(body, instituteId, transaction) {
       throw httpError("assetCategoryId not found or not in your institute", 404);
     }
   }
-
-  if (body.departmentId !== undefined) {
-    const department = await repo.findDepartmentById(body.departmentId, { transaction });
-    if (!department) {
-      throw httpError("departmentId not found", 404);
-    }
-  }
 }
 
 async function validateClassRoomSectionId(classRoomSectionId, transaction) {
@@ -248,7 +241,6 @@ export async function addAsset(body, instituteId) {
         status: "IN_STOCK",
         condition: body.condition,
         description: body.description ?? null,
-        departmentId: body.departmentId,
         assetCategoryId: body.assetCategoryId,
         instituteId,
       },
