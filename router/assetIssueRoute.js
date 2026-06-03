@@ -4,8 +4,10 @@ import { validate } from "../utility/validation.js";
 import {
   addAssetIssue,
   getAllAssetIssues,
+  getAllAssetReturnTransactions,
   getSingleAssetIssue,
   updateAssetIssue,
+  returnAssetIssueItems,
 } from "../controllers/assetIssueController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -16,18 +18,34 @@ const positiveIntegerId = z.coerce
   .int({ message: "id must be an integer" })
   .positive({ message: "id must be positive" });
 
+const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
+const moneyAmount = z.coerce.string().trim().min(1);
+
 const createAssetIssueSchema = z.object({
   memberId: positiveIntegerId,
   memberType: z.enum(["STUDENT", "TEACHER"]),
   issueDate: z.string().date(),
   dueDate: z.string().date(),
-  remarks: z.string().trim().optional().nullable(),
-  items: z.array(
-    z.object({
-      assetId: positiveIntegerId,
-      remarks: z.string().trim().optional().nullable(),
-    })
-  ).min(1),
+  securityAmount: moneyAmount.optional(),
+  paymentMethod: paymentMethodEnum.optional().default("cash"),
+  items: z
+    .array(
+      z.object({
+        assetInventoryItemId: positiveIntegerId,
+      })
+    )
+    .min(1),
+});
+
+const returnAssetIssueSchema = z.object({
+  returnDate: z.string().date(),
+  items: z
+    .array(
+      z.object({
+        assetIssueInventoryItemId: positiveIntegerId,
+      })
+    )
+    .min(1),
 });
 
 const listAssetIssueQuerySchema = z.object({
@@ -47,40 +65,40 @@ const listAssetIssueQuerySchema = z.object({
 });
 
 const singleAssetIssueQuerySchema = z.object({
-  assetIssueId: positiveIntegerId,
+  assetIssueTransactionId: positiveIntegerId,
 });
 
 const updateAssetIssueSchema = z
   .object({
-    assetIssueId: positiveIntegerId,
+    assetIssueTransactionId: positiveIntegerId,
     memberId: positiveIntegerId.optional(),
     memberType: z.enum(["STUDENT", "TEACHER"]).optional(),
     issueDate: z.string().date().optional(),
     dueDate: z.string().date().optional(),
-    remarks: z.string().trim().optional().nullable(),
-    items: z
-      .array(
-        z.object({
-          assetIssueItemId: positiveIntegerId,
-          assetId: positiveIntegerId.optional(),
-          returnDate: z.string().date().optional().nullable(),
-          remarks: z.string().trim().optional().nullable(),
-        })
-      )
-      .optional(),
   })
   .refine(
     (data) =>
       data.memberId !== undefined ||
       data.memberType !== undefined ||
       data.issueDate !== undefined ||
-      data.dueDate !== undefined ||
-      data.remarks !== undefined ||
-      data.items !== undefined,
+      data.dueDate !== undefined,
     { message: "At least one field is required to update" }
   );
 
+const listAssetReturnQuerySchema = z.object({
+  page: z.coerce.number().int("page must be an integer").min(1).optional().default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1)
+    .max(100)
+    .optional()
+    .default(20),
+});
+
 router.post("/", userAuth, validate({ body: createAssetIssueSchema }), addAssetIssue);
+router.post("/return", userAuth, validate({ body: returnAssetIssueSchema }), returnAssetIssueItems);
+router.get("/return", userAuth, validate({ query: listAssetReturnQuerySchema }), getAllAssetReturnTransactions);
 router.get("/", userAuth, validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
 router.get("/single", userAuth, validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
 router.patch("/", userAuth, validate({ body: updateAssetIssueSchema }), updateAssetIssue);

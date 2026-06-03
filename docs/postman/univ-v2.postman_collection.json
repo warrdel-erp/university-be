@@ -2420,7 +2420,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -2456,7 +2456,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -2496,7 +2496,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -2547,7 +2547,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -2584,7 +2584,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -2620,7 +2620,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjpudWxsLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOm51bGwsInVzZXJOYW1lIjoiQWFkaSBLaXJhbiBNYWhhamFuaSIsInVuaXF1ZUlkIjoiODNmYjliN2UtNThiMy00MjhmLThhNzUtYzRiNWU2OTg5MWQzIiwicGFzc3dvcmQiOiIkMmEkMTAkRXMyaWV0d1pvQUE0eFNGcEpsZjNGZS5CZHV4Mi5qdW1HcFQyZlpQS1hocS5tNXFHZ2FoQk8iLCJkdW1teVBhc3N3b3JkIjpudWxsLCJzdGF0dXMiOiJhY3RpdmUiLCJwaG9uZSI6Ijk5Mjk1NTU2NDQiLCJlbWFpbCI6ImFhZGkyOHg2QGdtYWlsLmNvbSIsInJvbGUiOiJBZG1pbiIsImNyZWF0ZWRBdCI6IjIwMjUtMDgtMTNUMTY6NDg6NDIuMDAwWiIsInVwZGF0ZWRBdCI6IjIwMjUtMDgtMThUMDc6MzA6MjMuMDAwWiIsImRlbGV0ZWRBdCI6bnVsbCwiaW5zdGl0dXRlTmFtZSI6IkFheW9qYW4gU2Nob29sIG9mIEFyY2hpdGVjdHVyZSIsImlhdCI6MTc3MzM3ODExMCwiZXhwIjoxNzc1OTcwMTEwfQ.W8LX3PTecvBa3OCfNZzmoS7Ls6Oke0smozyYTIe3rV0",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -8508,7 +8508,7 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module (run in order)\n\n1. **assetLocation** — CRUD locations (`asset_locations`)\n2. **assetCategory** — CRUD categories (`asset_categories`)\n3. **asset** — CRUD assets (`asset` table)\n4. **assetIssue** — create/list/single/update issue entries (`asset_issue`, `asset_issue_item`)\n\n**Create** requests save IDs to collection variables. `instituteId` comes from auth token.\n\n**asset status:** `ISSUED` | `IN_STOCK` | `MAINTANANCE`\n\n**asset condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`",
+      "description": "## Asset module\n\n**Auth:** Bearer `{{token}}` — `instituteId` from token on all routes.\n\n### Run order\n1. **assetLocation** — room-based storage (`classRoomSectionId` → `asset_locations`)\n2. **assetCategory** — categories (`asset_categories`)\n3. **asset** — master + inventory copies (`asset` + `asset_inventory_item`)\n4. **assetIssue** — issue / return (`asset_issue_transaction`, `asset_issue_inventory_item`, `asset_return_transaction`)\n\n### Tables\n| Table | Notes |\n|-------|--------|\n| `asset_locations` | `assetLocationId`, `classRoomSectionId` (no `name`) |\n| `asset` | Master: `name`, `code`, `status`, `condition`, category, department |\n| `asset_inventory_item` | Copies: auto `code` `AST-1`…, UUID `barcode`; user sends `locationId` only |\n| `asset_issue_transaction` | One per issue POST: `memberId`, `memberType`, `issueDate`, `dueDate` |\n| `asset_issue_inventory_item` | Links issue ↔ inventory; `assetReturnTransactionId` when returned |\n| `student_fee_payment` + `payment_item` | Optional security on issue (`referenceType` `ASSET_SECURITY`) |\n\n### Enums\n- **asset.status:** `IN_STOCK` | `ISSUED` | `MAINTANANCE`\n- **asset.condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`\n- **memberType:** `STUDENT` | `TEACHER`\n\n### Collection variables (auto-set by tests)\n`assetLocation_id`, `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`\n\n**Prerequisites:** `{{student_id}}`, `{{class_room_section_id}}`, `{{department_id}}`",
       "item": [
         {
           "name": "assetLocation",
@@ -8544,7 +8544,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Main Store\"\n}",
+                  "raw": "{\n  \"classRoomSectionId\": {{class_room_section_id}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8560,7 +8560,7 @@
                     "assetLocation"
                   ]
                 },
-                "description": "**POST /assetLocation** — create location. Sets `assetLocation_id` from response."
+                "description": "**POST /assetLocation** — body: `{ \"classRoomSectionId\": number }`. One location per room per institute. Sets `assetLocation_id`."
               },
               "response": []
             },
@@ -8587,7 +8587,8 @@
                   "path": [
                     "assetLocation"
                   ]
-                }
+                },
+                "description": "**GET /assetLocation** — list all locations for the institute. Each row includes `classRoom` hierarchy."
               },
               "response": []
             },
@@ -8621,7 +8622,8 @@
                       "value": "{{assetLocation_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**GET /assetLocation/single?assetLocationId=** — fetch one location with `classRoom` hierarchy."
               },
               "response": []
             },
@@ -8642,7 +8644,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"name\": \"Main Store (updated)\"\n}",
+                  "raw": "{\n  \"assetLocationId\": {{assetLocation_id}},\n  \"classRoomSectionId\": {{class_room_section_id}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8657,7 +8659,8 @@
                   "path": [
                     "assetLocation"
                   ]
-                }
+                },
+                "description": "**PATCH /assetLocation** — `assetLocationId` + `classRoomSectionId`."
               },
               "response": []
             },
@@ -8690,7 +8693,8 @@
                       "value": "{{assetLocation_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**DELETE /assetLocation?assetLocationId=**"
               },
               "response": []
             }
@@ -8773,7 +8777,8 @@
                   "path": [
                     "assetCategory"
                   ]
-                }
+                },
+                "description": "**GET /assetCategory** — list categories for institute."
               },
               "response": []
             },
@@ -8807,7 +8812,8 @@
                       "value": "{{assetCategory_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**GET /assetCategory/single?assetCategoryId=**"
               },
               "response": []
             },
@@ -8843,7 +8849,8 @@
                   "path": [
                     "assetCategory"
                   ]
-                }
+                },
+                "description": "**PATCH /assetCategory** — `assetCategoryId` + `name`."
               },
               "response": []
             },
@@ -8896,6 +8903,13 @@
                       "const data = pm.response.json()?.data;",
                       "if (data?.assetId) {",
                       "  pm.collectionVariables.set('asset_id', String(data.assetId));",
+                      "}",
+                      "const inv = data?.inventoryItems;",
+                      "if (Array.isArray(inv) && inv.length) {",
+                      "  const first = inv.find((r) => r?.assetInventoryItemId) || inv[0];",
+                      "  if (first?.assetInventoryItemId) {",
+                      "    pm.collectionVariables.set('assetInventoryItem_id', String(first.assetInventoryItemId));",
+                      "  }",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -8917,7 +8931,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"status\": \"IN_STOCK\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}}\n}",
+                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-001\",\n  \"condition\": \"GOOD\",\n  \"description\": \"IT department laptop\",\n  \"departmentId\": {{department_id}},\n  \"assetCategoryId\": {{assetCategory_id}},\n  \"inventory\": [\n    { \"locationId\": {{assetLocation_id}} }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8933,7 +8947,7 @@
                     "asset"
                   ]
                 },
-                "description": "**POST /asset** — create asset. Requires valid `department_id` and `assetCategory_id` (run category create first). Sets `asset_id`. Code is unique per institute."
+                "description": "**POST /asset** — master fields + optional `inventory[]` with `locationId` only. `status` is derived from inventory issues (`IN_STOCK` / `ISSUED`). Server assigns `AST-1`, `AST-2`… and UUID `barcode`. Sets `asset_id`, `assetInventoryItem_id`."
               },
               "response": []
             },
@@ -8961,7 +8975,7 @@
                     "asset"
                   ]
                 },
-                "description": "Returns assets with nested `assetCategory` and `department`."
+                "description": "Returns assets with `assetCategory`, `department`, and `inventoryItems` (each with nested `assetLocation`)."
               },
               "response": []
             },
@@ -8995,7 +9009,8 @@
                       "value": "{{asset_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**GET /asset/single?assetId=** — includes `inventoryItems` + `assetLocation`."
               },
               "response": []
             },
@@ -9016,7 +9031,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"status\": \"ISSUED\",\n  \"condition\": \"FAIR\"\n}",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"inventory\": [\n    { \"assetInventoryItemId\": {{assetInventoryItem_id}}, \"locationId\": {{assetLocation_id}} },\n    { \"locationId\": {{assetLocation_id}} }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9032,7 +9047,42 @@
                     "asset"
                   ]
                 },
-                "description": "**PATCH /asset** — send `assetId` plus at least one field to update."
+                "description": "**PATCH /asset** — update inventory: existing row needs `assetInventoryItemId` + `locationId`; new row only `locationId` (auto `code`/`barcode`)."
+              },
+              "response": []
+            },
+            {
+              "name": "delete inventory item",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset/inventory?assetInventoryItemId={{assetInventoryItem_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset",
+                    "inventory"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetInventoryItemId",
+                      "value": "{{assetInventoryItem_id}}"
+                    }
+                  ]
+                },
+                "description": "**DELETE /asset/inventory?assetInventoryItemId=** — 409 if issued and not returned."
               },
               "response": []
             },
@@ -9065,7 +9115,8 @@
                       "value": "{{asset_id}}"
                     }
                   ]
-                }
+                },
+                "description": "**DELETE /asset?assetId=** — blocked if inventory exists or items still issued."
               },
               "response": []
             }
@@ -9082,14 +9133,18 @@
                   "script": {
                     "exec": [
                       "const data = pm.response.json()?.data;",
-                      "if (data?.assetIssueId) {",
-                      "  pm.collectionVariables.set('assetIssue_id', String(data.assetIssueId));",
+                      "if (data?.assetIssueTransactionId) {",
+                      "  pm.collectionVariables.set('assetIssueTransaction_id', String(data.assetIssueTransactionId));",
                       "}",
-                      "if (Array.isArray(data?.items) && data.items.length) {",
-                      "  const firstItem = data.items[0];",
-                      "  if (firstItem?.assetIssueItemId) {",
-                      "    pm.collectionVariables.set('assetIssueItem_id', String(firstItem.assetIssueItemId));",
+                      "const lines = data?.items;",
+                      "if (Array.isArray(lines) && lines.length) {",
+                      "  const first = lines.find((r) => r?.assetIssueInventoryItemId) || lines[0];",
+                      "  if (first?.assetIssueInventoryItemId) {",
+                      "    pm.collectionVariables.set('assetIssueInventoryItem_id', String(first.assetIssueInventoryItemId));",
                       "  }",
+                      "}",
+                      "if (data?.securityPayment?.studentFeePaymentId) {",
+                      "  pm.collectionVariables.set('assetSecurityPayment_id', String(data.securityPayment.studentFeePaymentId));",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -9111,7 +9166,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"remarks\": \"Issued for lab work\",\n  \"items\": [\n    {\n      \"assetId\": {{asset_id}},\n      \"remarks\": \"Keep in good condition\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"securityAmount\": \"500.00\",\n  \"paymentMethod\": \"cash\",\n  \"items\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}}\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9127,7 +9182,7 @@
                     "assetIssue"
                   ]
                 },
-                "description": "**POST /assetIssue** — creates issue + issue items, marks issued assets as `ISSUED`. Saves `assetIssue_id` and first `assetIssueItem_id`."
+                "description": "**POST /assetIssue**\n\n| Field | Notes |\n|-------|--------|\n| `memberId`, `memberType` | `STUDENT` or `TEACHER` |\n| `issueDate`, `dueDate` | `dueDate` >= `issueDate` |\n| `items[]` | `{ assetInventoryItemId }` — must be available |\n| `securityAmount` | Optional — creates payment + `payment_item` (`ASSET_SECURITY`) |\n| `paymentMethod` | Default `cash` |\n\nSets `assetIssueTransaction_id`, `assetIssueInventoryItem_id`."
               },
               "response": []
             },
@@ -9169,7 +9224,7 @@
                     }
                   ]
                 },
-                "description": "Supports pagination + search over member/remarks/asset fields."
+                "description": "**GET /assetIssue** — each row includes `memberBasicDetails`, `items[]` (inventory + asset name/code/status), and `securityPayment` (if ASSET_SECURITY payment exists)."
               },
               "response": []
             },
@@ -9189,7 +9244,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/assetIssue/single?assetIssueId={{assetIssue_id}}",
+                  "raw": "{{baseurl}}/assetIssue/single?assetIssueTransactionId={{assetIssueTransaction_id}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -9199,12 +9254,104 @@
                   ],
                   "query": [
                     {
-                      "key": "assetIssueId",
-                      "value": "{{assetIssue_id}}"
+                      "key": "assetIssueTransactionId",
+                      "value": "{{assetIssueTransaction_id}}"
                     }
                   ]
                 },
-                "description": "Returns single issue with `member` details + issued `items` and nested `asset` details."
+                "description": "**GET /assetIssue/single** — `memberBasicDetails`, `items[]` with asset basics, `securityPayment` when present."
+              },
+              "response": []
+            },
+            {
+              "name": "return",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "const txn = data?.returnTransaction;",
+                      "if (txn?.assetReturnTransactionId) {",
+                      "  pm.collectionVariables.set('assetReturnTransaction_id', String(txn.assetReturnTransactionId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"returnDate\": \"2026-06-02\",\n  \"items\": [\n    { \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}} }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/return",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "return"
+                  ]
+                },
+                "description": "**POST /assetIssue/return**\n\n```json\n{ \"returnDate\": \"2026-06-02\", \"items\": [{ \"assetIssueInventoryItemId\": 1 }] }\n```\n\nOne `returnDate` for all items → one `asset_return_transaction`. All lines get same `assetReturnTransactionId`. Asset → `IN_STOCK` when all copies returned."
+              },
+              "response": []
+            },
+            {
+              "name": "get all returns",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/return?page=1&limit=20",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "return"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "**GET /assetIssue/return** — paginated return transactions (`asset_return_transaction`). Each row has `returnDate` and `items[]` (returned inventory + asset + issue/member details)."
               },
               "response": []
             },
@@ -9225,7 +9372,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetIssueId\": {{assetIssue_id}},\n  \"dueDate\": \"2026-06-20\",\n  \"remarks\": \"Due date extended\",\n  \"items\": [\n    {\n      \"assetIssueItemId\": {{assetIssueItem_id}},\n      \"returnDate\": \"2026-06-20\",\n      \"remarks\": \"Updated by admin\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"assetIssueTransactionId\": {{assetIssueTransaction_id}},\n  \"dueDate\": \"2026-06-20\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9241,7 +9388,7 @@
                     "assetIssue"
                   ]
                 },
-                "description": "**PATCH /assetIssue** — updates issue by `assetIssueId` and item rows by `assetIssueItemId` in one transaction."
+                "description": "**PATCH /assetIssue** — `assetIssueTransactionId` + optional `memberId`, `memberType`, `issueDate`, `dueDate`. Returns same shape as GET single."
               },
               "response": []
             }
@@ -9258,7 +9405,7 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA0LTMwVDExOjIwOjQ4LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3Nzc3MDMzNDQsImV4cCI6MTc4MDI5NTM0NH0.S5kc3_xTRiB4fCI73d628v_lIQqwzCXQNOm3qN-nYnw",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTAyVDA0OjM0OjE5LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODA0MTM0ODMsImV4cCI6MTc4MzAwNTQ4M30.Na06YpJssiXVpcFt8wTUKJzXI2tBn5J1foTlolXzDAo",
       "type": "string"
     },
     {
@@ -9342,12 +9489,22 @@
       "type": "string"
     },
     {
-      "key": "assetIssue_id",
+      "key": "assetIssueTransaction_id",
       "value": "1",
       "type": "string"
     },
     {
-      "key": "assetIssueItem_id",
+      "key": "assetIssueInventoryItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetInventoryItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturnTransaction_id",
       "value": "1",
       "type": "string"
     },
@@ -9364,6 +9521,11 @@
     {
       "key": "assetIssue_search",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assetSecurityPayment_id",
+      "value": "1",
       "type": "string"
     }
   ]

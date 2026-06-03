@@ -1,24 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
-import classRoomModel from "./classRoomModel.js";
+import assetModel from "./assetModel.js";
+import assetLocationModel from "./assetLocationModel.js";
 
 export default sequelize.define(
-  "asset_location",
+  "asset_inventory_item",
   {
-    assetLocationId: {
+    assetInventoryItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "asset_location_id",
+      field: "asset_inventory_item_id",
     },
-    classRoomSectionId: {
+    code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    barcode: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    assetId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "class_room_section_id",
+      allowNull: false,
+      field: "asset_id",
       references: {
-        model: classRoomModel,
-        key: "class_room_section_id",
+        model: assetModel,
+        key: "asset_id",
       },
     },
     instituteId: {
@@ -30,9 +39,18 @@ export default sequelize.define(
         key: "institute_id",
       },
     },
+    locationId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "location_id",
+      references: {
+        model: assetLocationModel,
+        key: "asset_location_id",
+      },
+    },
   },
   {
-    tableName: "asset_locations",
+    tableName: "asset_inventory_item",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

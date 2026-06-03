@@ -51,3 +51,21 @@ export async function deleteAsset(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function deleteAssetInventoryItem(req, res) {
+  try {
+    const { assetInventoryItemId } = req.query;
+    await assetService.deleteAssetInventoryItem(
+      assetInventoryItemId,
+      req.user.defaultInstituteId
+    );
+    return SuccessResponse(
+      res,
+      200,
+      `Asset inventory item deleted successfully (ID ${assetInventoryItemId})`,
+      null
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

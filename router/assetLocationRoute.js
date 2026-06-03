@@ -22,17 +22,13 @@ const assetLocationIdQuerySchema = z.object({
 });
 
 const addAssetLocationSchema = z.object({
-  name: z.string().trim().min(1),
+  classRoomSectionId: positiveIntegerId,
 });
 
-const updateAssetLocationSchema = z
-  .object({
-    assetLocationId: positiveIntegerId,
-    name: z.string().trim().min(1).optional(),
-  })
-  .refine((d) => d.name !== undefined, {
-    message: "At least one of name is required",
-  });
+const updateAssetLocationSchema = z.object({
+  assetLocationId: positiveIntegerId,
+  classRoomSectionId: positiveIntegerId,
+});
 
 router.post("/", userAuth, validate({ body: addAssetLocationSchema }), addAssetLocation);
 router.get("/", userAuth, getAllAssetLocation);
@@ -43,11 +39,6 @@ router.get(
   getSingleAssetLocationDetails
 );
 router.patch("/", userAuth, validate({ body: updateAssetLocationSchema }), updateAssetLocation);
-router.delete(
-  "/",
-  userAuth,
-  validate({ query: assetLocationIdQuerySchema }),
-  deleteAssetLocation
-);
+router.delete("/", userAuth, validate({ query: assetLocationIdQuerySchema }), deleteAssetLocation);
 
 export default router;

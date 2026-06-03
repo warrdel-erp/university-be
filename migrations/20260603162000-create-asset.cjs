@@ -3,6 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const [tables] = await queryInterface.sequelize.query(
+      `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'asset'`
+    );
+    if (tables.length) return;
+
     await queryInterface.createTable(
       'asset',
       {
@@ -12,14 +18,8 @@ module.exports = {
           autoIncrement: true,
           allowNull: false,
         },
-        name: {
-          type: Sequelize.STRING,
-          allowNull: false,
-        },
-        code: {
-          type: Sequelize.STRING,
-          allowNull: false,
-        },
+        name: { type: Sequelize.STRING, allowNull: false },
+        code: { type: Sequelize.STRING, allowNull: false },
         status: {
           type: Sequelize.ENUM('ISSUED', 'IN_STOCK', 'MAINTANANCE'),
           allowNull: false,
@@ -28,10 +28,7 @@ module.exports = {
           type: Sequelize.ENUM('GOOD', 'FAIR', 'EXCELLENT', 'BAD'),
           allowNull: false,
         },
-        description: {
-          type: Sequelize.STRING,
-          allowNull: true,
-        },
+        description: { type: Sequelize.STRING, allowNull: true },
         department_id: {
           type: Sequelize.INTEGER,
           allowNull: false,
@@ -74,6 +71,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    await queryInterface.removeIndex('asset', 'asset_institute_id_code_unique');
     await queryInterface.dropTable('asset');
   },
 };

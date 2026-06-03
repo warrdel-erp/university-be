@@ -4,7 +4,7 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 export async function addAssetLocation(req, res) {
   try {
     const row = await assetLocationService.addAssetLocation(req.body, req.user.defaultInstituteId);
-    return SuccessResponse(res, 201, "Asset location added successfully", row);
+    return SuccessResponse(res, 201, "Asset location created successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -13,7 +13,7 @@ export async function addAssetLocation(req, res) {
 export async function getAllAssetLocation(req, res) {
   try {
     const rows = await assetLocationService.listAssetLocations(req.user.defaultInstituteId);
-    return SuccessResponse(res, 200, "Asset locations fetched successfully", rows);
+    return SuccessResponse(res, 200, "Asset locations fetched successfully", { assetLocations: rows });
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -26,9 +26,6 @@ export async function getSingleAssetLocationDetails(req, res) {
       assetLocationId,
       req.user.defaultInstituteId
     );
-    if (!row) {
-      return ErrorResponse(res, 404, "Asset location not found");
-    }
     return SuccessResponse(res, 200, "Asset location fetched successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

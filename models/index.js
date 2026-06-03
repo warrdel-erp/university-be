@@ -55,8 +55,10 @@ import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import assetLocationModel from "./assetLocationModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
 import assetModel from "./assetModel.js";
-import assetIssueModel from "./assetIssueModel.js";
-import assetIssueItemModel from "./assetIssueItemModel.js";
+import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
+import assetIssueInventoryItemModel from "./assetIssueInventoryItemModel.js";
+import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
+import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -624,6 +626,9 @@ instituteModel.hasMany(feeTypeCatalogModel, { foreignKey: "instituteId", as: "fe
 assetLocationModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetLocation" });
 instituteModel.hasMany(assetLocationModel, { foreignKey: "instituteId", as: "assetLocations" });
 
+assetLocationModel.belongsTo(classRoomModel, { foreignKey: "classRoomSectionId", as: "classRoom" });
+classRoomModel.hasMany(assetLocationModel, { foreignKey: "classRoomSectionId", as: "assetLocations" });
+
 assetCategoryModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetCategory" });
 instituteModel.hasMany(assetCategoryModel, { foreignKey: "instituteId", as: "assetCategories" });
 
@@ -636,14 +641,56 @@ assetCategoryModel.hasMany(assetModel, { foreignKey: "assetCategoryId", as: "cat
 assetModel.belongsTo(departmentModel, { foreignKey: "departmentId", as: "department" });
 departmentModel.hasMany(assetModel, { foreignKey: "departmentId", as: "departmentAssets" });
 
-assetIssueModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetIssue" });
-instituteModel.hasMany(assetIssueModel, { foreignKey: "instituteId", as: "assetIssues" });
+assetIssueTransactionModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteAssetIssueTransaction",
+});
+instituteModel.hasMany(assetIssueTransactionModel, {
+  foreignKey: "instituteId",
+  as: "assetIssueTransactions",
+});
 
-assetIssueItemModel.belongsTo(assetIssueModel, { foreignKey: "assetIssueId", as: "issue" });
-assetIssueModel.hasMany(assetIssueItemModel, { foreignKey: "assetIssueId", as: "items" });
+assetIssueInventoryItemModel.belongsTo(assetIssueTransactionModel, {
+  foreignKey: "assetIssueTransactionId",
+  as: "transaction",
+});
+assetIssueTransactionModel.hasMany(assetIssueInventoryItemModel, {
+  foreignKey: "assetIssueTransactionId",
+  as: "items",
+});
 
-assetIssueItemModel.belongsTo(assetModel, { foreignKey: "assetId", as: "asset" });
-assetModel.hasMany(assetIssueItemModel, { foreignKey: "assetId", as: "issueItems" });
+assetIssueInventoryItemModel.belongsTo(assetInventoryItemModel, {
+  foreignKey: "assetInventoryItemId",
+  as: "inventoryItem",
+});
+assetInventoryItemModel.hasMany(assetIssueInventoryItemModel, {
+  foreignKey: "assetInventoryItemId",
+  as: "issueInventoryItems",
+});
+
+assetIssueInventoryItemModel.belongsTo(assetReturnTransactionModel, {
+  foreignKey: "assetReturnTransactionId",
+  as: "returnTransaction",
+});
+assetReturnTransactionModel.hasMany(assetIssueInventoryItemModel, {
+  foreignKey: "assetReturnTransactionId",
+  as: "returnedIssueItems",
+});
+
+assetInventoryItemModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAssetInventoryItem" });
+instituteModel.hasMany(assetInventoryItemModel, { foreignKey: "instituteId", as: "assetInventoryItems" });
+
+assetInventoryItemModel.belongsTo(assetModel, { foreignKey: "assetId", as: "asset" });
+assetModel.hasMany(assetInventoryItemModel, { foreignKey: "assetId", as: "inventoryItems" });
+
+assetInventoryItemModel.belongsTo(assetLocationModel, {
+  foreignKey: "locationId",
+  as: "assetLocation",
+});
+assetLocationModel.hasMany(assetInventoryItemModel, {
+  foreignKey: "locationId",
+  as: "inventoryItems",
+});
 
 //fee (fee Invoice)
 feeInvoiceModel.belongsTo(userModel, { foreignKey: "createdBy", as: "userFeeInvoice" });
@@ -1524,8 +1571,10 @@ export {
   assetLocationModel,
   assetCategoryModel,
   assetModel,
-  assetIssueModel,
-  assetIssueItemModel,
+  assetIssueTransactionModel,
+  assetIssueInventoryItemModel,
+  assetReturnTransactionModel,
+  assetInventoryItemModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,

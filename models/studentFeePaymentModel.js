@@ -24,7 +24,7 @@ export default sequelize.define(
       field: "payee_id",
     },
     payeeType: {
-      type: DataTypes.ENUM("STUDENT", "VENDOR"),
+      type: DataTypes.ENUM("STUDENT", "VENDOR", "OTHER"),
       allowNull: false,
       field: "payee_type",
     },

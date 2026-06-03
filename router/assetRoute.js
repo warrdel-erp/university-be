@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
-import { assetStatuses, assetConditions } from "../constant.js";
+import { assetConditions } from "../constant.js";
 import {
   addAsset,
   getAllAsset,
   getSingleAssetDetails,
   updateAsset,
   deleteAsset,
+  deleteAssetInventoryItem,
 } from "../controllers/assetController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -18,10 +19,6 @@ const positiveIntegerId = z.coerce
   .int({ message: "id must be an integer" })
   .positive({ message: "id must be positive" });
 
-const assetStatusSchema = z.enum(assetStatuses, {
-  errorMap: () => ({ message: `status must be one of: ${assetStatuses.join(", ")}` }),
-});
-
 const assetConditionSchema = z.enum(assetConditions, {
   errorMap: () => ({ message: `condition must be one of: ${assetConditions.join(", ")}` }),
 });
@@ -30,14 +27,29 @@ const assetIdQuerySchema = z.object({
   assetId: positiveIntegerId,
 });
 
+const assetInventoryItemIdQuerySchema = z.object({
+  assetInventoryItemId: positiveIntegerId,
+});
+
+const inventoryRowSchema = z.object({
+  locationId: positiveIntegerId.optional().nullable(),
+});
+
+const updateInventoryRowSchema = z.object({
+  assetInventoryItemId: positiveIntegerId,
+  locationId: z.union([positiveIntegerId, z.null()]),
+});
+
+const inventoryItemSchema = z.union([updateInventoryRowSchema, inventoryRowSchema]);
+
 const addAssetSchema = z.object({
   name: z.string().trim().min(1),
   code: z.string().trim().min(1),
-  status: assetStatusSchema,
   condition: assetConditionSchema,
   description: z.string().trim().optional().nullable(),
   departmentId: positiveIntegerId,
   assetCategoryId: positiveIntegerId,
+  inventory: z.union([inventoryRowSchema, z.array(inventoryRowSchema)]).optional(),
 });
 
 const updateAssetSchema = z
@@ -45,21 +57,23 @@ const updateAssetSchema = z
     assetId: positiveIntegerId,
     name: z.string().trim().min(1).optional(),
     code: z.string().trim().min(1).optional(),
-    status: assetStatusSchema.optional(),
     condition: assetConditionSchema.optional(),
     description: z.string().optional().nullable(),
     departmentId: positiveIntegerId.optional(),
     assetCategoryId: positiveIntegerId.optional(),
+    inMaintenance: z.boolean().optional(),
+    inventory: z.array(inventoryItemSchema).optional(),
   })
   .refine(
     (d) =>
       d.name !== undefined ||
       d.code !== undefined ||
-      d.status !== undefined ||
       d.condition !== undefined ||
       d.description !== undefined ||
       d.departmentId !== undefined ||
-      d.assetCategoryId !== undefined,
+      d.assetCategoryId !== undefined ||
+      d.inMaintenance !== undefined ||
+      (d.inventory !== undefined && d.inventory.length > 0),
     { message: "At least one field is required to update" }
   );
 
@@ -68,5 +82,11 @@ router.get("/", userAuth, getAllAsset);
 router.get("/single", userAuth, validate({ query: assetIdQuerySchema }), getSingleAssetDetails);
 router.patch("/", userAuth, validate({ body: updateAssetSchema }), updateAsset);
 router.delete("/", userAuth, validate({ query: assetIdQuerySchema }), deleteAsset);
+router.delete(
+  "/inventory",
+  userAuth,
+  validate({ query: assetInventoryItemIdQuerySchema }),
+  deleteAssetInventoryItem
+);
 
 export default router;

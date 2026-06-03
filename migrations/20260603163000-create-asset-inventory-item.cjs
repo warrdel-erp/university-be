@@ -3,14 +3,29 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const [tables] = await queryInterface.sequelize.query(
+      `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'asset_inventory_item'`
+    );
+    if (tables.length) return;
+
     await queryInterface.createTable(
-      'asset_issue',
+      'asset_inventory_item',
       {
-        asset_issue_id: {
+        asset_inventory_item_id: {
           type: Sequelize.INTEGER,
           primaryKey: true,
           autoIncrement: true,
           allowNull: false,
+        },
+        code: { type: Sequelize.STRING, allowNull: false },
+        barcode: { type: Sequelize.STRING, allowNull: true },
+        asset_id: {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          references: { model: 'asset', key: 'asset_id' },
+          onUpdate: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
         institute_id: {
           type: Sequelize.INTEGER,
@@ -19,25 +34,12 @@ module.exports = {
           onUpdate: 'CASCADE',
           onDelete: 'RESTRICT',
         },
-        member_id: {
+        location_id: {
           type: Sequelize.INTEGER,
-          allowNull: false,
-        },
-        member_type: {
-          type: Sequelize.ENUM('STUDENT', 'TEACHER'),
-          allowNull: false,
-        },
-        issue_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: false,
-        },
-        due_date: {
-          type: Sequelize.DATEONLY,
-          allowNull: false,
-        },
-        remarks: {
-          type: Sequelize.STRING,
           allowNull: true,
+          references: { model: 'asset_locations', key: 'asset_location_id' },
+          onUpdate: 'CASCADE',
+          onDelete: 'SET NULL',
         },
         created_at: {
           type: Sequelize.DATE,
@@ -52,18 +54,9 @@ module.exports = {
       },
       { charset: 'latin1', collate: 'latin1_swedish_ci' }
     );
-
-    await queryInterface.addIndex('asset_issue', ['institute_id'], {
-      name: 'idx_asset_issue_institute',
-    });
-    await queryInterface.addIndex('asset_issue', ['member_type', 'member_id'], {
-      name: 'idx_asset_issue_member',
-    });
   },
 
   async down(queryInterface) {
-    await queryInterface.removeIndex('asset_issue', 'idx_asset_issue_member');
-    await queryInterface.removeIndex('asset_issue', 'idx_asset_issue_institute');
-    await queryInterface.dropTable('asset_issue');
+    await queryInterface.dropTable('asset_inventory_item');
   },
 };

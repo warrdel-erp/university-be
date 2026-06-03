@@ -27,7 +27,12 @@ export default sequelize.define(
       field: "reference_id",
     },
     referenceType: {
-      type: DataTypes.ENUM("STUDENT_FEE_INVOICE", "STUDENT_LIBRARY_INVOICE"),
+      type: DataTypes.ENUM(
+        "STUDENT_FEE_INVOICE",
+        "STUDENT_LIBRARY_INVOICE",
+        "OTHER",
+        "ASSET_SECURITY"
+      ),
       allowNull: false,
       field: "reference_type",
     },
