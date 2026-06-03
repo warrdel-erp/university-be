@@ -70,8 +70,26 @@ export async function getLibraryBookInventoryIssueHistory(req, res) {
 
 export async function getLibraryMembersList(req, res) {
   try {
-    const data = await services.getLibraryMembersList(req.query);
-    return SuccessResponse(res, 200, "Library members list fetched successfully", data);
+    const { data, paginationData } = await services.getLibraryMembersList(req.query);
+    return SuccessResponse(res, 200, "Library members list fetched successfully", data, paginationData);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getLibraryReturnBookTransactions(req, res) {
+  try {
+    const { data, paginationData } = await services.getLibraryReturnBookTransactions(
+      req.query,
+      req.user.defaultInstituteId,
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Library return book transactions fetched successfully",
+      data,
+      paginationData,
+    );
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
