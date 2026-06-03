@@ -131,6 +131,7 @@ import libraryBookSubjectMappingModel from "./libraryBookSubjectMappingModel.js"
 import libraryCategoryModel from "./libraryCategoryModel.js";
 import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel.js";
 import libraryBookIssueInventoryItemModel from "./libraryBookIssueInventoryItemModel.js";
+import libraryReturnBookTransactionModel from "./libraryReturnBookTransactionModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
 import assessmentEvaluationModel from "./assessmentEvaluationModel.js";
 import jobSettingModel from "./jobSettingModel.js";
@@ -1209,6 +1210,14 @@ libraryBookIssueInventoryItemModel.belongsTo(libraryBookInventoryModel, {
   foreignKey: "inventoryId",
   as: "inventory",
 });
+libraryReturnBookTransactionModel.hasMany(libraryBookIssueInventoryItemModel, {
+  foreignKey: "libraryReturnBookTransactionId",
+  as: "inventoryItems",
+});
+libraryBookIssueInventoryItemModel.belongsTo(libraryReturnBookTransactionModel, {
+  foreignKey: "libraryReturnBookTransactionId",
+  as: "returnBookTransaction",
+});
 
 libraryCreationModel.hasMany(libraryBookModel, {
   foreignKey: "library_creation_id",
@@ -1601,6 +1610,7 @@ export {
   libraryCategoryModel,
   libraryIssueBookTransactionModel,
   libraryBookIssueInventoryItemModel,
+  libraryReturnBookTransactionModel,
   internalAssessmentModel,
   assessmentEvaluationModel,
   jobSettingModel,
