@@ -114,7 +114,13 @@ export async function findIssueInventoryItemsForReturn(
       {
         model: model.assetIssueTransactionModel,
         as: "transaction",
-        attributes: ["assetIssueTransactionId", "issueDate", "instituteId"],
+        attributes: [
+          "assetIssueTransactionId",
+          "issueDate",
+          "instituteId",
+          "memberId",
+          "memberType",
+        ],
         where: { instituteId },
         required: true,
       },
@@ -158,6 +164,38 @@ export async function returnIssueInventoryItems(items, assetReturnTransactionId,
   }
 
   return affected;
+}
+
+export async function findReturnTransactionIdsByIssueTransactionId(
+  assetIssueTransactionId,
+  instituteId,
+  options = {}
+) {
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: ["assetReturnTransactionId"],
+    where: {
+      assetIssueTransactionId,
+      assetReturnTransactionId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  return [
+    ...new Set(
+      rows
+        .map((row) => row.assetReturnTransactionId)
+        .filter((returnId) => returnId != null)
+    ),
+  ];
 }
 
 export async function findAssetSecurityPaymentsByIssueIds(
@@ -206,6 +244,45 @@ export async function findAssetSecurityPaymentByIssueId(
     options
   );
   return rows[0] ?? null;
+}
+
+export async function findReturnSettlementPaymentsByReturnIds(
+  assetReturnTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetReturnTransactionIds.length) return [];
+
+  return model.paymentItemModel.findAll({
+    attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
+    where: {
+      referenceId: assetReturnTransactionIds,
+      referenceType: "OTHER",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: [
+          "studentFeePaymentId",
+          "paymentType",
+          "payeeId",
+          "payeeType",
+          "amount",
+          "paymentMethod",
+          "referenceNumber",
+          "transactionId",
+          "remark",
+        ],
+        required: true,
+        where: {
+          instituteId,
+          remark: { [Op.like]: "Asset return%" },
+        },
+      },
+    ],
+    transaction: options.transaction,
+  });
 }
 
 export async function findIssueInventoryItemsByIds(assetIssueInventoryItemIds, options = {}) {
@@ -421,6 +498,35 @@ const returnedIssueItemDetailIncludes = [
     required: true,
   },
 ];
+
+export async function findAssetReturnTransactionByIdForInstitute(
+  assetReturnTransactionId,
+  instituteId,
+  options = {}
+) {
+  return model.assetReturnTransactionModel.findOne({
+    attributes: ["assetReturnTransactionId", "returnDate"],
+    where: { assetReturnTransactionId },
+    include: [
+      {
+        model: model.assetIssueInventoryItemModel,
+        as: "returnedIssueItems",
+        attributes: ["assetIssueInventoryItemId"],
+        required: true,
+        include: [
+          {
+            model: model.assetIssueTransactionModel,
+            as: "transaction",
+            attributes: [],
+            where: { instituteId },
+            required: true,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
 
 export async function findAssetReturnTransactionsPaginated(
   instituteId,

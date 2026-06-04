@@ -92,18 +92,21 @@ export async function findAssetsByInstitutePaginated(
 
   const assetIds = idRows.map((row) => row.assetId);
   if (!assetIds.length) {
-    return { rows: [], total, page, limit };
+    return { rows: [], total, page, limit, inventoryStatsByAssetId: {} };
   }
 
-  const rows = await model.assetModel.findAll({
-    attributes: { exclude: excludeTs },
-    where: { assetId: assetIds, instituteId },
-    include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
-    order: [["assetId", "ASC"]],
-    transaction: options.transaction,
-  });
+  const [rows, inventoryStatsByAssetId] = await Promise.all([
+    model.assetModel.findAll({
+      attributes: { exclude: excludeTs },
+      where: { assetId: assetIds, instituteId },
+      include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
+      order: [["assetId", "ASC"]],
+      transaction: options.transaction,
+    }),
+    countInventoryStatsByAssetIds(assetIds, instituteId, options),
+  ]);
 
-  return { rows, total, page, limit };
+  return { rows, total, page, limit, inventoryStatsByAssetId };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {
@@ -196,6 +199,69 @@ export async function countInventoryItemsByAsset(assetId, instituteId, options =
   });
 }
 
+/** Per-asset inventory totals and open-issue counts (Sequelize GROUP BY, 2 queries). */
+export async function countInventoryStatsByAssetIds(assetIds, instituteId, options = {}) {
+  if (!assetIds.length) {
+    return {};
+  }
+
+  const { transaction } = options;
+  const db = model.assetInventoryItemModel.sequelize;
+
+  const [totalRows, issuedRows] = await Promise.all([
+    model.assetInventoryItemModel.findAll({
+      attributes: [
+        "assetId",
+        [db.fn("COUNT", db.col("asset_inventory_item_id")), "totalInventory"],
+      ],
+      where: { assetId: assetIds, instituteId },
+      group: ["assetId"],
+      raw: true,
+      transaction,
+    }),
+    model.assetIssueInventoryItemModel.findAll({
+      attributes: [
+        [db.col("inventoryItem.asset_id"), "assetId"],
+        [db.fn("COUNT", db.col("asset_issue_inventory_item_id")), "issuedCount"],
+      ],
+      include: [
+        {
+          model: model.assetInventoryItemModel,
+          as: "inventoryItem",
+          attributes: [],
+          where: { assetId: assetIds, instituteId },
+          required: true,
+        },
+      ],
+      where: { assetReturnTransactionId: null },
+      group: ["inventoryItem.asset_id"],
+      raw: true,
+      subQuery: false,
+      transaction,
+    }),
+  ]);
+
+  const statsByAssetId = Object.create(null);
+
+  for (const row of totalRows) {
+    const assetId = Number(row.assetId);
+    statsByAssetId[assetId] = {
+      totalInventory: Number(row.totalInventory),
+      issuedCount: 0,
+    };
+  }
+
+  for (const row of issuedRows) {
+    const assetId = Number(row.assetId);
+    if (!statsByAssetId[assetId]) {
+      statsByAssetId[assetId] = { totalInventory: 0, issuedCount: 0 };
+    }
+    statsByAssetId[assetId].issuedCount = Number(row.issuedCount);
+  }
+
+  return statsByAssetId;
+}
+
 export async function countOpenIssuesForInventoryItem(assetInventoryItemId, options = {}) {
   return model.assetIssueInventoryItemModel.count({
     where: {
@@ -207,19 +273,17 @@ export async function countOpenIssuesForInventoryItem(assetInventoryItemId, opti
 }
 
 export async function countOpenIssuesForAsset(assetId, instituteId, options = {}) {
-  const inventoryItems = await model.assetInventoryItemModel.findAll({
-    attributes: ["assetInventoryItemId"],
-    where: { assetId, instituteId },
-    transaction: options.transaction,
-  });
-  if (!inventoryItems.length) return 0;
-
-  const inventoryIds = inventoryItems.map((row) => row.assetInventoryItemId);
   return model.assetIssueInventoryItemModel.count({
-    where: {
-      assetInventoryItemId: { [Op.in]: inventoryIds },
-      assetReturnTransactionId: null,
-    },
+    where: { assetReturnTransactionId: null },
+    include: [
+      {
+        model: model.assetInventoryItemModel,
+        as: "inventoryItem",
+        attributes: [],
+        where: { assetId, instituteId },
+        required: true,
+      },
+    ],
     transaction: options.transaction,
   });
 }

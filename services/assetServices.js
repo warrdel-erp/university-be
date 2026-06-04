@@ -1,15 +1,21 @@
 import { randomUUID } from "crypto";
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/assetRepository.js";
+import {
+  decimalCompare,
+  decimalGreaterThanOrEqual,
+  decimalSubtract,
+  toMoneyNumber,
+} from "../utility/decimalMoney.js";
 
 const INVENTORY_CODE_PREFIX = "AST-";
 
 /** ISSUED only when every inventory copy has an open issue; otherwise IN_STOCK. */
 export function deriveAssetStatusFromInventory(openIssues, totalInventory) {
-  if (totalInventory === 0) {
+  if (decimalCompare(totalInventory, 0) === 0) {
     return "IN_STOCK";
   }
-  return openIssues >= totalInventory ? "ISSUED" : "IN_STOCK";
+  return decimalGreaterThanOrEqual(openIssues, totalInventory) ? "ISSUED" : "IN_STOCK";
 }
 
 export async function syncAssetStatusFromInventory(assetId, instituteId, options = {}) {
@@ -38,6 +44,23 @@ function httpError(message, statusCode = 400) {
 function toPlain(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function buildInventoryCounts(totalInventory = 0, issuedCount = 0) {
+  const total = toMoneyNumber(totalInventory);
+  const issued = toMoneyNumber(issuedCount);
+
+  return {
+    totalInventory: total,
+    issuedCount: issued,
+    nonIssuedCount: decimalSubtract(total, issued),
+  };
+}
+
+function attachInventoryCounts(assetPlain, statsByAssetId = {}) {
+  const raw = statsByAssetId[assetPlain.assetId];
+  const counts = buildInventoryCounts(raw?.totalInventory, raw?.issuedCount);
+  return { ...assetPlain, ...counts };
 }
 
 function updatePayload(body) {
@@ -275,26 +298,38 @@ export async function addAsset(body, instituteId) {
 }
 
 export async function listAssets(instituteId, query = {}) {
-  const { rows, total, page, limit } = await sequelize.transaction(async (transaction) => {
-    return await repo.findAssetsByInstitutePaginated(
-      instituteId,
-      { inventoryStatus: query.status },
-      { page: query.page, limit: query.limit },
-      { transaction }
-    );
-  });
+  const { rows, total, page, limit, inventoryStatsByAssetId } = await sequelize.transaction(
+    (transaction) =>
+      repo.findAssetsByInstitutePaginated(
+        instituteId,
+        { inventoryStatus: query.status },
+        { page: query.page, limit: query.limit },
+        { transaction }
+      )
+  );
 
   return {
-    data: { assets: rows.map(toPlain) },
+    data: {
+      assets: rows.map((row) => attachInventoryCounts(toPlain(row), inventoryStatsByAssetId)),
+    },
     pagination: { page, limit, total },
   };
 }
 
 export async function getSingleAsset(assetId, instituteId) {
   const row = await sequelize.transaction(async (transaction) => {
-    return await repo.findAssetById(assetId, instituteId, { transaction });
+    const asset = await repo.findAssetById(assetId, instituteId, { transaction });
+    if (!asset) {
+      return null;
+    }
+
+    const statsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId, {
+      transaction,
+    });
+
+    return attachInventoryCounts(toPlain(asset), statsByAssetId);
   });
-  return toPlain(row);
+  return row;
 }
 
 export async function updateAsset(assetId, body, instituteId) {

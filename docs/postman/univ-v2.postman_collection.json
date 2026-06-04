@@ -8582,7 +8582,7 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module\n\n**Auth:** Bearer `{{token}}` — `instituteId` from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** (create master + inventory) → 3. **assetIssue** (issue / return)\n\n### POST /asset — single **create** request\nOpen **asset → create** for all 3 `inventoryBulk` payload types (Type 1 active in Body; Types 2–3 commented in request docs). Use `inventoryBulk[]` only on create.\n\n### PATCH /asset — inventory line\n```json\n{\n  \"assetId\": 1,\n  \"inventory\": [\n    { \"assetInventoryItemId\": 5, \"classRoomSectionId\": 12 }\n  ]\n}\n```\nSets room → inventory `ASSIGNED`. Use `inMaintenance: true` on asset for `MAINTANANCE`.\n\n### Enums\n- **asset.status:** `IN_STOCK` | `ISSUED` | `MAINTANANCE` (auto)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` | `ASSIGNED`\n- **asset.condition:** `GOOD` | `FAIR` | `EXCELLENT` | `BAD`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `class_room_section_id`, `class_room_section_id_2`, `department_id`, `student_id`",
+      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset?page&limit&status` (`status`: all \\| assigned \\| unassigned) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE`\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id` `class_room_section_id_2`, `department_id`, `student_id`",
       "item": [
         {
           "name": "assetCategory",
@@ -8815,7 +8815,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id_2}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2 }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} }\n//   ]\n// }\n\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   \"inventoryBulk\": [\n//     { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n//     { \"count\": 3 }\n//   ]\n// }",
+                  "raw": "{\n  \"name\": \"Dell Laptop\",\n  \"code\": \"LAP-0012\",\n  \"condition\": \"GOOD\",\n  // optional\n  \"description\": \"IT department laptop\",\n  \"assetCategoryId\": {{assetCategory_id}},\n  // optional - use only one of: inventoryBulk | count | inventory\n  \"inventoryBulk\": [\n    { \"count\": 2, \"classRoomSectionId\": {{class_room_section_id}} },\n    { \"count\": 2 }\n  ]\n}\n\n// Type 2 - count only (optional classRoomSectionId on root with count mode)\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   // optional\n//   \"description\": \"IT department laptop\",\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   // optional\n//   \"count\": 2\n// }\n\n// Type 3 - inventory[] rows (optional classRoomSectionId per row)\n// {\n//   \"name\": \"Dell Laptop\",\n//   \"code\": \"LAP-0012\",\n//   \"condition\": \"GOOD\",\n//   // optional\n//   \"description\": null,\n//   \"assetCategoryId\": {{assetCategory_id}},\n//   // optional\n//   \"inventory\": [{ \"classRoomSectionId\": {{class_room_section_id}} }]\n// }",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8930,7 +8930,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"inventory\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}},\n      \"classRoomSectionId\": {{class_room_section_id}}\n    }\n  ]\n}",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  // optional\n  \"inventory\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}},\n      \"classRoomSectionId\": {{class_room_section_id}}\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -8967,7 +8967,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"name\": \"Dell Laptop (updated)\",\n  \"condition\": \"FAIR\"\n}",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  // optional\n  \"name\": \"Dell Laptop (updated)\",\n  // optional\n  \"code\": \"LAP-0012\",\n  // optional\n  \"condition\": \"FAIR\",\n  // optional\n  \"description\": null,\n  // optional\n  \"assetCategoryId\": {{assetCategory_id}},\n  // optional\n  \"inMaintenance\": false\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9060,7 +9060,7 @@
         },
         {
           "name": "assetIssue",
-          "description": "## Asset issue / return\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n**Prerequisite:** Create asset + inventory via **asset → create** (`inventoryBulk`). Issue uses `assetInventoryItemId` from `asset_inventory_item` (room on copy via `classRoomSectionId`, not `asset_locations`).\n\n### Routes (unchanged)\n| Method | Path | Purpose |\n|--------|------|--------|\n| POST | `/assetIssue` | Issue copies to student/teacher |\n| GET | `/assetIssue` | List issues (paginated) |\n| GET | `/assetIssue/single` | Single issue |\n| PATCH | `/assetIssue` | Update dates/member |\n| POST | `/assetIssue/return` | Return issued copies (`returnCondition` required per item) |\n| GET | `/assetIssue/return` | List return transactions |\n\n### POST return body\n`returnDate` + `items[]` with `assetIssueInventoryItemId`, `returnCondition` (`GOOD`/`FAIR`/`EXCELLENT`/`BAD`), optional `damageNotes`.\n\n### Item fields in responses\n`classRoomSectionId`, `inventoryStatus`, `classRoom` hierarchy. On return: `damageNotes`, `returnCondition` per `asset_issue_inventory_item` line.",
+          "description": "## Asset issue / return (all APIs)\n\n**Prerequisite:** **asset → create** first (`inventoryBulk`). Use `{{assetInventoryItem_id}}` on issue.\n\n| # | Method | Path | Notes |\n|---|--------|------|--------|\n| 1 | POST | `/assetIssue` | Issue; optional `securityAmount` |\n| 2 | GET | `/assetIssue` | List — no `securityPayment` |\n| 3 | GET | `/assetIssue/single` | One issue — includes `securityPayment` if any |\n| 4 | GET | `/assetIssue/payments` | All payments for `assetIssueTransactionId` |\n| 5 | PATCH | `/assetIssue` | Update member/dates |\n| 6 | POST | `/assetIssue/return` | Return lines; optional deposit settlement |\n| 7 | GET | `/assetIssue/return` | List returns — no `payments` |\n| 8 | GET | `/assetIssue/return/payments` | Return settlement only (`assetReturnTransactionId`) |\n\n**Return:** `returnCondition` required per item. `securityAmount` + `fineAmount` together for settlement payment.",
           "item": [
             {
               "name": "create",
@@ -9103,7 +9103,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  \"securityAmount\": \"500.00\",\n  \"paymentMethod\": \"cash\",\n  \"items\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}}\n    }\n  ]\n}",
+                  "raw": "{\n  \"memberId\": {{student_id}},\n  \"memberType\": \"STUDENT\",\n  \"issueDate\": \"2026-05-28\",\n  \"dueDate\": \"2026-06-15\",\n  // optional\n  \"securityAmount\": \"500.00\",\n  // optional (default: cash)\n  \"paymentMethod\": \"cash\",\n  \"items\": [\n    {\n      \"assetInventoryItemId\": {{assetInventoryItem_id}}\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9161,7 +9161,42 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue** — `memberBasicDetails`, `items[]` (inventory code/barcode, `classRoomSectionId`, `inventoryStatus`, `classRoom`, asset), `securityPayment` when present."
+                "description": "**GET /assetIssue** — paginated issues (`memberBasicDetails`, `items[]` only; no payments)."
+              },
+              "response": []
+            },
+            {
+              "name": "get issue payments by id",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/payments?assetIssueTransactionId={{assetIssueTransaction_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetIssueTransactionId",
+                      "value": "{{assetIssueTransaction_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /assetIssue/payments?assetIssueTransactionId=** — payments for one issue.\n\nResponse: `memberBasicDetails` (issue member) + `payments[]` each with `payeeDetails` (name, scholarNumber/course for student; employeeName/code for teacher).\n\n`paymentPurpose`: `ASSET_SECURITY` | `RETURN_SETTLEMENT`."
               },
               "response": []
             },
@@ -9196,7 +9231,44 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/single?assetIssueTransactionId=** — same shape as list row (inventory room on copy, not `assetLocation`)."
+                "description": "**GET /assetIssue/single?assetIssueTransactionId=** — full issue row including `securityPayment` when recorded. Use **get issue payments by id** for `payments[]` only."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetIssueTransactionId\": {{assetIssueTransaction_id}},\n  // optional\n  \"memberId\": {{student_id}},\n  // optional\n  \"memberType\": \"STUDENT\",\n  // optional\n  \"issueDate\": \"2026-05-28\",\n  // optional\n  \"dueDate\": \"2026-06-20\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue"
+                  ]
+                },
+                "description": "**PATCH /assetIssue** — `assetIssueTransactionId` + optional `memberId`, `memberType`, `issueDate`, `dueDate`. Returns same shape as GET single."
               },
               "response": []
             },
@@ -9232,7 +9304,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"returnDate\": \"2026-06-03\",\n  \"items\": [\n    {\n      \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}},\n      \"returnCondition\": \"GOOD\",\n      \"damageNotes\": null\n    }\n  ]\n}",
+                  "raw": "{\n  \"returnDate\": \"2026-06-03\",\n  // optional - must send with fineAmount when settling deposit\n  \"securityAmount\": \"500.00\",\n  // optional - must send with securityAmount when settling deposit\n  \"fineAmount\": \"150.00\",\n  // optional (default: cash)\n  \"paymentMethod\": \"cash\",\n  \"items\": [\n    {\n      \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}},\n      \"returnCondition\": \"GOOD\",\n      // optional\n      \"damageNotes\": null\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -9254,6 +9326,44 @@
               "response": []
             },
             {
+              "name": "return (no settlement)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"returnDate\": \"2026-06-03\",\n  \"items\": [\n    {\n      \"assetIssueInventoryItemId\": {{assetIssueInventoryItem_id}},\n      \"returnCondition\": \"GOOD\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/assetIssue/return",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "assetIssue",
+                    "return"
+                  ]
+                },
+                "description": "**POST /assetIssue/return** — return only (no `securityAmount` / `fineAmount`). No deposit settlement payment."
+              },
+              "response": []
+            },
+            {
               "name": "get all returns",
               "request": {
                 "auth": {
@@ -9269,7 +9379,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/assetIssue/return?page=1&limit=20",
+                  "raw": "{{baseurl}}/assetIssue/return?page={{assetReturn_page}}&limit={{assetReturn_limit}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -9280,20 +9390,20 @@
                   "query": [
                     {
                       "key": "page",
-                      "value": "1"
+                      "value": "{{assetReturn_page}}"
                     },
                     {
                       "key": "limit",
-                      "value": "20"
+                      "value": "{{assetReturn_limit}}"
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/return** — paginated return batches: `returnDate`, `items[]` each with `damageNotes`, `returnCondition`, inventory, asset, member details."
+                "description": "**GET /assetIssue/return** — paginated return batches (`returnDate`, `items[]` only; no payments)."
               },
               "response": []
             },
             {
-              "name": "update",
+              "name": "get return payments by id",
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -9305,27 +9415,26 @@
                     }
                   ]
                 },
-                "method": "PATCH",
+                "method": "GET",
                 "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"assetIssueTransactionId\": {{assetIssueTransaction_id}},\n  \"dueDate\": \"2026-06-20\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
                 "url": {
-                  "raw": "{{baseurl}}/assetIssue",
+                  "raw": "{{baseurl}}/assetIssue/return/payments?assetReturnTransactionId={{assetReturnTransaction_id}}",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
-                    "assetIssue"
+                    "assetIssue",
+                    "return",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "assetReturnTransactionId",
+                      "value": "{{assetReturnTransaction_id}}"
+                    }
                   ]
                 },
-                "description": "**PATCH /assetIssue** — `assetIssueTransactionId` + optional `memberId`, `memberType`, `issueDate`, `dueDate`. Returns same shape as GET single."
+                "description": "**GET /assetIssue/return/payments?assetReturnTransactionId=** — settlement payment(s) for this return only.\n\nResponse: `memberBasicDetails` (member from returned lines) + `payments[]` each with `payeeDetails`. Empty `payments[]` if no settlement recorded."
               },
               "response": []
             }
@@ -9342,7 +9451,7 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTUsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjYwLCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6IiIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwicm9sZSI6IkFkbWluIiwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wNi0wMVQxODo0NDo0Mi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJpbnN0aXR1dGVOYW1lIjoiVWRhaXB1ciBDb2xsZWdlICYgSW5mb3JtYXRpb24gSW5zdGl0dXRlIE9mIFRlY2hub2xvZ3kiLCJpYXQiOjE3ODAzODc1NTAsImV4cCI6MTc4MDQ3Mzk1MH0.XZQz1PelTrydZQU8OffYvaQ8UJJ8MrJuTba8aBjwm7g",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTAyVDA0OjM0OjE5LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODA1NTE4OTksImV4cCI6MTc4MzE0Mzg5OX0.NIh27QoQP0w6G4ECF4rVoTw1NC6pn8lA78KVIyP4UmA",
       "type": "string"
     },
     {
@@ -9468,6 +9577,16 @@
     {
       "key": "assetSecurityPayment_id",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturn_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturn_limit",
+      "value": "20",
       "type": "string"
     }
   ]
