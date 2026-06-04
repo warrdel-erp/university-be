@@ -136,7 +136,12 @@ function formatIssueItemBasic(item) {
   };
 }
 
-function formatAssetIssueRecord(issuePlain, memberBasicDetails, securityPaymentRow = null) {
+function formatAssetIssueRecord(
+  issuePlain,
+  memberBasicDetails,
+  securityPaymentRow = null,
+  itemStats = null
+) {
   const record = {
     assetIssueTransactionId: issuePlain.assetIssueTransactionId,
     instituteId: issuePlain.instituteId,
@@ -145,6 +150,8 @@ function formatAssetIssueRecord(issuePlain, memberBasicDetails, securityPaymentR
     issueDate: issuePlain.issueDate,
     dueDate: issuePlain.dueDate,
     memberBasicDetails,
+    issuedTotalItems: itemStats?.issuedTotalItems ?? 0,
+    returnedTotalItems: itemStats?.returnedTotalItems ?? 0,
     items: (issuePlain.items ?? []).map(formatIssueItemBasic),
   };
 
@@ -375,13 +382,21 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       instituteId,
       transaction
     );
-    const securityPaymentRow = await repo.findAssetSecurityPaymentByIssueId(
-      issue.assetIssueTransactionId,
-      instituteId,
-      { transaction }
-    );
+    const [securityPaymentRow, itemStatsByTransactionId] = await Promise.all([
+      repo.findAssetSecurityPaymentByIssueId(issue.assetIssueTransactionId, instituteId, {
+        transaction,
+      }),
+      repo.countIssueItemStatsByTransactionIds([issue.assetIssueTransactionId], instituteId, {
+        transaction,
+      }),
+    ]);
 
-    return formatAssetIssueRecord(issuePlain, memberBasicDetails, securityPaymentRow);
+    return formatAssetIssueRecord(
+      issuePlain,
+      memberBasicDetails,
+      securityPaymentRow,
+      itemStatsByTransactionId[issue.assetIssueTransactionId]
+    );
   });
 
   return row;
@@ -395,24 +410,22 @@ export async function listAssetIssues(instituteId, query) {
   );
 
   const assetIssues = rows.map(toPlain);
-  const studentIds = [
-    ...new Set(
-      assetIssues
-        .filter((issue) => issue.memberType === "STUDENT")
-        .map((issue) => issue.memberId)
-    ),
-  ];
-  const employeeIds = [
-    ...new Set(
-      assetIssues
-        .filter((issue) => issue.memberType === "TEACHER")
-        .map((issue) => issue.memberId)
-    ),
-  ];
+  const transactionIds = assetIssues.map((issue) => issue.assetIssueTransactionId);
+  const studentIds = [];
+  const employeeIds = [];
 
-  const [studentRows, employeeRows] = await Promise.all([
-    repo.findStudentMemberDetailsByIds(studentIds, instituteId),
-    repo.findEmployeeMemberDetailsByIds(employeeIds, instituteId),
+  for (const issue of assetIssues) {
+    if (issue.memberType === "STUDENT") {
+      studentIds.push(issue.memberId);
+    } else if (issue.memberType === "TEACHER") {
+      employeeIds.push(issue.memberId);
+    }
+  }
+
+  const [studentRows, employeeRows, itemStatsByTransactionId] = await Promise.all([
+    repo.findStudentMemberDetailsByIds([...new Set(studentIds)], instituteId),
+    repo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)], instituteId),
+    repo.countIssueItemStatsByTransactionIds(transactionIds, instituteId),
   ]);
 
   const studentMap = new Map(studentRows.map((row) => [toPlain(row).studentId, row]));
@@ -424,7 +437,12 @@ export async function listAssetIssues(instituteId, query) {
         ? buildMemberDetailsFromStudent(issue.memberId, studentMap.get(issue.memberId))
         : buildMemberDetailsFromEmployee(issue.memberId, employeeMap.get(issue.memberId));
 
-    return formatAssetIssueRecord(issue, memberBasicDetails);
+    return formatAssetIssueRecord(
+      issue,
+      memberBasicDetails,
+      null,
+      itemStatsByTransactionId[issue.assetIssueTransactionId]
+    );
   });
 
   return {
@@ -519,13 +537,19 @@ export async function getSingleAssetIssue(assetIssueTransactionId, instituteId) 
       instituteId,
       transaction
     );
-    const securityPaymentRow = await repo.findAssetSecurityPaymentByIssueId(
-      assetIssueTransactionId,
-      instituteId,
-      { transaction }
-    );
+    const [securityPaymentRow, itemStatsByTransactionId] = await Promise.all([
+      repo.findAssetSecurityPaymentByIssueId(assetIssueTransactionId, instituteId, { transaction }),
+      repo.countIssueItemStatsByTransactionIds([assetIssueTransactionId], instituteId, {
+        transaction,
+      }),
+    ]);
 
-    return formatAssetIssueRecord(issuePlain, memberBasicDetails, securityPaymentRow);
+    return formatAssetIssueRecord(
+      issuePlain,
+      memberBasicDetails,
+      securityPaymentRow,
+      itemStatsByTransactionId[assetIssueTransactionId]
+    );
   });
 
   return data;
@@ -573,13 +597,19 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
       instituteId,
       transaction
     );
-    const securityPaymentRow = await repo.findAssetSecurityPaymentByIssueId(
-      assetIssueTransactionId,
-      instituteId,
-      { transaction }
-    );
+    const [securityPaymentRow, itemStatsByTransactionId] = await Promise.all([
+      repo.findAssetSecurityPaymentByIssueId(assetIssueTransactionId, instituteId, { transaction }),
+      repo.countIssueItemStatsByTransactionIds([assetIssueTransactionId], instituteId, {
+        transaction,
+      }),
+    ]);
 
-    return formatAssetIssueRecord(updatedPlain, memberBasicDetails, securityPaymentRow);
+    return formatAssetIssueRecord(
+      updatedPlain,
+      memberBasicDetails,
+      securityPaymentRow,
+      itemStatsByTransactionId[assetIssueTransactionId]
+    );
   });
 
   return data;

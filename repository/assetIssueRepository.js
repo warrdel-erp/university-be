@@ -361,6 +361,62 @@ export async function findAssetIssuesPaginated(instituteId, filters = {}, pagina
   return { rows, total: count, page, limit };
 }
 
+/** Per issue transaction: total lines issued and lines with a return recorded. */
+export async function countIssueItemStatsByTransactionIds(
+  assetIssueTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetIssueTransactionIds.length) {
+    return {};
+  }
+
+  const { transaction } = options;
+  const db = model.assetIssueInventoryItemModel.sequelize;
+
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: [
+      "assetIssueTransactionId",
+      [db.fn("COUNT", db.col("asset_issue_inventory_item_id")), "issuedTotalItems"],
+      [
+        db.fn(
+          "SUM",
+          db.literal(
+            "CASE WHEN asset_issue_inventory_item.asset_return_transaction_id IS NOT NULL THEN 1 ELSE 0 END"
+          )
+        ),
+        "returnedTotalItems",
+      ],
+    ],
+    where: { assetIssueTransactionId: assetIssueTransactionIds },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    group: ["assetIssueTransactionId"],
+    raw: true,
+    subQuery: false,
+    transaction,
+  });
+
+  const statsByTransactionId = Object.create(null);
+
+  for (const row of rows) {
+    const assetIssueTransactionId = Number(row.assetIssueTransactionId);
+    statsByTransactionId[assetIssueTransactionId] = {
+      issuedTotalItems: Number(row.issuedTotalItems),
+      returnedTotalItems: Number(row.returnedTotalItems) || 0,
+    };
+  }
+
+  return statsByTransactionId;
+}
+
 export async function findStudentById(studentId, instituteId, options = {}) {
   return model.studentModel.findOne({
     attributes: ["studentId"],
@@ -567,6 +623,14 @@ export async function findAssetReturnTransactionsPaginated(
 
   return { rows, total: count, page, limit };
 }
+
+const issueTransactionIncludeForInstitute = (instituteId) => ({
+  model: model.assetIssueTransactionModel,
+  as: "transaction",
+  attributes: [],
+  where: { instituteId },
+  required: true,
+});
 
 export async function findReturnedIssueItemsByReturnTransactionIds(
   assetReturnTransactionIds,

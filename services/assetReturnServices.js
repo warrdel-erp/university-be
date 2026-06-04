@@ -422,7 +422,10 @@ export async function returnAssetIssueItems(body, instituteId, createdBy) {
 export async function listAssetReturnTransactions(instituteId, query) {
   const { rows, total, page, limit } = await repo.findAssetReturnTransactionsPaginated(
     instituteId,
-    { page: query.page, limit: query.limit }
+    {
+      page: query.page,
+      limit: query.limit,
+    }
   );
 
   const returnRows = rows.map(toPlain);

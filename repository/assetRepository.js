@@ -1,5 +1,10 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import {
+  parseAssetCodeSequenceForNameSlug,
+  parseInventoryItemCopyNumber,
+  nextAssetCodeSequenceFromMax,
+} from "../utility/assetCode.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
 
@@ -128,7 +133,7 @@ export async function findAssetStatusById(assetId, instituteId, options = {}) {
 
 export async function findAssetCategoryByIdForInstitute(assetCategoryId, instituteId, options = {}) {
   return model.assetCategoryModel.findOne({
-    attributes: ["assetCategoryId", "instituteId"],
+    attributes: ["assetCategoryId", "instituteId", "name", "codePrefix"],
     where: { assetCategoryId, instituteId },
     transaction: options.transaction,
   });
@@ -142,24 +147,53 @@ export async function findClassRoomSectionById(classRoomSectionId, options = {})
   });
 }
 
-export async function getNextInventoryCodeSequence(instituteId, options = {}) {
-  const rows = await model.assetInventoryItemModel.findAll({
+export async function getNextAssetCodeSequence(
+  instituteId,
+  categoryPrefix,
+  assetNamePrefix,
+  options = {}
+) {
+  const rows = await model.assetModel.findAll({
     attributes: ["code"],
-    where: {
-      instituteId,
-      code: { [Op.like]: "AST-%" },
-    },
+    where: { instituteId },
     transaction: options.transaction,
   });
 
   let maxSeq = 0;
   for (const row of rows) {
-    const match = /^AST-(\d+)$/.exec(row.code);
-    if (match) {
-      maxSeq = Math.max(maxSeq, Number.parseInt(match[1], 10));
+    const seq = parseAssetCodeSequenceForNameSlug(row.code, categoryPrefix, assetNamePrefix);
+    if (seq !== null) {
+      maxSeq = Math.max(maxSeq, seq);
     }
   }
-  return maxSeq;
+
+  return { sequence: nextAssetCodeSequenceFromMax(maxSeq) };
+}
+
+export async function findAssetCodeById(assetId, instituteId, options = {}) {
+  const row = await model.assetModel.findOne({
+    attributes: ["code"],
+    where: { assetId, instituteId },
+    transaction: options.transaction,
+  });
+  return row?.code ?? null;
+}
+
+export async function getNextInventoryCopyNumber(assetId, instituteId, assetCode, options = {}) {
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["code"],
+    where: { assetId, instituteId },
+    transaction: options.transaction,
+  });
+
+  let maxCopy = 0;
+  for (const row of rows) {
+    const copy = parseInventoryItemCopyNumber(row.code, assetCode);
+    if (copy !== null) {
+      maxCopy = Math.max(maxCopy, copy);
+    }
+  }
+  return maxCopy;
 }
 
 export async function findInventoryItemById(assetInventoryItemId, instituteId, options = {}) {
