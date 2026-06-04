@@ -115,7 +115,7 @@ export async function getFeePlanProfileOptions(courseId, sessionId, instituteId)
     const courseSessionId = mapping.get("sessionCourseMappingId");
     const rows = await model.feePlanProfileModel.findAll({
         attributes: ["feePlanProfileId", "name"],
-        where: { instituteId, courseSessionId },
+        where: { instituteId, courseSessionId, publishStatus: "published" },
         order: [["feePlanProfileId", "ASC"]],
     });
 
