@@ -192,3 +192,5 @@ export const feeTypeLedgerTypes = ["Account Receivable", "Account Payable"];
 export const assetStatuses = ["ISSUED", "IN_STOCK", "MAINTANANCE"];
 
 export const assetConditions = ["GOOD", "FAIR", "EXCELLENT", "BAD"];
+
+export const assetInventoryStatuses = ["NOT_ASSIGNED", "ASSIGNED"];

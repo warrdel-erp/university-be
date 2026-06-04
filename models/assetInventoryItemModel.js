@@ -1,45 +1,34 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
-import assetCategoryModel from "./assetCategoryModel.js";
-import { assetStatuses, assetConditions } from "../constant.js";
+import assetModel from "./assetModel.js";
+import classRoomModel from "./classRoomModel.js";
+import { assetInventoryStatuses } from "../constant.js";
 
 export default sequelize.define(
-  "asset",
+  "asset_inventory_item",
   {
-    assetId: {
+    assetInventoryItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "asset_id",
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
+      field: "asset_inventory_item_id",
     },
     code: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    status: {
-      type: DataTypes.ENUM(...assetStatuses),
-      allowNull: false,
-    },
-    condition: {
-      type: DataTypes.ENUM(...assetConditions),
-      allowNull: false,
-    },
-    description: {
+    barcode: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
-    assetCategoryId: {
+    assetId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: "asset_category_id",
+      field: "asset_id",
       references: {
-        model: assetCategoryModel,
-        key: "asset_category_id",
+        model: assetModel,
+        key: "asset_id",
       },
     },
     instituteId: {
@@ -51,9 +40,23 @@ export default sequelize.define(
         key: "institute_id",
       },
     },
+    classRoomSectionId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "class_room_section_id",
+      references: {
+        model: classRoomModel,
+        key: "class_room_section_id",
+      },
+    },
+    status: {
+      type: DataTypes.ENUM(...assetInventoryStatuses),
+      allowNull: false,
+      defaultValue: "NOT_ASSIGNED",
+    },
   },
   {
-    tableName: "asset",
+    tableName: "asset_inventory_item",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

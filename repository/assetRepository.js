@@ -1,61 +1,124 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
 
-const assetIncludes = [
-  {
-    model: model.assetCategoryModel,
-    as: "assetCategory",
-    attributes: ["assetCategoryId", "name"],
-  },
-  {
-    model: model.departmentModel,
-    as: "department",
-    attributes: ["departmentId", "departmentName"],
-  },
-];
+const classRoomHierarchyInclude = {
+  model: model.classRoomModel,
+  as: "classRoom",
+  attributes: ["classRoomSectionId", "roomNumber", "floorId"],
+  required: false,
+  include: [
+    {
+      model: model.floorModel,
+      as: "roomFloor",
+      attributes: ["floorId", "name", "buildingId"],
+      include: [
+        {
+          model: model.buildingModel,
+          as: "floorBuilding",
+          attributes: ["buildingId", "name", "buildingType", "campusId"],
+        },
+      ],
+    },
+  ],
+};
+
+function buildInventoryWhere(inventoryStatus) {
+  if (inventoryStatus === "assigned") {
+    return { status: "ASSIGNED" };
+  }
+  if (inventoryStatus === "unassigned") {
+    return { status: "NOT_ASSIGNED" };
+  }
+  return undefined;
+}
+
+function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
+  const { separate = false } = options;
+  const where = buildInventoryWhere(inventoryStatus);
+
+  return {
+    model: model.assetInventoryItemModel,
+    as: "inventoryItems",
+    attributes: { exclude: excludeTs },
+    where,
+    required: false,
+    separate: separate || undefined,
+    include: [classRoomHierarchyInclude],
+  };
+}
+
+function buildAssetDetailIncludes(inventoryStatus = "all", options = {}) {
+  return [
+    {
+      model: model.assetCategoryModel,
+      as: "assetCategory",
+      attributes: ["assetCategoryId", "name"],
+    },
+    buildInventoryItemsInclude(inventoryStatus, options),
+  ];
+}
 
 export async function createAsset(data, options = {}) {
   return model.assetModel.create(data, { transaction: options.transaction });
 }
 
-export async function findAssetsByInstitute(instituteId, options = {}) {
-  return model.assetModel.findAll({
+export async function findAssetsByInstitutePaginated(
+  instituteId,
+  filters = {},
+  pagination = {},
+  options = {}
+) {
+  const page = Number(pagination.page) || 1;
+  const limit = Number(pagination.limit) || 20;
+  const offset = (page - 1) * limit;
+  const inventoryStatus = filters.inventoryStatus ?? "all";
+  const assetWhere = { instituteId };
+
+  const total = await model.assetModel.count({
+    where: assetWhere,
+    transaction: options.transaction,
+  });
+
+  const idRows = await model.assetModel.findAll({
+    attributes: ["assetId"],
+    where: assetWhere,
+    order: [["assetId", "ASC"]],
+    limit,
+    offset,
+    transaction: options.transaction,
+  });
+
+  const assetIds = idRows.map((row) => row.assetId);
+  if (!assetIds.length) {
+    return { rows: [], total, page, limit };
+  }
+
+  const rows = await model.assetModel.findAll({
     attributes: { exclude: excludeTs },
-    where: { instituteId },
-    include: [
-      {
-        model: model.assetCategoryModel,
-        as: "assetCategory",
-        attributes: ["assetCategoryId", "name"],
-      },
-      {
-        model: model.departmentModel,
-        as: "department",
-        attributes: ["departmentId", "departmentName"],
-      },
-    ],
+    where: { assetId: assetIds, instituteId },
+    include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
     order: [["assetId", "ASC"]],
     transaction: options.transaction,
   });
+
+  return { rows, total, page, limit };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {
   return model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
-    include: [
-      {
-        model: model.assetCategoryModel,
-        as: "assetCategory",
-        attributes: ["assetCategoryId", "name"],
-      },
-      {
-        model: model.departmentModel,
-        as: "department",
-        attributes: ["departmentId", "departmentName"],
-      },
-    ],
+    include: buildAssetDetailIncludes("all", { separate: true }),
+    transaction: options.transaction,
+  });
+}
+
+export async function findAssetStatusById(assetId, instituteId, options = {}) {
+  return model.assetModel.findOne({
+    attributes: ["assetId", "status"],
+    where: { assetId, instituteId },
     transaction: options.transaction,
   });
 }
@@ -68,12 +131,105 @@ export async function findAssetCategoryByIdForInstitute(assetCategoryId, institu
   });
 }
 
-export async function findDepartmentById(departmentId, options = {}) {
-  return model.departmentModel.findOne({
-    attributes: ["departmentId"],
-    where: { departmentId },
+export async function findClassRoomSectionById(classRoomSectionId, options = {}) {
+  return model.classRoomModel.findOne({
+    attributes: ["classRoomSectionId"],
+    where: { classRoomSectionId },
     transaction: options.transaction,
   });
+}
+
+export async function getNextInventoryCodeSequence(instituteId, options = {}) {
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["code"],
+    where: {
+      instituteId,
+      code: { [Op.like]: "AST-%" },
+    },
+    transaction: options.transaction,
+  });
+
+  let maxSeq = 0;
+  for (const row of rows) {
+    const match = /^AST-(\d+)$/.exec(row.code);
+    if (match) {
+      maxSeq = Math.max(maxSeq, Number.parseInt(match[1], 10));
+    }
+  }
+  return maxSeq;
+}
+
+export async function findInventoryItemById(assetInventoryItemId, instituteId, options = {}) {
+  return model.assetInventoryItemModel.findOne({
+    attributes: { exclude: excludeTs },
+    where: { assetInventoryItemId, instituteId },
+    transaction: options.transaction,
+  });
+}
+
+export async function createInventoryItem(data, options = {}) {
+  return model.assetInventoryItemModel.create(data, { transaction: options.transaction });
+}
+
+export async function bulkCreateInventoryItems(rows, options = {}) {
+  return model.assetInventoryItemModel.bulkCreate(rows, { transaction: options.transaction });
+}
+
+export async function updateInventoryItem(
+  assetInventoryItemId,
+  instituteId,
+  assetId,
+  payload,
+  options = {}
+) {
+  const [affected] = await model.assetInventoryItemModel.update(payload, {
+    where: { assetInventoryItemId, instituteId, assetId },
+    transaction: options.transaction,
+  });
+  return affected;
+}
+
+export async function countInventoryItemsByAsset(assetId, instituteId, options = {}) {
+  return model.assetInventoryItemModel.count({
+    where: { assetId, instituteId },
+    transaction: options.transaction,
+  });
+}
+
+export async function countOpenIssuesForInventoryItem(assetInventoryItemId, options = {}) {
+  return model.assetIssueInventoryItemModel.count({
+    where: {
+      assetInventoryItemId,
+      assetReturnTransactionId: null,
+    },
+    transaction: options.transaction,
+  });
+}
+
+export async function countOpenIssuesForAsset(assetId, instituteId, options = {}) {
+  const inventoryItems = await model.assetInventoryItemModel.findAll({
+    attributes: ["assetInventoryItemId"],
+    where: { assetId, instituteId },
+    transaction: options.transaction,
+  });
+  if (!inventoryItems.length) return 0;
+
+  const inventoryIds = inventoryItems.map((row) => row.assetInventoryItemId);
+  return model.assetIssueInventoryItemModel.count({
+    where: {
+      assetInventoryItemId: { [Op.in]: inventoryIds },
+      assetReturnTransactionId: null,
+    },
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteInventoryItem(assetInventoryItemId, instituteId, options = {}) {
+  const deleted = await model.assetInventoryItemModel.destroy({
+    where: { assetInventoryItemId, instituteId },
+    transaction: options.transaction,
+  });
+  return deleted > 0;
 }
 
 export async function updateAsset(assetId, instituteId, payload, options = {}) {

@@ -1,32 +1,23 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
-import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
-  "asset_location",
+  "asset_return_transaction",
   {
-    assetLocationId: {
+    assetReturnTransactionId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "asset_location_id",
+      field: "asset_return_transaction_id",
     },
-    name: {
-      type: DataTypes.STRING,
+    returnDate: {
+      type: DataTypes.DATEONLY,
       allowNull: false,
-    },
-    instituteId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "institute_id",
-      references: {
-        model: instituteModel,
-        key: "institute_id",
-      },
+      field: "return_date",
     },
   },
   {
-    tableName: "asset_locations",
+    tableName: "asset_return_transaction",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

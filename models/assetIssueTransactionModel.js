@@ -3,13 +3,13 @@ import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 
 export default sequelize.define(
-  "asset_issue",
+  "asset_issue_transaction",
   {
-    assetIssueId: {
+    assetIssueTransactionId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "asset_issue_id",
+      field: "asset_issue_transaction_id",
     },
     instituteId: {
       type: DataTypes.INTEGER,
@@ -40,13 +40,9 @@ export default sequelize.define(
       allowNull: false,
       field: "due_date",
     },
-    remarks: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
   },
   {
-    tableName: "asset_issue",
+    tableName: "asset_issue_transaction",
     charset: "latin1",
     collate: "latin1_swedish_ci",
     timestamps: true,

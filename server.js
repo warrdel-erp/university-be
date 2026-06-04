@@ -26,7 +26,6 @@ import feeGroup from "./router/feeGroupRoute.js";
 import feeType from "./router/feeTypeRoute.js";
 import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
 import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
-import assetLocation from "./router/assetLocationRoute.js";
 import assetCategory from "./router/assetCategoryRoute.js";
 import asset from "./router/assetRoute.js";
 import assetIssue from "./router/assetIssueRoute.js";
@@ -213,7 +212,6 @@ app.use("/feePlanProfile", feePlanProfile);
 app.use("/studentFeeInvoice", studentFeeInvoice);
 app.use("/studentFeePayment", studentFeePayment);
 
-app.use("/assetLocation", assetLocation);
 app.use("/assetCategory", assetCategory);
 app.use("/asset", asset);
 app.use("/assetIssue", assetIssue);

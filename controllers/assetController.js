@@ -12,8 +12,11 @@ export async function addAsset(req, res) {
 
 export async function getAllAsset(req, res) {
   try {
-    const rows = await assetService.listAssets(req.user.defaultInstituteId);
-    return SuccessResponse(res, 200, "Assets fetched successfully", rows);
+    const { data, pagination } = await assetService.listAssets(
+      req.user.defaultInstituteId,
+      req.query
+    );
+    return SuccessResponse(res, 200, "Assets fetched successfully", data, pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -47,6 +50,24 @@ export async function deleteAsset(req, res) {
     const { assetId } = req.query;
     await assetService.deleteAsset(assetId, req.user.defaultInstituteId);
     return SuccessResponse(res, 200, `Asset deleted successfully (ID ${assetId})`, null);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function deleteAssetInventoryItem(req, res) {
+  try {
+    const { assetInventoryItemId } = req.query;
+    await assetService.deleteAssetInventoryItem(
+      assetInventoryItemId,
+      req.user.defaultInstituteId
+    );
+    return SuccessResponse(
+      res,
+      200,
+      `Asset inventory item deleted successfully (ID ${assetInventoryItemId})`,
+      null
+    );
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
