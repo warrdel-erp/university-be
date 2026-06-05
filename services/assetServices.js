@@ -22,20 +22,35 @@ export function deriveAssetStatusFromInventory(openIssues, totalInventory) {
 }
 
 export async function syncAssetStatusFromInventory(assetId, instituteId, options = {}) {
-  const { transaction } = options;
+  await syncAssetStatusesFromInventory([assetId], instituteId, options);
+}
 
-  const asset = await repo.findAssetStatusById(assetId, instituteId, { transaction });
-  if (!asset || asset.status === "MAINTANANCE") {
+export async function syncAssetStatusesFromInventory(assetIds, instituteId, options = {}) {
+  const uniqueAssetIds = [...new Set(assetIds)];
+  if (!uniqueAssetIds.length) {
     return;
   }
 
-  const totalInventory = await repo.countInventoryItemsByAsset(assetId, instituteId, { transaction });
-  const openIssues = await repo.countOpenIssuesForAsset(assetId, instituteId, { transaction });
-  const nextStatus = deriveAssetStatusFromInventory(openIssues, totalInventory);
+  const { transaction } = options;
+  const [assets, statsByAssetId] = await Promise.all([
+    repo.findAssetStatusesByIds(uniqueAssetIds, instituteId, { transaction }),
+    repo.countInventoryStatsByAssetIds(uniqueAssetIds, instituteId, { transaction }),
+  ]);
 
-  if (asset.status !== nextStatus) {
-    await repo.updateAsset(assetId, instituteId, { status: nextStatus }, { transaction });
-  }
+  await Promise.all(
+    assets.map(async (asset) => {
+      if (asset.status === "MAINTANANCE") {
+        return;
+      }
+
+      const stats = statsByAssetId[asset.assetId] ?? { totalInventory: 0, issuedCount: 0 };
+      const nextStatus = deriveAssetStatusFromInventory(stats.issuedCount, stats.totalInventory);
+
+      if (asset.status !== nextStatus) {
+        await repo.updateAsset(asset.assetId, instituteId, { status: nextStatus }, { transaction });
+      }
+    })
+  );
 }
 
 function httpError(message, statusCode = 400) {
@@ -64,6 +79,24 @@ function attachInventoryCounts(assetPlain, statsByAssetId = {}) {
   const raw = statsByAssetId[assetPlain.assetId];
   const counts = buildInventoryCounts(raw?.totalInventory, raw?.issuedCount);
   return { ...assetPlain, ...counts };
+}
+
+function computeInventoryStatsFromLoadedItems(inventoryItems = []) {
+  const issuedCount = inventoryItems.filter((item) => (item.issueInventoryItems ?? []).length > 0).length;
+
+  return buildInventoryCounts(inventoryItems.length, issuedCount);
+}
+
+function stripOpenIssueLinesFromInventoryItems(assetPlain) {
+  return {
+    ...assetPlain,
+    inventoryItems: (assetPlain.inventoryItems ?? []).map(({ issueInventoryItems, ...item }) => item),
+  };
+}
+
+function attachInventoryCountsFromLoadedItems(assetPlain) {
+  const counts = computeInventoryStatsFromLoadedItems(assetPlain.inventoryItems);
+  return { ...stripOpenIssueLinesFromInventoryItems(assetPlain), ...counts };
 }
 
 function stripInventoryAppendFields(body) {
@@ -274,19 +307,12 @@ export async function listAssets(instituteId, query = {}) {
 }
 
 export async function getSingleAsset(assetId, instituteId) {
-  const row = await sequelize.transaction(async (transaction) => {
-    const asset = await repo.findAssetById(assetId, instituteId, { transaction });
-    if (!asset) {
-      return null;
-    }
+  const asset = await repo.findAssetById(assetId, instituteId);
+  if (!asset) {
+    return null;
+  }
 
-    const statsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId, {
-      transaction,
-    });
-
-    return attachInventoryCounts(toPlain(asset), statsByAssetId);
-  });
-  return row;
+  return attachInventoryCountsFromLoadedItems(toPlain(asset));
 }
 
 export async function updateAsset(assetId, body, instituteId) {

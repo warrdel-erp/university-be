@@ -650,6 +650,40 @@ assetIssueTransactionModel.hasMany(assetIssueInventoryItemModel, {
   as: "items",
 });
 
+studentModel.hasMany(assetIssueTransactionModel, {
+  foreignKey: "memberId",
+  scope: { memberType: "STUDENT" },
+  constraints: false,
+  as: "assetIssueTransactions",
+});
+assetIssueTransactionModel.belongsTo(studentModel, {
+  foreignKey: "memberId",
+  targetKey: "studentId",
+  constraints: false,
+  as: "studentMember",
+});
+
+employeeModel.hasMany(assetIssueTransactionModel, {
+  foreignKey: "memberId",
+  scope: { memberType: "TEACHER" },
+  constraints: false,
+  as: "assetIssueTransactions",
+});
+assetIssueTransactionModel.belongsTo(employeeModel, {
+  foreignKey: "memberId",
+  targetKey: "employeeId",
+  constraints: false,
+  as: "teacherMember",
+});
+
+assetIssueTransactionModel.hasMany(paymentItemModel, {
+  foreignKey: "referenceId",
+  sourceKey: "assetIssueTransactionId",
+  scope: { referenceType: "ASSET_SECURITY" },
+  constraints: false,
+  as: "securityPaymentItems",
+});
+
 assetIssueInventoryItemModel.belongsTo(assetInventoryItemModel, {
   foreignKey: "assetInventoryItemId",
   as: "inventoryItem",
@@ -1051,6 +1085,19 @@ studentFeePaymentModel.hasMany(paymentItemModel, {
 paymentItemModel.belongsTo(studentFeePaymentModel, {
   foreignKey: "paymentId",
   as: "payment",
+});
+
+studentFeePaymentModel.belongsTo(studentModel, {
+  foreignKey: "payeeId",
+  targetKey: "studentId",
+  constraints: false,
+  as: "studentPayee",
+});
+studentFeePaymentModel.belongsTo(employeeModel, {
+  foreignKey: "payeeId",
+  targetKey: "employeeId",
+  constraints: false,
+  as: "employeePayee",
 });
 
 studentFeeInvoiceItemsModel.belongsTo(feeTypeCatalogModel, {

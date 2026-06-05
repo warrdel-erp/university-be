@@ -8,7 +8,7 @@ import {
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
-import { syncAssetStatusFromInventory } from "./assetServices.js";
+import { syncAssetStatusesFromInventory } from "./assetServices.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -374,9 +374,7 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
   }
 
   const assetIds = [...new Set(issueLines.map((row) => toPlain(row).inventoryItem.assetId))];
-  for (const assetId of assetIds) {
-    await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
-  }
+  await syncAssetStatusesFromInventory(assetIds, instituteId, { transaction });
 
   const updatedItems = await repo.findIssueInventoryItemsByIds(uniqueItemIds, { transaction });
 
@@ -491,44 +489,34 @@ export async function listAssetReturnTransactions(instituteId, query) {
 }
 
 export async function getAssetReturnPaymentsById(assetReturnTransactionId, instituteId) {
-  const returnRow = await repo.findAssetReturnTransactionByIdForInstitute(
-    assetReturnTransactionId,
-    instituteId
-  );
+  const [returnRow, settlementPaymentRows, issueItemRows] = await Promise.all([
+    repo.findAssetReturnTransactionByIdForInstitute(assetReturnTransactionId, instituteId),
+    repo.findReturnSettlementPaymentsByReturnIds([assetReturnTransactionId], instituteId),
+    repo.findReturnedIssueItemsByReturnTransactionIds([assetReturnTransactionId], instituteId, {
+      includeMember: true,
+    }),
+  ]);
+
   if (!returnRow) {
     throw httpError("Asset return transaction not found", 404);
   }
 
   const returnPlain = toPlain(returnRow);
   const returnId = returnPlain.assetReturnTransactionId;
-
-  const [settlementPaymentRows, issueItemRows] = await Promise.all([
-    repo.findReturnSettlementPaymentsByReturnIds([returnId], instituteId),
-    repo.findReturnedIssueItemsByReturnTransactionIds([returnId], instituteId),
-  ]);
-
-  const returnItems = issueItemRows.map(toPlain);
-  const firstTxn = returnItems[0]?.transaction;
-  const memberBasicDetails = firstTxn
-    ? await getMemberDetails(firstTxn.memberType, firstTxn.memberId, instituteId)
-    : null;
-
-  const { studentMap, employeeMap } = await loadPayeeLookupMaps(settlementPaymentRows, instituteId);
+  const firstTxn = toPlain(issueItemRows[0])?.transaction ?? null;
+  const memberBasicDetails = extractMemberBasicDetailsFromTransaction(firstTxn);
 
   const payments = settlementPaymentRows
-    .map((row) => {
-      const payment = toPlain(row).payment;
-      return formatAssetReturnPaymentRecord(
+    .map((row) =>
+      formatAssetReturnPaymentRecord(
         row,
         {
           paymentPurpose: "RETURN_SETTLEMENT",
           assetReturnTransactionId: returnId,
         },
-        payment
-          ? resolvePayeeDetails(payment.payeeType, payment.payeeId, studentMap, employeeMap)
-          : null
-      );
-    })
+        resolvePayeeDetailsFromPayment(toPlain(row).payment)
+      )
+    )
     .filter(Boolean);
 
   return {
