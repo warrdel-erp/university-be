@@ -114,7 +114,13 @@ export async function findIssueInventoryItemsForReturn(
       {
         model: model.assetIssueTransactionModel,
         as: "transaction",
-        attributes: ["assetIssueTransactionId", "issueDate", "instituteId"],
+        attributes: [
+          "assetIssueTransactionId",
+          "issueDate",
+          "instituteId",
+          "memberId",
+          "memberType",
+        ],
         where: { instituteId },
         required: true,
       },
@@ -158,6 +164,38 @@ export async function returnIssueInventoryItems(items, assetReturnTransactionId,
   }
 
   return affected;
+}
+
+export async function findReturnTransactionIdsByIssueTransactionId(
+  assetIssueTransactionId,
+  instituteId,
+  options = {}
+) {
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: ["assetReturnTransactionId"],
+    where: {
+      assetIssueTransactionId,
+      assetReturnTransactionId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  return [
+    ...new Set(
+      rows
+        .map((row) => row.assetReturnTransactionId)
+        .filter((returnId) => returnId != null)
+    ),
+  ];
 }
 
 export async function findAssetSecurityPaymentsByIssueIds(
@@ -206,6 +244,45 @@ export async function findAssetSecurityPaymentByIssueId(
     options
   );
   return rows[0] ?? null;
+}
+
+export async function findReturnSettlementPaymentsByReturnIds(
+  assetReturnTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetReturnTransactionIds.length) return [];
+
+  return model.paymentItemModel.findAll({
+    attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
+    where: {
+      referenceId: assetReturnTransactionIds,
+      referenceType: "OTHER",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: [
+          "studentFeePaymentId",
+          "paymentType",
+          "payeeId",
+          "payeeType",
+          "amount",
+          "paymentMethod",
+          "referenceNumber",
+          "transactionId",
+          "remark",
+        ],
+        required: true,
+        where: {
+          instituteId,
+          remark: { [Op.like]: "Asset return%" },
+        },
+      },
+    ],
+    transaction: options.transaction,
+  });
 }
 
 export async function findIssueInventoryItemsByIds(assetIssueInventoryItemIds, options = {}) {
@@ -282,6 +359,62 @@ export async function findAssetIssuesPaginated(instituteId, filters = {}, pagina
   });
 
   return { rows, total: count, page, limit };
+}
+
+/** Per issue transaction: total lines issued and lines with a return recorded. */
+export async function countIssueItemStatsByTransactionIds(
+  assetIssueTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetIssueTransactionIds.length) {
+    return {};
+  }
+
+  const { transaction } = options;
+  const db = model.assetIssueInventoryItemModel.sequelize;
+
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: [
+      "assetIssueTransactionId",
+      [db.fn("COUNT", db.col("asset_issue_inventory_item_id")), "issuedTotalItems"],
+      [
+        db.fn(
+          "SUM",
+          db.literal(
+            "CASE WHEN asset_issue_inventory_item.asset_return_transaction_id IS NOT NULL THEN 1 ELSE 0 END"
+          )
+        ),
+        "returnedTotalItems",
+      ],
+    ],
+    where: { assetIssueTransactionId: assetIssueTransactionIds },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    group: ["assetIssueTransactionId"],
+    raw: true,
+    subQuery: false,
+    transaction,
+  });
+
+  const statsByTransactionId = Object.create(null);
+
+  for (const row of rows) {
+    const assetIssueTransactionId = Number(row.assetIssueTransactionId);
+    statsByTransactionId[assetIssueTransactionId] = {
+      issuedTotalItems: Number(row.issuedTotalItems),
+      returnedTotalItems: Number(row.returnedTotalItems) || 0,
+    };
+  }
+
+  return statsByTransactionId;
 }
 
 export async function findStudentById(studentId, instituteId, options = {}) {
@@ -422,6 +555,35 @@ const returnedIssueItemDetailIncludes = [
   },
 ];
 
+export async function findAssetReturnTransactionByIdForInstitute(
+  assetReturnTransactionId,
+  instituteId,
+  options = {}
+) {
+  return model.assetReturnTransactionModel.findOne({
+    attributes: ["assetReturnTransactionId", "returnDate"],
+    where: { assetReturnTransactionId },
+    include: [
+      {
+        model: model.assetIssueInventoryItemModel,
+        as: "returnedIssueItems",
+        attributes: ["assetIssueInventoryItemId"],
+        required: true,
+        include: [
+          {
+            model: model.assetIssueTransactionModel,
+            as: "transaction",
+            attributes: [],
+            where: { instituteId },
+            required: true,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function findAssetReturnTransactionsPaginated(
   instituteId,
   pagination = {},
@@ -461,6 +623,14 @@ export async function findAssetReturnTransactionsPaginated(
 
   return { rows, total: count, page, limit };
 }
+
+const issueTransactionIncludeForInstitute = (instituteId) => ({
+  model: model.assetIssueTransactionModel,
+  as: "transaction",
+  attributes: [],
+  where: { instituteId },
+  required: true,
+});
 
 export async function findReturnedIssueItemsByReturnTransactionIds(
   assetReturnTransactionIds,

@@ -5,7 +5,9 @@ import { assetConditions } from "../constant.js";
 import {
   addAssetIssue,
   getAllAssetIssues,
+  getAssetIssuePaymentsById,
   getAllAssetReturnTransactions,
+  getAssetReturnPaymentsById,
   getSingleAssetIssue,
   updateAssetIssue,
   returnAssetIssueItems,
@@ -44,18 +46,28 @@ const createAssetIssueSchema = z.object({
     .min(1),
 });
 
-const returnAssetIssueSchema = z.object({
-  returnDate: z.string().date(),
-  items: z
-    .array(
-      z.object({
-        assetIssueInventoryItemId: positiveIntegerId,
-        returnCondition: assetReturnConditionSchema,
-        damageNotes: z.string().trim().optional().nullable(),
-      })
-    )
-    .min(1),
-});
+const returnAssetIssueSchema = z
+  .object({
+    returnDate: z.string().date(),
+    securityAmount: moneyAmount.optional(),
+    fineAmount: moneyAmount.optional(),
+    paymentMethod: paymentMethodEnum.optional().default("cash"),
+    items: z
+      .array(
+        z.object({
+          assetIssueInventoryItemId: positiveIntegerId,
+          returnCondition: assetReturnConditionSchema,
+          damageNotes: z.string().trim().optional().nullable(),
+        })
+      )
+      .min(1),
+  })
+  .refine(
+    (data) =>
+      (data.securityAmount === undefined && data.fineAmount === undefined) ||
+      (data.securityAmount !== undefined && data.fineAmount !== undefined),
+    { message: "securityAmount and fineAmount must be provided together" }
+  );
 
 const listAssetIssueQuerySchema = z.object({
   page: z.coerce.number().int("page must be an integer").min(1).optional().default(1),
@@ -74,6 +86,10 @@ const listAssetIssueQuerySchema = z.object({
 });
 
 const singleAssetIssueQuerySchema = z.object({
+  assetIssueTransactionId: positiveIntegerId,
+});
+
+const assetIssuePaymentsQuerySchema = z.object({
   assetIssueTransactionId: positiveIntegerId,
 });
 
@@ -105,9 +121,26 @@ const listAssetReturnQuerySchema = z.object({
     .default(20),
 });
 
+const assetReturnPaymentsQuerySchema = z.object({
+  assetReturnTransactionId: positiveIntegerId,
+});
+
 router.post("/", userAuth, validate({ body: createAssetIssueSchema }), addAssetIssue);
+
 router.post("/return", userAuth, validate({ body: returnAssetIssueSchema }), returnAssetIssueItems);
+router.get(
+  "/return/payments",
+  userAuth,
+  validate({ query: assetReturnPaymentsQuerySchema }),
+  getAssetReturnPaymentsById
+);
 router.get("/return", userAuth, validate({ query: listAssetReturnQuerySchema }), getAllAssetReturnTransactions);
+router.get(
+  "/payments",
+  userAuth,
+  validate({ query: assetIssuePaymentsQuerySchema }),
+  getAssetIssuePaymentsById
+);
 router.get("/", userAuth, validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
 router.get("/single", userAuth, validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
 router.patch("/", userAuth, validate({ body: updateAssetIssueSchema }), updateAssetIssue);
