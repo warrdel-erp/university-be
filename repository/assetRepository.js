@@ -80,6 +80,43 @@ export async function createAsset(data, options = {}) {
   return model.assetModel.create(data, { transaction: options.transaction });
 }
 
+function buildAssetListWhere(instituteId, filters = {}) {
+  const search = filters.search?.trim();
+  if (!search) {
+    return { instituteId };
+  }
+
+  const pattern = { [Op.like]: `%${search}%` };
+
+  return {
+    [Op.and]: [
+      { instituteId },
+      {
+        [Op.or]: [
+          { name: pattern },
+          { code: pattern },
+          { "$assetCategory.name$": pattern },
+        ],
+      },
+    ],
+  };
+}
+
+function buildAssetListSearchInclude(filters = {}) {
+  if (!filters.search?.trim()) {
+    return [];
+  }
+
+  return [
+    {
+      model: model.assetCategoryModel,
+      as: "assetCategory",
+      attributes: [],
+      required: false,
+    },
+  ];
+}
+
 export async function findAssetsByInstitutePaginated(
   instituteId,
   filters = {},
@@ -90,19 +127,25 @@ export async function findAssetsByInstitutePaginated(
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
   const inventoryStatus = filters.inventoryStatus ?? "all";
-  const assetWhere = { instituteId };
+  const assetWhere = buildAssetListWhere(instituteId, filters);
+  const searchIncludes = buildAssetListSearchInclude(filters);
 
   const total = await model.assetModel.count({
     where: assetWhere,
+    include: searchIncludes,
+    distinct: Boolean(searchIncludes.length),
+    col: searchIncludes.length ? "asset_id" : undefined,
     transaction: options.transaction,
   });
 
   const idRows = await model.assetModel.findAll({
     attributes: ["assetId"],
     where: assetWhere,
+    include: searchIncludes,
     order: [["assetId", "ASC"]],
     limit,
     offset,
+    subQuery: searchIncludes.length ? false : undefined,
     transaction: options.transaction,
   });
 

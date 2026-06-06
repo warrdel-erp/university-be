@@ -299,7 +299,7 @@ export async function listAssets(instituteId, query = {}) {
     (transaction) =>
       repo.findAssetsByInstitutePaginated(
         instituteId,
-        { inventoryStatus: query.status },
+        { inventoryStatus: query.status, search: query.search },
         { page: query.page, limit: query.limit },
         { transaction }
       )

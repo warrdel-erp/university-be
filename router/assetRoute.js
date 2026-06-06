@@ -50,6 +50,11 @@ const listAssetQuerySchema = z.object({
     })
     .optional()
     .default("all"),
+  search: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
 });
 
 const assetInventoryItemIdQuerySchema = z.object({
