@@ -6,6 +6,7 @@ import {
   addAsset,
   getAllAsset,
   getSingleAssetDetails,
+  previewAssetCode,
   updateAsset,
   deleteAsset,
   deleteAssetInventoryItem,
@@ -31,6 +32,11 @@ const assetInventoryStatusSchema = z.enum(assetInventoryStatuses, {
 
 const assetIdQuerySchema = z.object({
   assetId: positiveIntegerId,
+});
+
+const assetCodePreviewQuerySchema = z.object({
+  name: z.string().trim().min(1),
+  assetCategoryId: positiveIntegerId,
 });
 
 const listAssetQuerySchema = z.object({
@@ -104,6 +110,12 @@ const updateAssetSchema = z
 router.post("/", userAuth, validate({ body: addAssetSchema }), addAsset);
 
 router.get("/", userAuth, validate({ query: listAssetQuerySchema }), getAllAsset);
+router.get(
+  "/codepreview",
+  userAuth,
+  validate({ query: assetCodePreviewQuerySchema }),
+  previewAssetCode
+);
 router.get("/single", userAuth, validate({ query: assetIdQuerySchema }), getSingleAssetDetails);
 router.patch("/", userAuth, validate({ body: updateAssetSchema }), updateAsset);
 router.delete("/", userAuth, validate({ query: assetIdQuerySchema }), deleteAsset);

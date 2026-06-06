@@ -147,6 +147,24 @@ async function resolveAssetCategory(assetCategoryId, instituteId, transaction) {
   return category;
 }
 
+async function resolveNextAssetCode(name, assetCategoryId, instituteId, transaction) {
+  const category = await resolveAssetCategory(assetCategoryId, instituteId, transaction);
+  const assetNamePrefix = deriveAssetNameCodePrefix(name);
+  const { sequence } = await repo.getNextAssetCodeSequence(
+    instituteId,
+    category.codePrefix,
+    assetNamePrefix,
+    { transaction }
+  );
+
+  return {
+    code: formatAssetCode(category.codePrefix, assetNamePrefix, sequence),
+    category,
+    assetNamePrefix,
+    sequence,
+  };
+}
+
 async function validateAssetReferences(body, instituteId, transaction) {
   if (body.assetCategoryId !== undefined) {
     await resolveAssetCategory(body.assetCategoryId, instituteId, transaction);
@@ -250,20 +268,31 @@ async function createInventoryRowsByBulkGroups(
   }
 }
 
+export async function previewAssetCode(query, instituteId) {
+  const { code, category } = await resolveNextAssetCode(
+    query.name,
+    query.assetCategoryId,
+    instituteId
+  );
+
+  return {
+    name: query.name,
+    assetCategoryId: category.assetCategoryId,
+    assetCategoryName: category.name,
+    code,
+  };
+}
+
 export async function addAsset(body, instituteId) {
   const row = await sequelize.transaction(async (transaction) => {
     await validateAssetReferences(body, instituteId, transaction);
 
-    const category = await resolveAssetCategory(body.assetCategoryId, instituteId, transaction);
-    const assetNamePrefix = deriveAssetNameCodePrefix(body.name);
-    const { sequence } = await repo.getNextAssetCodeSequence(
+    const { code: assetCode } = await resolveNextAssetCode(
+      body.name,
+      body.assetCategoryId,
       instituteId,
-      category.codePrefix,
-      assetNamePrefix,
-      { transaction }
+      transaction
     );
-
-    const assetCode = formatAssetCode(category.codePrefix, assetNamePrefix, sequence);
 
     const created = await repo.createAsset(
       {

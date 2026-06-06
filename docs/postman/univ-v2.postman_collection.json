@@ -8582,7 +8582,7 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset?page&limit&status&search` (`status`: all \\| assigned \\| unassigned; `search`: name, code, category) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture → `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name → `001`, `002`, …)\n- Do **not** send `code` on create/update — server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` → `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`, `asset_search`",
+      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset/codepreview?name&assetCategoryId` — preview next auto code (read-only) |\n| GET | `/asset?page&limit&status&search` (`status`: all \\| assigned \\| unassigned; `search`: name, code, category) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture → `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name → `001`, `002`, …)\n- Do **not** send `code` on create/update — server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` → `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`, `asset_search`",
       "item": [
         {
           "name": "assetCategory",
@@ -8833,6 +8833,47 @@
                   ]
                 },
                 "description": "**POST /asset** — Create asset + inventory. **Do not send `code`** — response includes auto `code` (e.g. name **Table** in **Furniture & Fixtures** → `FURN-TBL001`) and `inventoryItems[].code` (e.g. `FURN-TBL001-0001`).\n\n**`inventoryBulk[]`** (optional on create; omit key for master-only):\n\n| Row field | Required | Notes |\n|-----------|----------|--------|\n| `count` | yes | Min 1 per row |\n| `classRoomSectionId` | no | Omit or `null` → `NOT_ASSIGNED`; set → `ASSIGNED` |\n\nExample: 2 in room + 2 unassigned = 4 copies. Unassigned-only: `\"inventoryBulk\": [{ \"count\": 4 }]`.\n\nRequired master: `name`, `condition`, `assetCategoryId`. Body must be strict JSON (no `//` comments)."
+              },
+              "response": []
+            },
+            {
+              "name": "code preview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset/codepreview?name=Dell Laptop&assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset",
+                    "codepreview"
+                  ],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": "Dell Laptop",
+                      "description": "Asset name (same as POST /asset)"
+                    },
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}",
+                      "description": "Category id from assetCategory"
+                    }
+                  ]
+                },
+                "description": "**GET /asset/codepreview** — read-only preview of the next auto-generated asset `code` for `name` + `assetCategoryId`.\n\nDoes **not** save or reserve the code. **POST /asset** with the same `name` and `assetCategoryId` assigns the next available code at save time (usually matches preview unless another asset was created in between).\n\n**Response:** `name`, `assetCategoryId`, `assetCategoryName`, `code` (e.g. `IT-DLL001`)."
               },
               "response": []
             },
