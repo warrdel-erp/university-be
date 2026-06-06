@@ -3,7 +3,6 @@ import * as model from "../models/index.js";
 import {
   parseAssetCodeSequenceForNameSlug,
   parseInventoryItemCopyNumber,
-  nextAssetCodeSequenceFromMax,
 } from "../utility/assetCode.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
@@ -237,7 +236,7 @@ export async function getNextAssetCodeSequence(
     }
   }
 
-  return { sequence: nextAssetCodeSequenceFromMax(maxSeq) };
+  return { sequence: Math.max(1, maxSeq + 1) };
 }
 
 export async function findAssetCodeById(assetId, instituteId, options = {}) {

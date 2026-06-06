@@ -1,9 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/assetCategoryRepository.js";
-import {
-  codePrefixForCategoryName,
-  normalizeCategoryCodePrefix,
-} from "../utility/assetCode.js";
+import { codePrefixForCategoryName } from "../utility/assetCode.js";
 
 function updatePayload(body) {
   const { assetCategoryId, ...rest } = body;
@@ -15,7 +12,7 @@ export async function addAssetCategory(body, instituteId) {
     const created = await repo.createAssetCategory(
       {
         name: body.name,
-        codePrefix: normalizeCategoryCodePrefix(codePrefixForCategoryName(body.name)),
+        codePrefix: codePrefixForCategoryName(body.name),
         instituteId,
       },
       { transaction }
