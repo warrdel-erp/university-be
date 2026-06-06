@@ -43,7 +43,20 @@ const createAssetIssueSchema = z.object({
         assetInventoryItemId: positiveIntegerId,
       })
     )
-    .min(1),
+    .min(1)
+    .refine(
+      (items) => {
+        const ids = new Set();
+        for (const item of items) {
+          if (ids.has(item.assetInventoryItemId)) {
+            return false;
+          }
+          ids.add(item.assetInventoryItemId);
+        }
+        return true;
+      },
+      { message: "Duplicate assetInventoryItemId in items" }
+    ),
 });
 
 const returnAssetIssueSchema = z
@@ -142,6 +155,7 @@ router.get(
   getAssetIssuePaymentsById
 );
 router.get("/", userAuth, validate({ query: listAssetIssueQuerySchema }), getAllAssetIssues);
+
 router.get("/single", userAuth, validate({ query: singleAssetIssueQuerySchema }), getSingleAssetIssue);
 router.patch("/", userAuth, validate({ body: updateAssetIssueSchema }), updateAssetIssue);
 

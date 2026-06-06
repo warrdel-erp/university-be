@@ -42,19 +42,21 @@ function buildMemberDetailsFromEmployee(memberId, employeeRow) {
   };
 }
 
-function formatInventoryLocationFields(inventory) {
+function formatInventoryLocationFields(inventory, options = {}) {
   if (!inventory) {
     return {
       classRoomSectionId: null,
-      inventoryStatus: null,
       classRoom: null,
+      ...(options.includeInventoryStatus !== false ? { inventoryStatus: null } : {}),
     };
   }
 
   return {
     classRoomSectionId: inventory.classRoomSectionId ?? null,
-    inventoryStatus: inventory.status ?? null,
     classRoom: inventory.classRoom ? toPlain(inventory.classRoom) : null,
+    ...(options.includeInventoryStatus !== false
+      ? { inventoryStatus: inventory.status ?? null }
+      : {}),
   };
 }
 
@@ -101,13 +103,19 @@ function extractMemberBasicDetails(issuePlain) {
   return buildMemberDetailsFromEmployee(issuePlain.memberId, issuePlain.teacherMember);
 }
 
-function computeItemStatsFromItems(items) {
-  const list = items ?? [];
+async function getIssueItemStats(assetIssueTransactionId, instituteId, transaction) {
+  const statsByIssueId = await repo.countIssueItemStatsByTransactionIds(
+    [assetIssueTransactionId],
+    instituteId,
+    { transaction }
+  );
 
-  return {
-    issuedTotalItems: list.length,
-    returnedTotalItems: list.filter((item) => item.assetReturnTransactionId != null).length,
-  };
+  return (
+    statsByIssueId[assetIssueTransactionId] ?? {
+      issuedTotalItems: 0,
+      returnedTotalItems: 0,
+    }
+  );
 }
 
 function extractSecurityPaymentRow(issuePlain) {
@@ -117,6 +125,15 @@ function extractSecurityPaymentRow(issuePlain) {
   }
 
   return paymentItems[0];
+}
+
+function extractSecurityAmount(securityPaymentRow) {
+  if (!securityPaymentRow) {
+    return 0;
+  }
+
+  const plain = toPlain(securityPaymentRow);
+  return toMoneyNumber(plain.payment?.amount ?? plain.amount);
 }
 
 function resolvePayeeDetailsFromPayment(payment) {
@@ -131,7 +148,11 @@ function resolvePayeeDetailsFromPayment(payment) {
   return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeePayee);
 }
 
-function formatIssueItemBasic(item) {
+function resolveIssueItemStatus(itemPlain) {
+  return itemPlain.assetReturnTransactionId != null ? "returned" : "issued";
+}
+
+function formatIssueItemBasic(item, options = {}) {
   const plain = toPlain(item);
   if (!plain) return null;
 
@@ -141,9 +162,10 @@ function formatIssueItemBasic(item) {
   return {
     assetIssueInventoryItemId: plain.assetIssueInventoryItemId,
     assetInventoryItemId: plain.assetInventoryItemId,
+    itemStatus: resolveIssueItemStatus(plain),
     inventoryCode: inventory?.code ?? null,
     inventoryBarcode: inventory?.barcode ?? null,
-    ...formatInventoryLocationFields(inventory),
+    ...formatInventoryLocationFields(inventory, options),
     asset: asset
       ? {
           assetId: asset.assetId,
@@ -164,11 +186,26 @@ function formatIssueItemBasic(item) {
   };
 }
 
+function formatIssueItems(items, options = {}) {
+  const formattedItems = [];
+
+  for (const item of items ?? []) {
+    const formattedItem = formatIssueItemBasic(item, options);
+    if (formattedItem) {
+      formattedItems.push(formattedItem);
+    }
+  }
+
+  return formattedItems;
+}
+
 function formatAssetIssueRecord(
   issuePlain,
   memberBasicDetails,
   securityPaymentRow = null,
-  itemStats = null
+  itemStats = null,
+  securityAmountOverride = null,
+  options = {}
 ) {
   const record = {
     assetIssueTransactionId: issuePlain.assetIssueTransactionId,
@@ -177,10 +214,12 @@ function formatAssetIssueRecord(
     memberType: issuePlain.memberType,
     issueDate: issuePlain.issueDate,
     dueDate: issuePlain.dueDate,
+    securityAmount:
+      securityAmountOverride ?? extractSecurityAmount(securityPaymentRow),
     memberBasicDetails,
     issuedTotalItems: itemStats?.issuedTotalItems ?? 0,
     returnedTotalItems: itemStats?.returnedTotalItems ?? 0,
-    items: (issuePlain.items ?? []).map(formatIssueItemBasic),
+    items: formatIssueItems(issuePlain.items, options),
   };
 
   if (securityPaymentRow !== null) {
@@ -226,37 +265,43 @@ function assertDueDateOnOrAfterIssueDate(issueDate, dueDate) {
   }
 }
 
-async function validateIssueInventoryItems(items, instituteId, transaction) {
-  if (!items.length) {
+function throwInventoryValidationError(validationError) {
+  if (!validationError) {
+    return;
+  }
+
+  if (validationError.code === "EMPTY") {
     throw httpError("At least one inventory item is required", 400);
   }
 
-  const inventoryItemIds = [...new Set(items.map((item) => item.assetInventoryItemId))];
-  if (inventoryItemIds.length !== items.length) {
-    throw httpError("Duplicate assetInventoryItemId in items", 400);
+  if (validationError.code === "MISSING") {
+    throw httpError(
+      `assetInventoryItemId ${validationError.assetInventoryItemId} not found in your institute`,
+      404
+    );
   }
 
-  const inventoryRows = await repo.findInstituteInventoryItemsByIds(
+  if (validationError.code === "NOT_ASSIGNED") {
+    throw httpError(
+      `assetInventoryItemId ${validationError.assetInventoryItemId} is not assigned to any class room section and cannot be issued`,
+      400
+    );
+  }
+
+  throw httpError(
+    `assetInventoryItemId ${validationError.assetInventoryItemId} is already issued and not returned`,
+    409
+  );
+}
+
+async function validateIssueInventoryItems(items, instituteId, transaction) {
+  const inventoryItemIds = repo.extractInventoryItemIds(items);
+  const validationError = await repo.findIssueInventoryItemValidationError(
     inventoryItemIds,
     instituteId,
     { transaction }
   );
-  const existingInventoryIds = new Set(inventoryRows.map((row) => row.assetInventoryItemId));
-
-  const missingInventoryItemId = inventoryItemIds.find(
-    (inventoryItemId) => !existingInventoryIds.has(inventoryItemId)
-  );
-  if (missingInventoryItemId) {
-    throw httpError(`assetInventoryItemId ${missingInventoryItemId} not found in your institute`, 404);
-  }
-
-  const openLines = await repo.findOpenIssueLinesByInventoryIds(inventoryItemIds, { transaction });
-  if (openLines.length) {
-    throw httpError(
-      `assetInventoryItemId ${openLines[0].assetInventoryItemId} is already issued and not returned`,
-      409
-    );
-  }
+  throwInventoryValidationError(validationError);
 }
 
 async function createSecurityPaymentForAssetIssue(
@@ -320,12 +365,12 @@ export async function createAssetIssue(body, instituteId, createdBy) {
     await validateMember(body.memberType, body.memberId, instituteId, transaction);
     await validateIssueInventoryItems(body.items, instituteId, transaction);
 
-    const inventoryRows = await repo.findInstituteInventoryItemsByIds(
-      [...new Set(body.items.map((item) => item.assetInventoryItemId))],
+    const inventoryItemIds = repo.extractInventoryItemIds(body.items);
+    const issueAssetIds = await repo.findDistinctAssetIdsByInventoryItemIds(
+      inventoryItemIds,
       instituteId,
       { transaction }
     );
-    const issueAssetIds = [...new Set(inventoryRows.map((row) => row.assetId))];
 
     const issue = await repo.createAssetIssue(
       {
@@ -338,13 +383,10 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       { transaction }
     );
 
-    const issueItems = body.items.map((item) => ({
-      assetIssueTransactionId: issue.assetIssueTransactionId,
-      assetInventoryItemId: item.assetInventoryItemId,
-      assetReturnTransactionId: null,
-    }));
-
-    await repo.createAssetIssueInventoryItems(issueItems, { transaction });
+    await repo.createAssetIssueInventoryItems(
+      repo.buildAssetIssueInventoryItemRows(issue.assetIssueTransactionId, body.items),
+      { transaction }
+    );
     await syncAssetStatusesFromInventory(issueAssetIds, instituteId, { transaction });
 
     if (body.securityAmount !== undefined) {
@@ -373,7 +415,7 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       issuePlain,
       extractMemberBasicDetails(issuePlain),
       extractSecurityPaymentRow(issuePlain),
-      computeItemStatsFromItems(issuePlain.items)
+      await getIssueItemStats(issue.assetIssueTransactionId, instituteId, transaction)
     );
   });
 
@@ -381,22 +423,35 @@ export async function createAssetIssue(body, instituteId, createdBy) {
 }
 
 export async function listAssetIssues(instituteId, query) {
-  const { rows, total, page, limit } = await repo.findAssetIssuesPaginated(
+  const {
+    rows,
+    total,
+    page,
+    limit,
+    itemStatsByIssueId,
+    securityAmountByIssueId,
+  } = await repo.findAssetIssuesPaginated(
     instituteId,
     { search: query.search },
     { page: query.page, limit: query.limit }
   );
 
-  const enrichedAssetIssues = rows.map((row) => {
+  const enrichedAssetIssues = [];
+  for (const row of rows) {
     const issue = toPlain(row);
+    const issueId = issue.assetIssueTransactionId;
 
-    return formatAssetIssueRecord(
-      issue,
-      extractMemberBasicDetails(issue),
-      null,
-      computeItemStatsFromItems(issue.items)
+    enrichedAssetIssues.push(
+      formatAssetIssueRecord(
+        issue,
+        extractMemberBasicDetails(issue),
+        null,
+        itemStatsByIssueId[issueId],
+        securityAmountByIssueId[issueId] ?? 0,
+        { includeInventoryStatus: false }
+      )
     );
-  });
+  }
 
   return {
     data: { assetIssues: enrichedAssetIssues },
@@ -467,12 +522,13 @@ export async function getSingleAssetIssue(assetIssueTransactionId, instituteId) 
   }
 
   const issuePlain = toPlain(issue);
+  const itemStats = await getIssueItemStats(assetIssueTransactionId, instituteId);
 
   return formatAssetIssueRecord(
     issuePlain,
     extractMemberBasicDetails(issuePlain),
     extractSecurityPaymentRow(issuePlain),
-    computeItemStatsFromItems(issuePlain.items)
+    itemStats
   );
 }
 
@@ -521,7 +577,7 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
       updatedPlain,
       extractMemberBasicDetails(updatedPlain),
       extractSecurityPaymentRow(updatedPlain),
-      computeItemStatsFromItems(updatedPlain.items)
+      await getIssueItemStats(assetIssueTransactionId, instituteId, transaction)
     );
   });
 

@@ -81,22 +81,25 @@ function attachInventoryCounts(assetPlain, statsByAssetId = {}) {
   return { ...assetPlain, ...counts };
 }
 
-function computeInventoryStatsFromLoadedItems(inventoryItems = []) {
-  const issuedCount = inventoryItems.filter((item) => (item.issueInventoryItems ?? []).length > 0).length;
+function applyInventoryIssueStatus(assetPlain) {
+  if (!assetPlain?.inventoryItems?.length) {
+    return assetPlain;
+  }
 
-  return buildInventoryCounts(inventoryItems.length, issuedCount);
+  const inventoryItems = [];
+  for (const item of assetPlain.inventoryItems) {
+    const { issueInventoryItems, ...inventoryItem } = item;
+    inventoryItems.push({
+      ...inventoryItem,
+      issueStatus: issueInventoryItems?.length ? "issued" : "available",
+    });
+  }
+
+  return { ...assetPlain, inventoryItems };
 }
 
-function stripOpenIssueLinesFromInventoryItems(assetPlain) {
-  return {
-    ...assetPlain,
-    inventoryItems: (assetPlain.inventoryItems ?? []).map(({ issueInventoryItems, ...item }) => item),
-  };
-}
-
-function attachInventoryCountsFromLoadedItems(assetPlain) {
-  const counts = computeInventoryStatsFromLoadedItems(assetPlain.inventoryItems);
-  return { ...stripOpenIssueLinesFromInventoryItems(assetPlain), ...counts };
+function formatAssetResponse(assetRow, inventoryStatsByAssetId = {}) {
+  return attachInventoryCounts(applyInventoryIssueStatus(toPlain(assetRow)), inventoryStatsByAssetId);
 }
 
 function stripInventoryAppendFields(body) {
@@ -284,7 +287,11 @@ export async function addAsset(body, instituteId) {
     return await repo.findAssetById(created.assetId, instituteId, { transaction });
   });
 
-  return toPlain(row);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds(
+    [row.assetId],
+    instituteId
+  );
+  return formatAssetResponse(row, inventoryStatsByAssetId);
 }
 
 export async function listAssets(instituteId, query = {}) {
@@ -300,7 +307,7 @@ export async function listAssets(instituteId, query = {}) {
 
   return {
     data: {
-      assets: rows.map((row) => attachInventoryCounts(toPlain(row), inventoryStatsByAssetId)),
+      assets: rows.map((row) => formatAssetResponse(row, inventoryStatsByAssetId)),
     },
     pagination: { page, limit, total },
   };
@@ -312,7 +319,8 @@ export async function getSingleAsset(assetId, instituteId) {
     return null;
   }
 
-  return attachInventoryCountsFromLoadedItems(toPlain(asset));
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  return formatAssetResponse(asset, inventoryStatsByAssetId);
 }
 
 export async function updateAsset(assetId, body, instituteId) {
@@ -340,7 +348,8 @@ export async function updateAsset(assetId, body, instituteId) {
     return await repo.findAssetById(assetId, instituteId, { transaction });
   });
 
-  return toPlain(updated);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  return formatAssetResponse(updated, inventoryStatsByAssetId);
 }
 
 export async function deleteAsset(assetId, instituteId) {

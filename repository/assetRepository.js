@@ -115,23 +115,29 @@ export async function findAssetsByInstitutePaginated(
     model.assetModel.findAll({
       attributes: { exclude: excludeTs },
       where: { assetId: assetIds, instituteId },
-      include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
+      include: buildAssetDetailIncludes(inventoryStatus, {
+        separate: true,
+        includeOpenIssues: true,
+      }),
       order: [["assetId", "ASC"]],
       transaction: options.transaction,
     }),
     countInventoryStatsByAssetIds(assetIds, instituteId, options),
   ]);
 
+
   return { rows, total, page, limit, inventoryStatsByAssetId };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {
-  return model.assetModel.findOne({
+  const asset = await model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
     include: buildAssetDetailIncludes("all", { separate: true, includeOpenIssues: true }),
     transaction: options.transaction,
   });
+
+  return asset;
 }
 
 export async function findAssetStatusById(assetId, instituteId, options = {}) {

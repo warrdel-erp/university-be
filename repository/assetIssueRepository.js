@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { toMoneyNumber } from "../utility/decimalMoney.js";
 
 const classRoomHierarchyInclude = {
   model: model.classRoomModel,
@@ -509,6 +510,53 @@ function buildAssetIssueWhere(instituteId, filters = {}) {
   };
 }
 
+function toPlainRow(row) {
+  if (!row) return null;
+  return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function extractPaymentAmountFromRow(paymentItemRow) {
+  const plain = toPlainRow(paymentItemRow);
+  if (!plain) {
+    return 0;
+  }
+
+  return toMoneyNumber(plain.payment?.amount ?? plain.amount);
+}
+
+export function buildSettlementPaymentByReturnId(settlementPaymentRows) {
+  const settlementByReturnId = new Map();
+
+  for (const row of settlementPaymentRows) {
+    const plain = toPlainRow(row);
+    settlementByReturnId.set(plain.referenceId, row);
+  }
+
+  return settlementByReturnId;
+}
+
+export function buildIssueTransactionIdsByReturnId(issueItemRows) {
+  const issueTransactionIdsByReturnId = new Map();
+
+  for (const row of issueItemRows) {
+    const item = toPlainRow(row);
+    const returnId = item.assetReturnTransactionId;
+    const issueTransactionId = item.transaction?.assetIssueTransactionId;
+
+    if (issueTransactionId == null) {
+      continue;
+    }
+
+    if (!issueTransactionIdsByReturnId.has(returnId)) {
+      issueTransactionIdsByReturnId.set(returnId, []);
+    }
+
+    issueTransactionIdsByReturnId.get(returnId).push(issueTransactionId);
+  }
+
+  return issueTransactionIdsByReturnId;
+}
+
 export async function findAssetIssuesPaginated(instituteId, filters = {}, pagination = {}, options = {}) {
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || 20;
@@ -530,7 +578,28 @@ export async function findAssetIssuesPaginated(instituteId, filters = {}, pagina
     transaction: options.transaction,
   });
 
-  return { rows, total: count, page, limit };
+  const issueIds = [];
+  for (const row of rows) {
+    issueIds.push(row.assetIssueTransactionId);
+  }
+
+  if (!issueIds.length) {
+    return {
+      rows,
+      total: count,
+      page,
+      limit,
+      itemStatsByIssueId: {},
+      securityAmountByIssueId: {},
+    };
+  }
+
+  const [itemStatsByIssueId, securityAmountByIssueId] = await Promise.all([
+    countIssueItemStatsByTransactionIds(issueIds, instituteId, options),
+    findSecurityAmountByIssueIds(issueIds, instituteId, options),
+  ]);
+
+  return { rows, total: count, page, limit, itemStatsByIssueId, securityAmountByIssueId };
 }
 
 /** Per issue transaction: total lines issued and lines with a return recorded. */
@@ -651,6 +720,165 @@ export async function findEmployeeMemberDetailsByIds(employeeIds, instituteId, o
     where: { employeeId: employeeIds, instituteId },
     transaction: options.transaction,
   });
+}
+
+export function extractInventoryItemIds(items) {
+  const inventoryItemIds = [];
+
+  for (const item of items) {
+    inventoryItemIds.push(item.assetInventoryItemId);
+  }
+
+  return inventoryItemIds;
+}
+
+export function buildAssetIssueInventoryItemRows(assetIssueTransactionId, items) {
+  const rows = [];
+
+  for (const item of items) {
+    rows.push({
+      assetIssueTransactionId,
+      assetInventoryItemId: item.assetInventoryItemId,
+      assetReturnTransactionId: null,
+    });
+  }
+
+  return rows;
+}
+
+async function findFirstMissingInventoryItemId(inventoryItemIds, instituteId, options = {}) {
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["assetInventoryItemId"],
+    where: { assetInventoryItemId: inventoryItemIds, instituteId },
+    transaction: options.transaction,
+  });
+
+  const foundIds = new Set();
+  for (const row of rows) {
+    foundIds.add(row.assetInventoryItemId);
+  }
+
+  for (const inventoryItemId of inventoryItemIds) {
+    if (!foundIds.has(inventoryItemId)) {
+      return inventoryItemId;
+    }
+  }
+
+  return null;
+}
+
+export async function findIssueInventoryItemValidationError(
+  inventoryItemIds,
+  instituteId,
+  options = {}
+) {
+  if (!inventoryItemIds.length) {
+    return { code: "EMPTY" };
+  }
+
+  const { transaction } = options;
+
+  const [foundCount, notAssignedItem, openIssueItem] = await Promise.all([
+    model.assetInventoryItemModel.count({
+      where: { assetInventoryItemId: inventoryItemIds, instituteId },
+      transaction,
+    }),
+    model.assetInventoryItemModel.findOne({
+      attributes: ["assetInventoryItemId"],
+      where: {
+        assetInventoryItemId: inventoryItemIds,
+        instituteId,
+        status: "NOT_ASSIGNED",
+      },
+      transaction,
+    }),
+    model.assetIssueInventoryItemModel.findOne({
+      attributes: ["assetInventoryItemId"],
+      where: {
+        assetInventoryItemId: inventoryItemIds,
+        assetReturnTransactionId: null,
+      },
+      transaction,
+    }),
+  ]);
+
+  if (foundCount !== inventoryItemIds.length) {
+    const missingInventoryItemId = await findFirstMissingInventoryItemId(
+      inventoryItemIds,
+      instituteId,
+      options
+    );
+    return { code: "MISSING", assetInventoryItemId: missingInventoryItemId };
+  }
+
+  if (notAssignedItem) {
+    return { code: "NOT_ASSIGNED", assetInventoryItemId: notAssignedItem.assetInventoryItemId };
+  }
+
+  if (openIssueItem) {
+    return { code: "OPEN_ISSUE", assetInventoryItemId: openIssueItem.assetInventoryItemId };
+  }
+
+  return null;
+}
+
+export async function findSecurityAmountByIssueIds(assetIssueTransactionIds, instituteId, options = {}) {
+  if (!assetIssueTransactionIds.length) {
+    return {};
+  }
+
+  const rows = await model.paymentItemModel.findAll({
+    attributes: ["referenceId", "amount"],
+    where: {
+      referenceId: assetIssueTransactionIds,
+      referenceType: "ASSET_SECURITY",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: ["amount"],
+        required: true,
+        where: {
+          instituteId,
+          paymentType: "INCOMING",
+        },
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const securityAmountByIssueId = Object.create(null);
+
+  for (const row of rows) {
+    securityAmountByIssueId[row.referenceId] = extractPaymentAmountFromRow(row);
+  }
+
+  return securityAmountByIssueId;
+}
+
+export async function findDistinctAssetIdsByInventoryItemIds(
+  inventoryItemIds,
+  instituteId,
+  options = {}
+) {
+  if (!inventoryItemIds.length) {
+    return [];
+  }
+
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["assetId"],
+    where: { assetInventoryItemId: inventoryItemIds, instituteId },
+    group: ["assetId"],
+    transaction: options.transaction,
+  });
+
+  const assetIds = [];
+  for (const row of rows) {
+    assetIds.push(row.assetId);
+  }
+
+  return assetIds;
 }
 
 export async function findInstituteInventoryItemsByIds(inventoryItemIds, instituteId, options = {}) {
@@ -803,6 +1031,65 @@ export async function findAssetReturnTransactionsPaginated(
   });
 
   return { rows, total: count, page, limit };
+}
+
+export async function findAssetReturnTransactionsListBundle(
+  instituteId,
+  pagination = {},
+  options = {}
+) {
+  const { rows, total, page, limit } = await findAssetReturnTransactionsPaginated(
+    instituteId,
+    pagination,
+    options
+  );
+  const returnIds = rows.map((row) => row.assetReturnTransactionId);
+
+  if (!returnIds.length) {
+    return {
+      rows,
+      total,
+      page,
+      limit,
+      issueItemRows: [],
+      settlementByReturnId: new Map(),
+      securityAmountByIssueId: {},
+      issueTransactionIdsByReturnId: new Map(),
+    };
+  }
+
+  const [issueItemRows, settlementPaymentRows] = await Promise.all([
+    findReturnedIssueItemsByReturnTransactionIds(returnIds, instituteId, {
+      ...options,
+      includeMember: false,
+    }),
+    findReturnSettlementPaymentsByReturnIds(returnIds, instituteId, options),
+  ]);
+
+  const issueTransactionIds = [
+    ...new Set(
+      issueItemRows
+        .map((row) => toPlainRow(row).transaction?.assetIssueTransactionId)
+        .filter((issueTransactionId) => issueTransactionId != null)
+    ),
+  ];
+
+  const securityAmountByIssueId = await findSecurityAmountByIssueIds(
+    issueTransactionIds,
+    instituteId,
+    options
+  );
+
+  return {
+    rows,
+    total,
+    page,
+    limit,
+    issueItemRows,
+    settlementByReturnId: buildSettlementPaymentByReturnId(settlementPaymentRows),
+    securityAmountByIssueId,
+    issueTransactionIdsByReturnId: buildIssueTransactionIdsByReturnId(issueItemRows),
+  };
 }
 
 const issueTransactionIncludeForInstitute = (instituteId) => ({
