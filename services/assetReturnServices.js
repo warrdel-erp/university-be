@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import sequelize from "../database/sequelizeConfig.js";
-import * as repo from "../repository/assetIssueRepository.js";
+import * as issueRepo from "../repository/assetIssueRepository.js";
+import * as returnRepo from "../repository/assetReturnRepository.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import {
   decimalAdd,
@@ -163,11 +164,11 @@ function formatReturnListItem(itemPlain) {
 
 async function getMemberDetails(memberType, memberId, instituteId, transaction) {
   if (memberType === "STUDENT") {
-    const student = await repo.findStudentMemberDetailsById(memberId, instituteId, { transaction });
+    const student = await issueRepo.findStudentMemberDetailsById(memberId, instituteId, { transaction });
     return buildMemberDetailsFromStudent(memberId, student);
   }
 
-  const employee = await repo.findEmployeeMemberDetailsById(memberId, instituteId, { transaction });
+  const employee = await issueRepo.findEmployeeMemberDetailsById(memberId, instituteId, { transaction });
   return buildMemberDetailsFromEmployee(memberId, employee);
 }
 
@@ -195,8 +196,8 @@ async function loadPayeeLookupMaps(paymentRows, instituteId) {
   }
 
   const [studentRows, employeeRows] = await Promise.all([
-    repo.findStudentMemberDetailsByIds([...new Set(studentIds)], instituteId),
-    repo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)], instituteId),
+    issueRepo.findStudentMemberDetailsByIds([...new Set(studentIds)], instituteId),
+    issueRepo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)], instituteId),
   ]);
 
   return {
@@ -291,10 +292,18 @@ function computeReturnSettlementAmounts(
   };
 }
 
-function formatAssetReturnTransactionRecord(returnPlain, returnedItems, settlementAmounts = null) {
+function formatAssetReturnTransactionRecord(
+  returnPlain,
+  returnedItems,
+  settlementAmounts = null,
+  memberDetails = null
+) {
   return {
     assetReturnTransactionId: returnPlain.assetReturnTransactionId,
     returnDate: returnPlain.returnDate,
+    memberId: memberDetails?.memberId ?? null,
+    memberType: memberDetails?.memberType ?? null,
+    memberBasicDetails: memberDetails?.memberBasicDetails ?? null,
     securityAmount: settlementAmounts?.securityAmount ?? 0,
     fineAmount: settlementAmounts?.fineAmount ?? 0,
     paidAmount: settlementAmounts?.paidAmount ?? 0,
@@ -337,7 +346,7 @@ async function settleSecurityDepositOnReturn(
     ...new Set(issueLines.map((row) => toPlain(row).transaction.assetIssueTransactionId)),
   ];
 
-  const depositByIssueId = await repo.findSecurityAmountByIssueIds(
+  const depositByIssueId = await issueRepo.findSecurityAmountByIssueIds(
     issueTransactionIds,
     instituteId,
     { transaction }
@@ -443,7 +452,7 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
     throw httpError("Duplicate assetIssueInventoryItemId in items", 400);
   }
 
-  const issueLines = await repo.findIssueInventoryItemsForReturn(uniqueItemIds, instituteId, {
+  const issueLines = await returnRepo.findIssueInventoryItemsForReturn(uniqueItemIds, instituteId, {
     transaction,
   });
   if (issueLines.length !== uniqueItemIds.length) {
@@ -458,8 +467,8 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
     assertReturnDateOnOrAfterIssueDate(line.transaction.issueDate, returnDate);
   }
 
-  const returnTxn = await repo.createAssetReturnTransaction(returnDate, { transaction });
-  const affected = await repo.returnIssueInventoryItems(
+  const returnTxn = await returnRepo.createAssetReturnTransaction(returnDate, { transaction });
+  const affected = await returnRepo.returnIssueInventoryItems(
     items,
     returnTxn.assetReturnTransactionId,
     { transaction }
@@ -471,7 +480,7 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
   const assetIds = [...new Set(issueLines.map((row) => toPlain(row).inventoryItem.assetId))];
   await syncAssetStatusesFromInventory(assetIds, instituteId, { transaction });
 
-  const updatedItems = await repo.findIssueInventoryItemsByIds(uniqueItemIds, { transaction });
+  const updatedItems = await returnRepo.findIssueInventoryItemsByIds(uniqueItemIds, { transaction });
 
   let settlementPayment = null;
   let settlement = null;
@@ -522,13 +531,14 @@ export async function listAssetReturnTransactions(instituteId, query) {
     settlementByReturnId,
     securityAmountByIssueId,
     issueTransactionIdsByReturnId,
-  } = await repo.findAssetReturnTransactionsListBundle(instituteId, {
+  } = await returnRepo.findAssetReturnTransactionsListBundle(instituteId, {
     page: query.page,
     limit: query.limit,
   });
 
   const returnRows = rows.map(toPlain);
   const itemsByReturnId = new Map();
+  const memberByReturnId = new Map();
 
   for (const row of issueItemRows) {
     const item = toPlain(row);
@@ -539,6 +549,14 @@ export async function listAssetReturnTransactions(instituteId, query) {
     }
 
     itemsByReturnId.get(returnId).push(formatReturnListItem(item));
+
+    if (!memberByReturnId.has(returnId) && item.transaction) {
+      memberByReturnId.set(returnId, {
+        memberId: item.transaction.memberId,
+        memberType: item.transaction.memberType,
+        memberBasicDetails: extractMemberBasicDetailsFromTransaction(item.transaction),
+      });
+    }
   }
 
   const assetReturnTransactions = returnRows.map((returnRow) => {
@@ -553,7 +571,8 @@ export async function listAssetReturnTransactions(instituteId, query) {
     return formatAssetReturnTransactionRecord(
       returnRow,
       itemsByReturnId.get(returnId) ?? [],
-      settlementAmounts
+      settlementAmounts,
+      memberByReturnId.get(returnId) ?? null
     );
   });
 
@@ -565,9 +584,9 @@ export async function listAssetReturnTransactions(instituteId, query) {
 
 export async function getAssetReturnPaymentsById(assetReturnTransactionId, instituteId) {
   const [returnRow, settlementPaymentRows, issueItemRows] = await Promise.all([
-    repo.findAssetReturnTransactionByIdForInstitute(assetReturnTransactionId, instituteId),
-    repo.findReturnSettlementPaymentsByReturnIds([assetReturnTransactionId], instituteId),
-    repo.findReturnedIssueItemsByReturnTransactionIds([assetReturnTransactionId], instituteId, {
+    returnRepo.findAssetReturnTransactionByIdForInstitute(assetReturnTransactionId, instituteId),
+    returnRepo.findReturnSettlementPaymentsByReturnIds([assetReturnTransactionId], instituteId),
+    returnRepo.findReturnedIssueItemsByReturnTransactionIds([assetReturnTransactionId], instituteId, {
       includeMember: true,
     }),
   ]);
