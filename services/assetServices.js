@@ -141,9 +141,6 @@ async function resolveAssetCategory(assetCategoryId, instituteId, transaction) {
   if (!category) {
     throw httpError("assetCategoryId not found or not in your institute", 404);
   }
-  if (!category.codePrefix) {
-    throw httpError("Asset category code prefix is not configured", 400);
-  }
   return category;
 }
 

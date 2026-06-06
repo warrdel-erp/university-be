@@ -17,7 +17,7 @@ export default sequelize.define(
     },
     codePrefix: {
       type: DataTypes.STRING(8),
-      allowNull: true,
+      allowNull: false,
       field: "code_prefix",
     },
     instituteId: {

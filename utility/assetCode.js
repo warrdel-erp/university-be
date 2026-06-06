@@ -1,45 +1,24 @@
 const ASSET_CODE_SEQUENCE_PAD = 3;
 const INVENTORY_COPY_PAD = 4;
 
-/** Default prefixes for seeded asset category names. */
-export const CATEGORY_CODE_PREFIX_BY_NAME = {
-  "Land & Buildings": "LDB",
-  "Furniture & Fixtures": "FURN",
-  "IT Assets": "IT",
-  "Software & Licenses": "SWL",
-  "Office Equipment": "AV",
-  Vehicles: "VEH",
-  "Plant & Machinery": "PLM",
-  "Electrical & Utility Equipment": "ELE",
-  "Tools & Instruments": "LIB",
-  "Security Equipment": "SEC",
-  "Other Equipment": "OTH",
-  "Intangible Assets": "INT",
-};
+/** Sets code_prefix on new asset category create (always stored on the category row). */
+export function deriveCategoryCodePrefixFromName(categoryName) {
+  const words = categoryName
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s&]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && word !== "&");
 
-/** Category code prefix from name (seeded map or derived), normalized for storage. */
-export function codePrefixForCategoryName(categoryName) {
-  const mappedPrefix = CATEGORY_CODE_PREFIX_BY_NAME[categoryName];
-  let prefix = mappedPrefix;
+  let prefix = "GEN";
 
-  if (!prefix) {
-    const words = categoryName
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9\s&]/g, " ")
-      .split(/\s+/)
-      .filter((word) => word && word !== "&");
-
-    if (!words.length) {
-      prefix = "GEN";
-    } else if (words.length === 1) {
-      prefix = words[0].slice(0, 4);
-    } else {
-      prefix = words
-        .map((word) => word[0])
-        .join("")
-        .slice(0, 4);
-    }
+  if (words.length === 1) {
+    prefix = words[0].slice(0, 4);
+  } else if (words.length > 1) {
+    prefix = words
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 4);
   }
 
   return String(prefix)
@@ -113,7 +92,6 @@ export function parseAssetCodeSequenceForNameSlug(code, categoryPrefix, assetNam
 
   return Number.parseInt(match[1], 10);
 }
-
 
 /** Inventory copy: FURN-TBL001-0001 */
 export function formatInventoryItemCode(assetCode, copyNumber) {
