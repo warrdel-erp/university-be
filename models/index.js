@@ -61,7 +61,7 @@ import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import amcVendorModel from "./amcVendorModel.js";
 import amcVendorAddressModel from "./amcVendorAddressModel.js";
 import amcContractModel from "./amcContractModel.js";
-import serviceTicketModel from "./serviceTicketModel.js";
+import amcServiceTicketModel from "./amcServiceTicketModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -672,38 +672,38 @@ amcVendorModel.hasOne(amcContractModel, {
   as: "amcContract",
 });
 
-serviceTicketModel.belongsTo(instituteModel, {
+amcServiceTicketModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteServiceTicket",
 });
-instituteModel.hasMany(serviceTicketModel, {
+instituteModel.hasMany(amcServiceTicketModel, {
   foreignKey: "instituteId",
   as: "serviceTickets",
 });
 
-serviceTicketModel.belongsTo(assetModel, {
+amcServiceTicketModel.belongsTo(assetModel, {
   foreignKey: "assetId",
   as: "ticketAsset",
 });
-assetModel.hasMany(serviceTicketModel, {
+assetModel.hasMany(amcServiceTicketModel, {
   foreignKey: "assetId",
   as: "serviceTickets",
 });
 
-serviceTicketModel.belongsTo(amcVendorModel, {
+amcServiceTicketModel.belongsTo(amcVendorModel, {
   foreignKey: "amcVendorId",
   as: "ticketVendor",
 });
-amcVendorModel.hasMany(serviceTicketModel, {
+amcVendorModel.hasMany(amcServiceTicketModel, {
   foreignKey: "amcVendorId",
   as: "serviceTickets",
 });
 
-serviceTicketModel.belongsTo(assetCategoryModel, {
+amcServiceTicketModel.belongsTo(assetCategoryModel, {
   foreignKey: "assetCategoryId",
   as: "ticketAssetCategory",
 });
-assetCategoryModel.hasMany(serviceTicketModel, {
+assetCategoryModel.hasMany(amcServiceTicketModel, {
   foreignKey: "assetCategoryId",
   as: "serviceTickets",
 });
@@ -1699,7 +1699,7 @@ export {
   amcVendorModel,
   amcVendorAddressModel,
   amcContractModel,
-  serviceTicketModel,
+  amcServiceTicketModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,

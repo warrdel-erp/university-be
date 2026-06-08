@@ -14,7 +14,7 @@ import {
   deleteServiceTicket,
   previewServiceTicketNumber,
   getServiceTicketSummary,
-} from "../controllers/serviceTicketController.js";
+} from "../controllers/amcServiceTicketController.js";
 import userAuth from "../middleware/authUser.js";
 
 const router = Router();

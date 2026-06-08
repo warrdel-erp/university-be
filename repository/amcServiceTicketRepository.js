@@ -99,7 +99,7 @@ export async function findAmcVendorByCategoryId(assetCategoryId, instituteId, op
 }
 
 export async function findLatestTicketNumberByYear(instituteId, year, options = {}) {
-  return model.serviceTicketModel.findOne({
+  return model.amcServiceTicketModel.findOne({
     attributes: ["ticketNumber"],
     where: {
       instituteId,
@@ -111,13 +111,13 @@ export async function findLatestTicketNumberByYear(instituteId, year, options = 
 }
 
 export async function createServiceTicket(data, options = {}) {
-  return model.serviceTicketModel.create(data, { transaction: options.transaction });
+  return model.amcServiceTicketModel.create(data, { transaction: options.transaction });
 }
 
 export async function findAndCountServiceTickets(instituteId, options = {}) {
   const { search, status, priority, amcVendorId, page = 1, limit = 20, transaction } = options;
 
-  return model.serviceTicketModel.findAndCountAll({
+  return model.amcServiceTicketModel.findAndCountAll({
     ...ticketListQuery(instituteId, { search, status, priority, amcVendorId }, { transaction }),
     limit,
     offset: (page - 1) * limit,
@@ -125,14 +125,14 @@ export async function findAndCountServiceTickets(instituteId, options = {}) {
 }
 
 export async function findServiceTicketById(serviceTicketId, instituteId, options = {}) {
-  return model.serviceTicketModel.findOne({
+  return model.amcServiceTicketModel.findOne({
     ...ticketListQuery(instituteId, {}, options),
     where: { serviceTicketId, instituteId },
   });
 }
 
 export async function findServiceTicketMetaById(serviceTicketId, instituteId, options = {}) {
-  return model.serviceTicketModel.findOne({
+  return model.amcServiceTicketModel.findOne({
     attributes: ["serviceTicketId", "status"],
     where: { serviceTicketId, instituteId },
     raw: true,
@@ -141,7 +141,7 @@ export async function findServiceTicketMetaById(serviceTicketId, instituteId, op
 }
 
 export async function updateServiceTicket(serviceTicketId, instituteId, payload, options = {}) {
-  const [affected] = await model.serviceTicketModel.update(payload, {
+  const [affected] = await model.amcServiceTicketModel.update(payload, {
     where: { serviceTicketId, instituteId },
     transaction: options.transaction,
   });
@@ -149,7 +149,7 @@ export async function updateServiceTicket(serviceTicketId, instituteId, payload,
 }
 
 export async function deleteServiceTicket(serviceTicketId, instituteId, options = {}) {
-  const deleted = await model.serviceTicketModel.destroy({
+  const deleted = await model.amcServiceTicketModel.destroy({
     where: { serviceTicketId, instituteId },
     transaction: options.transaction,
   });
@@ -161,7 +161,7 @@ export async function findServiceTicketSummaryStats(instituteId, options = {}) {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const row = await model.serviceTicketModel.findOne({
+  const row = await model.amcServiceTicketModel.findOne({
     attributes: [
       [
         sequelize.fn("SUM", sequelize.literal("CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END")),

@@ -1,10 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
-import * as repo from "../repository/serviceTicketRepository.js";
+import * as repo from "../repository/amcServiceTicketRepository.js";
 import {
   currentTicketYear,
   formatTicketNumber,
   parseTicketNumberSequence,
-} from "../utility/serviceTicketCode.js";
+} from "../utility/amcServiceTicketCode.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
