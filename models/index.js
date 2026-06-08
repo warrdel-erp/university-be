@@ -58,6 +58,9 @@ import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
 import assetIssueInventoryItemModel from "./assetIssueInventoryItemModel.js";
 import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
 import assetInventoryItemModel from "./assetInventoryItemModel.js";
+import amcVendorModel from "./amcVendorModel.js";
+import amcVendorAddressModel from "./amcVendorAddressModel.js";
+import amcContractModel from "./amcContractModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -631,6 +634,42 @@ instituteModel.hasMany(assetModel, { foreignKey: "instituteId", as: "assets" });
 
 assetModel.belongsTo(assetCategoryModel, { foreignKey: "assetCategoryId", as: "assetCategory" });
 assetCategoryModel.hasMany(assetModel, { foreignKey: "assetCategoryId", as: "categoryAssets" });
+
+amcVendorModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAmcVendor" });
+instituteModel.hasMany(amcVendorModel, { foreignKey: "instituteId", as: "amcVendors" });
+
+amcVendorModel.belongsTo(assetCategoryModel, {
+  foreignKey: "assetCategoryId",
+  as: "vendorCategory",
+});
+assetCategoryModel.hasMany(amcVendorModel, {
+  foreignKey: "assetCategoryId",
+  as: "amcVendors",
+});
+
+amcVendorModel.hasOne(amcVendorAddressModel, {
+  foreignKey: "amcVendorId",
+  as: "vendorAddress",
+});
+amcVendorAddressModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "vendor",
+});
+
+amcContractModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteAmcContract",
+});
+instituteModel.hasMany(amcContractModel, { foreignKey: "instituteId", as: "amcContracts" });
+
+amcContractModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "contractVendor",
+});
+amcVendorModel.hasOne(amcContractModel, {
+  foreignKey: "amcVendorId",
+  as: "amcContract",
+});
 
 assetIssueTransactionModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
@@ -1620,6 +1659,9 @@ export {
   assetIssueInventoryItemModel,
   assetReturnTransactionModel,
   assetInventoryItemModel,
+  amcVendorModel,
+  amcVendorAddressModel,
+  amcContractModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,
