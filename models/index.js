@@ -61,6 +61,7 @@ import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import amcVendorModel from "./amcVendorModel.js";
 import amcVendorAddressModel from "./amcVendorAddressModel.js";
 import amcContractModel from "./amcContractModel.js";
+import serviceTicketModel from "./serviceTicketModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -669,6 +670,42 @@ amcContractModel.belongsTo(amcVendorModel, {
 amcVendorModel.hasOne(amcContractModel, {
   foreignKey: "amcVendorId",
   as: "amcContract",
+});
+
+serviceTicketModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteServiceTicket",
+});
+instituteModel.hasMany(serviceTicketModel, {
+  foreignKey: "instituteId",
+  as: "serviceTickets",
+});
+
+serviceTicketModel.belongsTo(assetModel, {
+  foreignKey: "assetId",
+  as: "ticketAsset",
+});
+assetModel.hasMany(serviceTicketModel, {
+  foreignKey: "assetId",
+  as: "serviceTickets",
+});
+
+serviceTicketModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "ticketVendor",
+});
+amcVendorModel.hasMany(serviceTicketModel, {
+  foreignKey: "amcVendorId",
+  as: "serviceTickets",
+});
+
+serviceTicketModel.belongsTo(assetCategoryModel, {
+  foreignKey: "assetCategoryId",
+  as: "ticketAssetCategory",
+});
+assetCategoryModel.hasMany(serviceTicketModel, {
+  foreignKey: "assetCategoryId",
+  as: "serviceTickets",
 });
 
 assetIssueTransactionModel.belongsTo(instituteModel, {
@@ -1662,6 +1699,7 @@ export {
   amcVendorModel,
   amcVendorAddressModel,
   amcContractModel,
+  serviceTicketModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,

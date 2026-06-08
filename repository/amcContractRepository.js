@@ -3,61 +3,55 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import {
   buildExpiryStatusWhere,
-  NEAR_EXPIRY_DAYS,
+  deriveContractStatus,
 } from "../utility/amcContractStatus.js";
 
-function contractListInclude() {
-  return {
+const contractListInclude = [
+  {
     model: model.amcVendorModel,
     as: "contractVendor",
-    attributes: [],
+    attributes: ["vendorName", "vendorCode", "assetCategoryId"],
     required: true,
     include: [
       {
         model: model.assetCategoryModel,
         as: "vendorCategory",
-        attributes: [],
+        attributes: ["name"],
         required: true,
       },
     ],
-  };
-}
+  },
+];
 
-function contractListAttributes() {
-  return [
-    [sequelize.col("amc_contract.amc_contract_id"), "amcContractId"],
-    [sequelize.col("amc_contract.contract_number"), "contractNumber"],
-    [sequelize.col("amc_contract.contract_name"), "contractName"],
-    [sequelize.col("amc_contract.approval_status"), "approvalStatus"],
-    [sequelize.col("amc_contract.amc_vendor_id"), "amcVendorId"],
-    [sequelize.col("contractVendor.vendor_name"), "vendorName"],
-    [sequelize.col("contractVendor.vendor_code"), "vendorCode"],
-    [sequelize.col("contractVendor.asset_category_id"), "assetCategoryId"],
-    [sequelize.col("contractVendor.vendorCategory.name"), "vendorCategory"],
-    [sequelize.col("amc_contract.contract_type"), "contractType"],
-    [sequelize.col("amc_contract.start_date"), "startDate"],
-    [sequelize.col("amc_contract.end_date"), "endDate"],
-    [sequelize.col("amc_contract.contract_value"), "contractValue"],
-    [sequelize.col("amc_contract.payment_terms"), "paymentTerms"],
-    [sequelize.col("amc_contract.service_visit_frequency"), "serviceVisitFrequency"],
-    [sequelize.col("amc_contract.sla_response_hours"), "slaResponseHours"],
-    [sequelize.col("amc_contract.sla_resolution_hours"), "slaResolutionHours"],
-    [sequelize.col("amc_contract.description"), "description"],
-    [
-      sequelize.literal(`(
-        CASE
-          WHEN amc_contract.end_date < CURDATE() THEN 'EXPIRED'
-          WHEN amc_contract.end_date <= DATE_ADD(CURDATE(), INTERVAL ${NEAR_EXPIRY_DAYS} DAY) THEN 'NEAR_EXPIRY'
-          ELSE 'ACTIVE'
-        END
-      )`),
-      "status",
-    ],
-    [sequelize.literal("0"), "totalAssetsCovered"],
-    [sequelize.col("amc_contract.institute_id"), "instituteId"],
-    [sequelize.col("amc_contract.created_at"), "createdAt"],
-    [sequelize.col("amc_contract.updated_at"), "updatedAt"],
-  ];
+function formatContractRow(row) {
+  const plain = typeof row.get === "function" ? row.get({ plain: true }) : row;
+  const vendor = plain.contractVendor;
+
+  return {
+    amcContractId: plain.amcContractId,
+    contractNumber: plain.contractNumber,
+    contractName: plain.contractName,
+    approvalStatus: plain.approvalStatus,
+    amcVendorId: plain.amcVendorId,
+    vendorName: vendor?.vendorName ?? null,
+    vendorCode: vendor?.vendorCode ?? null,
+    assetCategoryId: vendor?.assetCategoryId ?? null,
+    vendorCategory: vendor?.vendorCategory?.name ?? null,
+    contractType: plain.contractType,
+    startDate: plain.startDate,
+    endDate: plain.endDate,
+    contractValue: plain.contractValue,
+    paymentTerms: plain.paymentTerms,
+    serviceVisitFrequency: plain.serviceVisitFrequency,
+    slaResponseHours: plain.slaResponseHours,
+    slaResolutionHours: plain.slaResolutionHours,
+    description: plain.description,
+    status: deriveContractStatus(plain.endDate),
+    totalAssetsCovered: 0,
+    instituteId: plain.instituteId,
+    createdAt: plain.createdAt,
+    updatedAt: plain.updatedAt,
+  };
 }
 
 function buildContractWhere(instituteId, { search, approvalStatus, status } = {}) {
@@ -131,27 +125,30 @@ export async function findAndCountAmcContracts(instituteId, options = {}) {
   const { search, approvalStatus, status, page = 1, limit = 20, transaction } = options;
   const offset = (page - 1) * limit;
 
-  return model.amcContractModel.findAndCountAll({
-    attributes: contractListAttributes(),
+  const { rows, count } = await model.amcContractModel.findAndCountAll({
     where: buildContractWhere(instituteId, { search, approvalStatus, status }),
-    include: [contractListInclude()],
+    include: contractListInclude,
     order: [["amcContractId", "DESC"]],
     limit,
     offset,
-    raw: true,
     transaction,
     subQuery: false,
   });
+
+  return {
+    rows: rows.map(formatContractRow),
+    count,
+  };
 }
 
 export async function findAmcContractById(amcContractId, instituteId, options = {}) {
-  return model.amcContractModel.findOne({
-    attributes: contractListAttributes(),
+  const row = await model.amcContractModel.findOne({
     where: { amcContractId, instituteId },
-    include: [contractListInclude()],
-    raw: true,
+    include: contractListInclude,
     transaction: options.transaction,
   });
+
+  return row ? formatContractRow(row) : null;
 }
 
 export async function findAmcContractMetaById(amcContractId, instituteId, options = {}) {

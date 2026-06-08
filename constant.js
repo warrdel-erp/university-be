@@ -214,3 +214,16 @@ export const amcContractApprovalStatuses = ["DRAFT", "PUBLISHED", "APPROVED"];
 export const amcPaymentTerms = ["ANNUAL_UPFRONT", "QUARTERLY", "MONTHLY"];
 
 export const amcServiceVisitFrequencies = ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+export const serviceTicketIssueTypes = ["HARDWARE", "SOFTWARE"];
+
+export const serviceTicketPriorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+export const serviceTicketStatuses = [
+  "OPEN",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "ESCALATED",
+  "RESOLVED",
+  "CLOSED",
+];
