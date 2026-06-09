@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/studentFeeInvoiceRepository.js";
+import * as feePlanProfileRepo from "../repository/feePlanProfileRepository.js";
 import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
 import {
   decimalCompare,
@@ -48,6 +49,28 @@ function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
   return err;
+}
+
+async function assertStudentFeePlanProfilePublished(
+  feePlanProfileId,
+  instituteId,
+  transaction
+) {
+  const profile = await feePlanProfileRepo.findFeePlanProfileByIdForInstitute(
+    feePlanProfileId,
+    instituteId,
+    { transaction }
+  );
+  if (!profile) {
+    throw httpError("Fee plan profile not found for this institute", 404);
+  }
+  const plain = toPlain(profile);
+  if (plain.publishStatus !== "published") {
+    throw httpError(
+      "Invoices can only be generated for students assigned to a published fee plan",
+      400
+    );
+  }
 }
 
 function invoiceItemsPlain(p) {
@@ -196,6 +219,13 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
     if (!student.feePlanProfileId) {
       throw httpError("Student has no fee plan profile assigned", 400);
     }
+
+    await assertStudentFeePlanProfilePublished(
+      student.feePlanProfileId,
+      instituteId,
+      transaction
+    );
+
     if (feePlanItem.feePlanProfileId !== student.feePlanProfileId) {
       throw httpError("Fee plan item does not belong to the student's fee plan profile", 400);
     }

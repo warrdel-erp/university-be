@@ -302,6 +302,12 @@ export async function addStudent(
   }
 }
 
+function studentHttpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
 async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
   const profile =
     await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
@@ -309,7 +315,12 @@ async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
       instituteId,
     );
   if (!profile) {
-    throw new Error("Fee plan profile not found for this institute");
+    throw studentHttpError("Fee plan profile not found for this institute", 404);
+  }
+  const plain =
+    typeof profile.get === "function" ? profile.get({ plain: true }) : profile;
+  if (plain.publishStatus !== "published") {
+    throw studentHttpError("Only published fee plans can be assigned to students", 400);
   }
 }
 
@@ -988,7 +999,7 @@ function updateHttpError(message, statusCode = 400) {
   return err;
 }
 
-export async function updateStudentDetails(StudentId, info, files) {
+export async function updateStudentDetails(StudentId, info, files, instituteId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -1004,6 +1015,17 @@ export async function updateStudentDetails(StudentId, info, files) {
     }
 
     const studentPayload = pickStudentUpdatePayload(info);
+
+    if (studentPayload.feePlanProfileId) {
+      const resolvedInstituteId = instituteId ?? studentPayload.instituteId ?? info.instituteId;
+      if (!resolvedInstituteId) {
+        throw updateHttpError("instituteId is required to assign a fee plan", 400);
+      }
+      await assertFeePlanProfileForInstitute(
+        studentPayload.feePlanProfileId,
+        resolvedInstituteId
+      );
+    }
 
     let rowsUpdated = 0;
     if (Object.keys(studentPayload).length > 0) {

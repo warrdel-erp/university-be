@@ -45,6 +45,12 @@ export default sequelize.define(
         key: "institute_id",
       },
     },
+    publishStatus: {
+      type: DataTypes.ENUM("draft", "published"),
+      allowNull: false,
+      defaultValue: "draft",
+      field: "publish_status",
+    },
   },
   {
     tableName: "fee_plan_profile",

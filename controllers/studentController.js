@@ -96,7 +96,12 @@ export const updateStudentDetails = async (req, res) => {
         if (!studentId) {
             return ErrorResponse(res, 400, "studentId in URL path is required");
         }
-        const result = await studentService.updateStudentDetails(studentId, info, file);
+        const result = await studentService.updateStudentDetails(
+            studentId,
+            info,
+            file,
+            req.user.defaultInstituteId
+        );
         return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {
         console.error(`Error in updating student Id ${studentId}:`, error);

@@ -132,7 +132,9 @@ router.get(
   getSingleStudentDetail
 );
 router.post("/import", userAuth, importStudentData);
+
 router.patch("/:studentId", userAuth, updateStudentDetails);
+
 router.delete("/:studentId", userAuth, deleteStudentDetail);
 router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
 router.post("/studentMapping", userAuth, studentCourseMapping);
