@@ -8,6 +8,7 @@ import {
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
+import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 
 function netInvoiceItemAmount(amount, waiver) {
   const lineAmount = toMoneyNumber(amount);
@@ -65,7 +66,7 @@ async function assertStudentFeePlanProfilePublished(
     throw httpError("Fee plan profile not found for this institute", 404);
   }
   const plain = toPlain(profile);
-  if (plain.publishStatus !== "published") {
+  if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
     throw httpError(
       "Invoices can only be generated for students assigned to a published fee plan",
       400

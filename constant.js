@@ -194,3 +194,8 @@ export const assetStatuses = ["ISSUED", "IN_STOCK", "MAINTANANCE"];
 export const assetConditions = ["GOOD", "FAIR", "EXCELLENT", "BAD"];
 
 export const assetInventoryStatuses = ["NOT_ASSIGNED", "ASSIGNED"];
+
+export const FEE_PLAN_PUBLISH_STATUS = {
+  DRAFT: "draft",
+  PUBLISHED: "published",
+};
