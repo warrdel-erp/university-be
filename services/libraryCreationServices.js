@@ -1,6 +1,7 @@
 import * as libraryCreationService from "../repository/libraryCreationRepository.js";
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { LOW_STOCK_THRESHOLD } from "../constant.js";
 
 const httpError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -744,6 +745,18 @@ async function addBookWithInventoryRecord(
 async function enrichBooksWithCategoriesAndSubjects(books) {
   if (!books || books.length === 0) return books;
   return books.map(applyBookMappingLists);
+}
+
+export async function getBookSummaryStats(query, user) {
+  const { libraryCreationId, libraryFloorId } = query;
+
+  return libraryCreationService.getBookSummaryStats(
+    user.universityId,
+    libraryCreationId,
+    libraryFloorId,
+    user.defaultInstituteId,
+    LOW_STOCK_THRESHOLD,
+  );
 }
 
 export async function getAllBooks(query, user) {

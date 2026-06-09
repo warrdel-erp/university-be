@@ -5784,7 +5784,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library APIs under `/libraryCreation` (test in order: library → get single library (set `libraryFloor_id`) → floor structure POST/GET → categories → add book → allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
+      "description": "Library APIs under `/libraryCreation` (test in order: library → get single library (set `libraryFloor_id`) → floor structure POST/GET → categories → add book → bookSummary/allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -6319,6 +6319,65 @@
               "_postman_previewlanguage": "json",
               "header": [],
               "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 52,\n      \"libraryCreationId\": 25,\n      \"title\": \"Data Structures\"\n    },\n    \"inventory\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get book summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/libraryCreation/bookSummary?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "libraryCreation",
+                "bookSummary"
+              ],
+              "query": [
+                {
+                  "key": "libraryCreationId",
+                  "value": "{{libraryCreation_id}}",
+                  "description": "Required — library creation ID"
+                },
+                {
+                  "key": "libraryFloorId",
+                  "value": "{{libraryFloor_id}}",
+                  "description": "Optional — scope stats to a floor; omit for whole library",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /libraryCreation/bookSummary**\n\nDashboard summary for the Book List page.\n\n**Query**\n| Key | Required | Notes |\n|-----|----------|--------|\n| `libraryCreationId` | Yes | Library ID |\n| `libraryFloorId` | No | Floor scope; omit for whole library |\n\n**Response `data`**\n| Field | Description |\n|-------|-------------|\n| `totalBooks` | Distinct book titles in scope |\n| `inStock` | Inventory copies with `status = available` (issued copies excluded) |\n| `lowStock` | Books with available copies ≤ `LOW_STOCK_THRESHOLD` (2), including books with no copies |\n| `totalCopies` | Total inventory copies in scope |\n\n**Examples**\n- `GET .../bookSummary?libraryCreationId=1`\n- `GET .../bookSummary?libraryCreationId=1&libraryFloorId=1`"
+          },
+          "response": [
+            {
+              "name": "200 OK — library summary",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Book summary fetched successfully\",\n  \"data\": {\n    \"totalBooks\": 120,\n    \"inStock\": 98,\n    \"lowStock\": 12,\n    \"totalCopies\": 200\n  }\n}"
+            },
+            {
+              "name": "200 OK — floor scoped",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Book summary fetched successfully\",\n  \"data\": {\n    \"totalBooks\": 45,\n    \"inStock\": 38,\n    \"lowStock\": 5,\n    \"totalCopies\": 72\n  }\n}"
             }
           ]
         },

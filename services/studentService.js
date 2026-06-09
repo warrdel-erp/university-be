@@ -24,6 +24,7 @@ import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
+import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 
 function isMainFeePlanSubItem(line) {
   return line?.isMainSubItem === true || line?.isMainSubItem === 1;
@@ -319,7 +320,7 @@ async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
   }
   const plain =
     typeof profile.get === "function" ? profile.get({ plain: true }) : profile;
-  if (plain.publishStatus !== "published") {
+  if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
     throw studentHttpError("Only published fee plans can be assigned to students", 400);
   }
 }
