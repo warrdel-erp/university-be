@@ -103,12 +103,47 @@ function formatAssetResponse(assetRow, inventoryStatsByAssetId = {}) {
 }
 
 function stripInventoryAppendFields(body) {
-  const { assetId, inventoryBulk, ...rest } = body;
+  const { assetId, inventoryBulk, inventory, ...rest } = body;
   return rest;
 }
 
 function hasInventoryAppend(body) {
   return body.inventoryBulk !== undefined;
+}
+
+function hasInventoryAssign(body) {
+  return body.inventory !== undefined;
+}
+
+async function assignInventoryItems(items, assetId, instituteId, transaction) {
+  for (const item of items) {
+    await validateClassRoomSectionId(item.classRoomSectionId, transaction);
+
+    const existing = await repo.findInventoryItemById(
+      item.assetInventoryItemId,
+      instituteId,
+      { transaction }
+    );
+
+    if (!existing || existing.assetId !== assetId) {
+      throw httpError("Inventory item not found or does not belong to this asset", 404);
+    }
+
+    const affected = await repo.updateInventoryItem(
+      item.assetInventoryItemId,
+      instituteId,
+      assetId,
+      {
+        classRoomSectionId: item.classRoomSectionId,
+        status: inventoryStatusForRoom(item.classRoomSectionId),
+      },
+      { transaction }
+    );
+
+    if (!affected) {
+      throw httpError("Failed to assign inventory item to room", 500);
+    }
+  }
 }
 
 async function appendInventoryOnAsset(body, assetId, instituteId, transaction) {
@@ -367,6 +402,10 @@ export async function updateAsset(assetId, body, instituteId) {
 
     if (hasInventoryAppend(body)) {
       await appendInventoryOnAsset(body, assetId, instituteId, transaction);
+    }
+
+    if (hasInventoryAssign(body)) {
+      await assignInventoryItems(body.inventory, assetId, instituteId, transaction);
     }
 
     await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
