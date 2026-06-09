@@ -1,9 +1,12 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/assetCategoryRepository.js";
-import {
-  codePrefixForCategoryName,
-  normalizeCategoryCodePrefix,
-} from "../utility/assetCode.js";
+import { deriveCategoryCodePrefixFromName } from "../utility/assetCode.js";
+
+function httpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
 
 function updatePayload(body) {
   const { assetCategoryId, ...rest } = body;
@@ -12,10 +15,17 @@ function updatePayload(body) {
 
 export async function addAssetCategory(body, instituteId) {
   const row = await sequelize.transaction(async (transaction) => {
+    const existing = await repo.findAssetCategoryByNameForInstitute(body.name, instituteId, {
+      transaction,
+    });
+    if (existing) {
+      throw httpError("Asset category name already exists in your institute", 409);
+    }
+
     const created = await repo.createAssetCategory(
       {
         name: body.name,
-        codePrefix: normalizeCategoryCodePrefix(codePrefixForCategoryName(body.name)),
+        codePrefix: deriveCategoryCodePrefixFromName(body.name),
         instituteId,
       },
       { transaction }
@@ -44,7 +54,7 @@ export async function updateAssetCategory(assetCategoryId, body, instituteId) {
       transaction,
     });
     if (!affected) {
-      throw new Error("Asset category not found or not in your institute");
+      throw httpError("Asset category not found or not in your institute", 404);
     }
     return repo.findAssetCategoryById(assetCategoryId, instituteId, { transaction });
   });
@@ -54,11 +64,11 @@ export async function deleteAssetCategory(assetCategoryId, instituteId) {
   await sequelize.transaction(async (transaction) => {
     const inUse = await repo.countAssetsForCategory(assetCategoryId, instituteId, { transaction });
     if (inUse > 0) {
-      throw new Error(`Cannot delete: ${inUse} asset(s) still reference this category`);
+      throw httpError(`Cannot delete: ${inUse} asset(s) still reference this category`, 409);
     }
     const ok = await repo.deleteAssetCategory(assetCategoryId, instituteId, { transaction });
     if (!ok) {
-      throw new Error("Asset category not found or not in your institute");
+      throw httpError("Asset category not found or not in your institute", 404);
     }
   });
   return true;

@@ -22,20 +22,35 @@ export function deriveAssetStatusFromInventory(openIssues, totalInventory) {
 }
 
 export async function syncAssetStatusFromInventory(assetId, instituteId, options = {}) {
-  const { transaction } = options;
+  await syncAssetStatusesFromInventory([assetId], instituteId, options);
+}
 
-  const asset = await repo.findAssetStatusById(assetId, instituteId, { transaction });
-  if (!asset || asset.status === "MAINTANANCE") {
+export async function syncAssetStatusesFromInventory(assetIds, instituteId, options = {}) {
+  const uniqueAssetIds = [...new Set(assetIds)];
+  if (!uniqueAssetIds.length) {
     return;
   }
 
-  const totalInventory = await repo.countInventoryItemsByAsset(assetId, instituteId, { transaction });
-  const openIssues = await repo.countOpenIssuesForAsset(assetId, instituteId, { transaction });
-  const nextStatus = deriveAssetStatusFromInventory(openIssues, totalInventory);
+  const { transaction } = options;
+  const [assets, statsByAssetId] = await Promise.all([
+    repo.findAssetStatusesByIds(uniqueAssetIds, instituteId, { transaction }),
+    repo.countInventoryStatsByAssetIds(uniqueAssetIds, instituteId, { transaction }),
+  ]);
 
-  if (asset.status !== nextStatus) {
-    await repo.updateAsset(assetId, instituteId, { status: nextStatus }, { transaction });
-  }
+  await Promise.all(
+    assets.map(async (asset) => {
+      if (asset.status === "MAINTANANCE") {
+        return;
+      }
+
+      const stats = statsByAssetId[asset.assetId] ?? { totalInventory: 0, issuedCount: 0 };
+      const nextStatus = deriveAssetStatusFromInventory(stats.issuedCount, stats.totalInventory);
+
+      if (asset.status !== nextStatus) {
+        await repo.updateAsset(asset.assetId, instituteId, { status: nextStatus }, { transaction });
+      }
+    })
+  );
 }
 
 function httpError(message, statusCode = 400) {
@@ -64,6 +79,27 @@ function attachInventoryCounts(assetPlain, statsByAssetId = {}) {
   const raw = statsByAssetId[assetPlain.assetId];
   const counts = buildInventoryCounts(raw?.totalInventory, raw?.issuedCount);
   return { ...assetPlain, ...counts };
+}
+
+function applyInventoryIssueStatus(assetPlain) {
+  if (!assetPlain?.inventoryItems?.length) {
+    return assetPlain;
+  }
+
+  const inventoryItems = [];
+  for (const item of assetPlain.inventoryItems) {
+    const { issueInventoryItems, ...inventoryItem } = item;
+    inventoryItems.push({
+      ...inventoryItem,
+      issueStatus: issueInventoryItems?.length ? "issued" : "available",
+    });
+  }
+
+  return { ...assetPlain, inventoryItems };
+}
+
+function formatAssetResponse(assetRow, inventoryStatsByAssetId = {}) {
+  return attachInventoryCounts(applyInventoryIssueStatus(toPlain(assetRow)), inventoryStatsByAssetId);
 }
 
 function stripInventoryAppendFields(body) {
@@ -105,10 +141,25 @@ async function resolveAssetCategory(assetCategoryId, instituteId, transaction) {
   if (!category) {
     throw httpError("assetCategoryId not found or not in your institute", 404);
   }
-  if (!category.codePrefix) {
-    throw httpError("Asset category code prefix is not configured", 400);
-  }
   return category;
+}
+
+async function resolveNextAssetCode(name, assetCategoryId, instituteId, transaction) {
+  const category = await resolveAssetCategory(assetCategoryId, instituteId, transaction);
+  const assetNamePrefix = deriveAssetNameCodePrefix(name);
+  const { sequence } = await repo.getNextAssetCodeSequence(
+    instituteId,
+    category.codePrefix,
+    assetNamePrefix,
+    { transaction }
+  );
+
+  return {
+    code: formatAssetCode(category.codePrefix, assetNamePrefix, sequence),
+    category,
+    assetNamePrefix,
+    sequence,
+  };
 }
 
 async function validateAssetReferences(body, instituteId, transaction) {
@@ -214,20 +265,31 @@ async function createInventoryRowsByBulkGroups(
   }
 }
 
+export async function previewAssetCode(query, instituteId) {
+  const { code, category } = await resolveNextAssetCode(
+    query.name,
+    query.assetCategoryId,
+    instituteId
+  );
+
+  return {
+    name: query.name,
+    assetCategoryId: category.assetCategoryId,
+    assetCategoryName: category.name,
+    code,
+  };
+}
+
 export async function addAsset(body, instituteId) {
   const row = await sequelize.transaction(async (transaction) => {
     await validateAssetReferences(body, instituteId, transaction);
 
-    const category = await resolveAssetCategory(body.assetCategoryId, instituteId, transaction);
-    const assetNamePrefix = deriveAssetNameCodePrefix(body.name);
-    const { sequence } = await repo.getNextAssetCodeSequence(
+    const { code: assetCode } = await resolveNextAssetCode(
+      body.name,
+      body.assetCategoryId,
       instituteId,
-      category.codePrefix,
-      assetNamePrefix,
-      { transaction }
+      transaction
     );
-
-    const assetCode = formatAssetCode(category.codePrefix, assetNamePrefix, sequence);
 
     const created = await repo.createAsset(
       {
@@ -251,7 +313,11 @@ export async function addAsset(body, instituteId) {
     return await repo.findAssetById(created.assetId, instituteId, { transaction });
   });
 
-  return toPlain(row);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds(
+    [row.assetId],
+    instituteId
+  );
+  return formatAssetResponse(row, inventoryStatsByAssetId);
 }
 
 export async function listAssets(instituteId, query = {}) {
@@ -259,7 +325,7 @@ export async function listAssets(instituteId, query = {}) {
     (transaction) =>
       repo.findAssetsByInstitutePaginated(
         instituteId,
-        { inventoryStatus: query.status },
+        { inventoryStatus: query.status, search: query.search },
         { page: query.page, limit: query.limit },
         { transaction }
       )
@@ -267,26 +333,20 @@ export async function listAssets(instituteId, query = {}) {
 
   return {
     data: {
-      assets: rows.map((row) => attachInventoryCounts(toPlain(row), inventoryStatsByAssetId)),
+      assets: rows.map((row) => formatAssetResponse(row, inventoryStatsByAssetId)),
     },
     pagination: { page, limit, total },
   };
 }
 
 export async function getSingleAsset(assetId, instituteId) {
-  const row = await sequelize.transaction(async (transaction) => {
-    const asset = await repo.findAssetById(assetId, instituteId, { transaction });
-    if (!asset) {
-      return null;
-    }
+  const asset = await repo.findAssetById(assetId, instituteId);
+  if (!asset) {
+    return null;
+  }
 
-    const statsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId, {
-      transaction,
-    });
-
-    return attachInventoryCounts(toPlain(asset), statsByAssetId);
-  });
-  return row;
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  return formatAssetResponse(asset, inventoryStatsByAssetId);
 }
 
 export async function updateAsset(assetId, body, instituteId) {
@@ -314,7 +374,8 @@ export async function updateAsset(assetId, body, instituteId) {
     return await repo.findAssetById(assetId, instituteId, { transaction });
   });
 
-  return toPlain(updated);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  return formatAssetResponse(updated, inventoryStatsByAssetId);
 }
 
 export async function deleteAsset(assetId, instituteId) {

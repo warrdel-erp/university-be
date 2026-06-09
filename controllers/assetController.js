@@ -22,6 +22,15 @@ export async function getAllAsset(req, res) {
   }
 }
 
+export async function previewAssetCode(req, res) {
+  try {
+    const data = await assetService.previewAssetCode(req.query, req.user.defaultInstituteId);
+    return SuccessResponse(res, 200, "Asset code preview generated successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getSingleAssetDetails(req, res) {
   try {
     const { assetId } = req.query;

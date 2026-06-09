@@ -8582,7 +8582,7 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset?page&limit&status` (`status`: all \\| assigned \\| unassigned) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture → `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name → `001`, `002`, …)\n- Do **not** send `code` on create/update — server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` → `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`",
+      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset/codepreview?name&assetCategoryId` — preview next auto code (read-only) |\n| GET | `/asset?page&limit&status&search` (`status`: all \\| assigned \\| unassigned; `search`: name, code, category) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture → `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name → `001`, `002`, …)\n- Do **not** send `code` on create/update — server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` → `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`, `asset_search`",
       "item": [
         {
           "name": "assetCategory",
@@ -8837,6 +8837,47 @@
               "response": []
             },
             {
+              "name": "code preview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/asset/codepreview?name=Dell Laptop&assetCategoryId={{assetCategory_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "asset",
+                    "codepreview"
+                  ],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": "Dell Laptop",
+                      "description": "Asset name (same as POST /asset)"
+                    },
+                    {
+                      "key": "assetCategoryId",
+                      "value": "{{assetCategory_id}}",
+                      "description": "Category id from assetCategory"
+                    }
+                  ]
+                },
+                "description": "**GET /asset/codepreview** — read-only preview of the next auto-generated asset `code` for `name` + `assetCategoryId`.\n\nDoes **not** save or reserve the code. **POST /asset** with the same `name` and `assetCategoryId` assigns the next available code at save time (usually matches preview unless another asset was created in between).\n\n**Response:** `name`, `assetCategoryId`, `assetCategoryName`, `code` (e.g. `IT-DLL001`)."
+              },
+              "response": []
+            },
+            {
               "name": "get all",
               "request": {
                 "auth": {
@@ -8852,7 +8893,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/asset?page={{asset_page}}&limit={{asset_limit}}&status=all",
+                  "raw": "{{baseurl}}/asset?page={{asset_page}}&limit={{asset_limit}}&status=all&search={{asset_search}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -8872,10 +8913,15 @@
                       "key": "status",
                       "value": "all",
                       "description": "all | assigned | unassigned"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{asset_search}}",
+                      "description": "Optional. Partial match on asset name, code, or category name"
                     }
                   ]
                 },
-                "description": "**GET /asset** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `status` | `all` — filters nested `inventoryItems` only (`assigned` \\| `unassigned`) |\n\n**Response:** `data.assets[]` each with `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]`, `pagination` (`page`, `limit`, `total`)."
+                "description": "**GET /asset** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `status` | `all` — filters nested `inventoryItems` only (`assigned` \\| `unassigned`) |\n| `search` | optional — partial match on asset `name`, `code`, or category `name` only |\n\n**Response:** `data.assets[]` each with `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]` (`issueStatus`: `issued` \\| `available`), `pagination` (`page`, `limit`, `total`)."
               },
               "response": []
             },
@@ -9501,6 +9547,11 @@
     {
       "key": "asset_limit",
       "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "asset_search",
+      "value": "",
       "type": "string"
     },
     {

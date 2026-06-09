@@ -1,14 +1,16 @@
 import { v4 as uuidv4 } from "uuid";
 import sequelize from "../database/sequelizeConfig.js";
-import * as repo from "../repository/assetIssueRepository.js";
+import * as issueRepo from "../repository/assetIssueRepository.js";
+import * as returnRepo from "../repository/assetReturnRepository.js";
 import * as paymentRepo from "../repository/studentFeePaymentRepository.js";
 import {
+  decimalAdd,
   decimalCompare,
   decimalSubtract,
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
-import { syncAssetStatusFromInventory } from "./assetServices.js";
+import { syncAssetStatusesFromInventory } from "./assetServices.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -134,13 +136,39 @@ function formatReturnedIssueItem(itemPlain, memberBasicDetails) {
   };
 }
 
+function formatReturnListItem(itemPlain) {
+  const inventory = itemPlain.inventoryItem;
+  const asset = inventory?.asset;
+
+  return {
+    assetIssueInventoryItemId: itemPlain.assetIssueInventoryItemId,
+    assetInventoryItemId: itemPlain.assetInventoryItemId,
+    itemStatus: "returned",
+    inventoryCode: inventory?.code ?? null,
+    inventoryBarcode: inventory?.barcode ?? null,
+    classRoomSectionId: inventory?.classRoomSectionId ?? null,
+    classRoom: inventory?.classRoom ? toPlain(inventory.classRoom) : null,
+    asset: asset
+      ? {
+          assetId: asset.assetId,
+          name: asset.name,
+          code: asset.code,
+          status: asset.status,
+          condition: asset.condition,
+        }
+      : null,
+    damageNotes: itemPlain.damageNotes ?? null,
+    returnCondition: itemPlain.returnCondition ?? null,
+  };
+}
+
 async function getMemberDetails(memberType, memberId, instituteId, transaction) {
   if (memberType === "STUDENT") {
-    const student = await repo.findStudentMemberDetailsById(memberId, instituteId, { transaction });
+    const student = await issueRepo.findStudentMemberDetailsById(memberId, instituteId, { transaction });
     return buildMemberDetailsFromStudent(memberId, student);
   }
 
-  const employee = await repo.findEmployeeMemberDetailsById(memberId, instituteId, { transaction });
+  const employee = await issueRepo.findEmployeeMemberDetailsById(memberId, instituteId, { transaction });
   return buildMemberDetailsFromEmployee(memberId, employee);
 }
 
@@ -168,8 +196,8 @@ async function loadPayeeLookupMaps(paymentRows, instituteId) {
   }
 
   const [studentRows, employeeRows] = await Promise.all([
-    repo.findStudentMemberDetailsByIds([...new Set(studentIds)], instituteId),
-    repo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)], instituteId),
+    issueRepo.findStudentMemberDetailsByIds([...new Set(studentIds)], instituteId),
+    issueRepo.findEmployeeMemberDetailsByIds([...new Set(employeeIds)], instituteId),
   ]);
 
   return {
@@ -193,11 +221,94 @@ function formatAssetReturnPaymentRecord(paymentItemRow, meta, payeeDetails = nul
   };
 }
 
-function formatAssetReturnTransactionRecord(returnPlain, returnedItems) {
+function extractMemberBasicDetailsFromTransaction(transaction) {
+  if (!transaction) {
+    return null;
+  }
+
+  if (transaction.memberType === "STUDENT") {
+    return buildMemberDetailsFromStudent(transaction.memberId, transaction.studentMember);
+  }
+
+  return buildMemberDetailsFromEmployee(transaction.memberId, transaction.teacherMember);
+}
+
+function resolvePayeeDetailsFromPayment(payment) {
+  if (!payment) {
+    return null;
+  }
+
+  if (payment.payeeType === "STUDENT") {
+    return buildMemberDetailsFromStudent(payment.payeeId, payment.studentPayee);
+  }
+
+  return buildMemberDetailsFromEmployee(payment.payeeId, payment.employeePayee);
+}
+
+function extractPaymentAmount(paymentItemRow) {
+  const plain = toPlain(paymentItemRow);
+  if (!plain) {
+    return 0;
+  }
+
+  return toMoneyNumber(plain.payment?.amount ?? plain.amount);
+}
+
+function computeReturnSettlementAmounts(
+  returnId,
+  issueTransactionIds,
+  securityAmountByIssueId,
+  settlementByReturnId
+) {
+  const securityAmount = decimalSum(
+    [...new Set(issueTransactionIds)].map(
+      (issueTransactionId) => securityAmountByIssueId[issueTransactionId] ?? 0
+    )
+  );
+
+  const settlementPaymentRow = settlementByReturnId.get(returnId);
+  if (!settlementPaymentRow) {
+    return {
+      securityAmount: 0,
+      fineAmount: 0,
+      paidAmount: 0,
+    };
+  }
+
+  const payment = toPlain(settlementPaymentRow).payment;
+  const paidAmount = extractPaymentAmount(settlementPaymentRow);
+  let fineAmount = 0;
+
+  if (payment?.paymentType === "INCOMING") {
+    fineAmount = decimalAdd(securityAmount, paidAmount);
+  } else if (payment?.paymentType === "OUTGOING") {
+    fineAmount = decimalSubtract(securityAmount, paidAmount);
+  }
+
+  return {
+    securityAmount,
+    fineAmount,
+    paidAmount,
+  };
+}
+
+function formatAssetReturnTransactionRecord(
+  returnPlain,
+  returnedItems,
+  settlementAmounts = null,
+  memberDetails = null
+) {
   return {
     assetReturnTransactionId: returnPlain.assetReturnTransactionId,
     returnDate: returnPlain.returnDate,
-    items: returnedItems,
+    memberId: memberDetails?.memberId ?? null,
+    memberType: memberDetails?.memberType ?? null,
+    memberBasicDetails: memberDetails?.memberBasicDetails ?? null,
+    securityAmount: settlementAmounts?.securityAmount ?? 0,
+    fineAmount: settlementAmounts?.fineAmount ?? 0,
+    paidAmount: settlementAmounts?.paidAmount ?? 0,
+    itemLength: returnedItems.length,
+    item: returnedItems,
   };
 }
 
@@ -235,28 +346,21 @@ async function settleSecurityDepositOnReturn(
     ...new Set(issueLines.map((row) => toPlain(row).transaction.assetIssueTransactionId)),
   ];
 
-  const securityRows = await repo.findAssetSecurityPaymentsByIssueIds(
+  const depositByIssueId = await issueRepo.findSecurityAmountByIssueIds(
     issueTransactionIds,
     instituteId,
     { transaction }
   );
 
-  const depositByIssueId = new Map();
-  for (const row of securityRows) {
-    const plain = toPlain(row);
-    const amount = toMoneyNumber(plain.payment?.amount ?? plain.amount);
-    depositByIssueId.set(plain.referenceId, amount);
-  }
-
   const missingDepositIssueIds = issueTransactionIds.filter(
-    (issueTransactionId) => !depositByIssueId.has(issueTransactionId)
+    (issueTransactionId) => depositByIssueId[issueTransactionId] === undefined
   );
   if (missingDepositIssueIds.length) {
     throw httpError("Security deposit not found for this asset issue", 404);
   }
 
   const savedSecurity = decimalSum(
-    issueTransactionIds.map((issueTransactionId) => depositByIssueId.get(issueTransactionId))
+    issueTransactionIds.map((issueTransactionId) => depositByIssueId[issueTransactionId])
   );
 
   if (decimalCompare(payloadSecurity, savedSecurity) !== 0) {
@@ -348,7 +452,7 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
     throw httpError("Duplicate assetIssueInventoryItemId in items", 400);
   }
 
-  const issueLines = await repo.findIssueInventoryItemsForReturn(uniqueItemIds, instituteId, {
+  const issueLines = await returnRepo.findIssueInventoryItemsForReturn(uniqueItemIds, instituteId, {
     transaction,
   });
   if (issueLines.length !== uniqueItemIds.length) {
@@ -363,8 +467,8 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
     assertReturnDateOnOrAfterIssueDate(line.transaction.issueDate, returnDate);
   }
 
-  const returnTxn = await repo.createAssetReturnTransaction(returnDate, { transaction });
-  const affected = await repo.returnIssueInventoryItems(
+  const returnTxn = await returnRepo.createAssetReturnTransaction(returnDate, { transaction });
+  const affected = await returnRepo.returnIssueInventoryItems(
     items,
     returnTxn.assetReturnTransactionId,
     { transaction }
@@ -374,11 +478,9 @@ async function processAssetReturnItems(returnDate, items, instituteId, transacti
   }
 
   const assetIds = [...new Set(issueLines.map((row) => toPlain(row).inventoryItem.assetId))];
-  for (const assetId of assetIds) {
-    await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
-  }
+  await syncAssetStatusesFromInventory(assetIds, instituteId, { transaction });
 
-  const updatedItems = await repo.findIssueInventoryItemsByIds(uniqueItemIds, { transaction });
+  const updatedItems = await returnRepo.findIssueInventoryItemsByIds(uniqueItemIds, { transaction });
 
   let settlementPayment = null;
   let settlement = null;
@@ -420,69 +522,59 @@ export async function returnAssetIssueItems(body, instituteId, createdBy) {
 }
 
 export async function listAssetReturnTransactions(instituteId, query) {
-  const { rows, total, page, limit } = await repo.findAssetReturnTransactionsPaginated(
-    instituteId,
-    {
-      page: query.page,
-      limit: query.limit,
-    }
-  );
+  const {
+    rows,
+    total,
+    page,
+    limit,
+    issueItemRows,
+    settlementByReturnId,
+    securityAmountByIssueId,
+    issueTransactionIdsByReturnId,
+  } = await returnRepo.findAssetReturnTransactionsListBundle(instituteId, {
+    page: query.page,
+    limit: query.limit,
+  });
 
   const returnRows = rows.map(toPlain);
-  const returnIds = returnRows.map((row) => row.assetReturnTransactionId);
-
-  const issueItemRows = await repo.findReturnedIssueItemsByReturnTransactionIds(
-    returnIds,
-    instituteId
-  );
-  const issueItems = issueItemRows.map(toPlain);
-
-  const studentIds = [
-    ...new Set(
-      issueItems
-        .filter((item) => item.transaction?.memberType === "STUDENT")
-        .map((item) => item.transaction.memberId)
-    ),
-  ];
-  const employeeIds = [
-    ...new Set(
-      issueItems
-        .filter((item) => item.transaction?.memberType === "TEACHER")
-        .map((item) => item.transaction.memberId)
-    ),
-  ];
-
-  const [studentRows, employeeRows] = await Promise.all([
-    repo.findStudentMemberDetailsByIds(studentIds, instituteId),
-    repo.findEmployeeMemberDetailsByIds(employeeIds, instituteId),
-  ]);
-
-  const studentMap = new Map(studentRows.map((row) => [toPlain(row).studentId, row]));
-  const employeeMap = new Map(employeeRows.map((row) => [toPlain(row).employeeId, row]));
-
   const itemsByReturnId = new Map();
+  const memberByReturnId = new Map();
 
-  for (const item of issueItems) {
+  for (const row of issueItemRows) {
+    const item = toPlain(row);
     const returnId = item.assetReturnTransactionId;
-    const txn = item.transaction;
-    const memberBasicDetails =
-      txn?.memberType === "STUDENT"
-        ? buildMemberDetailsFromStudent(txn.memberId, studentMap.get(txn.memberId))
-        : buildMemberDetailsFromEmployee(txn.memberId, employeeMap.get(txn.memberId));
 
     if (!itemsByReturnId.has(returnId)) {
       itemsByReturnId.set(returnId, []);
     }
 
-    itemsByReturnId.get(returnId).push(formatReturnedIssueItem(item, memberBasicDetails));
+    itemsByReturnId.get(returnId).push(formatReturnListItem(item));
+
+    if (!memberByReturnId.has(returnId) && item.transaction) {
+      memberByReturnId.set(returnId, {
+        memberId: item.transaction.memberId,
+        memberType: item.transaction.memberType,
+        memberBasicDetails: extractMemberBasicDetailsFromTransaction(item.transaction),
+      });
+    }
   }
 
-  const assetReturnTransactions = returnRows.map((returnRow) =>
-    formatAssetReturnTransactionRecord(
+  const assetReturnTransactions = returnRows.map((returnRow) => {
+    const returnId = returnRow.assetReturnTransactionId;
+    const settlementAmounts = computeReturnSettlementAmounts(
+      returnId,
+      issueTransactionIdsByReturnId.get(returnId) ?? [],
+      securityAmountByIssueId,
+      settlementByReturnId
+    );
+
+    return formatAssetReturnTransactionRecord(
       returnRow,
-      itemsByReturnId.get(returnRow.assetReturnTransactionId) ?? []
-    )
-  );
+      itemsByReturnId.get(returnId) ?? [],
+      settlementAmounts,
+      memberByReturnId.get(returnId) ?? null
+    );
+  });
 
   return {
     data: { assetReturnTransactions },
@@ -491,44 +583,34 @@ export async function listAssetReturnTransactions(instituteId, query) {
 }
 
 export async function getAssetReturnPaymentsById(assetReturnTransactionId, instituteId) {
-  const returnRow = await repo.findAssetReturnTransactionByIdForInstitute(
-    assetReturnTransactionId,
-    instituteId
-  );
+  const [returnRow, settlementPaymentRows, issueItemRows] = await Promise.all([
+    returnRepo.findAssetReturnTransactionByIdForInstitute(assetReturnTransactionId, instituteId),
+    returnRepo.findReturnSettlementPaymentsByReturnIds([assetReturnTransactionId], instituteId),
+    returnRepo.findReturnedIssueItemsByReturnTransactionIds([assetReturnTransactionId], instituteId, {
+      includeMember: true,
+    }),
+  ]);
+
   if (!returnRow) {
     throw httpError("Asset return transaction not found", 404);
   }
 
   const returnPlain = toPlain(returnRow);
   const returnId = returnPlain.assetReturnTransactionId;
-
-  const [settlementPaymentRows, issueItemRows] = await Promise.all([
-    repo.findReturnSettlementPaymentsByReturnIds([returnId], instituteId),
-    repo.findReturnedIssueItemsByReturnTransactionIds([returnId], instituteId),
-  ]);
-
-  const returnItems = issueItemRows.map(toPlain);
-  const firstTxn = returnItems[0]?.transaction;
-  const memberBasicDetails = firstTxn
-    ? await getMemberDetails(firstTxn.memberType, firstTxn.memberId, instituteId)
-    : null;
-
-  const { studentMap, employeeMap } = await loadPayeeLookupMaps(settlementPaymentRows, instituteId);
+  const firstTxn = toPlain(issueItemRows[0])?.transaction ?? null;
+  const memberBasicDetails = extractMemberBasicDetailsFromTransaction(firstTxn);
 
   const payments = settlementPaymentRows
-    .map((row) => {
-      const payment = toPlain(row).payment;
-      return formatAssetReturnPaymentRecord(
+    .map((row) =>
+      formatAssetReturnPaymentRecord(
         row,
         {
           paymentPurpose: "RETURN_SETTLEMENT",
           assetReturnTransactionId: returnId,
         },
-        payment
-          ? resolvePayeeDetails(payment.payeeType, payment.payeeId, studentMap, employeeMap)
-          : null
-      );
-    })
+        resolvePayeeDetailsFromPayment(toPlain(row).payment)
+      )
+    )
     .filter(Boolean);
 
   return {

@@ -3,7 +3,6 @@ import * as model from "../models/index.js";
 import {
   parseAssetCodeSequenceForNameSlug,
   parseInventoryItemCopyNumber,
-  nextAssetCodeSequenceFromMax,
 } from "../utility/assetCode.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
@@ -40,8 +39,19 @@ function buildInventoryWhere(inventoryStatus) {
 }
 
 function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
-  const { separate = false } = options;
+  const { separate = false, includeOpenIssues = false } = options;
   const where = buildInventoryWhere(inventoryStatus);
+  const nestedIncludes = [classRoomHierarchyInclude];
+
+  if (includeOpenIssues) {
+    nestedIncludes.push({
+      model: model.assetIssueInventoryItemModel,
+      as: "issueInventoryItems",
+      attributes: ["assetIssueInventoryItemId"],
+      required: false,
+      where: { assetReturnTransactionId: null },
+    });
+  }
 
   return {
     model: model.assetInventoryItemModel,
@@ -50,7 +60,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
     where,
     required: false,
     separate: separate || undefined,
-    include: [classRoomHierarchyInclude],
+    include: nestedIncludes,
   };
 }
 
@@ -69,6 +79,43 @@ export async function createAsset(data, options = {}) {
   return model.assetModel.create(data, { transaction: options.transaction });
 }
 
+function buildAssetListWhere(instituteId, filters = {}) {
+  const search = filters.search?.trim();
+  if (!search) {
+    return { instituteId };
+  }
+
+  const pattern = { [Op.like]: `%${search}%` };
+
+  return {
+    [Op.and]: [
+      { instituteId },
+      {
+        [Op.or]: [
+          { name: pattern },
+          { code: pattern },
+          { "$assetCategory.name$": pattern },
+        ],
+      },
+    ],
+  };
+}
+
+function buildAssetListSearchInclude(filters = {}) {
+  if (!filters.search?.trim()) {
+    return [];
+  }
+
+  return [
+    {
+      model: model.assetCategoryModel,
+      as: "assetCategory",
+      attributes: [],
+      required: false,
+    },
+  ];
+}
+
 export async function findAssetsByInstitutePaginated(
   instituteId,
   filters = {},
@@ -79,19 +126,25 @@ export async function findAssetsByInstitutePaginated(
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
   const inventoryStatus = filters.inventoryStatus ?? "all";
-  const assetWhere = { instituteId };
+  const assetWhere = buildAssetListWhere(instituteId, filters);
+  const searchIncludes = buildAssetListSearchInclude(filters);
 
   const total = await model.assetModel.count({
     where: assetWhere,
+    include: searchIncludes,
+    distinct: Boolean(searchIncludes.length),
+    col: searchIncludes.length ? "asset_id" : undefined,
     transaction: options.transaction,
   });
 
   const idRows = await model.assetModel.findAll({
     attributes: ["assetId"],
     where: assetWhere,
+    include: searchIncludes,
     order: [["assetId", "ASC"]],
     limit,
     offset,
+    subQuery: searchIncludes.length ? false : undefined,
     transaction: options.transaction,
   });
 
@@ -104,29 +157,45 @@ export async function findAssetsByInstitutePaginated(
     model.assetModel.findAll({
       attributes: { exclude: excludeTs },
       where: { assetId: assetIds, instituteId },
-      include: buildAssetDetailIncludes(inventoryStatus, { separate: true }),
+      include: buildAssetDetailIncludes(inventoryStatus, {
+        separate: true,
+        includeOpenIssues: true,
+      }),
       order: [["assetId", "ASC"]],
       transaction: options.transaction,
     }),
     countInventoryStatsByAssetIds(assetIds, instituteId, options),
   ]);
 
+
   return { rows, total, page, limit, inventoryStatsByAssetId };
 }
 
 export async function findAssetById(assetId, instituteId, options = {}) {
-  return model.assetModel.findOne({
+  const asset = await model.assetModel.findOne({
     attributes: { exclude: excludeTs },
     where: { assetId, instituteId },
-    include: buildAssetDetailIncludes("all", { separate: true }),
+    include: buildAssetDetailIncludes("all", { separate: true, includeOpenIssues: true }),
     transaction: options.transaction,
   });
+
+  return asset;
 }
 
 export async function findAssetStatusById(assetId, instituteId, options = {}) {
   return model.assetModel.findOne({
     attributes: ["assetId", "status"],
     where: { assetId, instituteId },
+    transaction: options.transaction,
+  });
+}
+
+export async function findAssetStatusesByIds(assetIds, instituteId, options = {}) {
+  if (!assetIds.length) return [];
+
+  return model.assetModel.findAll({
+    attributes: ["assetId", "status"],
+    where: { assetId: assetIds, instituteId },
     transaction: options.transaction,
   });
 }
@@ -167,7 +236,7 @@ export async function getNextAssetCodeSequence(
     }
   }
 
-  return { sequence: nextAssetCodeSequenceFromMax(maxSeq) };
+  return { sequence: Math.max(1, maxSeq + 1) };
 }
 
 export async function findAssetCodeById(assetId, instituteId, options = {}) {
