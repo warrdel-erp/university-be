@@ -20,14 +20,18 @@ export const getAllStudents = async (req, res) => {
     const universityId = req.user.universityId;
     const instituteId = req.user.defaultInstituteId;
     const role = req.user.role;
-    let { search, acedmicYearId, page, limit } = req.query;
-
-    search = search || 'all';
-    page = parseInt(page) || 1;
-    limit = parseInt(limit) || 10;
+    const { page, limit, search, courseId } = req.query;
 
     try {
-        const result = await studentService.getAllStudents(search, universityId, acedmicYearId, page, limit, instituteId, role);
+        const result = await studentService.getAllStudents({
+            universityId,
+            page,
+            limit,
+            instituteId,
+            role,
+            search,
+            courseId,
+        });
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all student details:", error);
@@ -96,7 +100,12 @@ export const updateStudentDetails = async (req, res) => {
         if (!studentId) {
             return ErrorResponse(res, 400, "studentId in URL path is required");
         }
-        const result = await studentService.updateStudentDetails(studentId, info, file);
+        const result = await studentService.updateStudentDetails(
+            studentId,
+            info,
+            file,
+            req.user.defaultInstituteId
+        );
         return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {
         console.error(`Error in updating student Id ${studentId}:`, error);

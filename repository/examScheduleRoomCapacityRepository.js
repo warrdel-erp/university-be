@@ -66,6 +66,49 @@ export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
   });
 }
 
+export async function getRoomsByExamScheduleId(examScheduleId) {
+  const rows = await model.examScheduleRoomCapacityModel.findAll({
+    where: { examScheduleId },
+    attributes: [
+      "examScheduleRoomCapacityId",
+      "examScheduleId",
+      "classRoomSectionId",
+      "capacity",
+      "columns",
+      "orderKey",
+    ],
+    include: [
+      {
+        model: model.classRoomModel,
+        as: "classRoom",
+        attributes: [
+          "classRoomSectionId",
+          "roomNumber",
+          "capacity",
+          "examCapacity",
+          "examCapacityColumns",
+        ],
+        required: true,
+        paranoid: true,
+      },
+    ],
+    order: [["orderKey", "ASC"]],
+  });
+
+  return rows.map((row) => {
+    const plain = row.get({ plain: true });
+    return {
+      examScheduleRoomCapacityId: plain.examScheduleRoomCapacityId,
+      examScheduleId: plain.examScheduleId,
+      classRoomSectionId: plain.classRoomSectionId,
+      capacity: plain.capacity,
+      columns: plain.columns,
+      orderKey: plain.orderKey,
+      classRoom: plain.classRoom ?? null,
+    };
+  });
+}
+
 export async function getExamScheduleSlot(examScheduleId) {
   return await model.examScheduleModel.findByPk(examScheduleId, {
     attributes: ["examScheduleId", "examDate", "examTime", "duration"],

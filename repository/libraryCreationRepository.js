@@ -1,5 +1,5 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 
 const bookMappingIncludes = [
@@ -413,6 +413,194 @@ export async function getAllBooks(
   });
 
   return { total: count, books: rows };
+}
+
+const EMPTY_BOOK_SUMMARY = {
+  totalBooks: 0,
+  inStock: 0,
+  lowStock: 0,
+  totalCopies: 0,
+};
+
+const AVAILABLE_INVENTORY_STATUS = "available";
+
+function buildBookDetailsInclude(libraryCreationId, instituteId) {
+  return {
+    model: model.libraryBookModel,
+    as: "bookDetails",
+    attributes: [],
+    where: { libraryCreationId },
+    required: true,
+    include: instituteId
+      ? [
+          {
+            model: model.libraryCreationModel,
+            as: "library",
+            attributes: [],
+            where: { instituteId },
+            required: true,
+          },
+        ]
+      : [],
+  };
+}
+
+async function resolveBookSummaryScope(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  instituteId,
+) {
+  if (libraryCreationId && instituteId) {
+    const library = await model.libraryCreationModel.findOne({
+      attributes: ["libraryCreationId"],
+      where: { libraryCreationId, instituteId },
+    });
+    if (!library) {
+      return null;
+    }
+  }
+
+  const inventoryWhere = {};
+  const requireInventoryJoin = Boolean(libraryFloorId);
+
+  if (libraryFloorId) {
+    const floor = await model.libraryFloorModel.findOne({
+      attributes: ["libraryFloorId"],
+      where: {
+        libraryFloorId,
+        universityId,
+        libraryCreationId,
+        ...(instituteId && { instituteId }),
+      },
+    });
+
+    if (!floor) {
+      return null;
+    }
+
+    const aisles = await model.libraryAisleModel.findAll({
+      attributes: ["libraryAisleId"],
+      where: { libraryFloorId },
+      raw: true,
+    });
+
+    const aisleIds = aisles.map((row) => row.libraryAisleId);
+    if (!aisleIds.length) {
+      return null;
+    }
+
+    inventoryWhere.libraryAisleId = { [Op.in]: aisleIds };
+  }
+
+  const libraryScopeInclude = instituteId
+    ? [
+        {
+          model: model.libraryCreationModel,
+          as: "library",
+          attributes: [],
+          where: { instituteId },
+          required: true,
+        },
+      ]
+    : [];
+
+  return {
+    inventoryWhere,
+    requireInventoryJoin,
+    libraryScopeInclude,
+  };
+}
+
+function summarizePerBookInventoryStats(perBookStats, totalBooks, lowStockThreshold, requireInventoryJoin) {
+  let totalCopies = 0;
+  let inStock = 0;
+  let lowStock = 0;
+
+  for (const row of perBookStats) {
+    const copies = Number(row.totalCopies) || 0;
+    const available = Number(row.availableCount) || 0;
+    totalCopies += copies;
+    inStock += available;
+    if (available <= lowStockThreshold) {
+      lowStock += 1;
+    }
+  }
+
+  if (!requireInventoryJoin) {
+    const booksWithoutInventory = Math.max(0, Number(totalBooks) - perBookStats.length);
+    lowStock += booksWithoutInventory;
+  }
+
+  return { totalCopies, inStock, lowStock };
+}
+
+export async function getBookSummaryStats(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  instituteId,
+  lowStockThreshold = 2,
+) {
+  const scope = await resolveBookSummaryScope(
+    universityId,
+    libraryCreationId,
+    libraryFloorId,
+    instituteId,
+  );
+  if (!scope) {
+    return { ...EMPTY_BOOK_SUMMARY };
+  }
+
+  const { inventoryWhere, requireInventoryJoin, libraryScopeInclude } = scope;
+  const hasInventoryWhere = Object.keys(inventoryWhere).length > 0;
+  const bookDetailsInclude = buildBookDetailsInclude(libraryCreationId, instituteId);
+  const availableCountExpr = fn(
+    "SUM",
+    fn("IF", where(col("status"), AVAILABLE_INVENTORY_STATUS), 1, 0),
+  );
+  const inventoryIncludeForBookCount = {
+    model: model.libraryBookInventoryModel,
+    as: "inventoryCopies",
+    attributes: [],
+    where: hasInventoryWhere ? inventoryWhere : undefined,
+    required: requireInventoryJoin,
+  };
+
+  const [totalBooks, perBookStats] = await Promise.all([
+    model.libraryBookModel.count({
+      where: { libraryCreationId },
+      include: [...libraryScopeInclude, inventoryIncludeForBookCount],
+      distinct: true,
+      col: "library_book_id",
+    }),
+    model.libraryBookInventoryModel.findAll({
+      attributes: [
+        "libraryBookId",
+        [fn("COUNT", col("library_book_inventory.inventory_id")), "totalCopies"],
+        [availableCountExpr, "availableCount"],
+      ],
+      where: hasInventoryWhere ? inventoryWhere : undefined,
+      include: [bookDetailsInclude],
+      group: ["libraryBookId"],
+      raw: true,
+      subQuery: false,
+    }),
+  ]);
+
+  const { totalCopies, inStock, lowStock } = summarizePerBookInventoryStats(
+    perBookStats,
+    totalBooks,
+    lowStockThreshold,
+    requireInventoryJoin,
+  );
+
+  return {
+    totalBooks: Number(totalBooks) || 0,
+    inStock,
+    lowStock,
+    totalCopies,
+  };
 }
 
 export async function bookExistsById(libraryBookId, transaction) {

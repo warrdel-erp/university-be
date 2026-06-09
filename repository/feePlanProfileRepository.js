@@ -225,6 +225,7 @@ export async function findFeePlanProfileByIdForInstitute(feePlanProfileId, insti
       "planType",
       "category",
       "courseSessionId",
+      "publishStatus",
     ],
     transaction,
   });
