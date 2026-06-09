@@ -399,25 +399,9 @@ async function generateScholarNumber(courseId, instituteId) {
   return scholarNumber;
 }
 
-export async function getAllStudents(
-  search,
-  universityId,
-  acedmicYearId,
-  page,
-  limit,
-  instituteId,
-  role,
-) {
+export async function getAllStudents(payload) {
   try {
-    return await studentRepository.getAllStudents(
-      search,
-      universityId,
-      acedmicYearId,
-      page,
-      limit,
-      instituteId,
-      role,
-    );
+    return await studentRepository.getAllStudents(payload);
   } catch (error) {
     console.error("Error in studentService.getAllStudents:", error);
     throw error;

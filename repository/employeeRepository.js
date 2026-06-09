@@ -24,12 +24,11 @@ export async function updateEmployee(employeeId, data, transaction) {
     }
 };
 
-export async function getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role) {
+export async function getAllEmployee(universityId, campusId, instituteId, headInstituteId, role) {
     try {
         const whereClause = {
-            campusId: campusId,
-            acedmicYearId: acedmicYearId,
-            instituteId: instituteId,
+            campusId,
+            instituteId,
         };
         const result = await model.employeeModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
