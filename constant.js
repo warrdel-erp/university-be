@@ -199,3 +199,5 @@ export const FEE_PLAN_PUBLISH_STATUS = {
   DRAFT: "draft",
   PUBLISHED: "published",
 };
+
+export const LOW_STOCK_THRESHOLD = 2;
