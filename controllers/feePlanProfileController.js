@@ -24,6 +24,23 @@ export async function updateFeePlanProfile(req, res) {
   }
 }
 
+export async function publishFeePlanProfile(req, res) {
+  try {
+    const instituteId = req.user.defaultInstituteId;
+    const { feePlanProfileId } = req.body;
+    const row = await feePlanProfileService.publishFeePlanProfile(
+      feePlanProfileId,
+      instituteId
+    );
+    if (!row) {
+      return ErrorResponse(res, 404, "Fee plan profile not found");
+    }
+    return SuccessResponse(res, 200, "Fee plan profile published successfully", row);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getAllFeePlanProfile(req, res) {
   try {
     const instituteId = req.user.defaultInstituteId;

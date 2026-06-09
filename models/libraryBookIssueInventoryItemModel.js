@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel.js";
 import libraryBookInventoryModel from "./libraryBookInventoryModel.js";
+import libraryReturnBookTransactionModel from "./libraryReturnBookTransactionModel.js";
 
 export default sequelize.define(
   "library_book_issue_inventory_item",
@@ -30,10 +31,14 @@ export default sequelize.define(
         key: "inventory_id",
       },
     },
-    returnDate: {
-      type: DataTypes.DATEONLY,
+    libraryReturnBookTransactionId: {
+      type: DataTypes.INTEGER,
       allowNull: true,
-      field: "return_date",
+      field: "library_return_book_transaction_id",
+      references: {
+        model: libraryReturnBookTransactionModel,
+        key: "library_return_book_transaction_id",
+      },
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -47,16 +52,11 @@ export default sequelize.define(
       defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
       field: "updated_at",
     },
-    deletedAt: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      field: "deleted_at",
-    },
   },
   {
     tableName: "library_book_issue_inventory_item",
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
   },
 );
 

@@ -24,6 +24,7 @@ import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
+import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 
 function isMainFeePlanSubItem(line) {
   return line?.isMainSubItem === true || line?.isMainSubItem === 1;
@@ -302,6 +303,12 @@ export async function addStudent(
   }
 }
 
+function studentHttpError(message, statusCode = 400) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
+
 async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
   const profile =
     await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
@@ -309,7 +316,12 @@ async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
       instituteId,
     );
   if (!profile) {
-    throw new Error("Fee plan profile not found for this institute");
+    throw studentHttpError("Fee plan profile not found for this institute", 404);
+  }
+  const plain =
+    typeof profile.get === "function" ? profile.get({ plain: true }) : profile;
+  if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+    throw studentHttpError("Only published fee plans can be assigned to students", 400);
   }
 }
 
@@ -399,25 +411,9 @@ async function generateScholarNumber(courseId, instituteId) {
   return scholarNumber;
 }
 
-export async function getAllStudents(
-  search,
-  universityId,
-  acedmicYearId,
-  page,
-  limit,
-  instituteId,
-  role,
-) {
+export async function getAllStudents(payload) {
   try {
-    return await studentRepository.getAllStudents(
-      search,
-      universityId,
-      acedmicYearId,
-      page,
-      limit,
-      instituteId,
-      role,
-    );
+    return await studentRepository.getAllStudents(payload);
   } catch (error) {
     console.error("Error in studentService.getAllStudents:", error);
     throw error;
@@ -988,7 +984,7 @@ function updateHttpError(message, statusCode = 400) {
   return err;
 }
 
-export async function updateStudentDetails(StudentId, info, files) {
+export async function updateStudentDetails(StudentId, info, files, instituteId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -1004,6 +1000,17 @@ export async function updateStudentDetails(StudentId, info, files) {
     }
 
     const studentPayload = pickStudentUpdatePayload(info);
+
+    if (studentPayload.feePlanProfileId) {
+      const resolvedInstituteId = instituteId ?? studentPayload.instituteId ?? info.instituteId;
+      if (!resolvedInstituteId) {
+        throw updateHttpError("instituteId is required to assign a fee plan", 400);
+      }
+      await assertFeePlanProfileForInstitute(
+        studentPayload.feePlanProfileId,
+        resolvedInstituteId
+      );
+    }
 
     let rowsUpdated = 0;
     if (Object.keys(studentPayload).length > 0) {

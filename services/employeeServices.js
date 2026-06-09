@@ -422,8 +422,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role) {
-  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, acedmicYearId, headInstituteId, role);
+export async function getAllEmployee(universityId, campusId, instituteId, headInstituteId, role) {
+  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, headInstituteId, role);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
