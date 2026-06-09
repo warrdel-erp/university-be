@@ -91,6 +91,11 @@ const listBooksQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   search: optionalTrimmedString,
+  sortBy: z.enum(bookListSortByValues).optional(),
+  sortOrder: z
+    .enum(["asc", "desc", "ASC", "DESC"])
+    .optional()
+    .transform((v) => (v ? v.toLowerCase() : undefined)),
 });
 
 const bookSummaryQuerySchema = z.object({
@@ -277,10 +282,14 @@ router.delete("/deleteInventory", userAuth, validate({ query: inventoryQuerySche
 
 router.get("/issuedBook", userAuth, getAllIssuedBooks);
 
+const bulkUploadQuerySchema = z.object({
+  libraryCreationId: z.coerce.number().optional(),
+});
+
 router.post(
   "/bulkUpload",
   userAuth,
-  validate({ query: idQuerySchema }),
+  validate({ query: bulkUploadQuerySchema }),
   bulkUploadBooks,
 );
 

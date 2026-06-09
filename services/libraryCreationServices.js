@@ -394,23 +394,34 @@ export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
   }
 
   const audit = structureAuditFields(user.userId);
+  const maxAisleName =
+    await libraryStructureRepository.getMaxNumericAisleNameByFloorId(libraryFloorId);
+  const aisleNameStart = maxAisleName + 1;
+  const aislePayloads = buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit);
+
+  for (const { name } of aislePayloads) {
+    if (await libraryStructureRepository.findAisleByFloorAndName(libraryFloorId, name)) {
+      throw httpError(`Aisle name '${name}' already exists`, 409);
+    }
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
-    const maxAisleName =
-      await libraryStructureRepository.getMaxNumericAisleNameByFloorId(
-        libraryFloorId,
-        transaction,
-      );
-    const aisleNameStart = maxAisleName + 1;
-
     const createdAisles = await libraryStructureRepository.bulkCreateAisles(
-      buildAislePayloads(libraryFloorId, aisles, aisleNameStart, audit),
+      aislePayloads,
       transaction,
     );
 
+    const rackPayloads = buildRackPayloads(createdAisles, racksPerAisle, audit);
+    for (const { libraryAisleId, name } of rackPayloads) {
+      if (await libraryStructureRepository.findRackByAisleAndName(libraryAisleId, name)) {
+        throw httpError(`Rack name '${name}' already exists in this aisle`, 409);
+      }
+    }
+
     const createdRacks = await libraryStructureRepository.bulkCreateRacks(
-      buildRackPayloads(createdAisles, racksPerAisle, audit),
+      rackPayloads,
       transaction,
     );
 
@@ -423,6 +434,12 @@ export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
       aisleNameByAisleId,
       audit,
     );
+
+    for (const { libraryRackId, name } of rowPayloads) {
+      if (await libraryStructureRepository.findRowByRackAndName(libraryRackId, name)) {
+        throw httpError(`Row name '${name}' already exists in this rack`, 409);
+      }
+    }
 
     await libraryStructureRepository.bulkCreateRows(rowPayloads, transaction);
 
@@ -508,6 +525,9 @@ export async function getFloorStructure(libraryFloorId, user) {
 
 export async function addLibrary(body, user) {
   const { instituteId, name, description, floors, campusId } = body;
+  if (await libraryStructureRepository.findLibraryByInstituteAndName(instituteId, name)) {
+    throw httpError(`Library name '${name}' already exists`, 409);
+  }
   const payload = {
     instituteId,
     name,
@@ -542,7 +562,16 @@ async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, 
     );
 
     // 2. Create Floors
+    const seenFloorNames = new Set();
     for (const floor of data.floors) {
+      const floorKey = String(floor.name).toLowerCase();
+      if (seenFloorNames.has(floorKey)) {
+        throw httpError(`Floor name '${floor.name}' already exists`, 409);
+      }
+      seenFloorNames.add(floorKey);
+      if (await libraryStructureRepository.findFloorByLibraryAndName(library.libraryCreationId, floor.name)) {
+        throw httpError(`Floor name '${floor.name}' already exists`, 409);
+      }
       await libraryStructureRepository.createFloor(
         {
           libraryCreationId: library.libraryCreationId,
@@ -604,6 +633,13 @@ async function updateLibraryRecord(libraryCreationId, libraryData, updatedBy) {
   // const transaction = await sequelize.transaction();
 
   try {
+    if (libraryData.name) {
+      const library = await libraryStructureRepository.findLibraryById(libraryCreationId);
+      const instituteId = libraryData.instituteId ?? library.instituteId;
+      if (await libraryStructureRepository.findLibraryByInstituteAndName(instituteId, libraryData.name, libraryCreationId)) {
+        throw httpError(`Library name '${libraryData.name}' already exists`, 409);
+      }
+    }
     // Update library data
     libraryData.updatedBy = updatedBy;
     const result = await libraryCreationService.updateLibrary(libraryCreationId, libraryData);
@@ -766,13 +802,15 @@ export async function getAllBooks(query, user) {
     page = 1,
     limit = 20,
     search,
+    sortBy,
+    sortOrder,
   } = query;
 
   const safeLimit = Math.min(100, Math.max(1, limit));
   const safePage = Math.max(1, page);
   const offset = (safePage - 1) * safeLimit;
 
-  const filters = { search };
+  const filters = { search, sortBy, sortOrder };
 
   const { total, books } = await libraryCreationService.getAllBooks(
     user.universityId,

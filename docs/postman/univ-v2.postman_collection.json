@@ -6397,7 +6397,7 @@
               ]
             },
             "url": {
-              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20&search=",
+              "raw": "{{baseurl}}/libraryCreation/allBook?libraryCreationId={{libraryCreation_id}}&libraryFloorId={{libraryFloor_id}}&page=1&limit=20&search=&sortBy=accessionNumber&sortOrder=asc",
               "host": [
                 "{{baseurl}}"
               ],
@@ -6431,10 +6431,20 @@
                   "key": "search",
                   "value": "",
                   "description": "Single search — title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "accessionNumber",
+                  "description": "Optional — server-side sort column: accessionNumber | title | author | type | condition | status"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Optional — asc or desc (default asc when sortBy is set). Omit sortBy to use default order (libraryBookId DESC)"
                 }
               ]
             },
-            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | — | Library ID |\n| `libraryFloorId` | No | — | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | — | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list with server-side column sorting across the full dataset (not client-side). Use **`search`** for lookup.\n\n**Query (8 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | — | Library ID |\n| `libraryFloorId` | No | — | Floor scope; inventory filter + sort scoped to floor |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | — | Book + inventory fields; omit for all |\n| `sortBy` | No | — | Column key (see below) |\n| `sortOrder` | No | `asc` | `asc` or `desc` when `sortBy` is set |\n\n**`sortBy` values:** `accessionNumber`, `title`, `author`, `type`, `condition`, `status` (category, subject, location are not sortable)\n\n**Default order (no sortBy):** `libraryBookId` DESC\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&sortBy=accessionNumber&sortOrder=asc&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&sortBy=title&sortOrder=desc&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&sortBy=status&sortOrder=asc&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
           },
           "response": [
             {

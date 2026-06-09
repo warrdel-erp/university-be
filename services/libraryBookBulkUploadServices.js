@@ -12,7 +12,7 @@ import { readLibraryBulkUploadFile } from "../utility/fileHandler.js";
 
 /** Columns written to library_book table. */
 const BULK_BOOK_FIELDS = [
-  "libraryCreationId", "libraryFloorId", "title", "subtitle", "authors", "publisher",
+  "title", "subtitle", "authors", "publisher",
   "placeOfPublication", "yearOfPublication", "edition", "seriesTitle", "volumeNumber",
   "language", "isbn", "issn", "barcode", "physicalDescription", "numberOfPages",
   "illustrations", "summary", "keywords", "additionalAuthor", "subjectId",
@@ -21,26 +21,45 @@ const BULK_BOOK_FIELDS = [
 
 /** Columns written to library_book_inventory table (one row per Excel line). */
 const BULK_INVENTORY_FIELDS = [
-  "accessionNumber", "libraryAisleId", "libraryRackId", "libraryRowId", "studentId",
-  "employeeId", "issueDate", "dueDate", "status", "billNo", "billDate",
-  "itemPrice", "netPrice", "currency", "condition",
+  "accessionNumber", "studentId", "employeeId", "issueDate", "dueDate", "status",
+  "billNo", "billDate", "itemPrice", "netPrice", "currency", "condition",
 ];
 
 /** Fields parsed as Number() from Excel cells. */
 const BULK_NUMBER_FIELDS = [
-  "libraryCreationId", "libraryFloorId", "yearOfPublication", "numberOfPages",
-  "classSectionsId", "libraryAisleId", "libraryRackId", "libraryRowId",
+  "yearOfPublication", "numberOfPages", "classSectionsId",
   "studentId", "employeeId", "itemPrice", "netPrice",
 ];
 
 /** Fields passed through parseCustomDate (supports Excel date serials / strings). */
 const BULK_DATE_FIELDS = ["billDate", "issueDate", "dueDate"];
 
-/**
- * Excel headers "Aisle", "Rack", "Row" hold location *names*, not IDs.
- * Mapped to internal keys resolved later via libraryStructureRepository.
- */
-const BULK_LOCATION_HEADER_MAP = { aisle: "aisleName", rack: "rackName", row: "rowName" };
+/** Library / floor / shelf — Excel sends names; IDs are resolved on import. */
+const BULK_CONTEXT_FIELD_ALIASES = {
+  libraryName: [
+    "library",
+    "Library",
+    "LIBRARY",
+    "library name",
+    "Library Name",
+    "libraryName",
+    "LibraryName",
+  ],
+  floorName: [
+    "floor",
+    "Floor",
+    "FLOOR",
+    "floor name",
+    "Floor Name",
+    "floorName",
+    "FloorName",
+    "library floor",
+    "Library Floor",
+  ],
+  aisleName: ["aisle", "Aisle", "AISLE", "aisle name", "Aisle Name", "aisleName", "AisleName"],
+  rackName: ["rack", "Rack", "RACK", "rack name", "Rack Name", "rackName", "RackName"],
+  rowName: ["row", "Row", "ROW", "row name", "Row Name", "rowName", "RowName"],
+};
 
 /** Applied when cell is empty and column has a sensible default. */
 const BULK_FIELD_DEFAULTS = { itemType: "print", status: "available", illustrations: false };
@@ -76,30 +95,6 @@ const BULK_INVENTORY_FIELD_ALIASES = {
     "Accession No",
     "acc no",
     "ACC No",
-  ],
-  libraryAisleId: [
-    "LIBRARYAISLEID",
-    "aisle_id",
-    "Aisle_Id",
-    "aisleid",
-    "AisleId",
-    "Aisle ID",
-  ],
-  libraryRackId: [
-    "LIBRARYRACKID",
-    "rackid",
-    "RackId",
-    "rack id",
-    "Rack Id",
-    "Rack ID",
-  ],
-  libraryRowId: [
-    "libraryrowid",
-    "LibraryRowId",
-    "LIBRARYROWID",
-    "row id",
-    "Row Id",
-    "Row ID",
   ],
   studentId: [
     "studentid",
@@ -248,6 +243,7 @@ function buildBulkExcelHeaderLookupMap(fieldAliasesByModel) {
 
 const BULK_BOOK_HEADER_LOOKUP = buildBulkExcelHeaderLookupMap(BULK_BOOK_FIELD_ALIASES);
 const BULK_INVENTORY_HEADER_LOOKUP = buildBulkExcelHeaderLookupMap(BULK_INVENTORY_FIELD_ALIASES);
+const BULK_CONTEXT_HEADER_LOOKUP = buildBulkExcelHeaderLookupMap(BULK_CONTEXT_FIELD_ALIASES);
 
 /**
  * Resolve one Excel column header to a library_book or library_book_inventory field.
@@ -389,26 +385,24 @@ function isBulkExcelRowEmpty(excelRow) {
 }
 
 /**
- * Parse one Excel data row into three objects:
- *   - book: library_book fields
- *   - inventory: library_book_inventory fields
- *   - location: aisle/rack/row names (resolved to IDs later in batch)
+ * Parse one Excel data row into:
+ *   - book / inventory: DB fields
+ *   - context: library, floor, aisle, rack, row names (resolved to IDs later)
  */
 function parseSingleBulkUploadExcelRow(excelRow) {
   const book = {};
   const inventory = {};
-  const location = {};
+  const context = {};
   const errors = [];
 
   for (const [excelHeader, rawCellValue] of Object.entries(excelRow)) {
-    // Location columns use names, not numeric IDs
-    const locationFieldName =
-      BULK_LOCATION_HEADER_MAP[normalizeBulkExcelHeader(excelHeader)] ??
-      BULK_LOCATION_HEADER_MAP[toCamelCaseFieldKeyFromHeader(excelHeader)];
+    const contextFieldName =
+      BULK_CONTEXT_HEADER_LOOKUP[normalizeBulkExcelHeader(excelHeader)] ??
+      BULK_CONTEXT_HEADER_LOOKUP[toCamelCaseFieldKeyFromHeader(excelHeader)];
 
-    if (locationFieldName) {
+    if (contextFieldName) {
       if (!isBulkExcelCellEmpty(rawCellValue)) {
-        location[locationFieldName] = String(rawCellValue).trim();
+        context[contextFieldName] = String(rawCellValue).trim();
       }
       continue;
     }
@@ -461,8 +455,9 @@ function parseSingleBulkUploadExcelRow(excelRow) {
   // Minimum required per business rules
   if (!book.title) errors.push("title is required");
   if (!inventory.accessionNumber) errors.push("accessionNumber is required");
+  if (!context.aisleName) errors.push("aisleName is required");
 
-  return { book, inventory, location, errors };
+  return { book, inventory, context, errors };
 }
 
 function formatBulkUploadRowError(excelRowNumber, errorText) {
@@ -635,7 +630,22 @@ async function validateAccessionNumbersBeforeUpload(parsedRows) {
 /**
  * Run every check that can fail before we open a DB transaction.
  */
-async function runAllPreUploadValidations(parsedRows, instituteId) {
+function validateLibraryNameOnAllRows(parsedRows, libraryCreationId) {
+  if (libraryCreationId) {
+    return [];
+  }
+  const errors = [];
+  for (const row of parsedRows) {
+    if (!row.context.libraryName) {
+      errors.push(
+        formatBulkUploadRowError(row.rowNumber, "libraryName is required (or pass libraryCreationId in query)"),
+      );
+    }
+  }
+  return errors;
+}
+
+async function runAllPreUploadValidations(parsedRows, instituteId, libraryCreationId) {
   const [categoryRows, subjectRows] = await Promise.all([
     libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(instituteId),
     libraryBookBulkUploadRepository.findAllSubjectsForBulkUpload(),
@@ -647,6 +657,7 @@ async function runAllPreUploadValidations(parsedRows, instituteId) {
   const validSubjectIds = buildMasterIdSet(subjectRows, "subjectId");
 
   const errors = [
+    ...validateLibraryNameOnAllRows(parsedRows, libraryCreationId),
     ...validateCategoryAndSubjectNamesOnAllRows(
       parsedRows,
       categoryNameToIdMap,
@@ -684,9 +695,9 @@ function splitBulkUploadRowsIntoBatches(rows, batchSize) {
  * In-memory key for bookCache: prefer ISBN, else normalized title.
  * Rows sharing this key get the same libraryBookId.
  */
-function buildBulkUploadBookCacheKey(book) {
-  if (book.isbn) return `isbn:${book.isbn}`;
-  return `title:${book.title.toLowerCase()}`;
+function buildBulkUploadBookCacheKey(book, libraryCreationId) {
+  const bookKey = book.isbn ? `isbn:${book.isbn}` : `title:${book.title.toLowerCase()}`;
+  return `${libraryCreationId}:${bookKey}`;
 }
 
 /** Split "1, Math, 3" into numeric IDs and name tokens for subject/category resolution. */
@@ -794,6 +805,7 @@ async function resolveBulkUploadSubjectIds(
 async function buildBulkUploadNewBookRecord(
   book,
   libraryCreationId,
+  libraryFloorId,
   instituteId,
   createdBy,
   updatedBy,
@@ -830,6 +842,7 @@ async function buildBulkUploadNewBookRecord(
       ...bookFields,
       isbn: book.isbn ?? null,
       libraryCreationId,
+      libraryFloorId: libraryFloorId ?? null,
       createdBy,
       updatedBy,
     },
@@ -931,45 +944,95 @@ function registerBookInLookupIndexes(libraryBookId, bookPayload, bookIndexByTitl
 }
 
 // =============================================================================
-// LOCATION RESOLUTION — Aisle/Rack/Row names → foreign key IDs
+// CONTEXT RESOLUTION — library / floor / aisle / rack / row names → IDs
 // =============================================================================
 
-/** Cache location name lookups within one upload to avoid repeated DB hits. */
-async function fetchLibraryLocationIdByName(locationName, locationCache, fetchIdByName) {
-  const cacheKey = String(locationName).trim().toLowerCase();
-  if (locationCache.has(cacheKey)) {
-    return locationCache.get(cacheKey);
+async function fetchCachedId(cache, cacheKey, fetchId) {
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey);
   }
-  const locationId = await fetchIdByName(locationName);
-  locationCache.set(cacheKey, locationId);
-  return locationId;
+  const id = await fetchId();
+  cache.set(cacheKey, id);
+  return id;
 }
 
-/** Optional: Excel may omit aisle/rack/row; IDs stay null (allowed for bulk data). */
-async function resolveBulkUploadLocationIdsForRow(location, aisleCache, rackCache, rowCache) {
+/** Resolve libraryName / floorName from sheet (query libraryCreationId is fallback). */
+async function resolveBulkUploadContextIds(
+  context,
+  libraryCreationId,
+  instituteId,
+  libraryCache,
+  floorCache,
+) {
+  let resolvedLibraryCreationId = libraryCreationId ?? null;
+
+  if (context.libraryName) {
+    const libraryKey = `${instituteId}:${context.libraryName.toLowerCase()}`;
+    resolvedLibraryCreationId = await fetchCachedId(libraryCache, libraryKey, () =>
+      libraryStructureRepository.getLibraryCreationIdByInstituteAndName(
+        instituteId,
+        context.libraryName,
+      ),
+    );
+  }
+
+  if (!resolvedLibraryCreationId) {
+    throw new Error("libraryName is required when libraryCreationId is not provided in query");
+  }
+
+  let libraryFloorId = null;
+  if (context.floorName) {
+    const floorKey = `${resolvedLibraryCreationId}:${context.floorName.toLowerCase()}`;
+    libraryFloorId = await fetchCachedId(floorCache, floorKey, () =>
+      libraryStructureRepository.getFloorIdByLibraryAndName(
+        resolvedLibraryCreationId,
+        context.floorName,
+      ),
+    );
+  }
+
+  return { libraryCreationId: resolvedLibraryCreationId, libraryFloorId };
+}
+
+/** Resolve aisleName / rackName / rowName under the resolved floor (case-insensitive). */
+async function resolveBulkUploadLocationIdsForRow(
+  context,
+  libraryFloorId,
+  libraryCreationId,
+  aisleCache,
+  rackCache,
+  rowCache,
+) {
   let libraryAisleId = null;
   let libraryRackId = null;
   let libraryRowId = null;
 
-  if (location.aisleName) {
-    libraryAisleId = await fetchLibraryLocationIdByName(
-      location.aisleName,
-      aisleCache,
-      libraryStructureRepository.getAisleIdByName,
+  if (context.rackName && !context.aisleName) {
+    throw new Error("aisleName is required when rackName is provided");
+  }
+  if (context.rowName && !context.rackName) {
+    throw new Error("rackName is required when rowName is provided");
+  }
+  if (!libraryFloorId) {
+    throw new Error("floorName is required when aisleName is provided");
+  }
+
+  const aisleKey = `${libraryFloorId}:${context.aisleName.toLowerCase()}`;
+  libraryAisleId = await fetchCachedId(aisleCache, aisleKey, () =>
+    libraryStructureRepository.getAisleIdByFloorAndName(libraryFloorId, context.aisleName),
+  );
+
+  if (context.rackName) {
+    const rackKey = `${libraryAisleId}:${context.rackName.toLowerCase()}`;
+    libraryRackId = await fetchCachedId(rackCache, rackKey, () =>
+      libraryStructureRepository.getRackIdByAisleAndName(libraryAisleId, context.rackName),
     );
   }
-  if (location.rackName) {
-    libraryRackId = await fetchLibraryLocationIdByName(
-      location.rackName,
-      rackCache,
-      libraryStructureRepository.getRackIdByName,
-    );
-  }
-  if (location.rowName) {
-    libraryRowId = await fetchLibraryLocationIdByName(
-      location.rowName,
-      rowCache,
-      libraryStructureRepository.getRowIdByName,
+
+  if (context.rowName) {
+    const rowKey = `${libraryRackId}:${context.rowName.toLowerCase()}`;
+    libraryRowId = await fetchCachedId(rowCache, rowKey, () =>
+      libraryStructureRepository.getRowIdByRackAndName(libraryRackId, context.rowName),
     );
   }
 
@@ -997,6 +1060,8 @@ async function persistBulkUploadBatchInTransaction({
   instituteId,
   createdBy,
   updatedBy,
+  libraryCache,
+  floorCache,
   aisleCache,
   rackCache,
   rowCache,
@@ -1006,8 +1071,16 @@ async function persistBulkUploadBatchInTransaction({
 
   // --- Phase A: decide library_book per unique ISBN/title ---
   // Same ISBN or title → reuse one book; only accessionNumber is new per Excel row.
-  for (const { book, rowNumber } of parsedRowBatch) {
-    const cacheKey = buildBulkUploadBookCacheKey(book);
+  for (const { book, context, rowNumber } of parsedRowBatch) {
+    const contextIds = await resolveBulkUploadContextIds(
+      context,
+      libraryCreationId,
+      instituteId,
+      libraryCache,
+      floorCache,
+    );
+    const { libraryCreationId: rowLibraryCreationId, libraryFloorId } = contextIds;
+    const cacheKey = buildBulkUploadBookCacheKey(book, rowLibraryCreationId);
 
     if (bookCache[cacheKey]) {
       continue;
@@ -1032,7 +1105,8 @@ async function persistBulkUploadBatchInTransaction({
         cacheKey,
         await buildBulkUploadNewBookRecord(
           book,
-          libraryCreationId,
+          rowLibraryCreationId,
+          libraryFloorId,
           instituteId,
           createdBy,
           updatedBy,
@@ -1080,10 +1154,25 @@ async function persistBulkUploadBatchInTransaction({
   // --- Phase C: every Excel row becomes one inventory row ---
   const inventoryInsertPayloads = [];
 
-  for (const { book, inventory, location } of parsedRowBatch) {
-    const libraryBookId = bookCache[buildBulkUploadBookCacheKey(book)];
+  for (const { book, inventory, context } of parsedRowBatch) {
+    const contextIds = await resolveBulkUploadContextIds(
+      context,
+      libraryCreationId,
+      instituteId,
+      libraryCache,
+      floorCache,
+    );
+    const { libraryCreationId: rowLibraryCreationId, libraryFloorId } = contextIds;
+    const libraryBookId = bookCache[buildBulkUploadBookCacheKey(book, rowLibraryCreationId)];
     const { libraryAisleId, libraryRackId, libraryRowId } =
-      await resolveBulkUploadLocationIdsForRow(location, aisleCache, rackCache, rowCache);
+      await resolveBulkUploadLocationIdsForRow(
+        context,
+        libraryFloorId,
+        rowLibraryCreationId,
+        aisleCache,
+        rackCache,
+        rowCache,
+      );
 
     inventoryInsertPayloads.push({
       ...inventory,
@@ -1140,7 +1229,7 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
       rowNumber: excelRowNumber,
       book: parsed.book,
       inventory: parsed.inventory,
-      location: parsed.location,
+      context: parsed.context,
     });
   }
 
@@ -1154,7 +1243,7 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
       result: {
         status: "error",
         message:
-          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, authors, publisher, billDate, ...) and data from row 2 onward.",
+          "Excel file has no valid data rows. Row 1 must be headers (accessionNumber, title, aisleName, floorName, ...) and data from row 2 onward.",
       },
     };
   }
@@ -1171,21 +1260,25 @@ async function executeBulkUploadInTransaction({
   createdBy,
   updatedBy,
 }) {
-  const existingBooks = await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(
-    libraryCreationId,
-  );
+  const existingBooks = libraryCreationId
+    ? await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(libraryCreationId)
+    : [];
   const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
     buildExistingBookLookupIndexes(existingBooks);
 
   return sequelize.transaction(async (transaction) => {
     const instituteIdForMappings =
       instituteId ??
-      (await libraryBookBulkUploadRepository.getInstituteIdByLibraryCreationId(
-        Number(libraryCreationId),
-        transaction,
-      ));
+      (libraryCreationId
+        ? await libraryBookBulkUploadRepository.getInstituteIdByLibraryCreationId(
+            libraryCreationId,
+            transaction,
+          )
+        : null);
 
     const bookCache = {};
+    const libraryCache = new Map();
+    const floorCache = new Map();
     const aisleCache = new Map();
     const rackCache = new Map();
     const rowCache = new Map();
@@ -1212,6 +1305,8 @@ async function executeBulkUploadInTransaction({
         instituteId: instituteIdForMappings,
         createdBy,
         updatedBy,
+        libraryCache,
+        floorCache,
         aisleCache,
         rackCache,
         rowCache,
@@ -1292,18 +1387,18 @@ export async function importLibraryBooksFromExcel(
   libraryCreationId,
   instituteId,
 ) {
-  if (libraryCreationId == null || libraryCreationId === "") {
-    return { status: "error", message: "libraryCreationId is required" };
-  }
+  const resolvedLibraryCreationId =
+    libraryCreationId != null && libraryCreationId !== "" ? Number(libraryCreationId) : null;
 
-  const library = await libraryBookBulkUploadRepository.findLibraryCreationById(
-    Number(libraryCreationId),
-  );
-  if (!library) {
-    return {
-      status: "error",
-      message: `Library with libraryCreationId ${libraryCreationId} does not exist`,
-    };
+  let library = null;
+  if (resolvedLibraryCreationId) {
+    library = await libraryBookBulkUploadRepository.findLibraryCreationById(resolvedLibraryCreationId);
+    if (!library) {
+      return {
+        status: "error",
+        message: `Library with libraryCreationId ${resolvedLibraryCreationId} does not exist`,
+      };
+    }
   }
 
   if (!Array.isArray(excelRows) || excelRows.length === 0) {
@@ -1327,10 +1422,18 @@ export async function importLibraryBooksFromExcel(
     return parseResult.result;
   }
 
-  const resolvedInstituteId = instituteId ?? library.instituteId ?? null;
+  const resolvedInstituteId = instituteId ?? library?.instituteId ?? null;
+  if (!resolvedInstituteId) {
+    return {
+      status: "error",
+      message: "instituteId is required when libraryCreationId is not provided in query",
+    };
+  }
+
   const preUpload = await runAllPreUploadValidations(
     parseResult.parsedRows,
     resolvedInstituteId,
+    resolvedLibraryCreationId,
   );
   if (!preUpload.ok) {
     return preUpload.result;
@@ -1339,7 +1442,7 @@ export async function importLibraryBooksFromExcel(
   try {
     return await executeBulkUploadInTransaction({
       parsedRows: parseResult.parsedRows,
-      libraryCreationId,
+      libraryCreationId: resolvedLibraryCreationId,
       instituteId: resolvedInstituteId,
       categoryNameToIdMap: preUpload.categoryNameToIdMap,
       subjectNameToIdMap: preUpload.subjectNameToIdMap,
