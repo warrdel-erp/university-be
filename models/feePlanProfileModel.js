@@ -18,6 +18,11 @@ export default sequelize.define(
       allowNull: false,
       field: "plan_type",
     },
+    category: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      field: "category",
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -39,6 +44,12 @@ export default sequelize.define(
         model: instituteModel,
         key: "institute_id",
       },
+    },
+    publishStatus: {
+      type: DataTypes.ENUM("draft", "published"),
+      allowNull: false,
+      defaultValue: "draft",
+      field: "publish_status",
     },
   },
   {

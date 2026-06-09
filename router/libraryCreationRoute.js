@@ -10,6 +10,7 @@ import {
   bulkGenerateFloorStructure,
   getFloorStructure,
   addBookWithInventory,
+  getBookSummaryStats,
   getAllBooks,
   getSingleBookDetails,
   updateBookWithInventory,
@@ -79,21 +80,14 @@ const optionalTrimmedString = z
   .optional()
   .transform((v) => (v === undefined || v.trim() === "" ? undefined : v.trim()));
 
-const bookListSortByValues = [
-  "accessionNumber",
-  "title",
-  "author",
-  "type",
-  "condition",
-  "status",
-];
+const optionalLibraryFloorId = z
+  .union([z.coerce.number(), z.literal("")])
+  .optional()
+  .transform((v) => (v === "" ? undefined : v));
 
 const listBooksQuerySchema = z.object({
   libraryCreationId: z.coerce.number(),
-  libraryFloorId: z
-    .union([z.coerce.number(), z.literal("")])
-    .optional()
-    .transform((v) => (v === "" ? undefined : v)),
+  libraryFloorId: optionalLibraryFloorId,
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   search: optionalTrimmedString,
@@ -102,6 +96,11 @@ const listBooksQuerySchema = z.object({
     .enum(["asc", "desc", "ASC", "DESC"])
     .optional()
     .transform((v) => (v ? v.toLowerCase() : undefined)),
+});
+
+const bookSummaryQuerySchema = z.object({
+  libraryCreationId: z.coerce.number(),
+  libraryFloorId: optionalLibraryFloorId,
 });
 
 const addCategorySchema = z.object({
@@ -265,6 +264,7 @@ router.patch("/updateCategory", userAuth, validate({ body: updateCategorySchema 
 router.delete("/deleteCategory", userAuth, validate({ query: categoryQuerySchema }), deleteCategory);
 
 router.post("/addBook", userAuth, validate({ body: addBookWithInventorySchema }), addBookWithInventory);
+router.get("/bookSummary", userAuth, validate({ query: bookSummaryQuerySchema }), getBookSummaryStats);
 router.get("/allBook", userAuth, validate({ query: listBooksQuerySchema }), getAllBooks);
 
 router.get("/singleBook", userAuth, validate({ query: libraryBookQuerySchema }), getSingleBookDetails);

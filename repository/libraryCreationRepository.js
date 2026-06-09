@@ -1,5 +1,5 @@
 import * as model from "../models/index.js";
-import { Op } from "sequelize";
+import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 
 const bookMappingIncludes = [
@@ -142,22 +142,27 @@ export async function deleteCategory(libraryCategoryId, transaction) {
   return deleted > 0;
 }
 
-export async function getLibraryDetails(universityId) {
+export async function getLibraryDetails(universityId, instituteId) {
   try {
     const libraries = await model.libraryCreationModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
+      where: instituteId ? { instituteId } : undefined,
       include: [
         {
           model: model.userModel,
           as: "userLibraryCreation",
           attributes: ["universityId", "userId"],
           where: { universityId },
+          required: true,
         },
         {
           model: model.libraryFloorModel,
           as: "floorDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
-          where: { universityId },
+          where: {
+            universityId,
+            ...(instituteId && { instituteId }),
+          },
         },
         {
           model: model.instituteModel,
@@ -181,22 +186,27 @@ export async function getLibraryDetails(universityId) {
   }
 }
 
-export async function getSingleLibraryDetails(libraryCreationId, universityId) {
+export async function getSingleLibraryDetails(libraryCreationId, universityId, instituteId) {
   try {
     const library = await model.libraryCreationModel.findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
-      where: { libraryCreationId },
+      where: {
+        libraryCreationId,
+        ...(instituteId && { instituteId }),
+      },
       include: [
         {
           model: model.userModel,
           as: "userLibraryCreation",
           attributes: ["universityId", "userId"],
-          // where: { universityId }
+          where: { universityId },
+          required: true,
         },
         {
           model: model.libraryFloorModel,
           as: "floorDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"] },
+          where: instituteId ? { instituteId } : undefined,
         },
         {
           model: model.instituteModel,
@@ -324,7 +334,18 @@ export async function getAllBooks(
   libraryFloorId,
   filters = {},
   pagination = {},
+  instituteId,
 ) {
+  if (libraryCreationId && instituteId) {
+    const library = await model.libraryCreationModel.findOne({
+      attributes: ["libraryCreationId"],
+      where: { libraryCreationId, instituteId },
+    });
+    if (!library) {
+      return { total: 0, books: [] };
+    }
+  }
+
   if (libraryFloorId) {
     const floor = await model.libraryFloorModel.findOne({
       attributes: ["libraryFloorId"],
@@ -332,6 +353,7 @@ export async function getAllBooks(
         libraryFloorId,
         universityId,
         libraryCreationId,
+        ...(instituteId && { instituteId }),
       },
     });
 
@@ -388,6 +410,18 @@ export async function getAllBooks(
 
   const { limit, offset } = pagination;
 
+  const libraryScopeInclude = instituteId
+    ? [
+        {
+          model: model.libraryCreationModel,
+          as: "library",
+          attributes: ["libraryCreationId", "instituteId"],
+          where: { instituteId },
+          required: true,
+        },
+      ]
+    : [];
+
   const { count, rows } = await model.libraryBookModel.findAndCountAll({
     where: buildBookListWhere(libraryCreationId, filters),
     subQuery: false,
@@ -396,13 +430,201 @@ export async function getAllBooks(
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    include: [...bookMappingIncludes, inventoryInclude],
+    include: [...bookMappingIncludes, ...libraryScopeInclude, inventoryInclude],
     limit,
     offset,
     order: buildBookListOrder(filters.sortBy, filters.sortOrder),
   });
 
   return { total: count, books: rows };
+}
+
+const EMPTY_BOOK_SUMMARY = {
+  totalBooks: 0,
+  inStock: 0,
+  lowStock: 0,
+  totalCopies: 0,
+};
+
+const AVAILABLE_INVENTORY_STATUS = "available";
+
+function buildBookDetailsInclude(libraryCreationId, instituteId) {
+  return {
+    model: model.libraryBookModel,
+    as: "bookDetails",
+    attributes: [],
+    where: { libraryCreationId },
+    required: true,
+    include: instituteId
+      ? [
+          {
+            model: model.libraryCreationModel,
+            as: "library",
+            attributes: [],
+            where: { instituteId },
+            required: true,
+          },
+        ]
+      : [],
+  };
+}
+
+async function resolveBookSummaryScope(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  instituteId,
+) {
+  if (libraryCreationId && instituteId) {
+    const library = await model.libraryCreationModel.findOne({
+      attributes: ["libraryCreationId"],
+      where: { libraryCreationId, instituteId },
+    });
+    if (!library) {
+      return null;
+    }
+  }
+
+  const inventoryWhere = {};
+  const requireInventoryJoin = Boolean(libraryFloorId);
+
+  if (libraryFloorId) {
+    const floor = await model.libraryFloorModel.findOne({
+      attributes: ["libraryFloorId"],
+      where: {
+        libraryFloorId,
+        universityId,
+        libraryCreationId,
+        ...(instituteId && { instituteId }),
+      },
+    });
+
+    if (!floor) {
+      return null;
+    }
+
+    const aisles = await model.libraryAisleModel.findAll({
+      attributes: ["libraryAisleId"],
+      where: { libraryFloorId },
+      raw: true,
+    });
+
+    const aisleIds = aisles.map((row) => row.libraryAisleId);
+    if (!aisleIds.length) {
+      return null;
+    }
+
+    inventoryWhere.libraryAisleId = { [Op.in]: aisleIds };
+  }
+
+  const libraryScopeInclude = instituteId
+    ? [
+        {
+          model: model.libraryCreationModel,
+          as: "library",
+          attributes: [],
+          where: { instituteId },
+          required: true,
+        },
+      ]
+    : [];
+
+  return {
+    inventoryWhere,
+    requireInventoryJoin,
+    libraryScopeInclude,
+  };
+}
+
+function summarizePerBookInventoryStats(perBookStats, totalBooks, lowStockThreshold, requireInventoryJoin) {
+  let totalCopies = 0;
+  let inStock = 0;
+  let lowStock = 0;
+
+  for (const row of perBookStats) {
+    const copies = Number(row.totalCopies) || 0;
+    const available = Number(row.availableCount) || 0;
+    totalCopies += copies;
+    inStock += available;
+    if (available <= lowStockThreshold) {
+      lowStock += 1;
+    }
+  }
+
+  if (!requireInventoryJoin) {
+    const booksWithoutInventory = Math.max(0, Number(totalBooks) - perBookStats.length);
+    lowStock += booksWithoutInventory;
+  }
+
+  return { totalCopies, inStock, lowStock };
+}
+
+export async function getBookSummaryStats(
+  universityId,
+  libraryCreationId,
+  libraryFloorId,
+  instituteId,
+  lowStockThreshold = 2,
+) {
+  const scope = await resolveBookSummaryScope(
+    universityId,
+    libraryCreationId,
+    libraryFloorId,
+    instituteId,
+  );
+  if (!scope) {
+    return { ...EMPTY_BOOK_SUMMARY };
+  }
+
+  const { inventoryWhere, requireInventoryJoin, libraryScopeInclude } = scope;
+  const hasInventoryWhere = Object.keys(inventoryWhere).length > 0;
+  const bookDetailsInclude = buildBookDetailsInclude(libraryCreationId, instituteId);
+  const availableCountExpr = fn(
+    "SUM",
+    fn("IF", where(col("status"), AVAILABLE_INVENTORY_STATUS), 1, 0),
+  );
+  const inventoryIncludeForBookCount = {
+    model: model.libraryBookInventoryModel,
+    as: "inventoryCopies",
+    attributes: [],
+    where: hasInventoryWhere ? inventoryWhere : undefined,
+    required: requireInventoryJoin,
+  };
+
+  const [totalBooks, perBookStats] = await Promise.all([
+    model.libraryBookModel.count({
+      where: { libraryCreationId },
+      include: [...libraryScopeInclude, inventoryIncludeForBookCount],
+      distinct: true,
+      col: "library_book_id",
+    }),
+    model.libraryBookInventoryModel.findAll({
+      attributes: [
+        "libraryBookId",
+        [fn("COUNT", col("library_book_inventory.inventory_id")), "totalCopies"],
+        [availableCountExpr, "availableCount"],
+      ],
+      where: hasInventoryWhere ? inventoryWhere : undefined,
+      include: [bookDetailsInclude],
+      group: ["libraryBookId"],
+      raw: true,
+      subQuery: false,
+    }),
+  ]);
+
+  const { totalCopies, inStock, lowStock } = summarizePerBookInventoryStats(
+    perBookStats,
+    totalBooks,
+    lowStockThreshold,
+    requireInventoryJoin,
+  );
+
+  return {
+    totalBooks: Number(totalBooks) || 0,
+    inStock,
+    lowStock,
+    totalCopies,
+  };
 }
 
 export async function bookExistsById(libraryBookId, transaction) {
@@ -561,7 +783,7 @@ export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
   return row?.libraryBookId ?? null;
 }
 
-export async function getAllIssuedBooks() {
+export async function getAllIssuedBooks(instituteId) {
   try {
     const result = await model.libraryBookInventoryModel.findAll({
       where: { status: "issued" },
@@ -571,6 +793,7 @@ export async function getAllIssuedBooks() {
         {
           model: model.libraryBookModel,
           as: "bookDetails",
+          required: true,
           attributes: [
             "libraryBookId",
             "title",
@@ -593,6 +816,7 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
+              ...(instituteId && { where: { instituteId }, required: true }),
             },
           ],
         },
@@ -625,6 +849,7 @@ export async function getAllIssuedBooks() {
               attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt"],
               },
+              ...(instituteId && { where: { instituteId }, required: true }),
             },
           ],
         },

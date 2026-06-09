@@ -22,7 +22,12 @@ const moneyAmount = z.coerce.string().trim().min(1);
 const paymentMethodEnum = z.enum(["credit_card", "bank_transfer", "cash", "cheque"]);
 const paymentTypeEnum = z.enum(["INCOMING", "OUTGOING"]);
 const payeeTypeEnum = z.enum(["STUDENT", "VENDOR", "OTHER"]);
-const referenceTypeEnum = z.enum(["STUDENT_FEE_INVOICE", "STUDENT_LIBRARY_INVOICE","OTHER"]);
+const referenceTypeEnum = z.enum([
+  "STUDENT_FEE_INVOICE",
+  "STUDENT_LIBRARY_INVOICE",
+  "OTHER",
+  "ASSET_SECURITY",
+]);
 
 const paymentDetailsPaymentItemSchema = z.object({
   referenceId: positiveIntegerId,

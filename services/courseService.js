@@ -1,19 +1,12 @@
 import * as courseRepository from '../repository/courseRepository.js';
 
 /**
- * List all courses
- * @param {number} universityId 
- * @param {number} [instituteId] 
- * @param {number} [campusId]
+ * List courses scoped to the user's university, institute, and academic year.
+ * @param {{ universityId: number, instituteId: number, acedmicYearId: number, campusId?: number }} scope
  * @returns {Promise<Array>}
  */
-export const listCourses = async (universityId, instituteId, campusId) => {
-    try {
-        return await courseRepository.getAllCourses(universityId, instituteId, campusId);
-    } catch (error) {
-        console.error('Error in Course Service (listCourses):', error);
-        throw error;
-    }
+export const listCourses = async (scope) => {
+    return courseRepository.getAllCourses(scope);
 };
 
 /**

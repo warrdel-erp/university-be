@@ -6,6 +6,14 @@ export async function createAssetCategory(data, options = {}) {
   return model.assetCategoryModel.create(data, { transaction: options.transaction });
 }
 
+export async function findAssetCategoryByNameForInstitute(name, instituteId, options = {}) {
+  return model.assetCategoryModel.findOne({
+    attributes: ["assetCategoryId", "name", "codePrefix"],
+    where: { name, instituteId },
+    transaction: options.transaction,
+  });
+}
+
 export async function findAssetCategoriesByInstitute(instituteId, options = {}) {
   return model.assetCategoryModel.findAll({
     attributes: { exclude: excludeTs },

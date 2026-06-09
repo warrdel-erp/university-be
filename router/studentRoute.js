@@ -78,6 +78,24 @@ const feePlanProfilesAllQuerySchema = z.object({
     .default(20),
 });
 
+const getAllStudentsQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(10),
+  search: z.string().trim().optional(),
+  courseId: positiveIntegerId.optional(),
+});
+
 const dateField = z.string().trim().min(1, "date is required");
 
 const addStudentWithFeePlanProfileBodySchema = z.object({
@@ -124,7 +142,12 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
 });
 
 // Student routes (create via POST /withFeePlanProfile — fee v2)
-router.get("/all", userAuth, getAllStudents);
+router.get(
+  "/all",
+  userAuth,
+  validate({ query: getAllStudentsQuerySchema }),
+  getAllStudents
+);
 router.get(
   "/",
   userAuth,
@@ -132,7 +155,9 @@ router.get(
   getSingleStudentDetail
 );
 router.post("/import", userAuth, importStudentData);
+
 router.patch("/:studentId", userAuth, updateStudentDetails);
+
 router.delete("/:studentId", userAuth, deleteStudentDetail);
 router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
 router.post("/studentMapping", userAuth, studentCourseMapping);

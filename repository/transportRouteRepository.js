@@ -9,24 +9,23 @@ export const createTransportRoute = async (data) => {
     }
 };
 
-export const findAllTransportRoutes = async (universityId,acedmicYearId,instituteId,role) => {
+export const findAllTransportRoutes = async (universityId, acedmicYearId, instituteId) => {
     try {
         const whereClause = {
             universityId,
             ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { instituteId })  
+            ...(instituteId && { instituteId }),
         };
         return await model.transportRouteModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where : whereClause,
-             include: [{
+            where: whereClause,
+            include: [{
                 model: model.userModel,
-                 as: 'transportUser',
+                as: "transportUser",
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
-            }]
+                where: { universityId },
+                required: true,
+            }],
         });
     } catch (error) {
         console.error("Error in findAllTransportRoutes:", error);
@@ -34,22 +33,25 @@ export const findAllTransportRoutes = async (universityId,acedmicYearId,institut
     }
 };
 
-export const findTransportRouteById = async (transportRouteId, universityId) => {
+export const findTransportRouteById = async (transportRouteId, universityId, instituteId) => {
     try {
         return await model.transportRouteModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            where: {
+                transportRouteId,
+                universityId,
+                ...(instituteId && { instituteId }),
+            },
             include: [{
                 model: model.userModel,
-                as: 'transportUser',
+                as: "transportUser",
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
+                where: { universityId },
+                required: true,
             }],
-            where: { transportRouteId },
         });
     } catch (error) {
-        console.error(`Error in findTransportRouteById for ID ${id}:`, error);
+        console.error(`Error in findTransportRouteById for ID ${transportRouteId}:`, error);
         throw error;
     }
 };

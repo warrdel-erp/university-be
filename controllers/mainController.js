@@ -222,8 +222,8 @@ export const addClassSubjectMapper = async (req, res) => {
 
 export const getClassSubjectMapper = async (req, res) => {
     try {
-        const semesterId = req.query.semesterId || 0;
-        const acedmicYearId = req.query.acedmicYearId
+        const semesterId = req.query.semesterId ? Number(req.query.semesterId) : undefined;
+        const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
         const universityId = req.user.universityId;
         const role = req.user.role;
         const instituteId = req.user.defaultInstituteId;

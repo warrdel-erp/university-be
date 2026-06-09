@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
-import departmentModel from "./departmentModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
 import { assetStatuses, assetConditions } from "../constant.js";
 
@@ -33,15 +32,6 @@ export default sequelize.define(
     description: {
       type: DataTypes.STRING,
       allowNull: true,
-    },
-    departmentId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "department_id",
-      references: {
-        model: departmentModel,
-        key: "department_id",
-      },
     },
     assetCategoryId: {
       type: DataTypes.INTEGER,

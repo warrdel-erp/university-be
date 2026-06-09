@@ -1,61 +1,369 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { toMoneyNumber } from "../utility/decimalMoney.js";
 
-const issueIncludes = [
-  {
-    model: model.assetIssueItemModel,
-    as: "items",
-    attributes: {
-      exclude: ["createdAt", "updatedAt"],
+const classRoomHierarchyInclude = {
+  model: model.classRoomModel,
+  as: "classRoom",
+  attributes: ["classRoomSectionId", "roomNumber", "floorId"],
+  required: false,
+  include: [
+    {
+      model: model.floorModel,
+      as: "roomFloor",
+      attributes: ["floorId", "name", "buildingId"],
+      include: [
+        {
+          model: model.buildingModel,
+          as: "floorBuilding",
+          attributes: ["buildingId", "name", "buildingType", "campusId"],
+        },
+      ],
     },
+  ],
+};
+
+const issueInventoryItemIncludes = [
+  {
+    model: model.assetInventoryItemModel,
+    as: "inventoryItem",
+    attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "classRoomSectionId", "status"],
     include: [
       {
         model: model.assetModel,
         as: "asset",
         attributes: ["assetId", "name", "code", "status", "condition"],
       },
+      classRoomHierarchyInclude,
     ],
+  },
+  {
+    model: model.assetReturnTransactionModel,
+    as: "returnTransaction",
+    attributes: ["assetReturnTransactionId", "returnDate"],
+    required: false,
   },
 ];
 
+const issueIncludes = [
+  {
+    model: model.assetIssueInventoryItemModel,
+    as: "items",
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
+    include: issueInventoryItemIncludes,
+  },
+];
+
+const studentMemberInclude = {
+  model: model.studentModel,
+  as: "studentMember",
+  attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
+  required: false,
+  include: [
+    {
+      model: model.courseModel,
+      as: "course",
+      attributes: ["courseId", "courseName"],
+    },
+  ],
+};
+
+const teacherMemberInclude = {
+  model: model.employeeModel,
+  as: "teacherMember",
+  attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+  required: false,
+};
+
+const memberIncludes = [studentMemberInclude, teacherMemberInclude];
+
+const paymentPayeeIncludes = [
+  {
+    model: model.studentModel,
+    as: "studentPayee",
+    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
+    required: false,
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName"],
+      },
+    ],
+  },
+  {
+    model: model.employeeModel,
+    as: "employeePayee",
+    attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+    required: false,
+  },
+];
+
+const securityPaymentInclude = {
+  model: model.paymentItemModel,
+  as: "securityPaymentItems",
+  attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
+  required: false,
+  separate: true,
+  include: [
+    {
+      model: model.studentFeePaymentModel,
+      as: "payment",
+      attributes: [
+        "studentFeePaymentId",
+        "paymentType",
+        "payeeId",
+        "payeeType",
+        "amount",
+        "paymentMethod",
+        "referenceNumber",
+        "transactionId",
+        "remark",
+      ],
+      required: true,
+      where: { paymentType: "INCOMING" },
+    },
+  ],
+};
+
+const studentFeePaymentAttributes = [
+  "studentFeePaymentId",
+  "paymentType",
+  "payeeId",
+  "payeeType",
+  "amount",
+  "paymentMethod",
+  "referenceNumber",
+  "transactionId",
+  "remark",
+];
+
+function buildIssueDetailIncludes({
+  includeItems = true,
+  includeMember = false,
+  includeSecurityPayment = false,
+  instituteId = null,
+} = {}) {
+  const includes = [];
+
+  if (includeItems) {
+    includes.push(...issueIncludes);
+  }
+  if (includeMember) {
+    includes.push(...memberIncludes);
+  }
+  if (includeSecurityPayment) {
+    includes.push({
+      ...securityPaymentInclude,
+      include: [
+        {
+          model: model.studentFeePaymentModel,
+          as: "payment",
+          attributes: studentFeePaymentAttributes,
+          required: true,
+          where: {
+            instituteId,
+            paymentType: "INCOMING",
+          },
+        },
+      ],
+    });
+  }
+
+  return includes;
+}
+
 export async function createAssetIssue(payload, options = {}) {
-  return model.assetIssueModel.create(payload, { transaction: options.transaction });
+  return model.assetIssueTransactionModel.create(payload, { transaction: options.transaction });
 }
 
-export async function createAssetIssueItems(payload, options = {}) {
-  return model.assetIssueItemModel.bulkCreate(payload, { transaction: options.transaction });
+export async function createAssetIssueInventoryItems(payload, options = {}) {
+  return model.assetIssueInventoryItemModel.bulkCreate(payload, { transaction: options.transaction });
 }
 
-export async function updateAssetIssue(assetIssueId, instituteId, payload, options = {}) {
-  const [affected] = await model.assetIssueModel.update(payload, {
-    where: { assetIssueId, instituteId },
+export async function updateAssetIssue(assetIssueTransactionId, instituteId, payload, options = {}) {
+  const [affected] = await model.assetIssueTransactionModel.update(payload, {
+    where: { assetIssueTransactionId, instituteId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function findAssetIssueById(assetIssueId, instituteId, options = {}) {
-  return model.assetIssueModel.findOne({
+export async function findAssetIssueById(assetIssueTransactionId, instituteId, options = {}) {
+  const {
+    transaction,
+    includeItems = true,
+    includeMember = false,
+    includeSecurityPayment = false,
+  } = options;
+
+  return model.assetIssueTransactionModel.findOne({
     attributes: {
       exclude: ["createdAt", "updatedAt"],
     },
-    where: { assetIssueId, instituteId },
-    include: issueIncludes,
+    where: { assetIssueTransactionId, instituteId },
+    include: buildIssueDetailIncludes({
+      includeItems,
+      includeMember,
+      includeSecurityPayment,
+      instituteId,
+    }),
+    transaction,
+  });
+}
+
+export async function findOpenIssueLinesByInventoryIds(inventoryItemIds, options = {}) {
+  if (!inventoryItemIds.length) return [];
+  return model.assetIssueInventoryItemModel.findAll({
+    attributes: ["assetIssueInventoryItemId", "assetInventoryItemId"],
+    where: {
+      assetInventoryItemId: inventoryItemIds,
+      assetReturnTransactionId: null,
+    },
     transaction: options.transaction,
   });
 }
 
-export async function findIssueItemsByIds(assetIssueId, assetIssueItemIds, options = {}) {
-  return model.assetIssueItemModel.findAll({
-    attributes: ["assetIssueItemId", "assetIssueId", "assetId"],
-    where: { assetIssueId, assetIssueItemId: assetIssueItemIds },
+export async function findReturnTransactionIdsByIssueTransactionId(
+  assetIssueTransactionId,
+  instituteId,
+  options = {}
+) {
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: ["assetReturnTransactionId"],
+    where: {
+      assetIssueTransactionId,
+      assetReturnTransactionId: { [Op.ne]: null },
+    },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  return [
+    ...new Set(
+      rows
+        .map((row) => row.assetReturnTransactionId)
+        .filter((returnId) => returnId != null)
+    ),
+  ];
+}
+
+export async function findAssetSecurityPaymentsByIssueIds(
+  assetIssueTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetIssueTransactionIds.length) return [];
+  return model.paymentItemModel.findAll({
+    attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
+    where: {
+      referenceId: assetIssueTransactionIds,
+      referenceType: "ASSET_SECURITY",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: studentFeePaymentAttributes,
+        required: true,
+        where: { instituteId, paymentType: "INCOMING" },
+        include: paymentPayeeIncludes,
+      },
+    ],
     transaction: options.transaction,
   });
 }
 
-export async function updateAssetIssueItemById(assetIssueItemId, assetIssueId, payload, options = {}) {
-  const [affected] = await model.assetIssueItemModel.update(payload, {
-    where: { assetIssueItemId, assetIssueId },
+export async function findAssetIssuePaymentsWithPayeesByIssueId(
+  assetIssueTransactionId,
+  instituteId,
+  options = {}
+) {
+  const returnIds = await findReturnTransactionIdsByIssueTransactionId(
+    assetIssueTransactionId,
+    instituteId,
+    options
+  );
+
+  const referenceFilters = [
+    {
+      referenceId: assetIssueTransactionId,
+      referenceType: "ASSET_SECURITY",
+    },
+  ];
+
+  if (returnIds.length) {
+    referenceFilters.push({
+      referenceId: returnIds,
+      referenceType: "OTHER",
+    });
+  }
+
+  return model.paymentItemModel.findAll({
+    attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
+    where: {
+      [Op.or]: referenceFilters,
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: studentFeePaymentAttributes,
+        required: true,
+        where: {
+          instituteId,
+          [Op.or]: [
+            { paymentType: "INCOMING" },
+            { remark: { [Op.like]: "Asset return%" } },
+          ],
+        },
+        include: paymentPayeeIncludes,
+      },
+    ],
+    order: [
+      [
+        model.paymentItemModel.sequelize.literal(
+          "CASE WHEN reference_type = 'ASSET_SECURITY' THEN 0 ELSE 1 END"
+        ),
+        "ASC",
+      ],
+      ["paymentItemId", "ASC"],
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findAssetSecurityPaymentByIssueId(
+  assetIssueTransactionId,
+  instituteId,
+  options = {}
+) {
+  const rows = await findAssetSecurityPaymentsByIssueIds(
+    [assetIssueTransactionId],
+    instituteId,
+    options
+  );
+  return rows[0] ?? null;
+}
+
+export async function updateAssetIssueInventoryItemById(
+  assetIssueInventoryItemId,
+  assetIssueTransactionId,
+  payload,
+  options = {}
+) {
+  const [affected] = await model.assetIssueInventoryItemModel.update(payload, {
+    where: { assetIssueInventoryItemId, assetIssueTransactionId },
     transaction: options.transaction,
   });
   return affected;
@@ -71,20 +379,34 @@ function buildAssetIssueWhere(instituteId, filters = {}) {
   const pattern = { [Op.like]: `%${search}%` };
   const orParts = [
     { memberType: pattern },
-    { remarks: pattern },
-    { "$items.remarks$": pattern },
-    { "$items.asset.name$": pattern },
-    { "$items.asset.code$": pattern },
+    { "$items.inventoryItem.code$": pattern },
+    { "$items.inventoryItem.barcode$": pattern },
+    { "$items.inventoryItem.asset.name$": pattern },
+    { "$items.inventoryItem.asset.code$": pattern },
   ];
 
   const numericSearch = Number(search);
   if (search !== "" && !Number.isNaN(numericSearch)) {
-    orParts.push({ assetIssueId: numericSearch }, { memberId: numericSearch });
+    orParts.push({ assetIssueTransactionId: numericSearch }, { memberId: numericSearch });
   }
 
   return {
     [Op.and]: [{ instituteId }, { [Op.or]: orParts }],
   };
+}
+
+function toPlainRow(row) {
+  if (!row) return null;
+  return typeof row.get === "function" ? row.get({ plain: true }) : row;
+}
+
+function extractPaymentAmountFromRow(paymentItemRow) {
+  const plain = toPlainRow(paymentItemRow);
+  if (!plain) {
+    return 0;
+  }
+
+  return toMoneyNumber(plain.payment?.amount ?? plain.amount);
 }
 
 export async function findAssetIssuesPaginated(instituteId, filters = {}, pagination = {}, options = {}) {
@@ -93,22 +415,99 @@ export async function findAssetIssuesPaginated(instituteId, filters = {}, pagina
   const offset = (page - 1) * limit;
   const where = buildAssetIssueWhere(instituteId, filters);
 
-  const { count, rows } = await model.assetIssueModel.findAndCountAll({
+  const { count, rows } = await model.assetIssueTransactionModel.findAndCountAll({
     attributes: {
       exclude: ["createdAt", "updatedAt"],
     },
     where,
-    include: issueIncludes,
-    order: [["assetIssueId", "DESC"]],
+    include: [...issueIncludes, ...memberIncludes],
+    order: [["assetIssueTransactionId", "DESC"]],
     limit,
     offset,
     subQuery: false,
     distinct: true,
-    col: "asset_issue_id",
+    col: "asset_issue_transaction_id",
     transaction: options.transaction,
   });
 
-  return { rows, total: count, page, limit };
+  const issueIds = [];
+  for (const row of rows) {
+    issueIds.push(row.assetIssueTransactionId);
+  }
+
+  if (!issueIds.length) {
+    return {
+      rows,
+      total: count,
+      page,
+      limit,
+      itemStatsByIssueId: {},
+      securityAmountByIssueId: {},
+    };
+  }
+
+  const [itemStatsByIssueId, securityAmountByIssueId] = await Promise.all([
+    countIssueItemStatsByTransactionIds(issueIds, instituteId, options),
+    findSecurityAmountByIssueIds(issueIds, instituteId, options),
+  ]);
+
+  return { rows, total: count, page, limit, itemStatsByIssueId, securityAmountByIssueId };
+}
+
+/** Per issue transaction: total lines issued and lines with a return recorded. */
+export async function countIssueItemStatsByTransactionIds(
+  assetIssueTransactionIds,
+  instituteId,
+  options = {}
+) {
+  if (!assetIssueTransactionIds.length) {
+    return {};
+  }
+
+  const { transaction } = options;
+  const db = model.assetIssueInventoryItemModel.sequelize;
+
+  const rows = await model.assetIssueInventoryItemModel.findAll({
+    attributes: [
+      "assetIssueTransactionId",
+      [db.fn("COUNT", db.col("asset_issue_inventory_item_id")), "issuedTotalItems"],
+      [
+        db.fn(
+          "SUM",
+          db.literal(
+            "CASE WHEN asset_issue_inventory_item.asset_return_transaction_id IS NOT NULL THEN 1 ELSE 0 END"
+          )
+        ),
+        "returnedTotalItems",
+      ],
+    ],
+    where: { assetIssueTransactionId: assetIssueTransactionIds },
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: [],
+        where: { instituteId },
+        required: true,
+      },
+    ],
+    group: ["assetIssueTransactionId"],
+    raw: true,
+    subQuery: false,
+    transaction,
+  });
+
+  const statsByTransactionId = Object.create(null);
+
+  for (const row of rows) {
+    const assetIssueTransactionId = Number(row.assetIssueTransactionId);
+    statsByTransactionId[assetIssueTransactionId] = {
+      issuedTotalItems: Number(row.issuedTotalItems),
+      returnedTotalItems: Number(row.returnedTotalItems) || 0,
+    };
+  }
+
+  return statsByTransactionId;
 }
 
 export async function findStudentById(studentId, instituteId, options = {}) {
@@ -171,6 +570,173 @@ export async function findEmployeeMemberDetailsByIds(employeeIds, instituteId, o
   return model.employeeModel.findAll({
     attributes: ["employeeId", "employeeName", "employeeCode", "department"],
     where: { employeeId: employeeIds, instituteId },
+    transaction: options.transaction,
+  });
+}
+
+export function extractInventoryItemIds(items) {
+  const inventoryItemIds = [];
+
+  for (const item of items) {
+    inventoryItemIds.push(item.assetInventoryItemId);
+  }
+
+  return inventoryItemIds;
+}
+
+export function buildAssetIssueInventoryItemRows(assetIssueTransactionId, items) {
+  const rows = [];
+
+  for (const item of items) {
+    rows.push({
+      assetIssueTransactionId,
+      assetInventoryItemId: item.assetInventoryItemId,
+      assetReturnTransactionId: null,
+    });
+  }
+
+  return rows;
+}
+
+async function findFirstMissingInventoryItemId(inventoryItemIds, instituteId, options = {}) {
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["assetInventoryItemId"],
+    where: { assetInventoryItemId: inventoryItemIds, instituteId },
+    transaction: options.transaction,
+  });
+
+  const foundIds = new Set();
+  for (const row of rows) {
+    foundIds.add(row.assetInventoryItemId);
+  }
+
+  for (const inventoryItemId of inventoryItemIds) {
+    if (!foundIds.has(inventoryItemId)) {
+      return inventoryItemId;
+    }
+  }
+
+  return null;
+}
+
+export async function findIssueInventoryItemValidationError(
+  inventoryItemIds,
+  instituteId,
+  options = {}
+) {
+  if (!inventoryItemIds.length) {
+    return { code: "EMPTY" };
+  }
+
+  const { transaction } = options;
+
+  const [foundCount, notAssignedItem, openIssueItem] = await Promise.all([
+    model.assetInventoryItemModel.count({
+      where: { assetInventoryItemId: inventoryItemIds, instituteId },
+      transaction,
+    }),
+    model.assetInventoryItemModel.findOne({
+      attributes: ["assetInventoryItemId"],
+      where: {
+        assetInventoryItemId: inventoryItemIds,
+        instituteId,
+        status: "NOT_ASSIGNED",
+      },
+      transaction,
+    }),
+    model.assetIssueInventoryItemModel.findOne({
+      attributes: ["assetInventoryItemId"],
+      where: {
+        assetInventoryItemId: inventoryItemIds,
+        assetReturnTransactionId: null,
+      },
+      transaction,
+    }),
+  ]);
+
+  if (foundCount !== inventoryItemIds.length) {
+    const missingInventoryItemId = await findFirstMissingInventoryItemId(
+      inventoryItemIds,
+      instituteId,
+      options
+    );
+    return { code: "MISSING", assetInventoryItemId: missingInventoryItemId };
+  }
+
+  if (notAssignedItem) {
+    return { code: "NOT_ASSIGNED", assetInventoryItemId: notAssignedItem.assetInventoryItemId };
+  }
+
+  if (openIssueItem) {
+    return { code: "OPEN_ISSUE", assetInventoryItemId: openIssueItem.assetInventoryItemId };
+  }
+
+  return null;
+}
+
+export async function findSecurityAmountByIssueIds(assetIssueTransactionIds, instituteId, options = {}) {
+  if (!assetIssueTransactionIds.length) {
+    return {};
+  }
+
+  const rows = await model.paymentItemModel.findAll({
+    attributes: ["referenceId", "amount"],
+    where: {
+      referenceId: assetIssueTransactionIds,
+      referenceType: "ASSET_SECURITY",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: ["amount"],
+        required: true,
+        where: {
+          instituteId,
+          paymentType: "INCOMING",
+        },
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const securityAmountByIssueId = Object.create(null);
+
+  for (const row of rows) {
+    securityAmountByIssueId[row.referenceId] = extractPaymentAmountFromRow(row);
+  }
+
+  return securityAmountByIssueId;
+}
+
+export async function findDistinctAssetIdsByInventoryItemIds(
+  inventoryItemIds,
+  instituteId,
+  options = {}
+) {
+  if (!inventoryItemIds.length) {
+    return [];
+  }
+
+  const rows = await model.assetInventoryItemModel.findAll({
+    attributes: ["assetId"],
+    where: { assetInventoryItemId: inventoryItemIds, instituteId },
+    group: ["assetId"],
+    transaction: options.transaction,
+  });
+
+  const assetIds = [];
+  for (const row of rows) {
+    assetIds.push(row.assetId);
+  }
+
+  return assetIds;
+}
+
+export async function findInstituteInventoryItemsByIds(inventoryItemIds, instituteId, options = {}) {
+  return model.assetInventoryItemModel.findAll({
+    attributes: ["assetInventoryItemId", "assetId"],
+    where: { assetInventoryItemId: inventoryItemIds, instituteId },
     transaction: options.transaction,
   });
 }

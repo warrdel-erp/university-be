@@ -10,58 +10,71 @@ export async function teacherSectionMapping(data) {
     }
 };
 
-export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId,instituteId,role) {    
+export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId, instituteId, role) {
     try {
+        const academicInstituteFilter = {
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(instituteId && { instituteId }),
+        };
+
+        const courseWhere = {
+            universityId,
+            ...(instituteId && { instituteId }),
+        };
+
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: employeeId ? { employeeId } : undefined,
             include: [
                 {
                     model: model.userModel,
                     as: "userTeacherSectionMapping",
                     attributes: ["universityId", "userId"],
-                    where: { universityId: universityId }
+                    where: { universityId },
+                    required: true,
                 },
                 {
                     model: model.employeeModel,
                     as: "employeeData",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    // where: acedmicYearId ? { acedmicYearId } : undefined,
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId })
-                    },
-
+                    where: academicInstituteFilter,
+                    required: true,
                     include: [
                         {
                             model: model.campusModel,
                             as: "employeeCampus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] }
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "campusCode"] },
+                            where: { universityId },
+                            required: true,
                         },
                         {
                             model: model.instituteModel,
                             as: "employeeInstitute",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] }
-                        }
-                    ]
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "instituteCode"] },
+                            ...(instituteId && {
+                                where: { instituteId },
+                                required: true,
+                            }),
+                        },
+                    ],
                 },
                 {
                     model: model.classSectionModel,
                     as: "employeeSection",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId })
-                    },
+                    where: academicInstituteFilter,
+                    required: true,
                     include: [
                         {
                             model: model.courseModel,
                             as: "employeeCourse",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-                        }
-                    ]
-                }
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            where: courseWhere,
+                            required: true,
+                        },
+                    ],
+                },
             ],
-            where: employeeId ? { employeeId } : undefined
         };
 
         const result = await model.teacherSectionMappingModel.findAll(queryOptions);

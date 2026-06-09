@@ -8,6 +8,8 @@ import {
   getLibraryIssueBookTransactionById,
   updateLibraryIssueBookTransaction,
   getLibraryBookInventoryIssueHistory,
+  getLibraryMembersList,
+  getLibraryReturnBookTransactions,
 } from "../controllers/libraryIssueBookTransactionController.js";
 
 const router = Router();
@@ -70,13 +72,23 @@ const libraryIssueBookTransactionIdQuerySchema = z.object({
 });
 
 const listIssueBookTransactionQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().positive().max(100).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(20),
   search: z.string().trim().optional(),
 });
 
 const inventoryIssueHistoryQuerySchema = z.object({
   inventoryId: positiveId,
+});
+const memberListQuerySchema = z.object({
+  memberType: memberTypeEnum.optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(20),
+});
+const returnTransactionsQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().optional().default(20),
+  search: z.string().trim().optional(),
 });
 
 router.post(
@@ -109,5 +121,19 @@ router.patch(
   validate({ body: issueBookTransactionUpdateSchema }),
   updateLibraryIssueBookTransaction,
 );
+
+router.get(
+  "/membersList",
+  userAuth,
+  validate({ query: memberListQuerySchema }),
+  getLibraryMembersList,
+);
+router.get(
+  "/returnTransactions",
+  userAuth,
+  validate({ query: returnTransactionsQuerySchema }),
+  getLibraryReturnBookTransactions,
+);
+
 export default router;
 

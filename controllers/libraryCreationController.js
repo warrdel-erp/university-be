@@ -105,6 +105,15 @@ export async function addBookWithInventory(req, res) {
   }
 }
 
+export async function getBookSummaryStats(req, res) {
+  try {
+    const stats = await libraryCreation.getBookSummaryStats(req.query, req.user);
+    return SuccessResponse(res, 200, "Book summary fetched successfully", stats);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 export async function getAllBooks(req, res) {
   try {
     const result = await libraryCreation.getAllBooks(req.query, req.user);
@@ -170,7 +179,7 @@ export async function deleteInventoryCopy(req, res) {
 
 export async function getAllIssuedBooks(req, res) {
   try {
-    const issuedBooks = await libraryCreation.getAllIssuedBooks();
+    const issuedBooks = await libraryCreation.getAllIssuedBooks(req.user);
     return SuccessResponse(res, 200, "Issued books fetched successfully", issuedBooks);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

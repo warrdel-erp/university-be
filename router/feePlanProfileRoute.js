@@ -9,6 +9,7 @@ import {
   getFeePlanProfileSummary,
   getSingleFeePlanProfileDetails,
   assignFeePlanProfileToStudent,
+  publishFeePlanProfile,
 } from "../controllers/feePlanProfileController.js";
 import userAuth from "../middleware/authUser.js";
 
@@ -67,11 +68,15 @@ const feePlanItemForUpdate = z
   })
   .superRefine((item, ctx) => assertUniqueFeeTypeCatalogIds(item.feePlanSubItems, [], ctx));
 
+const publishStatusEnum = z.enum(["draft", "published"]);
+
 const createBody = z.object({
   name: z.string().trim().min(1),
   planType: z.enum(["annual", "semester", "trimester"]),
+  category: z.enum(["scholarship", "non-scholarship"]),
   courseSessionId: id,
   academicYearId: id.optional(),
+  publishStatus: publishStatusEnum.optional().default("draft"),
   feePlanItems: z.array(feePlanItemBody).min(1).optional(),
 });
 
@@ -80,16 +85,20 @@ const updateBody = z
     feePlanProfileId: id,
     name: z.string().trim().min(1).optional(),
     planType: z.enum(["annual", "semester", "trimester"]).optional(),
+    category: z.enum(["scholarship", "non-scholarship"]).optional(),
     courseSessionId: id.optional(),
     academicYearId: id.optional(),
+    publishStatus: publishStatusEnum.optional(),
     feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
   })
   .superRefine((body, ctx) => {
     const hasUpdate =
       body.name !== undefined ||
       body.planType !== undefined ||
+      body.category !== undefined ||
       body.courseSessionId !== undefined ||
       body.academicYearId !== undefined ||
+      body.publishStatus !== undefined ||
       body.feePlanItems !== undefined;
 
     if (!hasUpdate) {
@@ -115,8 +124,13 @@ const assignStudentBody = z.object({
   feePlanProfileId: id,
 });
 
+const publishBody = z.object({
+  feePlanProfileId: id,
+});
+
 router.post("/", userAuth, validate({ body: createBody }), addFeePlanProfile);
 router.patch("/", userAuth, validate({ body: updateBody }), updateFeePlanProfile);
+router.patch("/publish", userAuth, validate({ body: publishBody }), publishFeePlanProfile);
 
 router.patch(
   "/assignStudent",

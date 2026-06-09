@@ -4,33 +4,29 @@ const createVehicle = async (vehicleData) => {
     return await model.vehicleModel.create(vehicleData);
 };
 
-const getAllVehicles = async (universityId,acedmicYearId,role,instituteId) => {
+const getAllVehicles = async (universityId, acedmicYearId, instituteId) => {
     try {
+        const employeeWhere = {
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(instituteId && { instituteId }),
+        };
+
         const result = await model.vehicleModel.findAll({
             attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
             },
-            where:{
-                ...(role === 'Head' && { instituteId })
+            where: {
+                ...(instituteId && { instituteId }),
             },
             include: [
                 {
                     model: model.employeeModel,
                     as: "employee",
-                    attributes: {exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]},
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId })
-                    },
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    where: employeeWhere,
+                    required: Object.keys(employeeWhere).length > 0,
                 },
-                // {
-                //     model: model.userModel,
-                //     as: 'vehicleUser',
-                //     attributes: ["universityId", "userId"],
-                //     where: {
-                //         universityId: universityId
-                //     }
-                // }
-            ]
+            ],
         });
 
         return result;
@@ -40,20 +36,22 @@ const getAllVehicles = async (universityId,acedmicYearId,role,instituteId) => {
     }
 };
 
-const getVehicleById = async (vehicleId, universityId) => {
+const getVehicleById = async (vehicleId, universityId, instituteId) => {
     return await model.vehicleModel.findOne({
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        where: {
+            vehicleId,
+            ...(instituteId && { instituteId }),
+        },
         include: [
             {
                 model: model.userModel,
-                as: 'vehicleUser',
+                as: "vehicleUser",
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
-            }
+                where: { universityId },
+                required: true,
+            },
         ],
-        where: { vehicleId },
     });
 };
 

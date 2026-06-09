@@ -12,7 +12,10 @@ export async function createLibraryIssueBookTransaction(req, res) {
 
 export async function getLibraryIssueBookTransactions(req, res) {
   try {
-    const { data, paginationData } = await services.getLibraryIssueBookTransactions(req.query);
+    const { data, paginationData } = await services.getLibraryIssueBookTransactions(
+      req.query,
+      req.user.defaultInstituteId,
+    );
     return SuccessResponse(
       res,
       200,
@@ -29,6 +32,7 @@ export async function getLibraryIssueBookTransactionById(req, res) {
   try {
     const data = await services.getLibraryIssueBookTransactionById(
       req.query.libraryIssueBookTransactionId,
+      req.user.defaultInstituteId,
     );
     return SuccessResponse(res, 200, "Library issue book transaction fetched successfully", data);
   } catch (error) {
@@ -47,12 +51,44 @@ export async function updateLibraryIssueBookTransaction(req, res) {
 
 export async function getLibraryBookInventoryIssueHistory(req, res) {
   try {
-    const data = await services.getLibraryBookInventoryIssueHistory(req.query.inventoryId);
+    const data = await services.getLibraryBookInventoryIssueHistory(
+      req.query.inventoryId,
+      req.user.defaultInstituteId,
+    );
     return SuccessResponse(
       res,
       200,
       "Library book inventory issue history fetched successfully",
       data,
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+
+
+export async function getLibraryMembersList(req, res) {
+  try {
+    const { data, paginationData } = await services.getLibraryMembersList(req.query);
+    return SuccessResponse(res, 200, "Library members list fetched successfully", data, paginationData);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getLibraryReturnBookTransactions(req, res) {
+  try {
+    const { data, paginationData } = await services.getLibraryReturnBookTransactions(
+      req.query,
+      req.user.defaultInstituteId,
+    );
+    return SuccessResponse(
+      res,
+      200,
+      "Library return book transactions fetched successfully",
+      data,
+      paginationData,
     );
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

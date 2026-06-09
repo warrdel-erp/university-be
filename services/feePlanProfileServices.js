@@ -15,6 +15,12 @@ function httpError(message, statusCode = 400) {
   return err;
 }
 
+function assertFeePlanProfilePublished(profilePlain) {
+  if (profilePlain.publishStatus !== "published") {
+    throw httpError("Only published fee plans can be assigned to students", 400);
+  }
+}
+
 function isMainFeePlanSubItem(line) {
   return line?.isMainSubItem === true || line?.isMainSubItem === 1;
 }
@@ -133,6 +139,7 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
     feePlanProfileId: plainProfile.feePlanProfileId,
     planName: plainProfile.name,
     planType: plainProfile.planType,
+    category: plainProfile.category,
     courseSessionId: plainProfile.courseSessionId,
     term: items.length,
     termFees,
@@ -142,6 +149,7 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
     totalInvoices: numberOfInvoices,
     feePlanItems: buildFeePlanItemInvoiceRows(items, invoiceCountByItem),
     assignedStudentCount,
+    publishStatus: plainProfile.publishStatus ?? "draft",
     status: assignedStudentCount > 0 ? "active" : "inactive",
     instituteId: plainProfile.instituteId,
   };
@@ -191,6 +199,7 @@ function formatFeePlanProfileSingleResponse(row, counts) {
     feePlanProfileId: p.feePlanProfileId,
     planName: p.name,
     planType: p.planType,
+    category: p.category,
     courseSessionId: p.courseSessionId,
     instituteId: p.instituteId,
     courseId: mapping.courseId ?? course.courseId ?? null,
@@ -199,6 +208,7 @@ function formatFeePlanProfileSingleResponse(row, counts) {
     sessionName: session.sessionName ?? null,
     assignedStudentCount: counts.assignedStudentCount,
     numberOfInvoices: counts.numberOfInvoices,
+    publishStatus: p.publishStatus ?? "draft",
     status: counts.assignedStudentCount > 0 ? "active" : "inactive",
     term: feePlanItems.length,
     termFees,
@@ -332,7 +342,9 @@ export async function updateFeePlanProfile(body, instituteId) {
     const profileUpdates = {};
     if (body.name !== undefined) profileUpdates.name = body.name;
     if (body.planType !== undefined) profileUpdates.planType = body.planType;
+    if (body.category !== undefined) profileUpdates.category = body.category;
     if (body.courseSessionId !== undefined) profileUpdates.courseSessionId = body.courseSessionId;
+    if (body.publishStatus !== undefined) profileUpdates.publishStatus = body.publishStatus;
 
     if (Object.keys(profileUpdates).length > 0) {
       await repo.updateFeePlanProfileById(
@@ -356,6 +368,45 @@ export async function updateFeePlanProfile(body, instituteId) {
   return getSingleFeePlanProfile(feePlanProfileId, instituteId);
 }
 
+export async function publishFeePlanProfile(feePlanProfileId, instituteId) {
+  await sequelize.transaction(async (transaction) => {
+    const profile = await repo.findFeePlanProfileById(feePlanProfileId, instituteId, {
+      forDetail: true,
+      transaction,
+    });
+    if (!profile) {
+      throw httpError("Fee plan profile not found", 404);
+    }
+
+    const plain = toPlain(profile);
+    if (plain.publishStatus === "published") {
+      throw httpError("Fee plan is already published", 400);
+    }
+
+    const items = plain.feePlanItems ?? [];
+    if (!items.length) {
+      throw httpError("Fee plan must have at least one term before publishing", 400);
+    }
+
+    const missingSubItems = items.some((item) => !(item.feePlanSubItems?.length));
+    if (missingSubItems) {
+      throw httpError(
+        "Each fee plan term must have at least one fee line before publishing",
+        400
+      );
+    }
+
+    await repo.updateFeePlanProfileById(
+      feePlanProfileId,
+      instituteId,
+      { publishStatus: "published" },
+      { transaction }
+    );
+  });
+
+  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
+}
+
 export async function addFeePlanProfile(body, instituteId) {
   const mapId = body.courseSessionId;
 
@@ -366,8 +417,10 @@ export async function addFeePlanProfile(body, instituteId) {
       {
         name: body.name,
         planType: body.planType,
+        category: body.category,
         courseSessionId: mapId,
         instituteId,
+        publishStatus: body.publishStatus ?? "draft",
       },
       { transaction }
     );
@@ -481,6 +534,7 @@ export async function assignFeePlanProfileToStudent(body, instituteId) {
     if (!profile) {
       throw httpError("Fee plan profile not found for this institute", 404);
     }
+    assertFeePlanProfilePublished(toPlain(profile));
 
     const student = await studentRepo.findStudentByIdForInstitute(studentId, instituteId, {
       transaction,
@@ -506,6 +560,8 @@ export async function assignFeePlanProfileToStudent(body, instituteId) {
       scholarNumber: plainStudent.scholarNumber ?? null,
       feePlanName: profilePlain.name ?? null,
       planType: profilePlain.planType ?? null,
+      category: profilePlain.category ?? null,
+      publishStatus: profilePlain.publishStatus ?? null,
     };
   });
 }
