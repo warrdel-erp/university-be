@@ -7,12 +7,6 @@ import {
   parseContractNumberSequence,
 } from "../utility/amcContractCode.js";
 
-function httpError(message, statusCode = 400) {
-  const err = new Error(message);
-  err.statusCode = statusCode;
-  return err;
-}
-
 function updatePayload(body) {
   const payload = {};
 
@@ -38,7 +32,7 @@ function resolveContractValue(body) {
 
   const value = parseMoneyInput(body.contractValue);
   if (Number.isNaN(value)) {
-    throw httpError("contractValue must be a valid money value", 400);
+    throw new Error("contractValue must be a valid money value");
   }
 
   return value;
@@ -60,7 +54,7 @@ async function resolveNextContractNumber(instituteId, transaction) {
 async function assertVendorAvailable(amcVendorId, instituteId, transaction, excludeAmcContractId) {
   const vendor = await repo.findAmcVendorForContract(amcVendorId, instituteId, { transaction });
   if (!vendor) {
-    throw httpError("amcVendorId not found or not in your institute", 404);
+    throw new Error("amcVendorId not found or not in your institute");
   }
 
   const duplicate = await repo.findContractByVendorId(amcVendorId, instituteId, {
@@ -69,9 +63,8 @@ async function assertVendorAvailable(amcVendorId, instituteId, transaction, excl
   });
 
   if (duplicate) {
-    throw httpError(
-      "A contract already exists for this vendor. Only one contract per vendor category is allowed.",
-      409
+    throw new Error(
+      "A contract already exists for this vendor. Only one contract per vendor category is allowed."
     );
   }
 
@@ -80,13 +73,13 @@ async function assertVendorAvailable(amcVendorId, instituteId, transaction, excl
 
 function assertDraftContract(approvalStatus, actionLabel) {
   if (approvalStatus !== "DRAFT") {
-    throw httpError(`Only DRAFT contracts can be ${actionLabel}`, 400);
+    throw new Error(`Only DRAFT contracts can be ${actionLabel}`);
   }
 }
 
 function assertContractExists(row) {
   if (!row) {
-    throw httpError("AMC contract not found or not in your institute", 404);
+    throw new Error("AMC contract not found or not in your institute");
   }
   return row;
 }
@@ -94,7 +87,7 @@ function assertContractExists(row) {
 export async function addAmcContract(body, instituteId) {
   const contractValue = resolveContractValue(body);
   if (contractValue === null || contractValue === undefined) {
-    throw httpError("contractValue is required", 400);
+    throw new Error("contractValue is required");
   }
 
   const transaction = await sequelize.transaction();
@@ -131,25 +124,33 @@ export async function addAmcContract(body, instituteId) {
     return row;
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to create AMC contract: ${error.message}`);
   }
 }
 
 export async function listAmcContracts(instituteId, query = {}) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const { rows, count } = await repo.findAndCountAmcContracts(instituteId, { ...query, page, limit });
+  try {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const { rows, count } = await repo.findAndCountAmcContracts(instituteId, { ...query, page, limit });
 
-  return {
-    rows,
-    total: count,
-    page,
-    limit,
-  };
+    return {
+      rows,
+      total: count,
+      page,
+      limit,
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch AMC contracts: ${error.message}`);
+  }
 }
 
 export async function getSingleAmcContract(amcContractId, instituteId) {
-  return repo.findAmcContractById(amcContractId, instituteId);
+  try {
+    return await repo.findAmcContractById(amcContractId, instituteId);
+  } catch (error) {
+    throw new Error(`Failed to fetch AMC contract: ${error.message}`);
+  }
 }
 
 export async function updateAmcContract(amcContractId, body, instituteId) {
@@ -171,7 +172,7 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
     const nextStartDate = payload.startDate ?? existing.startDate;
     const nextEndDate = payload.endDate ?? existing.endDate;
     if (nextEndDate < nextStartDate) {
-      throw httpError("endDate must be on or after startDate", 400);
+      throw new Error("endDate must be on or after startDate");
     }
 
     if (Object.keys(payload).length) {
@@ -179,7 +180,7 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
         transaction,
       });
       if (!affected) {
-        throw httpError("AMC contract not found or not in your institute", 404);
+        throw new Error("AMC contract not found or not in your institute");
       }
     }
 
@@ -190,7 +191,7 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
     return row;
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to update AMC contract: ${error.message}`);
   }
 }
 
@@ -206,14 +207,14 @@ export async function deleteAmcContract(amcContractId, instituteId) {
 
     const ok = await repo.deleteAmcContract(amcContractId, instituteId, { transaction });
     if (!ok) {
-      throw httpError("AMC contract not found or not in your institute", 404);
+      throw new Error("AMC contract not found or not in your institute");
     }
 
     await transaction.commit();
     return true;
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to delete AMC contract: ${error.message}`);
   }
 }
 
@@ -241,7 +242,7 @@ export async function submitAmcContractForApproval(amcContractId, instituteId) {
     return row;
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to submit AMC contract for approval: ${error.message}`);
   }
 }
 
@@ -254,7 +255,7 @@ export async function approveAmcContract(amcContractId, instituteId) {
     );
 
     if (existing.approvalStatus !== "PUBLISHED") {
-      throw httpError("Only PUBLISHED contracts can be approved", 400);
+      throw new Error("Only PUBLISHED contracts can be approved");
     }
 
     await repo.updateAmcContract(
@@ -271,12 +272,16 @@ export async function approveAmcContract(amcContractId, instituteId) {
     return row;
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to approve AMC contract: ${error.message}`);
   }
 }
 
 export async function getAmcContractSummary(instituteId) {
-  return repo.findContractSummaryStats(instituteId);
+  try {
+    return await repo.findContractSummaryStats(instituteId);
+  } catch (error) {
+    throw new Error(`Failed to fetch AMC contract summary: ${error.message}`);
+  }
 }
 
 export async function previewContractNumber(instituteId) {
@@ -293,6 +298,6 @@ export async function previewContractNumber(instituteId) {
     };
   } catch (error) {
     await transaction.rollback();
-    throw error;
+    throw new Error(`Failed to preview contract number: ${error.message}`);
   }
 }

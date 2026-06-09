@@ -6,12 +6,6 @@ import {
   parseTicketNumberSequence,
 } from "../utility/amcServiceTicketCode.js";
 
-function httpError(message, statusCode = 400) {
-  const err = new Error(message);
-  err.statusCode = statusCode;
-  return err;
-}
-
 async function resolveNextTicketNumber(instituteId, transaction) {
   const year = currentTicketYear();
   const prefix = `TKT-${year}-`;
@@ -26,7 +20,7 @@ async function resolveNextTicketNumber(instituteId, transaction) {
 async function resolveAssetCategoryId(assetId, instituteId, transaction) {
   const asset = await repo.findAssetForTicket(assetId, instituteId, { transaction });
   if (!asset) {
-    throw httpError("assetId not found or not in your institute", 404);
+    throw new Error("assetId not found or not in your institute");
   }
   return asset.assetCategoryId;
 }
@@ -35,7 +29,7 @@ async function resolveAmcVendorId(amcVendorId, assetCategoryId, instituteId, tra
   if (amcVendorId !== undefined && amcVendorId !== null) {
     const vendor = await repo.findAmcVendorForTicket(amcVendorId, instituteId, { transaction });
     if (!vendor) {
-      throw httpError("amcVendorId not found or not in your institute", 404);
+      throw new Error("amcVendorId not found or not in your institute");
     }
     return vendor.amcVendorId;
   }
@@ -46,133 +40,161 @@ async function resolveAmcVendorId(amcVendorId, assetCategoryId, instituteId, tra
 
 function assertOpenTicket(status, actionLabel) {
   if (status !== "OPEN") {
-    throw httpError(`Only OPEN tickets can be ${actionLabel}`, 400);
+    throw new Error(`Only OPEN tickets can be ${actionLabel}`);
   }
 }
 
 function assertTicketNotClosed(status) {
   if (status === "CLOSED") {
-    throw httpError("Closed tickets cannot be modified", 400);
+    throw new Error("Closed tickets cannot be modified");
   }
 }
 
 function assertTicketExists(row) {
   if (!row) {
-    throw httpError("Service ticket not found or not in your institute", 404);
+    throw new Error("Service ticket not found or not in your institute");
   }
   return row;
 }
 
 export async function addServiceTicket(body, instituteId) {
-  return sequelize.transaction(async (transaction) => {
-    const assetCategoryId = await resolveAssetCategoryId(body.assetId, instituteId, transaction);
-    const amcVendorId = await resolveAmcVendorId(
-      body.amcVendorId,
-      assetCategoryId,
-      instituteId,
-      transaction
-    );
-    const ticketNumber = await resolveNextTicketNumber(instituteId, transaction);
-
-    const created = await repo.createServiceTicket(
-      {
-        instituteId,
-        ticketNumber,
-        assetId: body.assetId,
-        amcVendorId,
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const assetCategoryId = await resolveAssetCategoryId(body.assetId, instituteId, transaction);
+      const amcVendorId = await resolveAmcVendorId(
+        body.amcVendorId,
         assetCategoryId,
-        issue: body.issue,
-        issueType: body.issueType,
-        problemDescription: body.problemDescription,
-        downtimeStartedAt: body.downtimeStartedAt,
-        priority: body.priority ?? "MEDIUM",
-        status: "OPEN",
-      },
-      { transaction }
-    );
+        instituteId,
+        transaction
+      );
+      const ticketNumber = await resolveNextTicketNumber(instituteId, transaction);
 
-    return repo.findServiceTicketById(created.serviceTicketId, instituteId, { transaction });
-  });
+      const created = await repo.createServiceTicket(
+        {
+          instituteId,
+          ticketNumber,
+          assetId: body.assetId,
+          amcVendorId,
+          assetCategoryId,
+          issue: body.issue,
+          issueType: body.issueType,
+          problemDescription: body.problemDescription,
+          downtimeStartedAt: body.downtimeStartedAt,
+          priority: body.priority ?? "MEDIUM",
+          status: "OPEN",
+        },
+        { transaction }
+      );
+
+      return repo.findServiceTicketById(created.serviceTicketId, instituteId, { transaction });
+    });
+  } catch (error) {
+    throw new Error(`Failed to create service ticket: ${error.message}`);
+  }
 }
 
 export async function listServiceTickets(instituteId, query = {}) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const { rows, count } = await repo.findAndCountServiceTickets(instituteId, {
-    ...query,
-    page,
-    limit,
-  });
+  try {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const { rows, count } = await repo.findAndCountServiceTickets(instituteId, {
+      ...query,
+      page,
+      limit,
+    });
 
-  return { rows, total: count, page, limit };
+    return { rows, total: count, page, limit };
+  } catch (error) {
+    throw new Error(`Failed to fetch service tickets: ${error.message}`);
+  }
 }
 
 export async function getSingleServiceTicket(serviceTicketId, instituteId) {
-  return repo.findServiceTicketById(serviceTicketId, instituteId);
+  try {
+    return await repo.findServiceTicketById(serviceTicketId, instituteId);
+  } catch (error) {
+    throw new Error(`Failed to fetch service ticket: ${error.message}`);
+  }
 }
 
 export async function updateServiceTicket(serviceTicketId, body, instituteId) {
-  return sequelize.transaction(async (transaction) => {
-    const existing = assertTicketExists(
-      await repo.findServiceTicketMetaById(serviceTicketId, instituteId, { transaction })
-    );
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const existing = assertTicketExists(
+        await repo.findServiceTicketMetaById(serviceTicketId, instituteId, { transaction })
+      );
 
-    assertTicketNotClosed(existing.status);
+      assertTicketNotClosed(existing.status);
 
-    const { serviceTicketId: _id, ...payload } = body;
+      const { serviceTicketId: _id, ...payload } = body;
 
-    if (payload.amcVendorId !== undefined && payload.amcVendorId !== null) {
-      const vendor = await repo.findAmcVendorForTicket(payload.amcVendorId, instituteId, {
+      if (payload.amcVendorId !== undefined && payload.amcVendorId !== null) {
+        const vendor = await repo.findAmcVendorForTicket(payload.amcVendorId, instituteId, {
+          transaction,
+        });
+        if (!vendor) {
+          throw new Error("amcVendorId not found or not in your institute");
+        }
+      }
+
+      if (payload.status === undefined) {
+        assertOpenTicket(existing.status, "updated");
+      }
+
+      const affected = await repo.updateServiceTicket(serviceTicketId, instituteId, payload, {
         transaction,
       });
-      if (!vendor) {
-        throw httpError("amcVendorId not found or not in your institute", 404);
+      if (!affected) {
+        throw new Error("Service ticket not found or not in your institute");
       }
-    }
 
-    if (payload.status === undefined) {
-      assertOpenTicket(existing.status, "updated");
-    }
-
-    const affected = await repo.updateServiceTicket(serviceTicketId, instituteId, payload, {
-      transaction,
+      return repo.findServiceTicketById(serviceTicketId, instituteId, { transaction });
     });
-    if (!affected) {
-      throw httpError("Service ticket not found or not in your institute", 404);
-    }
-
-    return repo.findServiceTicketById(serviceTicketId, instituteId, { transaction });
-  });
+  } catch (error) {
+    throw new Error(`Failed to update service ticket: ${error.message}`);
+  }
 }
 
 export async function deleteServiceTicket(serviceTicketId, instituteId) {
-  return sequelize.transaction(async (transaction) => {
-    const existing = assertTicketExists(
-      await repo.findServiceTicketMetaById(serviceTicketId, instituteId, { transaction })
-    );
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const existing = assertTicketExists(
+        await repo.findServiceTicketMetaById(serviceTicketId, instituteId, { transaction })
+      );
 
-    assertOpenTicket(existing.status, "deleted");
+      assertOpenTicket(existing.status, "deleted");
 
-    const ok = await repo.deleteServiceTicket(serviceTicketId, instituteId, { transaction });
-    if (!ok) {
-      throw httpError("Service ticket not found or not in your institute", 404);
-    }
+      const ok = await repo.deleteServiceTicket(serviceTicketId, instituteId, { transaction });
+      if (!ok) {
+        throw new Error("Service ticket not found or not in your institute");
+      }
 
-    return true;
-  });
+      return true;
+    });
+  } catch (error) {
+    throw new Error(`Failed to delete service ticket: ${error.message}`);
+  }
 }
 
 export async function previewTicketNumber(instituteId) {
-  return sequelize.transaction(async (transaction) => {
-    const ticketNumber = await resolveNextTicketNumber(instituteId, transaction);
+  try {
+    return await sequelize.transaction(async (transaction) => {
+      const ticketNumber = await resolveNextTicketNumber(instituteId, transaction);
 
-    return {
-      ticketNumber,
-      year: currentTicketYear(),
-    };
-  });
+      return {
+        ticketNumber,
+        year: currentTicketYear(),
+      };
+    });
+  } catch (error) {
+    throw new Error(`Failed to preview ticket number: ${error.message}`);
+  }
 }
 
 export async function getServiceTicketSummary(instituteId) {
-  return repo.findServiceTicketSummaryStats(instituteId);
+  try {
+    return await repo.findServiceTicketSummaryStats(instituteId);
+  } catch (error) {
+    throw new Error(`Failed to fetch service ticket summary: ${error.message}`);
+  }
 }
