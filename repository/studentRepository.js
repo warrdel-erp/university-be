@@ -1,6 +1,38 @@
 import * as model from '../models/index.js'
 import { Op, Sequelize } from 'sequelize';
 
+function buildStudentName({ firstName, middleName, lastName }) {
+    return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+}
+
+function buildStudentListWhere(instituteId, role, search, courseId) {
+    const where = {};
+
+    if (role === 'Head') {
+        where.instituteId = instituteId;
+    }
+
+    if (courseId) {
+        where.courseId = courseId;
+    }
+
+    if (search) {
+        const term = `%${search}%`;
+        where[Op.or] = [
+            { firstName: { [Op.like]: term } },
+            { lastName: { [Op.like]: term } },
+            { middleName: { [Op.like]: term } },
+            { scholarNumber: { [Op.like]: term } },
+            { enrollNumber: { [Op.like]: term } },
+            { fatherName: { [Op.like]: term } },
+            { birthDate: { [Op.like]: term } },
+            { '$course.course_name$': { [Op.like]: term } },
+        ];
+    }
+
+    return where;
+}
+
 export async function addStudent(data, transaction) {
     try {
         const result = await model.studentModel.create(data, { transaction });
@@ -61,7 +93,15 @@ export async function studentMetaData(data, transaction) {
     }
 };
 
-export async function getAllStudents(firstName, universityId, acedmicYearId, page, limit, instituteId, role) {
+export async function getAllStudents({
+    universityId,
+    page,
+    limit,
+    instituteId,
+    role,
+    search,
+    courseId,
+}) {
     try {
         const baseInclude = [
             {
@@ -86,7 +126,6 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
                 model: model.acedmicYearModel,
                 as: "acdemicYear",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                // where: { universityId },
             },
             {
                 model: model.affiliatedIniversityModel,
@@ -171,40 +210,51 @@ export async function getAllStudents(firstName, universityId, acedmicYearId, pag
             },
         ];
 
-        const whereCondition = {
-            ...(firstName !== 'all' && {
-                first_name: {
-                    [Op.like]: `%${firstName}%`
-                }
-            }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { instituteId })
-        };
+        const whereCondition = buildStudentListWhere(
+            instituteId,
+            role,
+            search,
+            courseId
+        );
 
         const offset = (page - 1) * limit;
-
-        const result = await model.studentModel.findAll({
+        const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: whereCondition,
             include: baseInclude,
             offset,
-            limit
+            limit,
+            order: [["studentId", "DESC"]],
+            ...(search && { subQuery: false }),
+        };
+
+        const rows = await model.studentModel.findAll(queryOptions);
+        const result = rows.map((row) => {
+            const student = row.get({ plain: true });
+            return {
+                ...student,
+                name: buildStudentName(student),
+            };
         });
 
         const totalCount = await model.studentModel.count({
             where: whereCondition,
             include: baseInclude,
             distinct: true,
-            col: 'student_id'
+            col: 'student_id',
+            ...(search && { subQuery: false }),
         });
 
-
         return {
-            result, totalCount
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
         };
 
     } catch (error) {
-        console.error(`Error in getting student name "${firstName}":`, error);
+        console.error("Error in getting all students:", error);
         throw error;
     }
 };
