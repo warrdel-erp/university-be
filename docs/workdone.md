@@ -93,3 +93,25 @@
 12. Added Building Type (Academics, Residential).
 13. Ledger type in Create fee type.
 14. Asset management Basic BE setup.
+
+---
+
+1. data scoping (show only data that belongs to selected institute of academic year). [Big one]
+2. Session program mapping can not be deleted if
+3. book detail with it's inventory details.
+4. Asset location from existing building rooms. and count for assets.
+5. book return with with transactions.
+6. asset management tab changes (assigned and unassigned).
+7. asset category separate management.
+8. show list of members in library management.
+9. Fee plan category (Scholarship, Non-Scholarship).
+10. fee plan dates automation.
+11. missing Fee plan data.
+12. Create fee plan error resolve.
+13. after asset issuance. it could not be changed.
+14. security amount during asset issue.
+15. Exam time table handles multiple actions.
+
+---
+
+1.
