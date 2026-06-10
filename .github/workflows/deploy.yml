@@ -1,76 +1,76 @@
-name: Deploy Backend to AWS EC2 using Docker
+# name: Deploy Backend to AWS EC2 using Docker
 
-on:
-  push:
-    branches:
-      - production # Change to your deployment branch
+# on:
+#   push:
+#     branches:
+#       - production # Change to your deployment branch
 
-# Prevent race conditions: cancel previous deployment when a new push happens
-concurrency:
-  group: deploy-production
-  cancel-in-progress: true
+# # Prevent race conditions: cancel previous deployment when a new push happens
+# concurrency:
+#   group: deploy-production
+#   cancel-in-progress: true
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: production
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     environment: production
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }} # Explicitly use the commit that triggered the workflow
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+#         with:
+#           ref: ${{ github.sha }} # Explicitly use the commit that triggered the workflow
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#       - name: Login to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
-          build-args: |
-            CACHE_BUST=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+#       - name: Build and Push Docker image
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: .
+#           push: true
+#           tags: ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
+#           build-args: |
+#             CACHE_BUST=${{ github.sha }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
 
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            # Login to Docker Hub
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+#       - name: Deploy to Server
+#         uses: appleboy/ssh-action@v1.0.3
+#         with:
+#           host: ${{ secrets.SSH_HOST }}
+#           username: ${{ secrets.SSH_USER }}
+#           key: ${{ secrets.SSH_PRIVATE_KEY }}
+#           port: ${{ secrets.SSH_PORT }}
+#           script: |
+#             # Login to Docker Hub
+#             echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            # Pull Latest Image
-            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
+#             # Pull Latest Image
+#             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
 
-            # Stop and Remove Existing Container
-            sudo docker stop university-erp-be || true
-            sudo docker rm university-erp-be || true
+#             # Stop and Remove Existing Container
+#             sudo docker stop university-erp-be || true
+#             sudo docker rm university-erp-be || true
 
-            # Run New Container
-            sudo docker run \
-              --network host \
-              --env-file /home/support/envs/.be.env \
-              -d \
-              --name university-erp-be \
-              --restart unless-stopped \
-              -p 6002:6002 \
-              ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
+#             # Run New Container
+#             sudo docker run \
+#               --network host \
+#               --env-file /home/support/envs/.be.env \
+#               -d \
+#               --name university-erp-be \
+#               --restart unless-stopped \
+#               -p 6002:6002 \
+#               ${{ secrets.DOCKERHUB_USERNAME }}/university-erp-be:latest
 
-            # Run Migrations
-            sudo docker exec university-erp-be npm run migrate
+#             # Run Migrations
+#             sudo docker exec university-erp-be npm run migrate
 
-            # Clean up Old Images
-            sudo docker image prune -a -f
+#             # Clean up Old Images
+#             sudo docker image prune -a -f
