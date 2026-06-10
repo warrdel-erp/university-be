@@ -200,26 +200,30 @@ export async function addLessionMapping(data, transaction) {
 
 export async function getMapping(universityId, instituteId, role, acedmicYearId) {
   try {
-    const whereClause = {
+    const mainWhereClause = {
+      ...(universityId && { universityId }),
+      ...(role === "Head" && { instituteId }),
+    };
+    const lessonWhereClause = {
       ...(universityId && { universityId }),
       ...(acedmicYearId && { acedmicYearId }),
-      ...(role === "Head" && { institute_id: instituteId }),
     };
     const lesson = await model.lessonMappingModel.findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: whereClause,
+      where: mainWhereClause,
       include: [
         {
           model: model.topicModel,
           as: "mappingTopic",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-          where: whereClause,
+          required: true,
           include: [
             {
               model: model.lessonModel,
               as: "lessonTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              where: whereClause,
+              where: lessonWhereClause,
+              required: true,
               include: [
                 {
                   model: model.subjectModel,
@@ -232,7 +236,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               model: model.subTopicModel,
               as: "subTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              where: whereClause,
+              required: false,
             },
           ],
         },
