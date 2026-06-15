@@ -26,6 +26,75 @@ import * as model from "../models/index.js";
 import { decimalAdd, decimalSum, toMoneyNumber } from "../utility/decimalMoney.js";
 import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 
+
+function buildStudentRowPayload(info) {
+  const {
+    entranceDetails,
+    addressDetails,
+    corsAddress,
+    allDropDownData,
+    roleId,
+    admissionDate,
+    additionalNotes,
+    gender,
+    caste,
+    religion,
+    bloodGroup,
+    ...studentRow
+  } = info;
+  return studentRow;
+}
+
+function toEntranceDetailRow(detail = {}) {
+  return {
+    ...detail,
+    categoryRank:
+      detail.categoryRank != null && detail.categoryRank !== ""
+        ? Number(detail.categoryRank)
+        : detail.categoryRank,
+    marks:
+      detail.marks != null && detail.marks !== ""
+        ? Number(detail.marks)
+        : detail.marks,
+    percentile:
+      detail.percentile != null && detail.percentile !== ""
+        ? Number(detail.percentile)
+        : detail.percentile,
+  };
+}
+
+async function resolveSemesterIdForStudent(info) {
+  const raw = info.semesterId;
+  if (raw == null || raw === "") return null;
+
+  const termOrId = Number(raw);
+  if (!Number.isInteger(termOrId) || termOrId <= 0) return null;
+
+  const existing = await model.semesterModel.findByPk(termOrId, {
+    attributes: ["semesterId"],
+  });
+  if (existing) return termOrId;
+
+  if (info.classSectionsId) {
+    const section = await model.classSectionModel.findByPk(info.classSectionsId, {
+      attributes: ["semesterId"],
+    });
+    if (section?.semesterId) return section.semesterId;
+  }
+
+  const semesters = await model.semesterModel.findAll({
+    where: {
+      courseId: info.courseId,
+      ...(info.acedmicYearId && { acedmicYearId: info.acedmicYearId }),
+      ...(info.instituteId && { instituteId: info.instituteId }),
+    },
+    attributes: ["semesterId"],
+    order: [["semesterId", "ASC"]],
+  });
+
+  return semesters[termOrId - 1]?.semesterId ?? null;
+}
+
 function isMainFeePlanSubItem(line) {
   return line?.isMainSubItem === true || line?.isMainSubItem === 1;
 }
@@ -104,25 +173,23 @@ export async function addStudent(
     }
 
     // Scholar number
-    info.scholarNumber = await generateScholarNumber(
-      info.courseId,
-      info.instituteId,
-    );
+    if (!info.scholarNumber) {
+      info.scholarNumber = await generateScholarNumber(
+        info.courseId,
+        info.instituteId,
+      );
+    }
     info.email = info.email.toLowerCase();
     info.createdBy = createdBy;
 
-    delete info.semesterId;
-
-    const studentPayload = { ...info };
-    for (const key of [
-      "entranceDetails",
-      "addressDetails",
-      "corsAddress",
-      "allDropDownData",
-      "roleId",
-    ]) {
-      delete studentPayload[key];
+    const resolvedSemesterId = await resolveSemesterIdForStudent(info);
+    if (resolvedSemesterId) {
+      info.semesterId = resolvedSemesterId;
+    } else {
+      delete info.semesterId;
     }
+
+    const studentPayload = buildStudentRowPayload(info);
 
     // Save student information
     const student = await studentRepository.addStudent(studentPayload, transaction);
@@ -142,7 +209,13 @@ export async function addStudent(
       roleId,
     };
 
-    const data = { studentId, acedmicYearId, createdBy, sessionId };
+    const data = {
+      studentId,
+      acedmicYearId,
+      createdBy,
+      sessionId,
+      ...(info.semesterId && { semesterId: info.semesterId }),
+    };
     const result = await studentRepository.classStudentMapping(
       data,
       transaction,
@@ -158,108 +231,60 @@ export async function addStudent(
       },
       transaction,
     );
-    //  entranceDetails
+    //  entranceDetails — shape validated in route Zod schema
     let entranceDetails = [];
-    if (info.entranceDetails) {
-      const entranceDetailsArray =
-        typeof info.entranceDetails === "string"
-          ? JSON.parse(info.entranceDetails)
-          : info.entranceDetails;
-
-      if (Array.isArray(entranceDetailsArray)) {
-        entranceDetails = entranceDetailsArray.map((detail) => ({
-          ...detail,
-          studentId,
-          createdBy,
-        }));
-        await studentRepository.addStudentsEntranceDetail(
-          entranceDetails,
-          transaction,
-        );
-      } else {
-        throw new Error("Entrance details should be an array.");
-      }
+    if (Array.isArray(info.entranceDetails) && info.entranceDetails.length > 0) {
+      entranceDetails = info.entranceDetails.map((detail) => ({
+        ...toEntranceDetailRow(detail),
+        studentId,
+        createdBy,
+      }));
+      await studentRepository.addStudentsEntranceDetail(
+        entranceDetails,
+        transaction,
+      );
     }
 
     //  addressDetails
     let addressDetails = null;
-    if (info.addressDetails) {
-      const addressDetailsObject =
-        typeof info.addressDetails === "string"
-          ? JSON.parse(info.addressDetails)
-          : info.addressDetails;
-
-      if (
-        typeof addressDetailsObject === "object" &&
-        !Array.isArray(addressDetailsObject)
-      ) {
-        addressDetailsObject.studentId = studentId;
-        addressDetailsObject.createdBy = createdBy;
-        addressDetails = await studentRepository.addStudentsAddress(
-          addressDetailsObject,
-          transaction,
-        );
-      } else {
-        throw new Error("Address details should be an object.");
-      }
+    if (
+      info.addressDetails &&
+      typeof info.addressDetails === "object" &&
+      !Array.isArray(info.addressDetails)
+    ) {
+      addressDetails = await studentRepository.addStudentsAddress(
+        { ...info.addressDetails, studentId, createdBy },
+        transaction,
+      );
     }
 
     // cors AddressDetails
     let CorsAddressDetails = null;
-    if (info.corsAddress) {
-      const addressDetailsObject =
-        typeof info.corsAddress === "string"
-          ? JSON.parse(info.corsAddress)
-          : info.corsAddress;
-
-      if (
-        typeof addressDetailsObject === "object" &&
-        !Array.isArray(addressDetailsObject)
-      ) {
-        addressDetailsObject.studentId = studentId;
-        addressDetailsObject.createdBy = createdBy;
-        CorsAddressDetails = await studentRepository.addStudentsCorsAddress(
-          addressDetailsObject,
-          transaction,
-        );
-      } else {
-        throw new Error("Address details should be an object.");
-      }
+    if (
+      info.corsAddress &&
+      typeof info.corsAddress === "object" &&
+      !Array.isArray(info.corsAddress)
+    ) {
+      CorsAddressDetails = await studentRepository.addStudentsCorsAddress(
+        { ...info.corsAddress, studentId, createdBy },
+        transaction,
+      );
     }
-    //  allDropDownData
+
+    //  allDropDownData — type/code length validated in route Zod schema
     let allDropDownData = null;
-    if (info.allDropDownData) {
-      const allDropDownDataObject =
-        typeof info.allDropDownData === "string"
-          ? JSON.parse(info.allDropDownData)
-          : info.allDropDownData;
-
-      if (
-        typeof allDropDownDataObject === "object" &&
-        Array.isArray(allDropDownDataObject.type) &&
-        Array.isArray(allDropDownDataObject.code)
-      ) {
-        const type = allDropDownDataObject.type;
-        const code = allDropDownDataObject.code;
-
-        if (type.length !== code.length) {
-          throw new Error("Types and codes arrays must be of the same length.");
-        }
-
-        const entries = type.map((types, index) => ({
-          studentId,
-          createdBy,
-          types,
-          codes: code[index],
-        }));
-
-        allDropDownData = await studentRepository.studentMetaData(
-          entries,
-          transaction,
-        );
-      } else {
-        throw new Error("Invalid format for allDropDownData.");
-      }
+    if (info.allDropDownData?.type?.length) {
+      const { type, code } = info.allDropDownData;
+      const entries = type.map((types, index) => ({
+        studentId,
+        createdBy,
+        types,
+        codes: code[index],
+      }));
+      allDropDownData = await studentRepository.studentMetaData(
+        entries,
+        transaction,
+      );
     }
 
     //student register
@@ -339,9 +364,7 @@ async function assertStudentEnrollNumberAvailable(enrollNumber) {
 }
 
 async function assertStudentEmailAvailable(email) {
-  if (!email) {
-    throw new Error("Email is required");
-  }
+  if (!email) return;
   const existing = await studentRepository.findStudentByEmail(email);
   if (
     existing &&
@@ -984,7 +1007,13 @@ function updateHttpError(message, statusCode = 400) {
   return err;
 }
 
-export async function updateStudentDetails(StudentId, info, files, instituteId) {
+export async function updateStudentDetails(
+  StudentId,
+  info,
+  files,
+  instituteId,
+  createdBy,
+) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -996,6 +1025,15 @@ export async function updateStudentDetails(StudentId, info, files, instituteId) 
           const s3Response = await uploadFile(file);
           info[key] = s3Response.Location;
         }
+      }
+    }
+
+    if ("semesterId" in info) {
+      const resolvedSemesterId = await resolveSemesterIdForStudent(info);
+      if (resolvedSemesterId) {
+        info.semesterId = resolvedSemesterId;
+      } else {
+        delete info.semesterId;
       }
     }
 
@@ -1036,7 +1074,8 @@ export async function updateStudentDetails(StudentId, info, files, instituteId) 
 
       if (Array.isArray(entranceDetailsArray)) {
         for (const detail of entranceDetailsArray) {
-          const { studentsEntranceDetailId, ...allDetails } = detail;
+          const { studentsEntranceDetailId, ...allDetails } =
+            toEntranceDetailRow(detail);
           if (studentsEntranceDetailId) {
             entranceDetails =
               await studentRepository.updateStudentEntranceDetails(
@@ -1044,6 +1083,12 @@ export async function updateStudentDetails(StudentId, info, files, instituteId) 
                 allDetails,
                 transaction,
               );
+          } else if (createdBy) {
+            const created = await studentRepository.addStudentsEntranceDetail(
+              [{ ...allDetails, studentId: StudentId, createdBy }],
+              transaction,
+            );
+            entranceDetails = created;
           }
         }
       }
