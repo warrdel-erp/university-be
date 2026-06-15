@@ -25,8 +25,197 @@ import { validate } from "../utility/validation.js";
 import { z } from "zod";
 import { Router } from "express";
 import { ROLES } from "../const/roles.js";
+import { studentAdmissionStatus, studentStatus } from "../constant.js";
+import { ErrorResponse } from "../utility/response.js";
 
 const router = Router();
+
+/** FE key → DB/model key */
+const KEY_ALIASES = {
+  admissionDate: "admisssionDate",
+  additionalNotes: "AdditionalNotes",
+};
+
+const positiveIntegerId = z.coerce
+  .number({ invalid_type_error: "id must be a number" })
+  .int({ message: "id must be an integer" })
+  .positive({ message: "id must be positive" });
+
+const requiredFeePlanProfileId = z.coerce
+  .number({
+    required_error: "feePlanProfileId is required",
+    invalid_type_error: "feePlanProfileId must be a number",
+  })
+  .int({ message: "feePlanProfileId must be an integer" });
+
+const dateField = z.string().trim().min(1, "date is required");
+
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
+const optionalString = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().optional(),
+);
+
+const optionalNonEmptyString = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().min(1).optional(),
+);
+
+const optionalEmail = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().email().optional(),
+);
+
+const optionalDateField = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().min(1).optional(),
+);
+
+const optionalPositiveIntegerId = z.preprocess(
+  emptyToUndefined,
+  positiveIntegerId.optional(),
+);
+
+const admissionStatusField = z
+  .union([
+    z.enum(studentAdmissionStatus),
+    z.coerce.number().int().positive(),
+    z.string().trim().min(1),
+  ])
+  .optional();
+
+const studentStatusField = z
+  .union([z.enum(studentStatus), z.coerce.number().int().positive()])
+  .optional();
+
+const parseJsonInput = (val) => {
+  if (val == null || val === "" || val === "[]" || val === "{}") return undefined;
+  if (typeof val === "string") {
+    return JSON.parse(val);
+  }
+  return val;
+};
+
+const entranceDetailsField = z.preprocess(
+  parseJsonInput,
+  z.array(z.record(z.string(), z.any())).optional(),
+);
+
+const allDropDownDataField = z.preprocess(
+  parseJsonInput,
+  z
+    .object({
+      studentId: z.coerce.number().optional().nullable(),
+      type: z.array(z.coerce.number().int().positive()),
+      code: z.array(z.coerce.number().int().positive()),
+    })
+    .refine((d) => d.type.length === d.code.length, {
+      message: "Types and codes arrays must be of the same length",
+    })
+    .optional(),
+);
+
+const jsonObjectField = z.preprocess(
+  parseJsonInput,
+  z.record(z.string(), z.any()).optional(),
+);
+
+const studentSharedOptionalFields = {
+  specializationId: optionalPositiveIntegerId,
+  semesterId: optionalPositiveIntegerId,
+  scholarNumber: optionalNonEmptyString,
+  enrollNumber: optionalNonEmptyString,
+  middleName: optionalString,
+  lastName: optionalString,
+  motherName: optionalString,
+  annualIncome: z.preprocess(emptyToUndefined, z.coerce.number().nonnegative().optional()),
+  admissionDate: optionalDateField,
+  enrollDate: optionalDateField,
+  studentAdmissionStatus: z.preprocess(emptyToUndefined, admissionStatusField),
+  currentClass: optionalString,
+  mobileNumber: optionalString,
+  parentEmail: optionalEmail,
+  parentNumber: optionalString,
+  aadharNumber: optionalString,
+  panNumber: optionalString,
+  placeOfBirth: optionalString,
+  pAddress: optionalString,
+  pPincode: z.preprocess(emptyToUndefined, z.coerce.number().int().optional()),
+  pCountry: optionalString,
+  pState: optionalString,
+  pCity: optionalString,
+  cAddress: optionalString,
+  cPincode: z.preprocess(emptyToUndefined, z.coerce.number().int().optional()),
+  cCountry: optionalString,
+  cState: optionalString,
+  cCity: optionalString,
+  bankName: optionalString,
+  accountNumber: optionalString,
+  ifscCode: optionalString,
+  studentStatus: z.preprocess(emptyToUndefined, studentStatusField),
+  cancelDate: optionalDateField,
+  cancelReason: optionalString,
+  additionalNotes: optionalString,
+  generalRemark: optionalString,
+  gender: optionalPositiveIntegerId,
+  caste: optionalPositiveIntegerId,
+  religion: optionalPositiveIntegerId,
+  bloodGroup: optionalPositiveIntegerId,
+  entranceDetails: entranceDetailsField,
+  allDropDownData: allDropDownDataField,
+  addressDetails: jsonObjectField,
+  corsAddress: jsonObjectField,
+};
+
+/** Same keys as create — all optional on PATCH */
+const studentUpdateBodyFields = {
+  studentId: optionalPositiveIntegerId,
+  feePlanProfileId: z.preprocess(emptyToUndefined, requiredFeePlanProfileId.optional()),
+  universityId: optionalPositiveIntegerId,
+  campusId: optionalPositiveIntegerId,
+  instituteId: optionalPositiveIntegerId,
+  affiliatedUniversityId: optionalPositiveIntegerId,
+  courseLevelId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
+  roleId: z.literal(ROLES.STUDENT).optional(),
+  classSectionsId: optionalPositiveIntegerId,
+  acedmicYearId: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
+  email: optionalEmail,
+  firstName: optionalNonEmptyString,
+  fatherName: optionalNonEmptyString,
+  phoneNumber: optionalNonEmptyString,
+  birthDate: optionalDateField,
+  ...studentSharedOptionalFields,
+};
+
+const addStudentWithFeePlanProfileBodySchema = z.object({
+  feePlanProfileId: requiredFeePlanProfileId,
+  universityId: positiveIntegerId,
+  campusId: positiveIntegerId,
+  instituteId: positiveIntegerId,
+  affiliatedUniversityId: positiveIntegerId,
+  courseLevelId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
+  classSectionsId: positiveIntegerId,
+  acedmicYearId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  email: z.string().trim().email(),
+  firstName: z.string().trim().min(1),
+  fatherName: z.string().trim().min(1),
+  phoneNumber: z.string().trim().min(1),
+  birthDate: dateField,
+  ...studentSharedOptionalFields,
+});
+
+const updateStudentDetailsParamsSchema = z.object({
+  studentId: positiveIntegerId,
+});
+
+const updateStudentDetailsBodySchema = z.object(studentUpdateBodyFields);
 
 const getAllAnswerSheetsQuerySchema = z.object({
   examScheduleId: z.coerce
@@ -34,19 +223,6 @@ const getAllAnswerSheetsQuerySchema = z.object({
     .int("examScheduleId must be an integer")
     .positive("examScheduleId must be greater than 0"),
 });
-
-const positiveIntegerId = z.coerce
-  .number({ invalid_type_error: "id must be a number" })
-  .int({ message: "id must be an integer" })
-  .positive({ message: "id must be positive" });
-
-/** Rejects null/empty before coerce (z.coerce.number(null) → 0). */
-const requiredFeePlanProfileId = z.coerce
-  .number({
-    required_error: "feePlanProfileId is required",
-    invalid_type_error: "feePlanProfileId must be a number",
-  })
-  .int({ message: "feePlanProfileId must be an integer" });
 
 const acedmicYearIdQuerySchema = z.object({
   acedmicYearId: positiveIntegerId,
@@ -96,52 +272,42 @@ const getAllStudentsQuerySchema = z.object({
   courseId: positiveIntegerId.optional(),
 });
 
-const dateField = z.string().trim().min(1, "date is required");
+const mapStudentBody = (req, res, next) => {
+  try {
+    const body = { ...req.body };
+    for (const [from, to] of Object.entries(KEY_ALIASES)) {
+      if (body[from] != null && body[to] == null) body[to] = body[from];
+      delete body[from];
+    }
+    const admStatus = Number(body.studentAdmissionStatus);
+    if (admStatus >= 1 && admStatus <= studentAdmissionStatus.length) {
+      body.studentAdmissionStatus = studentAdmissionStatus[admStatus - 1];
+    } else if (
+      body.studentAdmissionStatus === 0 ||
+      body.studentAdmissionStatus === "0"
+    ) {
+      delete body.studentAdmissionStatus;
+    }
+    if (body.studentStatus === 0 || body.studentStatus === "0") {
+      delete body.studentStatus;
+    } else if (body.studentStatus != null && body.studentStatus !== "") {
+      const statusIndex = Number(body.studentStatus);
+      if (
+        Number.isInteger(statusIndex) &&
+        statusIndex >= 1 &&
+        statusIndex <= studentStatus.length
+      ) {
+        body.studentStatus = studentStatus[statusIndex - 1];
+      }
+    }
+    if (body.currentClass === "") delete body.currentClass;
+    req.body = body;
+    next();
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Invalid student payload");
+  }
+};
 
-const addStudentWithFeePlanProfileBodySchema = z.object({
-  feePlanProfileId: requiredFeePlanProfileId,
-  universityId: positiveIntegerId,
-  campusId: positiveIntegerId,
-  instituteId: positiveIntegerId,
-  affiliatedUniversityId: positiveIntegerId,
-  courseLevelId: positiveIntegerId,
-  courseId: positiveIntegerId,
-  roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
-  classSectionsId: positiveIntegerId,
-  acedmicYearId: positiveIntegerId,
-  sessionId: positiveIntegerId,
-  email: z.string().trim().email(),
-  enrollNumber: z.string().trim().min(1).optional(),
-  firstName: z.string().trim().min(1),
-  middleName: z.string().trim().optional(),
-  lastName: z.string().trim().optional(),
-  fatherName: z.string().trim().min(1),
-  motherName: z.string().trim().optional(),
-  annualIncome: z.coerce.number().nonnegative().optional(),
-  birthDate: dateField,
-  admisssionDate: dateField.optional(),
-  enrollDate: dateField.optional(),
-  phoneNumber: z.string().trim().min(1),
-  mobileNumber: z.string().trim().optional(),
-  parentEmail: z.string().trim().email().optional(),
-  parentNumber: z.string().trim().optional(),
-  aadharNumber: z.string().trim().optional(),
-  placeOfBirth: z.string().trim().optional(),
-  pAddress: z.string().trim().optional(),
-  pPincode: z.coerce.number().int().optional(),
-  pCountry: z.string().trim().optional(),
-  pState: z.string().trim().optional(),
-  pCity: z.string().trim().optional(),
-  cAddress: z.string().trim().optional(),
-  cPincode: z.coerce.number().int().optional(),
-  cCountry: z.string().trim().optional(),
-  cState: z.string().trim().optional(),
-  cCity: z.string().trim().optional(),
-  entranceDetails: z.any().optional(),
-  semesterId: positiveIntegerId.optional(),
-});
-
-// Student routes (create via POST /withFeePlanProfile — fee v2)
 router.get(
   "/all",
   userAuth,
@@ -156,9 +322,18 @@ router.get(
 );
 router.post("/import", userAuth, importStudentData);
 
-router.patch("/:studentId", userAuth, updateStudentDetails);
-
+router.patch(
+  "/:studentId",
+  userAuth,
+  validate({
+    params: updateStudentDetailsParamsSchema,
+    body: updateStudentDetailsBodySchema,
+  }),
+  mapStudentBody,
+  updateStudentDetails
+);
 router.delete("/:studentId", userAuth, deleteStudentDetail);
+
 router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
 router.post("/studentMapping", userAuth, studentCourseMapping);
 router.post("/classStudentMapping", userAuth, classStudentMapping);
@@ -189,11 +364,11 @@ router.get(
   getAllAnswerSheets
 );
 
-// Fee v2 — create student with fee plan profile; invoice per term via POST /studentFeeInvoice
 router.post(
   "/",
   userAuth,
   validate({ body: addStudentWithFeePlanProfileBodySchema }),
+  mapStudentBody,
   addStudentWithFeePlanProfile
 );
 

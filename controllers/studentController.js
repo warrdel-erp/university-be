@@ -104,7 +104,8 @@ export const updateStudentDetails = async (req, res) => {
             studentId,
             info,
             file,
-            req.user.defaultInstituteId
+            req.user.defaultInstituteId,
+            req.user.userId,
         );
         return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {

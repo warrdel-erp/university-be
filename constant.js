@@ -144,16 +144,28 @@ export const state = ["RAJASTHAN", "HARYANA", "Punjab"];
 
 export const city = ["JAIPUR", "KOTA", "KOTPUTLI", "REWARI", "GURUGRAM"];
 
-export const studentStatus = [
+/** Matches students.student_status ENUM (see extend-student-status-enum migration) */
+export const STUDENT_STATUS_OPTIONS = [
+  { label: "Cancel Student", value: "Cancel Student" },
+  { label: "Left Student", value: "Left Student" },
+  { label: "Long Absent", value: "Long Absent" },
+  { label: "Non Attendant", value: "Non Attendant" },
+  { label: "Active", value: "active" },
+  { label: "Deactive", value: "deactive" },
+  { label: "Transferred", value: "transferred" },
+  { label: "Graduated", value: "graduated" },
+];
+
+export const STUDENT_STATUS_VALUES = STUDENT_STATUS_OPTIONS.map((o) => o.value);
+
+export const STUDENT_CANCELLATION_STATUSES = [
   "Cancel Student",
   "Left Student",
   "Long Absent",
   "Non Attendant",
-  "active",
-  "deactive",
-  "transferred",
-  "graduated",
 ];
+
+export const studentStatus = STUDENT_STATUS_VALUES;
 
 export const admissionCategory = ["11A", "11B", "11C"];
 
