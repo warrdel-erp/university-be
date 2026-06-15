@@ -14,9 +14,8 @@ export const addTimeTable = async (req, res) => {
 };
 
 export const getTimeTableDetails = async (req, res) => {
-    const universityId = req.user.universityId;
     try {
-        const result = await timeTableServices.getTimeTableDetails(universityId);
+        const result = await timeTableServices.getTimeTableDetails();
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table:", error);
@@ -37,10 +36,9 @@ export const getAllTimeTableName = async (req, res) => {
 };
 
 export const getSingleTimeTableDetails = async (req, res) => {
-    const universityId = req.user.universityId;
     let { courseId } = req.query;
     try {
-        const result = await timeTableServices.getSingleTimeTableDetails(courseId, universityId);
+        const result = await timeTableServices.getSingleTimeTableDetails(courseId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table:", error);

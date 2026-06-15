@@ -8,12 +8,12 @@ export async function addHoliday(holidayData, createdBy, updatedBy) {
     return Holiday;
 };
 
-export async function getHolidayDetails(universityId) {
-    return await holidayCreationService.getHolidayDetails(universityId);
+export async function getHolidayDetails(page, limit, filter) {
+    return await holidayCreationService.getHolidayDetails(page, limit, filter);
 }
 
-export async function getSingleHolidayDetails(holidayId,universityId) {
-    return await holidayCreationService.getSingleHolidayDetails(holidayId,universityId);
+export async function getSingleHolidayDetails(holidayId) {
+    return await holidayCreationService.getSingleHolidayDetails(holidayId);
 }
 
 export async function deleteHoliday(holidayId) {

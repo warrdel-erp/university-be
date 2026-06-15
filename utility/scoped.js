@@ -1,18 +1,46 @@
 import { requestContext } from "./requestContext.js";
 
-// DB/models use "acedmicYearId" (typo); request context uses "academicYearId".
+/**
+ * Multi-tenant query scoping for Sequelize models.
+ *
+ * Reads tenant context from requestContext (set in authUser middleware):
+ *   universityId, instituteId, academicYearId, userId, role
+ *
+ * Two ways to use:
+ *   1. Explicit:  scoped(model.departmentModel).findAll({ where: { ... } })
+ *   2. Automatic: applyMultiTenancy(sequelize) patches all models at startup
+ *      so model.departmentModel.findAll() is scoped without wrapping.
+ *
+ * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
+ * or when store.bypass is true (set for routes like /campus, /institute).
+ */
+
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
 
-const isScoped = (configValue, field, attrs) =>
-  configValue !== false && (configValue === true || field in attrs);
+function isScoped(configValue, field, attrs) {
+  return configValue !== false && (configValue === true || field in attrs);
+}
 
+function getOriginal(model, method) {
+  if (model._scopeOriginals?.[method]) {
+    return model._scopeOriginals[method];
+  }
+  return model[method].bind(model);
+}
+
+/**
+ * Builds tenant WHERE filters for a model based on requestContext.
+ * Override per model via model.scopeConfig: { university, institute, academicYear, teacherRestricted }
+ */
 export const buildScope = (model) => {
   const where = {};
   const config = model.scopeConfig || {};
   const store = requestContext.getStore();
   const attrs = model.rawAttributes || {};
 
-  if (!store) return where;
+  if (!store || store.bypass) {
+    return where;
+  }
 
   if (isScoped(config.university, "universityId", attrs)) {
     if (!store.universityId) {
@@ -45,52 +73,130 @@ export const buildScope = (model) => {
   return where;
 };
 
-const mergeScope = (model, options = {}) => {
+export const scoped = (model) => {
   const baseWhere = buildScope(model);
-  return { ...options, where: { ...baseWhere, ...options.where } };
+  const pk = model.primaryKeyAttribute || "id";
+
+  return {
+    findAll: (options = {}) =>
+      getOriginal(model, "findAll")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    findOne: (options = {}) =>
+      getOriginal(model, "findOne")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    findByPk: (id, options = {}) =>
+      getOriginal(model, "findOne")({
+        ...options,
+        where: { ...baseWhere, ...options.where, [pk]: id },
+      }),
+
+    findAndCountAll: (options = {}) =>
+      getOriginal(model, "findAndCountAll")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    update: (data, options = {}) =>
+      getOriginal(model, "update")(data, {
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    delete: (options = {}) =>
+      getOriginal(model, "destroy")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    count: (options = {}) =>
+      getOriginal(model, "count")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    destroy: (options = {}) =>
+      getOriginal(model, "destroy")({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      }),
+
+    create: (data, options = {}) =>
+      getOriginal(model, "create")({ ...data, ...baseWhere }, options),
+
+    bulkCreate: (rows, options = {}) =>
+      getOriginal(model, "bulkCreate")(
+        rows.map((row) => ({ ...row, ...baseWhere })),
+        { validate: true, ...options }
+      ),
+  };
 };
 
-export const scoped = (model) => ({
-  findAll: (options = {}) => model.findAll(mergeScope(model, options)),
-
-  findOne: (options = {}) => model.findOne(mergeScope(model, options)),
-
-  findByPk: (id, options = {}) => {
-    const pk = model.primaryKeyAttribute || "id";
-    const scopedOptions = mergeScope(model, options);
-    return model.findOne({
-      ...scopedOptions,
-      where: { ...scopedOptions.where, [pk]: id }
-    });
-  },
-
-  findAndCountAll: (options = {}) => model.findAndCountAll(mergeScope(model, options)),
-
-  update: (data, options = {}) => model.update(data, mergeScope(model, options)),
-
-  delete: (options = {}) => model.destroy(mergeScope(model, options)),
-
-  count: (options = {}) => model.count(mergeScope(model, options)),
-
-  destroy: (options = {}) => model.destroy(mergeScope(model, options)),
-
-  create: (data, options = {}) =>
-    model.create({ ...data, ...buildScope(model) }, options),
-
-  bulkCreate: (rows, options = {}) =>
-    model.bulkCreate(
-      rows.map((row) => ({ ...row, ...buildScope(model) })),
-      { validate: true, ...options }
-    )
-});
-
+/**
+ * Patches all Sequelize models so direct model.findAll() calls are auto-scoped.
+ * Called once in models/index.js after all models are registered.
+ */
 export const applyMultiTenancy = (sequelize) => {
-  const methods = ["findAll", "findOne", "findByPk", "findAndCountAll", "count"];
+  for (const model of Object.values(sequelize.models)) {
+    if (model._scopePatched) {
+      continue;
+    }
 
-  Object.values(sequelize.models).forEach((model) => {
-    const wrapper = scoped(model);
-    methods.forEach((method) => {
-      model[method] = (...args) => wrapper[method](...args);
-    });
-  });
+    model._scopeOriginals = {
+      findAll: model.findAll.bind(model),
+      findOne: model.findOne.bind(model),
+      findByPk: model.findByPk.bind(model),
+      findAndCountAll: model.findAndCountAll.bind(model),
+      count: model.count.bind(model),
+    };
+
+    const pk = model.primaryKeyAttribute || "id";
+
+    model.findAll = (options = {}) => {
+      const baseWhere = buildScope(model);
+      return model._scopeOriginals.findAll({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      });
+    };
+
+    model.findOne = (options = {}) => {
+      const baseWhere = buildScope(model);
+      return model._scopeOriginals.findOne({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      });
+    };
+
+    model.findAndCountAll = (options = {}) => {
+      const baseWhere = buildScope(model);
+      return model._scopeOriginals.findAndCountAll({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      });
+    };
+
+    model.count = (options = {}) => {
+      const baseWhere = buildScope(model);
+      return model._scopeOriginals.count({
+        ...options,
+        where: { ...baseWhere, ...options.where },
+      });
+    };
+
+    model.findByPk = (id, options = {}) => {
+      const baseWhere = buildScope(model);
+      return model._scopeOriginals.findOne({
+        ...options,
+        where: { ...baseWhere, ...options.where, [pk]: id },
+      });
+    };
+
+    model._scopePatched = true;
+  }
 };

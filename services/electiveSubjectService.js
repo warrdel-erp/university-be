@@ -1,20 +1,17 @@
 import * as electiveSubjectServices  from "../repository/electiveSubjectRepository.js";
 
-export async function addElectiveSubject(electiveSubjectData, createdBy, updatedBy,universityId) {
-
+export async function addElectiveSubject(electiveSubjectData, createdBy, updatedBy) {
         electiveSubjectData.createdBy = createdBy;
         electiveSubjectData.updatedBy = updatedBy;
-        electiveSubjectData.universityId = universityId
-        const ElectiveSubject = await electiveSubjectServices.addElectiveSubject(electiveSubjectData);
-        return ElectiveSubject;
-};
+        return await electiveSubjectServices.addElectiveSubject(electiveSubjectData);
+    };
 
-export async function getElectiveSubjectDetails(universityId,acedmicYearId) {
-    return await electiveSubjectServices.getElectiveSubjectDetails(universityId,acedmicYearId);
+export async function getElectiveSubjectDetails() {
+    return await electiveSubjectServices.getElectiveSubjectDetails();
 }
 
-export async function getSingleElectiveSubjectDetails(electiveSubjectId,universityId) {
-    return await electiveSubjectServices.getSingleElectiveSubjectDetails(electiveSubjectId,universityId);
+export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
+    return await electiveSubjectServices.getSingleElectiveSubjectDetails(electiveSubjectId);
 }
 
 

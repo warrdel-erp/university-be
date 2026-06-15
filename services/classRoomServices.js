@@ -8,12 +8,12 @@ export async function addClassRoom(ClassRoomData, createdBy, updatedBy) {
         return ClassRoom;
 };
 
-export async function getClassRoomDetails(universityId) {
-    return await ClassRoomCreationService.getClassRoomDetails(universityId);
+export async function getClassRoomDetails() {
+    return await ClassRoomCreationService.getClassRoomDetails();
 }
 
-export async function getSingleClassRoomDetails(classRoomSectionId,universityId) {
-    return await ClassRoomCreationService.getSingleClassRoomDetails(classRoomSectionId,universityId);
+export async function getSingleClassRoomDetails(classRoomSectionId) {
+    return await ClassRoomCreationService.getSingleClassRoomDetails(classRoomSectionId);
 }
 
 export async function deleteClassRoom(classRoomSectionId) {

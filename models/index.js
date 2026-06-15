@@ -587,6 +587,31 @@ classRoomModel.hasMany(classScheduleModel, { foreignKey: "class_room_section_id"
 classScheduleModel.belongsTo(electiveSubjectModel, { foreignKey: "elective_subject_id", as: "timeTableElective" });
 electiveSubjectModel.hasMany(classScheduleModel, { foreignKey: "elective_subject_id", as: "timeTableElective" });
 
+// elective_subject tenant + academic chain (used for institute_id backfill / scoped queries)
+electiveSubjectModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(electiveSubjectModel, { foreignKey: "university_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(electiveSubjectModel, { foreignKey: "institute_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
+acedmicYearModel.hasMany(electiveSubjectModel, { foreignKey: "acedmic_year_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(courseModel, { foreignKey: "course_id", as: "course" });
+courseModel.hasMany(electiveSubjectModel, { foreignKey: "course_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(specializationModel, { foreignKey: "specialization_id", as: "specialization" });
+specializationModel.hasMany(electiveSubjectModel, { foreignKey: "specialization_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(userModel, { foreignKey: "created_by", as: "createdByUser" });
+userModel.hasMany(electiveSubjectModel, { foreignKey: "created_by", as: "createdElectiveSubjects" });
+
+studentElectiveSubjectModel.belongsTo(electiveSubjectModel, { foreignKey: "elective_subject_id", as: "electiveSubject" });
+electiveSubjectModel.hasMany(studentElectiveSubjectModel, { foreignKey: "elective_subject_id", as: "studentMappings" });
+
+studentElectiveSubjectModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(studentElectiveSubjectModel, { foreignKey: "student_id", as: "electiveSubjectMappings" });
+
 classScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "timeTableSubject" });
 subjectModel.hasMany(classScheduleModel, { foreignKey: "subject_id", as: "timeTableSubject" });
 

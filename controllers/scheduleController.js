@@ -43,7 +43,7 @@ export async function getAllSchedule(req, res) {
     const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
-        const schedule = await scheduleCreation.getScheduleDetails(universityId, acedmicYearId, instituteId, role);
+        const schedule = await scheduleCreation.getScheduleDetails();
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -54,7 +54,7 @@ export async function getSingleScheduleDetails(req, res) {
     const universityId = req.user.universityId;
     try {
         const { scheduleId } = req.query;
-        const schedule = await scheduleCreation.getSingleScheduleDetails(scheduleId, universityId);
+        const schedule = await scheduleCreation.getSingleScheduleDetails(scheduleId);
         if (schedule) {
             res.status(200).json(schedule);
         } else {
@@ -155,7 +155,7 @@ export async function getAllAttendence(req, res) {
     const role = req.user.role;
     const { page, limit, fromDate, toDate } = req.query
     try {
-        const schedule = await scheduleCreation.getAllAttendence(universityId, instituteId, role, page, limit, fromDate, toDate);
+        const schedule = await scheduleCreation.getAllAttendence(page, limit, fromDate, toDate);
         res.status(200).json(schedule);
     } catch (error) {
         res.status(500).json({ error: error.message });

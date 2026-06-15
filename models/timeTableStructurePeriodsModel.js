@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 
-export default sequelize.define(
+const timeTableStructurePeriodsModel = sequelize.define(
     'time_table_structure_periods',
     {
         timeTableCreationId: {
@@ -95,5 +95,6 @@ export default sequelize.define(
     },
 );
 
+timeTableStructurePeriodsModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
-
+export default timeTableStructurePeriodsModel;

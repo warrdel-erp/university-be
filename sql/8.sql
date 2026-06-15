@@ -312,6 +312,6 @@ SET SQL_SAFE_UPDATES = 1;
 
 delete from time_table_create where time_table_type = 'elective';
 
-
+-- elective_subject institute_id: see sql/9.sql
 
 

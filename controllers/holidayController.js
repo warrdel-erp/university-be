@@ -16,20 +16,19 @@ export async function addHoliday(req, res) {
 }
 
 export async function getAllHoliday(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const holiday = await holidayCreation.getHolidayDetails(universityId);
-        res.status(200).json(holiday);
+        const { page, limit, ...filter } = req.query;
+        const result = await holidayCreation.getHolidayDetails(page, limit, filter);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
 
 export async function getSingleHolidayDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { holidayId } = req.query;
-        const holiday = await holidayCreation.getSingleHolidayDetails(holidayId,universityId);
+        const holiday = await holidayCreation.getSingleHolidayDetails(holidayId);
         if (holiday) {
             res.status(200).json(holiday);
         } else {

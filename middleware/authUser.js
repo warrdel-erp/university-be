@@ -3,46 +3,6 @@ import { findEmailByEmail } from "../repository/userRepository.js";
 import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
 import { requestContext } from "../utility/requestContext.js";
 
-
-const SECRET_KEY = 'warrdelUniversityERPWarrdelUniversityERP';
-
-// export default async function useAuth(req, res, next) {
-
-//     const authHeader = req.headers.authorization;
-
-//     if (!authHeader) {
-//         return res.status(401).json({ message: "Authorization header missing" });
-//     }
-
-//     const token = authHeader.split(" ")[1];
-
-//     if (!token) {
-//         return res.status(401).json({ message: "Token missing" });
-//     }
-
-//     try {
-//         const decoded = jwt.verify(token, SECRET_KEY);
-//         const { email } = decoded;
-
-//         if (!email) {
-//             return res.status(401).json({ message: "Invalid token payload" });
-//         }
-
-//         const userDetail = await findEmailByEmail(email);
-
-//         if (!userDetail) {
-//             return res.status(401).json({ message: "Invalid user" });
-//         }
-
-//         req.user = userDetail;
-//         next();
-//     } catch (error) {
-//         console.error('Token verification failed:', error);
-//         return res.status(401).json({ message: "Invalid or expired token" });
-//     }
-// };
-
-
 export default async function useAuth(req, res, next) {
     const authHeader = req.headers.authorization;
 
@@ -116,20 +76,25 @@ export default async function useAuth(req, res, next) {
             }
         }
 
-        // Extract values from headers, fallback to user defaults
-        const rawAcademicYearId = req.header("X-Academic-Year-Id") || req.header("x-academic-year-id") || req.user.defaultAcademicYearId;
-        const rawInstituteId = req.header("X-Institute-Id") || req.header("x-institute-id") || req.user.defaultInstituteId;
+        let instituteId = req.header("X-Institute-Id");
+        if (instituteId == null || instituteId === "") {
+            instituteId = req.user.defaultInstituteId;
+        }
+        instituteId = instituteId ? parseInt(instituteId, 10) : undefined;
 
-        const academicYearId = rawAcademicYearId ? parseInt(rawAcademicYearId, 10) : undefined;
-        const instituteId = rawInstituteId ? parseInt(rawInstituteId, 10) : undefined;
+        let academicYearId = req.header("X-Academic-Year-Id");
+        if (academicYearId == null || academicYearId === "") {
+            academicYearId = req.user.defaultAcademicYearId;
+        }
+        academicYearId = academicYearId ? parseInt(academicYearId, 10) : undefined;
 
-        // Run downstream handlers in request scope
         requestContext.run({
             universityId: req.user.universityId,
-            instituteId: instituteId,
-            academicYearId: academicYearId,
+            instituteId,
+            academicYearId,
             userId: req.user.userId,
             role: role ? role.toLowerCase() : undefined,
+            bypass: req.bypassScope === true,
         }, () => {
             next();
         });

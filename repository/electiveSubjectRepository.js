@@ -1,54 +1,44 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import { scoped } from '../utility/scoped.js';
 
-export async function addElectiveSubject(electiveSubjectData) {    
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
+
+export async function addElectiveSubject(electiveSubjectData) {
     try {
-        const result = await model.electiveSubjectModel.create(electiveSubjectData);
-        return result;
+        return await scoped(model.electiveSubjectModel).create(electiveSubjectData);
     } catch (error) {
-        console.error("Error in add electiveSubject :", error);
+        console.error('Error in add electiveSubject :', error);
         throw error;
     }
-};
+}
 
-export async function addBulkElectiveSubject(electiveSubjectData) {    
+export async function addBulkElectiveSubject(electiveSubjectData) {
     try {
-        const result = await model.electiveSubjectModel.bulkCreate(electiveSubjectData);
-
-        return result;
+        return await scoped(model.electiveSubjectModel).bulkCreate(electiveSubjectData);
     } catch (error) {
-        console.error("Error in add electiveSubject :", error);
+        console.error('Error in add electiveSubject :', error);
         throw error;
     }
-};
+}
 
-export async function getElectiveSubjectDetails(universityId,acedmicYearId) {
+export async function getElectiveSubjectDetails(filter = {}) {
     try {
-        const whereClause = {
-            university_id: universityId,
-            ...(acedmicYearId && { acedmicYearId })  
-        };
-        const electiveSubject = await model.electiveSubjectModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where: whereClause,
+        return await scoped(model.electiveSubjectModel).findAll({
+            where: { ...filter },
+            attributes: { exclude: excludeMeta },
         });
-
-        return electiveSubject;
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);
         throw error;
     }
 }
 
-
 export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
     try {
-        const electiveSubject = await model.electiveSubjectModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.electiveSubjectModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { electiveSubjectId },
         });
-
-        return electiveSubject;
     } catch (error) {
         console.error('Error fetching electiveSubject details:', error);
         throw error;
@@ -57,12 +47,10 @@ export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
 
 export async function getSingleElectiveSubjectByAcedmicId(acedmicYearId) {
     try {
-        const electiveSubject = await model.electiveSubjectModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { acedmicYearId },
+        return await model.electiveSubjectModel.unscoped().findAll({
+            attributes: { exclude: excludeMeta },
+            where: { acedmicYearId: parseInt(acedmicYearId, 10) },
         });
-
-        return electiveSubject;
     } catch (error) {
         console.error('Error fetching electiveSubject details by acedmic Id:', error);
         throw error;
@@ -70,18 +58,19 @@ export async function getSingleElectiveSubjectByAcedmicId(acedmicYearId) {
 }
 
 export async function deleteElectiveSubject(electiveSubjectId) {
-    const deleted = await model.electiveSubjectModel.destroy({ where: { electiveSubjectId: electiveSubjectId } });
+    const deleted = await scoped(model.electiveSubjectModel).destroy({
+        where: { electiveSubjectId },
+    });
     return deleted > 0;
 }
 
 export async function updateElectiveSubject(electiveSubjectId, electiveSubjectData) {
     try {
-        const result = await model.electiveSubjectModel.update(electiveSubjectData, {
-            where: { electiveSubjectId }
+        return await scoped(model.electiveSubjectModel).update(electiveSubjectData, {
+            where: { electiveSubjectId },
         });
-        return result; 
     } catch (error) {
         console.error(`Error updating electiveSubject creation ${electiveSubjectId}:`, error);
-        throw error; 
+        throw error;
     }
 }

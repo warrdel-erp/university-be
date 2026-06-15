@@ -90,15 +90,15 @@ export async function addTimeTable(data, createdBy, updatedBy) {
 };
 
 export async function getAllTimeTableName(universityId, courseId) {
-    return await timeTableRepository.getAllTimeTableName(universityId, courseId);
+    return await timeTableRepository.getAllTimeTableName(courseId);
 };
 
 export async function getTimeTableDetails() {
     return await timeTableRepository.getTimeTableDetails();
 };
 
-export async function getSingleTimeTableDetails(courseId, universityId) {
-    return await timeTableRepository.getSingleTimeTableDetails(courseId, universityId);
+export async function getSingleTimeTableDetails(courseId) {
+    return await timeTableRepository.getSingleTimeTableDetails(courseId);
 };
 
 export async function updateTimeTable(info) {

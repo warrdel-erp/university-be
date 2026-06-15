@@ -2,8 +2,10 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import courseModel from "./courseModel.js";
+import institute from "./instituteModel.js";
+import acedmicYear from "./acedmicYearModel.js";
 
-export default sequelize.define(
+const timeTableStructureModel = sequelize.define(
     'time_table_structure',
     {
         timeTableNameId: {
@@ -11,6 +13,24 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'time_table_name_id'
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
         },
         name: {
             type: DataTypes.STRING,
@@ -92,3 +112,5 @@ export default sequelize.define(
         paranoid: true
     },
 );
+
+export default timeTableStructureModel;
