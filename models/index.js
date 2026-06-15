@@ -1724,3 +1724,8 @@ export {
   s3FileModel,
   pdfSplitJobModel,
 };
+
+import sequelize from "../database/sequelizeConfig.js";
+import { applyMultiTenancy } from "../utility/scoped.js";
+applyMultiTenancy(sequelize);
+

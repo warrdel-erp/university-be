@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { findEmailByEmail } from "../repository/userRepository.js";
 import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
+import { requestContext } from "../utility/requestContext.js";
 
 
 const SECRET_KEY = 'warrdelUniversityERPWarrdelUniversityERP';
@@ -115,7 +116,23 @@ export default async function useAuth(req, res, next) {
             }
         }
 
-        next();
+        // Extract values from headers, fallback to user defaults
+        const rawAcademicYearId = req.header("X-Academic-Year-Id") || req.header("x-academic-year-id") || req.user.defaultAcademicYearId;
+        const rawInstituteId = req.header("X-Institute-Id") || req.header("x-institute-id") || req.user.defaultInstituteId;
+
+        const academicYearId = rawAcademicYearId ? parseInt(rawAcademicYearId, 10) : undefined;
+        const instituteId = rawInstituteId ? parseInt(rawInstituteId, 10) : undefined;
+
+        // Run downstream handlers in request scope
+        requestContext.run({
+            universityId: req.user.universityId,
+            instituteId: instituteId,
+            academicYearId: academicYearId,
+            userId: req.user.userId,
+            role: role ? role.toLowerCase() : undefined,
+        }, () => {
+            next();
+        });
     } catch (error) {
         console.error('Token verification failed:', error);
         return res.status(401).json({ message: "Invalid or expired token" });
