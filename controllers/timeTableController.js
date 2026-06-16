@@ -5,18 +5,47 @@ export const addTimeTable = async (req, res) => {
         const data = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const result = await timeTableServices.addTimeTable(data, createdBy, updatedBy);
+        const universityId = req.user.universityId;
+        const instituteId = req.user.defaultInstituteId;
+        const acedmicYearId = req.body.acedmicYearId || req.user.defaultAcademicYearId;
+
+        if (data.courseId && !(data.sessionId || acedmicYearId)) {
+            return res.status(400).send('sessionId or acedmicYearId is required when courseId is provided');
+        }
+
+        const result = await timeTableServices.addTimeTable(
+            data,
+            createdBy,
+            updatedBy,
+            universityId,
+            instituteId,
+            acedmicYearId
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding all time table:", error);
-        res.status(500).send("Internal Server Error");
+        res.status(error.message?.includes('not found') || error.message?.includes('not mapped') ? 400 : 500)
+            .send(error.message || "Internal Server Error");
     }
 };
 
 export const getTimeTableDetails = async (req, res) => {
     const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
+    const role = req.user.role;
+    const { courseId, acedmicYearId } = req.query;
+    const resolvedAcademicYearId = courseId
+        ? (acedmicYearId || req.user.defaultAcademicYearId)
+        : acedmicYearId;
+
     try {
-        const result = await timeTableServices.getTimeTableDetails(universityId);
+        const result = await timeTableServices.getTimeTableDetails(
+            universityId,
+            instituteId,
+            resolvedAcademicYearId,
+            role,
+            courseId
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table:", error);
@@ -26,9 +55,22 @@ export const getTimeTableDetails = async (req, res) => {
 
 export const getAllTimeTableName = async (req, res) => {
     const universityId = req.user.universityId;
-    let { courseId } = req.query;
+    const instituteId = req.user.defaultInstituteId;
+    const role = req.user.role;
+    const { courseId, sessionId, acedmicYearId } = req.query;
+    const resolvedAcademicYearId = courseId
+        ? (acedmicYearId || req.user.defaultAcademicYearId)
+        : acedmicYearId;
+
     try {
-        const result = await timeTableServices.getAllTimeTableName(universityId, courseId);
+        const result = await timeTableServices.getAllTimeTableName(
+            universityId,
+            courseId,
+            instituteId,
+            resolvedAcademicYearId,
+            role,
+            sessionId
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table structure:", error);
@@ -38,9 +80,22 @@ export const getAllTimeTableName = async (req, res) => {
 
 export const getSingleTimeTableDetails = async (req, res) => {
     const universityId = req.user.universityId;
-    let { courseId } = req.query;
+    const instituteId = req.user.defaultInstituteId;
+    const role = req.user.role;
+    const { courseId, sessionId, acedmicYearId } = req.query;
+    const resolvedAcademicYearId = courseId
+        ? (acedmicYearId || req.user.defaultAcademicYearId)
+        : acedmicYearId;
+
     try {
-        const result = await timeTableServices.getSingleTimeTableDetails(courseId, universityId);
+        const result = await timeTableServices.getSingleTimeTableDetails(
+            courseId,
+            universityId,
+            instituteId,
+            resolvedAcademicYearId,
+            role,
+            sessionId
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table:", error);
@@ -48,7 +103,6 @@ export const getSingleTimeTableDetails = async (req, res) => {
     }
 };
 
-// update time table
 export const updateTimeTable = async (req, res) => {
     const info = req.body;
     try {
@@ -66,7 +120,6 @@ export const updateTimeTable = async (req, res) => {
     }
 };
 
-// delete time table
 export const deleteTimeTable = async (req, res) => {
     const { timeTableCreationId } = req.query;
     try {

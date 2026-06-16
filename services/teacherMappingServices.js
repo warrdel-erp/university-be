@@ -40,8 +40,8 @@ export async function teacherSectionMappingService(data,createdBy) {
   }
 }; 
 
-export async function getTeacherSubjectMappingService(employeeId,universityId,acedmicYearId,instituteId,role){
-  return await getTeacherSubjectMapping(employeeId,universityId,acedmicYearId,instituteId,role)
+export async function getTeacherSubjectMappingService(employeeId, universityId, instituteId, role, subjectId) {
+  return await getTeacherSubjectMapping(employeeId, universityId, instituteId, role, subjectId)
 };
 
 export async function getTeacherSectionMappingService(employeeId,universityId,acedmicYearId,instituteId,role){

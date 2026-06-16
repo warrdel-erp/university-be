@@ -67,15 +67,24 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term } = req.query;
+        const { courseId, term, sessionId } = req.query;
         const universityId = req.user.universityId;
+        const instituteId = req.user.defaultInstituteId;
         const acedmicYearId = req.user.defaultAcademicYearId;
 
-        const result = await optionsServices.getSubjectOptions(courseId, term, universityId, acedmicYearId);
+        const result = await optionsServices.getSubjectOptions(
+            courseId,
+            term,
+            universityId,
+            acedmicYearId,
+            sessionId,
+            instituteId
+        );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
         console.error("Error in getSubjectOptions:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+        const status = error.message?.includes("not found") || error.message?.includes("not mapped") ? 400 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
     }
 };
 

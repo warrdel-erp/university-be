@@ -53,15 +53,16 @@ export async function getSpecializationOptions(courseId, instituteId, university
     });
 }
 
-export async function getSubjectOptions(courseId, term, universityId, acedmicYearId) {
+export async function getSubjectOptions(courseId, term, universityId, acedmicYearId, instituteId) {
     return await model.subjectModel.findAll({
-        attributes: [['subject_name', 'label'], ['subject_id', 'value']],
+        attributes: [["subject_name", "label"], ["subject_id", "value"]],
         where: {
             ...(courseId && { courseId }),
             ...(term && { term }),
             ...(universityId && { universityId }),
             ...(acedmicYearId && { acedmicYearId }),
-        }
+            ...(instituteId && { instituteId }),
+        },
     });
 }
 

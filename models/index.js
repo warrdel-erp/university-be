@@ -540,6 +540,9 @@ timeTableStructureModel.hasMany(timeTableStructurePeriodsModel, {
 timeTableStructureModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
 courseModel.hasMany(timeTableStructureModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
 
+timeTableStructureModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "timeTableSession" });
+sessionModel.hasMany(timeTableStructureModel, { foreignKey: "session_id", as: "timeTableStructures" });
+
 timeTableRoutineModel.belongsTo(timeTableStructureModel, {
   foreignKey: "time_table_name_id",
   as: "timeTableCreateName",
