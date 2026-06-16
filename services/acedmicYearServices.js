@@ -104,7 +104,7 @@ export async function newActivateAndCopyData(data, universityId, instituteId, cr
             for (const dataType of copyData) {
                 switch (dataType) {
                     case 'subject':
-                        const subjects = await getAllSubject('', copyAcedmicYearId, '', '');
+                        const subjects = await getAllSubject(copyAcedmicYearId);
                         const newSubjects = subjects.map((subject) => ({
                             ...subject.get({ plain: true }),
                             acedmicYearId,

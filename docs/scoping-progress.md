@@ -12,18 +12,19 @@ Track repository → service → controller migration for multi-tenant scoping.
 6. Includes use `.unscoped()` on joined models with `buildScope()` on join `where` where the joined table has tenant columns.
 7. `scoped().create()` / `bulkCreate()` inject only tenant fields that exist on the target model (`rawAttributes` filter).
 8. Work proceeds in batches (~3 repos per batch): repository first, then service, then controller—documented in this file.
-9. **71 of 113** repositories are full-stack complete (batches 1–8, 11–22); library bulk upload next.
-10. Remaining: library bulk upload, leave, transport, dormitory, auth/RBAC (~24 repos).
+9. Repositories: use `scoped(model).*` directly; inline attributes/includes at call sites—no module-level constants or helper functions.
+10. **113 of 113** repositories are full-stack complete (batches 1–8, 11–28).
+11. Migration complete — all repositories use explicit `scoped()` scoping.
 
 **Legend:** ✅ complete (full stack) · 🔶 repo scoped, stack audit pending · ⬜ not started
 
 | Metric | Count |
 |--------|-------|
 | Total repositories | 113 |
-| Scoped in repo | 86 |
-| Full stack done | 71 (batches 1–8, 11–22) |
+| Scoped in repo | 113 |
+| Full stack done | 113 (batches 1–8, 11–28) |
 | Repo scoped, audit pending | 0 |
-| Not started | 24 |
+| Not started | 0 |
 
 ---
 
@@ -33,7 +34,7 @@ Track repository → service → controller migration for multi-tenant scoping.
 |-------|-------------|-------------|
 | **1** ✅ | `departmentRepository`, `buildingRepository`, `assetReturnRepository` | Institute + campus / issue joins |
 | **2** ✅ | `floorRepository`, `roomTypeRepository`, `departmentStructureRepository` | Building→campus join |
-| **3** ✅ | `campusRepository`, `instituteRepository`, `headRepository` | University tier; `scopeConfig` institute/academicYear off |
+| **3** ✅ | `campusRepository`, `instituteRepository`, `headRepository` | Campus university-scoped via `scoped()`; institute/head setup routes bypass institute/academic-year only |
 | **4** ✅ | `acedmicYearRepository`, `subAccountRepository`, `coRepository` | AY bypass route + institute; subAccount university; CO full tenant |
 | **5** ✅ | `courseRepository`, `creditRepository`, `subjectRepository` | Course institute+university; credit institute; subject + academic year |
 | **6** ✅ | `subjectWeightageRepository`, `syllabusRepository`, `termsRepository` | Weightage via scoped joins; syllabus institute+year; terms full scoped reads |
@@ -51,6 +52,12 @@ Track repository → service → controller migration for multi-tenant scoping.
 | **20** ✅ | `feeInvoiceRepository`, `feeInvoiceDetailsRepository`, `feeInvoiceDetailRecordRepository` | Legacy invoice tables gated via user/feePlan/student/mapper joins; child CRUD asserts scoped parent; institute code from context |
 | **21** ✅ | `studentFeeInvoiceRepository`, `studentFeePaymentRepository`, `studentInvoiceRepository` | Student fee invoice/payment via `scoped()`; legacy student invoice mapper gated via student + university scope |
 | **22** ✅ | `libraryCreationRepository`, `libraryStructureRepository`, `libraryIssueBookTransactionRepository` | Floor/category scoped direct; library via user join; aisle/rack/row/book/issue gated via floor/library parent joins |
+| **23** ✅ | `libraryBookBulkUploadRepository`, `leaveBalanceRepository`, `leavePolicyRepository` | Bulk upload gated via scoped library/book/inventory; leave balance via employee+policy joins; policies via `scoped()` |
+| **24** ✅ | `leaveRequestRepository`, `jobSettingsRepository`, `jobRepository` | Leave requests gated via scoped employee+policy joins; job types/jobs via `scoped()`; master filter uses scoped job settings |
+| **25** ✅ | `settingRepository`, `noticeRepository`, `pdfSplitJobRepository` | Global settings via `scoped()` (no tenant columns); notices full tenant CRUD; PDF split jobs scoped on HTTP, workers gate by id after assert |
+| **26** ✅ | `faculityLoadRepository`, `transportRouteRepository`, `vehicleRepository` | Faculty load gated via scoped employee joins; transport routes full tenant; vehicles scoped + employee join |
+| **27** ✅ | `assignVehicleRepository`, `addDormitoryRepository`, `dormitoryListRepository` | Assign vehicle gated via route/vehicle/user joins; dormitory list full tenant; rooms gated via list/roomType joins |
+| **28** ✅ | `mainRepository`, `roleRepository`, `permissionRepository`, `rolePermissionMappingRepository`, `userRoleRepository`, `userPermissionRepository`, `userRepository`, `userRolePermissionRepository`, `poRepository`, `collegeRepository`, `codeMasterRepository`, `s3FileRepository` | Auth paths unscoped; RBAC global or user-gated; main setup scoped; utility codes via scoped lookups; S3 files filter by context institute |
 
 ### Batch 16 detail (stack audit)
 
@@ -70,10 +77,12 @@ Track repository → service → controller migration for multi-tenant scoping.
 | **20** | ✅ | Legacy fee invoice + details + detail record |
 | **21** | ✅ | Student fee invoice/payment + legacy student invoice |
 | **22** | ✅ | Library creation, structure, issue transactions |
-| **23** | ⬜ | Library bulk upload |
-| **27–29** | ⬜ | Leave, jobs, settings |
-| **30–31** | ⬜ | Transport, dormitory |
-| **32–34** | ⬜ | Auth / RBAC / users |
+| **23** | ✅ | Library bulk upload + leave balance/policy |
+| **24** | ✅ | Leave requests + jobs cluster |
+| **25** | ✅ | Settings, notices, PDF split jobs |
+| **26** | ✅ | Faculty load + transport routes/vehicles |
+| **27** | ✅ | Assign vehicle + dormitory |
+| **28** | ✅ | Auth / RBAC / users / main / utility |
 
 ---
 
@@ -82,25 +91,25 @@ Track repository → service → controller migration for multi-tenant scoping.
 | Repository | Status |
 |------------|--------|
 | acedmicYearRepository | ✅ Batch 4 |
-| addDormitoryRepository | ⬜ |
+| addDormitoryRepository | ✅ Batch 27 |
 | answerSheetQrRepository | ✅ Batch 16 |
 | assetCategoryRepository | ✅ Batch 17 |
 | assetIssueRepository | ✅ Batch 17 |
 | assetRepository | ✅ Batch 17 |
 | assetReturnRepository | ✅ Batch 1 |
-| assignVehicleRepository | ⬜ |
+| assignVehicleRepository | ✅ Batch 27 |
 | attendanceRepository | ✅ Batch 7 |
 | buildingRepository | ✅ Batch 1 |
 | campusRepository | ✅ Batch 3 |
 | classRoomRepository | ✅ Batch 16 |
-| codeMasterRepository | ⬜ |
-| collegeRepository | ⬜ (utility codes, not org entity) |
+| codeMasterRepository | ✅ Batch 28 |
+| collegeRepository | ✅ Batch 28 (utility codes) |
 | coRepository | ✅ Batch 4 |
 | courseRepository | ✅ Batch 5 |
 | creditRepository | ✅ Batch 5 |
 | departmentRepository | ✅ Batch 1 |
 | departmentStructureRepository | ✅ Batch 2 |
-| dormitoryListRepository | ⬜ |
+| dormitoryListRepository | ✅ Batch 27 |
 | electiveSubjectRepository | ✅ Batch 16 |
 | employeeAchivementRepository | ✅ Batch 16 |
 | employeeActivityRepository | ✅ Batch 16 |
@@ -128,7 +137,7 @@ Track repository → service → controller migration for multi-tenant scoping.
 | examStructureRepository | ✅ Batch 12 |
 | examStructureScheduleMappingRepository | ✅ Batch 12 |
 | examTypeRepository | ✅ Batch 11 |
-| faculityLoadRepository | ⬜ |
+| faculityLoadRepository | ✅ Batch 26 |
 | feeGroupRepository | ✅ Batch 18 |
 | feeInvoiceDetailRecordRepository | ✅ Batch 20 |
 | feeInvoiceDetailsRepository | ✅ Batch 20 |
@@ -144,33 +153,33 @@ Track repository → service → controller migration for multi-tenant scoping.
 | holidayRepository | ✅ Batch 16 |
 | instituteRepository | ✅ Batch 3 |
 | internalAssessmentRepository | ✅ Batch 13 |
-| jobRepository | ⬜ |
-| jobSettingsRepository | ⬜ |
-| leaveBalanceRepository | ⬜ |
-| leavePolicyRepository | ⬜ |
-| leaveRequestRepository | ⬜ |
+| jobRepository | ✅ Batch 24 |
+| jobSettingsRepository | ✅ Batch 24 |
+| leaveBalanceRepository | ✅ Batch 23 |
+| leavePolicyRepository | ✅ Batch 23 |
+| leaveRequestRepository | ✅ Batch 24 |
 | lessonRepository | ✅ Batch 16 |
-| libraryBookBulkUploadRepository | ⬜ |
+| libraryBookBulkUploadRepository | ✅ Batch 23 |
 | libraryCreationRepository | ✅ Batch 22 |
 | libraryIssueBookTransactionRepository | ✅ Batch 22 |
 | libraryStructureRepository | ✅ Batch 22 |
-| mainRepository | ⬜ |
-| noticeRepository | ⬜ |
+| mainRepository | ✅ Batch 28 |
+| noticeRepository | ✅ Batch 25 |
 | optionsRepository | ✅ Batch 16 |
-| pdfSplitJobRepository | ⬜ |
-| permissionRepository | ⬜ |
-| poRepository | ⬜ |
+| pdfSplitJobRepository | ✅ Batch 25 |
+| permissionRepository | ✅ Batch 28 |
+| poRepository | ✅ Batch 28 |
 | questionBankRepository | ✅ Batch 14 |
 | questionPaperBlueprintRepository | ✅ Batch 14 |
 | questionPaperRepository | ✅ Batch 14 |
-| rolePermissionMappingRepository | ⬜ |
-| roleRepository | ⬜ |
+| rolePermissionMappingRepository | ✅ Batch 28 |
+| roleRepository | ✅ Batch 28 |
 | roomTypeRepository | ✅ Batch 2 |
-| s3FileRepository | ⬜ |
+| s3FileRepository | ✅ Batch 28 |
 | scheduleRepository | ✅ Batch 16 |
 | sectionRepository | ✅ Batch 16 |
 | sessionRepository | ✅ Batch 16 |
-| settingRepository | ⬜ |
+| settingRepository | ✅ Batch 25 |
 | staffRepository | ✅ Batch 16 |
 | studentClassSectionsHistoryRepository | ✅ Batch 7 |
 | studentFeeInvoiceRepository | ✅ Batch 21 |
@@ -188,13 +197,13 @@ Track repository → service → controller migration for multi-tenant scoping.
 | termsRepository | ✅ Batch 6 |
 | timeTablecreateRepository | ✅ Batch 16 |
 | timeTableRepository | ✅ Batch 16 |
-| transportRouteRepository | ⬜ |
-| userPermissionRepository | ⬜ |
-| userRepository | ⬜ |
-| userRolePermissionRepository | ⬜ |
-| userRoleRepository | ⬜ |
-| vehicleRepository | ⬜ |
+| transportRouteRepository | ✅ Batch 26 |
+| userPermissionRepository | ✅ Batch 28 |
+| userRepository | ✅ Batch 28 |
+| userRolePermissionRepository | ✅ Batch 28 |
+| userRoleRepository | ✅ Batch 28 |
+| vehicleRepository | ✅ Batch 26 |
 
 ---
 
-*Last updated: Batch 21–22 full stack (student fee invoice/payment, library creation/structure/issue)*
+*Last updated: Batch 28 full stack (auth/RBAC, users, main, utility repos) — **113/113 complete***

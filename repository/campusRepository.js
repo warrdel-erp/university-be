@@ -3,31 +3,26 @@ import { scoped } from "../utility/scoped.js";
 
 export async function createCampus(data) {
   try {
-    return await scoped(model.campusModel).create(data);
+    return scoped(model.campusModel).create(data);
   } catch (error) {
     console.error("Error in Campus Repository (createCampus):", error);
     throw error;
   }
 }
 
-export async function getCampuses(universityId) {
+export async function getCampuses() {
   try {
-    return await scoped(model.campusModel).findAll({
-      where: { universityId },
-    });
+    return scoped(model.campusModel).findAll();
   } catch (error) {
     console.error("Error in Campus Repository (getCampuses):", error);
     throw error;
   }
 }
 
-export async function getCampusById(campusId, universityId) {
+export async function getCampusById(campusId) {
   try {
-    return await scoped(model.campusModel).findOne({
-      where: {
-        campusId,
-        ...(universityId != null && { universityId }),
-      },
+    return scoped(model.campusModel).findOne({
+      where: { campusId },
     });
   } catch (error) {
     console.error("Error in Campus Repository (getCampusById):", error);

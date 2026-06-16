@@ -16,9 +16,8 @@ export async function addRolePermissionMapping(req, res) {
 }
 
 export async function getAllRolePermissionMapping(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const RolePermissionMapping = await RolePermissionMappingCreation.getRolePermissionMappingDetails(universityId);
+        const RolePermissionMapping = await RolePermissionMappingCreation.getRolePermissionMappingDetails();
         res.status(200).json(RolePermissionMapping);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -26,10 +25,9 @@ export async function getAllRolePermissionMapping(req, res) {
 }
 
 export async function getSingleRolePermissionMappingDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { rolePermissionMappingId } = req.query;
-        const RolePermissionMapping = await RolePermissionMappingCreation.getSingleRolePermissionMappingDetails(rolePermissionMappingId,universityId);
+        const RolePermissionMapping = await RolePermissionMappingCreation.getSingleRolePermissionMappingDetails(rolePermissionMappingId);
         if (RolePermissionMapping) {
             res.status(200).json(RolePermissionMapping);
         } else {

@@ -1,65 +1,60 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addJobType(data) {
   try {
-    return await model.jobSettingModel.create(data);
+    return scoped(model.jobSettingModel).create(data);
   } catch (error) {
     console.error("Repository Error - addJobType:", error.message);
     throw new Error(error.message);
   }
 }
 
-export async function getAllJobTypes(universityId, instituteId, role) {
-
-  const whereClause = {
-    isActive: true,
-    ...(universityId && { universityId }),
-    ...(role === "Head" && { instituteId }),
-  };
-
+export async function getAllJobTypes() {
   try {
-    return await model.jobSettingModel.findAll({
-      where: whereClause
+    return scoped(model.jobSettingModel).findAll({
+      where: { isActive: true },
     });
-
   } catch (error) {
     throw new Error(error.message);
   }
-};
+}
 
 export async function getSingleJobType(jobSettingId) {
   try {
-    return await model.jobSettingModel.findOne({
+    return scoped(model.jobSettingModel).findOne({
       where: { jobSettingId },
-      include :[
+      include: [
         {
-          model :model.jobModel,
-          as:'jobs',
+          model: model.jobModel.unscoped(),
+          as: "jobs",
           attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
-          include:[
-                    {
-                      model: model.employeeModel,
-                      as: "facultyJobs",
-                      attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"]
-                    },
-                    {
-                      model: model.subAccountModel,
-                      as: "departmentJobs",
-                      attributes: ["departmentName", "subAccountId","alternateName","departmentCode"]
-                    },
-                    {
-                      model: model.subjectModel,
-                      as: "subjectJobs",
-                      attributes: ["subjectName", "subjectCode", "subjectId"]
-                    },
-                    {
-                      model: model.courseModel,
-                      as: "courseJobs",
-                      attributes: ["courseId", "courseName", "courseCode"]
-                    }
-          ]
-        }
-      ]
+          where: buildScope(model.jobModel),
+          required: false,
+          include: [
+            {
+              model: model.employeeModel.unscoped(),
+              as: "facultyJobs",
+              attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
+            },
+            {
+              model: model.subAccountModel.unscoped(),
+              as: "departmentJobs",
+              attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
+            },
+            {
+              model: model.subjectModel.unscoped(),
+              as: "subjectJobs",
+              attributes: ["subjectName", "subjectCode", "subjectId"],
+            },
+            {
+              model: model.courseModel.unscoped(),
+              as: "courseJobs",
+              attributes: ["courseId", "courseName", "courseCode"],
+            },
+          ],
+        },
+      ],
     });
   } catch (error) {
     throw new Error(error.message);
@@ -68,7 +63,15 @@ export async function getSingleJobType(jobSettingId) {
 
 export async function updateJobType(jobSettingId, data) {
   try {
-    return await model.jobSettingModel.update(data, { where: { jobSettingId: jobSettingId } });
+    const existing = await scoped(model.jobSettingModel).findOne({
+      attributes: ["jobSettingId"],
+      where: { jobSettingId },
+    });
+    if (!existing) {
+      return [0];
+    }
+
+    return scoped(model.jobSettingModel).update(data, { where: { jobSettingId } });
   } catch (error) {
     throw new Error(error.message);
   }
@@ -76,8 +79,16 @@ export async function updateJobType(jobSettingId, data) {
 
 export async function deleteJobType(jobSettingId) {
   try {
-    return await model.jobSettingModel.destroy({ where: { jobSettingId: jobSettingId } });
+    const existing = await scoped(model.jobSettingModel).findOne({
+      attributes: ["jobSettingId"],
+      where: { jobSettingId },
+    });
+    if (!existing) {
+      return 0;
+    }
+
+    return scoped(model.jobSettingModel).destroy({ where: { jobSettingId } });
   } catch (error) {
     throw new Error(error.message);
   }
-};
+}

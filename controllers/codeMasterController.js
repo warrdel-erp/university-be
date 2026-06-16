@@ -1,7 +1,6 @@
 import * as codeMasterServices  from '../services/codeMasterServices.js';
 
 export const getAllEmployeeType = async (req,res) => {
-    const universityId = req.user.universityId;
     try {
         const result = await codeMasterServices.getAllEmployeeType();
         res.status(200).send(result);
@@ -28,11 +27,10 @@ export const addEmployeeCode = async (req,res) => {
 };
 
 export const getEmployeeCodesTypes = async (req, res) => {
-    const universityId = req.user.universityId;
     let { employeeCodeMasterId, key } = req.query;
     employeeCodeMasterId = employeeCodeMasterId || 0;
     try {
-        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId, universityId, key);
+        const result = await codeMasterServices.getEmployeeCodesTypes(employeeCodeMasterId, key);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting employee code and types:", error);

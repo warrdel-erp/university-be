@@ -1,77 +1,80 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-const createVehicle = async (vehicleData) => {
-    return await model.vehicleModel.create(vehicleData);
-};
+export async function createVehicle(vehicleData) {
+  const employee = await scoped(model.employeeModel).findOne({
+    attributes: ["employeeId"],
+    where: { employeeId: vehicleData.employeeId },
+  });
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
 
-const getAllVehicles = async (universityId, acedmicYearId, instituteId) => {
-    try {
-        const employeeWhere = {
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(instituteId && { instituteId }),
-        };
+  return scoped(model.vehicleModel).create(vehicleData);
+}
 
-        const result = await model.vehicleModel.findAll({
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
-            },
-            where: {
-                ...(instituteId && { instituteId }),
-            },
-            include: [
-                {
-                    model: model.employeeModel,
-                    as: "employee",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    where: employeeWhere,
-                    required: Object.keys(employeeWhere).length > 0,
-                },
-            ],
-        });
-
-        return result;
-    } catch (error) {
-        console.error(`Error fetching vehicles:`, error);
-        throw error;
-    }
-};
-
-const getVehicleById = async (vehicleId, universityId, instituteId) => {
-    return await model.vehicleModel.findOne({
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-        where: {
-            vehicleId,
-            ...(instituteId && { instituteId }),
+export async function getAllVehicles() {
+  try {
+    return scoped(model.vehicleModel).findAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
+      },
+      include: [
+        {
+          model: model.employeeModel.unscoped(),
+          as: "employee",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: buildScope(model.employeeModel),
+          required: true,
         },
-        include: [
-            {
-                model: model.userModel,
-                as: "vehicleUser",
-                attributes: ["universityId", "userId"],
-                where: { universityId },
-                required: true,
-            },
-        ],
+      ],
     });
-};
+  } catch (error) {
+    console.error("Error fetching vehicles:", error);
+    throw error;
+  }
+}
 
-const updateVehicle = async (vehicleId, vehicleData) => {
-    return await model.vehicleModel.update(vehicleData, {
-        where: { vehicleId }
-    });
-};
+export async function getVehicleById(vehicleId) {
+  return scoped(model.vehicleModel).findOne({
+    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+    where: { vehicleId },
+    include: [
+      {
+        model: model.employeeModel.unscoped(),
+        as: "employee",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        where: buildScope(model.employeeModel),
+        required: true,
+      },
+    ],
+  });
+}
 
-const deleteVehicle = async (vehicleId) => {
-    return await model.vehicleModel.destroy({
-        where: { vehicleId }
-    });
-};
+export async function updateVehicle(vehicleId, vehicleData) {
+  const existing = await scoped(model.vehicleModel).findOne({
+    attributes: ["vehicleId"],
+    where: { vehicleId },
+  });
+  if (!existing) {
+    return [0];
+  }
 
+  return scoped(model.vehicleModel).update(vehicleData, {
+    where: { vehicleId },
+  });
+}
 
-export default {
-    createVehicle,
-    getAllVehicles,
-    getVehicleById,
-    updateVehicle,
-    deleteVehicle
-};
+export async function deleteVehicle(vehicleId) {
+  const existing = await scoped(model.vehicleModel).findOne({
+    attributes: ["vehicleId"],
+    where: { vehicleId },
+  });
+  if (!existing) {
+    return 0;
+  }
+
+  return scoped(model.vehicleModel).destroy({
+    where: { vehicleId },
+  });
+}

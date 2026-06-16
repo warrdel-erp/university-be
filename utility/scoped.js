@@ -10,7 +10,7 @@ import { requestContext } from "./requestContext.js";
  *   scoped(model.departmentModel).findAll({ where: { ... } })
  *
  * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
- * or when store.bypass is true (set for routes like /campus, /institute).
+ * or when store.bypass is true (set for routes like /institute, /acedmicYear).
  */
 
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
@@ -153,68 +153,4 @@ export const scoped = (model) => {
         { validate: true, ...options }
       ),
   };
-};
-
-/**
- * Patches all Sequelize models so direct model.findAll() calls are auto-scoped.
- * Called once in models/index.js after all models are registered.
- */
-export const applyMultiTenancy = (sequelize) => {
-  for (const model of Object.values(sequelize.models)) {
-    if (model._scopePatched) {
-      continue;
-    }
-
-    model._scopeOriginals = {
-      findAll: model.findAll.bind(model),
-      findOne: model.findOne.bind(model),
-      findByPk: model.findByPk.bind(model),
-      findAndCountAll: model.findAndCountAll.bind(model),
-      count: model.count.bind(model),
-    };
-
-    const pk = model.primaryKeyAttribute || "id";
-
-    model.findAll = (options = {}) => {
-      const baseWhere = buildScope(model);
-      return model._scopeOriginals.findAll({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      });
-    };
-
-    model.findOne = (options = {}) => {
-      const baseWhere = buildScope(model);
-      return model._scopeOriginals.findOne({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      });
-    };
-
-    model.findAndCountAll = (options = {}) => {
-      const baseWhere = buildScope(model);
-      return model._scopeOriginals.findAndCountAll({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      });
-    };
-
-    model.count = (options = {}) => {
-      const baseWhere = buildScope(model);
-      return model._scopeOriginals.count({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      });
-    };
-
-    model.findByPk = (id, options = {}) => {
-      const baseWhere = buildScope(model);
-      return model._scopeOriginals.findOne({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where, pk, id),
-      });
-    };
-
-    model._scopePatched = true;
-  }
 };

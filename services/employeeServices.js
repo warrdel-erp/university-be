@@ -31,8 +31,8 @@ import moment from 'moment';
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
-  const campusCode = getCampusCodeDetail.get('campus_code');
-  const institueCode = getInstitueCodeDetail.get('institute_code');
+  const campusCode = getCampusCodeDetail.get('campusCode');
+  const institueCode = getInstitueCodeDetail.get('instituteCode');
   const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
   const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
   let enrollNumber;

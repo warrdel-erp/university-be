@@ -1,19 +1,19 @@
 import * as campusRepository from "../repository/campusRepository.js";
 
-export const createCampus = async (data) => {
+export async function createCampus(data) {
   try {
-    return await campusRepository.createCampus(data);
+    return campusRepository.createCampus(data);
   } catch (error) {
     console.error("Error in Campus Service (createCampus):", error);
     throw error;
   }
-};
+}
 
-export const listCampuses = async (universityId) => {
+export async function listCampuses() {
   try {
-    return await campusRepository.getCampuses(universityId);
+    return campusRepository.getCampuses();
   } catch (error) {
     console.error("Error in Campus Service (listCampuses):", error);
     throw error;
   }
-};
+}

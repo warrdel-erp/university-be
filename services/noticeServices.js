@@ -1,33 +1,33 @@
-import * as notice  from "../repository/noticeRepository.js";
-import sequelize from '../database/sequelizeConfig.js';
+import * as notice from "../repository/noticeRepository.js";
 
-export async function addNotice(data, createdBy, updatedBy,role, universityId, instituteId) {
-    try {
-        const payload = {
-            ...data,
-            createdBy,
-            updatedBy,role,universityId,instituteId
-        } 
-    return await notice.addNotice(payload);
-    } catch (error) {
-        console.error("Transaction failed in add Fee Plan:", error);
-        throw error;
-    }
-};
+export async function addNotice(data, createdBy, updatedBy, role) {
+  try {
+    const payload = {
+      ...data,
+      createdBy,
+      updatedBy,
+      role,
+    };
+    return notice.addNotice(payload);
+  } catch (error) {
+    console.error("Transaction failed in add notice:", error);
+    throw error;
+  }
+}
 
-export async function getAllStudentNotice(universityId,acedmicYearId,instituteId,role) {
-    return await notice.getAllStudentNotice(universityId,acedmicYearId,instituteId,role);
-};
+export async function getAllStudentNotice() {
+  return notice.getAllStudentNotice();
+}
 
-export async function getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy) {
-    return await notice.getAllEmployeeNotice(universityId,acedmicYearId,instituteId,role,createdBy);
-};
+export async function getAllEmployeeNotice(createdBy, role) {
+  return notice.getAllEmployeeNotice(createdBy, role);
+}
 
-export async function updateNotice(noticeId, data,updatedBy) {    
-        data.updatedBy = updatedBy;
-       return await notice.updateNotice(noticeId, data);
-};
+export async function updateNotice(noticeId, data, updatedBy) {
+  data.updatedBy = updatedBy;
+  return notice.updateNotice(noticeId, data);
+}
 
 export async function deleteNotice(noticeId) {
-    return await notice.deleteNotice(noticeId);
-};
+  return notice.deleteNotice(noticeId);
+}

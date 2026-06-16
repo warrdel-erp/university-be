@@ -1751,6 +1751,4 @@ export {
 };
 
 import sequelize from "../database/sequelizeConfig.js";
-import { applyMultiTenancy } from "../utility/scoped.js";
-applyMultiTenancy(sequelize);
 

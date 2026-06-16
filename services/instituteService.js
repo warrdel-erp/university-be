@@ -5,8 +5,8 @@ export const createInstitute = async (data) => {
   try {
     const { campusId } = data;
 
-    const campus = await campusRepository.getCampusById(campusId, data.universityId);
-    if (!campus) {
+    const campus = await campusRepository.getCampusById(campusId);
+    if (!campus || campus.universityId !== data.universityId) {
       const error = new Error("Campus not found or does not belong to this university");
       error.statusCode = 404;
       throw error;

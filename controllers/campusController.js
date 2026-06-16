@@ -2,10 +2,9 @@ import * as campusService from "../services/campusService.js";
 
 export const createCampus = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
     const createdBy = req.user.userId;
 
-    if (!universityId) {
+    if (!req.user.universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",
@@ -14,7 +13,6 @@ export const createCampus = async (req, res) => {
 
     const data = {
       ...req.body,
-      universityId,
       createdBy,
     };
 
@@ -37,16 +35,14 @@ export const createCampus = async (req, res) => {
 
 export const listCampuses = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
-
-    if (!universityId) {
+    if (!req.user.universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",
       });
     }
 
-    const result = await campusService.listCampuses(universityId);
+    const result = await campusService.listCampuses();
 
     return res.status(200).json({
       status: "success",

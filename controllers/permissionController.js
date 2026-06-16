@@ -14,9 +14,8 @@ export async function addPermission(req, res) {
 }
 
 export async function getAllPermission(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const Permission = await PermissionCreation.getPermissionDetails(universityId);
+        const Permission = await PermissionCreation.getPermissionDetails();
         res.status(200).json(Permission);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -24,10 +23,9 @@ export async function getAllPermission(req, res) {
 }
 
 export async function getSinglePermissionDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { permissionId } = req.query;
-        const Permission = await PermissionCreation.getSinglePermissionDetails(permissionId,universityId);
+        const Permission = await PermissionCreation.getSinglePermissionDetails(permissionId);
         if (Permission) {
             res.status(200).json(Permission);
         } else {

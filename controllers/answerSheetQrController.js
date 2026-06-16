@@ -144,9 +144,6 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
 
 export async function splitAnswerSheetPdf(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
-
     const fileUploadId = req.body.answerSheetS3FileId;
 
     // Find FileUpload record to get the S3 key
@@ -205,8 +202,6 @@ export async function splitAnswerSheetPdf(req, res) {
     // ── Enqueue the job ───────────────────────────────────────────────────────
     const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
       s3Key,
-      instituteId,
-      universityId,
       req.user.userId,
     );
 
