@@ -1,23 +1,13 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
-import { scoped } from '../utility/scoped.js';
+import { scoped, buildScope } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addHoliday(holidayData) {
     try {
-        const store = requestContext.getStore();
-
-        if (!store?.instituteId || !store?.academicYearId) {
-            throw new Error('Institute and academic year are required to create a holiday');
-        }
-
-        holidayData.instituteId = store.instituteId;
-        holidayData.acedmicYearId = store.academicYearId;
-
-        const result = await model.holidayModel.create(holidayData);
-        return result;
+        return await scoped(model.holidayModel).create(holidayData);
     } catch (error) {
         console.error('Error in add Holiday :', error);
         throw error;

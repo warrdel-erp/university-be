@@ -38,32 +38,24 @@ export const teacherSectionMapping = async (req, res) => {
 };
 
 export const getTeacherSubjectMapping = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
-    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
-        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
+        const result = await teacherMapping.getTeacherSubjectMappingService(employeeId);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting Teacher Subject Mapping:", error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in getting Teacher Subject Mapping:', error);
+        res.status(500).send('Internal Server Error');
     }
 };
 
 export const getTeacherSectionMapping = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
-    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(employeeId, universityId, acedmicYearId, instituteId, role);
+        const result = await teacherMapping.getTeacherSectionMappingService(employeeId);
         res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting Teacher Section Mapping:", error);
-        res.status(500).send("Internal Server Error");
+        console.error('Error in getting Teacher Section Mapping:', error);
+        res.status(500).send('Internal Server Error');
     }
 };
 

@@ -3,25 +3,7 @@ import { buildScope, scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
 import { getCampusIdByInstituteId } from './buildingRepository.js';
 
-const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
-
-const classRoomInclude = [
-    {
-        model: model.floorModel,
-        as: 'roomFloor',
-        attributes: { exclude: excludeMeta },
-        include: [
-            {
-                model: model.buildingModel,
-                as: 'floorBuilding',
-                attributes: { exclude: excludeMeta },
-            },
-        ],
-    },
-];
-
-async function isFloorInInstitute(floorId) {
-    const instituteId = buildScope(model.classRoomModel).instituteId;
+async function isFloorInInstitute(floorId) {    const instituteId = buildScope(model.classRoomModel).instituteId;
     const universityId = requestContext.getStore()?.universityId;
 
     if (!instituteId || !universityId || !floorId) {
@@ -70,8 +52,21 @@ export async function addClassRoom(ClassRoomData) {
 export async function getClassRoomDetails() {
     try {
         return await scoped(model.classRoomModel).findAll({
-            attributes: { exclude: excludeMeta },
-            include: classRoomInclude,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            include: [
+                {
+                    model: model.floorModel,
+                    as: 'roomFloor',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    include: [
+                        {
+                            model: model.buildingModel,
+                            as: 'floorBuilding',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                        },
+                    ],
+                },
+            ],
         });
     } catch (error) {
         console.error('Error fetching ClassRoom details:', error);
@@ -82,16 +77,28 @@ export async function getClassRoomDetails() {
 export async function getSingleClassRoomDetails(classRoomSectionId) {
     try {
         return await scoped(model.classRoomModel).findOne({
-            attributes: { exclude: excludeMeta },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             where: { classRoomSectionId },
-            include: classRoomInclude,
+            include: [
+                {
+                    model: model.floorModel,
+                    as: 'roomFloor',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    include: [
+                        {
+                            model: model.buildingModel,
+                            as: 'floorBuilding',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                        },
+                    ],
+                },
+            ],
         });
     } catch (error) {
         console.error('Error fetching ClassRoom details:', error);
         throw error;
     }
 }
-
 export async function deleteClassRoom(classRoomSectionId) {
     const deleted = await scoped(model.classRoomModel).destroy({
         where: { classRoomSectionId },

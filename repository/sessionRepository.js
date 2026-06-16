@@ -1,87 +1,76 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import { scoped, buildScope } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addSession(sessionData, transaction) {
     try {
-        const result = await model.sessionModel.create(sessionData, { transaction });
-        return result;
+        return await scoped(model.sessionModel).create(sessionData, { transaction });
     } catch (error) {
         console.error("Error in add Session :", error);
         throw error;
     }
-};
+}
 
 export async function addBulkSession(sessionData) {
     try {
-        const result = await model.sessionModel.bulkCreate(sessionData);
-
-        return result;
+        return await model.sessionModel.bulkCreate(sessionData);
     } catch (error) {
         console.error("Error in add Session bulk:", error);
         throw error;
     }
-};
+}
 
-export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, universityId) {
-  try {
-    const existingMapping = await model.sessionCouseMappingModel.findOne({
-      where: {
-        sessionId,
-        courseId,
-        instituteId,
-        universityId
-      }
-    });
-    return !!existingMapping;
-  } catch (error) {
-    console.error('Error checking if session is already mapped:', error);
-    throw error;
-  }
+export async function isSessionAlreadyMapped(sessionId, courseId) {
+    try {
+        const existingMapping = await scoped(model.sessionCouseMappingModel).findOne({
+            where: { sessionId, courseId }
+        });
+        return !!existingMapping;
+    } catch (error) {
+        console.error('Error checking if session is already mapped:', error);
+        throw error;
+    }
 }
 
 export async function courseSectionMapping(sessionData, transaction) {
     try {
-        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
-        return result;
+        return await scoped(model.sessionCouseMappingModel).bulkCreate(sessionData, { transaction });
     } catch (error) {
         console.error("Error in course Session :", error);
         throw error;
     }
-};
+}
 
 export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
     try {
-        const result = await model.sessionCouseMappingModel.update(data, {
+        return await scoped(model.sessionCouseMappingModel).update(data, {
             where: { sessionCourseMappingId }
         });
-        return result;
     } catch (error) {
         console.error(`Error updating course session mapping for ${sessionCourseMappingId}:`, error);
         throw error;
     }
-};
+}
 
-export async function getSessionDetails(universityId, instituteId, role, acedmicYearId) {
+export async function getSessionDetails() {
     try {
-        const session = await model.sessionModel.findAll({
-            where: {
-                instituteId,
-                ...(acedmicYearId && { acedmicYearId }),
-                ...(universityId && { universityId }),
-            },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        const mappingScope = buildScope(model.sessionCouseMappingModel);
+
+        return await scoped(model.sessionModel).findAll({
+            attributes: { exclude: excludeMeta },
             include: [
                 {
                     model: model.acedmicYearModel,
                     as: 'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                 },
                 {
                     model: model.sessionCouseMappingModel,
                     as: "courseMappings",
-                    where: { instituteId },
+                    where: mappingScope,
                     required: false,
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                     include: [
                         {
                             model: model.courseModel,
@@ -92,8 +81,6 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
                 }
             ]
         });
-
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -102,19 +89,17 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
 
 export async function getSingleSessionDetails(sessionId) {
     try {
-        const Session = await model.sessionModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.sessionModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { sessionId },
             include: [
                 {
                     model: model.acedmicYearModel,
                     as: 'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                 }
             ]
         });
-
-        return Session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -123,58 +108,44 @@ export async function getSingleSessionDetails(sessionId) {
 
 export async function getSessionDetailsByAcedmic(acedmicYearId) {
     try {
-        const Session = await model.sessionModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await model.sessionModel.findAll({
+            attributes: { exclude: excludeMeta },
             where: { acedmicYearId },
         });
-
-        return Session;
     } catch (error) {
         console.error('Error fetching Session details By Acedmic Id:', error);
         throw error;
     }
 }
 
-export async function getSessionByInstituteAndAcademicYear(instituteId, acedmicYearId) {
+export async function getSessionByInstituteAndAcademicYear() {
     try {
-        const session = await model.sessionModel.findAll({
-            where: {
-                instituteId, acedmicYearId
-            },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.sessionModel).findAll({
+            attributes: { exclude: excludeMeta },
         });
-
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
     }
 }
 
-
 export async function updateSession(sessionId, sessionData) {
     try {
-        const result = await model.sessionModel.update(sessionData, {
+        return await scoped(model.sessionModel).update(sessionData, {
             where: { sessionId }
         });
-        return result;
     } catch (error) {
         console.error(`Error updating Session creation ${sessionId}:`, error);
         throw error;
     }
 }
 
-export async function isSessionMappedwithcourse(sessionId, instituteId, universityId) {
+export async function isSessionMappedwithcourse(sessionId) {
     try {
-        const session = await model.sessionCouseMappingModel.findAll({
-            where: {
-                sessionId,
-                instituteId,
-                universityId
-            },
+        return await scoped(model.sessionCouseMappingModel).findAll({
+            where: { sessionId },
             attributes: ["sessionCourseMappingId"]
         });
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -182,18 +153,18 @@ export async function isSessionMappedwithcourse(sessionId, instituteId, universi
 }
 
 export async function deleteSession(sessionId) {
-    const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
+    const deleted = await scoped(model.sessionModel).destroy({ where: { sessionId } });
     return deleted > 0;
-};
+}
 
 export async function getMappingByCourseAndSession(courseId, sessionId) {
-    return await model.sessionCouseMappingModel.findOne({
+    return await scoped(model.sessionCouseMappingModel).findOne({
         where: { courseId, sessionId }
     });
 }
 
 export async function getMappingById(sessionCourseMappingId) {
-    return await model.sessionCouseMappingModel.findOne({
+    return await scoped(model.sessionCouseMappingModel).findOne({
         where: { sessionCourseMappingId }
     });
 }
@@ -302,7 +273,7 @@ export async function getCourseSessionMappingBlocker({ courseId, sessionId, sess
 }
 
 export async function deleteCourseSessionMapping(sessionCourseMappingId) {
-    const deleted = await model.sessionCouseMappingModel.destroy({
+    const deleted = await scoped(model.sessionCouseMappingModel).destroy({
         where: { sessionCourseMappingId }
     });
     return deleted > 0;

@@ -1,113 +1,99 @@
 import * as model from '../models/index.js'
+import { buildScope } from '../utility/scoped.js';
+import { requestContext } from '../utility/requestContext.js';
 
-export async function teacherSectionMapping(data) {    
+export async function teacherSectionMapping(data) {
     try {
-        const result = await model.teacherSectionMappingModel.create(data);
-        return result;
+        return await model.teacherSectionMappingModel.create(data);
     } catch (error) {
-        console.error("Error in student mapping course:", error);
+        console.error('Error in student mapping course:', error);
         throw error;
     }
-};
+}
 
-export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId, instituteId, role) {
+export async function getTeacherSectionMapping(employeeId) {
     try {
-        const academicInstituteFilter = {
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(instituteId && { instituteId }),
-        };
+        const universityId = requestContext.getStore()?.universityId;
+        const employeeWhere = buildScope(model.employeeModel);
+        const classSectionWhere = buildScope(model.classSectionModel);
+        const courseWhere = buildScope(model.courseModel);
 
-        const courseWhere = {
-            universityId,
-            ...(instituteId && { instituteId }),
-        };
-
-        const queryOptions = {
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: employeeId ? { employeeId } : undefined,
+        return await model.teacherSectionMappingModel.findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            ...(employeeId && { where: { employeeId } }),
             include: [
                 {
-                    model: model.userModel,
-                    as: "userTeacherSectionMapping",
-                    attributes: ["universityId", "userId"],
+                    model: model.userModel.unscoped(),
+                    as: 'userTeacherSectionMapping',
+                    attributes: ['universityId', 'userId'],
                     where: { universityId },
                     required: true,
                 },
                 {
-                    model: model.employeeModel,
-                    as: "employeeData",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: academicInstituteFilter,
+                    model: model.employeeModel.unscoped(),
+                    as: 'employeeData',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    where: employeeWhere,
                     required: true,
                     include: [
                         {
-                            model: model.campusModel,
-                            as: "employeeCampus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "campusCode"] },
+                            model: model.campusModel.unscoped(),
+                            as: 'employeeCampus',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'campusCode'] },
                             where: { universityId },
                             required: true,
                         },
                         {
-                            model: model.instituteModel,
-                            as: "employeeInstitute",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "instituteCode"] },
-                            ...(instituteId && {
-                                where: { instituteId },
-                                required: true,
-                            }),
+                            model: model.instituteModel.unscoped(),
+                            as: 'employeeInstitute',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
                         },
                     ],
                 },
                 {
-                    model: model.classSectionModel,
-                    as: "employeeSection",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: academicInstituteFilter,
+                    model: model.classSectionModel.unscoped(),
+                    as: 'employeeSection',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    where: classSectionWhere,
                     required: true,
                     include: [
                         {
-                            model: model.courseModel,
-                            as: "employeeCourse",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            model: model.courseModel.unscoped(),
+                            as: 'employeeCourse',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
                             where: courseWhere,
                             required: true,
                         },
                     ],
                 },
             ],
-        };
-
-        const result = await model.teacherSectionMappingModel.findAll(queryOptions);
-        return result;
+        });
     } catch (error) {
-        console.error(`Error in getting employee code and types${employeeId}:`, error);
+        console.error(`Error in getting employee code and types ${employeeId}:`, error);
         throw error;
     }
-};
+}
 
 export async function updateTeachersSectionMapping(teacherSectionMappingId, info) {
     try {
-        const result = await model.teacherSectionMappingModel.update(info, {
-            where: {
-                teacherSectionMappingId: teacherSectionMappingId
-            }
+        return await model.teacherSectionMappingModel.update(info, {
+            where: { teacherSectionMappingId },
         });
-     return result; 
     } catch (error) {
         console.error(`Error updating teacher subject mapping ${teacherSectionMappingId} :`, error);
-        throw error; 
+        throw error;
     }
-};
+}
 
-export async function deleteTeachersSectionMapping (teacherSectionMappingId) {
+export async function deleteTeachersSectionMapping(teacherSectionMappingId) {
     try {
-        const result = await model.teacherSectionMappingModel.destroy({
+        await model.teacherSectionMappingModel.destroy({
             where: { teacherSectionMappingId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'delete Teacher Section Mapping deleted successfully' };
     } catch (error) {
         console.error('Error during soft delete:', error);
         throw new Error('Unable to soft delete account');
     }
-};
+}

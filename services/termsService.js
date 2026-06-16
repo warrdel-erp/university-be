@@ -83,7 +83,7 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
     try {
 
         const [session, courses] = await Promise.all([
-            sessionRepository.getSessionByInstituteAndAcademicYear(instituteId, acedmicYearId),
+            sessionRepository.getSessionByInstituteAndAcademicYear(),
             courseRepository.getAllCourseByInstituteId(instituteId)
         ]);
 

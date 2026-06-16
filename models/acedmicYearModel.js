@@ -1,9 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const acedmicYearModel = sequelize.define(
     'acedmic_year',
     {
         acedmicYearId: {
@@ -11,6 +12,24 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'acedmic_year_id'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
         },
         yearTitle: {
             type: DataTypes.STRING,
@@ -27,11 +46,11 @@ export default sequelize.define(
             allowNull: false,
             field: 'ending_date'
         },
-        isActive :{
-            type:DataTypes.BOOLEAN,
-            allowNull:false,
-            field:'is_active',
-            defaultValue : false
+        isActive: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            field: 'is_active',
+            defaultValue: false
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -66,3 +85,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+acedmicYearModel.scopeConfig = { academicYear: false };
+
+export default acedmicYearModel;

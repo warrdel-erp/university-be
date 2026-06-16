@@ -1,21 +1,17 @@
 import sequelize from '../database/sequelizeConfig.js';
 import * as sessionCreationService from "../repository/sessionRepository.js";
 
-export async function addSession(sessionData, createdBy, updatedBy, universityId, instituteId) {
+export async function addSession(sessionData, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
     sessionData.createdBy = createdBy;
     sessionData.updatedBy = updatedBy;
-    sessionData.universityId = universityId;
-    sessionData.instituteId = instituteId;
 
     const session = await sessionCreationService.addSession(sessionData, transaction);
 
     if (Array.isArray(sessionData.courseId) && sessionData.courseId.length > 0) {
       const mappingData = sessionData.courseId.map(courseId => ({
-        universityId,
-        instituteId,
         courseId,
         sessionId: session.sessionId,
         createdBy,
@@ -35,8 +31,8 @@ export async function addSession(sessionData, createdBy, updatedBy, universityId
   }
 }
 
-export async function getSessionDetails(universityId, instituteId, role, acedmicYearId) {
-  return await sessionCreationService.getSessionDetails(universityId, instituteId, role, acedmicYearId);
+export async function getSessionDetails() {
+  return await sessionCreationService.getSessionDetails();
 }
 
 export async function getSingleSessionDetails(sessionId) {
@@ -48,22 +44,19 @@ export async function updateSession(sessionId, sessionData, updatedBy) {
   return await sessionCreationService.updateSession(sessionId, sessionData);
 }
 
-export async function deleteSession(sessionId, instituteId, universityId) {
-  const isSessionAlreadyMapped = await sessionCreationService.isSessionMappedwithcourse(sessionId, instituteId, universityId);
+export async function deleteSession(sessionId) {
+  const isSessionAlreadyMapped = await sessionCreationService.isSessionMappedwithcourse(sessionId);
 
   if (isSessionAlreadyMapped.length > 0) {
     throw new Error('Session already mapped with courses unable to delete')
   }
 
   return await sessionCreationService.deleteSession(sessionId);
-};
+}
 
-
-
-export async function couseSessionMapping(data, createdBy, updatedBy, universityId, instituteId) {
+export async function couseSessionMapping(data, createdBy, updatedBy) {
   try {
-    const isSessionAlreadyMapped = await sessionCreationService.isSessionAlreadyMapped(data.sessionId, data.courseId, instituteId, universityId);
-    // console.log("isSessionAlreadyMapped ", isSessionAlreadyMapped)
+    const isSessionAlreadyMapped = await sessionCreationService.isSessionAlreadyMapped(data.sessionId, data.courseId);
     if (isSessionAlreadyMapped) {
       throw new Error('Session already mapped')
     }
@@ -84,8 +77,6 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
       }
 
       mappings.push({
-        universityId,
-        instituteId,
         sessionId: data.sessionId,
         courseId,
         createdBy,
@@ -101,7 +92,7 @@ export async function couseSessionMapping(data, createdBy, updatedBy, university
     console.error("❌ Error inserting course-session mapping:", error);
     throw error;
   }
-};
+}
 
 export async function deleteCouseSessionMapping(sessionCourseMappingId) {
   const mapping = await sessionCreationService.getMappingById(sessionCourseMappingId);
@@ -122,10 +113,8 @@ export async function deleteCouseSessionMapping(sessionCourseMappingId) {
   return await sessionCreationService.deleteCourseSessionMapping(sessionCourseMappingId);
 }
 
-export async function updateCouseSessionMapping(data, updatedBy, universityId, instituteId) {
+export async function updateCouseSessionMapping(data, updatedBy) {
   data.updatedBy = updatedBy;
-  data.instituteId = instituteId;
-  data.universityId = universityId;
   const sessionCourseMappingId = data?.sessionCourseMappingId
   return await sessionCreationService.updateCouseSessionMapping(sessionCourseMappingId, data);
-};
+}

@@ -4,12 +4,11 @@ export async function addacedmicYear(req, res) {
     const { year } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
     try {
         if (!(year)) {
             return res.status(400).send('year is required')
         }
-        const acedmicYear = await acedmicYearCreation.addacedmicYear(req.body, createdBy, updatedBy, universityId);
+        const acedmicYear = await acedmicYearCreation.addacedmicYear(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", acedmicYear });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -17,9 +16,8 @@ export async function addacedmicYear(req, res) {
 }
 
 export async function getAllacedmicYear(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const acedmicYear = await acedmicYearCreation.getacedmicYearDetails(universityId);
+        const acedmicYear = await acedmicYearCreation.getacedmicYearDetails();
         res.status(200).json(acedmicYear);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -27,10 +25,9 @@ export async function getAllacedmicYear(req, res) {
 }
 
 export async function getSingleacedmicYearDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { acedmicYearId } = req.query;
-        const acedmicYear = await acedmicYearCreation.getSingleacedmicYearDetails(acedmicYearId, universityId);
+        const acedmicYear = await acedmicYearCreation.getSingleacedmicYearDetails(acedmicYearId);
         if (acedmicYear) {
             res.status(200).json(acedmicYear);
         } else {
@@ -69,9 +66,8 @@ export async function deleteacedmicYear(req, res) {
 };
 
 export async function getAllActiveAcedmicYear(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear(universityId);
+        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear();
         res.status(200).json(acedmicYear);
     } catch (error) {
         res.status(500).json({ error: error.message });

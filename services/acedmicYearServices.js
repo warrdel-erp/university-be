@@ -4,21 +4,19 @@ import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from "../
 import { getAllSubject, subjectBulkCreate } from "../repository/mainRepository.js";
 import { addBulkSession, getSessionDetailsByAcedmic } from "../repository/sessionRepository.js";
 
-export async function addacedmicYear(acedmicYearData, createdBy, updatedBy,universityId) {
-
+export async function addacedmicYear(acedmicYearData, createdBy, updatedBy) {
         acedmicYearData.createdBy = createdBy;
         acedmicYearData.updatedBy = updatedBy;
-        acedmicYearData.universityId = universityId;
         const acedmicYear = await acedmicYearCreationService.addacedmicYear(acedmicYearData);
         return acedmicYear;
 };
 
-export async function getacedmicYearDetails(universityId) {
-    return await acedmicYearCreationService.getacedmicYearDetails(universityId);
+export async function getacedmicYearDetails() {
+    return await acedmicYearCreationService.getacedmicYearDetails();
 };
 
-export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
-    return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId,universityId);
+export async function getSingleacedmicYearDetails(acedmicYearId) {
+    return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId);
 };
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
@@ -133,8 +131,8 @@ export async function deleteacedmicYear(acedmicYearId) {
     return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
 };
 
-export async function getAllActiveAcedmicYear(universityId) {
-    return await acedmicYearCreationService.getAllActiveAcedmicYear(universityId);
+export async function getAllActiveAcedmicYear() {
+    return await acedmicYearCreationService.getAllActiveAcedmicYear();
 };
 
 export async function newActivateAndCopyData(data, universityId, instituteId, createdBy, updatedBy) {

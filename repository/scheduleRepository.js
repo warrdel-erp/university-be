@@ -1,30 +1,10 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
 import { buildScope, scoped } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
-
-const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
-
-function getInstituteUniversityScope() {
-    const store = requestContext.getStore();
-    if (!store || store.bypass || !store.universityId || !store.instituteId) {
-        return null;
-    }
-
-    return {
-        universityId: store.universityId,
-        instituteId: store.instituteId,
-    };
-}
 
 export async function getScheduleInScope(scheduleId) {
-    const scheduleWhere = getInstituteUniversityScope();
-    if (!scheduleWhere) {
-        return null;
-    }
-
-    return await model.scheduleModel.unscoped().findOne({
-        where: { scheduleId, ...scheduleWhere },
+    return await scoped(model.scheduleModel).findOne({
+        where: { scheduleId },
         attributes: ['scheduleId'],
     });
 }
@@ -41,7 +21,7 @@ export async function addSchedule(scheduleData) {
 export async function getScheduleDetails() {
     try {
         return await scoped(model.scheduleModel).findAll({
-            attributes: { exclude: excludeMeta },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
     } catch (error) {
         console.error('Error fetching Schedule with details:', error);
@@ -52,8 +32,8 @@ export async function getScheduleDetails() {
 export async function getSingleScheduleDetails(scheduleId) {
     try {
         return await scoped(model.scheduleModel).findOne({
-            attributes: { exclude: excludeMeta },
             where: { scheduleId },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
     } catch (error) {
         console.error('Error fetching Schedule details:', error);
@@ -74,7 +54,7 @@ export async function updateSchedule(scheduleId, scheduleData) {
             where: { scheduleId },
         });
     } catch (error) {
-        console.error(`Error updating Schedule creation ${scheduleId}:`, error);
+        console.error(`Error updating Schedule ${scheduleId}:`, error);
         throw error;
     }
 }
@@ -101,26 +81,24 @@ export async function getAssignmentByScheduleAndEmployee(scheduleId, employeeId)
 
 export async function getAssignTeacher() {
     try {
-        const scheduleWhere = getInstituteUniversityScope();
-        if (!scheduleWhere) {
-            return [];
-        }
+        const scheduleWhere = buildScope(model.scheduleModel);
+        const employeeWhere = buildScope(model.employeeModel);
 
         return await model.scheduleAssignModel.findAll({
-            attributes: { exclude: excludeMeta },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
                     model: model.scheduleModel.unscoped(),
                     as: 'schedule',
                     required: true,
                     where: scheduleWhere,
-                    attributes: { exclude: excludeMeta },
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                 },
                 {
                     model: model.employeeModel.unscoped(),
                     as: 'employeeSchedule',
                     required: false,
-                    where: { instituteId: scheduleWhere.instituteId },
+                    where: employeeWhere,
                     attributes: [
                         'employeeId',
                         'employeeName',
@@ -152,7 +130,7 @@ export async function updateAttendence(teacherAttendenceId, data) {
             where: { teacherAttendenceId },
         });
     } catch (error) {
-        console.error(`Error updating Schedule creation ${teacherAttendenceId}:`, error);
+        console.error(`Error updating teacher attendence ${teacherAttendenceId}:`, error);
         throw error;
     }
 }
@@ -176,19 +154,20 @@ export async function getAllAttendence(page, limit, fromDate, toDate) {
 
         const attendances = await model.teacherAttendeceModel.findAndCountAll({
             where: whereClause,
-            attributes: { exclude: excludeMeta },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
                     model: model.scheduleAssignModel,
                     as: 'scheduleAssign',
-                    attributes: { exclude: excludeMeta },
+                    required: true,
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
                             model: model.scheduleModel.unscoped(),
                             as: 'schedule',
                             required: true,
                             where: scheduleWhere,
-                            attributes: { exclude: excludeMeta },
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                         },
                         {
                             model: model.employeeModel.unscoped(),

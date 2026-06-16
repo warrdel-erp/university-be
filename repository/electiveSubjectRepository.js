@@ -1,7 +1,6 @@
 import * as model from '../models/index.js'
 import { scoped } from '../utility/scoped.js';
 
-const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addElectiveSubject(electiveSubjectData) {
     try {

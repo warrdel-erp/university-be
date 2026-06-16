@@ -111,7 +111,7 @@ app.use(cors());
 app.use(urlencoded({ extended: true }));
 
 // Routes that manage tenant setup — skip auto query scoping for now.
-const UNSCOPED_ROUTE_PREFIXES = ["/campus", "/institute"];
+const UNSCOPED_ROUTE_PREFIXES = ["/campus", "/institute", "/acedmicYear"];
 app.use((req, res, next) => {
   const path = req.originalUrl.split("?")[0];
   if (UNSCOPED_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix))) {
@@ -125,9 +125,9 @@ app.use((req, res, next) => {
 // Tenant setup — bypass auto query scoping
 app.use("/campus", campus);
 app.use("/institute", institute);
-
-// Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
 app.use("/acedmicYear", acedmicYear);
+// Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
+
 app.use("/course", course);
 app.use("/questionPaper", questionPaper);
 app.use("/questionBank", questionBank);
