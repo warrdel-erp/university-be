@@ -3910,7 +3910,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=36&subjectId=54",
+              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=36&subjectId=99&sessionId=6",
               "host": [
                 "{{baseurl}}"
               ],
@@ -3927,13 +3927,62 @@
                 },
                 {
                   "key": "subjectId",
-                  "value": "54",
-                  "description": "Optional — resolves class_subject_mapper via subject_id",
+                  "value": "99",
+                  "description": "Optional — filters class_subject_mapper.subject_id",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters via semester → class_sections.session_id",
                   "type": "text"
                 }
               ]
             },
-            "description": "**GET /teacher/teacherSubject**\n\nLists teacher–subject mappings with nested employee, class-subject mapper, subject, semester, and class section.\n\n**Query:** optional `employeeId`, optional `subjectId` (filters `class_subject_mapper.subject_id`). Scoped by token `universityId` and `defaultInstituteId`."
+            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, mapper, subject, semester, class section, and session.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`. When `sessionId` is set, only mappings linked to a class section in that session are returned."
+          },
+          "response": []
+        },
+        {
+          "name": "get teacher section mappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection?employeeId=36&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "36",
+                  "description": "Optional — filter one teacher",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters class_sections.session_id",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "**GET /teacher/teacherSection**\n\nTeacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`."
           },
           "response": []
         }

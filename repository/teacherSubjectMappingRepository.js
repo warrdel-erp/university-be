@@ -10,7 +10,7 @@ export async function teacherSubjectMapping(data) {
     }
 }
 
-export async function getTeacherSubjectMapping(employeeId, universityId, instituteId, role, subjectId) {
+export async function getTeacherSubjectMapping(employeeId, universityId, instituteId, role, subjectId, sessionId) {
     try {
         const subjectWhere = {
             universityId,
@@ -21,6 +21,11 @@ export async function getTeacherSubjectMapping(employeeId, universityId, institu
         const mapperWhere = {
             ...(instituteId && { instituteId }),
             ...(subjectId && { subjectId }),
+        };
+
+        const classSectionWhere = {
+            ...(instituteId && { instituteId }),
+            ...(sessionId && { sessionId }),
         };
 
         return await model.teacherSubjectMappingModel.findAll({
@@ -70,16 +75,22 @@ export async function getTeacherSubjectMapping(employeeId, universityId, institu
                             model: model.semesterModel,
                             as: "employeeClassSection",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            required: false,
+                            required: Boolean(sessionId),
                             include: [
                                 {
                                     model: model.classSectionModel,
                                     as: "semesterDetail",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                    required: false,
-                                    ...(instituteId && {
-                                        where: { instituteId },
-                                    }),
+                                    required: Boolean(sessionId),
+                                    ...(Object.keys(classSectionWhere).length && { where: classSectionWhere }),
+                                    include: [
+                                        {
+                                            model: model.sessionModel,
+                                            as: "classSession",
+                                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+                                            required: false,
+                                        },
+                                    ],
                                 },
                             ],
                         },

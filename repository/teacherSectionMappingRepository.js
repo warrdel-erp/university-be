@@ -10,11 +10,12 @@ export async function teacherSectionMapping(data) {
     }
 };
 
-export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId, instituteId, role) {
+export async function getTeacherSectionMapping(employeeId, universityId, acedmicYearId, instituteId, role, sessionId) {
     try {
         const academicInstituteFilter = {
             ...(acedmicYearId && { acedmicYearId }),
             ...(instituteId && { instituteId }),
+            ...(sessionId && { sessionId }),
         };
 
         const courseWhere = {
@@ -71,6 +72,12 @@ export async function getTeacherSectionMapping(employeeId, universityId, acedmic
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                             where: courseWhere,
                             required: true,
+                        },
+                        {
+                            model: model.sessionModel,
+                            as: "classSession",
+                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+                            required: false,
                         },
                     ],
                 },
