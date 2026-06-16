@@ -12,10 +12,7 @@ export async function createLibraryIssueBookTransaction(req, res) {
 
 export async function getLibraryIssueBookTransactions(req, res) {
   try {
-    const { data, paginationData } = await services.getLibraryIssueBookTransactions(
-      req.query,
-      req.user.defaultInstituteId,
-    );
+    const { data, paginationData } = await services.getLibraryIssueBookTransactions(req.query);
     return SuccessResponse(
       res,
       200,
@@ -32,7 +29,6 @@ export async function getLibraryIssueBookTransactionById(req, res) {
   try {
     const data = await services.getLibraryIssueBookTransactionById(
       req.query.libraryIssueBookTransactionId,
-      req.user.defaultInstituteId,
     );
     return SuccessResponse(res, 200, "Library issue book transaction fetched successfully", data);
   } catch (error) {
@@ -51,10 +47,7 @@ export async function updateLibraryIssueBookTransaction(req, res) {
 
 export async function getLibraryBookInventoryIssueHistory(req, res) {
   try {
-    const data = await services.getLibraryBookInventoryIssueHistory(
-      req.query.inventoryId,
-      req.user.defaultInstituteId,
-    );
+    const data = await services.getLibraryBookInventoryIssueHistory(req.query.inventoryId);
     return SuccessResponse(
       res,
       200,
@@ -79,10 +72,7 @@ export async function getLibraryMembersList(req, res) {
 
 export async function getLibraryReturnBookTransactions(req, res) {
   try {
-    const { data, paginationData } = await services.getLibraryReturnBookTransactions(
-      req.query,
-      req.user.defaultInstituteId,
-    );
+    const { data, paginationData } = await services.getLibraryReturnBookTransactions(req.query);
     return SuccessResponse(
       res,
       200,

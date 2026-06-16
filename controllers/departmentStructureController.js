@@ -1,15 +1,14 @@
-import * as departmentStructureCreation  from  "../services/departmentStructureServices.js";
+import * as departmentStructureCreation from "../services/departmentStructureServices.js";
 
 export async function addDepartmentStructure(req, res) {
-    const {accountId,subAccountId,parentAccountId} = req.body
+    const { accountId, subAccountId, parentAccountId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
     try {
-        if(!(accountId && subAccountId && parentAccountId)){
-           return res.status(400).send('accountId,subAccountId and parentAccountId is required')
+        if (!(accountId && subAccountId && parentAccountId)) {
+            return res.status(400).send('accountId,subAccountId and parentAccountId is required');
         }
-        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(req.body,createdBy,updatedBy,universityId);
+        const departmentStructure = await departmentStructureCreation.addDepartmentStructure(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", departmentStructure });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -17,9 +16,8 @@ export async function addDepartmentStructure(req, res) {
 };
 
 export async function getAlldepartmentStructure(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const departmentStructureDetails = await departmentStructureCreation.getdepartmentStructureDetails(universityId);
+        const departmentStructureDetails = await departmentStructureCreation.getdepartmentStructureDetails();
         res.status(200).json(departmentStructureDetails);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -27,10 +25,9 @@ export async function getAlldepartmentStructure(req, res) {
 }
 
 export async function getSingledepartmentStructureDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { departmentStructureId } = req.query;
-        const departmentStructure = await departmentStructureCreation.getSingledepartmentStructureDetails(departmentStructureId,universityId);
+        const departmentStructure = await departmentStructureCreation.getSingledepartmentStructureDetails(departmentStructureId);
         if (departmentStructure) {
             res.status(200).json(departmentStructure);
         } else {
@@ -43,13 +40,13 @@ export async function getSingledepartmentStructureDetails(req, res) {
 
 export async function updatedepartmentStructure(req, res) {
     try {
-        const {departmentStructureId} = req.body
-        if(!(departmentStructureId)){
-            return res.status(400).send('departmentStructureId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updateddepartmentStructure = await departmentStructureCreation.updatedepartmentStructure(departmentStructureId, req.body,updatedBy);
-            res.status(200).json({message: "departmentStructure update succesfully" });
+        const { departmentStructureId } = req.body;
+        if (!departmentStructureId) {
+            return res.status(400).send('departmentStructureId is required');
+        }
+        const updatedBy = req.user.userId;
+        await departmentStructureCreation.updatedepartmentStructure(departmentStructureId, req.body, updatedBy);
+        res.status(200).json({ message: "departmentStructure update succesfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

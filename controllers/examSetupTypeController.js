@@ -4,16 +4,14 @@ import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 export const getExamSetupTypes = async (req, res) => {
     try {
         const { courseId, term } = req.query;
-        const universityId = req.user.universityId;
 
         if (!courseId || !term) {
             return ErrorResponse(res, 400, "courseId and term are required query parameters");
         }
 
         const filters = {
-            courseId: parseInt(courseId),
-            term: parseInt(term),
-            universityId
+            courseId: parseInt(courseId, 10),
+            term: parseInt(term, 10),
         };
 
         const result = await examSetupTypeServices.getExamSetupTypes(filters);

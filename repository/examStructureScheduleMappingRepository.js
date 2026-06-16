@@ -1,22 +1,32 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+async function assertScopedExamSchedule(examScheduleId, options = {}) {
+  const { transaction, attributes = ['examScheduleId'] } = options;
+  return scoped(model.examScheduleModel).findOne({
+    where: { examScheduleId },
+    attributes,
+    transaction,
+  });
+}
 
 export async function addExamStructureSchedule(examDetailSchedule) {
   try {
-    return await model.examStructureScheduleMappingModel.create(examDetailSchedule);
+    return await scoped(model.examStructureScheduleMappingModel).create(examDetailSchedule);
   } catch (error) {
     console.error("Error adding exam Structure Schedule:", error);
     throw error;
   }
 }
 
-export async function getExamStructureSchedule(universityId, acedmicYearId, role, instituteId, examSetupTypeId) {
+export async function getExamStructureSchedule(examSetupTypeId) {
   const whereClause = {
     ...(examSetupTypeId && { examSetupTypeId }),
   };
 
-  return await model.examSetupTypeModel.findAll({
+  return await scoped(model.examSetupTypeModel).findAll({
     where: whereClause,
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     include: [
@@ -82,7 +92,7 @@ export async function getExamStructureSchedule(universityId, acedmicYearId, role
 }
 
 export async function findSubjectAcedmicYearId(subjectId) {
-  const subject = await model.subjectModel.findByPk(subjectId, {
+  const subject = await scoped(model.subjectModel).findByPk(subjectId, {
     attributes: ["acedmicYearId"],
   });
   return subject?.acedmicYearId ?? null;
@@ -90,7 +100,11 @@ export async function findSubjectAcedmicYearId(subjectId) {
 
 export async function updateExamSchedule(examScheduleId, data) {
   try {
-    return await model.examScheduleModel.update(data, {
+    const existing = await assertScopedExamSchedule(examScheduleId);
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.examScheduleModel).update(data, {
       where: { examScheduleId },
     });
   } catch (error) {
@@ -101,7 +115,11 @@ export async function updateExamSchedule(examScheduleId, data) {
 
 export async function deleteExamSchedule(examScheduleId) {
   try {
-    const deleted = await model.examScheduleModel.destroy({ where: { examScheduleId } });
+    const existing = await assertScopedExamSchedule(examScheduleId);
+    if (!existing) {
+      return false;
+    }
+    const deleted = await scoped(model.examScheduleModel).destroy({ where: { examScheduleId } });
     return deleted > 0;
   } catch (error) {
     console.error("Error deleting exam Schedule:", error);
@@ -111,7 +129,14 @@ export async function deleteExamSchedule(examScheduleId) {
 
 export async function publishExamSchedule(examSetupTypeId, data) {
   try {
-    return await model.examSetupTypeModel.update(data, {
+    const existing = await scoped(model.examSetupTypeModel).findOne({
+      where: { examSetupTypeId },
+      attributes: ['examSetupTypeId'],
+    });
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.examSetupTypeModel).update(data, {
       where: { examSetupTypeId },
     });
   } catch (error) {
@@ -134,7 +159,7 @@ export async function findConflictingExamForStudentCohort({
   const examStartMinutesSql = "(TIME_TO_SEC(`exam_schedule`.`exam_time`) / 60)";
   const examEndMinutesSql = `(${examStartMinutesSql} + CAST(\`exam_schedule\`.\`duration\` AS UNSIGNED))`;
 
-  return model.examScheduleModel.findOne({
+  return scoped(model.examScheduleModel).findOne({
     attributes: ["examScheduleId", "examDate", "examTime", "duration", "subjectId"],
     where: {
       examDate,
@@ -171,7 +196,7 @@ export async function findConflictingExamForStudentCohort({
 
 export async function addExamSchedule(examDetail) {
   try {
-    return await model.examScheduleModel.create(examDetail);
+    return await scoped(model.examScheduleModel).create(examDetail);
   } catch (error) {
     console.error("Error adding exam schedule:", error.message);
     throw error;
@@ -180,7 +205,7 @@ export async function addExamSchedule(examDetail) {
 
 export async function getDetailByExamType(examSetupTypeId) {
   try {
-    return await model.examSetupTypeModel.findOne({
+    return await scoped(model.examSetupTypeModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: { examSetupTypeId },
       include: [
@@ -216,7 +241,7 @@ export async function getDetailByExamType(examSetupTypeId) {
 
 export async function getExamDetailByStudentId(studentId) {
   try {
-    return await model.studentModel.findOne({
+    return await scoped(model.studentModel).findOne({
       attributes: ["studentId", "semesterId", "firstName"],
       where: { studentId },
       include: [
@@ -256,7 +281,7 @@ export async function getExamDetailByStudentId(studentId) {
 
 export async function getExamScheduleById(examScheduleId) {
   try {
-    return await model.examScheduleModel.findByPk(examScheduleId, {
+    return await scoped(model.examScheduleModel).findByPk(examScheduleId, {
       include: [
         {
           model: model.subjectModel,
@@ -290,7 +315,7 @@ export async function getExamScheduleById(examScheduleId) {
 
 export async function getExamSetupTypeTermById(examSetupTypeTermId) {
   try {
-    return await model.examSetupTypeTermModel.findByPk(examSetupTypeTermId);
+    return await scoped(model.examSetupTypeTermModel).findByPk(examSetupTypeTermId);
   } catch (error) {
     console.error("Error fetching exam setup type term by id:", error.message);
     throw error;
@@ -298,8 +323,9 @@ export async function getExamSetupTypeTermById(examSetupTypeTermId) {
 }
 
 export async function findSubjectsWithSchedules(courseId, acedmicYearId, term, examSetupTypeTermId, sessionId) {
-  return model.subjectModel.findAll({
+  return scoped(model.subjectModel).findAll({
     where: {
+      ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
       ...(acedmicYearId && { acedmicYearId }),
       ...(term && { term }),
@@ -345,8 +371,18 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
     return [];
   }
 
-  return model.examScheduleRoomCapacityModel.findAll({
+  const scopedSchedules = await scoped(model.examScheduleModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
+    attributes: ['examScheduleId'],
+    raw: true,
+  });
+  const allowedIds = scopedSchedules.map((s) => s.examScheduleId);
+  if (!allowedIds.length) {
+    return [];
+  }
+
+  return model.examScheduleRoomCapacityModel.findAll({
+    where: { examScheduleId: { [Op.in]: allowedIds } },
     attributes: [
       "examScheduleRoomCapacityId",
       "examScheduleId",
@@ -370,7 +406,7 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
 
 export async function countStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
   try {
-    return await model.studentModel.count({
+    return await scoped(model.studentModel).count({
       include: [
         {
           model: model.classSectionModel,
@@ -380,6 +416,7 @@ export async function countStudentsForTerm(courseId, acedmicYearId, term, sessio
           where: {
             courseId,
             acedmicYearId,
+            ...buildScope(model.classSectionModel),
             ...(sessionId && { sessionId }),
           },
           include: [
@@ -402,7 +439,7 @@ export async function countStudentsForTerm(courseId, acedmicYearId, term, sessio
 
 export async function findStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
   try {
-    return await model.studentModel.findAll({
+    return await scoped(model.studentModel).findAll({
       attributes: [
         "studentId",
         [
@@ -441,6 +478,7 @@ export async function findStudentsForTerm(courseId, acedmicYearId, term, session
           where: {
             courseId,
             acedmicYearId,
+            ...buildScope(model.classSectionModel),
             ...(sessionId && { sessionId }),
           },
           include: [

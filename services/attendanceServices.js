@@ -36,8 +36,8 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
   }
 };
 
-export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
-  const result = await attendanceService.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
+export async function getAttendanceDetails() {
+  const result = await attendanceService.getAttendanceDetails();
   const groupedData = {};
   for (const record of result) {
     const {
@@ -642,7 +642,7 @@ function parseAttendanceExcelRows(dataRows, colMappings) {
 
 /* ----------------  Validate and Batch Prepare Records ---------------- */
 async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData) {
-  const studentRecords = await attendanceService.getStudentsByIds(studentIds, commonData.instituteId);
+  const studentRecords = await attendanceService.getStudentsByIds(studentIds);
   const studentMap = new Map();
   studentRecords.forEach(s => studentMap.set(s.studentId, s));
 

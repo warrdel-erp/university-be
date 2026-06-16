@@ -1,108 +1,66 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
-// import { Term, Subject, Course, Session } from '../models/index.js';
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-import {
-  courseModel,
-  subjectModel,
-  sessionModel,
-  semesterModel
-} from '../models/index.js';
 export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId) {
   try {
-    const subjects = await model.subjectModel.findAll({
+    return await scoped(model.subjectModel).findAll({
       where: { courseId, acedmicYearId },
       attributes: ['subjectId', 'subjectName', 'term'],
       raw: true,
-      nest: true
+      nest: true,
     });
-    return subjects;
   } catch (error) {
     console.error('Error fetching subjects:', error);
     throw error;
   }
 }
 
-export async function getSubjectsByCourseAndAcademicYearAndInstitute(courseId, acedmicYearId, instituteId) {
+export async function getSubjectsByCourseAndAcademicYearAndInstitute(courseId, acedmicYearId) {
   try {
-    const subjects = await model.subjectModel.findAll({
-      where: { courseId, acedmicYearId, instituteId },
-      attributes: ['subjectId', 'subjectName', 'term', "subjectCode"],
+    return await scoped(model.subjectModel).findAll({
+      where: { courseId, acedmicYearId },
+      attributes: ['subjectId', 'subjectName', 'term', 'subjectCode'],
       raw: true,
-      nest: true
+      nest: true,
     });
-    return subjects;
   } catch (error) {
     console.error('Error fetching subjects:', error);
     throw error;
   }
 }
-
 
 export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
-    const classSections = await model.classSectionModel.findAll({
+    return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
       attributes: ['classSectionsId', 'section'],
       include: [
         {
-          model: model.classModel,
+          model: model.classModel.unscoped(),
           as: 'classGroup',
-          attributes: ['classId', 'term']
+          attributes: ['classId', 'term'],
         },
       ],
       raw: true,
-      nest: true
+      nest: true,
     });
-    return classSections;
   } catch (error) {
     console.error('Error fetching class sections:', error);
     throw error;
   }
 }
 
-
-export const getTermsWithSubjectRepo = async (instituteId, academicYearId) => {
-  return await courseModel.findAll({
-    where: { instituteId },
-    attributes: ['id', 'courseName'],
-    include: [
-      {
-        model: semesterModel,
-        as: "semesters",
-        required: true,
-        include: [
-          {
-            model: subjectModel,
-            as: "subjects",
-            attributes: ['id', 'subjectName']
-          },
-          {
-            model: sessionModel,
-            as: "session",
-            required: true,
-            where: { acedmic_year_id: academicYearId },
-            attributes: ['session_id', 'session_name']
-          }
-        ]
-      }
-    ]
-  });
-};
-
 export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId) {
   try {
-    const examSetupTypeTerms = await model.examSetupTypeTermModel.findAll({
+    return await scoped(model.examSetupTypeTermModel).findAll({
       where: { courseId, acedmicYearId },
       include: [
         {
-          model: model.examSetupTypeModel,
+          model: model.examSetupTypeModel.unscoped(),
           as: 'examSetupType',
-        }
+        },
       ],
     });
-    return examSetupTypeTerms;
-
   } catch (error) {
     console.error('Error fetching exam setup type terms:', error);
     throw error;

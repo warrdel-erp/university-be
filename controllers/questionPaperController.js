@@ -7,9 +7,8 @@ export async function addQuestionPaper(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
-    const universityId = req.user.universityId;
     try {
-        const result = await questionPaperServices.addQuestionPaper(req.body, createdBy, updatedBy, universityId);
+        const result = await questionPaperServices.addQuestionPaper(req.body, createdBy, updatedBy);
 
         return SuccessResponse(res, 201, "Question paper created successfully", result);
     } catch (error) {
@@ -90,7 +89,6 @@ export async function generateQuestionPaper(req, res) {
         const { name, blueprintId, examScheduleId, numberOfPapers = 1 } = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-        const universityId = req.user.universityId;
 
         if (!name || !blueprintId || !examScheduleId) {
             return ErrorResponse(res, 400, "name, blueprintId and examScheduleId are required");
@@ -102,8 +100,7 @@ export async function generateQuestionPaper(req, res) {
             examScheduleId,
             numberOfPapers,
             createdBy,
-            updatedBy,
-            universityId
+            updatedBy
         );
 
         return SuccessResponse(res, 201, `${numberOfPapers} Question paper(s) generated successfully`, result);

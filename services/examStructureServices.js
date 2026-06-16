@@ -2,21 +2,18 @@ import * as examStructureRepository from "../repository/examStructureRepository.
 import * as examScheduleRepository from "../repository/examScheduleRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 
-export async function addExamStructure(examDetail, createdBy, updatedBy,universityId,instituteId) {
+export async function addExamStructure(examDetail, createdBy, updatedBy) {
     examDetail.createdBy = createdBy;
     examDetail.updatedBy = updatedBy;
-    examDetail.universityId = universityId;
-    examDetail.instituteId = instituteId;
-    const result = await examStructureRepository.addExamStructure(examDetail);
-    return result;
+    return await examStructureRepository.addExamStructure(examDetail);
 };
 
-export async function getExamStructure(universityId,acedmicYearId,role,instituteId) {
-    return await examStructureRepository.getExamStructure(universityId,acedmicYearId,role,instituteId);
+export async function getExamStructure(acedmicYearId) {
+    return await examStructureRepository.getExamStructure(acedmicYearId);
 };
 
-export async function getSingleExamStructure(courseId,sessionId, universityId) {
-    return await examStructureRepository.getSingleExamStructure(courseId,sessionId, universityId);
+export async function getSingleExamStructure(courseId, sessionId) {
+    return await examStructureRepository.getSingleExamStructure(courseId, sessionId);
 };
 
 export async function deleteExamStructure(examStructureId) {
@@ -28,16 +25,12 @@ export async function updateExamStructure(examStructureId, examDetail, updatedBy
     await examStructureRepository.updateExamStructure(examStructureId, examDetail);
 };
 
-export async function addExamType(examDetail, createdBy, updatedBy,universityId,instituteId) {
+export async function addExamType(examDetail, createdBy, updatedBy) {
     const payload = { ...examDetail };
-    // scheduledBy should not be accepted in create exam setup type.
     delete payload.scheduledBy;
     payload.createdBy = createdBy;
     payload.updatedBy = updatedBy;
-    payload.universityId = universityId;
-    payload.instituteId = instituteId;
-    const result = await examStructureRepository.addExamType(payload);
-    return result;
+    return await examStructureRepository.addExamType(payload);
 };
 
 export async function getDetailByExamType(examSetupTypeId) {
@@ -49,8 +42,6 @@ function toPlain(row) {
     return typeof row.toJSON === "function" ? row.toJSON() : row;
 }
 
-
-
 function resolveTerm(termNumber, termRows) {
     if (termNumber != null && termNumber !== "") {
         const parsed = Number(termNumber);
@@ -59,13 +50,11 @@ function resolveTerm(termNumber, termRows) {
     return termRows[0]?.term ?? null;
 }
 
-export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
+export async function getSingleExamType(courseId, sessionId, termNumber) {
     const result = await examStructureRepository.getSingleExamType(
         courseId,
         sessionId,
-        universityId,
         termNumber,
-        instituteId,
     );
 
     const rows = result ?? [];
@@ -95,14 +84,12 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
                 .filter(Boolean);
 
             let isHallTicketGenerated = false;
-            if (termIds.length > 0 && sessionId && instituteId && universityId) {
+            if (termIds.length > 0 && sessionId) {
                 const counts = await Promise.all(
                     termIds.map((examSetupTypeTermId) =>
                         studentHallTicketRepository.countHallTickets({
                             examSetupTypeTermId,
                             sessionId,
-                            instituteId,
-                            universityId,
                         }),
                     ),
                 );

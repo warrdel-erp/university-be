@@ -1,9 +1,9 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function addRoomType(RoomTypeData) {    
+export async function addRoomType(RoomTypeData) {
     try {
-        const result = await model.roomTypeModel.create(RoomTypeData);
+        const result = await scoped(model.roomTypeModel).create(RoomTypeData);
         return result;
     } catch (error) {
         console.error("Error in add RoomType :", error);
@@ -11,16 +11,10 @@ export async function addRoomType(RoomTypeData) {
     }
 };
 
-export async function getRoomTypeDetails(universityId,acedmicYearId,role,instituteId) {
+export async function getRoomTypeDetails() {
     try {
-        const RoomType = await model.roomTypeModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where: 
-                {
-                     ...(universityId && { universityId }),
-                    ...(acedmicYearId && { acedmicYearId }),
-                    ...(role === 'Head' && { instituteId })
-                },
+        const RoomType = await scoped(model.roomTypeModel).findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         });
 
         return RoomType;
@@ -33,7 +27,7 @@ export async function getRoomTypeDetails(universityId,acedmicYearId,role,institu
 
 export async function getSingleRoomTypeDetails(roomTypeId) {
     try {
-        const RoomType = await model.roomTypeModel.findOne({
+        const RoomType = await scoped(model.roomTypeModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { roomTypeId },
         });
@@ -46,18 +40,18 @@ export async function getSingleRoomTypeDetails(roomTypeId) {
 }
 
 export async function deleteRoomType(roomTypeId) {
-    const deleted = await model.roomTypeModel.destroy({ where: { roomTypeId: roomTypeId } });
+    const deleted = await scoped(model.roomTypeModel).destroy({ where: { roomTypeId } });
     return deleted > 0;
 }
 
 export async function updateRoomType(roomTypeId, RoomTypeData) {
     try {
-        const result = await model.roomTypeModel.update(RoomTypeData, {
+        const result = await scoped(model.roomTypeModel).update(RoomTypeData, {
             where: { roomTypeId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating RoomType creation ${roomTypeId}:`, error);
-        throw error; 
+        throw error;
     }
 }

@@ -22,18 +22,9 @@ export const addEmployee = async (req, res) => {
 };
 
 export const getAllEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
-    const headInstituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { campusId, instituteId } = req.query;
     try {
-        const result = await employee.getAllEmployee(
-            universityId,
-            campusId,
-            instituteId,
-            headInstituteId,
-            role
-        );
+        const result = await employee.getAllEmployee(campusId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);
@@ -42,13 +33,12 @@ export const getAllEmployee = async (req, res) => {
 };
 
 export const getSingleEmployeeDetails = async (req, res) => {
-    const employeeId = req.params.id
-    const universityId = req.user.universityId;
+    const employeeId = req.params.id;
     try {
         if (!employeeId) {
             return res.status(400).send('employeeId is required')
         }
-        const result = await employee.getSingleEmployeeDetails(employeeId, universityId);
+        const result = await employee.getSingleEmployeeDetails(employeeId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single employee details:", error);
@@ -162,16 +152,7 @@ export const getTeacherTimeTable = async (req, res) => {
             return res.status(400).send("employeeId is required");
         }
 
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const role = req.user.role;
-
-        const result = await employee.getTeacherTimeTable(
-            employeeId,
-            universityId,
-            instituteId,
-            role
-        );
+        const result = await employee.getTeacherTimeTable(employeeId);
 
         res.status(200).send(result);
 
@@ -189,16 +170,7 @@ export const getTeacherSubject = async (req, res) => {
             return res.status(400).send("employeeId is required");
         }
 
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const role = req.user.role;
-
-        const result = await employee.getTeacherSubject(
-            employeeId,
-            universityId,
-            instituteId,
-            role
-        );
+        const result = await employee.getTeacherSubject(employeeId);
 
         res.status(200).send(result);
 

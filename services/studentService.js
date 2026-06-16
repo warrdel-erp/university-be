@@ -309,12 +309,10 @@ function studentHttpError(message, statusCode = 400) {
   return err;
 }
 
-async function assertFeePlanProfileForInstitute(feePlanProfileId, instituteId) {
-  const profile =
-    await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
-      feePlanProfileId,
-      instituteId,
-    );
+async function assertFeePlanProfileForInstitute(feePlanProfileId) {
+  const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
+    feePlanProfileId
+  );
   if (!profile) {
     throw studentHttpError("Fee plan profile not found for this institute", 404);
   }
@@ -358,10 +356,7 @@ async function resolveStudentRoleId() {
 }
 
 export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
-  await assertFeePlanProfileForInstitute(
-    info.feePlanProfileId,
-    info.instituteId,
-  );
+  await assertFeePlanProfileForInstitute(info.feePlanProfileId);
   await assertStudentEmailAvailable(info.email);
   await assertStudentEnrollNumberAvailable(info.enrollNumber);
 
@@ -420,11 +415,8 @@ export async function getAllStudents(payload) {
   }
 }
 
-export async function getSingleStudentDetail(studentId, universityId) {
-  return await studentRepository.getSingleStudentDetail(
-    studentId,
-    universityId,
-  );
+export async function getSingleStudentDetail(studentId) {
+  return await studentRepository.getSingleStudentDetail(studentId);
 }
 
 // export async function importStudentData(excelData, data) {
@@ -592,10 +584,7 @@ export async function importStudentData(excelData, data) {
       convertedData.admisssionDate = formatAdmissionDate;
 
       if (convertedData.feePlanProfileId) {
-        await assertFeePlanProfileForInstitute(
-          convertedData.feePlanProfileId,
-          convertedData.instituteId,
-        );
+        await assertFeePlanProfileForInstitute(convertedData.feePlanProfileId);
       }
 
       //  Step 7: Insert student with scholar number
@@ -1006,10 +995,7 @@ export async function updateStudentDetails(StudentId, info, files, instituteId) 
       if (!resolvedInstituteId) {
         throw updateHttpError("instituteId is required to assign a fee plan", 400);
       }
-      await assertFeePlanProfileForInstitute(
-        studentPayload.feePlanProfileId,
-        resolvedInstituteId
-      );
+      await assertFeePlanProfileForInstitute(studentPayload.feePlanProfileId);
     }
 
     let rowsUpdated = 0;
@@ -1104,8 +1090,7 @@ export async function updateStudentDetails(StudentId, info, files, instituteId) 
 
     await transaction.commit();
 
-    const universityId = Number(info.universityId);
-    const studentRow = await getSingleStudentDetail(StudentId, universityId);
+    const studentRow = await getSingleStudentDetail(StudentId);
     if (!studentRow) {
       throw updateHttpError("Student not found", 404);
     }
@@ -1161,18 +1146,8 @@ export async function deleteStudentDetail(studentId) {
   }
 }
 
-export async function getEmptyEnrollNumber(
-  universityId,
-  acedmicYearId,
-  instituteId,
-  role,
-) {
-  return await studentRepository.getEmptyEnrollNumber(
-    universityId,
-    acedmicYearId,
-    instituteId,
-    role,
-  );
+export async function getEmptyEnrollNumber() {
+  return await studentRepository.getEmptyEnrollNumber();
 }
 
 export async function studentCourseMapping(data) {
@@ -1206,19 +1181,10 @@ export async function classStudentMapping(data, createdBy) {
   }
 }
 
-export async function getclassStudentMapping(
-  semesterId,
-  universityId,
-  acedmicYearId,
-  instituteId,
-  role,
-) {
+export async function getclassStudentMapping(semesterId, acedmicYearId) {
   return await studentRepository.getclassStudentMapping(
     semesterId,
-    universityId,
     acedmicYearId,
-    instituteId,
-    role,
   );
 }
 
@@ -1448,12 +1414,12 @@ function groupFeePlanItemsByProfileId(feePlanItems) {
 }
 
 /** GET /student/feePlanProfiles/all — students with fee plan + nested terms (paginated). */
-export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
+export async function getFeePlanInitiateAll(pagination = {}) {
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || 20;
 
-  const total = await studentRepository.countStudentsWithFeePlanForInitiate(instituteId);
-  const students = await studentRepository.findStudentsWithFeePlanForInitiate(instituteId, {
+  const total = await studentRepository.countStudentsWithFeePlanForInitiate();
+  const students = await studentRepository.findStudentsWithFeePlanForInitiate({
     page,
     limit,
   });
@@ -1475,8 +1441,8 @@ export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
   ];
 
   const [feePlanItems, invoices] = await Promise.all([
-    studentRepository.findFeePlanItemsByProfileIds(profileIds, instituteId),
-    studentRepository.findInvoicesByStudentIds(studentIds, instituteId),
+    studentRepository.findFeePlanItemsByProfileIds(profileIds),
+    studentRepository.findInvoicesByStudentIds(studentIds),
   ]);
 
   const itemsByProfile = groupFeePlanItemsByProfileId(feePlanItems);
@@ -1492,18 +1458,8 @@ export async function getFeePlanInitiateAll(instituteId, pagination = {}) {
   };
 }
 
-export async function getEmptyFeeDetails(
-  universityId,
-  acedmicYearId,
-  instituteId,
-  filters,
-) {
-  return await studentRepository.getEmptyFeeDetails(
-    universityId,
-    acedmicYearId,
-    instituteId,
-    filters,
-  );
+export async function getEmptyFeeDetails(filters) {
+  return await studentRepository.getEmptyFeeDetails(filters);
 }
 
 export async function getStudentSubject(studentId) {
@@ -2120,13 +2076,11 @@ export async function getStudentsByClassSection(
   }
 }
 
-export async function getAllAnswerSheets(filters, instituteId, universityId) {
+export async function getAllAnswerSheets(filters) {
   const { examScheduleId } = filters;
 
   const schedule = await studentRepository.getScopedExamScheduleForEvaluation(
     examScheduleId,
-    instituteId,
-    universityId,
   );
 
   if (!schedule) {
@@ -2148,8 +2102,6 @@ export async function getAllAnswerSheets(filters, instituteId, universityId) {
     courseId,
     term,
     examScheduleId,
-    instituteId,
-    universityId,
   );
 
   const data = studentsdata.map((student) => {

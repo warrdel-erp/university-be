@@ -1,26 +1,24 @@
-import * as feeTypeCreationService  from "../repository/feeTypeRepository.js";
+import * as feeTypeCreationService from "../repository/feeTypeRepository.js";
 
-export async function addFeeType(FeeTypeData, createdBy, updatedBy) {
-
-        FeeTypeData.createdBy = createdBy;
-        FeeTypeData.updatedBy = updatedBy;
-        const FeeType = await feeTypeCreationService.addFeeType(FeeTypeData);
-        return FeeType;
-};
-
-export async function getFeeTypeDetails(universityId,acedmicYearId,instituteId,role) {
-    return await feeTypeCreationService.getFeeTypeDetails(universityId,acedmicYearId,instituteId,role);
+export async function addFeeType(feeTypeData, createdBy, updatedBy) {
+  feeTypeData.createdBy = createdBy;
+  feeTypeData.updatedBy = updatedBy;
+  return feeTypeCreationService.addFeeType(feeTypeData);
 }
 
-export async function getSingleFeeTypeDetails(feeTypeId,universityId) {
-    return await feeTypeCreationService.getSingleFeeTypeDetails(feeTypeId,universityId);
+export async function getFeeTypeDetails(filters = {}) {
+  return feeTypeCreationService.getFeeTypeDetails(filters);
 }
 
-export async function updateFeeType(feeTypeId, FeeTypeData, updatedBy) {    
-        FeeTypeData.updatedBy = updatedBy;
-       return await feeTypeCreationService.updateFeeType(feeTypeId, FeeTypeData);
+export async function getSingleFeeTypeDetails(feeTypeId) {
+  return feeTypeCreationService.getSingleFeeTypeDetails(feeTypeId);
+}
+
+export async function updateFeeType(feeTypeId, feeTypeData, updatedBy) {
+  feeTypeData.updatedBy = updatedBy;
+  return feeTypeCreationService.updateFeeType(feeTypeId, feeTypeData);
 }
 
 export async function deleteFeeType(feeTypeId) {
-    return await feeTypeCreationService.deleteFeeType(feeTypeId);
+  return feeTypeCreationService.deleteFeeType(feeTypeId);
 }

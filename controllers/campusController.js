@@ -1,8 +1,5 @@
 import * as campusService from "../services/campusService.js";
 
-/**
- * Handle campus creation
- */
 export const createCampus = async (req, res) => {
   try {
     const universityId = req.user.universityId;
@@ -38,9 +35,6 @@ export const createCampus = async (req, res) => {
   }
 };
 
-/**
- * Handle listing of campuses
- */
 export const listCampuses = async (req, res) => {
   try {
     const universityId = req.user.universityId;

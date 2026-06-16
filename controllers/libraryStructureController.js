@@ -4,12 +4,11 @@ export async function addFloor(req, res) {
     const {name,campusId,instituteId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
     try {
         if(!(name && campusId && instituteId)){
            return res.status(400).send('floor Name and campusId is required')
         }
-        const floor = await libraryStructureService.addFloor(req.body,createdBy,updatedBy,universityId);
+        const floor = await libraryStructureService.addFloor(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", floor });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -17,10 +16,8 @@ export async function addFloor(req, res) {
 }
 
 export async function getAllFloor(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const floor = await libraryStructureService.getFloorDetails(universityId, instituteId);
+        const floor = await libraryStructureService.getFloorDetails();
         res.status(200).json(floor);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -28,11 +25,9 @@ export async function getAllFloor(req, res) {
 }
 
 export async function getSingleFloorDetails(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         const { libraryFloorId } = req.query;
-        const floor = await libraryStructureService.getSingleFloorDetails(libraryFloorId, universityId, instituteId);
+        const floor = await libraryStructureService.getSingleFloorDetails(libraryFloorId);
         if (floor) {
             res.status(200).json(floor);
         } else {
@@ -92,10 +87,8 @@ export async function addAisle(req, res) {
 }
 
 export async function getAllAisle(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const data = await libraryStructureService.getAisleDetails(universityId, instituteId);
+        const data = await libraryStructureService.getAisleDetails();
         res.status(200).json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -103,11 +96,9 @@ export async function getAllAisle(req, res) {
 }
 
 export async function getSingleAisleDetails(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         const { libraryAisleId } = req.query;
-        const result = await libraryStructureService.getSingleAisle(libraryAisleId, universityId, instituteId);
+        const result = await libraryStructureService.getSingleAisle(libraryAisleId);
         res.status(200).json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -158,10 +149,8 @@ export async function addRack(req, res) {
 }
 
 export async function getAllRack(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const data = await libraryStructureService.getRackDetails(universityId, instituteId);
+        const data = await libraryStructureService.getRackDetails();
         res.status(200).json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -169,11 +158,9 @@ export async function getAllRack(req, res) {
 }
 
 export async function getSingleRackDetails(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         const { libraryRackId } = req.query;
-        const result = await libraryStructureService.getSingleRack(libraryRackId, universityId, instituteId);
+        const result = await libraryStructureService.getSingleRack(libraryRackId);
         res.status(200).json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -224,10 +211,8 @@ export async function addRow(req, res) {
 }
 
 export async function getAllRow(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const data = await libraryStructureService.getRowDetails(universityId, instituteId);
+        const data = await libraryStructureService.getRowDetails();
         res.status(200).json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -235,11 +220,9 @@ export async function getAllRow(req, res) {
 }
 
 export async function getSingleRowDetails(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         const { libraryRowId } = req.query;
-        const result = await libraryStructureService.getSingleRow(libraryRowId, universityId, instituteId);
+        const result = await libraryStructureService.getSingleRow(libraryRowId);
         res.status(200).json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });

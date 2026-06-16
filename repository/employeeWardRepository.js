@@ -1,20 +1,36 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function addEmployeeWard(data,transaction) {
+async function assertScopedEmployee(employeeId, transaction) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+        transaction,
+    });
+}
+
+export async function addEmployeeWard(data, transaction) {
     try {
-        const result = await model.employeeWardModel.create(data,{transaction});
-        return result;
+        const employee = await assertScopedEmployee(data.employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        return await model.employeeWardModel.create(data, { transaction });
     } catch (error) {
         console.error("Error in add employee ward:", error);
         throw error;
     }
 };
 
-export async function deleteEmployeeWard (employeeId) {
+export async function deleteEmployeeWard(employeeId) {
     try {
-        const result = await model.employeeWardModel.destroy({
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        await model.employeeWardModel.destroy({
             where: { employeeId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'employee ward deleted successfully' };
     } catch (error) {
@@ -23,24 +39,28 @@ export async function deleteEmployeeWard (employeeId) {
     }
 };
 
-export async function refreshEmployeeWards(employeeId, wards,createdBy, updatedBy, transaction) {
-  try {
-    await model.employeeWardModel.destroy({ where: { employeeId }, transaction });
+export async function refreshEmployeeWards(employeeId, wards, createdBy, updatedBy, transaction) {
+    try {
+        const employee = await assertScopedEmployee(employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
 
-    const insertData = wards.map((w) => ({
-      employeeId,
-      createdBy,
-      updatedBy,
-     
-      name: w?.name ?? null,
-      relationship: w?.relationship ?? null,
-      dateOfBirth: w?.dateOfBirth ?? null,
-      profession: w?.profession ?? null
-    }));
+        await model.employeeWardModel.destroy({ where: { employeeId }, transaction });
 
-    return await model.employeeWardModel.bulkCreate(insertData, { transaction });
-  } catch (error) {
-    console.error("Error refreshing employee wards:", error);
-    throw error;
-  }
+        const insertData = wards.map((w) => ({
+            employeeId,
+            createdBy,
+            updatedBy,
+            name: w?.name ?? null,
+            relationship: w?.relationship ?? null,
+            dateOfBirth: w?.dateOfBirth ?? null,
+            profession: w?.profession ?? null,
+        }));
+
+        return await model.employeeWardModel.bulkCreate(insertData, { transaction });
+    } catch (error) {
+        console.error("Error refreshing employee wards:", error);
+        throw error;
+    }
 };

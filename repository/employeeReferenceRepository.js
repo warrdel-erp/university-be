@@ -1,20 +1,36 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function addEmployeeReference(data,transaction) {
+async function assertScopedEmployee(employeeId, transaction) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+        transaction,
+    });
+}
+
+export async function addEmployeeReference(data, transaction) {
     try {
-        const result = await model.employeeReferenceModel.create(data,{transaction});
-        return result;
+        const employee = await assertScopedEmployee(data.employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        return await model.employeeReferenceModel.create(data, { transaction });
     } catch (error) {
         console.error("Error in add employee reference:", error);
         throw error;
     }
 };
 
-export async function deleteEmployeeReference (employeeId) {
+export async function deleteEmployeeReference(employeeId) {
     try {
-        const result = await model.employeeReferenceModel.destroy({
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        await model.employeeReferenceModel.destroy({
             where: { employeeId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'employee reference deleted successfully' };
     } catch (error) {
@@ -23,39 +39,47 @@ export async function deleteEmployeeReference (employeeId) {
     }
 };
 
-export async function refreshEmployeeReferences(employeeId, references,createdBy, updatedBy, transaction) {
-  try {
-    await model.employeeReferenceModel.destroy({
-      where: { employeeId },
-      transaction
-    });
+export async function refreshEmployeeReferences(employeeId, references, createdBy, updatedBy, transaction) {
+    try {
+        const employee = await assertScopedEmployee(employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
 
-    const insertData = references.map(r => ({
-      employeeId,
-      createdBy,
-      updatedBy,
-      // Never trust UI payload IDs/system fields for refresh inserts.
-      name: r.name,
-      designation: r.designation,
-      mobileNumber: r.mobileNumber ?? r.mobaileNumber ?? null,
-      address: r.address ?? null
-    }));
+        await model.employeeReferenceModel.destroy({
+            where: { employeeId },
+            transaction,
+        });
 
-    return await model.employeeReferenceModel.bulkCreate(insertData, { transaction });
-  } catch (error) {
-    console.error("Error refreshing employee references:", error);
-    throw error;
-  }
+        const insertData = references.map(r => ({
+            employeeId,
+            createdBy,
+            updatedBy,
+            name: r.name,
+            designation: r.designation,
+            mobileNumber: r.mobileNumber ?? r.mobaileNumber ?? null,
+            address: r.address ?? null,
+        }));
+
+        return await model.employeeReferenceModel.bulkCreate(insertData, { transaction });
+    } catch (error) {
+        console.error("Error refreshing employee references:", error);
+        throw error;
+    }
 };
 
 export async function getEmployeeReferencesByEmployeeId(employeeId) {
-  try {
-    return await model.employeeReferenceModel.findAll({
-      where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt"] },
-    });
-  } catch (error) {
-    console.error("Error fetching employee references:", error);
-    throw error;
-  }
+    try {
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            return [];
+        }
+        return await model.employeeReferenceModel.findAll({
+            where: { employeeId },
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+        });
+    } catch (error) {
+        console.error("Error fetching employee references:", error);
+        throw error;
+    }
 };

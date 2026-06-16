@@ -18,12 +18,8 @@ export async function addAttendance(req, res) {
 }
 
 export async function getAttendanceDetails(req, res) {
-  const role = req.user.role;
-  const instituteId = req.user.defaultInstituteId;
-  const universityId = req.user.universityId;
-  const { acedmicYearId } = req.query
   try {
-    const Attendance = await AttendanceCreation.getAttendanceDetails(universityId, acedmicYearId, role, instituteId);
+    const Attendance = await AttendanceCreation.getAttendanceDetails();
     res.status(200).json(Attendance);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -1,8 +1,6 @@
 import * as termsRepository from '../repository/termsRepository.js';
 import * as sessionRepository from '../repository/sessionRepository.js';
 import * as courseRepository from '../repository/courseRepository.js';
-import { getTermsWithSubjectRepo } from '../repository/termsRepository.js';
-
 export async function getTermsData(courseId, sessionId) {
     try {
         // 1. Get session and course to find academicYearId and termType
@@ -79,12 +77,12 @@ export async function getTermsData(courseId, sessionId) {
     }
 }
 
-export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => {
+export const getTermsWithSubjectService = async (acedmicYearId) => {
     try {
 
         const [session, courses] = await Promise.all([
             sessionRepository.getSessionByInstituteAndAcademicYear(),
-            courseRepository.getAllCourseByInstituteId(instituteId)
+            courseRepository.getAllCourseByInstituteId()
         ]);
 
         if (!session) {
@@ -105,8 +103,7 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
             const subjects =
                 await termsRepository.getSubjectsByCourseAndAcademicYearAndInstitute(
                     courseId,
-                    acedmicYearId,
-                    instituteId
+                    acedmicYearId
                 );
 
             const termsMap = {};

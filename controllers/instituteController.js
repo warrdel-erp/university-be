@@ -1,8 +1,5 @@
 import * as instituteService from "../services/instituteService.js";
 
-/**
- * Handle institute creation
- */
 export const createInstitute = async (req, res) => {
   try {
     const universityId = req.user.universityId;
@@ -39,9 +36,6 @@ export const createInstitute = async (req, res) => {
   }
 };
 
-/**
- * Handle listing of institutes
- */
 export const listInstitutes = async (req, res) => {
   try {
     const universityId = req.user.universityId;

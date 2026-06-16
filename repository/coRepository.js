@@ -1,44 +1,34 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
 export async function addCo(coData) {
     try {
-        const result = await model.coModel.create(coData);
-        return result;
+        return await scoped(model.coModel).create(coData);
     } catch (error) {
-        console.error("Error in add co :", error);
+        console.error('Error in add co :', error);
         throw error;
     }
-};
+}
 
-export async function getAllCo(universityId, instituteId, role, acedmicYearId) {
+export async function getAllCo() {
     try {
-        const whereClause = {
-            ...(universityId && { universityId }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { institute_id: instituteId })
-        };
-        const co = await model.coModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: whereClause,
+        return await scoped(model.coModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
-                    model: model.syllabusDetailsModel,
-                    as: "cosyllabus",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    model: model.syllabusDetailsModel.unscoped(),
+                    as: 'cosyllabus',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.subjectModel,
+                            model: model.subjectModel.unscoped(),
                             as: 'syllabusSubject',
-                            attributes: {
-                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-                            },
-                        }
-                    ]
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                        },
+                    ],
                 },
-            ]
+            ],
         });
-
-        return co;
     } catch (error) {
         console.error('Error fetching co details all:', error);
         throw error;
@@ -47,28 +37,24 @@ export async function getAllCo(universityId, instituteId, role, acedmicYearId) {
 
 export async function getSingleCoDetails(coId) {
     try {
-        const Po = await model.coModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.coModel).findOne({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             where: { coId },
             include: [
                 {
-                    model: model.syllabusDetailsModel,
-                    as: "cosyllabus",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    model: model.syllabusDetailsModel.unscoped(),
+                    as: 'cosyllabus',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.subjectModel,
+                            model: model.subjectModel.unscoped(),
                             as: 'syllabusSubject',
-                            attributes: {
-                                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-                            },
-                        }
-                    ]
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                        },
+                    ],
                 },
-            ]
+            ],
         });
-
-        return Po;
     } catch (error) {
         console.error('Error fetching co details:', error);
         throw error;
@@ -77,10 +63,17 @@ export async function getSingleCoDetails(coId) {
 
 export async function updateCo(coId, poData) {
     try {
-        const result = await model.coModel.update(poData, {
-            where: { coId }
+        const existing = await scoped(model.coModel).findOne({
+            where: { coId },
+            attributes: ['coId'],
         });
-        return result;
+        if (!existing) {
+            return [0];
+        }
+
+        return await scoped(model.coModel).update(poData, {
+            where: { coId },
+        });
     } catch (error) {
         console.error(`Error updating co creation ${coId}:`, error);
         throw error;
@@ -88,93 +81,86 @@ export async function updateCo(coId, poData) {
 }
 
 export async function deleteCo(coId) {
-    const deleted = await model.coModel.destroy({ where: { coId: coId } });
+    const existing = await scoped(model.coModel).findOne({
+        where: { coId },
+        attributes: ['coId'],
+    });
+    if (!existing) {
+        return false;
+    }
+
+    const deleted = await scoped(model.coModel).destroy({ where: { coId } });
     return deleted > 0;
 }
 
 export async function addCoWeightage(coData) {
     try {
-        const result = await model.coWeightageModel.bulkCreate(coData);
-        return result;
+        return await scoped(model.coWeightageModel).bulkCreate(coData);
     } catch (error) {
-        console.error("Error in add weightage :", error);
+        console.error('Error in add weightage :', error);
         throw error;
     }
-};
+}
 
-export async function getAllCoWeightage(universityId, instituteId, role, acedmicYearId) {
+export async function getAllCoWeightage() {
     try {
-        const whereClause = {
-            ...(universityId && { universityId }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { institute_id: instituteId })
-        };
-        const co = await model.coWeightageModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","universityId","instituteId"] },
-            where: whereClause,
+        return await scoped(model.coWeightageModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy', 'universityId', 'instituteId'] },
             include: [
                 {
-                    model: model.coModel,
-                    as: "codetail",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","universityId","instituteId"] },
+                    model: model.coModel.unscoped(),
+                    as: 'codetail',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy', 'universityId', 'instituteId'] },
                     include: [
                         {
-                            model: model.syllabusDetailsModel,
-                            as: "cosyllabus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            model: model.syllabusDetailsModel.unscoped(),
+                            as: 'cosyllabus',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             include: [
                                 {
-                                    model: model.subjectModel,
+                                    model: model.subjectModel.unscoped(),
                                     as: 'syllabusSubject',
-                                    attributes: {
-                                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy","universityId","instituteId"]
-                                    },
-                                }
-                            ]
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                                },
+                            ],
                         },
-                    ]
+                    ],
                 },
-            ]
+            ],
         });
-
-        return co;
     } catch (error) {
         console.error('Error fetching co weightage all:', error);
         throw error;
     }
 }
 
-export async function getSingleCoDetailsWeightage(coId) {
+export async function getSingleCoDetailsWeightage(coWeightageId) {
     try {
-        const Po = await model.coWeightageModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { coId },
+        return await scoped(model.coWeightageModel).findOne({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            where: { coWeightageId },
             include: [
                 {
-                    model: model.coModel,
-                    as: "codetail",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    model: model.coModel.unscoped(),
+                    as: 'codetail',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.syllabusDetailsModel,
-                            as: "cosyllabus",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            model: model.syllabusDetailsModel.unscoped(),
+                            as: 'cosyllabus',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             include: [
                                 {
-                                    model: model.subjectModel,
+                                    model: model.subjectModel.unscoped(),
                                     as: 'syllabusSubject',
-                                    attributes: {
-                                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-                                    },
-                                }
-                            ]
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                                },
+                            ],
                         },
-                    ]
+                    ],
                 },
-            ]
+            ],
         });
-
-        return Po;
     } catch (error) {
         console.error('Error fetching co weightage:', error);
         throw error;
@@ -183,10 +169,17 @@ export async function getSingleCoDetailsWeightage(coId) {
 
 export async function updateCoWeightage(coWeightageId, poData) {
     try {
-        const result = await model.coModel.updateCoWeightage(poData, {
-            where: { coWeightageId }
+        const existing = await scoped(model.coWeightageModel).findOne({
+            where: { coWeightageId },
+            attributes: ['coWeightageId'],
         });
-        return result;
+        if (!existing) {
+            return [0];
+        }
+
+        return await scoped(model.coWeightageModel).update(poData, {
+            where: { coWeightageId },
+        });
     } catch (error) {
         console.error(`Error updating co weightage ${coWeightageId}:`, error);
         throw error;

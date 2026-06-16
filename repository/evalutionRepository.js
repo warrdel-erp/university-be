@@ -1,8 +1,9 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { buildScope, scoped } from '../utility/scoped.js';
 
 export async function addEvaluation(evaluationData) {
   try {
-    const result = await model.evalutionModel.bulkCreate(evaluationData);
+    const result = await scoped(model.evalutionModel).bulkCreate(evaluationData);
     return result;
   } catch (error) {
     console.error("Error in add Evaluation:", error);
@@ -10,36 +11,38 @@ export async function addEvaluation(evaluationData) {
   }
 };
 
-export async function getEvaluationDetails(universityId,examSetupTypeId,role,instituteId) {
+export async function getEvaluationDetails(examSetupTypeId) {
   try {
-    const Evaluations = await model.evalutionModel.findAll({
+    const Evaluations = await scoped(model.evalutionModel).findAll({
       where: {
-        ...(universityId && { universityId }),
-        ...(role === "Head" && instituteId && { instituteId }),
         ...(examSetupTypeId && { examSetupTypeId }),
       },
-
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
-
       include: [
         {
-          model: model.employeeModel,
+          model: model.employeeModel.unscoped(),
           as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName","employeeCode","department"]
+          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          where: buildScope(model.employeeModel),
+          required: false,
         },
         {
-          model: model.subjectModel,
+          model: model.subjectModel.unscoped(),
           as: "subjectEvalution",
-          attributes: ["subjectId", "subjectName","subjectCode"]
+          attributes: ["subjectId", "subjectName", "subjectCode"],
+          where: buildScope(model.subjectModel),
+          required: false,
         },
         {
-          model: model.examSetupTypeModel,
+          model: model.examSetupTypeModel.unscoped(),
           as: "examSetupTypeEvalution",
-          attributes: ["examSetupTypeId", "examType", "examName"]
-        }
-      ]
+          attributes: ["examSetupTypeId", "examType", "examName"],
+          where: buildScope(model.examSetupTypeModel),
+          required: false,
+        },
+      ],
     });
 
     return Evaluations;
@@ -51,30 +54,34 @@ export async function getEvaluationDetails(universityId,examSetupTypeId,role,ins
 
 export async function getSingleEvaluationDetails(evalutionId) {
   try {
-    const Evaluation = await model.evalutionModel.findOne({
+    const Evaluation = await scoped(model.evalutionModel).findOne({
       where: { evalutionId },
-
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
-
       include: [
         {
-          model: model.employeeModel,
+          model: model.employeeModel.unscoped(),
           as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName","employeeCode","department"]
+          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          where: buildScope(model.employeeModel),
+          required: false,
         },
         {
-          model: model.subjectModel,
+          model: model.subjectModel.unscoped(),
           as: "subjectEvalution",
-          attributes: ["subjectId", "subjectName","subjectCode"]
+          attributes: ["subjectId", "subjectName", "subjectCode"],
+          where: buildScope(model.subjectModel),
+          required: false,
         },
         {
-          model: model.examSetupTypeModel,
+          model: model.examSetupTypeModel.unscoped(),
           as: "examSetupTypeEvalution",
-          attributes: ["examSetupTypeId", "examType", "examName"]
-        }
-      ]
+          attributes: ["examSetupTypeId", "examType", "examName"],
+          where: buildScope(model.examSetupTypeModel),
+          required: false,
+        },
+      ],
     });
 
     return Evaluation;
@@ -86,37 +93,34 @@ export async function getSingleEvaluationDetails(evalutionId) {
 
 export async function getTeacherSubjectEvalution(employeeId) {
   try {
-    const Evaluation = await model.evalutionModel.findOne({
+    const Evaluation = await scoped(model.evalutionModel).findOne({
       where: { employeeId },
-
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
-
       include: [
         {
-          model: model.employeeModel,
+          model: model.employeeModel.unscoped(),
           as: "employeeEvalution",
-          attributes: ["employeeId", "employeeName","employeeCode","department"]
+          attributes: ["employeeId", "employeeName", "employeeCode", "department"],
+          where: buildScope(model.employeeModel),
+          required: true,
         },
         {
-          model: model.subjectModel,
+          model: model.subjectModel.unscoped(),
           as: "subjectEvalution",
-          attributes: ["subjectId", "subjectName","subjectCode"]
+          attributes: ["subjectId", "subjectName", "subjectCode"],
+          where: buildScope(model.subjectModel),
+          required: false,
         },
         {
-          model: model.examSetupTypeModel,
+          model: model.examSetupTypeModel.unscoped(),
           as: "examSetupTypeEvalution",
           attributes: ["examSetupTypeId", "examType", "examName"],
-          // include:[
-          //   {
-          //     model:model.examScheduleModel,
-          //     as:'examSchedulesTypes',
-          //     exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-          //   }
-          // ]
-        }
-      ]
+          where: buildScope(model.examSetupTypeModel),
+          required: false,
+        },
+      ],
     });
 
     return Evaluation;
@@ -127,18 +131,32 @@ export async function getTeacherSubjectEvalution(employeeId) {
 }
 
 export async function deleteEvaluation(evalutionId) {
-    const deleted = await model.evalutionModel.destroy({ where: { evalutionId: evalutionId } });
+    const existing = await scoped(model.evalutionModel).findOne({
+        where: { evalutionId },
+        attributes: ['evalutionId'],
+    });
+    if (!existing) {
+        return false;
+    }
+    const deleted = await scoped(model.evalutionModel).destroy({ where: { evalutionId } });
     return deleted > 0;
 }
 
 export async function updateEvaluation(evalutionId, evaluationData) {
     try {
-        const result = await model.evalutionModel.update(evaluationData, {
-            where: { evalutionId }
+        const existing = await scoped(model.evalutionModel).findOne({
+            where: { evalutionId },
+            attributes: ['evalutionId'],
         });
-        return result; 
+        if (!existing) {
+            return [0];
+        }
+        const result = await scoped(model.evalutionModel).update(evaluationData, {
+            where: { evalutionId },
+        });
+        return result;
     } catch (error) {
         console.error(`Error updating Evaluation creation ${evalutionId}:`, error);
-        throw error; 
+        throw error;
     }
 }

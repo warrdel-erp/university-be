@@ -5,13 +5,11 @@ export async function addLesson(req, res) {
     const { name, subjectId, acedmicYearId, sessionId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(name && subjectId && acedmicYearId && sessionId)) {
             return res.status(400).send('name,subjectId,acedmicYearId and sessionId is required')
         }
-        const lessonData = await lesson.addLesson(req.body, createdBy, updatedBy, universityId, instituteId);
+        const lessonData = await lesson.addLesson(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -19,12 +17,9 @@ export async function addLesson(req, res) {
 };
 
 export async function getAllLesson(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
-        const Lessons = await lesson.getLessonDetails(universityId, instituteId, role, acedmicYearId);
+        const Lessons = await lesson.getLessonDetails(acedmicYearId);
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -32,7 +27,6 @@ export async function getAllLesson(req, res) {
 };
 
 export async function getSingleLessonDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { lessonId } = req.query;
         const lessonDetail = await lesson.getSingleLessonDetails(lessonId);
@@ -50,13 +44,11 @@ export async function addTopice(req, res) {
     const { name, lessonId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(name && lessonId)) {
             return res.status(400).send('name and lessionId is required')
         }
-        const lessonData = await lesson.addTopice(req.body, createdBy, updatedBy, universityId, instituteId);
+        const lessonData = await lesson.addTopice(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -67,13 +59,11 @@ export async function addMapping(req, res) {
     const { topicId, timeTableMappingId, date } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(topicId && timeTableMappingId && date)) {
             return res.status(400).send('topiceId,timeTableMappingId and date is required')
         }
-        const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy, universityId, instituteId);
+        const lessonData = await lesson.addMapping(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -81,12 +71,9 @@ export async function addMapping(req, res) {
 };
 
 export async function getMapping(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { acedmicYearId } = req.query
     try {
-        const Lessons = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
+        const Lessons = await lesson.getMapping(acedmicYearId);
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -127,36 +114,30 @@ export async function deleteMapping(req, res) {
             return res.status(400).send("Mapping ID is required");
         }
         await lesson.deleteMapping(lessonMappingId);
-        res.status(200).json({ message: "Data deleted successfully" });
+        res.status(200).json({ message: "Mapping deleted successfully" });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
 export async function getEmployeeSubjectAndLesson(req, res) {
-    const role = req.user.role;
-    const { acedmicYearId, employeeId, courseId, sessionId } = req.query
+    const { acedmicYearId, employeeId, courseId, sessionId } = req.query;
     try {
-        const Lessons = await lesson.getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId);
-        res.status(200).json(Lessons);
+        if (!(acedmicYearId && employeeId && courseId && sessionId)) {
+            return res.status(400).send('acedmicYearId, employeeId, courseId and sessionId is required');
+        }
+        const result = await lesson.getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
 export async function getSimpleLessonList(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const filters = req.query;
     try {
-        const whereClause = {
-            ...filters,
-            universityId,
-            instituteId
-        };
-        const lessons = await lesson.getSimpleLessonList(whereClause);
-        return SuccessResponse(res, 200, "Lessons fetched successfully", lessons);
+        const result = await lesson.getSimpleLessonList(req.query);
+        res.status(200).json(result);
     } catch (error) {
-        return ErrorResponse(res, 500, error.message);
+        res.status(500).json({ error: error.message });
     }
 };

@@ -5,7 +5,7 @@ import campus from "./campusModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const headModel = sequelize.define(
     'head',
     {
         headId: {
@@ -140,3 +140,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+headModel.scopeConfig = { institute: false, academicYear: false };
+
+export default headModel;

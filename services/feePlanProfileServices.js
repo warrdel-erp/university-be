@@ -56,19 +56,15 @@ function mapFeePlanSubItemsForResponse(subItems) {
   }));
 }
 
-async function validateCourseSession(courseSessionId, instituteId, academicYearId, transaction) {
-  const mapping = await repo.findSessionCourseMappingForInstitute(
-    courseSessionId,
-    instituteId,
-    { transaction }
-  );
+async function validateCourseSession(courseSessionId, academicYearId, transaction) {
+  const mapping = await repo.findSessionCourseMappingForInstitute(courseSessionId, { transaction });
   if (!mapping) {
     throw new Error("courseSessionId not found or not in your institute");
   }
 
   if (academicYearId === undefined) return;
 
-  const withSession = await repo.findSessionCourseMappingWithSession(courseSessionId, instituteId, {
+  const withSession = await repo.findSessionCourseMappingWithSession(courseSessionId, {
     transaction,
   });
   if (withSession.session.acedmicYearId !== academicYearId) {
@@ -77,18 +73,16 @@ async function validateCourseSession(courseSessionId, instituteId, academicYearI
 }
 
 /** Validates catalogs and maps feePlanItems to repository installment shape. */
-async function prepareFeePlanItemsForDb(feePlanItemsInput, instituteId, transaction) {
+async function prepareFeePlanItemsForDb(feePlanItemsInput, transaction) {
   const prepared = [];
 
   for (const installment of feePlanItemsInput) {
     const subItems = [];
 
     for (const line of installment.feePlanSubItems) {
-      const catalog = await catalogRepo.findFeeTypeCatalogById(
-        line.feeTypeCatalogId,
-        instituteId,
-        { transaction }
-      );
+      const catalog = await catalogRepo.findFeeTypeCatalogById(line.feeTypeCatalogId, {
+        transaction,
+      });
       if (!catalog) {
         throw httpError(
           `feeTypeCatalogId ${line.feeTypeCatalogId} not found for this institute`,
@@ -155,11 +149,11 @@ function buildListRow(plainProfile, numberOfInvoices, assignedStudentCount, invo
   };
 }
 
-async function buildFeePlanListRows(list, instituteId, transaction) {
+async function buildFeePlanListRows(list, transaction) {
   const [studentCountByProfile, invoiceCountByProfile, invoiceCountByItem] = await Promise.all([
-    repo.countStudentsGroupedByFeePlanProfile(instituteId, { transaction }),
-    repo.countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId, { transaction }),
-    repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, { transaction }),
+    repo.countStudentsGroupedByFeePlanProfile({ transaction }),
+    repo.countStudentFeeInvoicesGroupedByFeePlanProfile({ transaction }),
+    repo.countStudentFeeInvoicesGroupedByFeePlanItem({ transaction }),
   ]);
 
   return list.map((row) => {
@@ -218,17 +212,8 @@ function formatFeePlanProfileSingleResponse(row, counts) {
   };
 }
 
-async function syncFeePlanItemsForUpdate(
-  feePlanProfileId,
-  instituteId,
-  feePlanItemsInput,
-  transaction
-) {
-  const existingItems = await repo.findFeePlanItemsByProfileId(
-    feePlanProfileId,
-    instituteId,
-    { transaction }
-  );
+async function syncFeePlanItemsForUpdate(feePlanProfileId, feePlanItemsInput, transaction) {
+  const existingItems = await repo.findFeePlanItemsByProfileId(feePlanProfileId, { transaction });
   const existingIdSet = new Set(existingItems.map((row) => toPlain(row).feePlanItemId));
 
   for (const input of feePlanItemsInput) {
@@ -240,11 +225,7 @@ async function syncFeePlanItemsForUpdate(
     }
   }
 
-  const preparedInstallments = await prepareFeePlanItemsForDb(
-    feePlanItemsInput,
-    instituteId,
-    transaction
-  );
+  const preparedInstallments = await prepareFeePlanItemsForDb(feePlanItemsInput, transaction);
 
   for (let index = 0; index < feePlanItemsInput.length; index++) {
     const itemId = feePlanItemsInput[index].feePlanItemId;
@@ -252,7 +233,6 @@ async function syncFeePlanItemsForUpdate(
 
     await repo.updateFeePlanItemById(
       itemId,
-      instituteId,
       {
         createDate: installment.startDate,
         dueDate: installment.dueDate,
@@ -267,7 +247,6 @@ async function syncFeePlanItemsForUpdate(
         const subItem = await repo.findFeePlanSubItemForProfile(
           line.feePlanSubitemId,
           feePlanProfileId,
-          instituteId,
           { transaction }
         );
         if (!subItem) {
@@ -282,7 +261,6 @@ async function syncFeePlanItemsForUpdate(
 
         await repo.updateFeePlanSubItemById(
           line.feePlanSubitemId,
-          instituteId,
           {
             amount: line.amount,
             feeTypeId: line.feeTypeId,
@@ -299,7 +277,6 @@ async function syncFeePlanItemsForUpdate(
           amount: line.amount,
           feeTypeId: line.feeTypeId,
           feePlanItemId: itemId,
-          instituteId,
           isMainSubItem: line.isMainSubItem,
         },
         { transaction }
@@ -307,27 +284,23 @@ async function syncFeePlanItemsForUpdate(
       keptSubItemIds.add(toPlain(created).feePlanSubitemId);
     }
 
-    const existingSubItems = await repo.findFeePlanSubItemsByFeePlanItemId(itemId, instituteId, {
+    const existingSubItems = await repo.findFeePlanSubItemsByFeePlanItemId(itemId, {
       transaction,
     });
     for (const subItem of existingSubItems) {
       const subItemId = toPlain(subItem).feePlanSubitemId;
       if (!keptSubItemIds.has(subItemId)) {
-        await repo.deleteFeePlanSubItemById(subItemId, instituteId, { transaction });
+        await repo.deleteFeePlanSubItemById(subItemId, { transaction });
       }
     }
   }
 }
 
-export async function updateFeePlanProfile(body, instituteId) {
+export async function updateFeePlanProfile(body) {
   const { feePlanProfileId } = body;
 
   await sequelize.transaction(async (transaction) => {
-    const profile = await repo.findFeePlanProfileByIdForInstitute(
-      feePlanProfileId,
-      instituteId,
-      { transaction }
-    );
+    const profile = await repo.findFeePlanProfileByIdForInstitute(feePlanProfileId, { transaction });
     if (!profile) {
       throw httpError("Fee plan profile not found", 404);
     }
@@ -336,7 +309,7 @@ export async function updateFeePlanProfile(body, instituteId) {
     const courseSessionId = body.courseSessionId ?? profilePlain.courseSessionId;
 
     if (body.courseSessionId !== undefined || body.academicYearId !== undefined) {
-      await validateCourseSession(courseSessionId, instituteId, body.academicYearId, transaction);
+      await validateCourseSession(courseSessionId, body.academicYearId, transaction);
     }
 
     const profileUpdates = {};
@@ -347,30 +320,20 @@ export async function updateFeePlanProfile(body, instituteId) {
     if (body.publishStatus !== undefined) profileUpdates.publishStatus = body.publishStatus;
 
     if (Object.keys(profileUpdates).length > 0) {
-      await repo.updateFeePlanProfileById(
-        feePlanProfileId,
-        instituteId,
-        profileUpdates,
-        { transaction }
-      );
+      await repo.updateFeePlanProfileById(feePlanProfileId, profileUpdates, { transaction });
     }
 
     if (body.feePlanItems !== undefined) {
-      await syncFeePlanItemsForUpdate(
-        feePlanProfileId,
-        instituteId,
-        body.feePlanItems,
-        transaction
-      );
+      await syncFeePlanItemsForUpdate(feePlanProfileId, body.feePlanItems, transaction);
     }
   });
 
-  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
+  return getSingleFeePlanProfile(feePlanProfileId);
 }
 
-export async function publishFeePlanProfile(feePlanProfileId, instituteId) {
+export async function publishFeePlanProfile(feePlanProfileId) {
   await sequelize.transaction(async (transaction) => {
-    const profile = await repo.findFeePlanProfileById(feePlanProfileId, instituteId, {
+    const profile = await repo.findFeePlanProfileById(feePlanProfileId, {
       forDetail: true,
       transaction,
     });
@@ -398,20 +361,19 @@ export async function publishFeePlanProfile(feePlanProfileId, instituteId) {
 
     await repo.updateFeePlanProfileById(
       feePlanProfileId,
-      instituteId,
       { publishStatus: "published" },
       { transaction }
     );
   });
 
-  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
+  return getSingleFeePlanProfile(feePlanProfileId);
 }
 
-export async function addFeePlanProfile(body, instituteId) {
+export async function addFeePlanProfile(body) {
   const mapId = body.courseSessionId;
 
   const feePlanProfileId = await sequelize.transaction(async (transaction) => {
-    await validateCourseSession(mapId, instituteId, body.academicYearId, transaction);
+    await validateCourseSession(mapId, body.academicYearId, transaction);
 
     const profile = await repo.createFeePlanProfile(
       {
@@ -419,81 +381,75 @@ export async function addFeePlanProfile(body, instituteId) {
         planType: body.planType,
         category: body.category,
         courseSessionId: mapId,
-        instituteId,
         publishStatus: body.publishStatus ?? "draft",
       },
       { transaction }
     );
 
     if (body.feePlanItems !== undefined) {
-      const installments = await prepareFeePlanItemsForDb(body.feePlanItems, instituteId, transaction);
-      await repo.createInstallmentsForProfile(
-        profile.feePlanProfileId,
-        instituteId,
-        installments,
-        { transaction }
-      );
+      const installments = await prepareFeePlanItemsForDb(body.feePlanItems, transaction);
+      await repo.createInstallmentsForProfile(profile.feePlanProfileId, installments, {
+        transaction,
+      });
     }
 
     return profile.feePlanProfileId;
   });
 
-  return getSingleFeePlanProfile(feePlanProfileId, instituteId);
+  return getSingleFeePlanProfile(feePlanProfileId);
 }
 
-export async function listFeePlanProfiles(instituteId, courseSessionId) {
+export async function listFeePlanProfiles(courseSessionId) {
   return sequelize.transaction(async (transaction) => {
-    const mapping = await repo.findSessionCourseMappingForInstitute(
-      courseSessionId,
-      instituteId,
-      { transaction }
-    );
+    const mapping = await repo.findSessionCourseMappingForInstitute(courseSessionId, {
+      transaction,
+    });
     if (!mapping) {
       throw new Error("courseSessionId not found or not in your institute");
     }
 
-    const list = await repo.findFeePlanProfilesByInstitute(instituteId, {
+    const list = await repo.findFeePlanProfilesByInstitute({
       courseSessionId,
       transaction,
     });
 
-    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
+    const feePlans = await buildFeePlanListRows(list, transaction);
     return { courseSessionId, feePlans };
   });
 }
 
-export async function listAllFeePlanProfiles(instituteId, planStatus = "all") {
+export async function listAllFeePlanProfiles(planStatus = "all") {
   return sequelize.transaction(async (transaction) => {
-    const assignedProfileIds = await repo.findDistinctAssignedFeePlanProfileIds(instituteId, {
+    const assignedProfileIds = await repo.findDistinctAssignedFeePlanProfileIds({
       transaction,
     });
 
     let list;
     if (planStatus === "active") {
-      list = await repo.findFeePlanProfilesByInstitute(instituteId, {
+      list = await repo.findFeePlanProfilesByInstitute({
         feePlanProfileIds: assignedProfileIds,
         transaction,
       });
     } else if (planStatus === "inactive") {
-      list = await repo.findFeePlanProfilesByInstitute(instituteId, {
+      list = await repo.findFeePlanProfilesByInstitute({
         excludeFeePlanProfileIds: assignedProfileIds,
         transaction,
       });
     } else {
-      list = await repo.findFeePlanProfilesByInstitute(instituteId, { transaction });
+      list = await repo.findFeePlanProfilesByInstitute({ transaction });
     }
 
-    const feePlans = await buildFeePlanListRows(list, instituteId, transaction);
+    const feePlans = await buildFeePlanListRows(list, transaction);
 
     return { status: planStatus, feePlans };
   });
 }
 
 /** Fees Invoice dashboard cards: active = assigned to ≥1 student; inactive = none assigned. */
-export async function getFeePlanProfileSummary(instituteId) {
+export async function getFeePlanProfileSummary() {
   const [allFeePlans, activeFeePlans] = await Promise.all([
-    repo.countFeePlanProfilesByInstitute(instituteId),
-    repo.countActiveFeePlanProfilesByInstitute(instituteId),
+    repo.countFeePlanProfilesByInstitute(),
+    repo.countActiveFeePlanProfilesByInstitute(),
   ]);
   const inactiveFeePlans = allFeePlans - activeFeePlans;
 
@@ -504,14 +460,14 @@ export async function getFeePlanProfileSummary(instituteId) {
   };
 }
 
-export async function getSingleFeePlanProfile(feePlanProfileId, instituteId) {
-  const row = await repo.findFeePlanProfileById(feePlanProfileId, instituteId, { forDetail: true });
+export async function getSingleFeePlanProfile(feePlanProfileId) {
+  const row = await repo.findFeePlanProfileById(feePlanProfileId, { forDetail: true });
   if (!row) return null;
 
   const [studentCountByProfile, invoiceCountByProfile, invoiceCountByItem] = await Promise.all([
-    repo.countStudentsGroupedByFeePlanProfile(instituteId),
-    repo.countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId),
-    repo.countStudentFeeInvoicesGroupedByFeePlanItem(instituteId),
+    repo.countStudentsGroupedByFeePlanProfile(),
+    repo.countStudentFeeInvoicesGroupedByFeePlanProfile(),
+    repo.countStudentFeeInvoicesGroupedByFeePlanItem(),
   ]);
 
   return formatFeePlanProfileSingleResponse(row, {
@@ -522,21 +478,19 @@ export async function getSingleFeePlanProfile(feePlanProfileId, instituteId) {
 }
 
 /** Assign fee v2 plan to student (students.fee_plan_profile_id). */
-export async function assignFeePlanProfileToStudent(body, instituteId) {
+export async function assignFeePlanProfileToStudent(body) {
   const { studentId, feePlanProfileId } = body;
 
   return sequelize.transaction(async (transaction) => {
-    const profile = await repo.findFeePlanProfileByIdForInstitute(
-      feePlanProfileId,
-      instituteId,
-      { transaction }
-    );
+    const profile = await repo.findFeePlanProfileByIdForInstitute(feePlanProfileId, {
+      transaction,
+    });
     if (!profile) {
       throw httpError("Fee plan profile not found for this institute", 404);
     }
     assertFeePlanProfilePublished(toPlain(profile));
 
-    const student = await studentRepo.findStudentByIdForInstitute(studentId, instituteId, {
+    const student = await studentRepo.findStudentByIdForInstitute(studentId, {
       transaction,
     });
     if (!student) {
@@ -545,7 +499,6 @@ export async function assignFeePlanProfileToStudent(body, instituteId) {
 
     await studentRepo.updateStudentFeePlanProfileId(
       studentId,
-      instituteId,
       feePlanProfileId,
       { transaction }
     );

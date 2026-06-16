@@ -3,8 +3,7 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addFeeTypeCategory(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const row = await feeTypeCategoryService.addFeeTypeCategory(req.body, instituteId);
+    const row = await feeTypeCategoryService.addFeeTypeCategory(req.body);
     return SuccessResponse(res, 201, "Fee type category added successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -13,8 +12,7 @@ export async function addFeeTypeCategory(req, res) {
 
 export async function getAllFeeTypeCategory(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const rows = await feeTypeCategoryService.listFeeTypeCategories(instituteId);
+    const rows = await feeTypeCategoryService.listFeeTypeCategories();
     return SuccessResponse(res, 200, "Fee type categories fetched successfully", rows);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -24,11 +22,7 @@ export async function getAllFeeTypeCategory(req, res) {
 export async function getSingleFeeTypeCategoryDetails(req, res) {
   try {
     const { feeTypeCategoryId } = req.query;
-    const instituteId = req.user.defaultInstituteId;
-    const row = await feeTypeCategoryService.getSingleFeeTypeCategory(
-      feeTypeCategoryId,
-      instituteId
-    );
+    const row = await feeTypeCategoryService.getSingleFeeTypeCategory(feeTypeCategoryId);
     if (!row) {
       return ErrorResponse(res, 404, "Fee type category not found");
     }
@@ -41,12 +35,7 @@ export async function getSingleFeeTypeCategoryDetails(req, res) {
 export async function updateFeeTypeCategory(req, res) {
   try {
     const { feeTypeCategoryId } = req.body;
-    const instituteId = req.user.defaultInstituteId;
-    const row = await feeTypeCategoryService.updateFeeTypeCategory(
-      feeTypeCategoryId,
-      req.body,
-      instituteId
-    );
+    const row = await feeTypeCategoryService.updateFeeTypeCategory(feeTypeCategoryId, req.body);
     return SuccessResponse(res, 200, "Fee type category updated successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -56,10 +45,7 @@ export async function updateFeeTypeCategory(req, res) {
 export async function deleteFeeTypeCategory(req, res) {
   try {
     const { feeTypeCategoryId } = req.query;
-    await feeTypeCategoryService.deleteFeeTypeCategory(
-      feeTypeCategoryId,
-      req.user.defaultInstituteId
-    );
+    await feeTypeCategoryService.deleteFeeTypeCategory(feeTypeCategoryId);
     return SuccessResponse(
       res,
       200,

@@ -89,7 +89,7 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 };
 
-export async function getAllTimeTableName(universityId, courseId) {
+export async function getAllTimeTableName(courseId) {
     return await timeTableRepository.getAllTimeTableName(courseId);
 };
 

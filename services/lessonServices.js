@@ -1,49 +1,43 @@
-import * as lesson  from "../repository/lessonRepository.js";
+import * as lesson from "../repository/lessonRepository.js";
 import sequelize from '../database/sequelizeConfig.js';
 
-export async function addLesson(data, createdBy, updatedBy, universityId, instituteId) {
+export async function addLesson(data, createdBy, updatedBy) {
     try {
         const payload = {
             ...data,
             createdBy,
             updatedBy,
-            universityId,
-            instituteId
         };
-
         return await lesson.addLesson(payload);
     } catch (error) {
         console.error("Error in addLesson:", error);
-        throw error; 
+        throw error;
     }
-};
+}
 
-export async function getLessonDetails(universityId,instituteId,role,acedmicYearId) {
-    return await lesson.getLessonDetails(universityId,instituteId,role,acedmicYearId);
-};
+export async function getLessonDetails(acedmicYearId) {
+    return await lesson.getLessonDetails(acedmicYearId);
+}
 
 export async function getSingleLessonDetails(lessonId) {
     return await lesson.getSingleLessonDetails(lessonId);
-};
+}
 
-export async function addTopice(data, createdBy, updatedBy, universityId, instituteId) {
+export async function addTopice(data, createdBy, updatedBy) {
     try {
         const payload = {
             ...data,
             createdBy,
             updatedBy,
-            universityId,
-            instituteId
         };
-
         return await lesson.addTopic(payload);
     } catch (error) {
         console.error("Error in add topic:", error);
-        throw error; 
+        throw error;
     }
-};
+}
 
-export async function addMapping(data, createdBy, updatedBy, universityId, instituteId) {
+export async function addMapping(data, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -58,8 +52,6 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
       status: data.status || 'inComplete',
       createdBy,
       updatedBy,
-      universityId,
-      instituteId
     };
 
     const lessonMapping = await lesson.addLessionMapping(payload, transaction);
@@ -69,13 +61,10 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
         const subTopicData = {
           name: sub.name,
           description: sub.description || null,
-          topicId: data.topicId, 
-          universityId,
-          instituteId,
+          topicId: data.topicId,
           createdBy,
-          updatedBy
+          updatedBy,
         };
-
         await lesson.addSubTopic(subTopicData, transaction);
       }
     }
@@ -87,20 +76,19 @@ export async function addMapping(data, createdBy, updatedBy, universityId, insti
     console.error("Error in addMapping:", error);
     throw error;
   }
-};
+}
 
-export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+export async function getMapping(acedmicYearId) {
   try {
-    const originalData = await lesson.getMapping(universityId, instituteId, role, acedmicYearId);
+    const originalData = await lesson.getMapping(acedmicYearId);
 
     const grouped = {};
 
     originalData.forEach(item => {
       const ttMapping = item.timeTableMapping;
 
-      if (!ttMapping) return; // skip if mapping is missing
+      if (!ttMapping) return;
 
-      // Prefer direct employee, otherwise teacher from teacherSubjectMapping
       const empDetails = ttMapping.employeeDetails;
       const teacherMapping = ttMapping.timeTableTeacherSubject?.teacherEmployeeData;
       const finalEmp = empDetails || teacherMapping;
@@ -120,7 +108,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
       const ttCreate = ttMapping.timeTablecreate || {};
       const classSection = ttCreate.timeTableClassSection || {};
       const subject = item.mappingTopic?.lessonTopic?.lessonSubject || {};
-      const lesson = item.mappingTopic?.lessonTopic || {};
+      const lessonRow = item.mappingTopic?.lessonTopic || {};
       const topic = item.mappingTopic || {};
       const subTopics = topic.subTopic || [];
 
@@ -138,9 +126,9 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
         classSection,
         subject,
         lesson: {
-          lessonId: lesson.lessonId,
-          name: lesson.name,
-          description: lesson.description
+          lessonId: lessonRow.lessonId,
+          name: lessonRow.name,
+          description: lessonRow.description
         },
         topic: {
           topicId: topic.topicId,
@@ -151,17 +139,15 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
       });
     });
 
-    const filteredData = Object.values(grouped);
-
     return {
       original: originalData,
-      filtered: filteredData
+      filtered: Object.values(grouped)
     };
   } catch (error) {
     console.error('Error in lesson service:', error);
     throw error;
   }
-};
+}
 
 export async function updateMapping(completeDate, lessonMappingId) {
   try {
@@ -169,14 +155,12 @@ export async function updateMapping(completeDate, lessonMappingId) {
       completeDate,
       status: 'complete'
     };
-
-    const result = await lesson.updateMapping(lessonMappingId, data);
-    return result;
+    return await lesson.updateMapping(lessonMappingId, data);
   } catch (error) {
     console.error('Error updating mapping:', error);
     throw error;
   }
-};
+}
 
 export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
   const transaction = await sequelize.transaction();
@@ -203,7 +187,7 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
       for (const sub of data.subTopic) {
         if (sub.subTopicId) {
           await lesson.updateSubTopic(
-            sub.subTopicId, 
+            sub.subTopicId,
             {
               name: sub.name,
               description: sub.description || null,
@@ -224,14 +208,10 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
   }
 }
 
-
 export async function deleteMapping(lessonMappingId) {
   const transaction = await sequelize.transaction();
   try {
-    // await lesson.deleteSubTopicsByMapping(lessonMappingId, transaction);
-
     await lesson.deleteLessionMapping(lessonMappingId, transaction);
-
     await transaction.commit();
     return true;
   } catch (error) {
@@ -239,7 +219,7 @@ export async function deleteMapping(lessonMappingId) {
     console.error("Error in deleteMapping:", error);
     throw error;
   }
-};
+}
 
 export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
     const data = await lesson.getEmployeeSubjectAndLesson(
@@ -249,11 +229,9 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
         sessionId
     );
 
-    const filteredData = data.filter(item =>
+    return data.filter(item =>
         item?.employeeSubject?.subjects !== null
     );
-
-    return filteredData;
 }
 
 export async function getSimpleLessonList(whereClause) {

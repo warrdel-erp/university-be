@@ -113,7 +113,7 @@ export function formatStudentFeePayment(row) {
   };
 }
 
-export async function recordStudentFeePaymentFromDetails(body, instituteId, createdBy) {
+export async function recordStudentFeePaymentFromDetails(body, createdBy) {
   const paymentType = body.paymentType ?? "INCOMING";
   if (paymentType !== "INCOMING") {
     throw httpError("Only INCOMING payments are supported for student fee invoices");
@@ -158,11 +158,9 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
           throw httpError("payeeType must be STUDENT for student fee invoice payment items", 400);
         }
 
-        const invoiceTotals = await paymentRepo.getInvoicePaymentTotals(
-          referenceId,
-          instituteId,
-          { transaction }
-        );
+        const invoiceTotals = await paymentRepo.getInvoicePaymentTotals(referenceId, {
+          transaction,
+        });
         if (!invoiceTotals) {
           throw httpError(`Student fee invoice not found: ${referenceId}`, 404);
         }
@@ -219,7 +217,6 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
         transactionId: body.transactionId,
         receivedBy: body.receivedBy ?? null,
         remark: body.remark ?? null,
-        instituteId,
         createdBy,
       },
       { transaction }
@@ -237,11 +234,9 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
       );
 
       if (line.referenceType === "STUDENT_FEE_INVOICE") {
-        const totalsAfter = await paymentRepo.getInvoicePaymentTotals(
-          line.referenceId,
-          instituteId,
-          { transaction }
-        );
+        const totalsAfter = await paymentRepo.getInvoicePaymentTotals(line.referenceId, {
+          transaction,
+        });
         const paidAfter = toMoneyNumber(totalsAfter.paidAmount);
         let paymentStatus = "unpaid";
         if (decimalCompare(paidAfter, 0) > 0) {
@@ -258,7 +253,6 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
 
         await paymentRepo.updateInvoicePaymentStatus(
           line.referenceId,
-          instituteId,
           paymentStatus,
           paidAfter,
           { transaction }
@@ -269,7 +263,7 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
     return { studentFeePaymentId: payment.studentFeePaymentId, resolvedLines: lines };
   });
 
-  const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId, instituteId);
+  const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId);
 
   const verifiedPaymentItems = [];
   for (const line of resolvedLines) {
@@ -297,8 +291,8 @@ export async function recordStudentFeePaymentFromDetails(body, instituteId, crea
   };
 }
 
-export async function getStudentFeePaymentById(studentFeePaymentId, instituteId) {
-  const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId, instituteId);
+export async function getStudentFeePaymentById(studentFeePaymentId) {
+  const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId);
   if (!payment) {
     throw httpError("Student fee payment not found", 404);
   }
@@ -307,10 +301,7 @@ export async function getStudentFeePaymentById(studentFeePaymentId, instituteId)
   const studentById = new Map();
 
   if (plain.payeeType === "STUDENT") {
-    const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(
-      [plain.payeeId],
-      instituteId
-    );
+    const studentRows = await paymentRepo.findStudentsByIdsForPaymentList([plain.payeeId]);
     if (studentRows[0]) {
       studentById.set(toPlain(studentRows[0]).studentId, studentRows[0]);
     }
@@ -328,15 +319,14 @@ export async function getStudentFeePaymentById(studentFeePaymentId, instituteId)
   };
 }
 
-export async function listStudentFeePayments(instituteId, query) {
+export async function listStudentFeePayments(query) {
   const { rows, total, page, limit } = await paymentRepo.findAllPaymentsPaginated(
-    instituteId,
     { payeeId: query.payeeId, search: query.search },
     { page: query.page, limit: query.limit }
   );
 
   const studentIds = paymentRepo.collectStudentPayeeIdsFromPayments(rows);
-  const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(studentIds, instituteId);
+  const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(studentIds);
   const studentById = new Map();
   for (const row of studentRows) {
     const plain = toPlain(row);
@@ -356,11 +346,11 @@ export async function listStudentFeePayments(instituteId, query) {
   };
 }
 
-export async function getPaymentDetails(studentId, instituteId) {
+export async function getPaymentDetails(studentId) {
   const [studentRow, invoiceRows, lastPaymentRow] = await Promise.all([
-    paymentRepo.findStudentForPaymentDetails(studentId, instituteId),
-    paymentRepo.findGeneratedInvoicesForPaymentDetails(studentId, instituteId),
-    paymentRepo.findLastIncomingPaymentForStudentPayee(studentId, instituteId),
+    paymentRepo.findStudentForPaymentDetails(studentId),
+    paymentRepo.findGeneratedInvoicesForPaymentDetails(studentId),
+    paymentRepo.findLastIncomingPaymentForStudentPayee(studentId),
   ]);
 
   if (!studentRow) {
@@ -376,8 +366,8 @@ export async function getPaymentDetails(studentId, instituteId) {
   }
 
   const [paidByReferenceId, totalByInvoiceId] = await Promise.all([
-    paymentRepo.sumPaidAmountByReferenceIds(invoiceIds, "STUDENT_FEE_INVOICE", instituteId),
-    paymentRepo.sumInvoiceTotalsByInvoiceIds(invoiceIds, instituteId),
+    paymentRepo.sumPaidAmountByReferenceIds(invoiceIds, "STUDENT_FEE_INVOICE"),
+    paymentRepo.sumInvoiceTotalsByInvoiceIds(invoiceIds),
   ]);
 
   const outstandingInvoices = [];

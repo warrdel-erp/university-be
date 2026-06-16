@@ -17,18 +17,12 @@ export const addStudentWithFeePlanProfile = async (req, res) => {
 
 // 2. get all student
 export const getAllStudents = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { page, limit, search, courseId } = req.query;
 
     try {
         const result = await studentService.getAllStudents({
-            universityId,
             page,
             limit,
-            instituteId,
-            role,
             search,
             courseId,
         });
@@ -42,10 +36,9 @@ export const getAllStudents = async (req, res) => {
 
 // 3. get single student details
 export const getSingleStudentDetail = async (req, res) => {
-    const universityId = req.user.universityId;
     const { studentId } = req.query;
     try {
-        const result = await studentService.getSingleStudentDetail(studentId, universityId);
+        const result = await studentService.getSingleStudentDetail(studentId);
         if (!result) {
             return res.status(404).send("Student not found");
         }
@@ -129,12 +122,8 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
-    const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     try {
-        const result = await studentService.getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role);
+        const result = await studentService.getEmptyEnrollNumber();
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -181,14 +170,11 @@ export const classStudentMapping = async (req, res) => {
 };
 
 export const getclassStudentMapping = async (req, res) => {
-    const universityId = req.user.universityId;
     const semesterId = req.query.semesterId || 0;
-    const acedmicYearId = req.query.acedmicYearId
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
+    const acedmicYearId = req.query.acedmicYearId;
 
     try {
-        const result = await studentService.getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role);
+        const result = await studentService.getclassStudentMapping(semesterId, acedmicYearId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Student Mapping:", error);
@@ -241,9 +227,8 @@ export const promoteStudent = async (req, res) => {
 
 export const getFeePlanInitiate = async (req, res) => {
     try {
-        const instituteId = req.user.defaultInstituteId;
         const { page, limit } = req.query;
-        const result = await studentService.getFeePlanInitiateAll(instituteId, { page, limit });
+        const result = await studentService.getFeePlanInitiateAll({ page, limit });
         return SuccessResponse(
             res,
             200,
@@ -257,16 +242,9 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const universityId = req.user.universityId;
-    const { acedmicYearId, courseId, sessionId } = req.query;
-    const instituteId = req.user.defaultInstituteId;
+    const { courseId, sessionId } = req.query;
     try {
-        const result = await studentService.getEmptyFeeDetails(
-            universityId,
-            acedmicYearId,
-            instituteId,
-            { courseId, sessionId },
-        );
+        const result = await studentService.getEmptyFeeDetails({ courseId, sessionId });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
@@ -375,16 +353,10 @@ export async function getStudentsByClassSection(req, res) {
 export const getAllAnswerSheets = async (req, res) => {
     try {
         const { examScheduleId } = req.query;
-        const instituteId = req.user.defaultInstituteId;
-        const universityId = req.user.universityId;
 
-        const result = await studentService.getAllAnswerSheets(
-            {
-                examScheduleId
-            },
-            instituteId,
-            universityId
-        );
+        const result = await studentService.getAllAnswerSheets({
+            examScheduleId,
+        });
 
         return res.status(200).json({
             success: true,

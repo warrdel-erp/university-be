@@ -1,207 +1,273 @@
-import * as model from '../models/index.js'
+import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
+function feePlanStudentInclude() {
+  return {
+    model: model.feePlanModel.unscoped(),
+    as: "studentFeePlan",
+    attributes: {
+      exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "description"],
+    },
+    where: buildScope(model.feePlanModel),
+    required: false,
+    include: [
+      {
+        model: model.feeNewInvoiceModel.unscoped(),
+        as: "invoices",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        include: [
+          {
+            model: model.feePlanSemesterModel.unscoped(),
+            as: "semesters",
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          },
+          {
+            model: model.feePlanTypeModel.unscoped(),
+            as: "additionalFees",
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          },
+        ],
+      },
+      {
+        model: model.sessionModel.unscoped(),
+        as: "sessionFee",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "acedmic_year_id"] },
+      },
+      {
+        model: model.courseModel.unscoped(),
+        as: "courseFee",
+        attributes: {
+          exclude: [
+            "createdAt",
+            "updatedAt",
+            "deletedAt",
+            "createdBy",
+            "updatedBy",
+            "affiliated_university_id",
+            "institute_id",
+            "acedmic_year_id",
+          ],
+        },
+      },
+      {
+        model: model.acedmicYearModel.unscoped(),
+        as: "acedmicYearFee",
+        attributes: {
+          exclude: [
+            "createdAt",
+            "updatedAt",
+            "deletedAt",
+            "createdBy",
+            "updatedBy",
+            "affiliated_university_id",
+            "institute_id",
+          ],
+        },
+      },
+    ],
+  };
+}
 
-export async function getStudentCount(type, universityId, instituteId, role) {
+function studentListIncludes() {
+  return [
+    feePlanStudentInclude(),
+    {
+      model: model.classSectionModel.unscoped(),
+      as: "studentSections",
+      attributes: {
+        exclude: [
+          "createdAt",
+          "updatedAt",
+          "deletedAt",
+          "createdBy",
+          "updatedBy",
+          "affiliated_university_id",
+          "institute_id",
+          "course_id",
+          "semester_id",
+          "class_id",
+          "acedmic_year_id",
+          "specialization_id",
+          "session_id",
+        ],
+      },
+    },
+  ];
+}
+
+export async function getStudentCount(type) {
   try {
-    const baseWhere = {
-      ...(universityId && { universityId }),
-      ...(role === 'Head' && { instituteId }) 
-    };
-
-    if (!type || type === 'total') {
+    if (!type || type === "total") {
       const [activeCount, inactiveCount] = await Promise.all([
-        model.studentModel.count({ where: {...baseWhere, feeStatus: true } }),
-        model.studentModel.count({ where: {...baseWhere, feeStatus: false } })
+        scoped(model.studentModel).count({ where: { feeStatus: true } }),
+        scoped(model.studentModel).count({ where: { feeStatus: false } }),
       ]);
       return {
         active: activeCount,
         inactive: inactiveCount,
-        all: activeCount + inactiveCount
+        all: activeCount + inactiveCount,
       };
     }
 
-    const whereClause = { ...baseWhere };
-
-    if (type === 'active') {
+    const whereClause = {};
+    if (type === "active") {
       whereClause.feeStatus = true;
-    } else if (type === 'inactive') {
+    } else if (type === "inactive") {
       whereClause.feeStatus = false;
     }
 
-    const studentList = await model.studentModel.findAll({
-      attributes:  ["studentId","firstName","middleName","lastName","scholarNumber","admisssionDate"] ,
+    return scoped(model.studentModel).findAll({
+      attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "admisssionDate"],
       where: whereClause,
-      include:[
-        {
-            model:model.feePlanModel,
-            as:'studentFeePlan',
-            attributes: {exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy","updatedBy","description"] },
-             include:
-                        [
-                            {
-                                model: model.feeNewInvoiceModel,
-                                as: "invoices",
-                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                include:[
-                                    {
-                                        model:model.feePlanSemesterModel,
-                                        as:'semesters',
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                    },
-                                    {
-                                        model:model.feePlanTypeModel,
-                                        as:'additionalFees',
-                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                                    }
-                                ]
-                            },
-                            {
-                              model:model.sessionModel,
-                              as:'sessionFee',
-                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","acedmic_year_id"] },
-                            },
-                            {
-                              model:model.courseModel,
-                              as:'courseFee',
-                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id","acedmic_year_id"] },
-                            },
-                            {
-                              model:model.acedmicYearModel,
-                              as:'acedmicYearFee',
-                              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id"] },
-                            },
-                        ]
-        },
-        {
-          model:model.classSectionModel,
-          as:'studentSections',
-          attributes: { exclude: [ "createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "affiliated_university_id", "institute_id", "course_id", "semester_id", "class_id", "acedmic_year_id", "specialization_id", "session_id" ] }
-        }
-      ]
+      include: studentListIncludes(),
     });
-
-    return studentList;
-
   } catch (error) {
-    console.error('Error in getStudentCount:', error);
+    console.error("Error in getStudentCount:", error);
     throw error;
   }
-};
-
-export async function getAllActiveInvoice(universityId) {
-     try {
-        const FeePlan = await model.studentInvoiceMapperModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:{
-                universityId
-            },
-            include:[
-                {
-                    model: model.studentModel,
-                    as: "studentinvoice",
-                    attributes: ["scholarNumber", "firstName", "middleName","lastName","admisssionDate","enrollDate"] ,
-                },
-                {
-                    model: model.feeNewInvoiceModel,
-                    as: "feeInvoicedata",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include:[
-                      {
-                        model:model.feePlanSemesterModel,
-                        as:'semesters',
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                      },
-                      {
-                        model:model.feePlanTypeModel,
-                        as:'additionalFees',
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                      }
-                    ]
-                },
-                {
-                    model: model.feeInvoiceDetailRecordModel,
-                    as: "studentMakePayment",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    
-                },
-                {
-                    model: model.feeTypeGroupModel,
-                    as: "feeTypeGroup",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    include: [
-                        {
-                            model: model.feeTypeModel,
-                            as: "feeTypes",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                            include: [
-                                {
-                                    model: model.feeGroupModel,
-                                    as: "feeGroup",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                }
-                            ]
-                        }
-                    ]
-                }    
-            ]
-        });
-
-        return FeePlan;
-    } catch (error) {
-        console.error('Error fetching all active fee plan:', error);
-        throw error;
-    }
 }
 
-export async function updateFeeNewInvoice(feeNewInvoiceId, data) {
-    try {
-        const result = await model.studentInvoiceMapperModel.update(data, {
-            where: { feeNewInvoiceId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating studentInvoiceMapperModel  ${feeNewInvoiceId}:`, error);
-        throw error; 
+export async function getAllActiveInvoice() {
+  try {
+    return model.studentInvoiceMapperModel.unscoped().findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: buildScope(model.studentInvoiceMapperModel),
+      include: [
+        {
+          model: model.studentModel.unscoped(),
+          as: "studentinvoice",
+          attributes: ["scholarNumber", "firstName", "middleName", "lastName", "admisssionDate", "enrollDate"],
+          where: buildScope(model.studentModel),
+          required: true,
+        },
+        {
+          model: model.feeNewInvoiceModel.unscoped(),
+          as: "feeInvoicedata",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          include: [
+            {
+              model: model.feePlanSemesterModel.unscoped(),
+              as: "semesters",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            },
+            {
+              model: model.feePlanTypeModel.unscoped(),
+              as: "additionalFees",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            },
+          ],
+        },
+        {
+          model: model.feeInvoiceDetailRecordModel.unscoped(),
+          as: "studentMakePayment",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        },
+        {
+          model: model.feeTypeGroupModel.unscoped(),
+          as: "feeTypeGroup",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          include: [
+            {
+              model: model.feeTypeModel.unscoped(),
+              as: "feeTypes",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+              include: [
+                {
+                  model: model.feeGroupModel.unscoped(),
+                  as: "feeGroup",
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  where: buildScope(model.feeGroupModel),
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching all active fee plan:", error);
+    throw error;
+  }
+}
+
+async function assertScopedStudentInvoiceMapper(studentInvoiceMapperId, transaction) {
+  return model.studentInvoiceMapperModel.unscoped().findOne({
+    attributes: ["studentInvoiceMapperId"],
+    where: { studentInvoiceMapperId },
+    include: [
+      {
+        model: model.studentModel.unscoped(),
+        as: "studentinvoice",
+        attributes: [],
+        where: buildScope(model.studentModel),
+        required: true,
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function updateFeeNewInvoice(feeNewInvoiceId, data, options = {}) {
+  try {
+    const mapper = await model.studentInvoiceMapperModel.unscoped().findOne({
+      attributes: ["studentInvoiceMapperId"],
+      where: { feeNewInvoiceId },
+      include: [
+        {
+          model: model.studentModel.unscoped(),
+          as: "studentinvoice",
+          attributes: [],
+          where: buildScope(model.studentModel),
+          required: true,
+        },
+      ],
+      transaction: options.transaction,
+    });
+    if (!mapper) {
+      return [0];
     }
-};
+
+    return model.studentInvoiceMapperModel.unscoped().update(data, {
+      where: { feeNewInvoiceId },
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error(`Error updating studentInvoiceMapperModel  ${feeNewInvoiceId}:`, error);
+    throw error;
+  }
+}
 
 export async function addStudentSpecificInvoice(data, transaction = null) {
-    try {
-        return await model.studentInvoiceMapperModel.create(data, { transaction });
-    } catch (error) {
-        console.error("Error in add Student specific Invoice:", error);
-        throw error;
+  try {
+    const student = await scoped(model.studentModel).findOne({
+      attributes: ["studentId"],
+      where: { studentId: data.studentId },
+      transaction,
+    });
+    if (!student) {
+      throw new Error("Student not found");
     }
-};
+
+    return scoped(model.studentInvoiceMapperModel).create(data, { transaction });
+  } catch (error) {
+    console.error("Error in add Student specific Invoice:", error);
+    throw error;
+  }
+}
 
 export async function addMultipleFeeTypeGroup(dataArray, transaction = null) {
-    try {
-        return await model.feeTypeGroupModel.bulkCreate(dataArray, { transaction });
-    } catch (error) {
-        console.error("Error in bulk insert fee type group:", error);
-        throw error;
+  try {
+    for (const row of dataArray) {
+      const mapper = await assertScopedStudentInvoiceMapper(row.studentInvoiceMapperId, transaction);
+      if (!mapper) {
+        throw new Error("Student invoice mapper not found");
+      }
     }
-};
 
-// export async function deleteFeePlan(poId) {
-//     const deleted = await model.poModel.destroy({ where: { poId: poId } });
-//     return deleted > 0;
-// };
-
-// export async function findByPlanId(feePlanId) {
-//   try {
-//     const FeePlan = await model.feeNewInvoiceModel.findAll({
-//       attributes: {
-//         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-//       },
-//       where: {
-//         feePlanId
-//       }
-//     });
-
-//     return FeePlan;
-//   } catch (error) {
-//     console.error("Error in findByPlanId:", error);
-//     throw error;
-//   }
-// };
+    return model.feeTypeGroupModel.unscoped().bulkCreate(dataArray, { transaction });
+  } catch (error) {
+    console.error("Error in bulk insert fee type group:", error);
+    throw error;
+  }
+}

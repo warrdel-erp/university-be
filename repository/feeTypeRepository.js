@@ -1,87 +1,120 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addFeeType(FeeTypeData) {    
-    try {
-        const result = await model.feeTypeModel.create(FeeTypeData);
-        return result;
-    } catch (error) {
-        console.error("Error in add FeeType :", error);
-        throw error;
+function feeTypeExcludedAttributes() {
+  return ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
+}
+
+function scopedUserInclude() {
+  return {
+    model: model.userModel.unscoped(),
+    as: "userFeeType",
+    attributes: ["universityId", "userId"],
+    where: buildScope(model.userModel),
+    required: true,
+  };
+}
+
+function scopedFeeGroupInclude(businessWhere = {}) {
+  return {
+    model: model.feeGroupModel.unscoped(),
+    as: "feeGroup",
+    attributes: { exclude: feeTypeExcludedAttributes() },
+    where: { ...businessWhere, ...buildScope(model.feeGroupModel) },
+    required: false,
+  };
+}
+
+async function assertScopedFeeType(feeTypeId, transaction) {
+  return model.feeTypeModel.unscoped().findOne({
+    attributes: ["feeTypeId"],
+    where: { feeTypeId },
+    include: [scopedUserInclude()],
+    transaction,
+  });
+}
+
+export async function addFeeType(feeTypeData, options = {}) {
+  try {
+    if (feeTypeData.feeGroupId != null) {
+      const feeGroup = await scoped(model.feeGroupModel).findOne({
+        attributes: ["feeGroupId"],
+        where: { feeGroupId: feeTypeData.feeGroupId },
+        transaction: options.transaction,
+      });
+      if (!feeGroup) {
+        throw new Error("feeGroupId not found or not in your institute");
+      }
     }
-};
 
-export async function getFeeTypeDetails(universityId,acedmicYearId,instituteId,role) {
-    try {
-        const whereClase ={
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { instituteId })
-        };
-        const FeeType = await model.feeTypeModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
-                {
-                    model: model.userModel,
-                    as: "userFeeType",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
-                {
-                    model: model.feeGroupModel,
-                    as: "feeGroup",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    where : whereClase
-                },
-            ]
-        });
+    return model.feeTypeModel.unscoped().create(feeTypeData, { transaction: options.transaction });
+  } catch (error) {
+    console.error("Error in add FeeType :", error);
+    throw error;
+  }
+}
 
-        return FeeType;
-    } catch (error) {
-        console.error('Error fetching FeeType details:', error);
-        throw error;
+export async function getFeeTypeDetails(filters = {}) {
+  try {
+    const feeGroupBusinessWhere = filters.acedmicYearId
+      ? { acedmicYearId: filters.acedmicYearId }
+      : {};
+
+    return model.feeTypeModel.unscoped().findAll({
+      attributes: { exclude: feeTypeExcludedAttributes() },
+      include: [scopedUserInclude(), scopedFeeGroupInclude(feeGroupBusinessWhere)],
+    });
+  } catch (error) {
+    console.error("Error fetching FeeType details:", error);
+    throw error;
+  }
+}
+
+export async function getSingleFeeTypeDetails(feeTypeId) {
+  try {
+    return model.feeTypeModel.unscoped().findOne({
+      attributes: { exclude: feeTypeExcludedAttributes() },
+      where: { feeTypeId },
+      include: [scopedUserInclude(), scopedFeeGroupInclude()],
+    });
+  } catch (error) {
+    console.error("Error fetching FeeType details:", error);
+    throw error;
+  }
+}
+
+export async function updateFeeType(feeTypeId, feeTypeData) {
+  try {
+    const existing = await assertScopedFeeType(feeTypeId);
+    if (!existing) {
+      return [0];
     }
-};
 
-export async function getSingleFeeTypeDetails(feeTypeId,universityId) {
-    try {
-        const FeeType = await model.feeTypeModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { feeTypeId },
-            include:[
-                {
-                    model: model.userModel,
-                    as: "userFeeType",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
-                {
-                    model: model.feeGroupModel,
-                    as: "feeGroup",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                },
-            ]
-        });
-
-        return FeeType;
-    } catch (error) {
-        console.error('Error fetching FeeType details:', error);
-        throw error;
+    if (feeTypeData.feeGroupId != null) {
+      const feeGroup = await scoped(model.feeGroupModel).findOne({
+        attributes: ["feeGroupId"],
+        where: { feeGroupId: feeTypeData.feeGroupId },
+      });
+      if (!feeGroup) {
+        throw new Error("feeGroupId not found or not in your institute");
+      }
     }
-};
 
-export async function updateFeeType(feeTypeId, FeeTypeData) {
-    try {
-        const result = await model.feeTypeModel.update(FeeTypeData, {
-            where: { feeTypeId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating FeeType creation ${feeTypeId}:`, error);
-        throw error; 
-    }
-};
+    return model.feeTypeModel.unscoped().update(feeTypeData, {
+      where: { feeTypeId },
+    });
+  } catch (error) {
+    console.error(`Error updating FeeType creation ${feeTypeId}:`, error);
+    throw error;
+  }
+}
 
 export async function deleteFeeType(feeTypeId) {
-    const deleted = await model.feeTypeModel.destroy({ where: { feeTypeId: feeTypeId } });
-    return deleted > 0;
-};
+  const existing = await assertScopedFeeType(feeTypeId);
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await model.feeTypeModel.unscoped().destroy({ where: { feeTypeId } });
+  return deleted > 0;
+}

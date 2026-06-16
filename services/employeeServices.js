@@ -422,8 +422,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(universityId, campusId, instituteId, headInstituteId, role) {
-  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, headInstituteId, role);
+export async function getAllEmployee(campusId) {
+  const result = await employeeRepository.getAllEmployee(campusId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -456,8 +456,8 @@ export async function getAllEmployee(universityId, campusId, instituteId, headIn
   }));
 };
 
-export async function getSingleEmployeeDetails(employeeId, universityId) {
-  const result = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+export async function getSingleEmployeeDetails(employeeId) {
+  const result = await employeeRepository.getSingleEmployeeDetails(employeeId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -734,7 +734,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     // Sync officialEmailId with user table email
     if (data.officalEmailId) {
-      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId);
       const userId = employeeDetails?.[0]?.userId;
       if (userId) {
         await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
@@ -1061,14 +1061,9 @@ export async function getBooksIssuedToEmployee(employeeId) {
   };
 };
 
-export async function getTeacherTimeTable(employeeId, universityId, instituteId, role) {
+export async function getTeacherTimeTable(employeeId) {
 
-  const allData = await timeTableCreateRepository.getTeacherTimeTable(
-    employeeId,
-    universityId,
-    instituteId,
-    role
-  );
+  const allData = await timeTableCreateRepository.getTeacherTimeTable(employeeId);
 
   const allMappings = [];
 
@@ -1197,8 +1192,8 @@ export async function getTeacherTimeTable(employeeId, universityId, instituteId,
 
 };
 
-export async function getTeacherSubject(employeeId, universityId, instituteId, role) {
-  return await employeeRepository.getTeacherSubject(employeeId, universityId, instituteId, role)
+export async function getTeacherSubject(employeeId) {
+  return await employeeRepository.getTeacherSubject(employeeId);
 };
 
 export async function getSubjectEvalution(employeeId) {

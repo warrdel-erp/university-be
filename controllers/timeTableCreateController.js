@@ -38,9 +38,8 @@ export const cloneTimeTableRoutine = async (req, res) => {
 };
 
 export const gettimeTableCreateDetails = async (req, res) => {
-    const universityId = req.user.universityId;
     try {
-        const result = await timeTableCreateServices.gettimeTableCreateDetails(universityId);
+        const result = await timeTableCreateServices.gettimeTableCreateDetails();
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table create:", error);
@@ -49,10 +48,9 @@ export const gettimeTableCreateDetails = async (req, res) => {
 };
 
 export const getSingletimeTableCreateDetails = async (req, res) => {
-    const universityId = req.user.universityId;
     let { courseId } = req.query
     try {
-        const result = await timeTableCreateServices.getSingletimeTableCreateDetails(courseId, universityId);
+        const result = await timeTableCreateServices.getSingletimeTableCreateDetails(courseId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single time table create:", error);
@@ -62,7 +60,6 @@ export const getSingletimeTableCreateDetails = async (req, res) => {
 
 export const getTimeTableByCourseAndSection = async (req, res) => {
     const { courseId, classSectionsId, timeTableType } = req.query;
-    const { universityId } = req.user;
 
     if (!courseId) {
         return res.status(400).send("courseId is required");
@@ -73,7 +70,6 @@ export const getTimeTableByCourseAndSection = async (req, res) => {
             await timeTableCreateServices.getTimeTableByCourseAndSection(
                 courseId,
                 classSectionsId,
-                universityId,
                 timeTableType
             );
 
@@ -107,19 +103,10 @@ export const addtimeTableMapping = async (req, res) => {
 };
 
 export const getTimeTableMappingDetail = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const timeTableRoutineId = req.body.timeTableRoutineId;
 
-    if (!universityId) {
-        return res.status(400).json({
-            status: "error",
-            message: "University Id is missing from user session",
-        });
-    }
     try {
-        const result = await timeTableCreateServices.getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role);
+        const result = await timeTableCreateServices.getTimeTableMappingDetail(timeTableRoutineId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table create:", error);
@@ -128,10 +115,9 @@ export const getTimeTableMappingDetail = async (req, res) => {
 };
 
 export const getSingletimeTableMappingDetail = async (req, res) => {
-    const universityId = req.user.universityId;
     let { courseId } = req.query
     try {
-        const result = await timeTableCreateServices.getSingletimeTableMappingDetail(courseId, universityId);
+        const result = await timeTableCreateServices.getSingletimeTableMappingDetail(courseId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single time table create:", error);
@@ -230,15 +216,12 @@ export const deletetimeTableMapping = async (req, res) => {
 };
 
 export const getTimeTableCellData = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { courseId, classSectionsId } = req.query
     if (!(courseId)) {
         return res.status(400).send("courseId  is required");
     }
     try {
-        const result = await timeTableCreateServices.getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role);
+        const result = await timeTableCreateServices.getTimeTableCellData(courseId, classSectionsId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table cell data:", error);
@@ -247,15 +230,12 @@ export const getTimeTableCellData = async (req, res) => {
 };
 
 export const getTimeTableElective = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { courseId } = req.query
     if (!(courseId)) {
         return res.status(400).send("courseId  is required");
     }
     try {
-        const result = await timeTableCreateServices.getTimeTableElective(courseId, universityId, instituteId, role);
+        const result = await timeTableCreateServices.getTimeTableElective(courseId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table cell data:", error);

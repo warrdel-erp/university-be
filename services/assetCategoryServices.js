@@ -13,11 +13,9 @@ function updatePayload(body) {
   return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
 }
 
-export async function addAssetCategory(body, instituteId) {
+export async function addAssetCategory(body) {
   const row = await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findAssetCategoryByNameForInstitute(body.name, instituteId, {
-      transaction,
-    });
+    const existing = await repo.findAssetCategoryByNameForInstitute(body.name, { transaction });
     if (existing) {
       throw httpError("Asset category name already exists in your institute", 409);
     }
@@ -26,7 +24,6 @@ export async function addAssetCategory(body, instituteId) {
       {
         name: body.name,
         codePrefix: deriveCategoryCodePrefixFromName(body.name),
-        instituteId,
       },
       { transaction }
     );
@@ -35,38 +32,36 @@ export async function addAssetCategory(body, instituteId) {
   return row;
 }
 
-export async function listAssetCategories(instituteId) {
+export async function listAssetCategories() {
   return sequelize.transaction(async (transaction) =>
-    repo.findAssetCategoriesByInstitute(instituteId, { transaction })
+    repo.findAssetCategoriesByInstitute({ transaction })
   );
 }
 
-export async function getSingleAssetCategory(assetCategoryId, instituteId) {
+export async function getSingleAssetCategory(assetCategoryId) {
   return sequelize.transaction(async (transaction) =>
-    repo.findAssetCategoryById(assetCategoryId, instituteId, { transaction })
+    repo.findAssetCategoryById(assetCategoryId, { transaction })
   );
 }
 
-export async function updateAssetCategory(assetCategoryId, body, instituteId) {
+export async function updateAssetCategory(assetCategoryId, body) {
   return sequelize.transaction(async (transaction) => {
     const payload = updatePayload(body);
-    const affected = await repo.updateAssetCategory(assetCategoryId, instituteId, payload, {
-      transaction,
-    });
+    const affected = await repo.updateAssetCategory(assetCategoryId, payload, { transaction });
     if (!affected) {
       throw httpError("Asset category not found or not in your institute", 404);
     }
-    return repo.findAssetCategoryById(assetCategoryId, instituteId, { transaction });
+    return repo.findAssetCategoryById(assetCategoryId, { transaction });
   });
 }
 
-export async function deleteAssetCategory(assetCategoryId, instituteId) {
+export async function deleteAssetCategory(assetCategoryId) {
   await sequelize.transaction(async (transaction) => {
-    const inUse = await repo.countAssetsForCategory(assetCategoryId, instituteId, { transaction });
+    const inUse = await repo.countAssetsForCategory(assetCategoryId, { transaction });
     if (inUse > 0) {
       throw httpError(`Cannot delete: ${inUse} asset(s) still reference this category`, 409);
     }
-    const ok = await repo.deleteAssetCategory(assetCategoryId, instituteId, { transaction });
+    const ok = await repo.deleteAssetCategory(assetCategoryId, { transaction });
     if (!ok) {
       throw httpError("Asset category not found or not in your institute", 404);
     }

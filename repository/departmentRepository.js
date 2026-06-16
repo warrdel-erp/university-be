@@ -1,8 +1,9 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
 export async function addDepartment(departmentData) {
     try {
-        const result = await model.departmentModel.create(departmentData);
+        const result = await scoped(model.departmentModel).create(departmentData);
         return result;
     } catch (error) {
         console.error("Error in add Department :", error);
@@ -10,15 +11,14 @@ export async function addDepartment(departmentData) {
     }
 };
 
-export async function getDepartmentDetails(universityId) {
+export async function getDepartmentDetails() {
     try {
-        const Department = await model.departmentModel.findAll({
+        const Department = await scoped(model.departmentModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
             include:
                 [
                     {
-                        model: model.subAccountModel,
+                        model: model.subAccountModel.unscoped(),
                         as: "subAccountDetail",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
@@ -35,13 +35,13 @@ export async function getDepartmentDetails(universityId) {
 
 export async function getSingleDepartmentDetails(departmentId) {
     try {
-        const Department = await model.departmentModel.findOne({
+        const Department = await scoped(model.departmentModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { departmentId },
             include:
                 [
                     {
-                        model: model.subAccountModel,
+                        model: model.subAccountModel.unscoped(),
                         as: "subAccountDetail",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
@@ -56,13 +56,13 @@ export async function getSingleDepartmentDetails(departmentId) {
 }
 
 export async function deleteDepartment(departmentId) {
-    const deleted = await model.departmentModel.destroy({ where: { departmentId: departmentId } });
+    const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId } });
     return deleted > 0;
 }
 
 export async function updateDepartment(departmentId, DepartmentData) {
     try {
-        const result = await model.departmentModel.update(DepartmentData, {
+        const result = await scoped(model.departmentModel).update(DepartmentData, {
             where: { departmentId }
         });
         return result;
@@ -74,7 +74,7 @@ export async function updateDepartment(departmentId, DepartmentData) {
 
 export async function getlatestEntry(subAccountId) {    
     try {
-        const department = await model.departmentModel.findOne({
+        const department = await scoped(model.departmentModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { subAccountId },
             order: [['department_order', 'DESC']],  
@@ -90,8 +90,8 @@ export async function getlatestEntry(subAccountId) {
 
 export async function employeeDetail(departmentName) {    
     try {
-        const employees = await model.employeeModel.findAll({
-            where: { department:departmentName },
+        const employees = await scoped(model.employeeModel).findAll({
+            where: { department: departmentName },
             attributes: { 
                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
             },

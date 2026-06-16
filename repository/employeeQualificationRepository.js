@@ -1,20 +1,36 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function addEmployeeQualification(data,transaction) {
+async function assertScopedEmployee(employeeId, transaction) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+        transaction,
+    });
+}
+
+export async function addEmployeeQualification(data, transaction) {
     try {
-        const result = await model.employeeQualificationModel.create(data,{transaction});
-        return result;
+        const employee = await assertScopedEmployee(data.employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        return await model.employeeQualificationModel.create(data, { transaction });
     } catch (error) {
         console.error("Error in add employee qualification:", error);
         throw error;
     }
 };
 
-export async function deleteEmployeeQualification (employeeId) {
+export async function deleteEmployeeQualification(employeeId) {
     try {
-        const result = await model.employeeQualificationModel.destroy({
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        await model.employeeQualificationModel.destroy({
             where: { employeeId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'employee qualification deleted successfully' };
     } catch (error) {
@@ -23,39 +39,47 @@ export async function deleteEmployeeQualification (employeeId) {
     }
 };
 
-export async function refreshEmployeeQualifications(employeeId, qualifications,createdBy, updatedBy, transaction) {
-  try {
-    await model.employeeQualificationModel.destroy({
-      where: { employeeId },
-      transaction
-    });
+export async function refreshEmployeeQualifications(employeeId, qualifications, createdBy, updatedBy, transaction) {
+    try {
+        const employee = await assertScopedEmployee(employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
 
-    const insertData = qualifications.map((q) => ({
-      employeeId,
-      createdBy,
-      updatedBy,
-     
-      document: q?.document ?? null,
-      receivedDate: q?.receivedDate ?? null,
-      returnedDate: q?.returnedDate ?? null,
-      attachment: q?.attachment ?? null
-    }));
+        await model.employeeQualificationModel.destroy({
+            where: { employeeId },
+            transaction,
+        });
 
-    return await model.employeeQualificationModel.bulkCreate(insertData, { transaction });
-  } catch (error) {
-    console.error("Error refreshing employee qualifications:", error);
-    throw error;
-  }
+        const insertData = qualifications.map((q) => ({
+            employeeId,
+            createdBy,
+            updatedBy,
+            document: q?.document ?? null,
+            receivedDate: q?.receivedDate ?? null,
+            returnedDate: q?.returnedDate ?? null,
+            attachment: q?.attachment ?? null,
+        }));
+
+        return await model.employeeQualificationModel.bulkCreate(insertData, { transaction });
+    } catch (error) {
+        console.error("Error refreshing employee qualifications:", error);
+        throw error;
+    }
 }
 
 export async function getEmployeeQualificationsByEmployeeId(employeeId) {
-  try {
-    return await model.employeeQualificationModel.findAll({
-      where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt"] },
-    });
-  } catch (error) {
-    console.error("Error fetching employee qualifications:", error);
-    throw error;
-  }
+    try {
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            return [];
+        }
+        return await model.employeeQualificationModel.findAll({
+            where: { employeeId },
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+        });
+    } catch (error) {
+        console.error("Error fetching employee qualifications:", error);
+        throw error;
+    }
 }

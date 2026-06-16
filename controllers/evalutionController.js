@@ -5,15 +5,12 @@ export async function addEvaluation(req, res) {
 
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-
     try {
         if (!Array.isArray(evalutions) || evalutions.length === 0) {
             return res.status(400).send("evalutions array is required");
         }
 
-        const result = await evaluationService.addEvaluation(evalutions, createdBy, updatedBy, universityId, instituteId);
+        const result = await evaluationService.addEvaluation(evalutions, createdBy, updatedBy);
 
         res.status(201).json({
             message: "evaluations added successfully",
@@ -26,12 +23,9 @@ export async function addEvaluation(req, res) {
 
 
 export async function getAllEvaluation(req, res) {
-    const universityId = req.user.universityId;
     const { examSetupTypeId } = req.query;
-    const role = req.user.role;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const evaluation = await evaluationService.getEvaluationDetails(universityId, examSetupTypeId, role, instituteId);
+        const evaluation = await evaluationService.getEvaluationDetails(examSetupTypeId);
         res.status(200).json(evaluation);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -39,10 +33,9 @@ export async function getAllEvaluation(req, res) {
 };
 
 export async function getSingleEvaluationDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { evaluationId } = req.query;
-        const evaluation = await evaluationService.getSingleEvaluationDetails(evaluationId, universityId);
+        const evaluation = await evaluationService.getSingleEvaluationDetails(evaluationId);
         if (evaluation) {
             res.status(200).json(evaluation);
         } else {

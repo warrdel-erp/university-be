@@ -1,8 +1,9 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
 export async function addDepartmentStructure(departmentStructureData) {
     try {
-        const result = await model.departmentStructureModel.create(departmentStructureData);
+        const result = await scoped(model.departmentStructureModel).create(departmentStructureData);
         return result;
     } catch (error) {
         console.error("Error in add department Structure :", error);
@@ -10,29 +11,22 @@ export async function addDepartmentStructure(departmentStructureData) {
     }
 };
 
-export async function getdepartmentStructureDetails(universityId) {
+export async function getdepartmentStructureDetails() {
     try {
-        const departmentStructure = await model.departmentStructureModel.findAll({
+        const departmentStructure = await scoped(model.departmentStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
             include:
                 [
                     {
-                        model: model.accountModel,
+                        model: model.accountModel.unscoped(),
                         as: "mainAccount",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
                     {
-                        model: model.subAccountModel,
+                        model: model.subAccountModel.unscoped(),
                         as: "subAccountDetails",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
-                    // {
-                    //     model: model.subAccountModel,
-                    //     as: "parentAccount",
-                    //     foreignKey: "sub_account_id",
-                    //     // attributes: ['location'],
-                    // },
                 ]
         });
 
@@ -46,27 +40,21 @@ export async function getdepartmentStructureDetails(universityId) {
 
 export async function getSingledepartmentStructureDetails(departmentStructureId) {
     try {
-        const departmentStructure = await model.departmentStructureModel.findOne({
+        const departmentStructure = await scoped(model.departmentStructureModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { departmentStructureId },
             include:
             [
                 {
-                    model: model.accountModel,
+                    model: model.accountModel.unscoped(),
                     as: "mainAccount",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
                 {
-                    model: model.subAccountModel,
+                    model: model.subAccountModel.unscoped(),
                     as: "subAccountDetails",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
-                // {
-                //     model: model.subAccountModel,
-                //     as: "departmentStructures",
-                //     // foreignKey: "sub_account_id",
-                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                // },
             ]
         });
 
@@ -78,13 +66,13 @@ export async function getSingledepartmentStructureDetails(departmentStructureId)
 }
 
 export async function deletedepartmentStructure(departmentStructureId) {
-    const deleted = await model.departmentStructureModel.destroy({ where: { departmentStructureId: departmentStructureId } });
+    const deleted = await scoped(model.departmentStructureModel).destroy({ where: { departmentStructureId } });
     return deleted > 0;
 }
 
 export async function updatedepartmentStructure(departmentStructureId, departmentStructureData) {
     try {
-        const result = await model.departmentStructureModel.update(departmentStructureData, {
+        const result = await scoped(model.departmentStructureModel).update(departmentStructureData, {
             where: { departmentStructureId }
         });
         return result;

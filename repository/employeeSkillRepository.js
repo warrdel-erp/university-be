@@ -1,20 +1,36 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function addEmployeeSkill(data,transaction) {
+async function assertScopedEmployee(employeeId, transaction) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+        transaction,
+    });
+}
+
+export async function addEmployeeSkill(data, transaction) {
     try {
-        const result = await model.employeeSkillModel.create(data,{transaction});
-        return result;
+        const employee = await assertScopedEmployee(data.employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        return await model.employeeSkillModel.create(data, { transaction });
     } catch (error) {
         console.error("Error in add employee skill:", error);
         throw error;
     }
 };
 
-export async function deleteEmployeeSkill (employeeId) {
+export async function deleteEmployeeSkill(employeeId) {
     try {
-        const result = await model.employeeSkillModel.destroy({
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        await model.employeeSkillModel.destroy({
             where: { employeeId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'employee skill deleted successfully' };
     } catch (error) {
@@ -23,41 +39,47 @@ export async function deleteEmployeeSkill (employeeId) {
     }
 };
 
-export async function refreshEmployeeSkills(employeeId, skills,createdBy, updatedBy, transaction) {
-  try {
-    // Delete old
-    await model.employeeSkillModel.destroy({
-      where: { employeeId },
-      transaction
-    });
+export async function refreshEmployeeSkills(employeeId, skills, createdBy, updatedBy, transaction) {
+    try {
+        const employee = await assertScopedEmployee(employeeId, transaction);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
 
-    // Insert new
-    const insertData = skills.map(skill => ({
-      employeeId,
-      createdBy,
-      updatedBy,
-      // sanitize payload to avoid carrying stale IDs/system fields
-      name: skill.name,
-      experienceInYear: skill.experienceInYear ?? null,
-      experienceInMonth: skill.experienceInMonth ?? null,
-      proficiencyLevel: skill.proficiencyLevel
-    }));
+        await model.employeeSkillModel.destroy({
+            where: { employeeId },
+            transaction,
+        });
 
-    return await model.employeeSkillModel.bulkCreate(insertData, { transaction });
-  } catch (error) {
-    console.error("Error refreshing employee skills:", error);
-    throw error;
-  }
+        const insertData = skills.map(skill => ({
+            employeeId,
+            createdBy,
+            updatedBy,
+            name: skill.name,
+            experienceInYear: skill.experienceInYear ?? null,
+            experienceInMonth: skill.experienceInMonth ?? null,
+            proficiencyLevel: skill.proficiencyLevel,
+        }));
+
+        return await model.employeeSkillModel.bulkCreate(insertData, { transaction });
+    } catch (error) {
+        console.error("Error refreshing employee skills:", error);
+        throw error;
+    }
 };
 
 export async function getEmployeeSkillsByEmployeeId(employeeId) {
-  try {
-    return await model.employeeSkillModel.findAll({
-      where: { employeeId },
-      attributes: { exclude: ["createdAt", "updatedAt"] },
-    });
-  } catch (error) {
-    console.error("Error fetching employee skills:", error);
-    throw error;
-  }
+    try {
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            return [];
+        }
+        return await model.employeeSkillModel.findAll({
+            where: { employeeId },
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+        });
+    } catch (error) {
+        console.error("Error fetching employee skills:", error);
+        throw error;
+    }
 };

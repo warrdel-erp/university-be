@@ -1,11 +1,10 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function countUnusedByInstitute(instituteId, universityId, transaction) {
-  return model.answerSheetQrModel.count({
+export async function countUnusedByInstitute(transaction) {
+  return scoped(model.answerSheetQrModel).count({
     where: {
-      instituteId,
-      universityId,
       studentId: { [Op.is]: null },
       examScheduleId: { [Op.is]: null },
     },
@@ -14,40 +13,40 @@ export async function countUnusedByInstitute(instituteId, universityId, transact
 }
 
 export async function bulkCreateAnswerSheetQr(rows, transaction) {
-  return model.answerSheetQrModel.bulkCreate(rows, { transaction });
+  return scoped(model.answerSheetQrModel).bulkCreate(rows, { transaction });
 }
 
-export async function getAnswerSheetQrById(id, instituteId, universityId, transaction) {
-  return model.answerSheetQrModel.findOne({
-    where: { id, instituteId, universityId },
+export async function getAnswerSheetQrById(id, transaction) {
+  return scoped(model.answerSheetQrModel).findOne({
+    where: { id },
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
-        model: model.studentModel,
+        model: model.studentModel.unscoped(),
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel,
+        model: model.examScheduleModel.unscoped(),
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel,
+            model: model.subjectModel.unscoped(),
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel,
+            model: model.examSetupTypeTermModel.unscoped(),
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel,
+                model: model.examSetupTypeModel.unscoped(),
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -57,7 +56,7 @@ export async function getAnswerSheetQrById(id, instituteId, universityId, transa
         ],
       },
       {
-        model: model.userModel,
+        model: model.userModel.unscoped(),
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,
@@ -67,14 +66,12 @@ export async function getAnswerSheetQrById(id, instituteId, universityId, transa
   });
 }
 
-export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, limit, offset) {
+export async function getAnswerSheetQrGenerationRequests(limit, offset) {
   const whereClause = {
-    instituteId,
-    universityId,
     requestId: { [Op.not]: null },
   };
 
-  const groupedRows = await model.answerSheetQrModel.findAll({
+  const groupedRows = await scoped(model.answerSheetQrModel).findAll({
     where: whereClause,
     attributes: [
       "requestId",
@@ -88,7 +85,7 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
     raw: true,
   });
 
-  const totalRequests = await model.answerSheetQrModel.count({
+  const totalRequests = await scoped(model.answerSheetQrModel).count({
     where: whereClause,
     distinct: true,
     col: "requestId",
@@ -97,55 +94,49 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
   return { groupedRows, totalRequests };
 }
 
-export async function getAnswerSheetQrUsageByRequestId(instituteId, universityId, requestId) {
-  return model.answerSheetQrModel.findAll({
-    where: {
-      instituteId,
-      universityId,
-      requestId,
-    },
+export async function getAnswerSheetQrUsageByRequestId(requestId) {
+  return scoped(model.answerSheetQrModel).findAll({
+    where: { requestId },
     attributes: ["studentId", "examScheduleId"],
     raw: true,
   });
 }
 
 export async function getAnswerSheetQrsByRequestId(
-  instituteId,
-  universityId,
   requestId,
   limit,
   offset
 ) {
-  return model.answerSheetQrModel.findAndCountAll({
-    where: { instituteId, universityId, requestId },
+  return scoped(model.answerSheetQrModel).findAndCountAll({
+    where: { requestId },
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
-        model: model.studentModel,
+        model: model.studentModel.unscoped(),
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel,
+        model: model.examScheduleModel.unscoped(),
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel,
+            model: model.subjectModel.unscoped(),
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel,
+            model: model.examSetupTypeTermModel.unscoped(),
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel,
+                model: model.examSetupTypeModel.unscoped(),
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -155,7 +146,7 @@ export async function getAnswerSheetQrsByRequestId(
         ],
       },
       {
-        model: model.userModel,
+        model: model.userModel.unscoped(),
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,
@@ -168,24 +159,26 @@ export async function getAnswerSheetQrsByRequestId(
 }
 
 
-export async function getScopedStudent(studentId, instituteId, universityId, transaction) {
-  return model.studentModel.findOne({
-    where: { studentId, instituteId, universityId },
+export async function getScopedStudent(studentId, transaction) {
+  return scoped(model.studentModel).findOne({
+    where: { studentId },
     attributes: ["studentId", "instituteId", "universityId"],
     transaction,
   });
 }
 
-export async function getScopedExamSchedule(examScheduleId, instituteId, universityId, transaction) {
-  return model.examScheduleModel.findOne({
+export async function getScopedExamSchedule(examScheduleId, transaction) {
+  const termScope = buildScope(model.examSetupTypeTermModel);
+
+  return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
     attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
     include: [
       {
-        model: model.examSetupTypeTermModel,
+        model: model.examSetupTypeTermModel.unscoped(),
         as: "examSetupTypeTerm",
         attributes: ["examSetupTypeTermId", "instituteId", "universityId"],
-        where: { instituteId, universityId },
+        where: termScope,
         required: true,
       },
     ],
@@ -197,12 +190,10 @@ export async function hasStudentHallTicketForExamTerm(
   studentId,
   examSetupTypeTermId,
   sessionId,
-  instituteId,
-  universityId,
   transaction
 ) {
-  const row = await model.studentHallTicketModel.findOne({
-    where: { studentId, examSetupTypeTermId, sessionId, instituteId, universityId },
+  const row = await scoped(model.studentHallTicketModel).findOne({
+    where: { studentId, examSetupTypeTermId, sessionId },
     attributes: ["id"],
     transaction,
   });
@@ -213,12 +204,10 @@ export async function mapAnswerSheetQrOnce(
   qr,
   studentId,
   examScheduleId,
-  instituteId,
-  universityId,
   transaction
 ) {
-  const row = await model.answerSheetQrModel.findOne({
-    where: { qr, instituteId, universityId },
+  const row = await scoped(model.answerSheetQrModel).findOne({
+    where: { qr },
     transaction,
   });
 
@@ -228,12 +217,10 @@ export async function mapAnswerSheetQrOnce(
     return { answerSheetAlreadyMapped: true, row };
   }
 
-  const existingPair = await model.answerSheetQrModel.findOne({
+  const existingPair = await scoped(model.answerSheetQrModel).findOne({
     where: {
       studentId,
       examScheduleId,
-      instituteId,
-      universityId,
       id: { [Op.ne]: row.id },
     },
     transaction,
@@ -248,20 +235,18 @@ export async function mapAnswerSheetQrOnce(
   return { row, answerSheetAlreadyMapped: false, studentExamAlreadyMapped: false };
 }
 
-export async function getScopedUser(userId, instituteId, universityId, transaction) {
-  return model.userModel.findOne({
-    where: { userId, defaultInstituteId: instituteId, universityId },
+export async function getScopedUser(userId, transaction) {
+  return scoped(model.userModel).findOne({
+    where: { userId },
     attributes: ["userId", "userName", "email", "defaultInstituteId", "universityId"],
     transaction,
   });
 }
 
-export async function getAnswerSheetQrsByIds(ids, instituteId, universityId, transaction) {
-  return model.answerSheetQrModel.findAll({
+export async function getAnswerSheetQrsByIds(ids, transaction) {
+  return scoped(model.answerSheetQrModel).findAll({
     where: {
       id: { [Op.in]: ids },
-      instituteId,
-      universityId,
     },
     attributes: ["id", "qr", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId"],
     transaction,
@@ -271,14 +256,12 @@ export async function getAnswerSheetQrsByIds(ids, instituteId, universityId, tra
 export async function assignTeacherByAnswerSheetIds(
   ids,
   assignedToUserId,
-  instituteId,
-  universityId,
   transaction
 ) {
-  const [affectedCount] = await model.answerSheetQrModel.update(
+  const [affectedCount] = await scoped(model.answerSheetQrModel).update(
     { assignedToUser: assignedToUserId },
     {
-      where: { id: { [Op.in]: ids }, instituteId, universityId },
+      where: { id: { [Op.in]: ids } },
       transaction,
     }
   );
@@ -289,14 +272,12 @@ export async function assignMarksByAnswerSheetId(
   id,
   obtainedMarks,
   evaluatedAt,
-  instituteId,
-  universityId,
   transaction
 ) {
-  const [affectedCount] = await model.answerSheetQrModel.update(
+  const [affectedCount] = await scoped(model.answerSheetQrModel).update(
     { obtainedMarks, evaluatedAt },
     {
-      where: { id, instituteId, universityId },
+      where: { id },
       transaction,
     }
   );
@@ -305,45 +286,41 @@ export async function assignMarksByAnswerSheetId(
 
 export async function getScriptsAssignedToTeacher(
   assignedToUserId,
-  instituteId,
-  universityId,
   limit,
   offset
 ) {
-  return model.answerSheetQrModel.findAndCountAll({
+  return scoped(model.answerSheetQrModel).findAndCountAll({
     where: {
-      assignedToUser:assignedToUserId,
-      instituteId,
-      universityId,
+      assignedToUser: assignedToUserId,
     },
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
     include: [
       {
-        model: model.studentModel,
+        model: model.studentModel.unscoped(),
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel,
+        model: model.examScheduleModel.unscoped(),
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel,
+            model: model.subjectModel.unscoped(),
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel,
+            model: model.examSetupTypeTermModel.unscoped(),
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel,
+                model: model.examSetupTypeModel.unscoped(),
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -353,7 +330,7 @@ export async function getScriptsAssignedToTeacher(
         ],
       },
       {
-        model: model.userModel,
+        model: model.userModel.unscoped(),
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,

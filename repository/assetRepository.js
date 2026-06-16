@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 import {
   parseAssetCodeSequenceForNameSlug,
   parseInventoryItemCopyNumber,
@@ -8,18 +9,18 @@ import {
 const excludeTs = ["createdAt", "updatedAt"];
 
 const classRoomHierarchyInclude = {
-  model: model.classRoomModel,
+  model: model.classRoomModel.unscoped(),
   as: "classRoom",
   attributes: ["classRoomSectionId", "roomNumber", "floorId"],
   required: false,
   include: [
     {
-      model: model.floorModel,
+      model: model.floorModel.unscoped(),
       as: "roomFloor",
       attributes: ["floorId", "name", "buildingId"],
       include: [
         {
-          model: model.buildingModel,
+          model: model.buildingModel.unscoped(),
           as: "floorBuilding",
           attributes: ["buildingId", "name", "buildingType", "campusId"],
         },
@@ -45,7 +46,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
 
   if (includeOpenIssues) {
     nestedIncludes.push({
-      model: model.assetIssueInventoryItemModel,
+      model: model.assetIssueInventoryItemModel.unscoped(),
       as: "issueInventoryItems",
       attributes: ["assetIssueInventoryItemId"],
       required: false,
@@ -54,7 +55,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
   }
 
   return {
-    model: model.assetInventoryItemModel,
+    model: model.assetInventoryItemModel.unscoped(),
     as: "inventoryItems",
     attributes: { exclude: excludeTs },
     where,
@@ -67,7 +68,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
 function buildAssetDetailIncludes(inventoryStatus = "all", options = {}) {
   return [
     {
-      model: model.assetCategoryModel,
+      model: model.assetCategoryModel.unscoped(),
       as: "assetCategory",
       attributes: ["assetCategoryId", "name"],
     },
@@ -76,27 +77,22 @@ function buildAssetDetailIncludes(inventoryStatus = "all", options = {}) {
 }
 
 export async function createAsset(data, options = {}) {
-  return model.assetModel.create(data, { transaction: options.transaction });
+  return scoped(model.assetModel).create(data, { transaction: options.transaction });
 }
 
-function buildAssetListWhere(instituteId, filters = {}) {
+function buildAssetListWhere(filters = {}) {
   const search = filters.search?.trim();
   if (!search) {
-    return { instituteId };
+    return {};
   }
 
   const pattern = { [Op.like]: `%${search}%` };
 
   return {
-    [Op.and]: [
-      { instituteId },
-      {
-        [Op.or]: [
-          { name: pattern },
-          { code: pattern },
-          { "$assetCategory.name$": pattern },
-        ],
-      },
+    [Op.or]: [
+      { name: pattern },
+      { code: pattern },
+      { "$assetCategory.name$": pattern },
     ],
   };
 }
@@ -108,7 +104,7 @@ function buildAssetListSearchInclude(filters = {}) {
 
   return [
     {
-      model: model.assetCategoryModel,
+      model: model.assetCategoryModel.unscoped(),
       as: "assetCategory",
       attributes: [],
       required: false,
@@ -116,20 +112,15 @@ function buildAssetListSearchInclude(filters = {}) {
   ];
 }
 
-export async function findAssetsByInstitutePaginated(
-  instituteId,
-  filters = {},
-  pagination = {},
-  options = {}
-) {
+export async function findAssetsByInstitutePaginated(filters = {}, pagination = {}, options = {}) {
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
   const inventoryStatus = filters.inventoryStatus ?? "all";
-  const assetWhere = buildAssetListWhere(instituteId, filters);
+  const assetWhere = buildAssetListWhere(filters);
   const searchIncludes = buildAssetListSearchInclude(filters);
 
-  const total = await model.assetModel.count({
+  const total = await scoped(model.assetModel).count({
     where: assetWhere,
     include: searchIncludes,
     distinct: Boolean(searchIncludes.length),
@@ -137,7 +128,7 @@ export async function findAssetsByInstitutePaginated(
     transaction: options.transaction,
   });
 
-  const idRows = await model.assetModel.findAll({
+  const idRows = await scoped(model.assetModel).findAll({
     attributes: ["assetId"],
     where: assetWhere,
     include: searchIncludes,
@@ -154,9 +145,9 @@ export async function findAssetsByInstitutePaginated(
   }
 
   const [rows, inventoryStatsByAssetId] = await Promise.all([
-    model.assetModel.findAll({
+    scoped(model.assetModel).findAll({
       attributes: { exclude: excludeTs },
-      where: { assetId: assetIds, instituteId },
+      where: { assetId: assetIds },
       include: buildAssetDetailIncludes(inventoryStatus, {
         separate: true,
         includeOpenIssues: true,
@@ -164,17 +155,17 @@ export async function findAssetsByInstitutePaginated(
       order: [["assetId", "ASC"]],
       transaction: options.transaction,
     }),
-    countInventoryStatsByAssetIds(assetIds, instituteId, options),
+    countInventoryStatsByAssetIds(assetIds, options),
   ]);
 
 
   return { rows, total, page, limit, inventoryStatsByAssetId };
 }
 
-export async function findAssetById(assetId, instituteId, options = {}) {
-  const asset = await model.assetModel.findOne({
+export async function findAssetById(assetId, options = {}) {
+  const asset = await scoped(model.assetModel).findOne({
     attributes: { exclude: excludeTs },
-    where: { assetId, instituteId },
+    where: { assetId },
     include: buildAssetDetailIncludes("all", { separate: true, includeOpenIssues: true }),
     transaction: options.transaction,
   });
@@ -182,49 +173,43 @@ export async function findAssetById(assetId, instituteId, options = {}) {
   return asset;
 }
 
-export async function findAssetStatusById(assetId, instituteId, options = {}) {
-  return model.assetModel.findOne({
+export async function findAssetStatusById(assetId, options = {}) {
+  return scoped(model.assetModel).findOne({
     attributes: ["assetId", "status"],
-    where: { assetId, instituteId },
+    where: { assetId },
     transaction: options.transaction,
   });
 }
 
-export async function findAssetStatusesByIds(assetIds, instituteId, options = {}) {
+export async function findAssetStatusesByIds(assetIds, options = {}) {
   if (!assetIds.length) return [];
 
-  return model.assetModel.findAll({
+  return scoped(model.assetModel).findAll({
     attributes: ["assetId", "status"],
-    where: { assetId: assetIds, instituteId },
+    where: { assetId: assetIds },
     transaction: options.transaction,
   });
 }
 
-export async function findAssetCategoryByIdForInstitute(assetCategoryId, instituteId, options = {}) {
-  return model.assetCategoryModel.findOne({
+export async function findAssetCategoryByIdForInstitute(assetCategoryId, options = {}) {
+  return scoped(model.assetCategoryModel).findOne({
     attributes: ["assetCategoryId", "instituteId", "name", "codePrefix"],
-    where: { assetCategoryId, instituteId },
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
 }
 
 export async function findClassRoomSectionById(classRoomSectionId, options = {}) {
-  return model.classRoomModel.findOne({
+  return scoped(model.classRoomModel).findOne({
     attributes: ["classRoomSectionId"],
     where: { classRoomSectionId },
     transaction: options.transaction,
   });
 }
 
-export async function getNextAssetCodeSequence(
-  instituteId,
-  categoryPrefix,
-  assetNamePrefix,
-  options = {}
-) {
-  const rows = await model.assetModel.findAll({
+export async function getNextAssetCodeSequence(categoryPrefix, assetNamePrefix, options = {}) {
+  const rows = await scoped(model.assetModel).findAll({
     attributes: ["code"],
-    where: { instituteId },
     transaction: options.transaction,
   });
 
@@ -239,19 +224,19 @@ export async function getNextAssetCodeSequence(
   return { sequence: Math.max(1, maxSeq + 1) };
 }
 
-export async function findAssetCodeById(assetId, instituteId, options = {}) {
-  const row = await model.assetModel.findOne({
+export async function findAssetCodeById(assetId, options = {}) {
+  const row = await scoped(model.assetModel).findOne({
     attributes: ["code"],
-    where: { assetId, instituteId },
+    where: { assetId },
     transaction: options.transaction,
   });
   return row?.code ?? null;
 }
 
-export async function getNextInventoryCopyNumber(assetId, instituteId, assetCode, options = {}) {
-  const rows = await model.assetInventoryItemModel.findAll({
+export async function getNextInventoryCopyNumber(assetId, assetCode, options = {}) {
+  const rows = await scoped(model.assetInventoryItemModel).findAll({
     attributes: ["code"],
-    where: { assetId, instituteId },
+    where: { assetId },
     transaction: options.transaction,
   });
 
@@ -265,45 +250,39 @@ export async function getNextInventoryCopyNumber(assetId, instituteId, assetCode
   return maxCopy;
 }
 
-export async function findInventoryItemById(assetInventoryItemId, instituteId, options = {}) {
-  return model.assetInventoryItemModel.findOne({
+export async function findInventoryItemById(assetInventoryItemId, options = {}) {
+  return scoped(model.assetInventoryItemModel).findOne({
     attributes: { exclude: excludeTs },
-    where: { assetInventoryItemId, instituteId },
+    where: { assetInventoryItemId },
     transaction: options.transaction,
   });
 }
 
 export async function createInventoryItem(data, options = {}) {
-  return model.assetInventoryItemModel.create(data, { transaction: options.transaction });
+  return scoped(model.assetInventoryItemModel).create(data, { transaction: options.transaction });
 }
 
 export async function bulkCreateInventoryItems(rows, options = {}) {
-  return model.assetInventoryItemModel.bulkCreate(rows, { transaction: options.transaction });
+  return scoped(model.assetInventoryItemModel).bulkCreate(rows, { transaction: options.transaction });
 }
 
-export async function updateInventoryItem(
-  assetInventoryItemId,
-  instituteId,
-  assetId,
-  payload,
-  options = {}
-) {
-  const [affected] = await model.assetInventoryItemModel.update(payload, {
-    where: { assetInventoryItemId, instituteId, assetId },
+export async function updateInventoryItem(assetInventoryItemId, assetId, payload, options = {}) {
+  const [affected] = await scoped(model.assetInventoryItemModel).update(payload, {
+    where: { assetInventoryItemId, assetId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function countInventoryItemsByAsset(assetId, instituteId, options = {}) {
-  return model.assetInventoryItemModel.count({
-    where: { assetId, instituteId },
+export async function countInventoryItemsByAsset(assetId, options = {}) {
+  return scoped(model.assetInventoryItemModel).count({
+    where: { assetId },
     transaction: options.transaction,
   });
 }
 
 /** Per-asset inventory totals and open-issue counts (Sequelize GROUP BY, 2 queries). */
-export async function countInventoryStatsByAssetIds(assetIds, instituteId, options = {}) {
+export async function countInventoryStatsByAssetIds(assetIds, options = {}) {
   if (!assetIds.length) {
     return {};
   }
@@ -312,27 +291,27 @@ export async function countInventoryStatsByAssetIds(assetIds, instituteId, optio
   const db = model.assetInventoryItemModel.sequelize;
 
   const [totalRows, issuedRows] = await Promise.all([
-    model.assetInventoryItemModel.findAll({
+    scoped(model.assetInventoryItemModel).findAll({
       attributes: [
         "assetId",
         [db.fn("COUNT", db.col("asset_inventory_item_id")), "totalInventory"],
       ],
-      where: { assetId: assetIds, instituteId },
+      where: { assetId: assetIds },
       group: ["assetId"],
       raw: true,
       transaction,
     }),
-    model.assetIssueInventoryItemModel.findAll({
+    scoped(model.assetIssueInventoryItemModel).findAll({
       attributes: [
         [db.col("inventoryItem.asset_id"), "assetId"],
         [db.fn("COUNT", db.col("asset_issue_inventory_item_id")), "issuedCount"],
       ],
       include: [
         {
-          model: model.assetInventoryItemModel,
+          model: model.assetInventoryItemModel.unscoped(),
           as: "inventoryItem",
           attributes: [],
-          where: { assetId: assetIds, instituteId },
+          where: { assetId: assetIds },
           required: true,
         },
       ],
@@ -366,7 +345,7 @@ export async function countInventoryStatsByAssetIds(assetIds, instituteId, optio
 }
 
 export async function countOpenIssuesForInventoryItem(assetInventoryItemId, options = {}) {
-  return model.assetIssueInventoryItemModel.count({
+  return scoped(model.assetIssueInventoryItemModel).count({
     where: {
       assetInventoryItemId,
       assetReturnTransactionId: null,
@@ -375,15 +354,15 @@ export async function countOpenIssuesForInventoryItem(assetInventoryItemId, opti
   });
 }
 
-export async function countOpenIssuesForAsset(assetId, instituteId, options = {}) {
-  return model.assetIssueInventoryItemModel.count({
+export async function countOpenIssuesForAsset(assetId, options = {}) {
+  return scoped(model.assetIssueInventoryItemModel).count({
     where: { assetReturnTransactionId: null },
     include: [
       {
-        model: model.assetInventoryItemModel,
+        model: model.assetInventoryItemModel.unscoped(),
         as: "inventoryItem",
         attributes: [],
-        where: { assetId, instituteId },
+        where: { assetId },
         required: true,
       },
     ],
@@ -391,25 +370,25 @@ export async function countOpenIssuesForAsset(assetId, instituteId, options = {}
   });
 }
 
-export async function deleteInventoryItem(assetInventoryItemId, instituteId, options = {}) {
-  const deleted = await model.assetInventoryItemModel.destroy({
-    where: { assetInventoryItemId, instituteId },
+export async function deleteInventoryItem(assetInventoryItemId, options = {}) {
+  const deleted = await scoped(model.assetInventoryItemModel).destroy({
+    where: { assetInventoryItemId },
     transaction: options.transaction,
   });
   return deleted > 0;
 }
 
-export async function updateAsset(assetId, instituteId, payload, options = {}) {
-  const [affected] = await model.assetModel.update(payload, {
-    where: { assetId, instituteId },
+export async function updateAsset(assetId, payload, options = {}) {
+  const [affected] = await scoped(model.assetModel).update(payload, {
+    where: { assetId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function deleteAsset(assetId, instituteId, options = {}) {
-  const deleted = await model.assetModel.destroy({
-    where: { assetId, instituteId },
+export async function deleteAsset(assetId, options = {}) {
+  const deleted = await scoped(model.assetModel).destroy({
+    where: { assetId },
     transaction: options.transaction,
   });
   return deleted > 0;

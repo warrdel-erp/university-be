@@ -1,8 +1,21 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
 import { Op } from 'sequelize';
+import { buildScope, scoped } from '../utility/scoped.js';
+
+function campusBuildingInclude() {
+    const campusScope = buildScope(model.campusModel);
+
+    return {
+        model: model.campusModel.unscoped(),
+        as: "campusbuilding",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        where: campusScope,
+        required: true,
+    };
+}
 
 export async function getCampusIdByInstituteId(instituteId) {
-    const institute = await model.instituteModel.findOne({
+    const institute = await scoped(model.instituteModel).findOne({
         where: { instituteId },
         attributes: ['campusId'],
     });
@@ -14,9 +27,9 @@ export async function getCampusIdByInstituteId(instituteId) {
     return institute.campusId;
 }
 
-export async function addbuilding(buildingData) {    
+export async function addbuilding(buildingData) {
     try {
-        const result = await model.buildingModel.create(buildingData);
+        const result = await scoped(model.buildingModel).create(buildingData);
         return result;
     } catch (error) {
         console.error("Error in add building :", error);
@@ -24,17 +37,11 @@ export async function addbuilding(buildingData) {
     }
 };
 
-export async function getbuildingDetails(universityId) {
+export async function getbuildingDetails() {
     try {
-        const building = await model.buildingModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
-                {
-                    model: model.campusModel,
-                    as: "campusbuilding",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                },
-            ]
+        const building = await scoped(model.buildingModel).findAll({
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+            include: [campusBuildingInclude()],
         });
 
         return building;
@@ -44,18 +51,12 @@ export async function getbuildingDetails(universityId) {
     }
 }
 
-export async function getSinglebuildingDetails(buildingId,universityId) {
+export async function getSinglebuildingDetails(buildingId) {
     try {
-        const building = await model.buildingModel.findOne({
+        const building = await scoped(model.buildingModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { buildingId },
-            include:[
-                {
-                    model: model.campusModel,
-                    as: "campusbuilding",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                },
-            ]
+            include: [campusBuildingInclude()],
         });
 
         return building;
@@ -67,40 +68,52 @@ export async function getSinglebuildingDetails(buildingId,universityId) {
 
 export async function updatebuilding(buildingId, buildingData) {
     try {
-        const result = await model.buildingModel.update(buildingData, {
+        const existing = await scoped(model.buildingModel).findOne({
+            where: { buildingId },
+            include: [campusBuildingInclude()],
+        });
+        if (!existing) {
+            return [0];
+        }
+
+        const result = await scoped(model.buildingModel).update(buildingData, {
             where: { buildingId }
         });
-        return result; 
+        return result;
     } catch (error) {
         console.error(`Error updating building creation ${buildingId}:`, error);
-        throw error; 
+        throw error;
     }
 }
 
 export async function deletebuilding(buildingId) {
-    const deleted = await model.buildingModel.destroy({ where: { buildingId: buildingId } });
+    const existing = await scoped(model.buildingModel).findOne({
+        where: { buildingId },
+        include: [campusBuildingInclude()],
+    });
+    if (!existing) {
+        return false;
+    }
+
+    const deleted = await scoped(model.buildingModel).destroy({ where: { buildingId } });
     return deleted > 0;
 }
 
-
-
-
-export async function getAllbuildingNested(universityId, buildingType, instituteId) {
+export async function getAllbuildingNested(buildingType, instituteId) {
     try {
         let campusIds = [];
 
         if (instituteId) {
             const campusId = await getCampusIdByInstituteId(instituteId);
-            const campus = await model.campusModel.findOne({
-                where: { campusId, universityId },
+            const campus = await scoped(model.campusModel).findOne({
+                where: { campusId },
                 attributes: ["campusId"],
             });
             if (campus) {
                 campusIds = [campus.campusId];
             }
         } else {
-            const campuses = await model.campusModel.findAll({
-                where: { universityId },
+            const campuses = await scoped(model.campusModel).findAll({
                 attributes: ["campusId"],
             });
             campusIds = campuses.map((campus) => campus.campusId);
@@ -110,28 +123,22 @@ export async function getAllbuildingNested(universityId, buildingType, institute
             return [];
         }
 
-        const building = await model.buildingModel.findAll({
+        const building = await scoped(model.buildingModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: {
                 campusId: { [Op.in]: campusIds },
                 ...(buildingType && { buildingType }),
             },
             include: [
+                campusBuildingInclude(),
                 {
-                    model: model.campusModel,
-                    as: "campusbuilding",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    where: { universityId },
-                    required: true,
-                },
-                {
-                    model: model.floorModel,
+                    model: model.floorModel.unscoped(),
                     as: "floorBuilding",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     required: false,
                     include: [
                         {
-                            model: model.classRoomModel,
+                            model: model.classRoomModel.unscoped(),
                             as: "roomFloor",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                             required: false,

@@ -1,4 +1,13 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+async function assertScopedGrade(gradeId, transaction) {
+    return scoped(model.gradeModel).findOne({
+        where: { gradeId },
+        attributes: ['gradeId'],
+        transaction,
+    });
+}
 
 /* =========================
    GRADE
@@ -6,7 +15,7 @@ import * as model from "../models/index.js";
 
 export async function addGrade(data, transaction) {
   try {
-    return await model.gradeModel.create(data, { transaction });
+    return await scoped(model.gradeModel).create(data, { transaction });
   } catch (error) {
     console.error("Repository Error - addGrade:", error.message);
     throw new Error("Unable to create grade scheme");
@@ -15,9 +24,13 @@ export async function addGrade(data, transaction) {
 
 export async function updateGrade(gradeId, data, transaction) {
   try {
-    return await model.gradeModel.update(
+    const existing = await assertScopedGrade(gradeId, transaction);
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.gradeModel).update(
       data,
-      { where: { gradeId }, transaction }
+      { where: { gradeId }, transaction },
     );
   } catch (error) {
     console.error("Repository Error - updateGrade:", error.message);
@@ -25,49 +38,26 @@ export async function updateGrade(gradeId, data, transaction) {
   }
 }
 
-export async function getAllGrades(universityId, instituteId, role) {
+export async function getAllGrades() {
   try {
-    return await model.gradeModel.findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
-      where: {
-        ...(universityId && { universityId }),
-        ...(role === "Head" && { instituteId })
-      },
-
+    return await scoped(model.gradeModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
       include: [
-       
-        // {
-        //   model: model.gradeScaleModel,
-        //   as: "scales"
-        // },
         {
-          model: model.gradeCourseModel,
+          model: model.gradeCourseModel.unscoped(),
           as: "coursesGrade",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
           include: [
-            // {
-            //   model: model.gradePassFailModel,
-            //   as: "passFail"
-            // },
-
             {
-              model: model.courseModel,
+              model: model.courseModel.unscoped(),
               as: "Allcourse",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
+              where: buildScope(model.courseModel),
+              required: false,
             },
-
-            // {
-            //   model: model.sessionModel,
-            //   as: "sessions"
-            // },
-
-            // {
-            //   model: model.acedmicYearModel,
-            //   as: "academicYear"
-            // }
-          ]
-        }
-      ]
+          ],
+        },
+      ],
     });
   } catch (error) {
     console.error("Repository Error - getAllGrades:", error.message);
@@ -75,48 +65,47 @@ export async function getAllGrades(universityId, instituteId, role) {
   }
 }
 
-
 export async function getSingleGrade(gradeId) {
   try {
-    return await model.gradeModel.findOne({
+    return await scoped(model.gradeModel).findOne({
       where: { gradeId },
-
       include: [
         {
-          model: model.gradeScaleModel,
-          as: "scales"
+          model: model.gradeScaleModel.unscoped(),
+          as: "scales",
         },
-
         {
-          model: model.gradeCourseModel,
+          model: model.gradeCourseModel.unscoped(),
           as: "coursesGrade",
           include: [
             {
-              model: model.gradePassFailModel,
-              as: "passFail"
+              model: model.gradePassFailModel.unscoped(),
+              as: "passFail",
             },
-
             {
-              model: model.courseModel,
+              model: model.courseModel.unscoped(),
               as: "Allcourse",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
+              where: buildScope(model.courseModel),
+              required: false,
             },
-
             {
-              model: model.sessionModel,
+              model: model.sessionModel.unscoped(),
               as: "sessions",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
-
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
+              where: buildScope(model.sessionModel),
+              required: false,
             },
-
             {
-              model: model.acedmicYearModel,
+              model: model.acedmicYearModel.unscoped(),
               as: "academicYear",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","updatedBy","createdBy"] },
-            }
-          ]
-        }
-      ]
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
+              where: buildScope(model.acedmicYearModel),
+              required: false,
+            },
+          ],
+        },
+      ],
     });
   } catch (error) {
     console.error("Repository Error - getSingleGradeScheme:", error.message);
@@ -124,10 +113,13 @@ export async function getSingleGrade(gradeId) {
   }
 }
 
-
 export async function deleteGrade(gradeId) {
   try {
-    return await model.gradeModel.destroy({ where: { gradeId } });
+    const existing = await assertScopedGrade(gradeId);
+    if (!existing) {
+      return 0;
+    }
+    return await scoped(model.gradeModel).destroy({ where: { gradeId } });
   } catch (error) {
     throw new Error("Unable to delete grade scheme");
   }
@@ -139,9 +131,13 @@ export async function deleteGrade(gradeId) {
 
 export async function deleteGradeScalesByGradeId(gradeId, transaction) {
   try {
+    const existing = await assertScopedGrade(gradeId, transaction);
+    if (!existing) {
+      return 0;
+    }
     return await model.gradeScaleModel.destroy({
       where: { gradeId },
-      transaction
+      transaction,
     });
   } catch (error) {
     throw new Error("Unable to delete grade scales");
@@ -154,32 +150,45 @@ export async function deleteGradeScalesByGradeId(gradeId, transaction) {
 
 export async function deleteGradeCoursesByGradeId(gradeId, transaction) {
   try {
+    const existing = await assertScopedGrade(gradeId, transaction);
+    if (!existing) {
+      return 0;
+    }
     return await model.gradeCourseModel.destroy({
       where: { gradeId },
-      transaction
+      transaction,
     });
   } catch (error) {
     throw new Error("Unable to delete grade scales");
   }
 }
 
-export async function deleteGradePassFailByGradeCourseId(gradeId, transaction) {  
+export async function deleteGradePassFailByGradeCourseId(gradeId, transaction) {
   try {
+    const existing = await assertScopedGrade(gradeId, transaction);
+    if (!existing) {
+      return 0;
+    }
     const result = await model.gradePassFailModel.destroy({
-      
       where: { gradeId },
-      transaction
+      transaction,
     });
-    return result 
+    return result;
   } catch (error) {
     console.error("Repository Error - deleteGradePassFailByGradeCourseId:", error.message);
     throw new Error("Unable to delete pass/fail rules");
   }
 }
 
-
 export async function addGradeScales(data, transaction) {
   try {
+    if (data?.length) {
+      const gradeId = data[0].gradeId;
+      const existing = await assertScopedGrade(gradeId, transaction);
+      if (!existing) {
+        throw new Error("Grade scheme not found");
+      }
+    }
     return await model.gradeScaleModel.bulkCreate(data, { transaction });
   } catch (error) {
     console.error("Repository Error - addGradeScales:", error.message);
@@ -193,7 +202,11 @@ export async function addGradeScales(data, transaction) {
 
 export async function addGradeCourse(data, transaction) {
   try {
-    return await model.gradeCourseModel.create(data, { transaction });
+    const existing = await assertScopedGrade(data.gradeId, transaction);
+    if (!existing) {
+      throw new Error("Grade scheme not found");
+    }
+    return await scoped(model.gradeCourseModel).create(data, { transaction });
   } catch (error) {
     console.error("Repository Error - addGradeCourse:", error.message);
     throw new Error("Unable to add grade course");
@@ -206,8 +219,15 @@ export async function addGradeCourse(data, transaction) {
 
 export async function addGradePassFail(data, transaction) {
   try {
-    const result = await model.gradePassFailModel.bulkCreate(data, { transaction });    
-    return result
+    if (data?.length) {
+      const gradeId = data[0].gradeId;
+      const existing = await assertScopedGrade(gradeId, transaction);
+      if (!existing) {
+        throw new Error("Grade scheme not found");
+      }
+    }
+    const result = await model.gradePassFailModel.bulkCreate(data, { transaction });
+    return result;
   } catch (error) {
     console.error("Repository Error - addGradePassFail:", error.message);
     throw new Error("Unable to add pass/fail rules");

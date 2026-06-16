@@ -14,8 +14,6 @@ export async function addSchedule(req, res) {
     ];
 
     const data = {
-        universityId: req.user.universityId,
-        instituteId: req.user.defaultInstituteId,
         createdBy: req.user.userId,
         updatedBy: req.user.userId,
         ...req.body
@@ -38,10 +36,6 @@ export async function addSchedule(req, res) {
 };
 
 export async function getAllSchedule(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const { acedmicYearId } = req.query
     try {
         const schedule = await scheduleCreation.getScheduleDetails();
         res.status(200).json(schedule);
@@ -51,7 +45,6 @@ export async function getAllSchedule(req, res) {
 };
 
 export async function getSingleScheduleDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { scheduleId } = req.query;
         const schedule = await scheduleCreation.getSingleScheduleDetails(scheduleId);
@@ -150,9 +143,6 @@ export async function updateAttendence(req, res) {
 };
 
 export async function getAllAttendence(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
     const { page, limit, fromDate, toDate } = req.query
     try {
         const schedule = await scheduleCreation.getAllAttendence(page, limit, fromDate, toDate);

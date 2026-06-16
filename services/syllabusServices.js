@@ -1,24 +1,27 @@
-import sequelize from "../database/sequelizeConfig.js";
-import * as SyllabusCreationRepository from "../repository/syllabusRepository.js";
+import sequelize from '../database/sequelizeConfig.js';
+import * as SyllabusCreationRepository from '../repository/syllabusRepository.js';
 
 export async function addSyllabus(syllabusData, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
   try {
     const allSyllabusResults = [];
 
-    const syllabus = await SyllabusCreationRepository.addSyllabus({
-      instituteId: syllabusData.instituteId,
-      acedmicYearId: syllabusData.acedmicYearId,
-      courseId: syllabusData.courseId,
-      sessionId: syllabusData.sessionId,
-      createdBy,
-      updatedBy
-    }, { transaction });
+    const syllabus = await SyllabusCreationRepository.addSyllabus(
+      {
+        instituteId: syllabusData.instituteId,
+        acedmicYearId: syllabusData.acedmicYearId,
+        courseId: syllabusData.courseId,
+        sessionId: syllabusData.sessionId,
+        createdBy,
+        updatedBy,
+      },
+      { transaction }
+    );
 
     const syllabusDetailsData = [];
 
-    syllabusData.subjects.forEach(subj => {
-      subj.term.forEach(termItem => {
+    syllabusData.subjects.forEach((subj) => {
+      subj.term.forEach((termItem) => {
         syllabusDetailsData.push({
           syllabusId: syllabus.syllabusId,
           subjectId: subj.subjectId,
@@ -28,7 +31,7 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
           marks: termItem.marks,
           total: subj.total,
           createdBy,
-          updatedBy
+          updatedBy,
         });
       });
     });
@@ -43,29 +46,28 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
     console.error('Error creating syllabus:', error);
     throw error;
   }
-};
+}
 
-export async function getSyllabusDetails(universityId, acedmicYearId, instituteId, role) {
-  return await SyllabusCreationRepository.getSyllabusDetails(universityId, acedmicYearId, instituteId, role);
-};
+export async function getSyllabusDetails(acedmicYearId) {
+  return await SyllabusCreationRepository.getSyllabusDetails(acedmicYearId);
+}
 
-export async function getSingleSyllabusDetails(SyllabusId, universityId) {
-  return await SyllabusCreationRepository.getSingleSyllabusDetails(SyllabusId, universityId);
-};
+export async function getSingleSyllabusDetails(SyllabusId) {
+  return await SyllabusCreationRepository.getSingleSyllabusDetails(SyllabusId);
+}
 
 export async function deleteSyllabus(SyllabusId) {
   return await SyllabusCreationRepository.deleteSyllabus(SyllabusId);
-};
+}
 
 export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
-
   syllabusData.updatedBy = updatedBy;
   await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
-};
+}
 
-export async function courseAllSubject(courseId, sessionId, universityId) {
-  return await SyllabusCreationRepository.courseAllSubject(courseId, sessionId, universityId);
-};
+export async function courseAllSubject(courseId, sessionId) {
+  return await SyllabusCreationRepository.courseAllSubject(courseId, sessionId);
+}
 
 export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, instituteId) {
   const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
@@ -81,22 +83,16 @@ export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, 
     description: unit.description,
     contactHours: unit.contactHours,
     createdBy,
-    updatedBy
+    updatedBy,
   }));
 
   return await SyllabusCreationRepository.addSyllabusUnit(syllabusUnits);
-};
+}
 
-export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, role, filters) {
-  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(
-    universityId,
-    acedmicYearId,
-    instituteId,
-    role,
-    filters
-  );
+export async function syllabusUnitGet(filters) {
+  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(filters);
 
-  return syllabusUnits.map(unit => ({
+  return syllabusUnits.map((unit) => ({
     syllabusUnitId: unit.syllabusUnitId,
     universityId: unit.universityId,
     instituteId: unit.instituteId,
@@ -116,19 +112,19 @@ export async function syllabusUnitGet(universityId, acedmicYearId, instituteId, 
     unitNumber: unit.unitNumber,
     name: unit.name,
     description: unit.description,
-    contactHours: unit.contactHours
+    contactHours: unit.contactHours,
   }));
-};
+}
 
 export async function semesterAllSubject(semesterId) {
   try {
     const rawData = await SyllabusCreationRepository.semesterAllSubject(semesterId);
 
     if (!rawData || rawData.length === 0) {
-      return { message: "Syllabus subject not found" };
+      return { message: 'Syllabus subject not found' };
     }
 
-    const semester = rawData[0]; // one semester
+    const semester = rawData[0];
 
     const formatted = {
       semesterId: semester.semesterId,
@@ -156,16 +152,15 @@ export async function semesterAllSubject(semesterId) {
 
             examType: syl.examSetupTypeSyllabus.examType,
             maxAssessment: syl.examSetupTypeSyllabus.maximumAssessment,
-            evaluatedBy: syl.examSetupTypeSyllabus.evaluatedBy
-          }))
+            evaluatedBy: syl.examSetupTypeSyllabus.evaluatedBy,
+          })),
         };
-      })
+      }),
     };
 
     return formatted;
-
   } catch (error) {
-    console.error("Service Error:", error);
+    console.error('Service Error:', error);
     throw error;
   }
-};
+}

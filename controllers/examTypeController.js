@@ -1,16 +1,14 @@
 import * as examTypeServices from "../services/examTypeServices.js";
 
 export async function addExamType(req, res) {
-    const { examName } = req.body
+    const { examName } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!examName) {
-            return res.status(400).send('examName is required')
+            return res.status(400).send('examName is required');
         }
-        const examType = await examTypeServices.addExamType(req.body, createdBy, updatedBy, universityId, instituteId);
+        const examType = await examTypeServices.addExamType(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", examType });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -18,12 +16,9 @@ export async function addExamType(req, res) {
 }
 
 export async function getAllExamType(req, res) {
-    const universityId = req.user.universityId;
-    const role = req.user.role;
-    const instituteId = req.user.defaultInstituteId;
     const { acedmicYearId } = req.query;
     try {
-        const libraries = await examTypeServices.getExamType(universityId, acedmicYearId, role, instituteId);
+        const libraries = await examTypeServices.getExamType(acedmicYearId);
         res.status(200).json(libraries);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -31,10 +26,9 @@ export async function getAllExamType(req, res) {
 }
 
 export async function getSingleExamType(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { examTypeId } = req.query;
-        const examDetails = await examTypeServices.getSingleExamType(examTypeId, universityId);
+        const examDetails = await examTypeServices.getSingleExamType(examTypeId);
         if (examDetails) {
             res.status(200).json(examDetails);
         } else {
@@ -47,9 +41,9 @@ export async function getSingleExamType(req, res) {
 
 export async function updateExamType(req, res) {
     try {
-        const { examTypeId } = req.body
-        if (!(examTypeId)) {
-            return res.status(400).send('examTypeId is required')
+        const { examTypeId } = req.body;
+        if (!examTypeId) {
+            return res.status(400).send('examTypeId is required');
         }
         const updatedBy = req.user.userId;
         const examDetails = await examTypeServices.updateExamType(examTypeId, req.body, updatedBy);

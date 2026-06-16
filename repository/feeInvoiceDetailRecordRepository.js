@@ -1,184 +1,159 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addFeeInvoiceDetailRecord(feeInvoiceArray) {
+function recordExcludedAttributes() {
+  return ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
+}
+
+function userFeeInvoiceInclude() {
+  return {
+    model: model.userModel.unscoped(),
+    as: "userFeeInvoice",
+    attributes: ["universityId", "userId"],
+    where: buildScope(model.userModel),
+    required: true,
+  };
+}
+
+async function assertScopedStudentInvoiceMapper(studentInvoiceMapperId, transaction) {
+  return model.studentInvoiceMapperModel.unscoped().findOne({
+    attributes: ["studentInvoiceMapperId"],
+    where: { studentInvoiceMapperId, ...buildScope(model.studentInvoiceMapperModel) },
+    include: [
+      {
+        model: model.studentModel.unscoped(),
+        as: "studentinvoice",
+        attributes: [],
+        where: buildScope(model.studentModel),
+        required: true,
+      },
+    ],
+    transaction,
+  });
+}
+
+export async function addFeeInvoiceDetailRecord(feeInvoiceArray, options = {}) {
   try {
-    const result = await model.feeInvoiceDetailRecordModel.bulkCreate(feeInvoiceArray, { returning: true });
-    return result;
+    const transaction = options.transaction;
+
+    for (const record of feeInvoiceArray) {
+      const mapper = await assertScopedStudentInvoiceMapper(record.studentInvoiceMapperId, transaction);
+      if (!mapper) {
+        throw new Error("Student invoice mapper not found");
+      }
+    }
+
+    return scoped(model.feeInvoiceDetailRecordModel).bulkCreate(feeInvoiceArray, {
+      returning: true,
+      transaction,
+    });
   } catch (error) {
     console.error("Error in add Fee Invoice Record :", error);
     throw error;
   }
 }
 
-export async function getAllFeeInvoiceDetailRecord(universityId, acedmicYearId, instituteId, role) {
-    try {
-        // const whereClase ={
-        //     ...(acedmicYearId && { acedmicYearId }),
-        //     ...(role === 'Head' && { instituteId })
-        // };
-        // const whereClases ={
-        //     // ...(acedmicYearId && { acedmicYearId }),
-        //     ...(role === 'Head' && { instituteId })
-        // };
-        const feeInvoice = await model.feeInvoiceDetailRecordModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            include: [
-                {
-                    model: model.feeInvoiceModel,
-                    as: "feeInvoice",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    include: [
-                        {
-                            model:model.feeInvoiceDetailModel,
-                            as:'invoiceDetails',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id"] },
-                            include: [
-                                {
-                                    model: model.feePlanTypeModel,
-                                    as: 'feeInvoiceTypePlan',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                },
-                                {
-                                    model: model.feePlanSemesterModel,
-                                    as: 'feeInvoiceTypeSemester',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                }
-                            ]
-                        },
-                        {
-                            model: model.feePlanModel,
-                            as: "feeInvoicePlan",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id"] },
-                            // where: whereClases
-                        },
-                        {
-                            model: model.classStudentMapperModel,
-                            as: "feeStudentMapper",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "student_id", "class_sections_id"] },
-                            // where: {
-                            //     ...(acedmicYearId && { acedmicYearId }),
-                            // },
-                            include: [
-                                {
-                                    model: model.studentModel,
-                                    as: 'studentMapped',
-                                    attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"]
-                                },
-                                {
-                                    model: model.classSectionModel,
-                                    as: 'studentSectionDetail',
-                                    attributes: ["section", "classSectionsId", "class"]
-                                }
-                            ]
-                        },
-                    ]
-                },
-                // {
-                //     model: model.feeInvoiceDetailModel,
-                //     as: "feeInvoiceDetail",
-                //     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                //     include: [
-                //         {
-                //             model: model.feePlanTypeModel,
-                //             as: 'feeInvoiceTypePlan',
-                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                //         },
-                //         {
-                //             model: model.feePlanSemesterModel,
-                //             as: 'feeInvoiceTypeSemester',
-                //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                //         }
-                //     ]
-                // },
+export async function getAllFeeInvoiceDetailRecord() {
+  try {
+    return model.feeInvoiceDetailRecordModel.unscoped().findAll({
+      attributes: { exclude: recordExcludedAttributes() },
+      include: [
+        {
+          model: model.studentInvoiceMapperModel.unscoped(),
+          as: "studentMakePayment",
+          required: true,
+          where: buildScope(model.studentInvoiceMapperModel),
+          include: [
+            {
+              model: model.studentModel.unscoped(),
+              as: "studentinvoice",
+              attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+              where: buildScope(model.studentModel),
+              required: true,
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching Fee Invoice details Record:", error);
+    throw error;
+  }
+}
 
-            ]
-        });
-
-        return feeInvoice;
-    } catch (error) {
-        console.error('Error fetching Fee Invoice details Record:', error);
-        throw error;
-    }
-};
-
-export async function getSingleFeeInvoiceDetails(feeInvoiceId, universityId) {
-    try {
-        const feeInvoice = await model.feeInvoiceModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_type_id"] },
-            where: { feeInvoiceId },
-            include: [
-                {
-                    model: model.userModel,
-                    as: "userFeeInvoice",
-                    attributes: ["universityId", "userId"],
-                    where: { universityId }
-                },
-                {
-                    model: model.feePlanModel,
-                    as: "feeInvoicePlan",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_group_id"] },
-                },
-                {
-                    model: model.classStudentMapperModel,
-                    as: "feeStudentMapper",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "student_id", "class_sections_id"] },
-                    include: [
-                        {
-                            model: model.studentModel,
-                            as: 'studentMapped',
-                            attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"]
-                        },
-                        {
-                            model: model.classSectionModel,
-                            as: 'studentSectionDetail',
-                            attributes: ["section", "classSectionsId", "class"]
-                        }
-                    ]
-                },
-                {
-                    model: model.feeInvoiceDetailModel,
-                    as: 'feeInvoiceDetails',
-                    attributes: ["feeInvoiceDetailsId", "feeInvoiceId", "feeTypeId", "amount", "waiver", "subTotal", "paidAmount"],
-                    include: [
-                        {
-                            model: model.feePlanTypeModel,
-                            as: 'feeInvoiceTypePlan',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        },
-                        {
-                            model: model.feePlanSemesterModel,
-                            as: 'feeInvoiceTypeSemester',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                        }
-                    ]
-                }
-            ]
-        });
-
-        return feeInvoice;
-    } catch (error) {
-        console.error('Error fetching FeeInvoice details:', error);
-        throw error;
-    }
-};
-
-
-
-export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, transaction) {
-    try {
-        const result = await model.feeInvoiceModel.update(feeInvoiceData, {
-            where: { feeInvoiceId }
-        });
-        transaction
-        return result;
-    } catch (error) {
-        console.error(`Error updating FeeInvoice creation ${feeInvoiceId}:`, error);
-        throw error;
-    }
-};
-
-export async function deleteFeeInvoice(feeInvoiceId) {
-    const deleted = await model.feeInvoiceModel.destroy({ where: { feeInvoiceId: feeInvoiceId } });
-    return deleted > 0;
-};
+export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
+  try {
+    return model.feeInvoiceModel.unscoped().findOne({
+      attributes: { exclude: [...recordExcludedAttributes(), "fee_type_id"] },
+      where: { feeInvoiceId },
+      include: [
+        userFeeInvoiceInclude(),
+        {
+          model: model.feePlanModel.unscoped(),
+          as: "feeInvoicePlan",
+          attributes: { exclude: [...recordExcludedAttributes(), "fee_group_id"] },
+          where: buildScope(model.feePlanModel),
+          required: false,
+        },
+        {
+          model: model.classStudentMapperModel.unscoped(),
+          as: "feeStudentMapper",
+          attributes: {
+            exclude: [
+              "createdAt",
+              "updatedAt",
+              "deletedAt",
+              "createdBy",
+              "updatedBy",
+              "student_id",
+              "class_sections_id",
+            ],
+          },
+          where: buildScope(model.classStudentMapperModel),
+          include: [
+            {
+              model: model.studentModel.unscoped(),
+              as: "studentMapped",
+              attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+              where: buildScope(model.studentModel),
+              required: true,
+            },
+            {
+              model: model.classSectionModel.unscoped(),
+              as: "studentSectionDetail",
+              attributes: ["section", "classSectionsId", "class"],
+            },
+          ],
+        },
+        {
+          model: model.feeInvoiceDetailModel.unscoped(),
+          as: "feeInvoiceDetails",
+          attributes: [
+            "feeInvoiceDetailsId",
+            "feeInvoiceId",
+            "feeTypeId",
+            "amount",
+            "waiver",
+            "subTotal",
+            "paidAmount",
+          ],
+          include: [
+            {
+              model: model.feePlanTypeModel.unscoped(),
+              as: "feeInvoiceTypePlan",
+              attributes: { exclude: recordExcludedAttributes() },
+            },
+            {
+              model: model.feePlanSemesterModel.unscoped(),
+              as: "feeInvoiceTypeSemester",
+              attributes: { exclude: recordExcludedAttributes() },
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching FeeInvoice details:", error);
+    throw error;
+  }
+}

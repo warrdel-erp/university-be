@@ -24,10 +24,9 @@ export const getTimeTableDetails = async (req, res) => {
 };
 
 export const getAllTimeTableName = async (req, res) => {
-    const universityId = req.user.universityId;
     let { courseId } = req.query;
     try {
-        const result = await timeTableServices.getAllTimeTableName(universityId, courseId);
+        const result = await timeTableServices.getAllTimeTableName(courseId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table structure:", error);

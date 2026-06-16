@@ -6,10 +6,8 @@ import { requestContext } from "./requestContext.js";
  * Reads tenant context from requestContext (set in authUser middleware):
  *   universityId, instituteId, academicYearId, userId, role
  *
- * Two ways to use:
- *   1. Explicit:  scoped(model.departmentModel).findAll({ where: { ... } })
- *   2. Automatic: applyMultiTenancy(sequelize) patches all models at startup
- *      so model.departmentModel.findAll() is scoped without wrapping.
+ * Use explicit scoping only:
+ *   scoped(model.departmentModel).findAll({ where: { ... } })
  *
  * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
  * or when store.bypass is true (set for routes like /campus, /institute).
@@ -26,6 +24,25 @@ function getOriginal(model, method) {
     return model._scopeOriginals[method];
   }
   return model[method].bind(model);
+}
+
+function mergeScopedWhere(baseWhere, optionsWhere = {}, pkField, pkValue) {
+  const where = { ...optionsWhere, ...baseWhere };
+  if (pkField != null && pkValue != null) {
+    where[pkField] = pkValue;
+  }
+  return where;
+}
+
+function scopeFieldsForModel(model, scopeWhere) {
+  const attrs = model.rawAttributes || {};
+  const filtered = {};
+  for (const [key, value] of Object.entries(scopeWhere)) {
+    if (key in attrs) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
 }
 
 /**
@@ -76,62 +93,63 @@ export const buildScope = (model) => {
 export const scoped = (model) => {
   const baseWhere = buildScope(model);
   const pk = model.primaryKeyAttribute || "id";
+  const writeScope = scopeFieldsForModel(model, baseWhere);
 
   return {
     findAll: (options = {}) =>
       getOriginal(model, "findAll")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     findOne: (options = {}) =>
       getOriginal(model, "findOne")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     findByPk: (id, options = {}) =>
       getOriginal(model, "findOne")({
         ...options,
-        where: { ...baseWhere, ...options.where, [pk]: id },
+        where: mergeScopedWhere(baseWhere, options.where, pk, id),
       }),
 
     findAndCountAll: (options = {}) =>
       getOriginal(model, "findAndCountAll")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     update: (data, options = {}) =>
       getOriginal(model, "update")(data, {
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     delete: (options = {}) =>
       getOriginal(model, "destroy")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     count: (options = {}) =>
       getOriginal(model, "count")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     destroy: (options = {}) =>
       getOriginal(model, "destroy")({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     create: (data, options = {}) =>
-      getOriginal(model, "create")({ ...data, ...baseWhere }, options),
+      getOriginal(model, "create")({ ...data, ...writeScope }, options),
 
     bulkCreate: (rows, options = {}) =>
       getOriginal(model, "bulkCreate")(
-        rows.map((row) => ({ ...row, ...baseWhere })),
+        rows.map((row) => ({ ...row, ...writeScope })),
         { validate: true, ...options }
       ),
   };
@@ -161,7 +179,7 @@ export const applyMultiTenancy = (sequelize) => {
       const baseWhere = buildScope(model);
       return model._scopeOriginals.findAll({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       });
     };
 
@@ -169,7 +187,7 @@ export const applyMultiTenancy = (sequelize) => {
       const baseWhere = buildScope(model);
       return model._scopeOriginals.findOne({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       });
     };
 
@@ -177,7 +195,7 @@ export const applyMultiTenancy = (sequelize) => {
       const baseWhere = buildScope(model);
       return model._scopeOriginals.findAndCountAll({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       });
     };
 
@@ -185,7 +203,7 @@ export const applyMultiTenancy = (sequelize) => {
       const baseWhere = buildScope(model);
       return model._scopeOriginals.count({
         ...options,
-        where: { ...baseWhere, ...options.where },
+        where: mergeScopedWhere(baseWhere, options.where),
       });
     };
 
@@ -193,7 +211,7 @@ export const applyMultiTenancy = (sequelize) => {
       const baseWhere = buildScope(model);
       return model._scopeOriginals.findOne({
         ...options,
-        where: { ...baseWhere, ...options.where, [pk]: id },
+        where: mergeScopedWhere(baseWhere, options.where, pk, id),
       });
     };
 

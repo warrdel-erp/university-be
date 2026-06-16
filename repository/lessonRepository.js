@@ -1,33 +1,30 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addLesson(data) {
   try {
-    const result = await model.lessonModel.create(data);
-    return result;
+    return await scoped(model.lessonModel).create(data);
   } catch (error) {
     console.error("Error in add lesson :", error);
     throw error;
   }
 }
 
-export async function getLessonDetails(universityId, instituteId, role, acedmicYearId) {
+export async function getLessonDetails(acedmicYearId) {
   try {
-    const whereClause = {
-      ...(universityId && { universityId }),
-      ...(acedmicYearId && { acedmicYearId }),
-      ...(role === "Head" && { institute_id: instituteId }),
-    };
-    const lesson = await model.lessonModel.findAll({
+    const lesson = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: whereClause,
+      where: {
+        ...(acedmicYearId && { acedmicYearId }),
+      },
       include: [
         {
-          model: model.subjectModel,
+          model: model.subjectModel.unscoped(),
           as: "lessonSubject",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.courseModel,
+              model: model.courseModel.unscoped(),
               as: "courseInfo",
               attributes: {
                 exclude: [
@@ -44,7 +41,7 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
           ],
         },
         {
-          model: model.semesterModel,
+          model: model.semesterModel.unscoped(),
           as: "lessionSemester",
           attributes: {
             exclude: [
@@ -59,12 +56,12 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
           },
         },
         {
-          model: model.sessionModel,
+          model: model.sessionModel.unscoped(),
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
         {
-          model: model.topicModel,
+          model: model.topicModel.unscoped(),
           as: "topicSession",
           attributes: {
             exclude: [
@@ -79,7 +76,7 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
           },
         },
         {
-          model: model.employeeModel,
+          model: model.employeeModel.unscoped(),
           as: "employeeLesson",
           attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         },
@@ -94,19 +91,19 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
 
 export async function getSingleLessonDetails(lessonId) {
   try {
-    const lesson = await model.lessonModel.findOne({
+    const lesson = await scoped(model.lessonModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: {
         lessonId,
       },
       include: [
         {
-          model: model.subjectModel,
+          model: model.subjectModel.unscoped(),
           as: "lessonSubject",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.courseModel,
+              model: model.courseModel.unscoped(),
               as: "courseInfo",
               attributes: {
                 exclude: [
@@ -124,7 +121,7 @@ export async function getSingleLessonDetails(lessonId) {
           ],
         },
         {
-          model: model.semesterModel,
+          model: model.semesterModel.unscoped(),
           as: "lessionSemester",
           attributes: {
             exclude: [
@@ -139,12 +136,12 @@ export async function getSingleLessonDetails(lessonId) {
           },
         },
         {
-          model: model.sessionModel,
+          model: model.sessionModel.unscoped(),
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
         {
-          model: model.topicModel,
+          model: model.topicModel.unscoped(),
           as: "topicSession",
           attributes: {
             exclude: [
@@ -170,8 +167,7 @@ export async function getSingleLessonDetails(lessonId) {
 
 export async function addTopic(data) {
   try {
-    const result = await model.topicModel.create(data);
-    return result;
+    return await scoped(model.topicModel).create(data);
   } catch (error) {
     console.error("Error in add topic :", error);
     throw error;
@@ -180,8 +176,7 @@ export async function addTopic(data) {
 
 export async function addSubTopic(data, transaction) {
   try {
-    const result = await model.subTopicModel.create(data, { transaction });
-    return result;
+    return await scoped(model.subTopicModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add sub topic :", error);
     throw error;
@@ -190,50 +185,44 @@ export async function addSubTopic(data, transaction) {
 
 export async function addLessionMapping(data, transaction) {
   try {
-    const result = await model.lessonMappingModel.create(data, { transaction });
-    return result;
+    return await scoped(model.lessonMappingModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Lession Mapping:", error);
     throw error;
   }
 }
 
-export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+export async function getMapping(acedmicYearId) {
   try {
-    const mainWhereClause = {
-      ...(universityId && { universityId }),
-      ...(role === "Head" && { instituteId }),
-    };
     const lessonWhereClause = {
-      ...(universityId && { universityId }),
       ...(acedmicYearId && { acedmicYearId }),
+      ...buildScope(model.lessonModel),
     };
-    const lesson = await model.lessonMappingModel.findAll({
+    const lesson = await scoped(model.lessonMappingModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: mainWhereClause,
       include: [
         {
-          model: model.topicModel,
+          model: model.topicModel.unscoped(),
           as: "mappingTopic",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           required: true,
           include: [
             {
-              model: model.lessonModel,
+              model: model.lessonModel.unscoped(),
               as: "lessonTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               where: lessonWhereClause,
               required: true,
               include: [
                 {
-                  model: model.subjectModel,
+                  model: model.subjectModel.unscoped(),
                   as: "lessonSubject",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
               ],
             },
             {
-              model: model.subTopicModel,
+              model: model.subTopicModel.unscoped(),
               as: "subTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               required: false,
@@ -241,7 +230,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
           ],
         },
         {
-          model: model.classScheduleModel,
+          model: model.classScheduleModel.unscoped(),
           as: "timeTableMapping",
           attributes: {
             exclude: [
@@ -260,8 +249,10 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
           },
           include: [
             {
-              model: model.timeTableRoutineModel,
+              model: model.timeTableRoutineModel.unscoped(),
               as: "timeTablecreate",
+              required: true,
+              where: buildScope(model.timeTableRoutineModel),
               attributes: {
                 exclude: [
                   "createdAt",
@@ -278,24 +269,24 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               },
               include: [
                 {
-                  model: model.classSectionModel,
+                  model: model.classSectionModel.unscoped(),
                   as: "timeTableClassSection",
                   attributes: ["section", "class", "section_id", "class_sections_id"],
                 },
               ],
             },
             {
-              model: model.timeTableStructurePeriodsModel,
+              model: model.timeTableStructurePeriodsModel.unscoped(),
               as: "timeTablecreation",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.employeeModel,
+              model: model.employeeModel.unscoped(),
               as: "employeeDetails",
               attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
             },
             {
-              model: model.teacherSubjectMappingModel,
+              model: model.teacherSubjectMappingModel.unscoped(),
               as: "timeTableTeacherSubject",
               attributes: {
                 exclude: [
@@ -310,7 +301,7 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
               },
               include: [
                 {
-                  model: model.employeeModel,
+                  model: model.employeeModel.unscoped(),
                   as: "teacherEmployeeData",
                   attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
                 },
@@ -329,13 +320,17 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
 
 export async function updateMapping(lessonMappingId, data) {
   try {
-    const [updatedRowsCount] = await model.lessonMappingModel.update(data, {
+    const existing = await scoped(model.lessonMappingModel).findOne({
       where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
     });
-
-    if (updatedRowsCount === 0) {
+    if (!existing) {
       throw new Error("No lesson mapping found with the given ID.");
     }
+
+    const [updatedRowsCount] = await scoped(model.lessonMappingModel).update(data, {
+      where: { lessonMappingId },
+    });
 
     return { success: true, message: "Mapping updated successfully." };
   } catch (error) {
@@ -346,11 +341,18 @@ export async function updateMapping(lessonMappingId, data) {
 
 export async function updateLessionMapping(lessonMappingId, data, transaction) {
   try {
-    const result = await model.lessonMappingModel.update(data, {
+    const existing = await scoped(model.lessonMappingModel).findOne({
+      where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
+      transaction,
+    });
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.lessonMappingModel).update(data, {
       where: { lessonMappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in update Lession Mapping:", error);
     throw error;
@@ -359,11 +361,18 @@ export async function updateLessionMapping(lessonMappingId, data, transaction) {
 
 export async function updateSubTopic(subTopicId, data, transaction) {
   try {
-    const result = await model.subTopicModel.update(data, {
+    const existing = await scoped(model.subTopicModel).findOne({
+      where: { subTopicId },
+      attributes: ['subTopicId'],
+      transaction,
+    });
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.subTopicModel).update(data, {
       where: { subTopicId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in update SubTopic:", error);
     throw error;
@@ -372,11 +381,18 @@ export async function updateSubTopic(subTopicId, data, transaction) {
 
 export async function deleteLessionMapping(lessonMappingId, transaction) {
   try {
-    const result = await model.lessonMappingModel.destroy({
+    const existing = await scoped(model.lessonMappingModel).findOne({
+      where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
+      transaction,
+    });
+    if (!existing) {
+      return 0;
+    }
+    return await scoped(model.lessonMappingModel).destroy({
       where: { lessonMappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in delete Lession Mapping:", error);
     throw error;
@@ -385,11 +401,18 @@ export async function deleteLessionMapping(lessonMappingId, transaction) {
 
 export async function deleteSubTopicsByMapping(mappingId, transaction) {
   try {
-    const result = await model.subTopicModel.destroy({
+    const topic = await scoped(model.topicModel).findOne({
+      where: { topicId: mappingId },
+      attributes: ['topicId'],
+      transaction,
+    });
+    if (!topic) {
+      return 0;
+    }
+    return await scoped(model.subTopicModel).destroy({
       where: { topicId: mappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in delete SubTopics:", error);
     throw error;
@@ -424,12 +447,12 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //                   where:{sessionId},
 //                   include:[
 //                     {
-//                       model: model.topicModel,
+//                       model: model.topicModel.unscoped(),
 //                       as: 'topicSession',
 //                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
 //                     },
 //                     {
-//                       model: model.semesterModel,
+//                       model: model.semesterModel.unscoped(),
 //                       as: 'lessionSemester',
 //                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
 //                       where:{courseId}
@@ -451,40 +474,59 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 
 export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
   try {
-    const whereClause = {
-      ...(employeeId && { employeeId }),
+    const employeeWhere = {
+      ...buildScope(model.employeeModel),
       ...(acedmicYearId && { acedmicYearId }),
+    };
+    const mapperWhere = buildScope(model.classSubjectMapperModel);
+    const subjectWhere = {
+      ...buildScope(model.subjectModel),
+      ...(courseId && { courseId }),
+    };
+    const lessonWhere = {
+      ...buildScope(model.lessonModel),
+      ...(sessionId && { sessionId, employeeId }),
     };
 
     const lesson = await model.teacherSubjectMappingModel.findAll({
-      where: whereClause,
+      where: {
+        ...(employeeId && { employeeId }),
+      },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
 
       include: [
         {
-          model: model.classSubjectMapperModel,
+          model: model.employeeModel.unscoped(),
+          as: "teacherEmployeeData",
+          required: true,
+          attributes: [],
+          where: employeeWhere,
+        },
+        {
+          model: model.classSubjectMapperModel.unscoped(),
           as: "employeeSubject",
           required: false,
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: mapperWhere,
           include: [
             {
-              model: model.subjectModel,
+              model: model.subjectModel.unscoped(),
               as: "subjects",
-              required: false, // ⭐ prevents NULL join issues
+              required: false,
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              ...(courseId && { where: { courseId } }), // Filter when provided
+              where: subjectWhere,
 
               include: [
                 {
-                  model: model.lessonModel,
+                  model: model.lessonModel.unscoped(),
                   as: "lessonSubject",
                   required: false,
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                  ...(sessionId && { where: { sessionId, employeeId } }),
+                  where: lessonWhere,
 
                   include: [
                     {
-                      model: model.topicModel,
+                      model: model.topicModel.unscoped(),
                       as: "topicSession",
                       required: false,
                       attributes: {
@@ -500,7 +542,7 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
                       },
                     },
                     {
-                      model: model.semesterModel,
+                      model: model.semesterModel.unscoped(),
                       as: "lessionSemester",
                       required: false,
                       attributes: {
@@ -534,7 +576,7 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
 
 export async function getSimpleLessonList(whereClause) {
   try {
-    const lessons = await model.lessonModel.findAll({
+    const lessons = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
     });

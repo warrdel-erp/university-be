@@ -80,9 +80,9 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
   }
 }
 
-export async function gettimeTableCreateDetails(universityId) {
-  try {
-    const result = await timeTableCreateRepository.getTimeTableCreateDetails(universityId);
+export async function gettimeTableCreateDetails() {
+    try {
+    const result = await timeTableCreateRepository.getTimeTableCreateDetails();
     return result;
   } catch (error) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
@@ -90,9 +90,9 @@ export async function gettimeTableCreateDetails(universityId) {
   }
 }
 
-export async function getSingletimeTableCreateDetails(courseId, universityId) {
-  try {
-    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
+export async function getSingletimeTableCreateDetails(courseId) {
+    try {
+    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 
     return result;
   } catch (error) {
@@ -101,12 +101,11 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
   }
 }
 
-export async function getTimeTableByCourseAndSection(courseId, classSectionsId, universityId, timeTableType) {
+export async function getTimeTableByCourseAndSection(courseId, classSectionsId, timeTableType) {
   try {
     const data = await timeTableCreateRepository.getTimeTableByCourseAndSection(
       courseId,
       classSectionsId,
-      universityId,
       timeTableType,
     );
 
@@ -546,8 +545,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
   }
 }
 
-export async function getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role) {
-  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role);
+export async function getTimeTableMappingDetail(timeTableRoutineId) {
+  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(timeTableRoutineId);
 
   if (!Array.isArray(rawResult) || rawResult.length === 0) {
     return [];
@@ -665,18 +664,16 @@ export async function getTimeTableMappingDetail(universityId, instituteId, timeT
   return result;
 }
 
-export async function getSingletimeTableMappingDetail(courseId, universityId) {
-  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
+export async function getSingletimeTableMappingDetail(courseId) {
+  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 }
 
 //---------------night
 
-export async function getTimeTableElective(courseId, universityId, instituteId, role) {
+export async function getTimeTableElective(courseId) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     Number(courseId),
-    universityId,
-    instituteId,
-    role,
+    null,
   );
 
   //  Separate normal and elective
@@ -974,13 +971,10 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
 
 // latest change
 
-export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
+export async function getTimeTableCellData(courseId, classSectionsId) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     courseId,
     classSectionsId,
-    universityId,
-    instituteId,
-    role,
   );
 
   // STEP 1: Filter by classSectionsId (NOW multiple timetables possible)

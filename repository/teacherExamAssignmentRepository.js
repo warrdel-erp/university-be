@@ -1,8 +1,26 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+async function assertScopedExamSchedule(examScheduleId, transaction) {
+    return scoped(model.examScheduleModel).findOne({
+        where: { examScheduleId },
+        attributes: ['examScheduleId'],
+        transaction,
+    });
+}
 
 export async function findAssignment(whereClause) {
     try {
-        return await model.teacherExamAssignmentModel.findOne({ where: whereClause });
+        return await scoped(model.teacherExamAssignmentModel).findOne({
+            where: whereClause,
+            include: [{
+                model: model.examScheduleModel.unscoped(),
+                as: 'examSchedule',
+                required: true,
+                where: buildScope(model.examScheduleModel),
+                attributes: ['examScheduleId'],
+            }],
+        });
     } catch (error) {
         console.error("Error in findAssignment repository:", error);
         throw error;
@@ -11,7 +29,11 @@ export async function findAssignment(whereClause) {
 
 export async function assignExam(data) {
     try {
-        const result = await model.teacherExamAssignmentModel.create(data);
+        const schedule = await assertScopedExamSchedule(data.examScheduleId);
+        if (!schedule) {
+            throw new Error('Exam schedule not found');
+        }
+        const result = await scoped(model.teacherExamAssignmentModel).create(data);
         return result;
     } catch (error) {
         console.error("Error in assignExam repository:", error);
@@ -21,40 +43,49 @@ export async function assignExam(data) {
 
 export async function getAssignments(whereClause) {
     try {
-        const result = await model.teacherExamAssignmentModel.findAll({
+        const result = await scoped(model.teacherExamAssignmentModel).findAll({
             where: whereClause,
             include: [
                 {
-                    model: model.examScheduleModel,
+                    model: model.examScheduleModel.unscoped(),
                     as: 'examSchedule',
+                    required: true,
+                    where: buildScope(model.examScheduleModel),
                     include: [
                         {
-                            model: model.subjectModel,
+                            model: model.subjectModel.unscoped(),
                             as: 'subjectSchedule',
+                            where: buildScope(model.subjectModel),
+                            required: false,
                             include: [
                                 {
-                                    model: model.courseModel,
-                                    as: "courseInfo"
-                                }
-                            ]
+                                    model: model.courseModel.unscoped(),
+                                    as: "courseInfo",
+                                },
+                            ],
                         },
                         {
-                            model: model.examSetupTypeTermModel,
+                            model: model.examSetupTypeTermModel.unscoped(),
                             as: "examSetupTypeTerm",
+                            where: buildScope(model.examSetupTypeTermModel),
+                            required: false,
                             include: [
                                 {
-                                    model: model.examSetupTypeModel,
-                                    as: "examSetupType"
-                                }
-                            ]
-                        }
-                    ]
+                                    model: model.examSetupTypeModel.unscoped(),
+                                    as: "examSetupType",
+                                    where: buildScope(model.examSetupTypeModel),
+                                },
+                            ],
+                        },
+                    ],
                 },
                 {
-                    model: model.employeeModel,
-                    as: 'teacherEmployee'
-                }
-            ]
+                    model: model.employeeModel.unscoped(),
+                    as: 'teacherEmployee',
+                    where: buildScope(model.employeeModel),
+                    required: false,
+                },
+            ],
         });
         return result;
     } catch (error) {
@@ -65,8 +96,15 @@ export async function getAssignments(whereClause) {
 
 export async function deleteAssignment(teacherExamAssignmentId) {
     try {
-        const result = await model.teacherExamAssignmentModel.destroy({
-            where: { teacherExamAssignmentId }
+        const existing = await scoped(model.teacherExamAssignmentModel).findOne({
+            where: { teacherExamAssignmentId },
+            attributes: ['teacherExamAssignmentId'],
+        });
+        if (!existing) {
+            return 0;
+        }
+        const result = await scoped(model.teacherExamAssignmentModel).destroy({
+            where: { teacherExamAssignmentId },
         });
         return result;
     } catch (error) {

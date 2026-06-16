@@ -35,7 +35,6 @@ export async function getAvailableRoomsForExamSchedule(req, res) {
   try {
     const data = await examRoomCapacityServices.getAvailableRoomsForExamSchedule(
       req.query.examScheduleId,
-      req.user.universityId,
     );
     return SuccessResponse(res, 200, "Available rooms fetched successfully", data);
   } catch (error) {
