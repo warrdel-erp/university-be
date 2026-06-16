@@ -60,13 +60,13 @@ export const getSingleStudentDetail = async (req, res) => {
 
 export const importStudentData = async (req, res) => {
     try {
-        const { campusId, instituteId, affiliatedUniversityId, acedmicYearId } = req.body;
+        const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
         const universityId = req.user.universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
-        if (!(campusId && instituteId && affiliatedUniversityId && acedmicYearId)) {
-            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and acedmicYearId are required');
+        if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
+            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
         }
 
         const excelFile = req.files?.student;

@@ -40,9 +40,19 @@ function buildStudentRowPayload(info) {
     caste,
     religion,
     bloodGroup,
+    acedmicYearId,
     ...studentRow
   } = info;
   return studentRow;
+}
+
+async function resolveAcedmicYearIdForClassMapping({ acedmicYearId, sessionId }) {
+  if (acedmicYearId != null) return acedmicYearId;
+  if (!sessionId) return null;
+  const session = await model.sessionModel.findByPk(sessionId, {
+    attributes: ["acedmicYearId"],
+  });
+  return session?.acedmicYearId ?? null;
 }
 
 function toEntranceDetailRow(detail = {}) {
@@ -191,6 +201,11 @@ export async function addStudent(
 
     const studentPayload = buildStudentRowPayload(info);
 
+    const mapperAcedmicYearId = await resolveAcedmicYearIdForClassMapping({
+      acedmicYearId,
+      sessionId,
+    });
+
     // Save student information
     const student = await studentRepository.addStudent(studentPayload, transaction);
     const studentId = student.dataValues.studentId;
@@ -211,7 +226,7 @@ export async function addStudent(
 
     const data = {
       studentId,
-      acedmicYearId,
+      acedmicYearId: mapperAcedmicYearId,
       createdBy,
       sessionId,
       ...(info.semesterId && { semesterId: info.semesterId }),
@@ -313,7 +328,7 @@ export async function addStudent(
       classSectionsId: plainStudent.classSectionsId,
       courseId: plainStudent.courseId,
       sessionId: plainStudent.sessionId,
-      acedmicYearId: plainStudent.acedmicYearId,
+      acedmicYearId: mapperAcedmicYearId,
       userId,
       student: plainStudent,
       entranceDetails,
@@ -390,7 +405,6 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
 
   const {
     universityId,
-    acedmicYearId,
     classSectionsId: classSectionId,
     sessionId,
     semesterId,
@@ -404,7 +418,7 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
     createdBy,
     universityId,
     roleId,
-    acedmicYearId,
+    info.acedmicYearId,
     classSectionId,
     semesterId,
     sessionId,
@@ -622,6 +636,12 @@ export async function importStudentData(excelData, data) {
       }
 
       //  Step 7: Insert student with scholar number
+      const mapperAcedmicYearId = await resolveAcedmicYearIdForClassMapping({
+        acedmicYearId: convertedData.acedmicYearId,
+        sessionId: convertedData.sessionId,
+      });
+      delete convertedData.acedmicYearId;
+
       const result = await studentRepository.addStudent(
         convertedData,
         transaction,
@@ -660,7 +680,7 @@ export async function importStudentData(excelData, data) {
       studentMapping.push({
         studentId: result.dataValues.studentId,
         createdBy: result.dataValues.createdBy,
-        acedmicYearId: result.dataValues.acedmicYearId,
+        acedmicYearId: mapperAcedmicYearId,
         semesterId: result.dataValues.semesterId,
         sessionId: result.dataValues.sessionId,
       });
@@ -877,7 +897,6 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
   "campusId",
   "instituteId",
   "affiliatedUniversityId",
-  "acedmicYearId",
   "courseLevelId",
   "courseId",
   "specializationId",
@@ -1286,7 +1305,9 @@ export async function promoteStudent(data) {
 
   const courseId = studentDetail.dataValues.courseId;
 
-  const currentAcademicYearId = studentDetail.dataValues.acedmicYearId;
+  const currentAcademicYearId =
+    studentDetail.studentMapped?.[0]?.acedmicYearId ??
+    studentDetail.studentSession?.acedmicYearId;
 
   const allSemestersRaw =
     await studentRepository.getSemesterByCourseId(courseId);
@@ -1747,7 +1768,8 @@ export async function getFeeDetailsByStudentId(studentId) {
       scholarNumber: student.scholarNumber || "",
       classSection: student.studentSemester?.classSections?.[0]?.section || "",
       semester: student.studentSemester?.name || "",
-      academicYear: student.acdemicYear?.yearTitle || "",
+      academicYear:
+        student.studentSession?.sessionAcedmic?.yearTitle || "",
     };
 
     const personalInfo = {

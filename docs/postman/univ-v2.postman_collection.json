@@ -8962,7 +8962,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/all?search=all&acedmicYearId={{acedmicYear_id}}&page=1&limit=20",
+                  "raw": "{{baseurl}}/student/all?search=all&page=1&limit=20",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -8977,10 +8977,6 @@
                       "description": "Search term or 'all'"
                     },
                     {
-                      "key": "acedmicYearId",
-                      "value": "{{acedmicYear_id}}"
-                    },
-                    {
                       "key": "page",
                       "value": "1"
                     },
@@ -8990,7 +8986,7 @@
                     }
                   ]
                 },
-                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `acedmicYearId`, `page` (default 1), `limit` (default 10).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
+                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `page` (default 1), `limit` (default 10), optional `courseId`.\n\nAcademic year is derived from `studentSession.sessionAcedmic` (not stored on `students`).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
               },
               "response": []
             },
@@ -9095,14 +9091,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
+                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, sessionId, email, firstName, fatherName, phoneNumber, birthDate.\n\nAcademic year for `class_student_mapper` is derived from `sessionId` (not stored on `students`).\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
               },
               "response": []
             },
