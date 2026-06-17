@@ -18,8 +18,9 @@ export async function addDepartment(req, res) {
 
 export async function getAllDepartment(req, res) {
     const universityId = req.user.universityId;
+    const instituteId = req.user.defaultInstituteId;
     try {
-        const departmentDetails = await DepartmentCreation.getDepartmentDetails(universityId);
+        const departmentDetails = await DepartmentCreation.getDepartmentDetails(universityId,instituteId);
         res.status(200).json(departmentDetails);
     } catch (error) {
         res.status(500).json({ error: error.message });

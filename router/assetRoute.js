@@ -80,6 +80,15 @@ const inventoryBulkField = {
   inventoryBulk: z.array(inventoryBulkRowSchema).min(1).max(50).optional(),
 };
 
+const inventoryAssignRowSchema = z.object({
+  assetInventoryItemId: positiveIntegerId,
+  classRoomSectionId: positiveIntegerId,
+});
+
+const inventoryAssignField = {
+  inventory: z.array(inventoryAssignRowSchema).min(1).max(100).optional(),
+};
+
 const addAssetSchema = z.object({
   name: z.string().trim().min(1),
   condition: assetConditionSchema,
@@ -96,6 +105,7 @@ const updateAssetSchema = z
     description: z.string().optional().nullable(),
     assetCategoryId: positiveIntegerId.optional(),
     ...inventoryBulkField,
+    ...inventoryAssignField,
   })
   .refine(
     (d) =>
@@ -103,7 +113,8 @@ const updateAssetSchema = z
       d.condition !== undefined ||
       d.description !== undefined ||
       d.assetCategoryId !== undefined ||
-      d.inventoryBulk !== undefined,
+      d.inventoryBulk !== undefined ||
+      d.inventory !== undefined,
     { message: "At least one field is required to update" }
   );
 

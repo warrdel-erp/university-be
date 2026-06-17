@@ -1230,6 +1230,42 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
   return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
 }
 
+function getTeacherDetails(rawSchedules) {
+  const employee = rawSchedules.find((schedule) => schedule.employeeDetails)?.employeeDetails;
+
+  if (!employee) {
+    return null;
+  }
+
+  return {
+    employeeId: employee.employeeId,
+    employeeName: employee.employeeName,
+    employeeCode: employee.employeeCode,
+    pickColor: employee.pickColor,
+  };
+}
+
+function stripTeacherFieldsFromSchedule(schedule) {
+  if (!schedule) {
+    return schedule;
+  }
+
+  const cleaned = { ...schedule };
+  delete cleaned.employeeDetails;
+  delete cleaned.teacher;
+
+  if (cleaned.timeTableTeacherSubject) {
+    cleaned.timeTableTeacherSubject = { ...cleaned.timeTableTeacherSubject };
+    delete cleaned.timeTableTeacherSubject.teacherEmployeeData;
+  }
+
+  if (Array.isArray(cleaned.classScheduleItems)) {
+    cleaned.classScheduleItems = cleaned.classScheduleItems.map(stripTeacherFieldsFromSchedule);
+  }
+
+  return cleaned;
+}
+
 export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
   const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
 
@@ -1277,13 +1313,16 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   // Sort by date descending
   pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const teacher = getTeacherDetails(rawSchedules);
+  const schedules = pastClasses.map(stripTeacherFieldsFromSchedule);
+
   if (groupPeriods) {
-    const grouped = groupConsecutivePeriods(pastClasses);
+    const grouped = groupConsecutivePeriods(schedules);
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return grouped;
+    return { teacher, schedules: grouped };
   }
 
-  return pastClasses;
+  return { teacher, schedules };
 }
 
 export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {

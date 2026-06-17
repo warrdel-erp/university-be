@@ -207,6 +207,38 @@ export const assetConditions = ["GOOD", "FAIR", "EXCELLENT", "BAD"];
 
 export const assetInventoryStatuses = ["NOT_ASSIGNED", "ASSIGNED"];
 
+export const amcContractTypes = [
+  "COMPREHENSIVE_AMC",
+  "NON_COMPREHENSIVE_AMC",
+  "WARRANTY_AMC",
+  "PREVENTIVE_MAINTENANCE",
+  "ON_DEMAND_SERVICE",
+];
+
+export const amcSlaResponseHours = [2, 6, 12, 24, 48,72];
+
+export const amcSlaResolutionHours = [6, 12, 24, 48, 72];
+
+export const amcContractStatuses = ["ACTIVE", "NEAR_EXPIRY", "EXPIRED"];
+
+export const amcContractApprovalStatuses = ["DRAFT", "PUBLISHED", "APPROVED"];
+
+export const amcPaymentTerms = ["ANNUAL_UPFRONT", "QUARTERLY", "MONTHLY"];
+
+export const amcServiceVisitFrequencies = ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+export const serviceTicketIssueTypes = ["HARDWARE", "SOFTWARE"];
+
+export const serviceTicketPriorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+export const serviceTicketStatuses = [
+  "OPEN",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "ESCALATED",
+  "RESOLVED",
+  "CLOSED",
+];
 export const FEE_PLAN_PUBLISH_STATUS = {
   DRAFT: "draft",
   PUBLISHED: "published",

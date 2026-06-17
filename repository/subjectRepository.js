@@ -2,10 +2,33 @@ import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 
+export async function getContactHoursSumBySubjectIds(subjectIds, tenantFilter) {
+    if (!subjectIds.length) {
+        return {};
+    }
+
+    const units = await model.syllabusUnitModel.findAll({
+        where: {
+            subjectId: { [Op.in]: subjectIds },
+            ...tenantFilter,
+        },
+        attributes: ['subjectId', 'contactHours'],
+        raw: true,
+    });
+
+    return units.reduce((sums, unit) => {
+        const hours = parseFloat(unit.contactHours) || 0;
+        sums[unit.subjectId] = (sums[unit.subjectId] || 0) + hours;
+        return sums;
+    }, {});
+}
+
 export async function getAllSubjects(filter) {
     try {
+        const { universityId, instituteId, acedmicYearId, ...subjectFilter } = filter;
+
         const result = await model.subjectModel.findAll({
-            where: filter,
+            where: { ...subjectFilter, universityId, instituteId, acedmicYearId },
             include: [
                 {
                     model: model.courseModel,
@@ -14,7 +37,26 @@ export async function getAllSubjects(filter) {
                 }
             ]
         });
-        return result;
+
+        if (!result.length) {
+            return result;
+        }
+
+        const subjectIds = result.map((subject) => subject.subjectId);
+        const contactHoursBySubject = await getContactHoursSumBySubjectIds(subjectIds, {
+            universityId,
+            instituteId,
+            acedmicYearId,
+        });
+
+        return result.map((subject) => {
+            const plain = subject.toJSON();
+            const totalContactHours = contactHoursBySubject[plain.subjectId] || 0;
+            return {
+                ...plain,
+                contactHours: String(totalContactHours),
+            };
+        });
     } catch (error) {
         console.error("Error in getAllSubjects repository:", error);
         throw error;
