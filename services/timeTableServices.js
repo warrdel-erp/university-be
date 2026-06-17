@@ -1,19 +1,86 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
+import * as sessionRepository from '../repository/sessionRepository.js';
+import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
 
-export async function addTimeTable(data, createdBy, updatedBy) {
+async function resolveTimeTableScope({
+    courseId,
+    sessionId,
+    universityId,
+    instituteId,
+    acedmicYearId,
+}) {
+    const scope = {
+        universityId,
+        instituteId,
+        acedmicYearId,
+        sessionId,
+    };
+
+    if (courseId) {
+        const course = await model.courseModel.findOne({
+            where: { courseId, universityId },
+            attributes: ["courseId", "instituteId", "universityId"],
+        });
+        if (!course) {
+            throw new Error('Course not found');
+        }
+        scope.instituteId = course.instituteId;
+    }
+
+    if (sessionId) {
+        const session = await model.sessionModel.findOne({
+            where: { sessionId, universityId },
+            attributes: ["sessionId", "acedmicYearId", "instituteId", "universityId"],
+        });
+        if (!session) {
+            throw new Error('Session not found');
+        }
+        scope.acedmicYearId = session.acedmicYearId;
+
+        if (courseId) {
+            const isMapped = await sessionRepository.isSessionAlreadyMapped(
+                sessionId,
+                courseId,
+                scope.instituteId,
+                universityId
+            );
+            if (!isMapped) {
+                throw new Error('Session is not mapped to this course');
+            }
+        }
+    }
+
+    if (courseId && !scope.acedmicYearId) {
+        throw new Error('acedmicYearId or sessionId is required when courseId is provided');
+    }
+
+    return scope;
+}
+
+export async function addTimeTable(data, createdBy, updatedBy, universityId, instituteId, acedmicYearId) {
     const transaction = await sequelize.transaction();
     try {
-        const name = data.name;
+        const scope = await resolveTimeTableScope({
+            courseId: data.courseId,
+            sessionId: data.sessionId,
+            universityId,
+            instituteId,
+            acedmicYearId,
+        });
 
-        // Fields that now live on time_table_structure (not repeated per period)
         const structureItem = {
-            name,
+            name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
+            sessionId: scope.sessionId,
+            universityId: scope.universityId,
+            instituteId: scope.instituteId,
+            acedmicYearId: scope.acedmicYearId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
+            weekOff: data.weekOff,
             createdBy,
             updatedBy,
         };
@@ -48,7 +115,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
 
                 timeSlots.push({
                     timeTableNameId,
-                    weekOff: data.weekOff,
                     type: data.type,
                     createdBy: data.createdBy,
                     updatedBy: data.updatedBy,
@@ -65,7 +131,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
                 const periodName = `Period${i + 1}`;
                 timeSlots.push({
                     timeTableNameId,
-                    weekOff: data.weekOff,
                     type: data.type,
                     createdBy: data.createdBy,
                     updatedBy: data.updatedBy,
@@ -87,19 +152,19 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         await transaction.rollback();
         throw error;
     }
-};
+}
 
-export async function getAllTimeTableName(courseId) {
-    return await timeTableRepository.getAllTimeTableName(courseId);
-};
+export async function getAllTimeTableName(courseId, acedmicYearId, role, sessionId) {
+    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role, sessionId);
+}
 
-export async function getTimeTableDetails() {
-    return await timeTableRepository.getTimeTableDetails();
-};
+export async function getTimeTableDetails(acedmicYearId, role, courseId) {
+    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role);
+}
 
-export async function getSingleTimeTableDetails(courseId) {
-    return await timeTableRepository.getSingleTimeTableDetails(courseId);
-};
+export async function getSingleTimeTableDetails(courseId, acedmicYearId, role, sessionId) {
+    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role, sessionId);
+}
 
 export async function updateTimeTable(info) {
     try {
@@ -114,8 +179,8 @@ export async function updateTimeTable(info) {
         console.error('Error updating time table:', error);
         throw new Error('Failed to update time table');
     }
-};
+}
 
 export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
-};
+}

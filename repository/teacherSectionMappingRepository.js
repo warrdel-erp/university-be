@@ -11,11 +11,24 @@ export async function teacherSectionMapping(data) {
     }
 }
 
-export async function getTeacherSectionMapping(employeeId) {
+export async function getTeacherSectionMapping(employeeId, acedmicYearId, sessionId) {
     try {
         const universityId = requestContext.getStore()?.universityId;
-        const employeeWhere = buildScope(model.employeeModel);
-        const classSectionWhere = buildScope(model.classSectionModel);
+        const academicInstituteFilter = {
+            ...(acedmicYearId && { acedmicYearId }),
+            ...(sessionId && { sessionId }),
+        };
+
+        const employeeWhere = {
+            ...buildScope(model.employeeModel),
+            ...academicInstituteFilter,
+        };
+
+        const classSectionWhere = {
+            ...buildScope(model.classSectionModel),
+            ...academicInstituteFilter,
+        };
+
         const courseWhere = buildScope(model.courseModel);
 
         return await model.teacherSectionMappingModel.findAll({
@@ -63,6 +76,12 @@ export async function getTeacherSectionMapping(employeeId) {
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
                             where: courseWhere,
                             required: true,
+                        },
+                        {
+                            model: model.sessionModel.unscoped(),
+                            as: "classSession",
+                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+                            required: false,
                         },
                     ],
                 },

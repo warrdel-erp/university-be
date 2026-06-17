@@ -1,4 +1,6 @@
 import * as optionsRepository from '../repository/optionsRepository.js';
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await optionsRepository.getAffiliatedUniversityOptions();
@@ -31,8 +33,35 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term) {
-    return await optionsRepository.getSubjectOptions(courseId, term);
+export async function getSubjectOptions(courseId, term, acedmicYearId, sessionId) {
+    let resolvedAcademicYearId = acedmicYearId;
+
+    if (sessionId) {
+        const session = await scoped(model.sessionModel).findOne({
+            where: { sessionId },
+            attributes: ["acedmicYearId"],
+        });
+        if (!session) {
+            throw new Error("Session not found");
+        }
+        resolvedAcademicYearId = session.acedmicYearId;
+
+        if (courseId) {
+            const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(
+                Number(courseId),
+                Number(sessionId),
+            );
+            if (!mapping) {
+                throw new Error("Session is not mapped to this course");
+            }
+        }
+    }
+
+    return await optionsRepository.getSubjectOptions(
+        courseId,
+        term,
+        resolvedAcademicYearId,
+    );
 }
 
 export async function getTeacherOptions(campusId) {

@@ -1489,7 +1489,8 @@ export async function getPastClassSchedulesForEmployee(
         'timeTableType',
         'day',
         'period',
-        'isAttendence'
+        'isAttendence',
+        'isSameTeacher'
       ],
       include: [
         {
@@ -1544,6 +1545,16 @@ export async function getPastClassSchedulesForEmployee(
                 }
               ]
             }
+          ]
+        },
+        {
+          model: model.employeeModel,
+          as: "employeeDetails",
+          attributes: [
+            "employeeId",
+            "employeeName",
+            "employeeCode",
+            "pickColor"
           ]
         },
         {

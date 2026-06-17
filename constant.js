@@ -144,7 +144,21 @@ export const state = ["RAJASTHAN", "HARYANA", "Punjab"];
 
 export const city = ["JAIPUR", "KOTA", "KOTPUTLI", "REWARI", "GURUGRAM"];
 
-export const studentStatus = [
+/** Matches students.student_status ENUM (see extend-student-status-enum migration) */
+export const STUDENT_STATUS_OPTIONS = [
+  { label: "Cancel Student", value: "Cancel Student" },
+  { label: "Left Student", value: "Left Student" },
+  { label: "Long Absent", value: "Long Absent" },
+  { label: "Non Attendant", value: "Non Attendant" },
+  { label: "Active", value: "active" },
+  { label: "Deactive", value: "deactive" },
+  { label: "Transferred", value: "transferred" },
+  { label: "Graduated", value: "graduated" },
+];
+
+export const STUDENT_STATUS_VALUES = STUDENT_STATUS_OPTIONS.map((o) => o.value);
+
+export const STUDENT_CANCELLATION_STATUSES = [
   "Cancel Student",
   "Left Student",
   "Long Absent",
@@ -154,6 +168,8 @@ export const studentStatus = [
   "transferred",
   "graduated",
 ];
+
+export const studentStatus = STUDENT_STATUS_VALUES;
 
 export const admissionCategory = ["11A", "11B", "11C"];
 
@@ -195,6 +211,38 @@ export const assetConditions = ["GOOD", "FAIR", "EXCELLENT", "BAD"];
 
 export const assetInventoryStatuses = ["NOT_ASSIGNED", "ASSIGNED"];
 
+export const amcContractTypes = [
+  "COMPREHENSIVE_AMC",
+  "NON_COMPREHENSIVE_AMC",
+  "WARRANTY_AMC",
+  "PREVENTIVE_MAINTENANCE",
+  "ON_DEMAND_SERVICE",
+];
+
+export const amcSlaResponseHours = [2, 6, 12, 24, 48,72];
+
+export const amcSlaResolutionHours = [6, 12, 24, 48, 72];
+
+export const amcContractStatuses = ["ACTIVE", "NEAR_EXPIRY", "EXPIRED"];
+
+export const amcContractApprovalStatuses = ["DRAFT", "PUBLISHED", "APPROVED"];
+
+export const amcPaymentTerms = ["ANNUAL_UPFRONT", "QUARTERLY", "MONTHLY"];
+
+export const amcServiceVisitFrequencies = ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+export const serviceTicketIssueTypes = ["HARDWARE", "SOFTWARE"];
+
+export const serviceTicketPriorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+export const serviceTicketStatuses = [
+  "OPEN",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "ESCALATED",
+  "RESOLVED",
+  "CLOSED",
+];
 export const FEE_PLAN_PUBLISH_STATUS = {
   DRAFT: "draft",
   PUBLISHED: "published",

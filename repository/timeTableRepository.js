@@ -1,5 +1,4 @@
 import * as model from '../models/index.js'
-import { Op } from 'sequelize';
 import { requestContext } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 
@@ -20,20 +19,6 @@ const structureInclude = (extra = {}) => ({
     ],
     ...extra,
 });
-
-async function getScopedStructureIds(extraWhere = {}) {
-    const scopeWhere = buildScope(model.timeTableStructureModel);
-    if (!scopeWhere.instituteId || !scopeWhere.acedmicYearId) {
-        return [];
-    }
-
-    const structures = await scoped(model.timeTableStructureModel).findAll({
-        attributes: ['timeTableNameId'],
-        where: extraWhere,
-    });
-
-    return structures.map((structure) => structure.timeTableNameId);
-}
 
 async function findPeriodInScope(timeTableCreationId) {
     const scopeWhere = buildScope(model.timeTableStructureModel);
@@ -79,59 +64,51 @@ export async function addTimeTableName(data, transaction) {
 
 export async function addTimeTable(data, transaction) {
     try {
-        return await model.timeTableStructurePeriodsModel.bulkCreate(data.timeSlots, { transaction });
+        const result = await model.timeTableStructurePeriodsModel.bulkCreate(data.timeSlots, { transaction });
+        return result;
     } catch (error) {
         console.error("Error in create time table:", error);
         throw error;
     }
 }
 
-export async function getTimeTableDetails() {
+export async function getTimeTableStructures(courseId, acedmicYearId, role, sessionId) {
     try {
-        const timeTableNameIds = await getScopedStructureIds();
-        if (!timeTableNameIds.length) {
-            return [];
+        const scopeWhere = buildScope(model.timeTableStructureModel);
+        const where = {
+            ...(courseId && { courseId }),
+            ...(sessionId && { sessionId }),
+        };
+
+        if (courseId) {
+            if (acedmicYearId) where.acedmicYearId = acedmicYearId;
+        } else {
+            if (acedmicYearId) where.acedmicYearId = acedmicYearId;
+            if (role === 'Head' && scopeWhere.instituteId) {
+                where.instituteId = scopeWhere.instituteId;
+            }
         }
 
-        return await model.timeTableStructurePeriodsModel.findAll({
-            attributes: { exclude: excludeMeta },
-            where: { timeTableNameId: { [Op.in]: timeTableNameIds } },
-            include: [structureInclude()],
-        });
-    } catch (error) {
-        console.error('Error in getting time table:', error);
-        throw error;
-    }
-}
-
-export async function getSingleTimeTableDetails(courseId) {
-    try {
-        const timeTableNameIds = await getScopedStructureIds({ courseId });
-        if (!timeTableNameIds.length) {
-            return [];
-        }
-
-        return await model.timeTableStructurePeriodsModel.findAll({
-            attributes: { exclude: excludeMeta },
-            where: { timeTableNameId: { [Op.in]: timeTableNameIds } },
-            include: [structureInclude()],
-        });
-    } catch (error) {
-        console.error('Error in getting time table:', error);
-        throw error;
-    }
-}
-
-export async function getAllTimeTableName(courseId) {
-    try {
         return await scoped(model.timeTableStructureModel).findAll({
-            attributes: { exclude: excludeMeta },
-            where: { courseId },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where,
             include: [
                 {
+                    model: model.sessionModel.unscoped(),
+                    as: "timeTableSession",
+                    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId", "instituteId"],
+                    required: false,
+                },
+                {
                     model: model.timeTableStructurePeriodsModel,
-                    as: 'timeTableName',
-                    attributes: { exclude: excludeMeta },
+                    as: "timeTableName",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+                {
+                    model: model.courseModel.unscoped(),
+                    as: "timeTableStructureCourse",
+                    attributes: ["courseId", "courseName", "courseCode"],
+                    required: false,
                 },
             ],
         });
@@ -144,7 +121,11 @@ export async function getAllTimeTableName(courseId) {
 export async function getSingleTimeTableById(timeTableCreationId) {
     try {
         const period = await findPeriodInScope(timeTableCreationId);
-        return period ? [period] : [];
+        if (!period) {
+            return [];
+        }
+
+        return [period];
     } catch (error) {
         console.error('Error in getting time table by id:', error);
         throw error;

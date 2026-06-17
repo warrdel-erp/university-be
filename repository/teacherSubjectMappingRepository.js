@@ -11,81 +11,88 @@ export async function teacherSubjectMapping(data) {
     }
 }
 
-export async function getTeacherSubjectMapping(employeeId) {
+export async function getTeacherSubjectMapping(employeeId, subjectId, sessionId) {
     try {
-        const universityId = requestContext.getStore()?.universityId;
+        const subjectWhere = {
+            ...buildScope(model.subjectModel),
+            ...(subjectId && { subjectId }),
+        };
+
+        const mapperWhere = {
+            ...buildScope(model.classSubjectMapperModel),
+            ...(subjectId && { subjectId }),
+        };
+
+        const classSectionWhere = {
+            ...buildScope(model.classSectionModel),
+            ...(sessionId && { sessionId }),
+        };
+
         const employeeWhere = buildScope(model.employeeModel);
-        const mapperWhere = buildScope(model.classSubjectMapperModel);
-        const semesterWhere = buildScope(model.semesterModel);
-        const subjectWhere = buildScope(model.subjectModel);
-        const classSectionWhere = buildScope(model.classSectionModel);
 
         return await model.teacherSubjectMappingModel.findAll({
-            ...(employeeId && { where: { employeeId } }),
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: employeeId ? { employeeId } : undefined,
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
-                    model: model.userModel.unscoped(),
-                    as: 'userTeacherSubjectMapping',
-                    attributes: ['universityId', 'userId'],
-                    where: { universityId },
-                    required: true,
-                },
-                {
                     model: model.employeeModel.unscoped(),
-                    as: 'teacherEmployeeData',
-                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    as: "teacherEmployeeData",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     where: employeeWhere,
                     required: true,
                     include: [
                         {
-                            model: model.campusModel.unscoped(),
-                            as: 'employeeCampus',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'campusCode'] },
-                            where: { universityId },
-                            required: true,
-                        },
-                        {
                             model: model.instituteModel.unscoped(),
-                            as: 'employeeInstitute',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
-                        },
-                        {
-                            model: model.acedmicYearModel.unscoped(),
-                            as: 'acedmicYear',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                            as: "employeeInstitute",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "instituteCode"] },
+                            required: false,
                         },
                     ],
                 },
                 {
                     model: model.classSubjectMapperModel.unscoped(),
-                    as: 'employeeSubject',
-                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    as: "employeeSubject",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     where: mapperWhere,
                     required: true,
                     include: [
                         {
-                            model: model.semesterModel.unscoped(),
-                            as: 'employeeClassSection',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                            where: semesterWhere,
+                            model: model.subjectModel.unscoped(),
+                            as: "subjects",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            where: subjectWhere,
                             required: true,
                             include: [
                                 {
-                                    model: model.classSectionModel.unscoped(),
-                                    as: 'classSections',
-                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                                    where: classSectionWhere,
-                                    required: true,
+                                    model: model.courseModel.unscoped(),
+                                    as: "courseInfo",
+                                    attributes: ["courseId", "courseName", "courseCode"],
+                                    required: false,
                                 },
                             ],
                         },
                         {
-                            model: model.subjectModel.unscoped(),
-                            as: 'subjects',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                            where: subjectWhere,
-                            required: true,
+                            model: model.semesterModel.unscoped(),
+                            as: "employeeClassSection",
+                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            required: Boolean(sessionId),
+                            include: [
+                                {
+                                    model: model.classSectionModel.unscoped(),
+                                    as: "semesterDetail",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                                    required: Boolean(sessionId),
+                                    ...(Object.keys(classSectionWhere).length && { where: classSectionWhere }),
+                                    include: [
+                                        {
+                                            model: model.sessionModel.unscoped(),
+                                            as: "classSession",
+                                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+                                            required: false,
+                                        },
+                                    ],
+                                },
+                            ],
                         },
                     ],
                 },
@@ -123,7 +130,7 @@ export async function deleteTeachersSubjectMapping(teacherSubjectMappingId) {
 export async function getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId) {
     try {
         return await model.teacherSubjectMappingModel.findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: { teacherSubjectMappingId },
         });
     } catch (error) {

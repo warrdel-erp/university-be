@@ -53,13 +53,13 @@ export const getSingleStudentDetail = async (req, res) => {
 
 export const importStudentData = async (req, res) => {
     try {
-        const { campusId, instituteId, affiliatedUniversityId, acedmicYearId } = req.body;
+        const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
         const universityId = req.user.universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
-        if (!(campusId && instituteId && affiliatedUniversityId && acedmicYearId)) {
-            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and acedmicYearId are required');
+        if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
+            return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
         }
 
         const excelFile = req.files?.student;
@@ -97,7 +97,8 @@ export const updateStudentDetails = async (req, res) => {
             studentId,
             info,
             file,
-            req.user.defaultInstituteId
+            req.user.defaultInstituteId,
+            req.user.userId,
         );
         return SuccessResponse(res, 200, "Student updated successfully", result);
     } catch (error) {
@@ -122,8 +123,9 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
+    const { acedmicYearId } = req.query;
     try {
-        const result = await studentService.getEmptyEnrollNumber();
+        const result = await studentService.getEmptyEnrollNumber(acedmicYearId);
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -242,9 +244,9 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { courseId, sessionId } = req.query;
+    const { acedmicYearId, courseId, sessionId } = req.query;
     try {
-        const result = await studentService.getEmptyFeeDetails({ courseId, sessionId });
+        const result = await studentService.getEmptyFeeDetails({ acedmicYearId, courseId, sessionId });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
@@ -322,10 +324,11 @@ export async function getStudentsByClassSection(req, res) {
 
     try {
 
-        const { timeTableMappingId, date } = req.query;
+        const { timeTableMappingId, academicYearId, date } = req.query;
 
         const students = await studentService.getStudentsByClassSection(
             timeTableMappingId,
+            academicYearId,
             date
         );
 

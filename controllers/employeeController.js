@@ -274,11 +274,11 @@ export const getPastClassSchedules = async (req, res) => {
         const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return SuccessResponse(res, 400, "employeeId is required");
         }
 
         if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
+            return SuccessResponse(res, 400, "academicYearId not found in user session");
         }
 
         const currentDate = date ? new Date(date) : new Date();
@@ -291,10 +291,10 @@ export const getPastClassSchedules = async (req, res) => {
             groupPeriods === 'true'
         );
 
-        res.status(200).send({ success: true, result });
+        return SuccessResponse(res, 200, "Past class schedules fetched successfully", result);
     } catch (error) {
         console.error("Error in getPastClassSchedules:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        return ErrorResponse(res, 500, "Internal Server Error");
     }
 };
 

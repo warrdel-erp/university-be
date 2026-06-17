@@ -221,12 +221,12 @@ export async function deleteMapping(lessonMappingId) {
   }
 }
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
+export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
     const data = await lesson.getEmployeeSubjectAndLesson(
-        acedmicYearId,
         employeeId,
         courseId,
-        sessionId
+        sessionId,
+        subjectSearch
     );
 
     return data.filter(item =>

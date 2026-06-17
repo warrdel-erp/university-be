@@ -58,6 +58,10 @@ import assetIssueTransactionModel from "./assetIssueTransactionModel.js";
 import assetIssueInventoryItemModel from "./assetIssueInventoryItemModel.js";
 import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
 import assetInventoryItemModel from "./assetInventoryItemModel.js";
+import amcVendorModel from "./amcVendorModel.js";
+import amcVendorAddressModel from "./amcVendorAddressModel.js";
+import amcContractModel from "./amcContractModel.js";
+import amcServiceTicketModel from "./amcServiceTicketModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 import feeInvoiceModel from "./feeInvoiceModel.js";
 import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
@@ -537,6 +541,9 @@ timeTableStructureModel.hasMany(timeTableStructurePeriodsModel, {
 timeTableStructureModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
 courseModel.hasMany(timeTableStructureModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
 
+timeTableStructureModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "timeTableSession" });
+sessionModel.hasMany(timeTableStructureModel, { foreignKey: "session_id", as: "timeTableStructures" });
+
 timeTableRoutineModel.belongsTo(timeTableStructureModel, {
   foreignKey: "time_table_name_id",
   as: "timeTableCreateName",
@@ -653,6 +660,78 @@ instituteModel.hasMany(assetModel, { foreignKey: "instituteId", as: "assets" });
 
 assetModel.belongsTo(assetCategoryModel, { foreignKey: "assetCategoryId", as: "assetCategory" });
 assetCategoryModel.hasMany(assetModel, { foreignKey: "assetCategoryId", as: "categoryAssets" });
+
+amcVendorModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "instituteAmcVendor" });
+instituteModel.hasMany(amcVendorModel, { foreignKey: "instituteId", as: "amcVendors" });
+
+amcVendorModel.belongsTo(assetCategoryModel, {
+  foreignKey: "assetCategoryId",
+  as: "vendorCategory",
+});
+assetCategoryModel.hasMany(amcVendorModel, {
+  foreignKey: "assetCategoryId",
+  as: "amcVendors",
+});
+
+amcVendorModel.hasOne(amcVendorAddressModel, {
+  foreignKey: "amcVendorId",
+  as: "vendorAddress",
+});
+amcVendorAddressModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "vendor",
+});
+
+amcContractModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteAmcContract",
+});
+instituteModel.hasMany(amcContractModel, { foreignKey: "instituteId", as: "amcContracts" });
+
+amcContractModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "contractVendor",
+});
+amcVendorModel.hasOne(amcContractModel, {
+  foreignKey: "amcVendorId",
+  as: "amcContract",
+});
+
+amcServiceTicketModel.belongsTo(instituteModel, {
+  foreignKey: "instituteId",
+  as: "instituteServiceTicket",
+});
+instituteModel.hasMany(amcServiceTicketModel, {
+  foreignKey: "instituteId",
+  as: "serviceTickets",
+});
+
+amcServiceTicketModel.belongsTo(assetModel, {
+  foreignKey: "assetId",
+  as: "ticketAsset",
+});
+assetModel.hasMany(amcServiceTicketModel, {
+  foreignKey: "assetId",
+  as: "serviceTickets",
+});
+
+amcServiceTicketModel.belongsTo(amcVendorModel, {
+  foreignKey: "amcVendorId",
+  as: "ticketVendor",
+});
+amcVendorModel.hasMany(amcServiceTicketModel, {
+  foreignKey: "amcVendorId",
+  as: "serviceTickets",
+});
+
+amcServiceTicketModel.belongsTo(assetCategoryModel, {
+  foreignKey: "assetCategoryId",
+  as: "ticketAssetCategory",
+});
+assetCategoryModel.hasMany(amcServiceTicketModel, {
+  foreignKey: "assetCategoryId",
+  as: "serviceTickets",
+});
 
 assetIssueTransactionModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
@@ -1642,6 +1721,10 @@ export {
   assetIssueInventoryItemModel,
   assetReturnTransactionModel,
   assetInventoryItemModel,
+  amcVendorModel,
+  amcVendorAddressModel,
+  amcContractModel,
+  amcServiceTicketModel,
   feeTypeModel,
   feeInvoiceModel,
   feeInvoiceDetailModel,

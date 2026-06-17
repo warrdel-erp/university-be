@@ -165,19 +165,19 @@
     },
     {
       "name": "infrastructure",
-      "description": "Campus infrastructure: **Building → Floor → Class room** (`/building`, `/floor`, `/classRoom`). Auth: Bearer `{{token}}`. Use **get all nested** for the full tree in one call; use flat GETs on `/floor` and `/classRoom` when you only need one level.",
+      "description": "Campus infrastructure: **Building ΓåÆ Floor ΓåÆ Class room** (`/building`, `/floor`, `/classRoom`). Auth: Bearer `{{token}}`. Use **get all nested** for the full tree in one call; use flat GETs on `/floor` and `/classRoom` when you only need one level.",
       "variable": [
         {
           "key": "building_id",
           "value": "1",
           "type": "string",
-          "description": "building.buildingId — set from create or nested response"
+          "description": "building.buildingId ΓÇö set from create or nested response"
         },
         {
           "key": "floor_id",
           "value": "1",
           "type": "string",
-          "description": "floor.floorId — set from floor create or nested floorBuilding[].floorId"
+          "description": "floor.floorId ΓÇö set from floor create or nested floorBuilding[].floorId"
         },
         {
           "key": "class_room_section_id",
@@ -233,7 +233,7 @@
               },
               "response": [
                 {
-                  "name": "201 Created — example",
+                  "name": "201 Created ΓÇö example",
                   "status": "Created",
                   "code": 201,
                   "_postman_previewlanguage": "json",
@@ -312,15 +312,15 @@
                     {
                       "key": "buildingType",
                       "value": "Academics",
-                      "description": "Optional — `Academics` | `Residential`; omit for all building types"
+                      "description": "Optional ΓÇö `Academics` | `Residential`; omit for all building types"
                     }
                   ]
                 },
-                "description": "**GET /building/allNested**\n\nReturns buildings for the authenticated user's university with full infrastructure nesting:\n\n**Building** → `floorBuilding[]` (floors) → `roomFloor[]` (class rooms)\n\n- Scoped by `req.user.universityId` via campus membership\n- Audit fields excluded\n\n**Query (optional)**\n| Key | Values |\n|-----|--------|\n| `buildingType` | `Academics` \\| `Residential` |\n\n**Examples**\n- `GET .../building/allNested` — all types\n- `GET .../building/allNested?buildingType=Academics` — academic buildings and their floors/rooms\n- `GET .../building/allNested?buildingType=Residential` — residential buildings and their floors/rooms"
+                "description": "**GET /building/allNested**\n\nReturns buildings for the authenticated user's university with full infrastructure nesting:\n\n**Building** ΓåÆ `floorBuilding[]` (floors) ΓåÆ `roomFloor[]` (class rooms)\n\n- Scoped by `req.user.universityId` via campus membership\n- Audit fields excluded\n\n**Query (optional)**\n| Key | Values |\n|-----|--------|\n| `buildingType` | `Academics` \\| `Residential` |\n\n**Examples**\n- `GET .../building/allNested` ΓÇö all types\n- `GET .../building/allNested?buildingType=Academics` ΓÇö academic buildings and their floors/rooms\n- `GET .../building/allNested?buildingType=Residential` ΓÇö residential buildings and their floors/rooms"
               },
               "response": [
                 {
-                  "name": "200 OK — example",
+                  "name": "200 OK ΓÇö example",
                   "status": "OK",
                   "code": 200,
                   "_postman_previewlanguage": "json",
@@ -389,7 +389,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"buildingId\": {{building_id}},\n  \"name\": \"Main Block — North Wing\",\n  \"buildingType\": \"Residential\",\n  \"description\": \"Updated description\",\n  \"openingTime\": \"07:30:00\",\n  \"closingTime\": \"19:00:00\"\n}",
+                  "raw": "{\n  \"buildingId\": {{building_id}},\n  \"name\": \"Main Block ΓÇö North Wing\",\n  \"buildingType\": \"Residential\",\n  \"description\": \"Updated description\",\n  \"openingTime\": \"07:30:00\",\n  \"closingTime\": \"19:00:00\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -709,7 +709,7 @@
                     "classRoom"
                   ]
                 },
-                "description": "**GET /classRoom**\n\nFlat list with `roomFloor` → `floorBuilding` includes."
+                "description": "**GET /classRoom**\n\nFlat list with `roomFloor` ΓåÆ `floorBuilding` includes."
               },
               "response": []
             },
@@ -979,7 +979,7 @@
                 }
               ]
             },
-            "description": "**DELETE /session/courseSessionMapping**\n\nUnmaps a course from a session. Blocked when dependent data already exists for that course–session pair."
+            "description": "**DELETE /session/courseSessionMapping**\n\nUnmaps a course from a session. Blocked when dependent data already exists for that courseΓÇôsession pair."
           },
           "response": []
         }
@@ -1294,7 +1294,7 @@
                 }
               ]
             },
-            "description": "**GET /subject/withExamSchedule**\n\nQuery: `examSetupTypeTermId` (required), `sessionId` (optional).\n\nReturns:\n- `studentCount` / `studentList` — enrolled students for course + term\n- `subjects[]` — each subject includes `scheduleSubject[]` (exam schedule rows). Per schedule: `isRoomAllocated` (true when rooms assigned), `roomNames` (e.g. `[\"A-101\",\"B-202\"]`), `rooms` (room assignment details with `roomNumber`, `capacity`, `orderKey`)"
+            "description": "**GET /subject/withExamSchedule**\n\nQuery: `examSetupTypeTermId` (required), `sessionId` (optional).\n\nReturns:\n- `studentCount` / `studentList` ΓÇö enrolled students for course + term\n- `subjects[]` ΓÇö each subject includes `scheduleSubject[]` (exam schedule rows). Per schedule: `isRoomAllocated` (true when rooms assigned), `roomNames` (e.g. `[\"A-101\",\"B-202\"]`), `rooms` (room assignment details with `roomNumber`, `capacity`, `orderKey`)"
           },
           "response": []
         },
@@ -1463,78 +1463,384 @@
     },
     {
       "name": "time table",
-      "item": [
+      "description": "Timetable structure (`/timeTable`) and routine (`/timeTableCreate`). Folder vars `timetable_*` — edit on this folder's Variables tab. Auth uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
         {
-          "name": "get time table routine data",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timeTableCreate",
-                "getRoutine"
-              ],
-              "query": [
-                {
-                  "key": "classSectionsId",
-                  "value": "197"
-                }
-              ]
-            }
-          },
-          "response": []
+          "key": "timetable_courseId",
+          "value": "34",
+          "type": "string",
+          "description": "Course PK — scopes institute + academic year on GET when provided"
         },
         {
-          "name": "get time table routine by teacher",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+          "key": "timetable_sessionId",
+          "value": "6",
+          "type": "string",
+          "description": "Session PK — required with courseId on POST; optional filter on GET"
+        },
+        {
+          "key": "timetable_acedmicYearId",
+          "value": "59",
+          "type": "string",
+          "description": "Academic year — optional on GET; fallback is user defaultAcademicYearId when courseId is set"
+        },
+        {
+          "key": "timetable_creationId",
+          "value": "1",
+          "type": "string",
+          "description": "time_table_structure_periods.time_table_creation_id — PATCH / DELETE"
+        },
+        {
+          "key": "timetable_classSectionsId",
+          "value": "197",
+          "type": "string",
+          "description": "Class section PK — timeTableCreate getRoutine"
+        },
+        {
+          "key": "timetable_employeeId",
+          "value": "40",
+          "type": "string",
+          "description": "Employee PK — timeTableCreate getRoutineByTeacher"
+        }
+      ],
+      "item": [
+        {
+          "name": "structure (/timeTable)",
+          "item": [
+            {
+              "name": "create (course + session + weekOff)",
+              "event": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const data = pm.response.json();",
+                      "  const row = Array.isArray(data) ? data[0] : data;",
+                      "  if (row && row.timeTableCreationId) {",
+                      "    pm.collectionVariables.set('timetable_creationId', String(row.timeTableCreationId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId=40&acedmicYearId=59",
-              "host": [
-                "{{baseurl}}"
               ],
-              "path": [
-                "timeTableCreate",
-                "getRoutineByTeacher"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "40"
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
                 },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
-                }
-              ]
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ]
+                },
+                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots) for a course.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `name` | Structure name |\n| `maximumPeriod` | Number of periods |\n| `periodLength` | Minutes |\n| `periodGap` | Minutes between periods |\n| `startingTime` | e.g. `09:00 AM` |\n| `type` | `Automatic` or `Manual` |\n\n### Course scope\nWhen `courseId` is sent, also send **`sessionId`** (or `acedmicYearId` in body). Server resolves:\n- `instituteId` from the course\n- `acedmicYearId` from the session (or body / user `defaultAcademicYearId`)\n- Validates session is mapped to the course\n\n### Optional\n- `weekOff` — JSON array on structure row, e.g. `[\"Sunday\"]`\n- `isCourse` — boolean on each generated period\n- `acedmicYearId` — only if not inferable from session\n\n### Success\n**200** — array of created period rows (`timeTableCreationId`, `periodName`, `startTime`, `endTime`, …). Test script saves first `timeTableCreationId` to `timetable_creationId`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all structures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable?courseId={{timetable_courseId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional — when set, filters by course institute + academic year"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}",
+                      "description": "Optional — defaults to user defaultAcademicYearId when courseId is set"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable**\n\nLists timetable structures with periods, course, session (`timeTableSession`), and `weekOff` on the structure row.\n\nWhen `courseId` is in query, results are scoped to that course's institute and academic year."
+              },
+              "response": []
+            },
+            {
+              "name": "get all names (course scoped)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "all_name"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Scopes institute + academic year when provided"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional session filter"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}",
+                      "description": "Optional — defaults when courseId is set"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/all_name**\n\nSame payload shape as **GET /timeTable** — structures with `weekOff`, `timeTableSession`, course, and nested periods."
+              },
+              "response": []
+            },
+            {
+              "name": "get single (course + session)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/single?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/single**\n\nFiltered list for one course/session (institute + academic year scope when `courseId` is set). Includes session info and `weekOff`."
+              },
+              "response": []
+            },
+            {
+              "name": "update period",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n  {\n    \"timeTableCreationId\": {{timetable_creationId}},\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"09:45 AM\"\n  }\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ]
+                },
+                "description": "**PATCH /timeTable**\n\nArray of period updates. Each object must include `timeTableCreationId`."
+              },
+              "response": []
+            },
+            {
+              "name": "delete period",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable?timeTableCreationId={{timetable_creationId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableCreationId",
+                      "value": "{{timetable_creationId}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /timeTable?timeTableCreationId=**\n\nSoft-deletes one period row."
+              },
+              "response": []
             }
-          },
-          "response": []
+          ]
+        },
+        {
+          "name": "routine (/timeTableCreate)",
+          "item": [
+            {
+              "name": "get time table routine data",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId={{timetable_classSectionsId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "getRoutine"
+                  ],
+                  "query": [
+                    {
+                      "key": "classSectionsId",
+                      "value": "{{timetable_classSectionsId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/getRoutine**\n\nRoutine grid for a class section. Includes structure `weekOff` on linked timetable name."
+              },
+              "response": []
+            },
+            {
+              "name": "get time table routine by teacher",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId={{timetable_employeeId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "getRoutineByTeacher"
+                  ],
+                  "query": [
+                    {
+                      "key": "employeeId",
+                      "value": "{{timetable_employeeId}}"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher routine for an academic year."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -2863,6 +3169,57 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "get employee subjects and lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/employee?employeeId=26&courseId=34&sessionId=6&subjectSearch=math",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "employee"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "26",
+                  "description": "Required"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "description": "Optional course filter on subject"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional session filter on lessons"
+                },
+                {
+                  "key": "subjectSearch",
+                  "value": "math",
+                  "description": "Optional — partial match on subjectName"
+                }
+              ]
+            },
+            "description": "**GET /lesson/employee**\n\nTeacher subject mappings with nested subject, lessons, topics, and semester.\n\nQuery: `employeeId`, optional `courseId`, `sessionId`, `subjectSearch`. No `acedmicYearId` needed — session scopes lessons."
+          },
+          "response": []
         }
       ]
     },
@@ -3528,6 +3885,104 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "teacher mapping",
+      "description": "Teacher subject/section mappings under `/teacher`.",
+      "item": [
+        {
+          "name": "get teacher subject mappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=36&subjectId=99&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSubject"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "36",
+                  "description": "Optional — filter one teacher",
+                  "type": "text"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "99",
+                  "description": "Optional — filters class_subject_mapper.subject_id",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters via semester → class_sections.session_id",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, mapper, subject, semester, class section, and session.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`. When `sessionId` is set, only mappings linked to a class section in that session are returned."
+          },
+          "response": []
+        },
+        {
+          "name": "get teacher section mappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection?employeeId=36&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "36",
+                  "description": "Optional — filter one teacher",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters class_sections.session_id",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "**GET /teacher/teacherSection**\n\nTeacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`."
           },
           "response": []
         }
@@ -4211,7 +4666,7 @@
                 "schedule"
               ]
             },
-            "description": "**POST /examScheduleMapping/schedule**\n\nCreates an exam schedule (date/time slot for a subject).\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `examSetupTypeTermId` | Links to course + term |\n| `sessionId` | Session for enrolled students |\n| `subjectId` | Subject being scheduled |\n| `examDate` | `YYYY-MM-DD` |\n| `examTime` | e.g. `10:00:00` |\n| `duration` | Minutes as string, e.g. `\"120\"` |\n| `type` | e.g. `Theory` |\n\nOptional: `semesterId` — when set, conflict check is scoped to that semester.\n\n### Server-set\n- `acedmicYearId` from token user's `defaultAcademicYearId`\n- `createdBy` / `updatedBy` from token user\n\n### Conflict rule\nReturns **500** with message like:\n`Cannot schedule exam: {subjectName} is already scheduled at the same time for the same students`\n\nwhen another exam overlaps for the same course/term/session cohort.\n\n### Success\n**201** — `{ message, examSchedule }`. Test script saves `examScheduleId` to `{{examScheduleMapping_examScheduleId}}`."
+            "description": "**POST /examScheduleMapping/schedule**\n\nCreates an exam schedule (date/time slot for a subject).\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `examSetupTypeTermId` | Links to course + term |\n| `sessionId` | Session for enrolled students |\n| `subjectId` | Subject being scheduled |\n| `examDate` | `YYYY-MM-DD` |\n| `examTime` | e.g. `10:00:00` |\n| `duration` | Minutes as string, e.g. `\"120\"` |\n| `type` | e.g. `Theory` |\n\nOptional: `semesterId` ΓÇö when set, conflict check is scoped to that semester.\n\n### Server-set\n- `acedmicYearId` from token user's `defaultAcademicYearId`\n- `createdBy` / `updatedBy` from token user\n\n### Conflict rule\nReturns **500** with message like:\n`Cannot schedule exam: {subjectName} is already scheduled at the same time for the same students`\n\nwhen another exam overlaps for the same course/term/session cohort.\n\n### Success\n**201** ΓÇö `{ message, examSchedule }`. Test script saves `examScheduleId` to `{{examScheduleMapping_examScheduleId}}`."
           },
           "response": []
         },
@@ -4424,7 +4879,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/options/subjects?term=1&courseId=34",
+              "raw": "{{baseurl}}/options/subjects?term=200&courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4435,16 +4890,26 @@
               "query": [
                 {
                   "key": "term",
-                  "value": "1",
+                  "value": "200",
+                  "description": "Term / semester filter on subject",
                   "type": "text"
                 },
                 {
                   "key": "courseId",
                   "value": "34",
+                  "description": "Course PK",
                   "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — session academic year + course mapping validation",
+                  "type": "text",
+                  "disabled": true
                 }
               ]
-            }
+            },
+            "description": "**GET /options/subjects**\n\nSubject dropdown (`label` / `value`).\n\n**Query:** `courseId`, `term` (required for typical use). Optional `sessionId` when you need session-scoped academic year.\n\nFilters by user `universityId` and `defaultInstituteId` from token."
           },
           "response": []
         },
@@ -4511,7 +4976,7 @@
                 }
               ]
             },
-            "description": "**GET /options/feePlans** — v2 only. Query: courseId, sessionId. Returns **published** plans only. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] }. Run **feePlanProfile → publish** first."
+            "description": "**GET /options/feePlans** ΓÇö v2 only. Query: courseId, sessionId. data: { courseSessionId, profiles: [{ feePlanProfileId, name }] }"
           },
           "response": []
         },
@@ -5468,7 +5933,7 @@
                 }
               ]
             },
-            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nQuery: `page`, `limit` (defaults 1 and 20).\n\n**200 response** (`SuccessResponse`):\n- `data` — object with:\n  - `filteredrows` — array of assigned script rows (id, qr, requestId, student/exam metadata, marks, etc.)\n  - `teacher` — `{ userId, userName, email }` for the user in `:assignedToUserId`\n- `paginationData` — `{ page, limit, total, totalPages }`\n\nAccess:\n- Teacher-only; `assignedToUserId` must match the authenticated user."
+            "description": "**GET /answerSheetQr/evaluator/:assignedToUserId**\n\nQuery: `page`, `limit` (defaults 1 and 20).\n\n**200 response** (`SuccessResponse`):\n- `data` ΓÇö object with:\n  - `filteredrows` ΓÇö array of assigned script rows (id, qr, requestId, student/exam metadata, marks, etc.)\n  - `teacher` ΓÇö `{ userId, userName, email }` for the user in `:assignedToUserId`\n- `paginationData` ΓÇö `{ page, limit, total, totalPages }`\n\nAccess:\n- Teacher-only; `assignedToUserId` must match the authenticated user."
           },
           "response": []
         },
@@ -5515,31 +5980,31 @@
     },
     {
       "name": "student hall ticket",
-      "description": "Hall ticket APIs share folder variables prefixed `hallticket_`. Edit them once on this folder (Variables tab) — all requests below resolve `{{hallticket_*}}`. Auth still uses global `{{token}}` and `{{baseurl}}`.",
+      "description": "Hall ticket APIs share folder variables prefixed `hallticket_`. Edit them once on this folder (Variables tab) ΓÇö all requests below resolve `{{hallticket_*}}`. Auth still uses global `{{token}}` and `{{baseurl}}`.",
       "variable": [
         {
           "key": "hallticket_examSetupTypeTermId",
           "value": "1",
           "type": "string",
-          "description": "Exam setup type term PK — used by generate, filtered list"
+          "description": "Exam setup type term PK ΓÇö used by generate, filtered list"
         },
         {
           "key": "hallticket_sessionId",
           "value": "1",
           "type": "string",
-          "description": "Session PK — used by generate, filtered list"
+          "description": "Session PK ΓÇö used by generate, filtered list"
         },
         {
           "key": "hallticket_courseId",
           "value": "1",
           "type": "string",
-          "description": "Program/course PK — same as GET /examStructure/examType/single"
+          "description": "Program/course PK ΓÇö same as GET /examStructure/examType/single"
         },
         {
           "key": "hallticket_termNumber",
           "value": "1",
           "type": "string",
-          "description": "Term index on exam setup type term — same as examStructure single `termNumber`"
+          "description": "Term index on exam setup type term ΓÇö same as examStructure single `termNumber`"
         },
         {
           "key": "hallticket_studentId",
@@ -5551,19 +6016,19 @@
           "key": "hallticket_hallTicketId",
           "value": "1",
           "type": "string",
-          "description": "student_hall_ticket.id — GET by id"
+          "description": "student_hall_ticket.id ΓÇö GET by id"
         },
         {
           "key": "hallticket_qr",
           "value": "550e8400-e29b-41d4-a716-446655440000",
           "type": "string",
-          "description": "UUID stored on hall ticket — GET byQr"
+          "description": "UUID stored on hall ticket ΓÇö GET byQr"
         },
         {
           "key": "hallticket_examSetupTypeId",
           "value": "1",
           "type": "string",
-          "description": "exam_setup_type id — optional for related requests"
+          "description": "exam_setup_type id ΓÇö optional for related requests"
         }
       ],
       "item": [
@@ -5572,7 +6037,7 @@
           "request": {
             "method": "POST",
             "header": [],
-            "description": "**POST /studentHallTicket/generate**\n\n**One-time only:** if any hall ticket already exists for that exam setup term + session (same institute/university), returns **400** — regeneration is not allowed.\n\nOtherwise **creates** one row per eligible student (new QR each). **Requires at least one** `exam_schedule` row for that pair with **both** `examDate` and `examTime` (one scheduled subject is enough for Mid-term / End-sem, etc.).\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
+            "description": "**POST /studentHallTicket/generate**\n\n**One-time only:** if any hall ticket already exists for that exam setup term + session (same institute/university), returns **400** ΓÇö regeneration is not allowed.\n\nOtherwise **creates** one row per eligible student (new QR each). **Requires at least one** `exam_schedule` row for that pair with **both** `examDate` and `examTime` (one scheduled subject is enough for Mid-term / End-sem, etc.).\n\n**Body** uses folder vars `hallticket_examSetupTypeTermId`, `hallticket_sessionId`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5605,7 +6070,7 @@
           },
           "response": [
             {
-              "name": "201 Created — example",
+              "name": "201 Created ΓÇö example",
               "originalRequest": {
                 "method": "POST",
                 "header": [],
@@ -5642,7 +6107,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default **1000** if omitted; each request clamps **`limit`** to **10–1000**). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
+            "description": "**GET /studentHallTicket**\n\nOptional filters: **`examSetupTypeTermId`**, **`sessionId`**, **`studentId`** (folder vars). **Pagination:** **`page`** (default 1), **`limit`** (default **1000** if omitted; each request clamps **`limit`** to **10ΓÇô1000**). Response **`data`** is the current page of hall tickets; **`paginationData`** has **`total`**, **`page`**, **`limit`**, **`totalPages`** (same pattern as GET `/questionPaper`).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5687,7 +6152,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -5701,7 +6166,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Top level: student/session/exam-type fields; **`subjects`** lists every `exam_schedule` for this ticket’s term + session. Each item has flat fields (`subjectId`, `subjectName`, …) plus nested **`subject`** (full subject row: type, term, course, etc.) and **`semester`** when linked.",
+            "description": "**GET /studentHallTicket/:id**\n\nPath id = `hallticket_hallTicketId`. Top level: student/session/exam-type fields; **`subjects`** lists every `exam_schedule` for this ticketΓÇÖs term + session. Each item has flat fields (`subjectId`, `subjectName`, ΓÇª) plus nested **`subject`** (full subject row: type, term, course, etc.) and **`semester`** when linked.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -5725,7 +6190,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -5771,7 +6236,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -5784,7 +6249,7 @@
     },
     {
       "name": "library creation",
-      "description": "Library APIs under `/libraryCreation` (test in order: library → get single library (set `libraryFloor_id`) → floor structure POST/GET → categories → add book → bookSummary/allBook/singleBook → updateBook → bulk upload). Auth: Bearer {{token}}.",
+      "description": "Library APIs under `/libraryCreation` (test in order: library ΓåÆ get single library (set `libraryFloor_id`) ΓåÆ floor structure POST/GET ΓåÆ categories ΓåÆ add book ΓåÆ allBook/singleBook ΓåÆ updateBook ΓåÆ bulk upload). Auth: Bearer {{token}}.",
       "variable": [
         {
           "key": "libraryCreation_id",
@@ -5849,7 +6314,7 @@
           },
           "response": [
             {
-              "name": "201 Created — example",
+              "name": "201 Created ΓÇö example",
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
@@ -5885,7 +6350,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -5928,7 +6393,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -5973,11 +6438,11 @@
                 "structure"
               ]
             },
-            "description": "**POST /libraryCreation/floor/:libraryFloorId/structure**\n\nBulk-creates aisles, racks, and rows (shelves) for a floor in one transaction.\n\n- **Aisle** `name` continues from the highest existing numeric aisle on the floor (e.g. day 1: 1–5, day 2 with `aisles: 2` → 6–7).\n- **Rack** / **row** names start at `1` within each new aisle/rack.\n- **description** is auto-set: `aisle 1`, `aisle 1 rack 2`, `aisle 1 rack 2 row 2`.\n\n**Body:** `aisles`, `racksPerAisle`, `rowsPerRack` (all integers ≥ 1).\n\nSet `libraryFloor_id` from **get single library** `floors[].libraryFloorId`."
+            "description": "**POST /libraryCreation/floor/:libraryFloorId/structure**\n\nBulk-creates aisles, racks, and rows (shelves) for a floor in one transaction.\n\n- **Aisle** `name` continues from the highest existing numeric aisle on the floor (e.g. day 1: 1ΓÇô5, day 2 with `aisles: 2` ΓåÆ 6ΓÇô7).\n- **Rack** / **row** names start at `1` within each new aisle/rack.\n- **description** is auto-set: `aisle 1`, `aisle 1 rack 2`, `aisle 1 rack 2 row 2`.\n\n**Body:** `aisles`, `racksPerAisle`, `rowsPerRack` (all integers ΓëÑ 1).\n\nSet `libraryFloor_id` from **get single library** `floors[].libraryFloorId`."
           },
           "response": [
             {
-              "name": "201 Created — example",
+              "name": "201 Created ΓÇö example",
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
@@ -6013,11 +6478,11 @@
                 "structure"
               ]
             },
-            "description": "**GET /libraryCreation/floor/:libraryFloorId/structure**\n\nReturns nested floor layout: **aisles → racks → shelves** (rows). Sorted numerically by `name`. Includes `description` on each level."
+            "description": "**GET /libraryCreation/floor/:libraryFloorId/structure**\n\nReturns nested floor layout: **aisles ΓåÆ racks ΓåÆ shelves** (rows). Sorted numerically by `name`. Includes `description` on each level."
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6062,7 +6527,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6104,7 +6569,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6287,7 +6752,7 @@
           },
           "response": [
             {
-              "name": "201 Created — example",
+              "name": "201 Created ΓÇö example",
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
@@ -6295,7 +6760,7 @@
               "body": "{\n  \"message\": \"Book & Inventory added successfully\",\n  \"result\": {\n    \"book\": {\n      \"libraryBookId\": 51,\n      \"libraryCreationId\": 25,\n      \"title\": \"Introduction to Algorithms\",\n      \"subjectId\": 0,\n      \"classSectionsId\": 0,\n      \"remark\": \"\",\n      \"itemType\": \"print\"\n    },\n    \"inventory\": 1\n  }\n}"
             },
             {
-              "name": "201 Created — partial payload example",
+              "name": "201 Created ΓÇö partial payload example",
               "originalRequest": {
                 "method": "POST",
                 "header": [],
@@ -6409,36 +6874,36 @@
                 {
                   "key": "libraryCreationId",
                   "value": "{{libraryCreation_id}}",
-                  "description": "Required — library creation ID"
+                  "description": "Required ΓÇö library creation ID"
                 },
                 {
                   "key": "libraryFloorId",
                   "value": "{{libraryFloor_id}}",
-                  "description": "Optional — filter inventory by floor; omit to list all books for libraryCreationId",
+                  "description": "Optional ΓÇö filter inventory by floor; omit to list all books for libraryCreationId",
                   "disabled": true
                 },
                 {
                   "key": "page",
                   "value": "1",
-                  "description": "Optional — page number (default 1)"
+                  "description": "Optional ΓÇö page number (default 1)"
                 },
                 {
                   "key": "limit",
                   "value": "20",
-                  "description": "Optional — page size (default 20, max 100)"
+                  "description": "Optional ΓÇö page size (default 20, max 100)"
                 },
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Single search — title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
+                  "description": "Single search ΓÇö title, subtitle, author, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, libraryBookId"
                 }
               ]
             },
-            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | — | Library ID |\n| `libraryFloorId` | No | — | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | — | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
+            "description": "**GET /libraryCreation/allBook**\n\nPaginated book list. Use **`search`** only for lookup (all former filter fields merged). Sorted by `libraryBookId` DESC.\n\n**Query (6 keys)**\n| Key | Required | Default | Notes |\n|-----|----------|---------|--------|\n| `libraryCreationId` | Yes | ΓÇö | Library ID |\n| `libraryFloorId` | No | ΓÇö | Floor scope; omit for whole library |\n| `page` | No | 1 | Page number |\n| `limit` | No | 20 | Max 100 |\n| `search` | No | ΓÇö | One field: book + inventory fields; omit for all |\n\n**`search` matches:** title, subtitle, authors, isbn, publisher, keywords, accessionNumber, status, billNo, billDate, numeric `libraryBookId`\n\n**Examples**\n- `GET .../allBook?libraryCreationId=1&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&libraryFloorId=1&search=design&page=1&limit=20`\n- `GET .../allBook?libraryCreationId=1&search=available&page=1&limit=20`\n\n**Response:** `data[]` + `paginationData`"
           },
           "response": [
             {
-              "name": "200 OK — paginated list",
+              "name": "200 OK ΓÇö paginated list",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6446,7 +6911,7 @@
               "body": "{\n  \"success\": true,\n  \"message\": \"Books\",\n  \"data\": [\n    {\n      \"libraryBookId\": 1,\n      \"libraryCreationId\": 1,\n      \"title\": \"Introduction to Algorithms\",\n      \"author\": \"Thomas H. Cormen\",\n      \"categories\": [{ \"libraryCategoryId\": 1, \"name\": \"Reference\" }],\n      \"subjects\": [{ \"subjectId\": 47, \"subjectName\": \"Ecology & Built Environment\" }],\n      \"accessionNumber\": [\"ACC-1001\"],\n      \"billNo\": [\"BILL-2024-01\"],\n      \"billDate\": [\"2024-01-15\"],\n      \"status\": \"available\",\n      \"condition\": \"Good\",\n      \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n      \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" },\n      \"inventoryCopies\": [\n        {\n          \"inventoryId\": 81,\n          \"accessionNumber\": \"ACC-1001\",\n          \"billNo\": \"BILL-2024-01\",\n          \"billDate\": \"2024-01-15\",\n          \"status\": \"available\",\n          \"condition\": \"Good\",\n          \"aisleDetails\": { \"libraryAisleId\": 1, \"name\": \"Library\", \"libraryFloorId\": 1 },\n          \"rackDetails\": { \"libraryRackId\": 1, \"name\": \"ASA LIBRARY\" },\n          \"rowDetails\": { \"libraryRowId\": 1, \"name\": \"ASA LIBRARY\" }\n        }\n      ]\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 5305,\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalPages\": 266\n  }\n}"
             },
             {
-              "name": "200 OK — with search",
+              "name": "200 OK ΓÇö with search",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6489,7 +6954,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6606,7 +7071,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6649,7 +7114,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6686,7 +7151,7 @@
           },
           "response": [
             {
-              "name": "200 OK — example",
+              "name": "200 OK ΓÇö example",
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
@@ -6697,7 +7162,7 @@
         },
         {
           "name": "bulk upload",
-          "description": "**POST /libraryCreation/bulkUpload?libraryCreationId=**\n\nUpload an Excel file (`.xlsx`). Each row = one inventory copy.\n\n**Query**\n| Key | Required |\n|-----|----------|\n| `libraryCreationId` | Yes |\n\n**Body (form-data)**\n| Key | Type | Required |\n|-----|------|----------|\n| `book` | file | Yes |\n\n**Required Excel columns (every row)**\n`isbn`, `accessionNumber`, `Aisle`, `Rack`, `Row`\n\n**Required only when ISBN is new in DB**\n`title`, `authors`\n\n**Optional book columns**\n`publisher`, `keywords`, `subtitle`, `barcode`, `itemType`, …\n\n**Logic**\n- ISBN exists → inventory row only\n- ISBN new → book + inventory\n- Same ISBN twice in file → first row creates book, next rows inventory only\n\n**Success**\n```json\n{ \"success\": true, \"message\": \"Data uploaded successfully\" }\n```\n\n**Error**\n```json\n{ \"message\": \"Row 2: Rack is required\" }\n```",
+          "description": "**POST /libraryCreation/bulkUpload?libraryCreationId=**\n\nUpload an Excel file (`.xlsx`). Each row = one inventory copy.\n\n**Query**\n| Key | Required |\n|-----|----------|\n| `libraryCreationId` | Yes |\n\n**Body (form-data)**\n| Key | Type | Required |\n|-----|------|----------|\n| `book` | file | Yes |\n\n**Required Excel columns (every row)**\n`isbn`, `accessionNumber`, `Aisle`, `Rack`, `Row`\n\n**Required only when ISBN is new in DB**\n`title`, `authors`\n\n**Optional book columns**\n`publisher`, `keywords`, `subtitle`, `barcode`, `itemType`, ΓÇª\n\n**Logic**\n- ISBN exists ΓåÆ inventory row only\n- ISBN new ΓåÆ book + inventory\n- Same ISBN twice in file ΓåÆ first row creates book, next rows inventory only\n\n**Success**\n```json\n{ \"success\": true, \"message\": \"Data uploaded successfully\" }\n```\n\n**Error**\n```json\n{ \"message\": \"Row 2: Rack is required\" }\n```",
           "item": [
             {
               "name": "upload excel",
@@ -6719,7 +7184,7 @@
                   "formdata": [
                     {
                       "key": "book",
-                      "description": "Excel file — columns: title, authors, isbn, accessionNumber, Aisle, Rack, Row, publisher, keywords",
+                      "description": "Excel file ΓÇö columns: title, authors, isbn, accessionNumber, Aisle, Rack, Row, publisher, keywords",
                       "type": "file",
                       "src": []
                     }
@@ -6744,7 +7209,7 @@
               },
               "response": [
                 {
-                  "name": "200 OK — success",
+                  "name": "200 OK ΓÇö success",
                   "status": "OK",
                   "code": 200,
                   "_postman_previewlanguage": "json",
@@ -6752,7 +7217,7 @@
                   "body": "{\n  \"success\": true,\n  \"message\": \"Data uploaded successfully\"\n}"
                 },
                 {
-                  "name": "400 — validation error",
+                  "name": "400 ΓÇö validation error",
                   "status": "Bad Request",
                   "code": 400,
                   "_postman_previewlanguage": "json",
@@ -6767,7 +7232,7 @@
     },
     {
       "name": "library issue book",
-      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create → get all/get single → **get inventory issue history** (by `inventoryId`) → update with `returnItems` (partial/full return) → update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Return is stored in `library_return_book_transaction`; inventory item links via `libraryReturnBookTransactionId`\n- Active issue = item row with `libraryReturnBookTransactionId` NULL; same `inventoryId` can be re-issued after return\n- For same `returnDate`, one return transaction can be reused for multiple returned items\n- `library_book_inventory.status`: `available` → `issued` on issue, back to `available` on return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** — accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
+      "description": "Library issue/return flow under `/libraryIssueBook`.\n\n**Test order:** create ΓåÆ get all/get single ΓåÆ **get inventory issue history** (by `inventoryId`) ΓåÆ update with `returnItems` (partial/full return) ΓåÆ update due date/inventory if needed.\n\n**Rules**\n- `memberType`: `STUDENT` | `TEACHER`; `memberId` maps to student/employee PK\n- Transaction: `issueDate`, `dueDate` (`dueDate` >= `issueDate`)\n- Return is stored in `library_return_book_transaction`; inventory item links via `libraryReturnBookTransactionId`\n- Active issue = item row with `libraryReturnBookTransactionId` NULL; same `inventoryId` can be re-issued after return\n- For same `returnDate`, one return transaction can be reused for multiple returned items\n- `library_book_inventory.status`: `available` ΓåÆ `issued` on issue, back to `available` on return\n- `inventoryItems[]` on update replaces outstanding copies (auto-returns old active items)\n- `returnItems[]` on update returns selected books by item id or inventory id\n- **GET /inventoryIssueHistory?inventoryId=** ΓÇö accession copy + all issue rows for that inventory (nested `bookDetails`, `issueBookTransaction` with `studentMember` / `teacherMember`)\n\nAuth: Bearer {{token}}",
       "variable": [
         {
           "key": "libraryIssueBookTransaction_id",
@@ -6867,7 +7332,7 @@
                 "libraryIssueBook"
               ]
             },
-            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (initially `libraryReturnBookTransactionId` is `null`). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT → student_id, TEACHER → employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
+            "description": "**POST /libraryIssueBook**\n\nCreates transaction + items (initially `libraryReturnBookTransactionId` is `null`). Sets each `library_book_inventory.status` to `issued`.\n\n| Field | Required | Notes |\n|-------|----------|-------|\n| `memberId`, `memberType` | Yes | STUDENT ΓåÆ student_id, TEACHER ΓåÆ employee_id |\n| `issueDate`, `dueDate` | Yes | `dueDate` >= `issueDate` |\n| `inventoryItems[]` | No | Copy must be `available`; unique per request |"
           },
           "response": []
         },
@@ -6999,7 +7464,7 @@
                 }
               ]
             },
-            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) — `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` — inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, …)\n- `issueCount` — total issue entries for this copy\n- `issueHistory[]` — each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and optional `returnBookTransaction` (`libraryReturnBookTransactionId`, `returnDate`)\n\n404 when `inventoryId` not found."
+            "description": "**GET /libraryIssueBook/inventoryIssueHistory**\n\nQuery: `inventoryId` (required) ΓÇö `library_book_inventory.inventory_id` (accession copy).\n\nReturns:\n- `book` ΓÇö inventory row with nested `bookDetails` (`title`, `authors`, `isbn`, `accessionNumber`, `status`, ΓÇª)\n- `issueCount` ΓÇö total issue entries for this copy\n- `issueHistory[]` ΓÇö each `library_book_issue_inventory_item` with nested `issueBookTransaction` (`issueDate`, `dueDate`, `memberType`, `studentMember` or `teacherMember`) and optional `returnBookTransaction` (`libraryReturnBookTransactionId`, `returnDate`)\n\n404 when `inventoryId` not found."
           },
           "response": []
         },
@@ -7036,7 +7501,7 @@
                 "libraryIssueBook"
               ]
             },
-            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{ inventoryId: number }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD, required per item\n  }>;\n};\n```\n\n### Return multiple books\n\nSend **one object per book** in `returnItems[]`. Repeat the same `returnDate` when all copies are returned on the same day — the API creates **one** `library_return_book_transaction` per calendar date (`findOrCreate` on `returnDate`) and links every matched issue item to it.\n\n**Example A — same returnDate (this request body)**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example B — by inventoryId**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"inventoryId\": 101, \"returnDate\": \"2026-06-02\" },\n    { \"inventoryId\": 102, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example C — mixed return dates** (creates two return transaction rows)\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-05\" }\n  ]\n}\n```\n\n### Test flow\n1. **POST** create with 2+ `inventoryItems`\n2. **GET /single** — saves `libraryBookIssueInventoryItem_id` / `_id_2` from active rows\n3. **PATCH** (this request) with both ids and same `{{return_date}}`\n4. **GET /returnTransactions** — one row per `returnDate`, `totalReturnedBooks` = 2\n\n### Other usage\n- Update member/dates: `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: `inventoryItems[]` (auto-returns active items first)"
+            "description": "**PATCH /libraryIssueBook**\n\nPrimary update API.\n\n### Payload type (frontend)\n\n```ts\ntype UpdateLibraryIssueBookPayload = {\n  libraryIssueBookTransactionId: number; // required\n  memberId?: number;\n  memberType?: \"STUDENT\" | \"TEACHER\";\n  issueDate?: string; // YYYY-MM-DD\n  dueDate?: string; // YYYY-MM-DD (must be >= issueDate when both sent)\n  inventoryItems?: Array<{ inventoryId: number }>;\n  returnItems?: Array<{\n    libraryBookIssueInventoryItemId?: number;\n    inventoryId?: number;\n    returnDate: string; // YYYY-MM-DD, required per item\n  }>;\n};\n```\n\n### Return multiple books\n\nSend **one object per book** in `returnItems[]`. Repeat the same `returnDate` when all copies are returned on the same day ΓÇö the API creates **one** `library_return_book_transaction` per calendar date (`findOrCreate` on `returnDate`) and links every matched issue item to it.\n\n**Example A ΓÇö same returnDate (this request body)**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example B ΓÇö by inventoryId**\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"inventoryId\": 101, \"returnDate\": \"2026-06-02\" },\n    { \"inventoryId\": 102, \"returnDate\": \"2026-06-02\" }\n  ]\n}\n```\n\n**Example C ΓÇö mixed return dates** (creates two return transaction rows)\n```json\n{\n  \"libraryIssueBookTransactionId\": 12,\n  \"returnItems\": [\n    { \"libraryBookIssueInventoryItemId\": 5, \"returnDate\": \"2026-06-02\" },\n    { \"libraryBookIssueInventoryItemId\": 6, \"returnDate\": \"2026-06-05\" }\n  ]\n}\n```\n\n### Test flow\n1. **POST** create with 2+ `inventoryItems`\n2. **GET /single** ΓÇö saves `libraryBookIssueInventoryItem_id` / `_id_2` from active rows\n3. **PATCH** (this request) with both ids and same `{{return_date}}`\n4. **GET /returnTransactions** ΓÇö one row per `returnDate`, `totalReturnedBooks` = 2\n\n### Other usage\n- Update member/dates: `memberId`, `memberType`, `issueDate`, `dueDate`\n- Replace outstanding copies: `inventoryItems[]` (auto-returns active items first)"
           },
           "response": []
         },
@@ -7079,7 +7544,7 @@
                 }
               ]
             },
-            "description": "**GET /libraryIssueBook/returnTransactions**\n\nLists return batches grouped by `library_return_book_transaction` (one row per **returnDate**). Multiple books returned on the same date appear under the same record.\n\n### Query params\n\n```ts\ntype GetReturnTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // default 20\n  search?: string; // returnDate, member, accession, title, isbn, …\n};\n```\n\n`{{baseurl}}/libraryIssueBook/returnTransactions?page={{page}}&limit={{limit}}&search={{search}}`\n\n### Response shape (per row)\n\n| Field | Description |\n|-------|-------------|\n| `libraryReturnBookTransactionId` | PK of return batch |\n| `returnDate` | Shared date for all books in this batch |\n| `totalReturnedBooks` | Count of copies in this batch |\n| `totalIssueTransactions` | Distinct issue transactions involved |\n| `issueTransactions[]` | Grouped by original issue |\n\nEach `issueTransactions[]` entry:\n- `libraryIssueBookTransactionId`, `memberId`, `memberType`, `issueDate`, `dueDate`, `member`\n- `returnedBooks[]` — `{ libraryBookIssueInventoryItemId, inventoryId, book }` (`book` includes `bookDetails`)\n\n### Example (two books, same returnDate)\n\n```json\n{\n  \"libraryReturnBookTransactionId\": 3,\n  \"returnDate\": \"2026-06-02\",\n  \"totalReturnedBooks\": 2,\n  \"totalIssueTransactions\": 1,\n  \"issueTransactions\": [\n    {\n      \"libraryIssueBookTransactionId\": 12,\n      \"memberType\": \"STUDENT\",\n      \"returnedBooks\": [\n        { \"libraryBookIssueInventoryItemId\": 5, \"inventoryId\": 101, \"book\": { } },\n        { \"libraryBookIssueInventoryItemId\": 6, \"inventoryId\": 102, \"book\": { } }\n      ]\n    }\n  ]\n}\n```\n\nRun after **PATCH** with multiple `returnItems` sharing `{{return_date}}` to verify grouping."
+            "description": "**GET /libraryIssueBook/returnTransactions**\n\nLists return batches grouped by `library_return_book_transaction` (one row per **returnDate**). Multiple books returned on the same date appear under the same record.\n\n### Query params\n\n```ts\ntype GetReturnTransactionsQuery = {\n  page?: number; // default 1\n  limit?: number; // default 20\n  search?: string; // returnDate, member, accession, title, isbn, ΓÇª\n};\n```\n\n`{{baseurl}}/libraryIssueBook/returnTransactions?page={{page}}&limit={{limit}}&search={{search}}`\n\n### Response shape (per row)\n\n| Field | Description |\n|-------|-------------|\n| `libraryReturnBookTransactionId` | PK of return batch |\n| `returnDate` | Shared date for all books in this batch |\n| `totalReturnedBooks` | Count of copies in this batch |\n| `totalIssueTransactions` | Distinct issue transactions involved |\n| `issueTransactions[]` | Grouped by original issue |\n\nEach `issueTransactions[]` entry:\n- `libraryIssueBookTransactionId`, `memberId`, `memberType`, `issueDate`, `dueDate`, `member`\n- `returnedBooks[]` ΓÇö `{ libraryBookIssueInventoryItemId, inventoryId, book }` (`book` includes `bookDetails`)\n\n### Example (two books, same returnDate)\n\n```json\n{\n  \"libraryReturnBookTransactionId\": 3,\n  \"returnDate\": \"2026-06-02\",\n  \"totalReturnedBooks\": 2,\n  \"totalIssueTransactions\": 1,\n  \"issueTransactions\": [\n    {\n      \"libraryIssueBookTransactionId\": 12,\n      \"memberType\": \"STUDENT\",\n      \"returnedBooks\": [\n        { \"libraryBookIssueInventoryItemId\": 5, \"inventoryId\": 101, \"book\": { } },\n        { \"libraryBookIssueInventoryItemId\": 6, \"inventoryId\": 102, \"book\": { } }\n      ]\n    }\n  ]\n}\n```\n\nRun after **PATCH** with multiple `returnItems` sharing `{{return_date}}` to verify grouping."
           },
           "response": []
         },
@@ -7130,7 +7595,7 @@
     },
     {
       "name": "fee v2",
-      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** — CRUD fee categories\n2. **feeTypeCatalog** — CRUD catalog lines\n3. **feePlanProfile** — **POST /** create (draft) → **PATCH /** edit → **PATCH /publish** → **PATCH /assignStudent**; **GET /summary**, **GET /all**, **GET /single**\n4. **student (fee v2)** — **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** — term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** — **GET /payment/details?studentId=** → **POST /payment/details** → **GET /** (list/print) → **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup — use **GET /options/feePlans**\n- GET /student/:id/feeDetails — use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
+      "description": "## End-to-end flow (run in order)\n\n1. **feeTypeCategory** ΓÇö CRUD fee categories\n2. **feeTypeCatalog** ΓÇö CRUD catalog lines\n3. **feePlanProfile** ΓÇö create plan; **GET /summary**; **GET /all?status=**; **PATCH /assignStudent** (link plan to student)\n4. **student (fee v2)** ΓÇö **GET /student/feePlanProfiles/all**; **GET /student/all**; **GET /student?studentId=**; **POST /student**; **PATCH /feePlanProfile/assignStudent** (assign plan); dropdown **GET /options/feePlans**\n5. **studentFeeInvoice** ΓÇö term: **POST /** ; adhoc: **POST /adhoc** (feeTypeCatalogs[], waiver); list: **GET /all?status=** (all|pending|completed); **GET ?studentId=** (student + invoices)\n6. **studentFeePayment** ΓÇö **GET /payment/details?studentId=** ΓåÆ **POST /payment/details** ΓåÆ **GET /** (list/print) ΓåÆ **GET /single?studentFeePaymentId=**\n\n## Removed\n- GET /feePlanProfile/lookup ΓÇö use **GET /options/feePlans**\n- GET /student/:id/feeDetails ΓÇö use **GET /studentFeeInvoice?studentId=**\n\n## Tables (v2)\nfee_type_categories, fee_type_catalog, fee_plan_profile, fee_plan_item, fee_plan_sub_items, students.fee_plan_profile_id, student_fee_invoice, student_fee_invoice_items, student_fee_payment, payment_item",
       "item": [
         {
           "name": "feeTypeCategory",
@@ -7659,7 +8124,7 @@
                     "summary"
                   ]
                 },
-                "description": "**GET /feePlanProfile/summary** — dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactiveFeePlans**: profiles not assigned to any student\n- **allFeePlans**: total profiles for institute"
+                "description": "**GET /feePlanProfile/summary** ΓÇö dashboard cards on Fees Invoice page.\n\n- **activeFeePlans**: fee_plan_profile assigned to ΓëÑ1 student (students.fee_plan_profile_id)\n- **inactiveFeePlans**: profiles not assigned to any student\n- **allFeePlans**: total profiles for institute"
               },
               "response": []
             },
@@ -7695,7 +8160,7 @@
                     }
                   ]
                 },
-                "description": "**GET /feePlanProfile/all?status=**\n\n- **all** — every fee plan for institute\n- **active** — assigned to ≥1 student (students.fee_plan_profile_id)\n- **inactive** — no student assigned\n\n**data:** { status, feePlans[] }"
+                "description": "**GET /feePlanProfile/all?status=**\n\n- **all** ΓÇö every fee plan for institute\n- **active** ΓÇö assigned to ΓëÑ1 student (students.fee_plan_profile_id)\n- **inactive** ΓÇö no student assigned\n\n**data:** { status, feePlans[] }"
               },
               "response": []
             },
@@ -7730,7 +8195,7 @@
                     }
                   ]
                 },
-                "description": "Fee plans with ≥1 student assigned. Response: { status: \"active\", feePlans[] }."
+                "description": "Fee plans with ΓëÑ1 student assigned. Response: { status: \"active\", feePlans[] }."
               },
               "response": []
             },
@@ -7800,7 +8265,7 @@
                     }
                   ]
                 },
-                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } — each plan: numberOfInvoices (term invoices via fee_plan_item), feePlanItems[{ sno, feePlanItemId, numberOfInvoices }], assignedStudentCount, status, termFees, totalFees, etc."
+                "description": "Query: courseSessionId (required). Response data: { courseSessionId, feePlans[] } ΓÇö each plan: numberOfInvoices (term invoices via fee_plan_item), feePlanItems[{ sno, feePlanItemId, numberOfInvoices }], assignedStudentCount, status, termFees, totalFees, etc."
               },
               "response": []
             },
@@ -7956,7 +8421,7 @@
                     }
                   }
                 },
-                "description": "**POST /studentFeeInvoice** — term / fee-plan invoice.\n\nBody: studentId, feePlanItemId only. instituteId from auth.\n\nCreates **student_fee_invoice** (linked to **fee_plan_item**, no amount column) + **student_fee_invoice_items** rows copied from **fee_plan_sub_items** (isMainItem = isMainSubItem).\n\nResponse: **feeInvoiceItems[]**; **amount** = main line; **supplementalFees** = supplemental.\n\n201 message: \"Invoice generated\". data: studentFeeInvoiceId, amount, total, totalVerified, supplementalFees[], feePlanItem, student (if loaded)."
+                "description": "**POST /studentFeeInvoice** ΓÇö term / fee-plan invoice.\n\nBody: studentId, feePlanItemId only. instituteId from auth.\n\nCreates **student_fee_invoice** (linked to **fee_plan_item**, no amount column) + **student_fee_invoice_items** rows copied from **fee_plan_sub_items** (isMainItem = isMainSubItem).\n\nResponse: **feeInvoiceItems[]**; **amount** = main line; **supplementalFees** = supplemental.\n\n201 message: \"Invoice generated\". data: studentFeeInvoiceId, amount, total, totalVerified, supplementalFees[], feePlanItem, student (if loaded)."
               },
               "response": []
             },
@@ -8009,7 +8474,7 @@
                     }
                   }
                 },
-                "description": "**POST /studentFeeInvoice/adhoc** — adhoc invoice (misconduct, fine, etc.). No feePlanItemId.\n\n**Body (required):** studentId, feeTypeCatalogs[] (min 1), createDate (YYYY-MM-DD).\n\n**feeTypeCatalogs[] each line:** feeTypeCatalogId, amount; optional waiver (≥ 0, cannot exceed amount).\n\n**Invoice total** = sum of (amount − waiver) per line. Example: 5000−500 + 3000−500 = **7000** (not 8000 gross).\n\n**Optional:** dueDate (null allowed), total — if sent, must equal net sum after waivers; omit total to auto-compute.\n\n**Stored:** student_fee_invoice_items.amount (gross), .waiver; student_fee_invoice.total only (no amount column).\n\ninstituteId from auth.\n\n201 data (minimal): studentFeeInvoiceId, studentId, total, createDate, dueDate, paymentStatus. Use GET /studentFeeInvoice/single for full detail."
+                "description": "**POST /studentFeeInvoice/adhoc** ΓÇö adhoc invoice (misconduct, fine, etc.). No feePlanItemId.\n\n**Body (required):** studentId, feeTypeCatalogs[] (min 1), createDate (YYYY-MM-DD).\n\n**feeTypeCatalogs[] each line:** feeTypeCatalogId, amount; optional waiver (ΓëÑ 0, cannot exceed amount).\n\n**Invoice total** = sum of (amount ΓêÆ waiver) per line. Example: 5000ΓêÆ500 + 3000ΓêÆ500 = **7000** (not 8000 gross).\n\n**Optional:** dueDate (null allowed), total ΓÇö if sent, must equal net sum after waivers; omit total to auto-compute.\n\n**Stored:** student_fee_invoice_items.amount (gross), .waiver; student_fee_invoice.total only (no amount column).\n\ninstituteId from auth.\n\n201 data (minimal): studentFeeInvoiceId, studentId, total, createDate, dueDate, paymentStatus. Use GET /studentFeeInvoice/single for full detail."
               },
               "response": []
             },
@@ -8045,7 +8510,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeeInvoice/all?status=**\n\n- **all** — every generated invoice\n- **pending** — unpaid + partial\n- **completed** — paid\n\n**data:** { status, invoices[] } — studentFeeInvoiceId, studentName, scholarNumber, amount, paid, balanceDue, paymentStatus, createDate, dueDate."
+                "description": "**GET /studentFeeInvoice/all?status=**\n\n- **all** ΓÇö every generated invoice\n- **pending** ΓÇö unpaid + partial\n- **completed** ΓÇö paid\n\n**data:** { status, invoices[] } ΓÇö studentFeeInvoiceId, studentName, scholarNumber, amount, paid, balanceDue, paymentStatus, createDate, dueDate."
               },
               "response": []
             },
@@ -8150,7 +8615,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeeInvoice?studentId=** — v2 replacement for GET /student/:id/feeDetails.\n\n**data:** { student: { studentId, studentName, scholarNumber }, invoices[] } — each invoice: studentFeeInvoiceId, total, paymentStatus, totalPaid, balanceDue, supplementalFees[{ name, amount }]."
+                "description": "**GET /studentFeeInvoice?studentId=** ΓÇö v2 replacement for GET /student/:id/feeDetails.\n\n**data:** { student: { studentId, studentName, scholarNumber }, invoices[] } ΓÇö each invoice: studentFeeInvoiceId, total, paymentStatus, totalPaid, balanceDue, supplementalFees[{ name, amount }]."
               },
               "response": []
             },
@@ -8186,7 +8651,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeeInvoice/single?studentFeeInvoiceId=**\n\nFull invoice detail. data includes:\n- studentFeeInvoiceId, studentId, feePlanItemId, instituteId\n- **student** — studentId, firstName, middleName, lastName, studentName, scholarNumber, email, mobileNumber, enrollNumber, feePlanProfileId\n- amount, supplementalFeesTotal, total, storedTotal, totalVerified\n- createDate, dueDate, status, paymentStatus, totalPaid, balanceDue\n- feePlanItem (term; null fields for adhoc)\n- feeInvoiceItems[] — studentFeeInvoiceItemsId, feeTypeId, isMainItem, amount, waiver, netAmount\n- supplementalFees[] — supplemental lines only (isMainItem=false)"
+                "description": "**GET /studentFeeInvoice/single?studentFeeInvoiceId=**\n\nFull invoice detail. data includes:\n- studentFeeInvoiceId, studentId, feePlanItemId, instituteId\n- **student** ΓÇö studentId, firstName, middleName, lastName, studentName, scholarNumber, email, mobileNumber, enrollNumber, feePlanProfileId\n- amount, supplementalFeesTotal, total, storedTotal, totalVerified\n- createDate, dueDate, status, paymentStatus, totalPaid, balanceDue\n- feePlanItem (term; null fields for adhoc)\n- feeInvoiceItems[] ΓÇö studentFeeInvoiceItemsId, feeTypeId, isMainItem, amount, waiver, netAmount\n- supplementalFees[] ΓÇö supplemental lines only (isMainItem=false)"
               },
               "response": []
             }
@@ -8194,7 +8659,7 @@
         },
         {
           "name": "studentFeePayment",
-          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** — outstanding invoices (pay screen)\n2. **POST /payment/details** — record payment (multi-invoice in one payment)\n3. **GET /** — paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** — one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ← `student_fee_invoice_items` (sum amount − waiver)\n- **paidAmount** ← `payment_item` SUM\n- **dueAmount** = total − paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header: payeeId, payeeType STUDENT|VENDOR|OTHER) + `payment_item` (referenceId, referenceType; fee invoice uses referenceType `STUDENT_FEE_INVOICE` and referenceId = studentFeeInvoiceId; omit referenceType → saves as `OTHER`)",
+          "description": "## studentFeePayment (fee v2)\n\nRun in order:\n1. **GET /payment/details?studentId=** ΓÇö outstanding invoices (pay screen)\n2. **POST /payment/details** ΓÇö record payment (multi-invoice in one payment)\n3. **GET /** ΓÇö paginated payment list (print)\n4. **GET /single?studentFeePaymentId=** ΓÇö one payment receipt with paymentItems\n\n## Amount rules (POST only)\n- **total** ΓåÉ `student_fee_invoice_items` (sum amount ΓêÆ waiver)\n- **paidAmount** ΓåÉ `payment_item` SUM\n- **dueAmount** = total ΓêÆ paidAmount; reject if amount > dueAmount\n\n## Tables\n`student_fee_payment` (header: payeeId, payeeType STUDENT|VENDOR|OTHER) + `payment_item` (referenceId, referenceType; fee invoice uses referenceType `STUDENT_FEE_INVOICE` and referenceId = studentFeeInvoiceId; omit referenceType ΓåÆ saves as `OTHER`)",
           "item": [
             {
               "name": "1 payment details by student",
@@ -8229,7 +8694,7 @@
                     }
                   ]
                 },
-                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` — count of generated invoices for this student\n- `lastPayment` — latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentMethod`, `paymentDate`) or `null`\n- `outstandingAmount` — sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` — sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount − waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total − paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` (use as paymentItems[].referenceId) before POST."
+                "description": "**GET /studentFeePayment/payment/details?studentId=**\n\nPay screen: student summary + outstanding invoices + aggregates.\n\n**Summary fields:**\n- `totalInvoices` ΓÇö count of generated invoices for this student\n- `lastPayment` ΓÇö latest INCOMING payment (`studentFeePaymentId`, `amount`, `paymentMethod`, `paymentDate`) or `null`\n- `outstandingAmount` ΓÇö sum of `balanceDue` on unpaid/partial invoices\n- `totalPaymentReceived` ΓÇö sum of **payment_item** amounts (INCOMING) across all student invoices\n\n**Per invoice (in `invoices[]`, unpaid/partial only):**\n- `total` from **student_fee_invoice_items** (sum amount ΓêÆ waiver)\n- `paidAmount` from **payment_item** SUM\n- `balanceDue` = total ΓêÆ paidAmount\n\n**data:** `{ student, totalInvoices, lastPayment, outstandingAmount, totalPaymentReceived, invoices[] }`\n\nSet `student_id` and `studentFeeInvoice_id` (use as paymentItems[].referenceId) before POST."
               },
               "response": []
             },
@@ -8289,7 +8754,7 @@
                     "details"
                   ]
                 },
-                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"referenceId\": 42, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"5000.00\" },\n    { \"referenceId\": 43, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\",\n  \"remark\": \"\"\n}\n```\n\n- **payeeType** (required): `STUDENT` | `VENDOR` | `OTHER`. Fee invoices require `STUDENT`.\n- **paymentItems[]**: `referenceId` (required), `amount` (required), `referenceType` (optional — defaults to `OTHER` if omitted).\n- **referenceType** `STUDENT_FEE_INVOICE`: validates invoice, updates `paid_amount` / `payment_status`. `STUDENT_LIBRARY_INVOICE` not supported yet.\n- **amount** must equal sum of `paymentItems[].amount`.\n\n**Optional:** paymentType (default INCOMING), referenceNumber, transactionId (auto UUID if omitted), receivedBy, remark.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` — verified items include referenceId, referenceType, and invoice totals when referenceType is STUDENT_FEE_INVOICE. Sets `studentFeePayment_id`."
+                "description": "**POST /studentFeePayment/payment/details**\n\n**Body (required):**\n```json\n{\n  \"payeeId\": 2152,\n  \"payeeType\": \"STUDENT\",\n  \"amount\": \"8000.00\",\n  \"paymentItems\": [\n    { \"referenceId\": 42, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"5000.00\" },\n    { \"referenceId\": 43, \"referenceType\": \"STUDENT_FEE_INVOICE\", \"amount\": \"3000.00\" }\n  ],\n  \"paymentMethod\": \"cash\",\n  \"receivedBy\": \"Receiver name or username\",\n  \"remark\": \"\"\n}\n```\n\n- **payeeType** (required): `STUDENT` | `VENDOR` | `OTHER`. Fee invoices require `STUDENT`.\n- **paymentItems[]**: `referenceId` (required), `amount` (required), `referenceType` (optional ΓÇö defaults to `OTHER` if omitted).\n- **referenceType** `STUDENT_FEE_INVOICE`: validates invoice, updates `paid_amount` / `payment_status`. `STUDENT_LIBRARY_INVOICE` not supported yet.\n- **amount** must equal sum of `paymentItems[].amount`.\n\n**Optional:** paymentType (default INCOMING), referenceNumber, transactionId (auto UUID if omitted), receivedBy, remark.\n\n**data:** `{ payment, verified: { payeeId, total, paymentItems[] } }` ΓÇö verified items include referenceId, referenceType, and invoice totals when referenceType is STUDENT_FEE_INVOICE. Sets `studentFeePayment_id`."
               },
               "response": []
             },
@@ -8382,7 +8847,7 @@
         },
         {
           "name": "student (fee v2)",
-          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** → **GET /student/all** → **GET /student?studentId=** → **POST /student** (create) → **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) → optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
+          "description": "Fee v2 student APIs: **GET /student/feePlanProfiles/all** ΓåÆ **GET /student/all** ΓåÆ **GET /student?studentId=** ΓåÆ **POST /student** (create) ΓåÆ **PATCH /feePlanProfile/assignStudent** (assign plan; preferred) ΓåÆ optional **PATCH /student/:studentId** (full edit). Then **studentFeeInvoice** per term.",
           "item": [
             {
               "name": "1 fee plan profiles all (paginated)",
@@ -8451,11 +8916,11 @@
                     }
                   ]
                 },
-                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` — studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `terms[]` each: sno, feePlanItemId, startDate, endDate, **amount** (sum of isMainItem lines), **supplementalFees**, **total**, **feeTypeCatalogs[]** (feePlanSubitemId, feeTypeId, name, amount, isMainItem), status, canGenerateInvoice, studentFeeInvoiceId, paymentStatus\n- `paginationData` — page, limit, total, totalPages\n\nAmounts come from **fee_plan_sub_items** (not fee_plan_item.amount).\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
+                "description": "**GET /student/feePlanProfiles/all**\n\nQuery: `page` (default 1), `limit` (default 20, max 100).\n\n**Response:**\n- `data.students[]` ΓÇö studentId, studentName, scholarNumber, className, program, session, feePlanName, feePlanProfileId, `terms[]`\n- `terms[]` each: sno, feePlanItemId, startDate, endDate, **amount** (sum of isMainItem lines), **supplementalFees**, **total**, **feeTypeCatalogs[]** (feePlanSubitemId, feeTypeId, name, amount, isMainItem), status, canGenerateInvoice, studentFeeInvoiceId, paymentStatus\n- `paginationData` ΓÇö page, limit, total, totalPages\n\nAmounts come from **fee_plan_sub_items** (not fee_plan_item.amount).\n\nTest script sets `student_id`, `feePlanProfile_id`, `feePlanItem_id` from first row.\n\nGenerate invoice: POST /studentFeeInvoice { studentId, feePlanItemId } when canGenerateInvoice is true."
               },
               "response": [
                 {
-                  "name": "200 OK — example",
+                  "name": "200 OK ΓÇö example",
                   "status": "OK",
                   "code": 200,
                   "_postman_previewlanguage": "json",
@@ -8497,7 +8962,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/all?search=all&acedmicYearId={{acedmicYear_id}}&page=1&limit=20",
+                  "raw": "{{baseurl}}/student/all?search=all&page=1&limit=20",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -8512,10 +8977,6 @@
                       "description": "Search term or 'all'"
                     },
                     {
-                      "key": "acedmicYearId",
-                      "value": "{{acedmicYear_id}}"
-                    },
-                    {
                       "key": "page",
                       "value": "1"
                     },
@@ -8525,7 +8986,7 @@
                     }
                   ]
                 },
-                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `acedmicYearId`, `page` (default 1), `limit` (default 10).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
+                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `page` (default 1), `limit` (default 10), optional `courseId`.\n\nAcademic year is derived from `studentSession.sessionAcedmic` (not stored on `students`).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
               },
               "response": []
             },
@@ -8630,14 +9091,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
+                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, sessionId, email, firstName, fatherName, phoneNumber, birthDate.\n\nAcademic year for `class_student_mapper` is derived from `sessionId` (not stored on `students`).\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
               },
               "response": []
             },
@@ -8701,11 +9162,11 @@
     },
     {
       "name": "asset",
-      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` — institute from token.\n\n### Run order\n1. **assetCategory** → 2. **asset** → 3. **assetIssue** (issue → return)\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset/codepreview?name&assetCategoryId` — preview next auto code (read-only) |\n| GET | `/asset?page&limit&status&search` (`status`: all \\| assigned \\| unassigned; `search`: name, code, category) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture → `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name → `001`, `002`, …)\n- Do **not** send `code` on create/update — server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` → `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`, `asset_search`",
+      "description": "## Asset module (all APIs)\n\n**Auth:** Bearer `{{token}}` ΓÇö institute from token.\n\n### Run order\n1. **assetCategory** ΓåÆ 2. **asset** ΓåÆ 3. **assetIssue** (issue ΓåÆ return) ΓåÆ 4. **amcVendor** ΓåÆ 5. **amcContract** ΓåÆ 6. **amcServiceTicket**\n\n### assetCategory\n| Method | Path |\n|--------|------|\n| POST | `/assetCategory` |\n| GET | `/assetCategory` |\n| GET | `/assetCategory/single?assetCategoryId=` |\n| PATCH | `/assetCategory` |\n| DELETE | `/assetCategory?assetCategoryId=` |\n\n### asset\n| Method | Path |\n|--------|------|\n| POST | `/asset` |\n| GET | `/asset/codepreview?name&assetCategoryId` ΓÇö preview next auto code (read-only) |\n| GET | `/asset?page&limit&status&search` (`status`: all \\| assigned \\| unassigned; `search`: name, code, category) |\n| GET | `/asset/single?assetId=` |\n| PATCH | `/asset` |\n| DELETE | `/asset/inventory?assetInventoryItemId=` |\n| DELETE | `/asset?assetId=` |\n\n### assetIssue\n| Method | Path |\n|--------|------|\n| POST | `/assetIssue` |\n| GET | `/assetIssue?page&limit&search` (no payments) |\n| GET | `/assetIssue/single?assetIssueTransactionId=` |\n| GET | `/assetIssue/payments?assetIssueTransactionId=` |\n| PATCH | `/assetIssue` |\n| POST | `/assetIssue/return` |\n| GET | `/assetIssue/return?page&limit` (no payments) |\n| GET | `/assetIssue/return/payments?assetReturnTransactionId=` |\n\n### Codes (auto-generated)\n- **Asset master:** `{categoryPrefix}-{nameSlug}{seq}` e.g. `FURN-TBL001` (Table in Furniture ΓåÆ `FURN` + `TBL` + `001`)\n- **Inventory copy:** `{assetCode}-{copy}` e.g. `FURN-TBL001-0001`\n- Sequence resets per category + asset name slug (same name ΓåÆ `001`, `002`, ΓÇª)\n- Do **not** send `code` on create/update ΓÇö server assigns it\n\n### Inventory (POST create / PATCH append)\nUse **`inventoryBulk[]`** only. Each row: **`count`** required (min 1); **`classRoomSectionId`** optional (omit or `null` ΓåÆ `NOT_ASSIGNED`). PATCH appends new copies only; does not update existing lines.\n\n### Enums\n- **asset.status:** `IN_STOCK` \\| `ISSUED` \\| `MAINTANANCE` (derived; do not send on create)\n- **asset_inventory_item.status:** `NOT_ASSIGNED` \\| `ASSIGNED`\n- **asset.condition / returnCondition:** `GOOD` \\| `FAIR` \\| `EXCELLENT` \\| `BAD`\n- **paymentMethod:** `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`\n\n### amcVendor\n| Method | Path |\n|--------|------|\n| POST | `/amcVendor` |\n| POST | `/amcVendor/codepreview` |\n| GET | `/amcVendor?page&limit&search` |\n| GET | `/amcVendor/single?amcVendorId=` |\n| PATCH | `/amcVendor` |\n| DELETE | `/amcVendor?amcVendorId=` |\n\n### amcContract\n| Method | Path |\n|--------|------|\n| POST | `/amcContract` |\n| GET | `/amcContract/numberpreview` |\n| GET | `/amcContract/summary` |\n| POST | `/amcContract/submitforapproval` |\n| POST | `/amcContract/approve` |\n| GET | `/amcContract?page&limit&search&approvalStatus&status` |\n| GET | `/amcContract/single?amcContractId=` |\n| PATCH | `/amcContract` |\n| DELETE | `/amcContract?amcContractId=` |\n\n### amcServiceTicket\n| Method | Path |\n|--------|------|\n| POST | `/serviceTicket` |\n| GET | `/serviceTicket/numberpreview` |\n| GET | `/serviceTicket/summary` |\n| GET | `/serviceTicket?page&limit&search&status&priority&amcVendorId` |\n| GET | `/serviceTicket/single?serviceTicketId=` |\n| PATCH | `/serviceTicket` |\n| DELETE | `/serviceTicket?serviceTicketId=` |\n\n**Vars:** `assetCategory_id`, `asset_id`, `assetInventoryItem_id`, `assetIssueTransaction_id`, `assetIssueInventoryItem_id`, `assetReturnTransaction_id`, `class_room_section_id`, `student_id`, `asset_search`, `amcVendor_id`, `amcContract_id`, `serviceTicket_id`",
       "item": [
         {
           "name": "assetCategory",
-          "description": "## assetCategory\n\n**POST body:** `{ \"name\": \"...\" }` only — do **not** send `codePrefix` (server sets it from name).\n\n| Name (seeded / example) | `codePrefix` |\n|-------------------------|-------------|\n| IT Assets | IT |\n| Furniture & Fixtures | FURN |\n| Software & Licenses | SWL |\n| Custom e.g. Electronics | ELEC (derived) |\n\n**PATCH:** `assetCategoryId` + optional `name`. Prefix is not changed on update.\n\nRun **get all** after migration to pick an existing seeded category instead of **create**.",
+          "description": "## assetCategory\n\n**POST body:** `{ \"name\": \"...\" }` only ΓÇö do **not** send `codePrefix` (server sets it from name).\n\n| Name (seeded / example) | `codePrefix` |\n|-------------------------|-------------|\n| IT Assets | IT |\n| Furniture & Fixtures | FURN |\n| Software & Licenses | SWL |\n| Custom e.g. Electronics | ELEC (derived) |\n\n**PATCH:** `assetCategoryId` + optional `name`. Prefix is not changed on update.\n\nRun **get all** after migration to pick an existing seeded category instead of **create**.",
           "item": [
             {
               "name": "create",
@@ -8754,7 +9215,7 @@
                     "assetCategory"
                   ]
                 },
-                "description": "**POST /assetCategory** — create category.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `name` | yes | Do **not** send `codePrefix` |\n\nResponse: `assetCategoryId`, `name`, `codePrefix` (e.g. IT Assets → `IT`). Sets `{{assetCategory_id}}`.\n\nPrefer **get all** and use an existing seeded **IT Assets** row when migration has already run.\n\n**Other examples (valid JSON only in Body):** `{ \"name\": \"Electronics\" }` → prefix `ELEC`. Seeded: Land & Buildings (`LDB`), Furniture & Fixtures (`FURN`)."
+                "description": "**POST /assetCategory** ΓÇö create category.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `name` | yes | Do **not** send `codePrefix` |\n\nResponse: `assetCategoryId`, `name`, `codePrefix` (e.g. IT Assets ΓåÆ `IT`). Sets `{{assetCategory_id}}`.\n\nPrefer **get all** and use an existing seeded **IT Assets** row when migration has already run.\n\n**Other examples (valid JSON only in Body):** `{ \"name\": \"Electronics\" }` ΓåÆ prefix `ELEC`. Seeded: Land & Buildings (`LDB`), Furniture & Fixtures (`FURN`)."
               },
               "response": []
             },
@@ -8782,7 +9243,7 @@
                     "assetCategory"
                   ]
                 },
-                "description": "**GET /assetCategory** — list categories for institute. Each row includes `codePrefix` (used for auto asset codes)."
+                "description": "**GET /assetCategory** ΓÇö list categories for institute. Each row includes `codePrefix` (used for auto asset codes)."
               },
               "response": []
             },
@@ -8817,7 +9278,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetCategory/single?assetCategoryId=** — `assetCategoryId`, `name`, `codePrefix`."
+                "description": "**GET /assetCategory/single?assetCategoryId=** ΓÇö `assetCategoryId`, `name`, `codePrefix`."
               },
               "response": []
             },
@@ -8854,7 +9315,7 @@
                     "assetCategory"
                   ]
                 },
-                "description": "**PATCH /assetCategory** — `assetCategoryId` required; at least `name`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `assetCategoryId` | yes | |\n| `name` | yes (on PATCH) | `codePrefix` is read-only — not accepted in body |"
+                "description": "**PATCH /assetCategory** ΓÇö `assetCategoryId` required; at least `name`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `assetCategoryId` | yes | |\n| `name` | yes (on PATCH) | `codePrefix` is read-only ΓÇö not accepted in body |"
               },
               "response": []
             },
@@ -8951,7 +9412,7 @@
                     "asset"
                   ]
                 },
-                "description": "**POST /asset** — Create asset + inventory. **Do not send `code`** — response includes auto `code` (e.g. name **Table** in **Furniture & Fixtures** → `FURN-TBL001`) and `inventoryItems[].code` (e.g. `FURN-TBL001-0001`).\n\n**`inventoryBulk[]`** (optional on create; omit key for master-only):\n\n| Row field | Required | Notes |\n|-----------|----------|--------|\n| `count` | yes | Min 1 per row |\n| `classRoomSectionId` | no | Omit or `null` → `NOT_ASSIGNED`; set → `ASSIGNED` |\n\nExample: 2 in room + 2 unassigned = 4 copies. Unassigned-only: `\"inventoryBulk\": [{ \"count\": 4 }]`.\n\nRequired master: `name`, `condition`, `assetCategoryId`. Body must be strict JSON (no `//` comments)."
+                "description": "**POST /asset** ΓÇö Create asset + inventory. **Do not send `code`** ΓÇö response includes auto `code` (e.g. name **Table** in **Furniture & Fixtures** ΓåÆ `FURN-TBL001`) and `inventoryItems[].code` (e.g. `FURN-TBL001-0001`).\n\n**`inventoryBulk[]`** (optional on create; omit key for master-only):\n\n| Row field | Required | Notes |\n|-----------|----------|--------|\n| `count` | yes | Min 1 per row |\n| `classRoomSectionId` | no | Omit or `null` ΓåÆ `NOT_ASSIGNED`; set ΓåÆ `ASSIGNED` |\n\nExample: 2 in room + 2 unassigned = 4 copies. Unassigned-only: `\"inventoryBulk\": [{ \"count\": 4 }]`.\n\nRequired master: `name`, `condition`, `assetCategoryId`. Body must be strict JSON (no `//` comments)."
               },
               "response": []
             },
@@ -8992,7 +9453,7 @@
                     }
                   ]
                 },
-                "description": "**GET /asset/codepreview** — read-only preview of the next auto-generated asset `code` for `name` + `assetCategoryId`.\n\nDoes **not** save or reserve the code. **POST /asset** with the same `name` and `assetCategoryId` assigns the next available code at save time (usually matches preview unless another asset was created in between).\n\n**Response:** `name`, `assetCategoryId`, `assetCategoryName`, `code` (e.g. `IT-DLL001`)."
+                "description": "**GET /asset/codepreview** ΓÇö read-only preview of the next auto-generated asset `code` for `name` + `assetCategoryId`.\n\nDoes **not** save or reserve the code. **POST /asset** with the same `name` and `assetCategoryId` assigns the next available code at save time (usually matches preview unless another asset was created in between).\n\n**Response:** `name`, `assetCategoryId`, `assetCategoryName`, `code` (e.g. `IT-DLL001`)."
               },
               "response": []
             },
@@ -9040,7 +9501,7 @@
                     }
                   ]
                 },
-                "description": "**GET /asset** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `status` | `all` — filters nested `inventoryItems` only (`assigned` \\| `unassigned`) |\n| `search` | optional — partial match on asset `name`, `code`, or category `name` only |\n\n**Response:** `data.assets[]` each with `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]` (`issueStatus`: `issued` \\| `available`), `pagination` (`page`, `limit`, `total`)."
+                "description": "**GET /asset** ΓÇö paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `status` | `all` ΓÇö filters nested `inventoryItems` only (`assigned` \\| `unassigned`) |\n| `search` | optional ΓÇö partial match on asset `name`, `code`, or category `name` only |\n\n**Response:** `data.assets[]` each with `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]` (`issueStatus`: `issued` \\| `available`), `pagination` (`page`, `limit`, `total`)."
               },
               "response": []
             },
@@ -9075,7 +9536,7 @@
                     }
                   ]
                 },
-                "description": "**GET /asset/single?assetId=** — asset master + `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]` (code, barcode, status, `classRoomSectionId`, `classRoom`)."
+                "description": "**GET /asset/single?assetId=** ΓÇö asset master + `totalInventory`, `issuedCount`, `nonIssuedCount`, `inventoryItems[]` (code, barcode, status, `classRoomSectionId`, `classRoom`)."
               },
               "response": []
             },
@@ -9112,7 +9573,7 @@
                     "asset"
                   ]
                 },
-                "description": "**PATCH /asset** — Same **`inventoryBulk[]`** as POST create. `assetId` required; at least one other field. Body must be strict JSON (no `//` comments).\n\n| Optional | Purpose |\n|----------|--------|\n| `name`, `condition`, `description`, `assetCategoryId` | Master (`code` read-only) |\n| `inventoryBulk[]` | Append copies: each row **`count`** required, **`classRoomSectionId`** optional |\n\nAppend-only example: `{ \"assetId\": 1, \"inventoryBulk\": [{ \"count\": 3 }] }`. Does not update existing inventory lines."
+                "description": "**PATCH /asset** ΓÇö Same **`inventoryBulk[]`** as POST create. `assetId` required; at least one other field. Body must be strict JSON (no `//` comments).\n\n| Optional | Purpose |\n|----------|--------|\n| `name`, `condition`, `description`, `assetCategoryId` | Master (`code` read-only) |\n| `inventoryBulk[]` | Append copies: each row **`count`** required, **`classRoomSectionId`** optional |\n\nAppend-only example: `{ \"assetId\": 1, \"inventoryBulk\": [{ \"count\": 3 }] }`. Does not update existing inventory lines."
               },
               "response": []
             },
@@ -9147,7 +9608,7 @@
                     }
                   ]
                 },
-                "description": "**DELETE /asset/inventory?assetInventoryItemId=** — 409 if issued and not returned."
+                "description": "**DELETE /asset/inventory?assetInventoryItemId=** ΓÇö 409 if issued and not returned."
               },
               "response": []
             },
@@ -9181,7 +9642,7 @@
                     }
                   ]
                 },
-                "description": "**DELETE /asset?assetId=** — blocked if inventory exists or items still issued."
+                "description": "**DELETE /asset?assetId=** ΓÇö blocked if inventory exists or items still issued."
               },
               "response": []
             }
@@ -9189,7 +9650,7 @@
         },
         {
           "name": "assetIssue",
-          "description": "## Asset issue / return (all APIs)\n\n**Prerequisite:** **asset → create** first. Use `{{assetInventoryItem_id}}` on issue (must be `NOT_ASSIGNED` or returned).\n\n| # | Method | Path | Notes |\n|---|--------|------|--------|\n| 1 | POST | `/assetIssue` | Issue; optional `securityAmount` |\n| 2 | GET | `/assetIssue` | List — no payments |\n| 3 | GET | `/assetIssue/single` | One issue — includes `securityPayment` if any |\n| 4 | GET | `/assetIssue/payments` | Payments for `assetIssueTransactionId` |\n| 5 | PATCH | `/assetIssue` | Update member/dates |\n| 6 | POST | `/assetIssue/return` | Return lines; optional deposit settlement |\n| 7 | GET | `/assetIssue/return` | List returns — no payments |\n| 8 | GET | `/assetIssue/return/payments` | Return settlement (`assetReturnTransactionId`) |\n\n**Return:** `returnCondition` required per item. `securityAmount` + `fineAmount` must be sent together for settlement. `paymentMethod`: `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`.",
+          "description": "## Asset issue / return (all APIs)\n\n**Prerequisite:** **asset ΓåÆ create** first. Use `{{assetInventoryItem_id}}` on issue (must be `NOT_ASSIGNED` or returned).\n\n| # | Method | Path | Notes |\n|---|--------|------|--------|\n| 1 | POST | `/assetIssue` | Issue; optional `securityAmount` |\n| 2 | GET | `/assetIssue` | List ΓÇö no payments |\n| 3 | GET | `/assetIssue/single` | One issue ΓÇö includes `securityPayment` if any |\n| 4 | GET | `/assetIssue/payments` | Payments for `assetIssueTransactionId` |\n| 5 | PATCH | `/assetIssue` | Update member/dates |\n| 6 | POST | `/assetIssue/return` | Return lines; optional deposit settlement |\n| 7 | GET | `/assetIssue/return` | List returns ΓÇö no payments |\n| 8 | GET | `/assetIssue/return/payments` | Return settlement (`assetReturnTransactionId`) |\n\n**Return:** `returnCondition` required per item. `securityAmount` + `fineAmount` must be sent together for settlement. `paymentMethod`: `cash` \\| `credit_card` \\| `bank_transfer` \\| `cheque`.",
           "item": [
             {
               "name": "create",
@@ -9248,7 +9709,7 @@
                     "assetIssue"
                   ]
                 },
-                "description": "**POST /assetIssue**\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `memberId`, `memberType` | yes | `STUDENT` or `TEACHER` |\n| `issueDate`, `dueDate` | yes | `dueDate` >= `issueDate` |\n| `items[]` | yes | `{ assetInventoryItemId }` — copy must not already be on open issue |\n| `securityAmount` | no | Creates `ASSET_SECURITY` payment when set |\n| `paymentMethod` | no | Default `cash`; also `credit_card`, `bank_transfer`, `cheque` |\n\nResponse: issue row + `items[]` + optional `securityPayment`. Sets `assetIssueTransaction_id`, `assetIssueInventoryItem_id`."
+                "description": "**POST /assetIssue**\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `memberId`, `memberType` | yes | `STUDENT` or `TEACHER` |\n| `issueDate`, `dueDate` | yes | `dueDate` >= `issueDate` |\n| `items[]` | yes | `{ assetInventoryItemId }` ΓÇö copy must not already be on open issue |\n| `securityAmount` | no | Creates `ASSET_SECURITY` payment when set |\n| `paymentMethod` | no | Default `cash`; also `credit_card`, `bank_transfer`, `cheque` |\n\nResponse: issue row + `items[]` + optional `securityPayment`. Sets `assetIssueTransaction_id`, `assetIssueInventoryItem_id`."
               },
               "response": []
             },
@@ -9290,7 +9751,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue** — paginated issues. Each row: `memberBasicDetails`, `issuedTotalItems` (lines on this issue), `returnedTotalItems` (returned lines), `items[]` (no payments)."
+                "description": "**GET /assetIssue** ΓÇö paginated issues. Each row: `memberBasicDetails`, `issuedTotalItems` (lines on this issue), `returnedTotalItems` (returned lines), `items[]` (no payments)."
               },
               "response": []
             },
@@ -9325,7 +9786,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/payments?assetIssueTransactionId=** — payments for one issue.\n\nResponse: `memberBasicDetails` (issue member) + `payments[]` each with `payeeDetails` (name, scholarNumber/course for student; employeeName/code for teacher).\n\n`paymentPurpose`: `ASSET_SECURITY` | `RETURN_SETTLEMENT`."
+                "description": "**GET /assetIssue/payments?assetIssueTransactionId=** ΓÇö payments for one issue.\n\nResponse: `memberBasicDetails` (issue member) + `payments[]` each with `payeeDetails` (name, scholarNumber/course for student; employeeName/code for teacher).\n\n`paymentPurpose`: `ASSET_SECURITY` | `RETURN_SETTLEMENT`."
               },
               "response": []
             },
@@ -9360,7 +9821,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/single?assetIssueTransactionId=** — same as list row: `issuedTotalItems`, `returnedTotalItems`, `items[]`, optional `securityPayment`. Use **get issue payments by id** for `payments[]` only."
+                "description": "**GET /assetIssue/single?assetIssueTransactionId=** ΓÇö same as list row: `issuedTotalItems`, `returnedTotalItems`, `items[]`, optional `securityPayment`. Use **get issue payments by id** for `payments[]` only."
               },
               "response": []
             },
@@ -9397,7 +9858,7 @@
                     "assetIssue"
                   ]
                 },
-                "description": "**PATCH /assetIssue** — `assetIssueTransactionId` + optional `memberId`, `memberType`, `issueDate`, `dueDate`. Returns same shape as GET single."
+                "description": "**PATCH /assetIssue** ΓÇö `assetIssueTransactionId` + optional `memberId`, `memberType`, `issueDate`, `dueDate`. Returns same shape as GET single."
               },
               "response": []
             },
@@ -9450,7 +9911,7 @@
                     "return"
                   ]
                 },
-                "description": "**POST /assetIssue/return** — with deposit settlement.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `returnDate` | yes | `YYYY-MM-DD`; >= each line `issueDate` |\n| `items[]` | yes | `assetIssueInventoryItemId`, `returnCondition`, optional `damageNotes` |\n| `securityAmount`, `fineAmount` | together | Both required to record settlement payment; omit both for return-only (see **return (no settlement)**) |\n| `paymentMethod` | no | Default `cash` |\n\nSets `assetReturnTransaction_id`. Use **get return payments by id** for settlement details."
+                "description": "**POST /assetIssue/return** ΓÇö with deposit settlement.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `returnDate` | yes | `YYYY-MM-DD`; >= each line `issueDate` |\n| `items[]` | yes | `assetIssueInventoryItemId`, `returnCondition`, optional `damageNotes` |\n| `securityAmount`, `fineAmount` | together | Both required to record settlement payment; omit both for return-only (see **return (no settlement)**) |\n| `paymentMethod` | no | Default `cash` |\n\nSets `assetReturnTransaction_id`. Use **get return payments by id** for settlement details."
               },
               "response": []
             },
@@ -9488,7 +9949,7 @@
                     "return"
                   ]
                 },
-                "description": "**POST /assetIssue/return** — return only (no `securityAmount` / `fineAmount`). No deposit settlement payment."
+                "description": "**POST /assetIssue/return** ΓÇö return only (no `securityAmount` / `fineAmount`). No deposit settlement payment."
               },
               "response": []
             },
@@ -9527,7 +9988,7 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/return** — `data.assetReturnTransactions[]` (`returnDate`, `items[]`), `pagination`. No payment rows (use **get return payments by id**)."
+                "description": "**GET /assetIssue/return** ΓÇö `data.assetReturnTransactions[]` (`returnDate`, `items[]`), `pagination`. No payment rows (use **get return payments by id**)."
               },
               "response": []
             },
@@ -9563,7 +10024,884 @@
                     }
                   ]
                 },
-                "description": "**GET /assetIssue/return/payments?assetReturnTransactionId=** — settlement payment(s) for this return only.\n\nResponse: `memberBasicDetails` (member from returned lines) + `payments[]` each with `payeeDetails`. Empty `payments[]` if no settlement recorded."
+                "description": "**GET /assetIssue/return/payments?assetReturnTransactionId=** ΓÇö settlement payment(s) for this return only.\n\nResponse: `memberBasicDetails` (member from returned lines) + `payments[]` each with `payeeDetails`. Empty `payments[]` if no settlement recorded."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "amcVendor",
+          "description": "## amcVendor\n\n**Prerequisite:** **assetCategory** (use `{{assetCategory_id}}`).\n\nVendor `vendorCode` is auto-generated from category prefix + name slug + year — do **not** send on create.\n\n| Method | Path |\n|--------|------|\n| POST | `/amcVendor` |\n| POST | `/amcVendor/codepreview` |\n| GET | `/amcVendor?page&limit&search` |\n| GET | `/amcVendor/single?amcVendorId=` |\n| PATCH | `/amcVendor` |\n| DELETE | `/amcVendor?amcVendorId=` |",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.amcVendorId) {",
+                      "  pm.collectionVariables.set('amcVendor_id', String(data.amcVendorId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"vendorName\": \"Dell Service India Pvt Ltd\",\n  \"assetCategoryId\": {{assetCategory_id}},\n  \"contactPerson\": \"John Doe\",\n  \"phone\": \"9876543210\",\n  \"email\": \"john@dell.com\",\n  \"address\": {\n    \"addressLine\": \"Plot 12, Tech Park\",\n    \"city\": \"Jaipur\",\n    \"state\": \"Rajasthan\",\n    \"country\": \"India\",\n    \"pincode\": \"302001\"\n  },\n  \"gstNumber\": \"08AAAAA0000A1Z5\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor"
+                  ]
+                },
+                "description": "**POST /amcVendor** — create AMC vendor.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `vendorName` | yes | Unique per institute |\n| `assetCategoryId` | yes | From **assetCategory** |\n| `contactPerson`, `phone`, `email`, `gstNumber` | no | |\n| `address` | no | `addressLine`, `city`, `state`, `country`, `pincode` |\n\nDo **not** send `vendorCode`. Sets `{{amcVendor_id}}`."
+              },
+              "response": []
+            },
+            {
+              "name": "code preview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"vendorName\": \"Dell Service India Pvt Ltd\",\n  \"assetCategoryId\": {{assetCategory_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor/codepreview",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor",
+                    "codepreview"
+                  ]
+                },
+                "description": "**POST /amcVendor/codepreview** — read-only preview of next `vendorCode` for `vendorName` + `assetCategoryId`.\n\nDoes not save. Response may include `vendorNameExists` or `vendorCodeExists` flags."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor?page={{amcVendor_page}}&limit={{amcVendor_limit}}&search={{amcVendor_search}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{amcVendor_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{amcVendor_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{amcVendor_search}}",
+                      "description": "Optional. Partial match on vendor name or code"
+                    }
+                  ]
+                },
+                "description": "**GET /amcVendor** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `search` | optional |\n\n**Response:** `data.rows[]`, `data.total`, `data.page`, `data.limit`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor/single?amcVendorId={{amcVendor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "amcVendorId",
+                      "value": "{{amcVendor_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /amcVendor/single?amcVendorId=** — vendor with `address` and linked `assetCategory`."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amcVendorId\": {{amcVendor_id}},\n  \"contactPerson\": \"Jane Doe\",\n  \"phone\": \"9876500000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor"
+                  ]
+                },
+                "description": "**PATCH /amcVendor** — `amcVendorId` required; at least one of `vendorName`, `assetCategoryId`, `contactPerson`, `phone`, `email`, `address`, `gstNumber`.\n\n`vendorCode` is read-only."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcVendor?amcVendorId={{amcVendor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcVendor"
+                  ],
+                  "query": [
+                    {
+                      "key": "amcVendorId",
+                      "value": "{{amcVendor_id}}"
+                    }
+                  ]
+                },
+                "description": "**DELETE /amcVendor?amcVendorId=** — blocked if an AMC contract references this vendor."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "amcContract",
+          "description": "## amcContract\n\n**Prerequisite:** **amcVendor → create** (`{{amcVendor_id}}`). One contract per vendor.\n\n`contractNumber` is auto-generated (e.g. `AMC26-0001`) — do **not** send on create.\n\n**Workflow:** DRAFT → **submit for approval** → PUBLISHED → **approve** → APPROVED. Only DRAFT contracts can be updated or deleted.\n\n| Method | Path |\n|--------|------|\n| POST | `/amcContract` |\n| GET | `/amcContract/numberpreview` |\n| GET | `/amcContract/summary` |\n| POST | `/amcContract/submitforapproval` |\n| POST | `/amcContract/approve` |\n| GET | `/amcContract?page&limit&search&approvalStatus&status` |\n| GET | `/amcContract/single?amcContractId=` |\n| PATCH | `/amcContract` |\n| DELETE | `/amcContract?amcContractId=` |",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.amcContractId) {",
+                      "  pm.collectionVariables.set('amcContract_id', String(data.amcContractId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"contractName\": \"IT AMC FY 2026\",\n  \"amcVendorId\": {{amcVendor_id}},\n  \"contractType\": \"COMPREHENSIVE_AMC\",\n  \"startDate\": \"2026-04-01\",\n  \"endDate\": \"2027-03-31\",\n  \"contractValue\": \"125000.00\",\n  \"paymentTerms\": \"ANNUAL_UPFRONT\",\n  \"serviceVisitFrequency\": \"QUARTERLY\",\n  \"slaResponseHours\": 12,\n  \"slaResolutionHours\": 24,\n  \"description\": \"Annual comprehensive AMC\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcContract",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract"
+                  ]
+                },
+                "description": "**POST /amcContract** — create contract in `DRAFT` approval status.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `contractName` | yes | |\n| `amcVendorId` | yes | From **amcVendor** |\n| `contractType` | yes | `COMPREHENSIVE_AMC`, `NON_COMPREHENSIVE_AMC`, `WARRANTY_AMC`, `PREVENTIVE_MAINTENANCE`, `ON_DEMAND_SERVICE` |\n| `startDate`, `endDate` | yes | `YYYY-MM-DD`; `endDate` >= `startDate` |\n| `contractValue` | yes | string or number |\n| `paymentTerms` | yes | `ANNUAL_UPFRONT`, `QUARTERLY`, `MONTHLY` |\n| `serviceVisitFrequency` | yes | `MONTHLY`, `QUARTERLY`, `ANNUALLY` |\n| `slaResponseHours` | yes | `2`, `6`, `12`, `24`, `48`, `72` |\n| `slaResolutionHours` | yes | `6`, `12`, `24`, `48`, `72` |\n| `description` | no | |\n\nSets `{{amcContract_id}}`."
+              },
+              "response": []
+            },
+            {
+              "name": "number preview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcContract/numberpreview",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract",
+                    "numberpreview"
+                  ]
+                },
+                "description": "**GET /amcContract/numberpreview** — read-only preview of next `contractNumber` (e.g. `AMC26-0001`). Does not reserve the number."
+              },
+              "response": []
+            },
+            {
+              "name": "summary",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcContract/summary",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract",
+                    "summary"
+                  ]
+                },
+                "description": "**GET /amcContract/summary** — dashboard counts: `totalContracts`, `totalContractsValue`, `activeContracts`, `nearExpiryContracts`, `expiredContracts`."
+              },
+              "response": []
+            },
+            {
+              "name": "submit for approval",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amcContractId\": {{amcContract_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcContract/submitforapproval",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract",
+                    "submitforapproval"
+                  ]
+                },
+                "description": "**POST /amcContract/submitforapproval** — `amcContractId` in body. Only `DRAFT` → `PUBLISHED`."
+              },
+              "response": []
+            },
+            {
+              "name": "approve",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amcContractId\": {{amcContract_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcContract/approve",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract",
+                    "approve"
+                  ]
+                },
+                "description": "**POST /amcContract/approve** — `amcContractId` in body. Only `PUBLISHED` → `APPROVED`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcContract?page={{amcContract_page}}&limit={{amcContract_limit}}&search={{amcContract_search}}&approvalStatus=&status=",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{amcContract_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{amcContract_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{amcContract_search}}",
+                      "description": "Optional. Contract name, number, or vendor name"
+                    },
+                    {
+                      "key": "approvalStatus",
+                      "value": "",
+                      "description": "Optional. DRAFT | PUBLISHED | APPROVED"
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "Optional expiry filter. ACTIVE | NEAR_EXPIRY | EXPIRED"
+                    }
+                  ]
+                },
+                "description": "**GET /amcContract** — paginated list with optional `approvalStatus` and expiry `status` filters.\n\n**Response:** `data.rows[]`, `data.total`, `data.page`, `data.limit`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcContract/single?amcContractId={{amcContract_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "amcContractId",
+                      "value": "{{amcContract_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /amcContract/single?amcContractId=** — full contract with vendor details."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amcContractId\": {{amcContract_id}},\n  \"contractValue\": \"130000.00\",\n  \"description\": \"Revised scope\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/amcContract",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract"
+                  ]
+                },
+                "description": "**PATCH /amcContract** — `amcContractId` required; at least one updatable field. Only `DRAFT` contracts.\n\nCannot change `amcVendorId` or `contractNumber`."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/amcContract?amcContractId={{amcContract_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "amcContract"
+                  ],
+                  "query": [
+                    {
+                      "key": "amcContractId",
+                      "value": "{{amcContract_id}}"
+                    }
+                  ]
+                },
+                "description": "**DELETE /amcContract?amcContractId=** — only `DRAFT` contracts."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "amcServiceTicket",
+          "description": "## amcServiceTicket\n\n**Prerequisite:** **asset → create** (`{{asset_id}}`). Optional: **amcVendor** (`{{amcVendor_id}}`) — if omitted, vendor is auto-resolved from the asset's category when available.\n\n`ticketNumber` is auto-generated (e.g. `TKT-2026-001`) — do **not** send on create.\n\n**Rules:** Only `OPEN` tickets can be deleted. Non-status field updates require `OPEN` status (unless `status` is included in the same PATCH). `CLOSED` tickets cannot be modified.\n\n| Method | Path |\n|--------|------|\n| POST | `/serviceTicket` |\n| GET | `/serviceTicket/numberpreview` |\n| GET | `/serviceTicket/summary` |\n| GET | `/serviceTicket?page&limit&search&status&priority&amcVendorId` |\n| GET | `/serviceTicket/single?serviceTicketId=` |\n| PATCH | `/serviceTicket` |\n| DELETE | `/serviceTicket?serviceTicketId=` |",
+          "item": [
+            {
+              "name": "create",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const data = pm.response.json()?.data;",
+                      "if (data?.serviceTicketId) {",
+                      "  pm.collectionVariables.set('serviceTicket_id', String(data.serviceTicketId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"assetId\": {{asset_id}},\n  \"amcVendorId\": {{amcVendor_id}},\n  \"issue\": \"Laptop not booting\",\n  \"issueType\": \"HARDWARE\",\n  \"problemDescription\": \"Device powers on but shows black screen after logo.\",\n  \"downtimeStartedAt\": \"2026-06-08T10:30:00+05:30\",\n  \"priority\": \"HIGH\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket"
+                  ]
+                },
+                "description": "**POST /serviceTicket** — raise AMC service ticket (status `OPEN`).\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `assetId` | yes | From **asset** |\n| `issue` | yes | Short title |\n| `issueType` | yes | `HARDWARE`, `SOFTWARE` |\n| `problemDescription` | yes | max 1000 chars |\n| `downtimeStartedAt` | yes | ISO 8601 datetime with offset |\n| `amcVendorId` | no | Omit or `null` to auto-resolve from asset category |\n| `priority` | no | `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` (default `MEDIUM`) |\n\nDo **not** send `ticketNumber` or `status`. Sets `{{serviceTicket_id}}`."
+              },
+              "response": []
+            },
+            {
+              "name": "number preview",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket/numberpreview",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket",
+                    "numberpreview"
+                  ]
+                },
+                "description": "**GET /serviceTicket/numberpreview** — read-only preview of next `ticketNumber` (e.g. `TKT-2026-001`). Does not reserve the number.\n\n**Response:** `ticketNumber`, `year`."
+              },
+              "response": []
+            },
+            {
+              "name": "summary",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket/summary",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket",
+                    "summary"
+                  ]
+                },
+                "description": "**GET /serviceTicket/summary** — dashboard counts: `openTickets`, `assignedTickets`, `inProgressTickets`, `escalatedTickets`, `resolvedMtd`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket?page={{serviceTicket_page}}&limit={{serviceTicket_limit}}&search={{serviceTicket_search}}&status={{serviceTicket_status}}&priority={{serviceTicket_priority}}&amcVendorId={{amcVendor_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "{{serviceTicket_page}}"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "{{serviceTicket_limit}}"
+                    },
+                    {
+                      "key": "search",
+                      "value": "{{serviceTicket_search}}",
+                      "description": "Optional. Ticket number, issue, description, asset name/code, vendor name/code",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "{{serviceTicket_status}}",
+                      "description": "Optional. OPEN | ASSIGNED | IN_PROGRESS | ESCALATED | RESOLVED | CLOSED",
+                      "disabled": true
+                    },
+                    {
+                      "key": "priority",
+                      "value": "{{serviceTicket_priority}}",
+                      "description": "Optional. LOW | MEDIUM | HIGH | CRITICAL",
+                      "disabled": true
+                    },
+                    {
+                      "key": "amcVendorId",
+                      "value": "{{amcVendor_id}}",
+                      "description": "Optional. Filter by AMC vendor",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "**GET /serviceTicket** — paginated list.\n\n| Query | Default |\n|-------|--------|\n| `page` | 1 |\n| `limit` | 20 (max 100) |\n| `search` | optional |\n| `status` | optional |\n| `priority` | optional |\n| `amcVendorId` | optional |\n\n**Response:** `data.rows[]`, `data.total`, `data.page`, `data.limit`. Rows include `assetName`, `assetCode`, `vendorName`, `vendorCode`, `assetCategoryName`."
+              },
+              "response": []
+            },
+            {
+              "name": "get single",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket/single?serviceTicketId={{serviceTicket_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "serviceTicketId",
+                      "value": "{{serviceTicket_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /serviceTicket/single?serviceTicketId=** — ticket with asset, vendor, and category details."
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"serviceTicketId\": {{serviceTicket_id}},\n  \"status\": \"ASSIGNED\",\n  \"priority\": \"CRITICAL\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket"
+                  ]
+                },
+                "description": "**PATCH /serviceTicket** — `serviceTicketId` required; at least one of `issue`, `issueType`, `problemDescription`, `downtimeStartedAt`, `priority`, `status`, `amcVendorId`.\n\n`status`: `OPEN`, `ASSIGNED`, `IN_PROGRESS`, `ESCALATED`, `RESOLVED`, `CLOSED`.\n\nNon-status updates allowed only on `OPEN` tickets. `CLOSED` tickets cannot be modified."
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/serviceTicket?serviceTicketId={{serviceTicket_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "serviceTicket"
+                  ],
+                  "query": [
+                    {
+                      "key": "serviceTicketId",
+                      "value": "{{serviceTicket_id}}"
+                    }
+                  ]
+                },
+                "description": "**DELETE /serviceTicket?serviceTicketId=** — only `OPEN` tickets."
               },
               "response": []
             }
@@ -9721,6 +11059,76 @@
     {
       "key": "assetReturn_limit",
       "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_status",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_priority",
+      "value": "",
       "type": "string"
     }
   ]

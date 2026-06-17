@@ -2,10 +2,12 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import courseModel from "./courseModel.js";
-import institute from "./instituteModel.js";
+import university from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
 import acedmicYear from "./acedmicYearModel.js";
+import sessionModel from "./sessionModel.js";
 
-const timeTableStructureModel = sequelize.define(
+export default sequelize.define(
     'time_table_structure',
     {
         timeTableNameId: {
@@ -13,24 +15,6 @@ const timeTableStructureModel = sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'time_table_name_id'
-        },
-        instituteId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'institute_id',
-            references: {
-                model: institute,
-                key: 'institute_id'
-            }
-        },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYear,
-                key: 'acedmic_year_id'
-            }
         },
         name: {
             type: DataTypes.STRING,
@@ -40,6 +24,42 @@ const timeTableStructureModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'maximum_period'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
         },
         courseId: {
             type: DataTypes.INTEGER,
@@ -112,5 +132,3 @@ const timeTableStructureModel = sequelize.define(
         paranoid: true
     },
 );
-
-export default timeTableStructureModel;

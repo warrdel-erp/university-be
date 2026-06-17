@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addLesson(data) {
@@ -472,16 +473,16 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //   }
 // };
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
+export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
   try {
-    const employeeWhere = {
-      ...buildScope(model.employeeModel),
-      ...(acedmicYearId && { acedmicYearId }),
-    };
+    const employeeWhere = buildScope(model.employeeModel);
     const mapperWhere = buildScope(model.classSubjectMapperModel);
     const subjectWhere = {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
+      ...(subjectSearch?.trim() && {
+        subjectName: { [Op.like]: `%${subjectSearch.trim()}%` },
+      }),
     };
     const lessonWhere = {
       ...buildScope(model.lessonModel),
@@ -512,9 +513,9 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
             {
               model: model.subjectModel.unscoped(),
               as: "subjects",
-              required: false,
+              required: Boolean(subjectSearch?.trim()),
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              where: subjectWhere,
+              ...(Object.keys(subjectWhere).length && { where: subjectWhere }),
 
               include: [
                 {
