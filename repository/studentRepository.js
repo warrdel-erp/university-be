@@ -122,11 +122,6 @@ export async function getAllStudents({
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
             },
             {
-                model: model.acedmicYearModel.unscoped(),
-                as: "acdemicYear",
-                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-            {
                 model: model.affiliatedIniversityModel.unscoped(),
                 as: "affiliatedUniversity",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
@@ -270,11 +265,6 @@ export async function getSingleStudentDetail(studentId) {
                     model: model.instituteModel.unscoped(),
                     as: "institute",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                },
-                {
-                    model: model.acedmicYearModel.unscoped(),
-                    as: "acdemicYear",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
                     model: model.affiliatedIniversityModel.unscoped(),
@@ -860,11 +850,6 @@ export async function getclassStudentMapping(semesterId, acedmicYearId) {
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
                         },
                         {
-                            model: model.acedmicYearModel.unscoped(),
-                            as: "acdemicYear",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                        },
-                        {
                             model: model.affiliatedIniversityModel.unscoped(),
                             as: "affiliatedUniversity",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
@@ -930,13 +915,22 @@ export async function promoteStudent(studentId, data) {
             return { result1: [0], result2: [0] };
         }
 
-        const result1 = await scoped(model.studentModel).update(data, {
+        const { acedmicYearId, semesterId, classSectionsId } = data;
+        const studentUpdate = {};
+        if (semesterId != null) studentUpdate.semesterId = semesterId;
+        if (classSectionsId != null) studentUpdate.classSectionsId = classSectionsId;
+
+        const result1 = await scoped(model.studentModel).update(studentUpdate, {
             where: {
                 studentId,
             },
         });
 
-        const result2 = await model.classStudentMapperModel.update(data, {
+        const mapperUpdate = {};
+        if (acedmicYearId != null) mapperUpdate.acedmicYearId = acedmicYearId;
+        if (semesterId != null) mapperUpdate.semesterId = semesterId;
+
+        const result2 = await model.classStudentMapperModel.update(mapperUpdate, {
             where: {
                 studentId,
             },
@@ -947,6 +941,24 @@ export async function promoteStudent(studentId, data) {
         throw error;
     }
 };
+
+export async function getClassStudentMapperByStudentId(studentId) {
+    try {
+        const student = await assertScopedStudent(studentId);
+        if (!student) {
+            return null;
+        }
+
+        return model.classStudentMapperModel.findOne({
+            where: { studentId },
+            attributes: ["acedmicYearId", "semesterId", "sessionId"],
+            order: [["classStudentMapperId", "DESC"]],
+        });
+    } catch (error) {
+        console.error(`Error fetching class student mapper for ${studentId}:`, error);
+        throw error;
+    }
+}
 
 export async function getStudentForPromate(studentId) {
     try {
@@ -1152,13 +1164,10 @@ export async function findStudentsByFeePlanProfileId(
     options = {}
 ) {
     try {
-        const { acedmicYearId, transaction } = options;
+        const { transaction } = options;
         const where = {
             feePlanProfileId,
         };
-        if (acedmicYearId != null) {
-            where.acedmicYearId = acedmicYearId;
-        }
 
         return await scoped(model.studentModel).findAll({
             where,
@@ -1388,16 +1397,15 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
+export async function getClassRecord(courseId, semesterId, classSectionId) {
     try {
         const student = await scoped(model.studentModel).findAll({
             where: {
                 classSectionsId: classSectionId,
                 courseId,
                 semesterId,
-                acedmicYearId,
             },
-            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "email", "mobileNumber", "phoneNumber", "courseId", "semesterId", "classSectionsId", "acedmicYearId"],
+            attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "email", "mobileNumber", "phoneNumber", "courseId", "semesterId", "classSectionsId"],
             include: [
                 {
                     model: model.classSectionModel.unscoped(),
@@ -1491,7 +1499,7 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, academicYearId, date) {
+export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, date) {
 
     try {
 
@@ -1506,7 +1514,6 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
             ],
             where: {
                 classSectionsId,
-                acedmicYearId: academicYearId,
             },
             include: [
                 {

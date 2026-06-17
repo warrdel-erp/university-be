@@ -120,6 +120,7 @@ export async function addStudent(
       "corsAddress",
       "allDropDownData",
       "roleId",
+      "acedmicYearId",
     ]) {
       delete studentPayload[key];
     }
@@ -288,7 +289,6 @@ export async function addStudent(
       classSectionsId: plainStudent.classSectionsId,
       courseId: plainStudent.courseId,
       sessionId: plainStudent.sessionId,
-      acedmicYearId: plainStudent.acedmicYearId,
       userId,
       student: plainStudent,
       entranceDetails,
@@ -587,6 +587,8 @@ export async function importStudentData(excelData, data) {
         await assertFeePlanProfileForInstitute(convertedData.feePlanProfileId);
       }
 
+      delete convertedData.acedmicYearId;
+
       //  Step 7: Insert student with scholar number
       const result = await studentRepository.addStudent(
         convertedData,
@@ -626,7 +628,7 @@ export async function importStudentData(excelData, data) {
       studentMapping.push({
         studentId: result.dataValues.studentId,
         createdBy: result.dataValues.createdBy,
-        acedmicYearId: result.dataValues.acedmicYearId,
+        acedmicYearId: data.acedmicYearId,
         semesterId: result.dataValues.semesterId,
         sessionId: result.dataValues.sessionId,
       });
@@ -843,7 +845,6 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
   "campusId",
   "instituteId",
   "affiliatedUniversityId",
-  "acedmicYearId",
   "courseLevelId",
   "courseId",
   "specializationId",
@@ -1205,9 +1206,12 @@ export async function promoteStudent(data) {
     data.studentId,
   );
 
+  const classStudentMapper =
+    await studentRepository.getClassStudentMapperByStudentId(data.studentId);
+
   const courseId = studentDetail.dataValues.courseId;
 
-  const currentAcademicYearId = studentDetail.dataValues.acedmicYearId;
+  const currentAcademicYearId = classStudentMapper?.acedmicYearId;
 
   const allSemestersRaw =
     await studentRepository.getSemesterByCourseId(courseId);
@@ -1658,7 +1662,7 @@ export async function getFeeDetailsByStudentId(studentId) {
       scholarNumber: student.scholarNumber || "",
       classSection: student.studentSemester?.classSections?.[0]?.section || "",
       semester: student.studentSemester?.name || "",
-      academicYear: student.acdemicYear?.yearTitle || "",
+      academicYear: student.studentSession?.sessionAcedmic?.yearTitle || "",
     };
 
     const personalInfo = {
@@ -1987,7 +1991,6 @@ function formatStudentTimetable(allData) {
 
 export async function getStudentsByClassSection(
   timeTableMappingId,
-  academicYearId,
   date,
 ) {
   try {
@@ -2029,7 +2032,6 @@ export async function getStudentsByClassSection(
     const students = await studentRepository.getStudentsByClassSection(
       classScheduleItem?.timeTablecreate?.classSectionsId,
       timeTableMappingId,
-      academicYearId,
       date,
     );
 

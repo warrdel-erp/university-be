@@ -354,8 +354,8 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
     }
 }
 
-export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
-    const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+export async function getClassRecord(courseId, semesterId, classSectionId) {
+    const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId);
 
     const response = {
         student: result.student.map((s) => ({

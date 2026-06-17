@@ -384,11 +384,6 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
           required: true,
           include: [
             {
-              model: model.acedmicYearModel.unscoped(),
-              as: "acdemicYear",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-            {
               model: model.affiliatedIniversityModel.unscoped(),
               as: "affiliatedUniversity",
               attributes: {
@@ -434,6 +429,13 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               model: model.sessionModel.unscoped(),
               as: "studentSession",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+              include: [
+                {
+                  model: model.acedmicYearModel.unscoped(),
+                  as: "sessionAcedmic",
+                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                },
+              ],
             },
             {
               model: model.specializationModel.unscoped(),

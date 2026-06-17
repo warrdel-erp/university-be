@@ -280,10 +280,9 @@ export const subjectExcel = async (req, res) => {
 export const getClassRecord = async (req, res) => {
     try {
         const semesterId = req.query.semesterId;
-        const acedmicYearId = req.query.acedmicYearId
         const courseId = req.query.courseId;
         const classSectionId = req.query.classSectionId
-        const result = await mainServices.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+        const result = await mainServices.getClassRecord(courseId, semesterId, classSectionId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class record Details:", error);
