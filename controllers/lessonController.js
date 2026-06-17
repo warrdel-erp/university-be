@@ -134,10 +134,14 @@ export async function deleteMapping(req, res) {
 };
 
 export async function getEmployeeSubjectAndLesson(req, res) {
-    const role = req.user.role;
-    const { acedmicYearId, employeeId, courseId, sessionId } = req.query
+    const { employeeId, courseId, sessionId, subjectSearch } = req.query
     try {
-        const Lessons = await lesson.getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId);
+        const Lessons = await lesson.getEmployeeSubjectAndLesson(
+            employeeId,
+            courseId,
+            sessionId,
+            subjectSearch
+        );
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });

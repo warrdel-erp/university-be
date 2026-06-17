@@ -1,4 +1,5 @@
 import * as optionsRepository from '../repository/optionsRepository.js';
+import * as model from '../models/index.js';
 
 export async function getAffiliatedUniversityOptions(instituteId) {
     return await optionsRepository.getAffiliatedUniversityOptions(instituteId);
@@ -31,8 +32,38 @@ export async function getSpecializationOptions(courseId, instituteId, university
     return await optionsRepository.getSpecializationOptions(courseId, instituteId, universityId);
 }
 
-export async function getSubjectOptions(courseId, term, universityId, acedmicYearId) {
-    return await optionsRepository.getSubjectOptions(courseId, term, universityId, acedmicYearId);
+export async function getSubjectOptions(courseId, term, universityId, acedmicYearId, sessionId, instituteId) {
+    let resolvedAcademicYearId = acedmicYearId;
+
+    if (sessionId) {
+        const session = await model.sessionModel.findOne({
+            where: { sessionId, universityId },
+            attributes: ["acedmicYearId"],
+        });
+        if (!session) {
+            throw new Error("Session not found");
+        }
+        resolvedAcademicYearId = session.acedmicYearId;
+
+        if (courseId) {
+            const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(
+                Number(courseId),
+                Number(sessionId),
+                instituteId
+            );
+            if (!mapping) {
+                throw new Error("Session is not mapped to this course");
+            }
+        }
+    }
+
+    return await optionsRepository.getSubjectOptions(
+        courseId,
+        term,
+        universityId,
+        resolvedAcademicYearId,
+        instituteId
+    );
 }
 
 export async function getTeacherOptions(instituteId, campusId) {

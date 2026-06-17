@@ -169,9 +169,6 @@ import pdfSplitJobModel from "./pdfSplitJobModel.js";
 studentModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campus" });
 campusModel.hasMany(studentModel, { foreignKey: "campus_id", as: "campus" });
 
-studentModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acdemicYear" });
-acedmicYearModel.hasMany(studentModel, { foreignKey: "acedmic_year_id", as: "acdemicyear" });
-
 studentModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
 instituteModel.hasMany(studentModel, { foreignKey: "institute_id", as: "institute" });
 
@@ -543,6 +540,9 @@ timeTableStructureModel.hasMany(timeTableStructurePeriodsModel, {
 
 timeTableStructureModel.belongsTo(courseModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
 courseModel.hasMany(timeTableStructureModel, { foreignKey: "course_id", as: "timeTableStructureCourse" });
+
+timeTableStructureModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "timeTableSession" });
+sessionModel.hasMany(timeTableStructureModel, { foreignKey: "session_id", as: "timeTableStructures" });
 
 timeTableRoutineModel.belongsTo(timeTableStructureModel, {
   foreignKey: "time_table_name_id",

@@ -281,9 +281,16 @@ export async function getFeeDetailsByStudentId(studentId) {
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     include: [
                         {
-                            model: model.acedmicYearModel,
-                            as: "acdemicYear",
+                            model: model.sessionModel,
+                            as: "studentSession",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            include: [
+                                {
+                                    model: model.acedmicYearModel,
+                                    as: "sessionAcedmic",
+                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                },
+                            ],
                         },
                         {
                             model: model.affiliatedIniversityModel,
@@ -326,11 +333,6 @@ export async function getFeeDetailsByStudentId(studentId) {
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                                 }
                             ]
-                        },
-                        {
-                            model: model.sessionModel,
-                            as: "studentSession",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         },
                         {
                             model: model.specializationModel,

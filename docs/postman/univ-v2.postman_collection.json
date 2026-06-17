@@ -1463,78 +1463,384 @@
     },
     {
       "name": "time table",
-      "item": [
+      "description": "Timetable structure (`/timeTable`) and routine (`/timeTableCreate`). Folder vars `timetable_*` — edit on this folder's Variables tab. Auth uses global `{{token}}` and `{{baseurl}}`.",
+      "variable": [
         {
-          "name": "get time table routine data",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId=197",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timeTableCreate",
-                "getRoutine"
-              ],
-              "query": [
-                {
-                  "key": "classSectionsId",
-                  "value": "197"
-                }
-              ]
-            }
-          },
-          "response": []
+          "key": "timetable_courseId",
+          "value": "34",
+          "type": "string",
+          "description": "Course PK — scopes institute + academic year on GET when provided"
         },
         {
-          "name": "get time table routine by teacher",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+          "key": "timetable_sessionId",
+          "value": "6",
+          "type": "string",
+          "description": "Session PK — required with courseId on POST; optional filter on GET"
+        },
+        {
+          "key": "timetable_acedmicYearId",
+          "value": "59",
+          "type": "string",
+          "description": "Academic year — optional on GET; fallback is user defaultAcademicYearId when courseId is set"
+        },
+        {
+          "key": "timetable_creationId",
+          "value": "1",
+          "type": "string",
+          "description": "time_table_structure_periods.time_table_creation_id — PATCH / DELETE"
+        },
+        {
+          "key": "timetable_classSectionsId",
+          "value": "197",
+          "type": "string",
+          "description": "Class section PK — timeTableCreate getRoutine"
+        },
+        {
+          "key": "timetable_employeeId",
+          "value": "40",
+          "type": "string",
+          "description": "Employee PK — timeTableCreate getRoutineByTeacher"
+        }
+      ],
+      "item": [
+        {
+          "name": "structure (/timeTable)",
+          "item": [
+            {
+              "name": "create (course + session + weekOff)",
+              "event": [
                 {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const data = pm.response.json();",
+                      "  const row = Array.isArray(data) ? data[0] : data;",
+                      "  if (row && row.timeTableCreationId) {",
+                      "    pm.collectionVariables.set('timetable_creationId', String(row.timeTableCreationId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId=40&acedmicYearId=59",
-              "host": [
-                "{{baseurl}}"
               ],
-              "path": [
-                "timeTableCreate",
-                "getRoutineByTeacher"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "40"
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
                 },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
-                }
-              ]
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Morning Schedule\",\n  \"courseId\": {{timetable_courseId}},\n  \"sessionId\": {{timetable_sessionId}},\n  \"weekOff\": [\"Sunday\"],\n  \"maximumPeriod\": 6,\n  \"periodLength\": 45,\n  \"periodGap\": 5,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"isCourse\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ]
+                },
+                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots) for a course.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `name` | Structure name |\n| `maximumPeriod` | Number of periods |\n| `periodLength` | Minutes |\n| `periodGap` | Minutes between periods |\n| `startingTime` | e.g. `09:00 AM` |\n| `type` | `Automatic` or `Manual` |\n\n### Course scope\nWhen `courseId` is sent, also send **`sessionId`** (or `acedmicYearId` in body). Server resolves:\n- `instituteId` from the course\n- `acedmicYearId` from the session (or body / user `defaultAcademicYearId`)\n- Validates session is mapped to the course\n\n### Optional\n- `weekOff` — JSON array on structure row, e.g. `[\"Sunday\"]`\n- `isCourse` — boolean on each generated period\n- `acedmicYearId` — only if not inferable from session\n\n### Success\n**200** — array of created period rows (`timeTableCreationId`, `periodName`, `startTime`, `endTime`, …). Test script saves first `timeTableCreationId` to `timetable_creationId`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all structures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable?courseId={{timetable_courseId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional — when set, filters by course institute + academic year"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}",
+                      "description": "Optional — defaults to user defaultAcademicYearId when courseId is set"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable**\n\nLists timetable structures with periods, course, session (`timeTableSession`), and `weekOff` on the structure row.\n\nWhen `courseId` is in query, results are scoped to that course's institute and academic year."
+              },
+              "response": []
+            },
+            {
+              "name": "get all names (course scoped)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/all_name?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "all_name"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Scopes institute + academic year when provided"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional session filter"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}",
+                      "description": "Optional — defaults when courseId is set"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/all_name**\n\nSame payload shape as **GET /timeTable** — structures with `weekOff`, `timeTableSession`, course, and nested periods."
+              },
+              "response": []
+            },
+            {
+              "name": "get single (course + session)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable/single?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTable/single**\n\nFiltered list for one course/session (institute + academic year scope when `courseId` is set). Includes session info and `weekOff`."
+              },
+              "response": []
+            },
+            {
+              "name": "update period",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n  {\n    \"timeTableCreationId\": {{timetable_creationId}},\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"09:45 AM\"\n  }\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTable",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ]
+                },
+                "description": "**PATCH /timeTable**\n\nArray of period updates. Each object must include `timeTableCreationId`."
+              },
+              "response": []
+            },
+            {
+              "name": "delete period",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTable?timeTableCreationId={{timetable_creationId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTable"
+                  ],
+                  "query": [
+                    {
+                      "key": "timeTableCreationId",
+                      "value": "{{timetable_creationId}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /timeTable?timeTableCreationId=**\n\nSoft-deletes one period row."
+              },
+              "response": []
             }
-          },
-          "response": []
+          ]
+        },
+        {
+          "name": "routine (/timeTableCreate)",
+          "item": [
+            {
+              "name": "get time table routine data",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId={{timetable_classSectionsId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "getRoutine"
+                  ],
+                  "query": [
+                    {
+                      "key": "classSectionsId",
+                      "value": "{{timetable_classSectionsId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/getRoutine**\n\nRoutine grid for a class section. Includes structure `weekOff` on linked timetable name."
+              },
+              "response": []
+            },
+            {
+              "name": "get time table routine by teacher",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId={{timetable_employeeId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "getRoutineByTeacher"
+                  ],
+                  "query": [
+                    {
+                      "key": "employeeId",
+                      "value": "{{timetable_employeeId}}"
+                    },
+                    {
+                      "key": "acedmicYearId",
+                      "value": "{{timetable_acedmicYearId}}"
+                    }
+                  ]
+                },
+                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher routine for an academic year."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -2863,6 +3169,57 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "get employee subjects and lessons",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/lesson/employee?employeeId=26&courseId=34&sessionId=6&subjectSearch=math",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "lesson",
+                "employee"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "26",
+                  "description": "Required"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34",
+                  "description": "Optional course filter on subject"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional session filter on lessons"
+                },
+                {
+                  "key": "subjectSearch",
+                  "value": "math",
+                  "description": "Optional — partial match on subjectName"
+                }
+              ]
+            },
+            "description": "**GET /lesson/employee**\n\nTeacher subject mappings with nested subject, lessons, topics, and semester.\n\nQuery: `employeeId`, optional `courseId`, `sessionId`, `subjectSearch`. No `acedmicYearId` needed — session scopes lessons."
+          },
+          "response": []
         }
       ]
     },
@@ -3528,6 +3885,104 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "teacher mapping",
+      "description": "Teacher subject/section mappings under `/teacher`.",
+      "item": [
+        {
+          "name": "get teacher subject mappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=36&subjectId=99&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSubject"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "36",
+                  "description": "Optional — filter one teacher",
+                  "type": "text"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "99",
+                  "description": "Optional — filters class_subject_mapper.subject_id",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters via semester → class_sections.session_id",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, mapper, subject, semester, class section, and session.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`. When `sessionId` is set, only mappings linked to a class section in that session are returned."
+          },
+          "response": []
+        },
+        {
+          "name": "get teacher section mappings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection?employeeId=36&sessionId=6",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "36",
+                  "description": "Optional — filter one teacher",
+                  "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — filters class_sections.session_id",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "**GET /teacher/teacherSection**\n\nTeacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`."
           },
           "response": []
         }
@@ -4424,7 +4879,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/options/subjects?term=1&courseId=34",
+              "raw": "{{baseurl}}/options/subjects?term=200&courseId=34",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4435,16 +4890,26 @@
               "query": [
                 {
                   "key": "term",
-                  "value": "1",
+                  "value": "200",
+                  "description": "Term / semester filter on subject",
                   "type": "text"
                 },
                 {
                   "key": "courseId",
                   "value": "34",
+                  "description": "Course PK",
                   "type": "text"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "6",
+                  "description": "Optional — session academic year + course mapping validation",
+                  "type": "text",
+                  "disabled": true
                 }
               ]
-            }
+            },
+            "description": "**GET /options/subjects**\n\nSubject dropdown (`label` / `value`).\n\n**Query:** `courseId`, `term` (required for typical use). Optional `sessionId` when you need session-scoped academic year.\n\nFilters by user `universityId` and `defaultInstituteId` from token."
           },
           "response": []
         },
@@ -8497,7 +8962,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/student/all?search=all&acedmicYearId={{acedmicYear_id}}&page=1&limit=20",
+                  "raw": "{{baseurl}}/student/all?search=all&page=1&limit=20",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -8512,10 +8977,6 @@
                       "description": "Search term or 'all'"
                     },
                     {
-                      "key": "acedmicYearId",
-                      "value": "{{acedmicYear_id}}"
-                    },
-                    {
                       "key": "page",
                       "value": "1"
                     },
@@ -8525,7 +8986,7 @@
                     }
                   ]
                 },
-                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `acedmicYearId`, `page` (default 1), `limit` (default 10).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
+                "description": "**GET /student/all**\n\nQuery: `search` (default `all`), `page` (default 1), `limit` (default 10), optional `courseId`.\n\nAcademic year is derived from `studentSession.sessionAcedmic` (not stored on `students`).\n\nUses auth `universityId` + `defaultInstituteId`.\n\nTest script sets `student_id` from first row when present."
               },
               "response": []
             },
@@ -8630,14 +9091,14 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
+                  "raw": "{\n  \"feePlanProfileId\": {{feePlanProfile_id}},\n  \"universityId\": 4,\n  \"campusId\": 11,\n  \"instituteId\": 12,\n  \"affiliatedUniversityId\": 12,\n  \"courseLevelId\": 200,\n  \"courseId\": 34,\n  \"roleId\": \"STUDENT\",\n  \"classSectionsId\": 195,\n  \"sessionId\": 6,\n  \"email\": \"student.fee.v2.{{$timestamp}}@example.com\",\n  \"enrollNumber\": \"ENR-FEE-V2-{{$timestamp}}\",\n  \"firstName\": \"John\",\n  \"middleName\": \"Michael\",\n  \"lastName\": \"Doe\",\n  \"fatherName\": \"Michael Doe\",\n  \"motherName\": \"Sarah Doe\",\n  \"annualIncome\": 0,\n  \"birthDate\": \"2000-01-01\",\n  \"admisssionDate\": \"2000-01-01\",\n  \"enrollDate\": \"2000-01-01\",\n  \"phoneNumber\": \"1234567890\",\n  \"mobileNumber\": \"9876543210\",\n  \"parentEmail\": \"parent.doe@example.com\",\n  \"parentNumber\": \"1122334455\",\n  \"aadharNumber\": \"123456789012\",\n  \"placeOfBirth\": \"Jaipur\",\n  \"addressDetails\": {\n    \"pAddress\": \"123 Street Jaipur\",\n    \"pPincode\": 302001,\n    \"contact\": \"Israil Tomy\"\n  },\n  \"entranceDetails\": [\n    {\n      \"entranceExam\": \"JEE\",\n      \"rollNumber\": \"JEE2025001\",\n      \"categoryRank\": 1000,\n      \"marks\": 95.5\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
                     }
                   }
                 },
-                "description": "**POST /student** ΓÇö fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, acedmicYearId, email, firstName, fatherName, phoneNumber, birthDate.\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3├ù s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice ΓåÆ generate** per term."
+                "description": "**POST /student** — fee v2 create.\n\n**Required (validated):** feePlanProfileId, universityId, campusId, instituteId, affiliatedUniversityId, courseLevelId, courseId, classSectionsId, sessionId, email, firstName, fatherName, phoneNumber, birthDate.\n\nAcademic year for `class_student_mapper` is derived from `sessionId` (not stored on `students`).\n\n**roleId:** must be `\"STUDENT\"` (defaults to STUDENT if omitted); resolved to DB role_id for user permissions.\n\n**Model field names (not aliases):** `admisssionDate` (3× s), `placeOfBirth` (not birthPlace/admissionDate). Entrance: `entranceExam`, `rollNumber`, `categoryRank`, `marks`.\n\nRun **1 fee plan profiles all** first. Then **studentFeeInvoice → generate** per term."
               },
               "response": []
             },

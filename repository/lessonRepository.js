@@ -1,4 +1,5 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 
 export async function addLesson(data) {
   try {
@@ -449,11 +450,17 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //   }
 // };
 
-export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, courseId, sessionId) {
+export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
   try {
     const whereClause = {
       ...(employeeId && { employeeId }),
-      ...(acedmicYearId && { acedmicYearId }),
+    };
+
+    const subjectWhere = {
+      ...(courseId && { courseId }),
+      ...(subjectSearch?.trim() && {
+        subjectName: { [Op.like]: `%${subjectSearch.trim()}%` },
+      }),
     };
 
     const lesson = await model.teacherSubjectMappingModel.findAll({
@@ -470,9 +477,9 @@ export async function getEmployeeSubjectAndLesson(acedmicYearId, employeeId, cou
             {
               model: model.subjectModel,
               as: "subjects",
-              required: false, // ⭐ prevents NULL join issues
+              required: Boolean(subjectSearch?.trim()),
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              ...(courseId && { where: { courseId } }), // Filter when provided
+              ...(Object.keys(subjectWhere).length && { where: subjectWhere }),
 
               include: [
                 {
