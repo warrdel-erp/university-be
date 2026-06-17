@@ -80,10 +80,10 @@ export async function deleteacedmicYear(acedmicYearId) {
     return deleted > 0;
 }
 
-export async function getAllActiveAcedmicYear(universityId, instituteId) {
+export async function getAllActiveAcedmicYear() {
     try {
-        return await scoped(model.acedmicYearModel).findAll({
-            where: { isActive: true, universityId, instituteId },
+        return await model.acedmicYearModel.findAll({
+            where: { isActive: true },
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
     } catch (error) {

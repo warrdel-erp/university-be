@@ -83,9 +83,9 @@ export async function deleteacedmicYear(req, res) {
 
 export async function getAllActiveAcedmicYear(req, res) {
     try {
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear(universityId, instituteId);
+        // const universityId = req.user.universityId;
+        // const instituteId = req.user.defaultInstituteId;
+        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear();
         res.status(200).json(acedmicYear);
     } catch (error) {
         res.status(500).json({ error: error.message });
