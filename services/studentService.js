@@ -1217,7 +1217,9 @@ export async function promoteStudent(data) {
     await studentRepository.getSemesterByCourseId(courseId);
 
   const allAcedmicYears =
-    await acedmicYearCreationService.getacedmicYearDetails();
+    await acedmicYearCreationService.getacedmicYearDetails(
+      studentDetail.dataValues.universityId,
+    );
 
   //  Ensure semesters are in array format
   const allSemesters = Array.isArray(allSemestersRaw)

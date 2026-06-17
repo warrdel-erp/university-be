@@ -10,8 +10,8 @@ export async function addacedmicYear(acedmicYearData, createdBy, updatedBy) {
     return await acedmicYearCreationService.addacedmicYear(acedmicYearData);
 }
 
-export async function getacedmicYearDetails(universityId, instituteId) {
-    return await acedmicYearCreationService.getacedmicYearDetails(universityId, instituteId);
+export async function getacedmicYearDetails(universityId) {
+    return await acedmicYearCreationService.getacedmicYearDetails(universityId);
 }
 
 export async function getSingleacedmicYearDetails(acedmicYearId) {
@@ -22,10 +22,10 @@ export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     return await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
 }
 
-export async function updateacedmicYear(acedmicYearData, updatedBy, universityId, instituteId) {
+export async function updateacedmicYear(acedmicYearData, updatedBy, universityId) {
     const { startingDate, endingDate } = acedmicYearData;
 
-    const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails(universityId, instituteId);
+    const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails(universityId);
     const currentYear = new Date().getFullYear();
 
     for (const record of allAcedmicyear) {
@@ -53,9 +53,9 @@ export async function updateacedmicYear(acedmicYearData, updatedBy, universityId
     }
 }
 
-export async function activateAcedmicYear(acedmicYearId, updatedBy, universityId, instituteId) {
+export async function activateAcedmicYear(acedmicYearId, updatedBy, universityId) {
     try {
-        const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails(universityId, instituteId);
+        const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails(universityId);
 
         const currentIndex = allAcedmicyear.findIndex(
             (record) => record.dataValues.acedmicYearId === Number(acedmicYearId)
@@ -87,8 +87,8 @@ export async function deleteacedmicYear(acedmicYearId) {
     return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
 }
 
-export async function getAllActiveAcedmicYear(universityId, instituteId) {
-    return await acedmicYearCreationService.getAllActiveAcedmicYear(universityId, instituteId);
+export async function getAllActiveAcedmicYear() {
+    return await acedmicYearCreationService.getAllActiveAcedmicYear();
 }
 
 export async function newActivateAndCopyData(data, universityId, instituteId, createdBy, updatedBy) {

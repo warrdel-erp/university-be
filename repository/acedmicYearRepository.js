@@ -1,20 +1,20 @@
 import * as model from '../models/index.js';
-import { scoped } from '../utility/scoped.js';
 
 export async function addacedmicYear(acedmicYearData) {
     try {
-        return await scoped(model.acedmicYearModel).create(acedmicYearData);
+        return await model.acedmicYearModel.create(acedmicYearData);
     } catch (error) {
         console.error('Error in add acedmicYear :', error);
         throw error;
     }
 }
 
-export async function getacedmicYearDetails(universityId, instituteId) {
+export async function getacedmicYearDetails(universityId) {
     try {
-        return await scoped(model.acedmicYearModel).findAll({
+        const where = universityId != null ? { universityId } : {};
+        return await model.acedmicYearModel.findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-            where: { universityId, instituteId },
+            where,
         });
     } catch (error) {
         console.error('Error fetching acedmicYear details:', error);
@@ -24,7 +24,7 @@ export async function getacedmicYearDetails(universityId, instituteId) {
 
 export async function getSingleacedmicYearDetails(acedmicYearId) {
     try {
-        return await scoped(model.acedmicYearModel).findOne({
+        return await model.acedmicYearModel.findOne({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             where: { acedmicYearId },
         });
@@ -36,7 +36,7 @@ export async function getSingleacedmicYearDetails(acedmicYearId) {
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     try {
-        return await scoped(model.acedmicYearModel).findOne({
+        return await model.acedmicYearModel.findOne({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             where: { yearTitle },
         });
@@ -48,7 +48,7 @@ export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
 
 export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
     try {
-        const existing = await scoped(model.acedmicYearModel).findOne({
+        const existing = await model.acedmicYearModel.findOne({
             where: { acedmicYearId },
             attributes: ['acedmicYearId'],
         });
@@ -56,7 +56,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
             return [0];
         }
 
-        return await scoped(model.acedmicYearModel).update(acedmicYearData, {
+        return await model.acedmicYearModel.update(acedmicYearData, {
             where: { acedmicYearId },
         });
     } catch (error) {
@@ -66,7 +66,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
 }
 
 export async function deleteacedmicYear(acedmicYearId) {
-    const existing = await scoped(model.acedmicYearModel).findOne({
+    const existing = await model.acedmicYearModel.findOne({
         where: { acedmicYearId },
         attributes: ['acedmicYearId'],
     });
@@ -74,7 +74,7 @@ export async function deleteacedmicYear(acedmicYearId) {
         return false;
     }
 
-    const deleted = await scoped(model.acedmicYearModel).destroy({
+    const deleted = await model.acedmicYearModel.destroy({
         where: { acedmicYearId },
     });
     return deleted > 0;
