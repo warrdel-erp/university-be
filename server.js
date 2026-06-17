@@ -29,6 +29,9 @@ import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
 import assetCategory from "./router/assetCategoryRoute.js";
 import asset from "./router/assetRoute.js";
 import assetIssue from "./router/assetIssueRoute.js";
+import amcVendor from "./router/amcVendorRoute.js";
+import amcContract from "./router/amcContractRoute.js";
+import amcServiceTicket from "./router/amcServiceTicketRoute.js";
 import feeInvoice from "./router/feeInvoiceRoute.js";
 import feeInvoiceDetails from "./router/feeInvoiceDetailRoute.js";
 import role from "./router/roleRoute.js";
@@ -215,6 +218,9 @@ app.use("/studentFeePayment", studentFeePayment);
 app.use("/assetCategory", assetCategory);
 app.use("/asset", asset);
 app.use("/assetIssue", assetIssue);
+app.use("/amcVendor", amcVendor);
+app.use("/amcContract", amcContract);
+app.use("/serviceTicket", amcServiceTicket);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

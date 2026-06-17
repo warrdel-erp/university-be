@@ -10,11 +10,11 @@ export async function addDepartment(departmentData) {
     }
 };
 
-export async function getDepartmentDetails(universityId) {
+export async function getDepartmentDetails(universityId,instituteId) {
     try {
         const Department = await model.departmentModel.findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
+            where: { universityId, institute_id: instituteId },
             include:
                 [
                     {

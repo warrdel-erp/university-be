@@ -27,8 +27,8 @@ export async function addDepartment(departmentData, createdBy, updatedBy, univer
     }
 };
 
-export async function getDepartmentDetails(universityId) {
-    return await departmentCreationRepository.getDepartmentDetails(universityId);
+export async function getDepartmentDetails(universityId,instituteId) {
+    return await departmentCreationRepository.getDepartmentDetails(universityId,instituteId);
 }
 
 export async function getSingleDepartmentDetails(departmentId,universityId) {
