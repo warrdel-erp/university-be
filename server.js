@@ -12,6 +12,7 @@ import download from "./router/downloadRoute.js";
 import codeMaster from "./router/codeMasterRoute.js";
 import campus from "./router/campusRoute.js";
 import institute from "./router/instituteRoute.js";
+import specialization from "./router/specializationRoute.js";
 import course from "./router/courseRoute.js";
 import user from "./router/auth/userRoute.js";
 import employee from "./router/employeeRoute.js";
@@ -128,6 +129,7 @@ app.use((req, res, next) => {
 // Tenant setup — institute/academic year bypass scoping; campus is university-scoped
 app.use("/campus", campus);
 app.use("/institute", institute);
+app.use("/specialization", specialization);
 app.use("/acedmicYear", acedmicYear);
 // Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
 

@@ -36,6 +36,68 @@ export const createInstitute = async (req, res) => {
   }
 };
 
+export const updateInstitute = async (req, res) => {
+  try {
+    const universityId = req.user.universityId;
+    if (!universityId) {
+      return res.status(400).json({
+        status: "error",
+        message: "University Id is missing from user session",
+      });
+    }
+
+    const { instituteId, ...body } = req.body;
+    const result = await instituteService.updateInstitute(instituteId, universityId, body);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Institute updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error in Update Institute Controller:", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      status: "error",
+      message: statusCode === 500 ? "Internal Server Error" : error.message,
+      ...(statusCode === 500 && { error: error.message }),
+    });
+  }
+};
+
+export const updateAffiliatedUniversity = async (req, res) => {
+  try {
+    const universityId = req.user.universityId;
+    if (!universityId) {
+      return res.status(400).json({
+        status: "error",
+        message: "University Id is missing from user session",
+      });
+    }
+
+    const { affiliatedUniversityId, ...body } = req.body;
+    const result = await instituteService.updateAffiliatedUniversity(
+      affiliatedUniversityId,
+      universityId,
+      body
+    );
+
+    return res.status(200).json({
+      status: "success",
+      message: "Affiliated university updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error in Update Affiliated University Controller:", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      status: "error",
+      message: statusCode === 500 ? "Internal Server Error" : error.message,
+      ...(statusCode === 500 && { error: error.message }),
+    });
+  }
+};
+
 export const listInstitutes = async (req, res) => {
   try {
     const universityId = req.user.universityId;

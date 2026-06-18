@@ -31,6 +31,16 @@ const campusModel = sequelize.define(
             allowNull: false,
             field: 'campus_code',
         },
+        campusType: {
+            type: DataTypes.ENUM('Main', 'Regional', 'Satellite'),
+            allowNull: true,
+            field: 'campus_type',
+        },
+        addressLine: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'address_line',
+        },
         latitude: {
             type: DataTypes.FLOAT,
             allowNull: true,
@@ -38,6 +48,21 @@ const campusModel = sequelize.define(
         longitude:{
             type: DataTypes.FLOAT,
             allowNull: true,
+        },
+        administratorName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_name',
+        },
+        administratorContactNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_contact_number',
+        },
+        administratorEmail: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_email',
         },
         createdAt: {
             type: DataTypes.DATE,

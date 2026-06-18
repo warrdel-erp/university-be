@@ -10908,6 +10908,271 @@
           ]
         }
       ]
+    },
+    {
+      "name": "campus & institute (updated)",
+      "description": "Updated tenant setup APIs for **campus** and **institute**.\n\n**Auth:** Bearer `{{token}}`. Campus routes are university-scoped; institute routes bypass institute/academic-year scoping.\n\n**Suggested flow:**\n1. **campus → create campuses (bulk)** — sets `{{campus_id}}` from first created campus\n2. **institute → create institute** — uses `{{campus_id}}`; sets `{{institute_id}}`\n3. **campus → get hierarchy** — full tree: campuses → institutes → affiliated universities → specializations\n\n**Migration:** run `20260617150000-extend-campus-fields` before testing bulk campus create.",
+      "variable": [
+        {
+          "key": "campus_id",
+          "value": "11",
+          "type": "string",
+          "description": "campus.campusId — set from create campuses (bulk)"
+        },
+        {
+          "key": "institute_id",
+          "value": "12",
+          "type": "string",
+          "description": "institute.instituteId — set from create institute"
+        }
+      ],
+      "item": [
+        {
+          "name": "campus",
+          "description": "## campus\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/campus` | Bulk create — body `{ \"campuses\": [...] }` |\n| GET | `/campus` | List campuses for authenticated university |\n| GET | `/campus/hierarchy` | Nested campuses → institutes → affiliated universities → specializations |\n\n**campusType:** `Main` \\| `Regional` \\| `Satellite`\n\n**address.geoTag:** optional `{ latitude, longitude }`",
+          "item": [
+            {
+              "name": "create campuses (bulk)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data[0] && json.data[0].campusId) {",
+                      "  pm.collectionVariables.set('campus_id', String(json.data[0].campusId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campuses\": [\n    {\n      \"campusName\": \"Main Campus\",\n      \"campusCode\": \"MC-{{$timestamp}}\",\n      \"campusType\": \"Main\",\n      \"address\": {\n        \"addressLine\": \"123 University Road, Jaipur\",\n        \"geoTag\": {\n          \"latitude\": 26.9124,\n          \"longitude\": 75.7873\n        }\n      },\n      \"campusAdministrator\": {\n        \"name\": \"John Doe\",\n        \"contactNumber\": \"9876543210\",\n        \"email\": \"john.doe@university.edu\"\n      }\n    },\n    {\n      \"campusName\": \"Regional Campus\",\n      \"campusCode\": \"RC-{{$timestamp}}\",\n      \"campusType\": \"Regional\",\n      \"address\": {\n        \"addressLine\": \"45 Industrial Area\",\n        \"geoTag\": null\n      },\n      \"campusAdministrator\": {\n        \"name\": \"Jane Smith\",\n        \"contactNumber\": \"9123456780\",\n        \"email\": \"jane.smith@university.edu\"\n      }\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/campus",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "campus"
+                  ]
+                },
+                "description": "**POST /campus** — create one or more campuses in a single transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campuses[]` | yes | Min 1 item |\n| `campusName` | yes | |\n| `campusCode` | yes | Unique per university |\n| `campusType` | yes | `Main`, `Regional`, or `Satellite` |\n| `address.addressLine` | yes | |\n| `address.geoTag` | no | `{ latitude, longitude }` or `null` |\n| `campusAdministrator.name` | yes | |\n| `campusAdministrator.contactNumber` | yes | |\n| `campusAdministrator.email` | yes | Valid email |\n\nSets `{{campus_id}}` from the first created campus."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/campus",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "campus"
+                  ]
+                },
+                "description": "**GET /campus** — list all campuses for the authenticated user's university.\n\nEach item includes nested `address` and `campusAdministrator`."
+              },
+              "response": []
+            },
+            {
+              "name": "get hierarchy",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/campus/hierarchy",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "campus",
+                    "hierarchy"
+                  ]
+                },
+                "description": "**GET /campus/hierarchy** — university-scoped nested tree:\n\n**campus** → `institutes[]` → `affiliatedUniversities[]` + `specializations[]`\n\nNo query params. Does not filter by academic year or institute header."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "institute",
+          "description": "## institute\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/institute` | Create institute; optional `affiliatedUniversity[]` in same request |\n| GET | `/institute` | List institutes; optional `?campusId=` filter |\n\n**Route scoping:** `/institute` bypasses institute/academic-year scope (tenant setup).",
+          "item": [
+            {
+              "name": "create institute",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data.instituteId) {",
+                      "  pm.collectionVariables.set('institute_id', String(json.data.instituteId));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College\",\n  \"instituteCode\": \"ENG-{{$timestamp}}\",\n  \"affiliatedUniversity\": [\n    {\n      \"affiliatedUniversityName\": \"State Technical University\",\n      \"affiliatedUniversityCode\": \"STU-{{$timestamp}}\"\n    },\n    {\n      \"affiliatedUniversityName\": \"National Board of Education\",\n      \"affiliatedUniversityCode\": \"NBE-{{$timestamp}}\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/institute",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "institute"
+                  ]
+                },
+                "description": "**POST /institute** — create institute and optional affiliated universities in one transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | Must belong to authenticated university |\n| `instituteName` | yes | |\n| `instituteCode` | yes | |\n| `affiliatedUniversity[]` | no | Each item: `affiliatedUniversityName`, `affiliatedUniversityCode` |\n\nResponse includes `affiliatedUniversity[]` with generated IDs. Sets `{{institute_id}}`."
+              },
+              "response": []
+            },
+            {
+              "name": "get all",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/institute",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "institute"
+                  ]
+                },
+                "description": "**GET /institute** — list all institutes for the authenticated university.\n\nEach item includes `affiliatedUniversity[]`."
+              },
+              "response": []
+            },
+            {
+              "name": "get by campusId",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/institute?campusId={{campus_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "institute"
+                  ],
+                  "query": [
+                    {
+                      "key": "campusId",
+                      "value": "{{campus_id}}"
+                    }
+                  ]
+                },
+                "description": "**GET /institute?campusId=** — filter institutes by campus."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
