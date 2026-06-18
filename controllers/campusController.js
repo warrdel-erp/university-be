@@ -11,11 +11,11 @@ export const createCampus = async (req, res) => {
       });
     }
 
-    const result = await campusService.createCampuses(req.body.campuses, createdBy);
+    const result = await campusService.createCampus(req.body, createdBy);
 
     return res.status(201).json({
       status: "success",
-      message: "Campuses created successfully",
+      message: "Campus created successfully",
       data: result,
     });
   } catch (error) {

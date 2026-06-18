@@ -50,9 +50,6 @@ const campusItemSchema = z.object({
   campusAdministrator: campusAdministratorSchema,
 });
 
-const createCampusesSchema = z.object({
-  campuses: z.array(campusItemSchema).min(1, "At least one campus is required"),
-});
 
 const updateAddressSchema = z.object({
   addressLine: z.string().min(1).optional(),
@@ -84,7 +81,7 @@ const updateCampusSchema = z
     { message: "At least one field to update is required" }
   );
 
-router.post("/", userAuth, validate({ body: createCampusesSchema }), campusController.createCampus);
+router.post("/", userAuth, validate({ body: campusItemSchema }), campusController.createCampus);
 router.patch("/", userAuth, validate({ body: updateCampusSchema }), campusController.updateCampus);
 router.get("/hierarchy", userAuth, campusController.getCampusHierarchy);
 router.get("/", userAuth, campusController.listCampuses);

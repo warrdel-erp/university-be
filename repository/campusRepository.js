@@ -1,5 +1,4 @@
 import { Op } from "sequelize";
-import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
@@ -20,21 +19,11 @@ function toCampusRecord(campus, createdBy) {
   };
 }
 
-export async function createCampuses(campuses, createdBy) {
-  const transaction = await sequelize.transaction();
+export async function createCampus(campus, createdBy) {
   try {
-    const rows = [];
-    for (const campus of campuses) {
-      const row = await scoped(model.campusModel).create(toCampusRecord(campus, createdBy), {
-        transaction,
-      });
-      rows.push(row);
-    }
-    await transaction.commit();
-    return rows;
+    return scoped(model.campusModel).create(toCampusRecord(campus, createdBy));
   } catch (error) {
-    await transaction.rollback();
-    console.error("Error in Campus Repository (createCampuses):", error);
+    console.error("Error in Campus Repository (createCampus):", error);
     throw error;
   }
 }

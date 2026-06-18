@@ -59,13 +59,13 @@ export function mapCampusRow(row) {
   };
 }
 
-export async function createCampuses(campuses, createdBy) {
+export async function createCampus(campus, createdBy) {
   try {
-    const payload = campuses.map(flattenCampusInput);
-    const rows = await campusRepository.createCampuses(payload, createdBy);
-    return rows.map(mapCampusRow);
+    const payload = flattenCampusInput(campus);
+    const row = await campusRepository.createCampus(payload, createdBy);
+    return mapCampusRow(row);
   } catch (error) {
-    console.error("Error in Campus Service (createCampuses):", error);
+    console.error("Error in Campus Service (createCampus):", error);
     throw error;
   }
 }

@@ -10911,28 +10911,46 @@
     },
     {
       "name": "campus & institute (updated)",
-      "description": "Updated tenant setup APIs for **campus** and **institute**.\n\n**Auth:** Bearer `{{token}}`. Campus routes are university-scoped; institute routes bypass institute/academic-year scoping.\n\n**Suggested flow:**\n1. **campus → create campuses (bulk)** — sets `{{campus_id}}` from first created campus\n2. **institute → create institute** — uses `{{campus_id}}`; sets `{{institute_id}}`\n3. **campus → get hierarchy** — full tree: campuses → institutes → affiliated universities → specializations\n\n**Migration:** run `20260617150000-extend-campus-fields` before testing bulk campus create.",
+      "description": "Updated tenant setup APIs for **campus**, **institute**, **affiliated university**, and **specialization**.\n\n**Auth:** Bearer `{{token}}`. Campus routes are university-scoped; institute/affiliated-university routes bypass institute/academic-year scoping; specialization uses institute + academic-year scope from token/headers.\n\n**Suggested flow:**\n1. **campus → create campus** — sets `{{campus_id}}`\n2. **campus → update campus (PATCH)** — full payload edit\n3. **institute → create institute** — sets `{{institute_id}}`, `{{affiliated_university_id}}`\n4. **institute → update institute (PATCH)** / **update affiliated university (PATCH)**\n5. **campus → get hierarchy** — sets `{{specialization_id}}` when present\n6. **specialization → update specialization (PATCH)**\n\n**Migration:** run `20260617150000-extend-campus-fields` before testing campus create.",
       "variable": [
         {
           "key": "campus_id",
           "value": "11",
           "type": "string",
-          "description": "campus.campusId — set from create campuses (bulk)"
+          "description": "campus.campusId — set from create campus"
         },
         {
           "key": "institute_id",
           "value": "12",
           "type": "string",
           "description": "institute.instituteId — set from create institute"
+        },
+        {
+          "key": "affiliated_university_id",
+          "value": "1",
+          "type": "string",
+          "description": "affiliated_university.affiliatedUniversityId — set from create institute"
+        },
+        {
+          "key": "specialization_id",
+          "value": "1",
+          "type": "string",
+          "description": "specialization.specializationId — set from get hierarchy"
+        },
+        {
+          "key": "course_id",
+          "value": "34",
+          "type": "string",
+          "description": "course.courseId — for specialization PATCH course_Id"
         }
       ],
       "item": [
         {
           "name": "campus",
-          "description": "## campus\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/campus` | Bulk create — body `{ \"campuses\": [...] }` |\n| GET | `/campus` | List campuses for authenticated university |\n| GET | `/campus/hierarchy` | Nested campuses → institutes → affiliated universities → specializations |\n\n**campusType:** `Main` \\| `Regional` \\| `Satellite`\n\n**address.geoTag:** optional `{ latitude, longitude }`",
+          "description": "## campus\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/campus` | Create one campus per request |\n| PATCH | `/campus` | Update campus — `campusId` required; at least one other field |\n| GET | `/campus` | List campuses for authenticated university |\n| GET | `/campus/hierarchy` | Nested campuses → institutes → affiliated universities → specializations |\n\n**campusType:** `Main` \\| `Regional` \\| `Satellite`\n\n**address.geoTag:** optional `{ latitude, longitude }`",
           "item": [
             {
-              "name": "create campuses (bulk)",
+              "name": "create campus",
               "event": [
                 {
                   "listen": "test",
@@ -10940,8 +10958,8 @@
                     "exec": [
                       "pm.test('status 201', () => pm.response.to.have.status(201));",
                       "const json = pm.response.json();",
-                      "if (json.data && json.data[0] && json.data[0].campusId) {",
-                      "  pm.collectionVariables.set('campus_id', String(json.data[0].campusId));",
+                      "if (json.data && json.data.campusId) {",
+                      "  pm.collectionVariables.set('campus_id', String(json.data.campusId));",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -10968,7 +10986,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"campuses\": [\n    {\n      \"campusName\": \"Main Campus\",\n      \"campusCode\": \"MC-{{$timestamp}}\",\n      \"campusType\": \"Main\",\n      \"address\": {\n        \"addressLine\": \"123 University Road, Jaipur\",\n        \"geoTag\": {\n          \"latitude\": 26.9124,\n          \"longitude\": 75.7873\n        }\n      },\n      \"campusAdministrator\": {\n        \"name\": \"John Doe\",\n        \"contactNumber\": \"9876543210\",\n        \"email\": \"john.doe@university.edu\"\n      }\n    },\n    {\n      \"campusName\": \"Regional Campus\",\n      \"campusCode\": \"RC-{{$timestamp}}\",\n      \"campusType\": \"Regional\",\n      \"address\": {\n        \"addressLine\": \"45 Industrial Area\",\n        \"geoTag\": null\n      },\n      \"campusAdministrator\": {\n        \"name\": \"Jane Smith\",\n        \"contactNumber\": \"9123456780\",\n        \"email\": \"jane.smith@university.edu\"\n      }\n    }\n  ]\n}",
+                  "raw": "{\n  \"campusName\": \"Main Campus\",\n  \"campusCode\": \"MC-{{$timestamp}}\",\n  \"campusType\": \"Main\",\n  \"address\": {\n    \"addressLine\": \"123 University Road, Jaipur\",\n    \"geoTag\": {\n      \"latitude\": 26.9124,\n      \"longitude\": 75.7873\n    }\n  },\n  \"campusAdministrator\": {\n    \"name\": \"John Doe\",\n    \"contactNumber\": \"9876543210\",\n    \"email\": \"john.doe@university.edu\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -10984,7 +11002,60 @@
                     "campus"
                   ]
                 },
-                "description": "**POST /campus** — create one or more campuses in a single transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campuses[]` | yes | Min 1 item |\n| `campusName` | yes | |\n| `campusCode` | yes | Unique per university |\n| `campusType` | yes | `Main`, `Regional`, or `Satellite` |\n| `address.addressLine` | yes | |\n| `address.geoTag` | no | `{ latitude, longitude }` or `null` |\n| `campusAdministrator.name` | yes | |\n| `campusAdministrator.contactNumber` | yes | |\n| `campusAdministrator.email` | yes | Valid email |\n\nSets `{{campus_id}}` from the first created campus."
+                "description": "**POST /campus** — create a single campus (one per request).\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusName` | yes | |\n| `campusCode` | yes | Unique per university |\n| `campusType` | yes | `Main`, `Regional`, or `Satellite` |\n| `address.addressLine` | yes | |\n| `address.geoTag` | no | `{ latitude, longitude }` or `null` |\n| `campusAdministrator.name` | yes | |\n| `campusAdministrator.contactNumber` | yes | |\n| `campusAdministrator.email` | yes | Valid email |\n\nSets `{{campus_id}}`. Response `data` is a single campus object."
+              },
+              "response": []
+            },
+            {
+              "name": "update campus (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campusId\": {{campus_id}},\n  \"campusName\": \"Main Campus (Updated)\",\n  \"campusCode\": \"MC-UPD-{{$timestamp}}\",\n  \"campusType\": \"Satellite\",\n  \"address\": {\n    \"addressLine\": \"456 Updated University Road, Jaipur, Rajasthan 302001\",\n    \"geoTag\": {\n      \"latitude\": 26.915,\n      \"longitude\": 75.79\n    }\n  },\n  \"campusAdministrator\": {\n    \"name\": \"John Doe (Updated)\",\n    \"contactNumber\": \"9988776655\",\n    \"email\": \"john.updated@university.edu\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/campus",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "campus"
+                  ]
+                },
+                "description": "**PATCH /campus** — update an existing campus (university-scoped).\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | |\n| `campusName` | no | At least one updatable field required |\n| `campusCode` | no | |\n| `campusType` | no | `Main`, `Regional`, or `Satellite` |\n| `address.addressLine` | no | |\n| `address.geoTag` | no | `{ latitude, longitude }` or `null` to clear coords |\n| `campusAdministrator.name` | no | |\n| `campusAdministrator.contactNumber` | no | |\n| `campusAdministrator.email` | no | Valid email |\n\nExample sends **all** updatable fields. Response mirrors create/list shape with nested `address` and `campusAdministrator`."
               },
               "response": []
             },
@@ -11018,6 +11089,28 @@
             },
             {
               "name": "get hierarchy",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));",
+                      "const json = pm.response.json();",
+                      "if (json.data) {",
+                      "  for (const campus of json.data) {",
+                      "    for (const inst of (campus.institutes || [])) {",
+                      "      if (inst.specializations && inst.specializations[0]) {",
+                      "        pm.collectionVariables.set('specialization_id', String(inst.specializations[0].specializationId));",
+                      "        break;",
+                      "      }",
+                      "    }",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -11049,7 +11142,7 @@
         },
         {
           "name": "institute",
-          "description": "## institute\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/institute` | Create institute; optional `affiliatedUniversity[]` in same request |\n| GET | `/institute` | List institutes; optional `?campusId=` filter |\n\n**Route scoping:** `/institute` bypasses institute/academic-year scope (tenant setup).",
+          "description": "## institute\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/institute` | Create institute; optional `affiliatedUniversity[]` in same request |\n| PATCH | `/institute` | Update institute — `instituteId` required |\n| PATCH | `/institute/affiliatedUniversity` | Update affiliated university row |\n| GET | `/institute` | List institutes; optional `?campusId=` filter |\n\n**Route scoping:** `/institute` bypasses institute/academic-year scope (tenant setup).",
           "item": [
             {
               "name": "create institute",
@@ -11062,6 +11155,9 @@
                       "const json = pm.response.json();",
                       "if (json.data && json.data.instituteId) {",
                       "  pm.collectionVariables.set('institute_id', String(json.data.instituteId));",
+                      "}",
+                      "if (json.data && json.data.affiliatedUniversity && json.data.affiliatedUniversity[0]) {",
+                      "  pm.collectionVariables.set('affiliated_university_id', String(json.data.affiliatedUniversity[0].affiliatedUniversityId));",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -11104,7 +11200,114 @@
                     "institute"
                   ]
                 },
-                "description": "**POST /institute** — create institute and optional affiliated universities in one transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | Must belong to authenticated university |\n| `instituteName` | yes | |\n| `instituteCode` | yes | |\n| `affiliatedUniversity[]` | no | Each item: `affiliatedUniversityName`, `affiliatedUniversityCode` |\n\nResponse includes `affiliatedUniversity[]` with generated IDs. Sets `{{institute_id}}`."
+                "description": "**POST /institute** — create institute and optional affiliated universities in one transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | Must belong to authenticated university |\n| `instituteName` | yes | |\n| `instituteCode` | yes | |\n| `affiliatedUniversity[]` | no | Each item: `affiliatedUniversityName`, `affiliatedUniversityCode` |\n\nResponse includes `affiliatedUniversity[]` with generated IDs. Sets `{{institute_id}}` and `{{affiliated_university_id}}`."
+              },
+              "response": []
+            },
+            {
+              "name": "update institute (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"instituteId\": {{institute_id}},\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College (Updated)\",\n  \"instituteCode\": \"ENG-UPD-{{$timestamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/institute",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "institute"
+                  ]
+                },
+                "description": "**PATCH /institute** — update institute (university-scoped via session `universityId`).\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `instituteId` | yes | |\n| `campusId` | no | Must belong to same university if provided |\n| `instituteName` | no | At least one updatable field required |\n| `instituteCode` | no | |\n\nExample sends **all** updatable fields. Response includes `affiliatedUniversity[]`."
+              },
+              "response": []
+            },
+            {
+              "name": "update affiliated university (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"affiliatedUniversityId\": {{affiliated_university_id}},\n  \"affiliatedUniversityName\": \"State Technical University (Updated)\",\n  \"affiliatedUniversityCode\": \"STU-UPD-{{$timestamp}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/institute/affiliatedUniversity",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "institute",
+                    "affiliatedUniversity"
+                  ]
+                },
+                "description": "**PATCH /institute/affiliatedUniversity** — update an affiliated university row.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `affiliatedUniversityId` | yes | |\n| `affiliatedUniversityName` | no | At least one required |\n| `affiliatedUniversityCode` | no | |\n\nScoped to authenticated user's `universityId`. Example sends **both** name and code."
               },
               "response": []
             },
@@ -11171,6 +11374,75 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "specialization",
+          "description": "## specialization\n\n| Method | Path | Notes |\n|--------|------|-------|\n| PATCH | `/specialization` | Update specialization — institute + academic-year scoped |\n\nUses `defaultInstituteId` / `defaultAcademicYearId` from token unless `X-Institute-Id` / `X-Academic-Year-Id` headers are sent.",
+          "item": [
+            {
+              "name": "update specialization (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}",
+                    "description": "Optional — defaults to token defaultInstituteId"
+                  },
+                  {
+                    "key": "X-Academic-Year-Id",
+                    "value": "{{acedmicYear_id}}",
+                    "description": "Optional — defaults to token defaultAcademicYearId"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"specializationId\": {{specialization_id}},\n  \"specializationName\": \"Computer Science (Updated)\",\n  \"specializationCode\": \"CS-UPD-{{$timestamp}}\",\n  \"course_Id\": {{course_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/specialization",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "specialization"
+                  ]
+                },
+                "description": "**PATCH /specialization** — update specialization (institute + academic-year scoped).\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `specializationId` | yes | Must exist in current institute/academic-year scope |\n| `specializationName` | no | At least one updatable field required |\n| `specializationCode` | no | |\n| `course_Id` | no | Re-link to another course in scope |\n\nExample sends **all** updatable fields. Run **campus → get hierarchy** first to set `{{specialization_id}}`, or set it manually."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }
@@ -11229,6 +11501,21 @@
     {
       "key": "acedmicYear_id",
       "value": "59",
+      "type": "string"
+    },
+    {
+      "key": "affiliated_university_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "specialization_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "course_id",
+      "value": "34",
       "type": "string"
     },
     {
