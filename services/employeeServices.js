@@ -422,8 +422,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(campusId) {
-  const result = await employeeRepository.getAllEmployee(campusId);
+export async function getAllEmployee(campusId, instituteId) {
+  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -443,7 +443,6 @@ export async function getAllEmployee(campusId) {
       pickColor: item?.pickColor || "",
       campusId: item?.campusId,
       instituteId: item?.instituteId,
-      acedmicYearId: item?.acedmicYearId,
       roleId: item?.roleId || mappedRoleData?.role || "",
       roleData: mappedRoleData,
       role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
@@ -590,7 +589,6 @@ function validateEmployeeRow(employee) {
     "campusId",
     "instituteId",
     "roleId",
-    "acedmicYearId",
     "createdBy",
     "department",
     "employmentType",
@@ -635,7 +633,6 @@ export async function importEmployeeData(excelData, commonData) {
         campusId: convertedData.campusId,
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
-        acedmicYearId: convertedData.acedmicYearId,
         createdBy: convertedData.createdBy,
       };
 

@@ -22,9 +22,10 @@ export const addEmployee = async (req, res) => {
 };
 
 export const getAllEmployee = async (req, res) => {
-    const { campusId, instituteId } = req.query;
+    const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
+    const instituteId = req.query.instituteId ? Number(req.query.instituteId) : undefined;
     try {
-        const result = await employee.getAllEmployee(campusId);
+        const result = await employee.getAllEmployee(campusId, instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);
@@ -63,13 +64,13 @@ export const deleteEmployeeDetail = async (req, res) => {
 
 export const importEmployeeData = async (req, res) => {
     try {
-        const { campusId, instituteId, roleId, acedmicYearId } = req.body;
+        const { campusId, instituteId, roleId } = req.body;
         const universityId = req.user.universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
-        if (!(campusId && instituteId && roleId && acedmicYearId)) {
-            return res.status(400).json({ error: 'campusId, instituteId, roleId, and acedmicYearId are required' });
+        if (!(campusId && instituteId && roleId)) {
+            return res.status(400).json({ error: 'campusId, instituteId, and roleId are required' });
         }
 
         const excelFile = req.files?.employee;

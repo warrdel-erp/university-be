@@ -47,15 +47,36 @@ export const getCourseWithSubjects = async (req, res) => {
 
 export const getCourseSessions = async (req, res) => {
   try {
-    const acedmicYearId = req.user.defaultAcademicYearId;
-    const courseId = req.params.courseId;
+    const acedmicYearId = req.query.acedmicYearId ?? req.user.defaultAcademicYearId;
+    const courseId = Number(req.params.courseId);
     const instituteId = req.user.defaultInstituteId;
+
+    if (!courseId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'courseId is required',
+      });
+    }
+
+    if (!acedmicYearId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'acedmicYearId is required',
+      });
+    }
 
     const result = await courseService.getCourseWithSessions(
       courseId,
       acedmicYearId,
       instituteId
     );
+
+    if (!result) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Course not found',
+      });
+    }
 
     return res.status(200).json({
       status: 'success',

@@ -1,4 +1,6 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
+import sequelize from '../database/sequelizeConfig.js';
 import { scoped, buildScope } from '../utility/scoped.js';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
@@ -21,10 +23,18 @@ export async function addBulkSession(sessionData) {
     }
 }
 
-export async function isSessionAlreadyMapped(sessionId, courseId) {
+export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, universityId) {
     try {
-        const existingMapping = await scoped(model.sessionCouseMappingModel).findOne({
-            where: { sessionId, courseId }
+        const where = { sessionId, courseId };
+        if (instituteId != null) {
+            where.instituteId = instituteId;
+        }
+        if (universityId != null) {
+            where.universityId = universityId;
+        }
+
+        const existingMapping = await model.sessionCouseMappingModel.unscoped().findOne({
+            where,
         });
         return !!existingMapping;
     } catch (error) {
@@ -129,10 +139,11 @@ export async function getSessionByInstituteAndAcademicYear() {
     }
 }
 
-export async function updateSession(sessionId, sessionData) {
+export async function updateSession(sessionId, sessionData, transaction) {
     try {
         return await scoped(model.sessionModel).update(sessionData, {
-            where: { sessionId }
+            where: { sessionId },
+            transaction,
         });
     } catch (error) {
         console.error(`Error updating Session creation ${sessionId}:`, error);
@@ -158,8 +169,22 @@ export async function deleteSession(sessionId) {
 }
 
 export async function getMappingByCourseAndSession(courseId, sessionId) {
-    return await scoped(model.sessionCouseMappingModel).findOne({
-        where: { courseId, sessionId }
+    return model.sessionCouseMappingModel.unscoped().findOne({
+        where: { courseId, sessionId },
+    });
+}
+
+export async function assertCourseInScope(courseId) {
+    return scoped(model.courseModel).findOne({
+        where: { courseId },
+        attributes: ['courseId', 'instituteId'],
+    });
+}
+
+export async function assertSessionInScope(sessionId) {
+    return scoped(model.sessionModel).findOne({
+        where: { sessionId },
+        attributes: ['sessionId', 'instituteId', 'acedmicYearId'],
     });
 }
 
@@ -277,4 +302,166 @@ export async function deleteCourseSessionMapping(sessionCourseMappingId) {
         where: { sessionCourseMappingId }
     });
     return deleted > 0;
+}
+
+function normalizeCourseIds(courseId) {
+    if (courseId == null || courseId === '') {
+        return [];
+    }
+    const ids = Array.isArray(courseId) ? courseId : [courseId];
+    return [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
+}
+
+function pickSessionUpdateFields(sessionData, updatedBy) {
+    const { courseId: _courseId, sessionId: _sessionId, ...sessionFields } = sessionData;
+    return { ...sessionFields, updatedBy };
+}
+
+async function findCoursesInScope(courseIds, transaction) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    return scoped(model.courseModel).findAll({
+        where: { courseId: { [Op.in]: courseIds } },
+        attributes: ['courseId'],
+        transaction,
+    });
+}
+
+async function findMappedCourseIds(sessionId, courseIds, transaction) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const rows = await model.sessionCouseMappingModel.unscoped().findAll({
+        where: {
+            sessionId,
+            courseId: { [Op.in]: courseIds },
+        },
+        attributes: ['courseId'],
+        transaction,
+    });
+
+    return rows.map((row) => row.courseId);
+}
+
+export async function syncCourseSessionMappings({
+    sessionId,
+    courseIds,
+    userId,
+    transaction,
+    rejectExisting = false,
+}) {
+    const normalizedCourseIds = normalizeCourseIds(courseIds);
+    if (!normalizedCourseIds.length) {
+        if (rejectExisting) {
+            throw new Error('courseId must be a non-empty array');
+        }
+        return { inserted: 0 };
+    }
+
+    const coursesInScope = await findCoursesInScope(normalizedCourseIds, transaction);
+    const scopedCourseIds = new Set(coursesInScope.map((course) => course.courseId));
+    const missingCourseId = normalizedCourseIds.find((courseId) => !scopedCourseIds.has(courseId));
+    if (missingCourseId) {
+        throw new Error(`Course ID ${missingCourseId} not found`);
+    }
+
+    const mappedCourseIds = new Set(
+        await findMappedCourseIds(sessionId, normalizedCourseIds, transaction),
+    );
+
+    if (rejectExisting) {
+        const duplicateCourseId = normalizedCourseIds.find((courseId) => mappedCourseIds.has(courseId));
+        if (duplicateCourseId) {
+            throw new Error(`Course ID ${duplicateCourseId} is already mapped to Session ID ${sessionId}`);
+        }
+    }
+
+    const courseIdsToInsert = rejectExisting
+        ? normalizedCourseIds
+        : normalizedCourseIds.filter((courseId) => !mappedCourseIds.has(courseId));
+
+    if (!courseIdsToInsert.length) {
+        return { inserted: 0 };
+    }
+
+    await scoped(model.sessionCouseMappingModel).bulkCreate(
+        courseIdsToInsert.map((courseId) => ({
+            sessionId,
+            courseId,
+            createdBy: userId,
+            updatedBy: userId,
+        })),
+        { transaction },
+    );
+
+    return { inserted: courseIdsToInsert.length };
+}
+
+export async function createSessionWithCourseMappings(sessionData, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const courseIds = normalizeCourseIds(sessionData.courseId);
+        const payload = {
+            ...sessionData,
+            createdBy,
+            updatedBy,
+        };
+        delete payload.courseId;
+
+        const session = await addSession(payload, transaction);
+
+        await syncCourseSessionMappings({
+            sessionId: session.sessionId,
+            courseIds,
+            userId: createdBy,
+            transaction,
+        });
+
+        await transaction.commit();
+        return session;
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error creating session and mapping:', error);
+        throw error;
+    }
+}
+
+export async function updateSessionWithCourseMappings(sessionId, sessionData, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const numericSessionId = Number(sessionId);
+        if (!Number.isInteger(numericSessionId) || numericSessionId <= 0) {
+            throw new Error('sessionId is required');
+        }
+
+        const session = await assertSessionInScope(numericSessionId);
+        if (!session) {
+            throw new Error(`Session ID ${numericSessionId} not found`);
+        }
+
+        await updateSession(
+            numericSessionId,
+            pickSessionUpdateFields(sessionData, updatedBy),
+            transaction,
+        );
+
+        await syncCourseSessionMappings({
+            sessionId: numericSessionId,
+            courseIds: sessionData.courseId,
+            userId: updatedBy,
+            transaction,
+        });
+
+        await transaction.commit();
+        return getSingleSessionDetails(numericSessionId);
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error updating session and course mappings:', error);
+        throw error;
+    }
 }

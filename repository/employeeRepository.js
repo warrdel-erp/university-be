@@ -38,10 +38,11 @@ export async function updateEmployee(employeeId, data, transaction) {
     }
 };
 
-export async function getAllEmployee(campusId) {
+export async function getAllEmployee(campusId, instituteId) {
     try {
         const whereClause = {
             ...(campusId && { campusId }),
+            ...(instituteId && { instituteId }),
         };
         return await scoped(model.employeeModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },

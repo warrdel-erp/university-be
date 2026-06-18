@@ -81,16 +81,10 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'session_course_mapping',
         timestamps: true,
-        paranoid: true,
         indexes: [
             {
                 unique: true,

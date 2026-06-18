@@ -462,9 +462,6 @@ teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: "employee_id",
 employeeModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "employeeCampus" });
 campusModel.hasMany(employeeModel, { foreignKey: "campus_id", as: "employeeCampus" });
 
-employeeModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
-acedmicYearModel.hasMany(employeeModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
-
 employeeModel.belongsTo(roleModel, { foreignKey: "role_id", as: "employeeRole" });
 roleModel.hasMany(employeeModel, { foreignKey: "role_id", as: "employeeRole" });
 

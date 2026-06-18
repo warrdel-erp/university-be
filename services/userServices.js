@@ -53,7 +53,6 @@ const formatEmployeeDetailsDeep = (employee) => {
     role: employee?.employeeRole?.role,
     campusId: employee.campusId,
     instituteId: employee.instituteId,
-    academicYearId: employee.acedmicYearId,
     instituteName: employee?.employeeInstitute?.instituteName,
   };
   // Subjects Taught

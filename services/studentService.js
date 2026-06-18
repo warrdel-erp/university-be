@@ -624,14 +624,13 @@ export async function importStudentData(excelData, data) {
         await assertFeePlanProfileForInstitute(convertedData.feePlanProfileId);
       }
 
-      delete convertedData.acedmicYearId;
-
-      //  Step 7: Insert student with scholar number
       const mapperAcedmicYearId = await resolveAcedmicYearIdForClassMapping({
         acedmicYearId: convertedData.acedmicYearId,
         sessionId: convertedData.sessionId,
       });
       delete convertedData.acedmicYearId;
+
+      //  Step 7: Insert student with scholar number
 
       const result = await studentRepository.addStudent(
         convertedData,

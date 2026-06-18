@@ -196,7 +196,7 @@ export async function getAllCourses({ acedmicYearId, campusId } = {}) {
                 ...sessionScope,
                 ...(acedmicYearId && { acedmicYearId }),
               },
-              required: false,
+              required: Boolean(acedmicYearId),
             },
           ],
         },
@@ -248,6 +248,7 @@ export async function getCourseWithSessionsData(
         ? { instituteId: allowedInstituteIds[0] }
         : { instituteId: { [Op.in]: allowedInstituteIds } };
 
+    const mappingScope = buildScope(model.sessionCouseMappingModel);
     const sessionScope = buildScope(model.sessionModel);
     const classScope = buildScope(model.classModel);
 
@@ -257,7 +258,9 @@ export async function getCourseWithSessionsData(
         {
           model: model.sessionCouseMappingModel.unscoped(),
           as: 'sessionCourseMappings',
-          attributes: ['sessionCourseMappingId'],
+          attributes: ['sessionCourseMappingId', 'courseId', 'sessionId'],
+          where: mappingScope,
+          required: false,
           include: [
             {
               model: model.sessionModel.unscoped(),
@@ -274,6 +277,7 @@ export async function getCourseWithSessionsData(
                 ...sessionScope,
                 ...(acedmicYearId ? { acedmicYearId } : {}),
               },
+              required: Boolean(acedmicYearId),
               include: [
                 {
                   model: model.classSectionModel.unscoped(),
@@ -302,7 +306,7 @@ export async function getCourseWithSessionsData(
     coursePayload.sessionCourseMappings = (coursePayload.sessionCourseMappings || []).filter(
       (sessionCourseMapping) => {
         const sessionId = sessionCourseMapping.session?.sessionId;
-        if (sessionId == null) return true;
+        if (sessionId == null) return false;
         if (dedupedSessionIds.has(sessionId)) return false;
         dedupedSessionIds.add(sessionId);
         return true;
