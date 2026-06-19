@@ -1,156 +1,160 @@
 import { requestContext } from "./requestContext.js";
 
-/**
- * Multi-tenant query scoping for Sequelize models.
- *
- * Reads tenant context from requestContext (set in authUser middleware):
- *   universityId, instituteId, academicYearId, userId, role
- *
- * Use explicit scoping only:
- *   scoped(model.departmentModel).findAll({ where: { ... } })
- *
- * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
- * or when store.bypass is true (set for routes like /institute, /acedmicYear).
- */
-
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
 
-function isScoped(configValue, field, attrs) {
-  return configValue !== false && (configValue === true || field in attrs);
-}
+/*
+Example:
 
-function getOriginal(model, method) {
-  if (model._scopeOriginals?.[method]) {
-    return model._scopeOriginals[method];
-  }
-  return model[method].bind(model);
+model.scopeConfig = {
+    university: true,
+    institute: true,
+    academicYear: false,
+    teacherRestricted: true
 }
+*/
 
-function mergeScopedWhere(baseWhere, optionsWhere = {}, pkField, pkValue) {
-  const where = { ...optionsWhere, ...baseWhere };
-  if (pkField != null && pkValue != null) {
-    where[pkField] = pkValue;
-  }
-  return where;
-}
-
-function scopeFieldsForModel(model, scopeWhere) {
-  const attrs = model.rawAttributes || {};
-  const filtered = {};
-  for (const [key, value] of Object.entries(scopeWhere)) {
-    if (key in attrs) {
-      filtered[key] = value;
-    }
-  }
-  return filtered;
-}
-
-/**
- * Builds tenant WHERE filters for a model based on requestContext.
- * Override per model via model.scopeConfig: { university, institute, academicYear, teacherRestricted }
- */
-export const buildScope = (model) => {
-  const where = {};
-  const config = model.scopeConfig || {};
+function getScope(model) {
   const store = requestContext.getStore();
-  const attrs = model.rawAttributes || {};
+  const scope = {};
 
   if (!store || store.bypass) {
-    return where;
+    return scope;
   }
 
-  if (isScoped(config.university, "universityId", attrs)) {
+  const config = model.scopeConfig || {};
+  const attrs = model.rawAttributes || {};
+
+  if (config.university !== false && attrs.universityId) {
     if (!store.universityId) {
-      throw new Error(`Error in university scope ${model.name}`);
+      throw new Error("University missing");
     }
-    where.universityId = store.universityId;
+
+    scope.universityId = store.universityId;
   }
 
-  if (isScoped(config.institute, "instituteId", attrs)) {
+  if (config.institute !== false && attrs.instituteId) {
     if (!store.instituteId) {
-      throw new Error(`Error in institute scope ${model.name}`);
+      throw new Error("Institute missing");
     }
-    where.instituteId = store.instituteId;
+
+    scope.instituteId = store.instituteId;
   }
 
-  if (isScoped(config.academicYear, ACADEMIC_YEAR_FIELD, attrs)) {
+  if (config.academicYear !== false && attrs[ACADEMIC_YEAR_FIELD]) {
     if (!store.academicYearId) {
-      throw new Error(`Error in academic year scope ${model.name}`);
+      throw new Error("Academic year missing");
     }
-    where[ACADEMIC_YEAR_FIELD] = store.academicYearId;
+
+    scope[ACADEMIC_YEAR_FIELD] = store.academicYearId;
   }
 
-  if (store.role === "teacher" && (config.teacherRestricted || "teacherId" in attrs)) {
+  if (
+    store.role === "teacher" &&
+    (config.teacherRestricted || attrs.teacherId)
+  ) {
     if (!store.userId) {
-      throw new Error(`Error in teacher scope ${model.name}`);
+      throw new Error("Teacher missing");
     }
-    where["teacherId" in attrs ? "teacherId" : "userId"] = store.userId;
+
+    if (attrs.teacherId) {
+      scope.teacherId = store.userId;
+    } else {
+      scope.userId = store.userId;
+    }
   }
 
-  return where;
-};
+  return scope;
+}
 
-export const scoped = (model) => {
-  const baseWhere = buildScope(model);
-  const pk = model.primaryKeyAttribute || "id";
-  const writeScope = scopeFieldsForModel(model, baseWhere);
+function mergeWhere(scope, where = {}) {
+  return {
+    ...where,
+    ...scope,
+  };
+}
+
+function getCreateData(model, data) {
+  const scope = getScope(model);
+
+  const allowed = {};
+
+  Object.keys(scope).forEach((key) => {
+    if (model.rawAttributes[key]) {
+      allowed[key] = scope[key];
+    }
+  });
 
   return {
-    findAll: (options = {}) =>
-      getOriginal(model, "findAll")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    findOne: (options = {}) =>
-      getOriginal(model, "findOne")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    findByPk: (id, options = {}) =>
-      getOriginal(model, "findOne")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where, pk, id),
-      }),
-
-    findAndCountAll: (options = {}) =>
-      getOriginal(model, "findAndCountAll")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    update: (data, options = {}) =>
-      getOriginal(model, "update")(data, {
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    delete: (options = {}) =>
-      getOriginal(model, "destroy")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    count: (options = {}) =>
-      getOriginal(model, "count")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    destroy: (options = {}) =>
-      getOriginal(model, "destroy")({
-        ...options,
-        where: mergeScopedWhere(baseWhere, options.where),
-      }),
-
-    create: (data, options = {}) =>
-      getOriginal(model, "create")({ ...data, ...writeScope }, options),
-
-    bulkCreate: (rows, options = {}) =>
-      getOriginal(model, "bulkCreate")(
-        rows.map((row) => ({ ...row, ...writeScope })),
-        { validate: true, ...options }
-      ),
+    ...data,
+    ...allowed,
   };
-};
+}
+
+export function scoped(model) {
+  const scope = getScope(model);
+
+  return {
+    findAll(options = {}) {
+      return model.findAll({
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    findOne(options = {}) {
+      return model.findOne({
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    findByPk(id, options = {}) {
+      return model.findOne({
+        ...options,
+        where: mergeWhere(scope, {
+          ...(options.where || {}),
+          [model.primaryKeyAttribute || "id"]: id,
+        }),
+      });
+    },
+
+    count(options = {}) {
+      return model.count({
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    findAndCountAll(options = {}) {
+      return model.findAndCountAll({
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    update(data, options = {}) {
+      return model.update(data, {
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    destroy(options = {}) {
+      return model.destroy({
+        ...options,
+        where: mergeWhere(scope, options.where),
+      });
+    },
+
+    create(data, options = {}) {
+      return model.create(getCreateData(model, data), options);
+    },
+
+    bulkCreate(rows, options = {}) {
+      return model.bulkCreate(
+        rows.map((row) => getCreateData(model, row)),
+        options,
+      );
+    },
+  };
+}
