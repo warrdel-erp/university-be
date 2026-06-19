@@ -161,9 +161,14 @@ export const addClass = async (req, res) => {
 
 export const getClass = async (req, res) => {
     try {
-        const classSectionIds = req.query.classSectionId;
+        const rawClassSectionId = req.query.classSectionId ?? req.query.classSectionsId;
+        const classSectionId =
+            rawClassSectionId != null && rawClassSectionId !== ''
+                ? Number(rawClassSectionId)
+                : 0;
         const acedmicYearId = req.query.acedmicYearId
-        const classSectionId = classSectionIds || 0;
+            ? Number(req.query.acedmicYearId)
+            : undefined;
         const result = await mainServices.getClassDetails(classSectionId, acedmicYearId);
         return res.status(200).send(result);
     } catch (error) {

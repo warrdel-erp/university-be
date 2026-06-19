@@ -1,7 +1,68 @@
-import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
+import { changeCourseStatuss, getCourseByCourseId, getSemestersByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
+
+function normalizeTermName(name) {
+    return String(name ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function buildTermName(termType, term) {
+    return `${termType} ${term}`;
+}
+
+function termNamesMatch(left, right) {
+    return normalizeTermName(left).toLowerCase() === normalizeTermName(right).toLowerCase();
+}
+
+function extractTermNumber(name) {
+    const match = String(name ?? '').match(/(\d+)/);
+    return match ? Number(match[1]) : null;
+}
+
+function resolveSemesterIdForTerm({
+    term,
+    termName,
+    courseId,
+    acedmicYearId = null,
+    semesters = [],
+}) {
+    const normalizedTermName = normalizeTermName(termName);
+
+    const courseSemesters = semesters.filter(
+        (semester) => Number(semester.courseId) === Number(courseId),
+    );
+
+    const pickFromMatches = (matches) => {
+        if (!matches.length) return null;
+        if (acedmicYearId) {
+            const inYear = matches.find(
+                (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+            );
+            if (inYear) return inYear.semesterId;
+        }
+        return matches[0].semesterId;
+    };
+
+    const byExactName = courseSemesters.filter((semester) =>
+        termNamesMatch(semester.name, normalizedTermName),
+    );
+    const exactMatch = pickFromMatches(byExactName);
+    if (exactMatch) {
+        return exactMatch;
+    }
+
+    const byTermNumber = courseSemesters.filter(
+        (semester) => extractTermNumber(semester.name) === Number(term),
+    );
+    const termNumberMatch = pickFromMatches(byTermNumber);
+    if (termNumberMatch) {
+        return termNumberMatch;
+    }
+
+    const byTermIndex = courseSemesters[Number(term) - 1];
+    return byTermIndex?.semesterId ?? null;
+}
 
 export async function getAllCollegesAndCourses(campusId, instituteId, acedmicYearId) {
     try {
@@ -230,7 +291,38 @@ export async function addClass(data, createdBy) {
         if (!term) throw new Error('Term is required');
         if (!sessionId) throw new Error('SessionId is required');
 
-        const classObject = { courseId, className, updatedBy: createdBy, createdBy, term, sessionId }
+        const course = await getCourseByCourseId(courseId);
+        if (!course) {
+            throw new Error('Course not found');
+        }
+
+        const termType = course.dataValues?.termType ?? course.termType;
+        const termName = buildTermName(termType, term);
+        const semesters = await getSemestersByCourseId(courseId);
+
+        const semesterId = resolveSemesterIdForTerm({
+            term,
+            termName,
+            courseId,
+            acedmicYearId,
+            semesters,
+        });
+
+        if (!semesterId) {
+            throw new Error(
+                `No semester found for course ${courseId} with name "${termName}" (term ${term})`,
+            );
+        }
+
+        const classObject = {
+            courseId,
+            className,
+            updatedBy: createdBy,
+            createdBy,
+            term,
+            sessionId,
+            semesterId,
+        };
 
         const classData = await mainRepository.seprateAddClass(classObject)
         const classId = classData.dataValues.classId
@@ -243,7 +335,8 @@ export async function addClass(data, createdBy) {
                 acedmicYearId,
                 classId,
                 term,
-                sessionId
+                sessionId,
+                semesterId,
             });
             results.push(result);
         }

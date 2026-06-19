@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { requestContext } from '../utility/requestContext.js';
 import { scoped } from '../utility/scoped.js';
 
 export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId) {
@@ -15,11 +16,24 @@ export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId
   }
 }
 
-export async function getSubjectsByCourseAndAcademicYearAndInstitute(courseId, acedmicYearId) {
+export async function getSubjectsByCourseAndAcademicYearAndInstitute(
+  courseId,
+  instituteId,
+  acedmicYearId
+) {
   try {
+
     return await scoped(model.subjectModel).findAll({
-      where: { courseId, acedmicYearId },
+      where: {
+        courseId,
+        instituteId,
+        acedmicYearId,
+      },
       attributes: ['subjectId', 'subjectName', 'term', 'subjectCode'],
+      order: [
+        ['term', 'ASC'],
+        ['subjectName', 'ASC'],
+      ],
       raw: true,
       nest: true,
     });

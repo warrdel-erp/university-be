@@ -2986,7 +2986,7 @@
     },
     {
       "name": "Students",
-      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`\n2. **GET /course/semesterWithClassSections** — target **sessionId** (2026 session for cross-year); pick next term's `classSections[].id`\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).\n\nSet header **X-Academic-Year-Id** to the **target** year when loading dropdown sections.",
+      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`, current `term`\n2. **GET /student/promotion/available-class-section** — `courseId`, `term`, `classSectionId` → target sections for next term/year\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).",
       "item": [
         {
           "name": "class section students",
@@ -3210,7 +3210,72 @@
                 }
               ]
             },
-            "description": "**GET /course/semesterWithClassSections** — promotion class-section dropdown.\n\n**Query:** `courseId`, `sessionId` (target year session).\n\n**Response:** array of `{ termName, term, classSections: [{ name, id }] }`. Use the group matching the **next** semester term.\n\nTest script sets `promotion_target_classSectionsId` from the first section found (override manually for the correct term)."
+            "description": "**GET /course/semesterWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-class-section** for term + academic-year aware promotion targets."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — available class sections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.acedmicYearId) pm.collectionVariables.set('promotion_target_acedmicYear_id', String(data.acedmicYearId));",
+                  "if (Array.isArray(data.classSections) && data.classSections[0]) {",
+                  "  const s = data.classSections[0];",
+                  "  if (s.classSectionsId) pm.collectionVariables.set('promotion_target_classSectionsId', String(s.classSectionsId));",
+                  "  if (s.sessionId) pm.collectionVariables.set('promotion_target_session_id', String(s.sessionId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/available-class-section?courseId={{course_id}}&term={{promotion_current_term}}&classSectionId={{classSections_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "available-class-section"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{promotion_current_term}}",
+                  "description": "Current term number (from class.term)"
+                },
+                {
+                  "key": "classSectionId",
+                  "value": "{{classSections_id}}",
+                  "description": "Student's current classSectionsId"
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/available-class-section**\n\n**Query:** `courseId`, `term` (current), `classSectionId` (current section).\n\nComputes next term from course `termType` + `totalTerms` / `courseDuration`:\n- Semester → year rolls after every 2 terms\n- Quarterly → year rolls after every 4 terms\n\n**Response `data`:** `promotedTerm`, `acedmicYearId`, `crossYear`, `classSections[]` (`classSectionsId`, `name`, `sessionId`).\n\nEmpty `classSections` when final term reached."
           },
           "response": []
         },
@@ -4678,7 +4743,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/teacher/teacherSection?employeeId=36&sessionId=6",
+              "raw": "{{baseurl}}/teacher/teacherSection?acedmicYearId=60&search=&page=1&limit=20",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4691,17 +4756,43 @@
                   "key": "employeeId",
                   "value": "36",
                   "description": "Optional — filter one teacher",
-                  "type": "text"
+                  "type": "text",
+                  "disabled": true
                 },
                 {
                   "key": "sessionId",
                   "value": "6",
                   "description": "Optional — filters class_sections.session_id",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "60",
+                  "description": "Optional — filters class_sections.acedmic_year_id",
+                  "type": "text"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional — employee name/code, section, course name/code, session name",
+                  "type": "text"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default 1)",
+                  "type": "text"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Page size 1–100 (default 20)",
                   "type": "text"
                 }
               ]
             },
-            "description": "**GET /teacher/teacherSection**\n\nTeacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`."
+            "description": "**GET /teacher/teacherSection**\n\nPaginated teacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`, `search`, `page`, `limit`.\n\n**Response:** `{ result, totalCount, page, limit, totalPages }`."
           },
           "response": []
         }
@@ -12259,6 +12350,18 @@
       "value": "6",
       "type": "string",
       "description": "Target sessionId (2026 session for cross-year promotion)"
+    },
+    {
+      "key": "promotion_current_term",
+      "value": "1",
+      "type": "string",
+      "description": "Current class term number (from class.term) for promotion dropdown"
+    },
+    {
+      "key": "classSections_id",
+      "value": "195",
+      "type": "string",
+      "description": "Student's current classSectionsId"
     },
     {
       "key": "institute_id",

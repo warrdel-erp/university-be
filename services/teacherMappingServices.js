@@ -44,8 +44,8 @@ export async function getTeacherSubjectMappingService(employeeId, subjectId, ses
   return await getTeacherSubjectMapping(employeeId, subjectId, sessionId, acedmicYearId);
 }
 
-export async function getTeacherSectionMappingService(employeeId) {
-  return await getTeacherSectionMapping(employeeId);
+export async function getTeacherSectionMappingService(filters) {
+  return await getTeacherSectionMapping(filters);
 }
 
 export async function saveOrUpdateTeacherSubjectMapping(list, userId) {

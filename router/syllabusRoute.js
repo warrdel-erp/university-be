@@ -22,7 +22,7 @@ const syllabusUnitSlabSchema = z.object({
   unitNumber: z.coerce.number().int().positive(),
   name: z.string().min(1),
   description: z.string().optional().nullable(),
-  contactHours: z.string().optional().nullable(),
+  contactHours: z.coerce.string().optional().nullable(),
 });
 
 const addSyllabusUnitSchema = z.object({
@@ -33,12 +33,21 @@ const addSyllabusUnitSchema = z.object({
   slab: z.array(syllabusUnitSlabSchema).min(1, 'At least one unit is required'),
 });
 
-const getSyllabusUnitQuerySchema = z.object({
-  acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
-  subjectId: z.coerce.number().int().positive().optional(),
-  sessionId: z.coerce.number().int().positive().optional(),
-  semesterId: z.coerce.number().int().positive().optional(),
-});
+const getSyllabusUnitQuerySchema = z
+  .object({
+    acedmicYearId: z.coerce.number().int().positive().optional(),
+    subjectId: z.coerce.number().int().positive().optional(),
+    sessionId: z.coerce.number().int().positive().optional(),
+    semesterId: z.coerce.number().int().positive().optional(),
+  })
+  .refine(
+    (data) =>
+      data.acedmicYearId != null ||
+      data.subjectId != null ||
+      data.sessionId != null ||
+      data.semesterId != null,
+    { message: 'At least one of acedmicYearId, subjectId, sessionId or semesterId is required' },
+  );
 
 const updateSyllabusUnitSchema = z
   .object({
@@ -50,7 +59,7 @@ const updateSyllabusUnitSchema = z
     unitNumber: z.coerce.number().int().positive().optional(),
     name: z.string().min(1).optional(),
     description: z.string().optional().nullable(),
-    contactHours: z.string().optional().nullable(),
+    contactHours: z.coerce.string().optional().nullable(),
   })
   .refine(
     (data) =>

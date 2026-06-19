@@ -13,8 +13,16 @@ export async function getTermsData(req, res) {
 
 export const getTermsWithSubject = async (req, res, next) => {
   try {
-    const acedmicYearId = req.query.acedmicYearId ?? req.user.defaultAcademicYearId;
-    const data = await termsService.getTermsWithSubjectService(acedmicYearId);
+    const instituteId = Number(req.query.instituteId);
+    const acedmicYearId = Number(req.query.acedmicYearId ?? req.user.defaultAcademicYearId);
+
+    const authorizedInstituteId = Number(
+      req.header('X-Institute-Id') || req.user.defaultInstituteId
+    );
+    if (instituteId !== authorizedInstituteId) {
+      return res.status(403).json({ message: 'instituteId does not match authorized institute' });
+    }
+    const data = await termsService.getTermsWithSubjectService(instituteId, acedmicYearId);
     return res.status(200).json(data);
   } catch (error) {
     next(error);

@@ -167,7 +167,7 @@ export const classStudentMapping = async (req, res) => {
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in class Student Mapping:", error);
-        return res.status(500).send("Internal Server Error");
+        return res.status(error.statusCode || 500).json({ error: error.message || "Internal Server Error" });
     }
 };
 
@@ -204,26 +204,69 @@ export const addElectiveSubject = async (req, res) => {
 
 export const promoteStudent = async (req, res) => {
     const data = req.body;
+    const createdBy = req.user.userId;
+
     try {
+        const promoteOne = async (payload) => {
+            const classSectionsId = payload.classSectionsId ?? payload.classSectionId;
+            if (!(payload.studentId && classSectionsId)) {
+                const error = new Error(
+                    "studentId and classSectionsId are required for all students.",
+                );
+                error.statusCode = 400;
+                throw error;
+            }
+            return studentService.promoteStudent({ ...payload, classSectionsId, createdBy });
+        };
 
         if (Array.isArray(data)) {
             const results = [];
             for (const student of data) {
-                if (!(student.studentId && student.semesterId)) {
-                    return res.status(400).send("Both semesterId and studentId are required for all students.");
-                }
-                const result = await studentService.promoteStudent(student);
-                results.push(result);
+                results.push(await promoteOne(student));
             }
             return res.status(200).json(results);
         }
 
-        const result = await studentService.promoteStudent(data);
+        const result = await promoteOne(data);
         return res.status(200).json(result);
-
     } catch (error) {
         console.error("Error in promoteStudent:", error);
-        return res.status(500).send("Internal Server Error: " + error.message);
+        const statusCode = error.statusCode || 500;
+        return res
+            .status(statusCode)
+            .json({ error: error.message || "Internal Server Error" });
+    }
+};
+
+export const getPromotionAvailableClassSection = async (req, res) => {
+    try {
+        const { courseId, term, classSectionId } = req.query;
+
+        const data = await studentService.getAvailablePromotionClassSections({
+            courseId,
+            term,
+            classSectionId,
+        });
+
+        if (data.finalTerm) {
+            return SuccessResponse(res, 200, "Final term reached", {
+                promotedTerm: data.promotedTerm,
+                acedmicYearId: data.acedmicYearId,
+                crossYear: data.crossYear,
+                classSections: data.classSections,
+            });
+        }
+
+        return SuccessResponse(res, 200, "Promotion class sections fetched successfully", {
+            promotedTerm: data.promotedTerm,
+            acedmicYearId: data.acedmicYearId,
+            crossYear: data.crossYear,
+            termsPerYear: data.termsPerYear,
+            totalTerms: data.totalTerms,
+            classSections: data.classSections,
+        });
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
 };
 

@@ -1,6 +1,12 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
+import { requestContext } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+
+function omitAcademicYearScope(scopeWhere = {}) {
+  const { acedmicYearId, ...rest } = scopeWhere;
+  return rest;
+}
 
 export async function getCourseByCourseId(courseId) {
   try {
@@ -54,10 +60,20 @@ export async function getCourseByAcedmicId(acedmicYearId) {
   }
 }
 
-export async function getAllCourseByInstituteId() {
+export async function getAllCourseByInstituteId(instituteId) {
   try {
-    return await scoped(model.courseModel).findAll({
+    const store = requestContext.getStore();
+    if (!store?.universityId) {
+      throw new Error('University scope required');
+    }
+
+    return await model.courseModel.unscoped().findAll({
+      where: {
+        instituteId,
+        universityId: store.universityId,
+      },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+      order: [['courseName', 'ASC']],
     });
   } catch (error) {
     console.error('Error in getting course details By InstituteI:', error);
@@ -360,7 +376,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
           attributes: ['term'],
         },
       ],
-      attributes: ['classSectionsId', 'section'],
+      attributes: ['classSectionsId', 'section', 'semesterId'],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);
@@ -400,6 +416,40 @@ export async function getCourseListWithSubjects(acedmicYearId) {
     });
   } catch (error) {
     console.error('Error in Course Repository (getCourseListWithSubjects):', error);
+    throw error;
+  }
+}
+
+export async function getSessionAcademicYearId(sessionId) {
+  try {
+    const session = await scoped(model.sessionModel).findOne({
+      where: { sessionId },
+      attributes: ['acedmicYearId'],
+      raw: true,
+    });
+    return session?.acedmicYearId ?? null;
+  } catch (error) {
+    console.error('Error in Course Repository (getSessionAcademicYearId):', error);
+    throw error;
+  }
+}
+
+export async function getSemestersByCourseId(courseId) {
+  try {
+    return model.semesterModel.unscoped().findAll({
+      where: {
+        courseId,
+        ...omitAcademicYearScope(buildScope(model.semesterModel)),
+      },
+      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId'],
+      order: [
+        ['acedmicYearId', 'ASC'],
+        ['semesterId', 'ASC'],
+      ],
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error in Course Repository (getSemestersByCourseId):', error);
     throw error;
   }
 }

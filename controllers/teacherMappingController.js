@@ -57,9 +57,8 @@ export const getTeacherSubjectMapping = async (req, res) => {
 };
 
 export const getTeacherSectionMapping = async (req, res) => {
-    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(employeeId);
+        const result = await teacherMapping.getTeacherSectionMappingService(req.query);
         res.status(200).send(result);
     } catch (error) {
         console.error('Error in getting Teacher Section Mapping:', error);

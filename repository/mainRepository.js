@@ -303,8 +303,10 @@ export async function getClassDetails(classSectionsId, acedmicYearId) {
                 }
             ],
             where: {
-                ...(classSectionsId !== 0 && { classSectionsId }),
-                ...(acedmicYearId && { acedmicYearId }),
+                ...(classSectionsId && Number(classSectionsId) !== 0 && {
+                    classSectionsId: Number(classSectionsId),
+                }),
+                ...(acedmicYearId && { acedmicYearId: Number(acedmicYearId) }),
             }
         };
 

@@ -1,15 +1,20 @@
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 
-function buildUnitWhere({ acedmicYearId, syllabusUnitId, subjectId, sessionId, semesterId }) {
-  const where = { acedmicYearId };
-  if (syllabusUnitId != null) where.syllabusUnitId = syllabusUnitId;
-  if (subjectId != null) where.subjectId = subjectId;
-  if (sessionId != null) where.sessionId = sessionId;
-  if (semesterId != null) where.semesterId = semesterId;
-  return where;
+function omitAcademicYearScope(scopeWhere = {}) {
+  const { acedmicYearId, ...rest } = scopeWhere;
+  return rest;
 }
 
+function buildUnitWhere({ acedmicYearId, syllabusUnitId, subjectId, sessionId, semesterId }) {
+  const where = {};
+  if (acedmicYearId != null) where.acedmicYearId = Number(acedmicYearId);
+  if (syllabusUnitId != null) where.syllabusUnitId = Number(syllabusUnitId);
+  if (subjectId != null) where.subjectId = Number(subjectId);
+  if (sessionId != null) where.sessionId = Number(sessionId);
+  if (semesterId != null) where.semesterId = Number(semesterId);
+  return where;
+}
 const unitIncludes = [
   {
     model: model.instituteModel.unscoped(),
@@ -196,6 +201,78 @@ export async function courseAllSubject(courseId, sessionId) {
   }
 }
 
+export async function getSubjectForUnitResolution(subjectId) {
+  try {
+    return model.subjectModel.unscoped().findOne({
+      where: { subjectId: Number(subjectId) },
+      attributes: ['subjectId', 'courseId', 'term', 'instituteId', 'campusId', 'acedmicYearId'],
+      include: [
+        {
+          model: model.courseModel.unscoped(),
+          as: 'courseInfo',
+          attributes: ['courseId', 'termType'],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching subject for syllabus unit:', error);
+    throw error;
+  }
+}
+
+export async function getSemestersForCourse(courseId) {
+  try {
+    return model.semesterModel.unscoped().findAll({
+      where: {
+        courseId: Number(courseId),
+        ...omitAcademicYearScope(buildScope(model.semesterModel)),
+      },
+      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId'],
+      order: [
+        ['acedmicYearId', 'ASC'],
+        ['semesterId', 'ASC'],
+      ],
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error fetching semesters for syllabus unit:', error);
+    throw error;
+  }
+}
+
+export async function backfillSubjectCampusId(subjectId) {
+  try {
+    const subject = await model.subjectModel.unscoped().findOne({
+      where: { subjectId: Number(subjectId) },
+      attributes: ['subjectId', 'campusId', 'instituteId'],
+    });
+
+    if (!subject || subject.campusId) {
+      return subject?.campusId ?? null;
+    }
+
+    const institute = await model.instituteModel.unscoped().findOne({
+      where: { instituteId: subject.instituteId },
+      attributes: ['campusId'],
+      raw: true,
+    });
+
+    if (!institute?.campusId) {
+      return null;
+    }
+
+    await model.subjectModel.unscoped().update(
+      { campusId: institute.campusId },
+      { where: { subjectId: Number(subjectId) } },
+    );
+
+    return institute.campusId;
+  } catch (error) {
+    console.error('Error backfilling subject campusId:', error);
+    throw error;
+  }
+}
+
 export async function addSyllabusUnit(syllabusData) {
   try {
     return await scoped(model.syllabusUnitModel).bulkCreate(syllabusData);
@@ -209,7 +286,7 @@ export async function syllabusUnitGet(filters = {}) {
   try {
     const { acedmicYearId, subjectId, sessionId, semesterId } = filters;
 
-    return await scoped(model.syllabusUnitModel).findAll({
+    return await model.syllabusUnitModel.unscoped().findAll({
       where: buildUnitWhere({ acedmicYearId, subjectId, sessionId, semesterId }),
       attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
       order: [
@@ -226,11 +303,10 @@ export async function syllabusUnitGet(filters = {}) {
 
 export async function getSyllabusUnitById(syllabusUnitId, acedmicYearId) {
   try {
-    return await scoped(model.syllabusUnitModel).findOne({
+    return await model.syllabusUnitModel.unscoped().findOne({
       where: buildUnitWhere({ syllabusUnitId, acedmicYearId }),
       attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
-    });
-  } catch (error) {
+    });  } catch (error) {
     console.error('Error fetching syllabus unit by id:', error);
     throw error;
   }
@@ -243,10 +319,9 @@ export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data) {
       return null;
     }
 
-    await scoped(model.syllabusUnitModel).update(data, {
+    await model.syllabusUnitModel.unscoped().update(data, {
       where: buildUnitWhere({ syllabusUnitId, acedmicYearId }),
     });
-
     return getSyllabusUnitById(syllabusUnitId, acedmicYearId);
   } catch (error) {
     console.error('Error updating syllabus unit:', error);
@@ -261,10 +336,9 @@ export async function deleteSyllabusUnit(syllabusUnitId, acedmicYearId) {
       return false;
     }
 
-    const deleted = await scoped(model.syllabusUnitModel).destroy({
+    const deleted = await model.syllabusUnitModel.unscoped().destroy({
       where: buildUnitWhere({ syllabusUnitId, acedmicYearId }),
     });
-
     return deleted > 0;
   } catch (error) {
     console.error('Error deleting syllabus unit:', error);

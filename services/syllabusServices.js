@@ -69,12 +69,97 @@ export async function courseAllSubject(courseId, sessionId) {
   return await SyllabusCreationRepository.courseAllSubject(courseId, sessionId);
 }
 
+function normalizeTermName(name) {
+  return String(name ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function termNamesMatch(left, right) {
+  return normalizeTermName(left).toLowerCase() === normalizeTermName(right).toLowerCase();
+}
+
+function extractTermNumber(name) {
+  const match = String(name ?? '').match(/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveSemesterIdForTerm({ term, termName, courseId, acedmicYearId, semesters }) {
+  const courseSemesters = semesters.filter(
+    (semester) => Number(semester.courseId) === Number(courseId),
+  );
+
+  const pickFromMatches = (matches) => {
+    if (!matches.length) return null;
+    if (acedmicYearId) {
+      const inYear = matches.find(
+        (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+      );
+      if (inYear) return inYear.semesterId;
+    }
+    return matches[0].semesterId;
+  };
+
+  const byExactName = courseSemesters.filter((semester) =>
+    termNamesMatch(semester.name, termName),
+  );
+  const exactMatch = pickFromMatches(byExactName);
+  if (exactMatch) return exactMatch;
+
+  const byTermNumber = courseSemesters.filter(
+    (semester) => extractTermNumber(semester.name) === Number(term),
+  );
+  const termNumberMatch = pickFromMatches(byTermNumber);
+  if (termNumberMatch) return termNumberMatch;
+
+  return courseSemesters[Number(term) - 1]?.semesterId ?? null;
+}
+
+async function resolveSemesterIdForSubject({ subjectId, acedmicYearId }) {
+  const subject = await SyllabusCreationRepository.getSubjectForUnitResolution(subjectId);
+  if (!subject) {
+    throw new Error('Subject not found');
+  }
+
+  const plain = subject.get({ plain: true });
+  const term = plain.term;
+  const courseId = plain.courseId;
+  const termType = plain.courseInfo?.termType;
+
+  if (term == null || !courseId || !termType) {
+    return null;
+  }
+
+  const termName = `${termType} ${term}`;
+  const semesters = await SyllabusCreationRepository.getSemestersForCourse(courseId);
+
+  return resolveSemesterIdForTerm({
+    term,
+    termName,
+    courseId,
+    acedmicYearId,
+    semesters,
+  });
+}
+
 export async function addSyllabusUnit(data, createdBy, updatedBy) {
   const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
+
+  await SyllabusCreationRepository.backfillSubjectCampusId(subjectId);
+
+  let resolvedSemesterId = semesterId ?? null;
+  if (!resolvedSemesterId) {
+    resolvedSemesterId = await resolveSemesterIdForSubject({ subjectId, acedmicYearId });
+  }
+
+  if (!resolvedSemesterId) {
+    throw new Error(
+      'semesterId could not be resolved from subject course/term; pass semesterId or configure semesters for the course',
+    );
+  }
+
   const syllabusUnits = slab.map((unit) => ({
     sessionId,
     acedmicYearId,
-    semesterId: semesterId ?? null,
+    semesterId: resolvedSemesterId,
     subjectId,
     unitNumber: unit.unitNumber,
     name: unit.name,
@@ -105,6 +190,7 @@ function mapSyllabusUnit(unit) {
     subjectId: unit.subjectId,
     subjectName: unit.subjectUnit?.subjectName || null,
     subjectCode: unit.subjectUnit?.subjectCode || null,
+    campusId: unit.subjectUnit?.campusId ?? null,
     unitNumber: unit.unitNumber,
     name: unit.name,
     description: unit.description,

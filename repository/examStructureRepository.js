@@ -1,6 +1,13 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
+function resolveAcedmicYearId(explicit) {
+  if (explicit != null && explicit !== "") {
+    return Number(explicit);
+  }
+  return buildScope(model.examStructureModel).acedmicYearId;
+}
+
 export async function addExamStructure(examDetail) {
   try {
     const result = await scoped(model.examStructureModel).create(examDetail);
@@ -13,12 +20,13 @@ export async function addExamStructure(examDetail) {
 
 export async function getExamStructure(acedmicYearId) {
   try {
+    const yearId = resolveAcedmicYearId(acedmicYearId);
     const result = await scoped(model.examStructureModel).findAll({
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
       },
       where: {
-        ...(acedmicYearId && { acedmicYearId }),
+        ...(yearId && { acedmicYearId: yearId }),
       },
       include: [
         {
@@ -40,11 +48,12 @@ export async function getExamStructure(acedmicYearId) {
   }
 };
 
-export async function getSingleExamStructure(courseId, sessionId) {
+export async function getSingleExamStructure(courseId, sessionId, acedmicYearId) {
   try {
+    const yearId = resolveAcedmicYearId(acedmicYearId);
     const result = await scoped(model.examStructureModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { courseId, sessionId },
+      where: { courseId, sessionId, acedmicYearId: yearId },
       include: [
         {
           model: model.courseModel.unscoped(),
@@ -104,6 +113,16 @@ export async function updateExamStructure(examStructureId, examDetail) {
 
 export async function addExamType(examDetail) {
   try {
+    const existingStructure = await scoped(model.examStructureModel).findOne({
+      where: { examStructureId: examDetail.examStructureId },
+      attributes: ["examStructureId"],
+    });
+    if (!existingStructure) {
+      const error = new Error("Exam structure not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
     const result = await scoped(model.examSetupTypeModel).create(examDetail);
     return result;
   } catch (error) {
@@ -122,8 +141,7 @@ export async function getDetailByExamType(examSetupTypeId) {
           model: model.examStructureModel.unscoped(),
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: buildScope(model.examStructureModel),
-          required: false,
+          required: true,
           include: [
             {
               model: model.courseModel.unscoped(),
@@ -152,12 +170,13 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
   try {
+    const yearId = resolveAcedmicYearId(acedmicYearId);
     const structureWhere = {
       courseId,
       sessionId,
-      ...buildScope(model.examStructureModel),
+      acedmicYearId: yearId,
     };
 
     const termInclude = {
@@ -165,7 +184,9 @@ export async function getSingleExamType(courseId, sessionId, termNumber) {
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: {
-        ...(termNumber != null && { term: termNumber, courseId }),
+        acedmicYearId: yearId,
+        courseId,
+        ...(termNumber != null && { term: termNumber }),
       },
       required: termNumber != null,
     };

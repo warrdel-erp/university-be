@@ -19,9 +19,8 @@ export async function addExamStructure(req, res) {
 }
 
 export async function getAllExamStructure(req, res) {
-  const { acedmicYearId } = req.query;
   try {
-    const Structures = await examStructureServices.getExamStructure(acedmicYearId);
+    const Structures = await examStructureServices.getExamStructure(req.query.acedmicYearId);
     return SuccessResponse(res, 200, "Exam Structures fetched successfully", Structures);
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
@@ -30,8 +29,12 @@ export async function getAllExamStructure(req, res) {
 
 export async function getSingleExamStructure(req, res) {
   try {
-    const { courseId, sessionId } = req.query;
-    const examDetails = await examStructureServices.getSingleExamStructure(courseId, sessionId);
+    const { courseId, sessionId, acedmicYearId } = req.query;
+    const examDetails = await examStructureServices.getSingleExamStructure(
+      courseId,
+      sessionId,
+      acedmicYearId,
+    );
 
     if (examDetails) {
       return SuccessResponse(res, 200, "Exam Structure fetched successfully", examDetails);
@@ -84,7 +87,7 @@ export async function addExamType(req, res) {
     );
     return SuccessResponse(res, 201, "Exam setup type created successfully", examStructure);
   } catch (error) {
-    return ErrorResponse(res, 500, error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message);
   }
 }
 
@@ -104,10 +107,11 @@ export async function getDetailByExamType(req, res) {
 
 export async function getSingleExamType(req, res) {
   try {
-    const { courseId, sessionId, termNumber } = req.query;
+    const { courseId, sessionId, acedmicYearId, termNumber } = req.query;
     const examDetails = await examStructureServices.getSingleExamType(
       courseId,
       sessionId,
+      acedmicYearId,
       termNumber ?? null,
     );
 

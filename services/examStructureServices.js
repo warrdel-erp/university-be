@@ -12,8 +12,8 @@ export async function getExamStructure(acedmicYearId) {
     return await examStructureRepository.getExamStructure(acedmicYearId);
 };
 
-export async function getSingleExamStructure(courseId, sessionId) {
-    return await examStructureRepository.getSingleExamStructure(courseId, sessionId);
+export async function getSingleExamStructure(courseId, sessionId, acedmicYearId) {
+    return await examStructureRepository.getSingleExamStructure(courseId, sessionId, acedmicYearId);
 };
 
 export async function deleteExamStructure(examStructureId) {
@@ -50,10 +50,11 @@ function resolveTerm(termNumber, termRows) {
     return termRows[0]?.term ?? null;
 }
 
-export async function getSingleExamType(courseId, sessionId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
     const result = await examStructureRepository.getSingleExamType(
         courseId,
         sessionId,
+        acedmicYearId,
         termNumber,
     );
 

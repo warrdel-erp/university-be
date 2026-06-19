@@ -13,6 +13,7 @@ import { getEmployeeCodesTypesForStudentImport } from "../repository/codeMasterR
 import {
   getCourseByName,
   getClassByName,
+  getCourseByCourseId,
 } from "../repository/courseRepository.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
@@ -224,15 +225,19 @@ export async function addStudent(
       roleId,
     };
 
-    const data = {
-      studentId,
-      acedmicYearId: mapperAcedmicYearId,
-      createdBy,
-      sessionId,
-      ...(info.semesterId && { semesterId: info.semesterId }),
-    };
+    const mapperPayload = await studentRepository.buildClassStudentMapperCreatePayload(
+      {
+        studentId,
+        classSectionsId: classSectionId,
+        createdBy,
+        semesterId: studentPayload.semesterId,
+        sessionId,
+        acedmicYearId: mapperAcedmicYearId,
+      },
+      transaction,
+    );
     const result = await studentRepository.classStudentMapping(
-      data,
+      mapperPayload,
       transaction,
     );
 
@@ -343,23 +348,19 @@ export async function addStudent(
   }
 }
 
-function studentHttpError(message, statusCode = 400) {
-  const err = new Error(message);
-  err.statusCode = statusCode;
-  return err;
-}
+
 
 async function assertFeePlanProfileForInstitute(feePlanProfileId) {
   const profile = await feePlanProfileRepository.findFeePlanProfileByIdForInstitute(
     feePlanProfileId
   );
   if (!profile) {
-    throw studentHttpError("Fee plan profile not found for this institute", 404);
+    throw new Error("Fee plan profile not found for this institute");
   }
   const plain =
     typeof profile.get === "function" ? profile.get({ plain: true }) : profile;
   if (plain.publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-    throw studentHttpError("Only published fee plans can be assigned to students", 400);
+    throw new Error("Only published fee plans can be assigned to students");
   }
 }
 
@@ -1010,11 +1011,7 @@ async function applyStudentMetaDataUpdates(studentId, info, transaction) {
   }
 }
 
-function updateHttpError(message, statusCode = 400) {
-  const err = new Error(message);
-  err.statusCode = statusCode;
-  return err;
-}
+
 
 export async function updateStudentDetails(
   StudentId,
@@ -1157,7 +1154,7 @@ export async function updateStudentDetails(
 
     const studentRow = await getSingleStudentDetail(StudentId);
     if (!studentRow) {
-      throw updateHttpError("Student not found", 404);
+      throw new Error("Student not found");
     }
 
     const plainStudent = toPlainRow(studentRow);
@@ -1222,13 +1219,19 @@ export async function studentCourseMapping(data) {
 export async function classStudentMapping(data, createdBy) {
   try {
     const { studentId, classSectionId } = data;
+    const studentIds = Array.isArray(studentId) ? studentId : [studentId];
     const results = [];
 
-    for (const id of studentId) {
-      const entryData = { studentId: id, classSectionId, createdBy };
+    for (const id of studentIds) {
+      const entryData = await studentRepository.buildClassStudentMapperCreatePayload(
+        {
+          studentId: id,
+          classSectionsId: classSectionId,
+          createdBy,
+        },
+      );
       const result = await studentRepository.classStudentMapping(entryData);
 
-      // Record in history
       await historyRepository.createHistory({
         studentId: id,
         classSectionsId: classSectionId,
@@ -1258,116 +1261,337 @@ export async function addElectiveSubject(data, createdBy) {
   return await studentRepository.addElectiveSubject(data);
 }
 
-export async function promoteStudent(data) {
-  if (!data) {
+function promotionError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+}
+
+const TERMS_PER_YEAR_BY_TYPE = {
+  SEMESTER: 2,
+  QUARTERLY: 4,
+  TRIMESTER: 3,
+};
+
+function resolveTermsPerYear(course) {
+  if (!course) return null;
+
+  const duration = Number(course.courseDuration);
+  const totalTerms = Number(course.totalTerms);
+  if (duration > 0 && totalTerms > 0 && totalTerms % duration === 0) {
+    return totalTerms / duration;
+  }
+
+  const normalized = String(course.termType || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+
+  if (normalized.includes("QUARTER")) return 4;
+  if (normalized.includes("TRIMEST")) return 3;
+  if (normalized.includes("SEMEST")) return 2;
+
+  for (const [key, value] of Object.entries(TERMS_PER_YEAR_BY_TYPE)) {
+    if (normalized.includes(key)) return value;
+  }
+
+  return null;
+}
+
+function resolveTotalTerms(course) {
+  const totalTerms = Number(course?.totalTerms);
+  if (totalTerms > 0) return totalTerms;
+
+  const duration = Number(course?.courseDuration);
+  const termsPerYear = resolveTermsPerYear(course);
+  if (duration > 0 && termsPerYear) {
+    return duration * termsPerYear;
+  }
+
+  return 0;
+}
+
+function calculateNextPromotionTerm(currentTerm, termsPerYear, totalTerms) {
+  const term = Number(currentTerm);
+  if (!Number.isInteger(term) || term <= 0) {
+    promotionError("term must be a positive integer");
+  }
+  if (!termsPerYear || termsPerYear <= 0) {
+    promotionError("Unable to determine terms per year for this course");
+  }
+
+  const maxTerms = Number(totalTerms);
+  if (!maxTerms || term >= maxTerms) {
+    return null;
+  }
+
+  const nextTerm = term + 1;
+  const currentYearGroup = Math.ceil(term / termsPerYear);
+  const nextYearGroup = Math.ceil(nextTerm / termsPerYear);
+
+  return {
+    nextTerm,
+    crossYear: nextYearGroup > currentYearGroup,
+  };
+}
+
+function mapPromotionClassSectionRow(row) {
+  const plain = row.get ? row.get({ plain: true }) : row;
+  return {
+    classSectionsId: plain.classSectionsId,
+    name: plain.section,
+    term: plain.classGroup?.term ?? null,
+    sessionId: plain.sessionId,
+    acedmicYearId: plain.acedmicYearId,
+    semesterId: plain.semesterId,
+    specializationId: plain.specializationId,
+  };
+}
+
+export async function getAvailablePromotionClassSections({
+  courseId,
+  term,
+  classSectionId,
+}) {
+  if (!courseId || !term || !classSectionId) {
+    promotionError("courseId, term and classSectionId are required");
+  }
+
+  const currentSection = await studentRepository.getTargetClassSectionForPromotion(
+    Number(classSectionId),
+  );
+  if (!currentSection) {
+    promotionError("Class section not found", 404);
+  }
+
+  const section = currentSection.get({ plain: true });
+  if (section.courseId !== Number(courseId)) {
+    promotionError("Class section does not belong to the given course");
+  }
+
+  const sectionTerm = section.classGroup?.term;
+  if (sectionTerm != null && Number(term) !== Number(sectionTerm)) {
+    promotionError("term does not match the selected class section");
+  }
+
+  const sourceAcedmicYearId = section.acedmicYearId;
+  const instituteId = section.instituteId;
+  const specializationId = section.specializationId ?? null;
+
+  const course = await getCourseByCourseId(Number(courseId));
+  if (!course) {
+    promotionError("Course not found", 404);
+  }
+
+  const termsPerYear = resolveTermsPerYear(course);
+  if (!termsPerYear) {
+    promotionError(`Unsupported or missing term type: ${course.termType || "unknown"}`);
+  }
+
+  const totalTerms = resolveTotalTerms(course);
+  const promotionStep = calculateNextPromotionTerm(term, termsPerYear, totalTerms);
+
+  if (!promotionStep) {
     return {
-      message:
-        "next acedmic year is active for promate the student and semester is required",
+      finalTerm: true,
+      promotedTerm: null,
+      acedmicYearId: sourceAcedmicYearId,
+      crossYear: false,
+      classSections: [],
     };
   }
 
-  const studentDetail = await studentRepository.getStudentForPromate(
-    data.studentId,
+  let targetAcedmicYearId = sourceAcedmicYearId;
+
+  if (promotionStep.crossYear) {
+    const nextYear = await studentRepository.getNextAcedmicYearAfter(sourceAcedmicYearId);
+    if (!nextYear) {
+      promotionError("Next academic year not found", 404);
+    }
+    targetAcedmicYearId = nextYear.acedmicYearId;
+  }
+
+  const rows = await studentRepository.getPromotionClassSections({
+    courseId: Number(courseId),
+    acedmicYearId: targetAcedmicYearId,
+    term: promotionStep.nextTerm,
+    specializationId,
+    instituteId,
+  });
+
+  return {
+    finalTerm: false,
+    promotedTerm: promotionStep.nextTerm,
+    acedmicYearId: targetAcedmicYearId,
+    crossYear: promotionStep.crossYear,
+    termsPerYear,
+    totalTerms,
+    classSections: rows.map(mapPromotionClassSectionRow),
+  };
+}
+
+export async function promoteStudent(data) {
+  if (!data?.studentId) {
+    promotionError("studentId is required");
+  }
+
+  const targetClassSectionsId = data.classSectionsId ?? data.classSectionId;
+  if (!targetClassSectionsId) {
+    promotionError("classSectionsId is required");
+  }
+
+  const studentDetail = await studentRepository.getStudentForPromate(data.studentId);
+  if (!studentDetail) {
+    promotionError("Student not found", 404);
+  }
+
+  const targetSection = await studentRepository.getTargetClassSectionForPromotion(
+    targetClassSectionsId,
   );
+  if (!targetSection) {
+    promotionError("Target class section not found", 404);
+  }
 
-  const classStudentMapper =
-    await studentRepository.getClassStudentMapperByStudentId(data.studentId);
+  const student = studentDetail.dataValues;
+  const sectionPlain = targetSection.get({ plain: true });
 
-  const courseId = studentDetail.dataValues.courseId;
+  if (sectionPlain.instituteId !== student.instituteId) {
+    promotionError("Class section does not belong to the student's institute");
+  }
+  if (sectionPlain.courseId !== student.courseId) {
+    promotionError("Class section does not belong to the student's course");
+  }
+  if (
+    student.specializationId &&
+    sectionPlain.specializationId &&
+    sectionPlain.specializationId !== student.specializationId
+  ) {
+    promotionError("Class section specialization does not match the student");
+  }
 
+  const courseId = student.courseId;
+  const currentSemesterId =
+    student.semesterId ?? studentDetail.studentMapped?.[0]?.semesterId ?? null;
   const currentAcademicYearId =
     studentDetail.studentMapped?.[0]?.acedmicYearId ??
     studentDetail.studentSession?.acedmicYearId;
 
-  const allSemestersRaw =
-    await studentRepository.getSemesterByCourseId(courseId);
+  if (!currentSemesterId) {
+    promotionError("Student current semester could not be determined");
+  }
 
-  const allAcedmicYears =
-    await acedmicYearCreationService.getacedmicYearDetails(
-      studentDetail.dataValues.universityId,
+  const targetSemesterId = sectionPlain.semesterId ?? Number(data.semesterId);
+  if (!targetSemesterId) {
+    promotionError(
+      "Target class section has no semesterId; pass semesterId in the request body",
     );
+  }
 
-  //  Ensure semesters are in array format
-  const allSemesters = Array.isArray(allSemestersRaw)
-    ? allSemestersRaw
-    : [allSemestersRaw];
+  if (
+    data.semesterId != null &&
+    sectionPlain.semesterId != null &&
+    Number(data.semesterId) !== sectionPlain.semesterId
+  ) {
+    promotionError("semesterId does not match the target class section");
+  }
 
-  //  Sort semesters by ID (or name if needed)
-  const sortedSemesters = allSemesters.sort(
-    (a, b) => a.semesterId - b.semesterId,
+  const progression = await studentRepository.getSemesterProgressionByCourseId(courseId);
+  if (!progression.length) {
+    promotionError("No semesters configured for this course");
+  }
+
+  const currentSemesterIndex = progression.findIndex(
+    (sem) => sem.semesterId === Number(currentSemesterId),
   );
-
-  //  Find current semester index
-  const currentSemesterIndex = sortedSemesters.findIndex(
-    (sem) => sem.semesterId === data.semesterId,
-  );
-
   if (currentSemesterIndex === -1) {
-    return { message: "Invalid semester ID for student" };
+    promotionError("Student current semester is not configured for this course");
   }
 
-  //  Get current semester object
-  const currentSemester = sortedSemesters[currentSemesterIndex];
+  const targetSemesterIndex = progression.findIndex(
+    (sem) => sem.semesterId === targetSemesterId,
+  );
+  if (targetSemesterIndex === -1) {
+    promotionError("Target semester is not configured for this course", 404);
+  }
 
-  const nextSemester = sortedSemesters[currentSemesterIndex + 1];
-
-  let nextAcedmicYearId = currentAcademicYearId;
-
-  //  Determine how many semesters per academic year
-  const semPerYear = 12 / currentSemester.semesterDuration;
-
-  //  Check if promotion crosses to next academic year
-  if ((currentSemesterIndex + 1) % semPerYear === 0) {
-    // Move to next academic year
-    const currentAcedmicYearObj = allAcedmicYears.find(
-      (a) => a.dataValues.acedmicYearId === currentAcademicYearId,
+  if (targetSemesterIndex !== currentSemesterIndex + 1) {
+    promotionError(
+      "Target class section semester must be the next semester after the student's current semester",
     );
-    const currentIndex = allAcedmicYears.indexOf(currentAcedmicYearObj);
+  }
 
-    if (currentIndex !== -1 && currentIndex + 1 < allAcedmicYears.length) {
-      nextAcedmicYearId =
-        allAcedmicYears[currentIndex + 1].dataValues.acedmicYearId;
-    } else {
-      console.log(`No next academic year found`);
+  // class_sections is the source of truth for cross-year promotion targets
+  const targetAcedmicYearId = sectionPlain.acedmicYearId;
+  const nextSessionId = sectionPlain.sessionId;
+
+  const latestMapper = await studentRepository.getClassStudentMapperByStudentId(
+    data.studentId,
+  );
+
+  const oldClassSectionId = student.classSectionsId;
+  const createdBy = data.createdBy ?? null;
+
+  const transaction = await sequelize.transaction();
+  try {
+    const result = await studentRepository.promoteStudent(
+      data.studentId,
+      {
+        semesterId: targetSemesterId,
+        acedmicYearId: targetAcedmicYearId,
+        classSectionsId: targetClassSectionsId,
+        sessionId: nextSessionId,
+        classStudentMapperId: latestMapper?.classStudentMapperId,
+      },
+      transaction,
+    );
+
+    if (oldClassSectionId) {
+      await historyRepository.createHistory(
+        {
+          studentId: data.studentId,
+          classSectionsId: oldClassSectionId,
+          status: "passed",
+          createdBy,
+        },
+        transaction,
+      );
     }
+
+    await historyRepository.createHistory(
+      {
+        studentId: data.studentId,
+        classSectionsId: targetClassSectionsId,
+        status: "current",
+        createdBy,
+      },
+      transaction,
+    );
+
+    await transaction.commit();
+
+    return {
+      message: "Student promoted",
+      result,
+      promotion: {
+        previous: {
+          acedmicYearId: currentAcademicYearId,
+          semesterId: Number(currentSemesterId),
+          classSectionsId: oldClassSectionId,
+          sessionId: student.sessionId,
+        },
+        current: {
+          acedmicYearId: targetAcedmicYearId,
+          semesterId: targetSemesterId,
+          classSectionsId: targetClassSectionsId,
+          sessionId: nextSessionId,
+        },
+        crossYear: targetAcedmicYearId !== currentAcademicYearId,
+      },
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
-
-  if (!nextSemester) {
-    return { message: "Student has completed all semesters" };
-  }
-
-  //  Update student mapping in DB
-  const result = await studentRepository.promoteStudent(data.studentId, {
-    semesterId: nextSemester.semesterId,
-    acedmicYearId: nextAcedmicYearId,
-    classSectionsId: data.classSectionsId, // if needed
-  });
-
-  // Record history (New entries only)
-  const oldClassSectionId = studentDetail.dataValues.classSectionsId;
-  const createdBy = data.createdBy || null;
-
-  // 1. Create entry for old section as 'passed'
-  if (oldClassSectionId) {
-    await historyRepository.createHistory({
-      studentId: data.studentId,
-      classSectionsId: oldClassSectionId,
-      status: "passed",
-      createdBy,
-    });
-  }
-
-  // 2. Create entry for new section as 'current'
-  if (data.classSectionsId) {
-    await historyRepository.createHistory({
-      studentId: data.studentId,
-      classSectionsId: data.classSectionsId,
-      status: "current",
-      createdBy,
-    });
-  }
-
-  return { message: "Student promoted", result };
 }
 
 function incrementScholarNumber(scholarNumber) {

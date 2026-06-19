@@ -1,5 +1,61 @@
 import * as courseRepository from '../repository/courseRepository.js';
 
+function normalizeTermName(name) {
+  return String(name ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function termNamesMatch(left, right) {
+  return normalizeTermName(left).toLowerCase() === normalizeTermName(right).toLowerCase();
+}
+
+function extractTermNumber(name) {
+  const match = String(name ?? '').match(/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveSemesterIdForTerm({
+  term,
+  termName,
+  courseId,
+  acedmicYearId = null,
+  semesters = [],
+}) {
+  const normalizedTermName = normalizeTermName(termName);
+
+  const courseSemesters = semesters.filter(
+    (semester) => Number(semester.courseId) === Number(courseId),
+  );
+
+  const pickFromMatches = (matches) => {
+    if (!matches.length) return null;
+    if (acedmicYearId) {
+      const inYear = matches.find(
+        (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+      );
+      if (inYear) return inYear.semesterId;
+    }
+    return matches[0].semesterId;
+  };
+
+  const byExactName = courseSemesters.filter((semester) =>
+    termNamesMatch(semester.name, normalizedTermName),
+  );
+  const exactMatch = pickFromMatches(byExactName);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const byTermNumber = courseSemesters.filter(
+    (semester) => extractTermNumber(semester.name) === Number(term),
+  );
+  const termNumberMatch = pickFromMatches(byTermNumber);
+  if (termNumberMatch) {
+    return termNumberMatch;
+  }
+
+  const byTermIndex = courseSemesters[Number(term) - 1];
+  return byTermIndex?.semesterId ?? null;
+}
 export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
 };
@@ -36,20 +92,40 @@ export const getClassSectionsGroupedByTerm = async (courseId, sessionId) => {
     }
 
     const { termType, totalTerms } = course;
-    const classSections = await courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId);
+    const [classSections, semesters, sessionAcedmicYearId] = await Promise.all([
+      courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+      courseRepository.getSemestersByCourseId(courseId),
+      courseRepository.getSessionAcademicYearId(sessionId),
+    ]);
 
     const grouped = [];
 
     for (let i = 1; i <= (totalTerms || 0); i++) {
-      const semesterName = `${termType} ${i}`;
+      const termName = `${termType} ${i}`;
+      const resolvedSemesterId = resolveSemesterIdForTerm({
+        term: i,
+        termName,
+        courseId,
+        acedmicYearId: sessionAcedmicYearId,
+        semesters,
+      });
+
       const sections = classSections
         .filter((cs) => cs.classGroup && cs.classGroup.term === i)
-        .map((cs) => ({ name: cs.section, id: cs.classSectionsId }))
-        .filter(Boolean);
+        .map((cs) => {
+          const plain = cs.get ? cs.get({ plain: true }) : cs;
+          return {
+            name: plain.section,
+            id: plain.classSectionsId,
+            semesterId: plain.semesterId ?? resolvedSemesterId,
+          };
+        })
+        .filter((section) => section.name != null && section.id != null);
 
       grouped.push({
-        termName: semesterName,
+        termName,
         term: i,
+        semesterId: resolvedSemesterId,
         classSections: sections,
       });
     }
