@@ -69,14 +69,12 @@ export async function courseAllSubject(courseId, sessionId) {
   return await SyllabusCreationRepository.courseAllSubject(courseId, sessionId);
 }
 
-export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, instituteId) {
+export async function addSyllabusUnit(data, createdBy, updatedBy) {
   const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
   const syllabusUnits = slab.map((unit) => ({
-    universityId,
-    instituteId,
     sessionId,
     acedmicYearId,
-    semesterId,
+    semesterId: semesterId ?? null,
     subjectId,
     unitNumber: unit.unitNumber,
     name: unit.name,
@@ -89,10 +87,8 @@ export async function addSyllabusUnit(data, createdBy, updatedBy, universityId, 
   return await SyllabusCreationRepository.addSyllabusUnit(syllabusUnits);
 }
 
-export async function syllabusUnitGet(filters) {
-  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(filters);
-
-  return syllabusUnits.map((unit) => ({
+function mapSyllabusUnit(unit) {
+  return {
     syllabusUnitId: unit.syllabusUnitId,
     universityId: unit.universityId,
     instituteId: unit.instituteId,
@@ -103,7 +99,7 @@ export async function syllabusUnitGet(filters) {
     acedmicYearStart: unit.acedmicYearUnit?.startingDate || null,
     acedmicYearEnd: unit.acedmicYearUnit?.endingDate || null,
     semesterId: unit.semesterId,
-    name: unit.semesterUnit?.name,
+    semesterName: unit.semesterUnit?.name || null,
     sessionId: unit.sessionId,
     sessionName: unit.sessionUnit?.sessionName || null,
     subjectId: unit.subjectId,
@@ -113,7 +109,48 @@ export async function syllabusUnitGet(filters) {
     name: unit.name,
     description: unit.description,
     contactHours: unit.contactHours,
-  }));
+  };
+}
+
+export async function syllabusUnitGet(filters) {
+  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(filters);
+  return syllabusUnits.map(mapSyllabusUnit);
+}
+
+export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data, updatedBy) {
+  const payload = {
+    ...(data.unitNumber != null && { unitNumber: data.unitNumber }),
+    ...(data.name != null && { name: data.name }),
+    ...(data.description != null && { description: data.description }),
+    ...(data.contactHours != null && { contactHours: data.contactHours }),
+    updatedBy,
+  };
+
+  const updated = await SyllabusCreationRepository.updateSyllabusUnit(
+    syllabusUnitId,
+    acedmicYearId,
+    payload
+  );
+
+  if (!updated) {
+    return null;
+  }
+
+  return {
+    syllabusUnitId: updated.syllabusUnitId,
+    acedmicYearId: updated.acedmicYearId,
+    subjectId: updated.subjectId,
+    sessionId: updated.sessionId,
+    semesterId: updated.semesterId,
+    unitNumber: updated.unitNumber,
+    name: updated.name,
+    description: updated.description,
+    contactHours: updated.contactHours,
+  };
+}
+
+export async function deleteSyllabusUnit(syllabusUnitId, acedmicYearId) {
+  return SyllabusCreationRepository.deleteSyllabusUnit(syllabusUnitId, acedmicYearId);
 }
 
 export async function semesterAllSubject(semesterId) {

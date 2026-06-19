@@ -1149,9 +1149,15 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Optional; use target year for promotion dropdown"
+              }
+            ],
             "url": {
-              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId=34&sessionId=12",
+              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1162,14 +1168,15 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "34"
+                  "value": "{{course_id}}"
                 },
                 {
                   "key": "sessionId",
-                  "value": "12"
+                  "value": "{{promotion_target_session_id}}"
                 }
               ]
-            }
+            },
+            "description": "**GET /course/semesterWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
           },
           "response": []
         }
@@ -1337,6 +1344,504 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "syllabus",
+      "description": "Syllabus CRUD, course/semester subject lookups, and **syllabus units** (topic slabs per subject).\n\n**Base path:** `/syllabus`\n\n**Auth:** Bearer `{{token}}`. Tenant scope from token/headers (`X-Academic-Year-Id` for year-scoped reads).\n\n**Suggested flow:**\n1. **GET courseSubject** — subjects for course + session\n2. **POST /** — create syllabus with subject term marks\n3. **POST addUnit** — add unit slabs for a subject\n4. **GET getUnit** — list units (filter by year, subject, session, semester)\n5. **PATCH unit** / **DELETE unit** — maintain units",
+      "item": [
+        {
+          "name": "get all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus?acedmicYearId={{acedmicYear_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}"
+                }
+              ]
+            },
+            "description": "**GET /syllabus?acedmicYearId=** — list syllabi for academic year."
+          },
+          "response": []
+        },
+        {
+          "name": "get single",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const id = body && (body.syllabusId || body.SyllabusId);",
+                  "if (id) pm.collectionVariables.set('syllabus_id', String(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/single?SyllabusId={{syllabus_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "SyllabusId",
+                  "value": "{{syllabus_id}}"
+                }
+              ]
+            },
+            "description": "**GET /syllabus/single?SyllabusId=** — single syllabus with details."
+          },
+          "response": []
+        },
+        {
+          "name": "add",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const row = body && body.Syllabus && body.Syllabus[0];",
+                  "if (row && row.syllabusId) pm.collectionVariables.set('syllabus_id', String(row.syllabusId));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"instituteId\": {{institute_id}},\n  \"sessionId\": {{session_id}},\n  \"subjects\": [\n    {\n      \"subjectId\": {{subject_id}},\n      \"subjectType\": \"core\",\n      \"total\": 100,\n      \"term\": [\n        {\n          \"examSetupTypeId\": 1,\n          \"type\": \"theory\",\n          \"marks\": 70\n        },\n        {\n          \"examSetupTypeId\": 2,\n          \"type\": \"practical\",\n          \"marks\": 30\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/syllabus",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus"
+              ]
+            },
+            "description": "**POST /syllabus**\n\n**Required:** `courseId`, `acedmicYearId`, `instituteId`, `sessionId`, `subjects[]` with `subjectId`, `subjectType`, `total`, `term[]` (`examSetupTypeId`, `type`, `marks`)."
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"SyllabusId\": {{syllabus_id}},\n  \"courseId\": {{course_id}},\n  \"sessionId\": {{session_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/syllabus",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus"
+              ]
+            },
+            "description": "**PATCH /syllabus** — `SyllabusId` required in body."
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus?SyllabusId={{syllabus_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus"
+              ],
+              "query": [
+                {
+                  "key": "SyllabusId",
+                  "value": "{{syllabus_id}}"
+                }
+              ]
+            },
+            "description": "**DELETE /syllabus?SyllabusId=**"
+          },
+          "response": []
+        },
+        {
+          "name": "course subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/courseSubject?courseId={{course_id}}&sessionId={{session_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "courseSubject"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{session_id}}"
+                }
+              ]
+            },
+            "description": "**GET /syllabus/courseSubject** — subjects for course + session (syllabus setup helper)."
+          },
+          "response": []
+        },
+        {
+          "name": "semester subjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/semesterSubject?semesterId={{student_semester_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "semesterSubject"
+              ],
+              "query": [
+                {
+                  "key": "semesterId",
+                  "value": "{{student_semester_id}}"
+                }
+              ]
+            },
+            "description": "**GET /syllabus/semesterSubject?semesterId=** — subjects linked to syllabus for a semester."
+          },
+          "response": []
+        },
+        {
+          "name": "unit — add",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const rows = body && body.Syllabus;",
+                  "if (Array.isArray(rows) && rows[0] && rows[0].syllabusUnitId) {",
+                  "  pm.collectionVariables.set('syllabus_unit_id', String(rows[0].syllabusUnitId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": {{subject_id}},\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"sessionId\": {{session_id}},\n  \"semesterId\": {{student_semester_id}},\n  \"slab\": [\n    {\n      \"unitNumber\": 1,\n      \"name\": \"Unit 1 — Introduction\",\n      \"description\": \"Course overview and fundamentals\",\n      \"contactHours\": \"10\"\n    },\n    {\n      \"unitNumber\": 2,\n      \"name\": \"Unit 2 — Core concepts\",\n      \"description\": \"Main syllabus topics\",\n      \"contactHours\": \"12\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/syllabus/addUnit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "addUnit"
+              ]
+            },
+            "description": "**POST /syllabus/addUnit**\n\n**Required:** `subjectId`, `acedmicYearId`, `sessionId`, `slab[]` (`unitNumber`, `name`).\n\n**Optional:** `semesterId` (nullable for session-level units).\n\n**Optional slab fields:** `description`, `contactHours`."
+          },
+          "response": []
+        },
+        {
+          "name": "unit — get",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const rows = pm.response.json();",
+                  "if (Array.isArray(rows) && rows[0] && rows[0].syllabusUnitId) {",
+                  "  pm.collectionVariables.set('syllabus_unit_id', String(rows[0].syllabusUnitId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/getUnit?acedmicYearId={{acedmicYear_id}}&subjectId={{subject_id}}&sessionId={{session_id}}&semesterId={{student_semester_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "getUnit"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Required"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "{{subject_id}}",
+                  "description": "Optional filter"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{session_id}}",
+                  "description": "Optional filter"
+                },
+                {
+                  "key": "semesterId",
+                  "value": "{{student_semester_id}}",
+                  "description": "Optional filter"
+                }
+              ]
+            },
+            "description": "**GET /syllabus/getUnit** — list syllabus units with institute/year/subject/session/semester metadata.\n\n**Required query:** `acedmicYearId`.\n\n**Optional:** `subjectId`, `sessionId`, `semesterId`."
+          },
+          "response": []
+        },
+        {
+          "name": "unit — update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"syllabusUnitId\": {{syllabus_unit_id}},\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"name\": \"Unit 1 — Updated title\",\n  \"description\": \"Updated description\",\n  \"contactHours\": \"14\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/syllabus/unit",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "unit"
+              ]
+            },
+            "description": "**PATCH /syllabus/unit**\n\n**Required:** `syllabusUnitId`, `acedmicYearId`, plus at least one of `unitNumber`, `name`, `description`, `contactHours`."
+          },
+          "response": []
+        },
+        {
+          "name": "unit — delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/unit?syllabusUnitId={{syllabus_unit_id}}&acedmicYearId={{acedmicYear_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "unit"
+              ],
+              "query": [
+                {
+                  "key": "syllabusUnitId",
+                  "value": "{{syllabus_unit_id}}"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}"
+                }
+              ]
+            },
+            "description": "**DELETE /syllabus/unit?syllabusUnitId=&acedmicYearId=** — hard delete (no soft delete on syllabus_unit)."
           },
           "response": []
         }
@@ -2481,6 +2986,7 @@
     },
     {
       "name": "Students",
+      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`\n2. **GET /course/semesterWithClassSections** — target **sessionId** (2026 session for cross-year); pick next term's `classSections[].id`\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).\n\nSet header **X-Academic-Year-Id** to the **target** year when loading dropdown sections.",
       "item": [
         {
           "name": "class section students",
@@ -2527,6 +3033,22 @@
         },
         {
           "name": "students",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const s = body && (body.data || body);",
+                  "if (s && s.semesterId) pm.collectionVariables.set('student_semester_id', String(s.semesterId));",
+                  "if (s && s.courseId) pm.collectionVariables.set('course_id', String(s.courseId));",
+                  "if (s && s.sessionId) pm.collectionVariables.set('session_id', String(s.sessionId));",
+                  "if (s && s.classSectionsId) pm.collectionVariables.set('classSections_id', String(s.classSectionsId));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -2554,7 +3076,8 @@
                   "value": "{{student_id}}"
                 }
               ]
-            }
+            },
+            "description": "**GET /student?studentId=** — step 1 of promotion flow. Test script saves `student_semester_id`, `course_id`, `session_id`, `classSections_id` to collection variables."
           },
           "response": []
         },
@@ -2622,6 +3145,196 @@
               "body": "{\n  \"success\": true,\n  \"message\": \"Answer sheets fetched successfully\",\n  \"data\": [\n    {\n      \"enrollNumber\": \"ENR-001\",\n      \"scholarNumber\": \"SCH-001\",\n      \"fullName\": \"Akash Choudhary\",\n      \"isMapped\": true\n    },\n    {\n      \"enrollNumber\": \"ENR-002\",\n      \"scholarNumber\": \"SCH-002\",\n      \"fullName\": \"Riya Sharma\",\n      \"isMapped\": false\n    }\n  ]\n}"
             }
           ]
+        },
+        {
+          "name": "promotion — class sections dropdown",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "const groups = Array.isArray(data) ? data : [];",
+                  "for (const g of groups) {",
+                  "  const sections = g.classSections || [];",
+                  "  if (sections[0] && sections[0].id) {",
+                  "    pm.collectionVariables.set('promotion_target_classSectionsId', String(sections[0].id));",
+                  "    break;",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Target academic year (e.g. 2026 after rollover)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "semesterWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}",
+                  "description": "Student's courseId"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{promotion_target_session_id}}",
+                  "description": "Target year session (Morning 2026, not 2025)"
+                }
+              ]
+            },
+            "description": "**GET /course/semesterWithClassSections** — promotion class-section dropdown.\n\n**Query:** `courseId`, `sessionId` (target year session).\n\n**Response:** array of `{ termName, term, classSections: [{ name, id }] }`. Use the group matching the **next** semester term.\n\nTest script sets `promotion_target_classSectionsId` from the first section found (override manually for the correct term)."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — promote student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const promo = body.promotion && body.promotion.current;",
+                  "if (promo) {",
+                  "  if (promo.semesterId) pm.collectionVariables.set('student_semester_id', String(promo.semesterId));",
+                  "  if (promo.classSectionsId) pm.collectionVariables.set('promotion_target_classSectionsId', String(promo.classSectionsId));",
+                  "  if (promo.sessionId) pm.collectionVariables.set('promotion_target_session_id', String(promo.sessionId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Target academic year context"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{student_id}},\n  \"semesterId\": {{student_semester_id}},\n  \"classSectionsId\": {{promotion_target_classSectionsId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promoteStudent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promoteStudent"
+              ]
+            },
+            "description": "**POST /student/promoteStudent** (updated)\n\n**Required body:**\n- `studentId`\n- `semesterId` — **current** semester (before promotion)\n- `classSectionsId` — **target** section from dropdown (must match student's institute, course, next semester, target academic year/session)\n\n**Server validates** target section, resolves next semester from course progression, sets `sessionId` from target section.\n\n**Updates:**\n- `students`: semesterId, classSectionsId, sessionId\n- `class_student_mapper`: acedmicYearId, semesterId, sessionId\n- `student_class_sections_history`: old → passed, new → current\n\n**Bulk:** send JSON array of objects with the same fields.\n\n**200 response** includes `promotion.previous`, `promotion.current`, `promotion.crossYear`.\n\n**400** on validation failure (institute/course/year/semester mismatch)."
+          },
+          "response": [
+            {
+              "name": "200 OK — promoted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Student promoted\",\n  \"result\": {\n    \"result1\": [1],\n    \"result2\": [1]\n  },\n  \"promotion\": {\n    \"previous\": {\n      \"acedmicYearId\": 59,\n      \"semesterId\": 102,\n      \"classSectionsId\": 195,\n      \"sessionId\": 6\n    },\n    \"current\": {\n      \"acedmicYearId\": 60,\n      \"semesterId\": 208,\n      \"classSectionsId\": 882,\n      \"sessionId\": 25\n    },\n    \"crossYear\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — promote students (bulk)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"studentId\": {{student_id}},\n    \"semesterId\": {{student_semester_id}},\n    \"classSectionsId\": {{promotion_target_classSectionsId}}\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promoteStudent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promoteStudent"
+              ]
+            },
+            "description": "**POST /student/promoteStudent** — same endpoint, **array body** for bulk promotion. Each item requires `studentId`, `semesterId` (current), `classSectionsId` (target). All-or-nothing per item; failed item returns 400 for the whole request when using sequential loop in controller."
+          },
+          "response": []
         }
       ]
     },
@@ -3013,7 +3726,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/classSections?sessionId=6&courseId=34",
+              "raw": "{{baseurl}}/classSections?sessionId={{promotion_target_session_id}}&courseId={{course_id}}&acedmicYearId={{acedmicYear_id}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -3023,14 +3736,20 @@
               "query": [
                 {
                   "key": "sessionId",
-                  "value": "6"
+                  "value": "{{promotion_target_session_id}}"
                 },
                 {
                   "key": "courseId",
-                  "value": "34"
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Optional filter for target academic year"
                 }
               ]
-            }
+            },
+            "description": "**GET /classSections** — flat list of class sections for course + session (+ optional acedmicYearId). Alternative to semesterWithClassSections for promotion UI."
           },
           "response": []
         }
@@ -11522,6 +12241,54 @@
       "key": "student_id",
       "value": "1513",
       "type": "string"
+    },
+    {
+      "key": "student_semester_id",
+      "value": "1",
+      "type": "string",
+      "description": "Current semesterId before promotion (from GET /student)"
+    },
+    {
+      "key": "promotion_target_classSectionsId",
+      "value": "195",
+      "type": "string",
+      "description": "Target classSectionsId for POST /student/promoteStudent"
+    },
+    {
+      "key": "promotion_target_session_id",
+      "value": "6",
+      "type": "string",
+      "description": "Target sessionId (2026 session for cross-year promotion)"
+    },
+    {
+      "key": "institute_id",
+      "value": "12",
+      "type": "string",
+      "description": "institute.instituteId — for syllabus create and tenant-scoped APIs"
+    },
+    {
+      "key": "session_id",
+      "value": "6",
+      "type": "string",
+      "description": "session.sessionId — course/session scoped syllabus APIs"
+    },
+    {
+      "key": "subject_id",
+      "value": "47",
+      "type": "string",
+      "description": "subject.subjectId — syllabus units and create payload"
+    },
+    {
+      "key": "syllabus_id",
+      "value": "1",
+      "type": "string",
+      "description": "syllabus.syllabusId — set from add/get single syllabus"
+    },
+    {
+      "key": "syllabus_unit_id",
+      "value": "1",
+      "type": "string",
+      "description": "syllabus_unit.syllabusUnitId — set from add/get unit"
     },
     {
       "key": "feePlanInitiate_page",

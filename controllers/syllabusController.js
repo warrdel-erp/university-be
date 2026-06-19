@@ -92,22 +92,10 @@ export async function courseAllSubject(req, res) {
 }
 
 export async function addSyllabusUnit(req, res) {
-  const { subjectId, acedmicYearId, sessionId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
-  const universityId = req.user.universityId;
-  const instituteId = req.user.defaultInstituteId;
   try {
-    if (!subjectId || !acedmicYearId || !sessionId) {
-      return res.status(400).send('sessionId,subjectId and acedmicYearId is required');
-    }
-    const Syllabus = await syllabusCreation.addSyllabusUnit(
-      req.body,
-      createdBy,
-      updatedBy,
-      universityId,
-      instituteId
-    );
+    const Syllabus = await syllabusCreation.addSyllabusUnit(req.body, createdBy, updatedBy);
     if (Syllabus) {
       res.status(201).json({ message: 'Data added successfully', Syllabus });
     } else {
@@ -122,6 +110,45 @@ export async function syllabusUnitGet(req, res) {
   try {
     const syllabus = await syllabusCreation.syllabusUnitGet(req.query);
     res.status(200).json(syllabus);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function updateSyllabusUnit(req, res) {
+  try {
+    const { syllabusUnitId, acedmicYearId } = req.body;
+    const updatedBy = req.user.userId;
+    const updated = await syllabusCreation.updateSyllabusUnit(
+      syllabusUnitId,
+      acedmicYearId,
+      req.body,
+      updatedBy
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Syllabus unit not found' });
+    }
+
+    res.status(200).json({ message: 'Syllabus unit updated successfully', data: updated });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function deleteSyllabusUnit(req, res) {
+  try {
+    const { syllabusUnitId, acedmicYearId } = req.query;
+    const deleted = await syllabusCreation.deleteSyllabusUnit(
+      Number(syllabusUnitId),
+      Number(acedmicYearId)
+    );
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Syllabus unit not found' });
+    }
+
+    res.status(200).json({ message: `Delete successful for syllabus unit ID ${syllabusUnitId}` });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
