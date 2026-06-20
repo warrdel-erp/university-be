@@ -1,44 +1,56 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
-import { buildScope } from '../utility/scoped.js';
+import { buildScope, scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
 
-function buildInstituteScope(modelRef) {
-    const scope = buildScope(modelRef);
-    delete scope.acedmicYearId;
-    return scope;
+function teacherSubjectWhere(subjectIds) {
+    if (subjectIds == null) {
+        return {};
+    }
+    if (!subjectIds.length) {
+        return { subjectId: -1 };
+    }
+    return { subjectId: { [Op.in]: subjectIds } };
+}
+
+function subjectInclude() {
+    return {
+        model: model.subjectModel,
+        as: 'employeeSubject',
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+    };
 }
 
 async function findEmployeeInInstitute(employeeId) {
-    return model.employeeModel.unscoped().findOne({
-        where: { employeeId, ...buildInstituteScope(model.employeeModel) },
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
         attributes: ['employeeId'],
     });
 }
 
 async function findClassSectionInInstitute(classSectionsId) {
-    return model.classSectionModel.unscoped().findOne({
-        where: { classSectionsId, ...buildInstituteScope(model.classSectionModel) },
+    return scoped(model.classSectionModel).findOne({
+        where: { classSectionsId },
         attributes: ['classSectionsId'],
     });
 }
 
 async function findTeacherSectionMappingInInstitute(teacherSectionMappingId) {
-    return model.teacherSectionMappingModel.findOne({
+    return scoped(model.teacherSectionMappingModel).findOne({
         where: { teacherSectionMappingId },
         attributes: ['teacherSectionMappingId', 'employeeId', 'classSectionsId'],
         include: [
             {
-                model: model.employeeModel.unscoped(),
+                model: model.employeeModel,
                 as: 'employeeData',
-                where: buildInstituteScope(model.employeeModel),
+                where: buildScope(model.employeeModel),
                 required: true,
                 attributes: ['employeeId'],
             },
             {
-                model: model.classSectionModel.unscoped(),
+                model: model.classSectionModel,
                 as: 'employeeSection',
-                where: buildInstituteScope(model.classSectionModel),
+                where: buildScope(model.classSectionModel),
                 required: true,
                 attributes: ['classSectionsId'],
             },
@@ -58,7 +70,7 @@ export async function teacherSectionMapping(data) {
             throw new Error(`Class section ID ${data.classSectionsId} not found`);
         }
 
-        return await model.teacherSectionMappingModel.create(data);
+        return await scoped(model.teacherSectionMappingModel).create(data);
     } catch (error) {
         console.error('Error in student mapping course:', error);
         throw error;
@@ -68,20 +80,22 @@ export async function teacherSectionMapping(data) {
 export async function getTeacherSectionMapping({
     employeeId,
     sessionId,
-    acedmicYearId,
+    yearId,
+    subjectIds,
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
         const universityId = requestContext.getStore()?.universityId;
+
         const classSectionWhere = {
-            ...buildInstituteScope(model.classSectionModel),
-            ...(acedmicYearId && { acedmicYearId }),
+            ...(yearId != null && { acedmicYearId: yearId }),
             ...(sessionId && { sessionId }),
+            ...buildScope(model.classSectionModel),
         };
-        const employeeWhere = buildInstituteScope(model.employeeModel);
-        const courseWhere = buildInstituteScope(model.courseModel);
+        const employeeWhere = buildScope(model.employeeModel);
+        const courseWhere = buildScope(model.courseModel);
 
         const mappingWhere = {};
         if (employeeId) {
@@ -101,51 +115,64 @@ export async function getTeacherSectionMapping({
             ];
         }
 
-        const include = [
+        const employeeInclude = [
             {
-                model: model.userModel.unscoped(),
-                as: 'userTeacherSectionMapping',
-                attributes: ['universityId', 'userId'],
-                where: { universityId },
+                model: model.campusModel,
+                as: 'employeeCampus',
+                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'campusCode'] },
+                where: { universityId, ...buildScope(model.campusModel) },
                 required: true,
             },
             {
-                model: model.employeeModel.unscoped(),
+                model: model.instituteModel,
+                as: 'employeeInstitute',
+                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
+            },
+        ];
+
+        if (subjectIds != null) {
+            employeeInclude.push({
+                model: model.teacherSubjectMappingModel,
+                as: 'teacherEmployeeData',
+                required: false,
+                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                where: teacherSubjectWhere(subjectIds),
+                include: [subjectInclude()],
+            });
+        }
+
+        const include = [
+            {
+                model: model.userModel,
+                as: 'userTeacherSectionMapping',
+                attributes: ['universityId', 'userId'],
+                where: { universityId, ...buildScope(model.userModel) },
+                required: true,
+            },
+            {
+                model: model.employeeModel,
                 as: 'employeeData',
                 attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
                 where: employeeWhere,
                 required: true,
-                include: [
-                    {
-                        model: model.campusModel.unscoped(),
-                        as: 'employeeCampus',
-                        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'campusCode'] },
-                        where: { universityId },
-                        required: true,
-                    },
-                    {
-                        model: model.instituteModel.unscoped(),
-                        as: 'employeeInstitute',
-                        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
-                    },
-                ],
+                include: employeeInclude,
             },
             {
-                model: model.classSectionModel.unscoped(),
+                model: model.classSectionModel,
                 as: 'employeeSection',
                 attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
                 where: classSectionWhere,
                 required: true,
                 include: [
                     {
-                        model: model.courseModel.unscoped(),
+                        model: model.courseModel,
                         as: 'employeeCourse',
                         attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
                         where: courseWhere,
                         required: true,
                     },
                     {
-                        model: model.sessionModel.unscoped(),
+                        model: model.sessionModel,
                         as: 'classSession',
                         attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'classTillDate'],
                         required: false,
@@ -165,8 +192,8 @@ export async function getTeacherSectionMapping({
             ...(trimmedSearch && { subQuery: false }),
         };
 
-        const result = await model.teacherSectionMappingModel.findAll(queryOptions);
-        const totalCount = await model.teacherSectionMappingModel.count({
+        const result = await scoped(model.teacherSectionMappingModel).findAll(queryOptions);
+        const totalCount = await scoped(model.teacherSectionMappingModel).count({
             ...(queryOptions.where && { where: queryOptions.where }),
             include,
             distinct: true,
@@ -208,7 +235,7 @@ export async function updateTeachersSectionMapping(teacherSectionMappingId, info
             }
         }
 
-        return await model.teacherSectionMappingModel.update(info, {
+        return await scoped(model.teacherSectionMappingModel).update(info, {
             where: { teacherSectionMappingId },
         });
     } catch (error) {
@@ -224,7 +251,7 @@ export async function deleteTeachersSectionMapping(teacherSectionMappingId) {
             throw new Error('Mapping not found');
         }
 
-        await model.teacherSectionMappingModel.destroy({
+        await scoped(model.teacherSectionMappingModel).destroy({
             where: { teacherSectionMappingId },
             individualHooks: true,
         });

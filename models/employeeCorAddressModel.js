@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const employeeCorAddressModel = sequelize.define(
     'employee_cor_address',
     {
         employeeCorAddressId: {
@@ -86,3 +86,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+employeeCorAddressModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default employeeCorAddressModel;

@@ -4676,8 +4676,46 @@
     },
     {
       "name": "teacher mapping",
-      "description": "Teacher subject/section mappings under `/teacher`.",
+      "description": "Teacher subject/section mappings under `/teacher`.\n\n**Subject mapping:** POST links a teacher (`employeeId`) directly to `subject` rows via `subjectId` (number or array). No `class_subject_mapper` involved.\n\n**Auth:** Bearer `{{token}}`. Tenant scope from `X-Institute-Id` / `X-Academic-Year-Id` headers.",
       "item": [
+        {
+          "name": "create teacher subject mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"employeeId\": 34,\n    \"subjectId\": [304],\n    \"instituteId\": 12,\n    \"campusId\": 11,\n    \"acedmicYearId\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSubject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSubject"
+              ]
+            },
+            "description": "**POST /teacher/teacherSubject**\n\nCreates one teacher–subject mapping per `subjectId`.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `employeeId` | Teacher employee PK |\n| `subjectId` | Number or array of subject PKs |\n\n### Optional body (informational / client context)\n`instituteId`, `campusId`, `acedmicYearId` — subject must exist in scoped institute/year via `subject` table.\n\n### Success\n**200** — array of created mapping rows.\n\n### Errors\n**400** — missing `employeeId` or `subjectId`.\n**500** — employee or subject not found in tenant scope."
+          },
+          "response": []
+        },
         {
           "name": "get teacher subject mappings",
           "request": {
@@ -4694,7 +4732,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=36&subjectId=99&sessionId=6",
+              "raw": "{{baseurl}}/teacher/teacherSubject?employeeId=34&subjectId=304&sessionId=6&acedmicYearId=60",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4705,25 +4743,142 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "36",
+                  "value": "34",
                   "description": "Optional — filter one teacher",
                   "type": "text"
                 },
                 {
                   "key": "subjectId",
-                  "value": "99",
+                  "value": "304",
                   "description": "Optional — filters class_subject_mapper.subject_id",
                   "type": "text"
                 },
                 {
                   "key": "sessionId",
                   "value": "6",
-                  "description": "Optional — filters via semester → class_sections.session_id",
+                  "description": "Optional — when acedmicYearId is set, limits mappers to sections in this session",
+                  "type": "text"
+                },
+                {
+                  "key": "acedmicYearId",
+                  "value": "60",
+                  "description": "Optional — limits mappings to subjects/mappers in this academic year",
                   "type": "text"
                 }
               ]
             },
-            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, mapper, subject, semester, class section, and session.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`. When `sessionId` is set, only mappings linked to a class section in that session are returned."
+            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, mapper, subject, semester, and course.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`, `acedmicYearId`.\n\nWhen `acedmicYearId` is set, only mappings whose class-subject mapper belongs to that year are returned. With `sessionId`, mapper resolution is further limited to class sections in that session."
+          },
+          "response": []
+        },
+        {
+          "name": "update teacher subject mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": [\n        {\n            \"teacherSubjectMappingId\": 1,\n            \"employeeId\": 34,\n            \"subjectId\": 304\n        }\n    ],\n    \"instituteId\": 12,\n    \"acedmicYearId\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSubject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSubject"
+              ]
+            },
+            "description": "**PATCH /teacher/teacherSubject**\n\nBulk create or update teacher–subject mappings.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `data` | Non-empty array |\n\n### Each `data[]` item\n| Field | Notes |\n|-------|--------|\n| `teacherSubjectMappingId` | When present → update; omit → create |\n| `employeeId` | Teacher employee PK |\n| `subjectId` | Subject PK |\n\n### Success\n**200** — `[{ action: \"created\"|\"updated\", teacherSubjectMappingId, result }]`. "
+          },
+          "response": []
+        },
+        {
+          "name": "delete teacher subject mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/:teacherSubjectMappingId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                ":teacherSubjectMappingId"
+              ],
+              "variable": [
+                {
+                  "key": "teacherSubjectMappingId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**DELETE /teacher/:teacherSubjectMappingId**\n\nSoft-deletes one teacher–subject mapping. Mapping must belong to the current institute scope.\n\n**200** — `{ message: \"teacher Subject Mapping deleted successfully\" }`."
+          },
+          "response": []
+        },
+        {
+          "name": "create teacher section mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"employeeId\": 34,\n    \"classSectionsId\": [101]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ]
+            },
+            "description": "**POST /teacher/teacherSection**\n\nCreates one teacher–section mapping per `classSectionsId`.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `employeeId` | Teacher employee PK |\n| `classSectionsId` | Number or array of class section PKs |\n\n### Success\n**200** — array of created mapping rows."
           },
           "response": []
         },
@@ -4754,7 +4909,7 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "36",
+                  "value": "34",
                   "description": "Optional — filter one teacher",
                   "type": "text",
                   "disabled": true
@@ -4793,6 +4948,79 @@
               ]
             },
             "description": "**GET /teacher/teacherSection**\n\nPaginated teacher–section mappings with employee, class section, course, and session.\n\n**Query (optional):** `employeeId`, `sessionId`, `acedmicYearId`, `search`, `page`, `limit`.\n\n**Response:** `{ result, totalCount, page, limit, totalPages }`."
+          },
+          "response": []
+        },
+        {
+          "name": "update teacher section mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"employeeId\": 34,\n    \"classSectionsId\": [101],\n    \"teacherSectionMappingId\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ]
+            },
+            "description": "**PATCH /teacher/teacherSection**\n\nUpdates an existing teacher–section mapping.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `teacherSectionMappingId` | Mapping PK to update |\n| `employeeId` | Teacher employee PK |\n| `classSectionsId` | Number or array (each id is applied in sequence) |"
+          },
+          "response": []
+        },
+        {
+          "name": "delete teacher section mapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/:teacherSectionMappingId",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                ":teacherSectionMappingId"
+              ],
+              "variable": [
+                {
+                  "key": "teacherSectionMappingId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "**DELETE /teacher/:teacherSectionMappingId**\n\nSoft-deletes one teacher–section mapping. Mapping must belong to the current institute scope.\n\n**200** — `{ message: \"teacher Section Mapping deleted successfully\" }`."
           },
           "response": []
         }

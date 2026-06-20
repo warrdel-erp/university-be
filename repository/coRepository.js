@@ -16,12 +16,12 @@ export async function getAllCo() {
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
-                    model: model.syllabusDetailsModel.unscoped(),
+                    model: model.syllabusDetailsModel,
                     as: 'cosyllabus',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
+                            model: model.subjectModel,
                             as: 'syllabusSubject',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                         },
@@ -42,12 +42,12 @@ export async function getSingleCoDetails(coId) {
             where: { coId },
             include: [
                 {
-                    model: model.syllabusDetailsModel.unscoped(),
+                    model: model.syllabusDetailsModel,
                     as: 'cosyllabus',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
+                            model: model.subjectModel,
                             as: 'syllabusSubject',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                         },
@@ -108,17 +108,17 @@ export async function getAllCoWeightage() {
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy', 'universityId', 'instituteId'] },
             include: [
                 {
-                    model: model.coModel.unscoped(),
+                    model: model.coModel,
                     as: 'codetail',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy', 'universityId', 'instituteId'] },
                     include: [
                         {
-                            model: model.syllabusDetailsModel.unscoped(),
+                            model: model.syllabusDetailsModel,
                             as: 'cosyllabus',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             include: [
                                 {
-                                    model: model.subjectModel.unscoped(),
+                                    model: model.subjectModel,
                                     as: 'syllabusSubject',
                                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                                 },
@@ -141,17 +141,17 @@ export async function getSingleCoDetailsWeightage(coWeightageId) {
             where: { coWeightageId },
             include: [
                 {
-                    model: model.coModel.unscoped(),
+                    model: model.coModel,
                     as: 'codetail',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.syllabusDetailsModel.unscoped(),
+                            model: model.syllabusDetailsModel,
                             as: 'cosyllabus',
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                             include: [
                                 {
-                                    model: model.subjectModel.unscoped(),
+                                    model: model.subjectModel,
                                     as: 'syllabusSubject',
                                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                                 },

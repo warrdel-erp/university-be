@@ -18,7 +18,7 @@ export async function getDepartmentDetails() {
             include:
                 [
                     {
-                        model: model.subAccountModel.unscoped(),
+                        model: model.subAccountModel,
                         as: "subAccountDetail",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
@@ -41,7 +41,7 @@ export async function getSingleDepartmentDetails(departmentId) {
             include:
                 [
                     {
-                        model: model.subAccountModel.unscoped(),
+                        model: model.subAccountModel,
                         as: "subAccountDetail",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },

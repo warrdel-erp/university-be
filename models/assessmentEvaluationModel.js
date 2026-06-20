@@ -6,7 +6,7 @@ import employeeModel from "./employeeModel.js";
 import studentModel from "./studentModel.js";
 import internalAssessmentModel from "./internalAssessmentModel.js";
 
-export default sequelize.define(
+const assessmentEvaluationModel = sequelize.define(
     'assessment_evalution',
     {
         assessmentEvalutionId: {
@@ -110,3 +110,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+assessmentEvaluationModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default assessmentEvaluationModel;

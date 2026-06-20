@@ -15,7 +15,7 @@ async function assertScopedQuestionPaper(id, transaction) {
         attributes: ['id', 'examScheduleId'],
         transaction,
         include: [{
-            model: model.examScheduleModel.unscoped(),
+            model: model.examScheduleModel,
             as: 'examSchedule',
             required: true,
             where: buildScope(model.examScheduleModel),
@@ -55,12 +55,12 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
             },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },
                 {
-                    model: model.examScheduleModel.unscoped(),
+                    model: model.examScheduleModel,
                     as: "examSchedule",
                     required: true,
                     where: buildScope(model.examScheduleModel),
@@ -88,7 +88,7 @@ export async function getSingleQuestionPaper(id) {
             where: { id },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },

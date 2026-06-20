@@ -6,7 +6,7 @@ import course from './courseModel.js';
 import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 
-export default sequelize.define(
+const poModel = sequelize.define(
     'po',
     {
         poId: {
@@ -101,3 +101,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+poModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default poModel;

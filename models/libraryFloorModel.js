@@ -6,7 +6,7 @@ import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 import libraryCreationModel from "./libraryCreationModel.js";
 
-export default sequelize.define(
+const libraryFloorModel = sequelize.define(
     'library_floor',
     {
         libraryFloorId: {
@@ -101,3 +101,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+libraryFloorModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default libraryFloorModel;

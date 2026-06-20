@@ -8,13 +8,13 @@ function excludeTimestamps() {
 
 function feeInvoiceItemsInclude() {
   return {
-    model: model.studentFeeInvoiceItemsModel.unscoped(),
+    model: model.studentFeeInvoiceItemsModel,
     as: "feeInvoiceItems",
     required: false,
     attributes: { exclude: excludeTimestamps() },
     include: [
       {
-        model: model.feeTypeCatalogModel.unscoped(),
+        model: model.feeTypeCatalogModel,
         as: "feeTypeCatalog",
         attributes: ["feeTypeCatalogId", "name", "ledgerType", "description", "amount"],
       },
@@ -24,12 +24,12 @@ function feeInvoiceItemsInclude() {
 
 function feePlanItemInclude() {
   return {
-    model: model.feePlanItemModel.unscoped(),
+    model: model.feePlanItemModel,
     as: "feePlanItem",
     attributes: { exclude: excludeTimestamps() },
     include: [
       {
-        model: model.feePlanSubItemsModel.unscoped(),
+        model: model.feePlanSubItemsModel,
         as: "feePlanSubItems",
         required: false,
         attributes: { exclude: excludeTimestamps() },
@@ -40,7 +40,7 @@ function feePlanItemInclude() {
 
 function studentInclude() {
   return {
-    model: model.studentModel.unscoped(),
+    model: model.studentModel,
     as: "studentFeeInvoiceStudent",
     attributes: [
       "studentId",
@@ -95,7 +95,7 @@ export async function createStudentFeeInvoice(data, options = {}) {
 }
 
 export async function bulkCreateStudentFeeInvoiceItems(rows, options = {}) {
-  return model.studentFeeInvoiceItemsModel.unscoped().bulkCreate(rows, {
+  return model.studentFeeInvoiceItemsModel.bulkCreate(rows, {
     transaction: options.transaction,
   });
 }
@@ -140,7 +140,7 @@ export async function findAllStudentFeeInvoicesByInstitute(options = {}) {
     ],
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "studentFeeInvoiceStudent",
         attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
         required: true,

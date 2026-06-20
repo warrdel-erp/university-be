@@ -21,7 +21,7 @@ function feePlanExcludedAttributes() {
 
 function userFeeInvoiceInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userFeeInvoice",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),
@@ -31,7 +31,7 @@ function userFeeInvoiceInclude() {
 
 function feePlanInclude() {
   return {
-    model: model.feePlanModel.unscoped(),
+    model: model.feePlanModel,
     as: "feeInvoicePlan",
     attributes: { exclude: feePlanExcludedAttributes() },
     where: buildScope(model.feePlanModel),
@@ -41,7 +41,7 @@ function feePlanInclude() {
 
 function classStudentMapperInclude(businessWhere = {}) {
   return {
-    model: model.classStudentMapperModel.unscoped(),
+    model: model.classStudentMapperModel,
     as: "feeStudentMapper",
     attributes: {
       exclude: [
@@ -57,14 +57,14 @@ function classStudentMapperInclude(businessWhere = {}) {
     where: { ...businessWhere, ...buildScope(model.classStudentMapperModel) },
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "studentMapped",
         attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
         where: buildScope(model.studentModel),
         required: true,
       },
       {
-        model: model.classSectionModel.unscoped(),
+        model: model.classSectionModel,
         as: "studentSectionDetail",
         attributes: ["section", "classSectionsId", "class"],
       },
@@ -74,17 +74,17 @@ function classStudentMapperInclude(businessWhere = {}) {
 
 function feeInvoiceDetailsInclude() {
   return {
-    model: model.feeInvoiceDetailModel.unscoped(),
+    model: model.feeInvoiceDetailModel,
     as: "feeInvoiceDetails",
     attributes: ["feeInvoiceDetailsId", "feeInvoiceId", "amount", "waiver", "subTotal", "paidAmount"],
     include: [
       {
-        model: model.feePlanTypeModel.unscoped(),
+        model: model.feePlanTypeModel,
         as: "feeInvoiceTypePlan",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       },
       {
-        model: model.feePlanSemesterModel.unscoped(),
+        model: model.feePlanSemesterModel,
         as: "feeInvoiceTypeSemester",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       },
@@ -104,12 +104,12 @@ function feeInvoiceListIncludes(filters = {}) {
 }
 
 async function assertScopedClassStudentMapper(classStudentMapperId, transaction) {
-  return model.classStudentMapperModel.unscoped().findOne({
+  return scoped(model.classStudentMapperModel).findOne({
     attributes: ["classStudentMapperId", "studentId"],
     where: { classStudentMapperId },
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "studentMapped",
         attributes: [],
         where: buildScope(model.studentModel),
@@ -121,7 +121,7 @@ async function assertScopedClassStudentMapper(classStudentMapperId, transaction)
 }
 
 async function assertScopedFeeInvoice(feeInvoiceId, transaction) {
-  return model.feeInvoiceModel.unscoped().findOne({
+  return scoped(model.feeInvoiceModel).findOne({
     attributes: ["feeInvoiceId"],
     where: { feeInvoiceId },
     include: [userFeeInvoiceInclude()],
@@ -148,7 +148,7 @@ export async function addFeeInvoice(feeInvoiceData, transaction) {
       throw new Error("Class student mapper not found");
     }
 
-    return model.feeInvoiceModel.unscoped().create(feeInvoiceData, { transaction });
+    return scoped(model.feeInvoiceModel).create(feeInvoiceData, { transaction });
   } catch (error) {
     console.error("Error in add Fee Invoice :", error);
     throw error;
@@ -157,7 +157,7 @@ export async function addFeeInvoice(feeInvoiceData, transaction) {
 
 export async function getFeeInvoiceDetails(filters = {}) {
   try {
-    return model.feeInvoiceModel.unscoped().findAll({
+    return scoped(model.feeInvoiceModel).findAll({
       attributes: { exclude: feeInvoiceExcludedAttributes() },
       include: feeInvoiceListIncludes(filters),
     });
@@ -169,18 +169,18 @@ export async function getFeeInvoiceDetails(filters = {}) {
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
   try {
-    return model.feeInvoiceModel.unscoped().findOne({
+    return scoped(model.feeInvoiceModel).findOne({
       attributes: { exclude: feeInvoiceExcludedAttributes() },
       where: { feeInvoiceId },
       include: [
         userFeeInvoiceInclude(),
         {
-          model: model.feePlanModel.unscoped(),
+          model: model.feePlanModel,
           as: "feeInvoicePlan",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
-          model: model.classStudentMapperModel.unscoped(),
+          model: model.classStudentMapperModel,
           as: "feeStudentMapper",
           attributes: {
             exclude: [
@@ -196,14 +196,14 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
           where: buildScope(model.classStudentMapperModel),
           include: [
             {
-              model: model.studentModel.unscoped(),
+              model: model.studentModel,
               as: "studentMapped",
               attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
               where: buildScope(model.studentModel),
               required: true,
             },
             {
-              model: model.classSectionModel.unscoped(),
+              model: model.classSectionModel,
               as: "studentSectionDetail",
               attributes: ["section", "classSectionsId", "class"],
             },
@@ -234,7 +234,7 @@ export async function updateFeeInvoice(feeInvoiceId, feeInvoiceData, transaction
       return [0];
     }
 
-    return model.feeInvoiceModel.unscoped().update(feeInvoiceData, {
+    return scoped(model.feeInvoiceModel).update(feeInvoiceData, {
       where: { feeInvoiceId },
       transaction,
     });
@@ -250,7 +250,7 @@ export async function deleteFeeInvoice(feeInvoiceId) {
     return false;
   }
 
-  const deleted = await model.feeInvoiceModel.unscoped().destroy({ where: { feeInvoiceId } });
+  const deleted = await scoped(model.feeInvoiceModel).destroy({ where: { feeInvoiceId } });
   return deleted > 0;
 }
 
@@ -269,7 +269,7 @@ export async function findInstituteCodeForScope(options = {}) {
 
 export async function latestInoviceNumber(instituteCode) {
   try {
-    return model.studentInvoiceMapperModel.unscoped().findOne({
+    return scoped(model.studentInvoiceMapperModel).findOne({
       attributes: ["invoice_number"],
       where: {
         invoice_number: {
@@ -287,7 +287,7 @@ export async function latestInoviceNumber(instituteCode) {
 
 export async function latestInvoiceDetailNumber(instituteCode) {
   try {
-    return model.feeInvoiceDetailModel.unscoped().findOne({
+    return scoped(model.feeInvoiceDetailModel).findOne({
       attributes: ["invoice_detail_number"],
       where: {
         invoice_detail_number: {
@@ -296,7 +296,7 @@ export async function latestInvoiceDetailNumber(instituteCode) {
       },
       include: [
         {
-          model: model.feeInvoiceModel.unscoped(),
+          model: model.feeInvoiceModel,
           as: "feeInvoiceDetails",
           attributes: [],
           required: true,
@@ -322,22 +322,22 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
       return [];
     }
 
-    return model.studentInvoiceMapperModel.unscoped().findAll({
+    return scoped(model.studentInvoiceMapperModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: { studentId, ...buildScope(model.studentInvoiceMapperModel) },
       include: [
         {
-          model: model.feeTypeGroupModel.unscoped(),
+          model: model.feeTypeGroupModel,
           as: "feeTypeGroup",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.feeTypeModel.unscoped(),
+              model: model.feeTypeModel,
               as: "feeTypes",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               include: [
                 {
-                  model: model.feeGroupModel.unscoped(),
+                  model: model.feeGroupModel,
                   as: "feeGroup",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                   where: buildScope(model.feeGroupModel),
@@ -348,43 +348,43 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
           ],
         },
         {
-          model: model.feeNewInvoiceModel.unscoped(),
+          model: model.feeNewInvoiceModel,
           as: "feeInvoicedata",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.feePlanModel.unscoped(),
+              model: model.feePlanModel,
               as: "feePlan",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               where: buildScope(model.feePlanModel),
               required: false,
             },
             {
-              model: model.feePlanTypeModel.unscoped(),
+              model: model.feePlanTypeModel,
               as: "additionalFees",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.feePlanSemesterModel.unscoped(),
+              model: model.feePlanSemesterModel,
               as: "semesters",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
           ],
         },
         {
-          model: model.feeInvoiceDetailRecordModel.unscoped(),
+          model: model.feeInvoiceDetailRecordModel,
           as: "studentMakePayment",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: "studentinvoice",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.studentModel),
           required: true,
           include: [
             {
-              model: model.affiliatedIniversityModel.unscoped(),
+              model: model.affiliatedIniversityModel,
               as: "affiliatedUniversity",
               attributes: {
                 exclude: [
@@ -399,7 +399,7 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               },
             },
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "course",
               attributes: {
                 exclude: [
@@ -414,31 +414,31 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               },
             },
             {
-              model: model.semesterModel.unscoped(),
+              model: model.semesterModel,
               as: "studentSemester",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
               include: [
                 {
-                  model: model.classSectionModel.unscoped(),
+                  model: model.classSectionModel,
                   as: "classSections",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
               ],
             },
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: "studentSession",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
               include: [
                 {
-                  model: model.acedmicYearModel.unscoped(),
+                  model: model.acedmicYearModel,
                   as: "sessionAcedmic",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
               ],
             },
             {
-              model: model.specializationModel.unscoped(),
+              model: model.specializationModel,
               as: "specialization",
               attributes: {
                 exclude: [

@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import user from './userModel.js';
 import { ROLES } from '../const/roles.js';
 
-export default sequelize.define(
+const userRoleModel = sequelize.define(
     'user_roles',
     {
         id: {
@@ -49,3 +49,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+userRoleModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default userRoleModel;

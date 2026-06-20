@@ -11,7 +11,7 @@ export async function getExamSetupTypes(filters) {
             },
             include: [
                 {
-                    model: model.examSetupTypeTermModel.unscoped(),
+                    model: model.examSetupTypeTermModel,
                     as: "examSetupTypeTerms",
                     where: {
                         ...buildScope(model.examSetupTypeTermModel),
@@ -22,7 +22,7 @@ export async function getExamSetupTypes(filters) {
                     required: !!(courseId || term),
                 },
                 {
-                    model: model.examStructureModel.unscoped(),
+                    model: model.examStructureModel,
                     as: "examStructure",
                     attributes: ["examStructureId", "totalMarks"],
                     where: buildScope(model.examStructureModel),

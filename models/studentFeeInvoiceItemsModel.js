@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
-export default sequelize.define(
+const studentFeeInvoiceItemsModel = sequelize.define(
   "student_fee_invoice_items",
   {
     studentFeeInvoiceItemsId: {
@@ -55,3 +55,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+studentFeeInvoiceItemsModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentFeeInvoiceItemsModel;

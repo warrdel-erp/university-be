@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import subAccount from "./subAccountModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const departmentModel = sequelize.define(
     'department',
     // this is subAccount model not a department model 
     {
@@ -84,3 +84,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+departmentModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default departmentModel;

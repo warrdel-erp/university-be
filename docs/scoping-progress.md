@@ -9,12 +9,10 @@ Track repository → service → controller migration for multi-tenant scoping.
 3. Tenant values (`universityId`, `instituteId`, `acedmicYearId`) come from `requestContext` / `buildScope()`—never from request body or manual controller passing.
 4. Services hold business logic only; controllers pass business filters (e.g. `sessionId`, `examSetupTypeTermId`), not tenant IDs.
 5. WHERE merges always put tenant scope last: `{ ...options.where, ...baseWhere }` so tenant constraints cannot be overridden.
-6. Includes use `.unscoped()` on joined models with `buildScope()` on join `where` where the joined table has tenant columns.
+6. Includes use `buildScope()` on join `where` where the joined table has tenant columns enabled in `scopeConfig`.
 7. `scoped().create()` / `bulkCreate()` inject only tenant fields that exist on the target model (`rawAttributes` filter).
-8. Work proceeds in batches (~3 repos per batch): repository first, then service, then controller—documented in this file.
-9. Repositories: use `scoped(model).*` directly; inline attributes/includes at call sites—no module-level constants or helper functions.
-10. **113 of 113** repositories are full-stack complete (batches 1–8, 11–28).
-11. Migration complete — all repositories use explicit `scoped()` scoping.
+8. Every model declares explicit `scopeConfig = { university: false, institute: false, academicYear: false }` and enables dimensions intentionally (`true` per column).
+9. Repositories use `scoped(model).*` only — no `.unscoped()` bypass.
 
 **Legend:** ✅ complete (full stack) · 🔶 repo scoped, stack audit pending · ⬜ not started
 

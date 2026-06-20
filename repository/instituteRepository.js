@@ -9,7 +9,7 @@ export async function createInstitute(data, affiliatedUniversities = []) {
 
     const affiliateRows = [];
     for (const item of affiliatedUniversities) {
-      const row = await model.affiliatedIniversityModel.unscoped().create(
+      const row = await scoped(model.affiliatedIniversityModel).create(
         {
           affiliatedUniversityName: item.affiliatedUniversityName,
           affiliatedUniversityCode: item.affiliatedUniversityCode,
@@ -41,12 +41,12 @@ export async function getInstitutes(universityId, campusId) {
       },
       include: [
         {
-          model: model.campusModel.unscoped(),
+          model: model.campusModel,
           as: "campues",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
         },
         {
-          model: model.affiliatedIniversityModel.unscoped(),
+          model: model.affiliatedIniversityModel,
           as: "affiliateInstitute",
           attributes: {
             exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "universityId", "instituteId"],
@@ -75,11 +75,11 @@ export async function getInstituteByCampusAndId(campusId, instituteId) {
 
 export async function getInstituteById(instituteId, universityId) {
   try {
-    return model.instituteModel.unscoped().findOne({
+    return scoped(model.instituteModel).findOne({
       where: { instituteId, universityId },
       include: [
         {
-          model: model.affiliatedIniversityModel.unscoped(),
+          model: model.affiliatedIniversityModel,
           as: "affiliateInstitute",
           attributes: {
             exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "universityId", "instituteId"],
@@ -96,14 +96,14 @@ export async function getInstituteById(instituteId, universityId) {
 
 export async function updateInstitute(instituteId, universityId, data) {
   try {
-    const existing = await model.instituteModel.unscoped().findOne({
+    const existing = await scoped(model.instituteModel).findOne({
       where: { instituteId, universityId },
     });
     if (!existing) {
       return null;
     }
 
-    await model.instituteModel.unscoped().update(data, {
+    await scoped(model.instituteModel).update(data, {
       where: { instituteId, universityId },
     });
 
@@ -116,7 +116,7 @@ export async function updateInstitute(instituteId, universityId, data) {
 
 export async function getAffiliatedUniversityById(affiliatedUniversityId, universityId) {
   try {
-    return model.affiliatedIniversityModel.unscoped().findOne({
+    return scoped(model.affiliatedIniversityModel).findOne({
       where: { affiliatedUniversityId, universityId },
     });
   } catch (error) {
@@ -132,7 +132,7 @@ export async function updateAffiliatedUniversity(affiliatedUniversityId, univers
       return null;
     }
 
-    await model.affiliatedIniversityModel.unscoped().update(data, {
+    await scoped(model.affiliatedIniversityModel).update(data, {
       where: { affiliatedUniversityId, universityId },
     });
 

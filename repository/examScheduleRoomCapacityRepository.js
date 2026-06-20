@@ -18,7 +18,7 @@ async function assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction)
     attributes: ['examScheduleRoomCapacityId', 'examScheduleId'],
     transaction,
     include: [{
-      model: model.examScheduleModel.unscoped(),
+      model: model.examScheduleModel,
       as: 'examSchedule',
       required: true,
       where: buildScope(model.examScheduleModel),
@@ -42,7 +42,7 @@ const activeRoomHierarchyInclude = () => ({
       paranoid: true,
       include: [
         {
-          model: model.campusModel.unscoped(),
+          model: model.campusModel,
           as: "campusbuilding",
           attributes: [],
           required: true,
@@ -159,7 +159,7 @@ async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, s
     attributes: ["classRoomSectionId"],
     include: [
       {
-        model: model.examScheduleModel.unscoped(),
+        model: model.examScheduleModel,
         as: "examSchedule",
         attributes: [],
         required: true,
@@ -289,7 +289,7 @@ async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examD
         },
       },
       {
-        model: model.timeTableRoutineModel.unscoped(),
+        model: model.timeTableRoutineModel,
         as: "timeTablecreate",
         attributes: [],
         required: true,

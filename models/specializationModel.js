@@ -6,7 +6,7 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const specializationModel = sequelize.define(
     'specialization',
     {
         specializationId: {
@@ -103,3 +103,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+specializationModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default specializationModel;

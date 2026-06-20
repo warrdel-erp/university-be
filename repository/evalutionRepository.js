@@ -22,21 +22,21 @@ export async function getEvaluationDetails(examSetupTypeId) {
       },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeEvalution",
           attributes: ["employeeId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: false,
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subjectEvalution",
           attributes: ["subjectId", "subjectName", "subjectCode"],
           where: buildScope(model.subjectModel),
           required: false,
         },
         {
-          model: model.examSetupTypeModel.unscoped(),
+          model: model.examSetupTypeModel,
           as: "examSetupTypeEvalution",
           attributes: ["examSetupTypeId", "examType", "examName"],
           where: buildScope(model.examSetupTypeModel),
@@ -61,21 +61,21 @@ export async function getSingleEvaluationDetails(evalutionId) {
       },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeEvalution",
           attributes: ["employeeId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: false,
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subjectEvalution",
           attributes: ["subjectId", "subjectName", "subjectCode"],
           where: buildScope(model.subjectModel),
           required: false,
         },
         {
-          model: model.examSetupTypeModel.unscoped(),
+          model: model.examSetupTypeModel,
           as: "examSetupTypeEvalution",
           attributes: ["examSetupTypeId", "examType", "examName"],
           where: buildScope(model.examSetupTypeModel),
@@ -100,21 +100,21 @@ export async function getTeacherSubjectEvalution(employeeId) {
       },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeEvalution",
           attributes: ["employeeId", "employeeName", "employeeCode", "department"],
           where: buildScope(model.employeeModel),
           required: true,
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subjectEvalution",
           attributes: ["subjectId", "subjectName", "subjectCode"],
           where: buildScope(model.subjectModel),
           required: false,
         },
         {
-          model: model.examSetupTypeModel.unscoped(),
+          model: model.examSetupTypeModel,
           as: "examSetupTypeEvalution",
           attributes: ["examSetupTypeId", "examType", "examName"],
           where: buildScope(model.examSetupTypeModel),

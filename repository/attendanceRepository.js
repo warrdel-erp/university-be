@@ -34,57 +34,57 @@ export async function getAttendanceDetails() {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "class_sections_id", "student_id"] },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "userAttendence",
                     attributes: ["universityId", "userId"],
                 },
                 {
-                    model: model.classSectionModel.unscoped(),
+                    model: model.classSectionModel,
                     as: "classAttendance",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "course_id", "semester_id", "class_id", "acedmic_year_id", "specialization_id", "session_id"] },
                 },
                 {
-                    model: model.studentModel.unscoped(),
+                    model: model.studentModel,
                     as: "studentAttendance",
                     attributes: ["firstName", "middleName", "lastName", "scholarNumber"],
                 },
                 {
-                    model: model.classScheduleModel.unscoped(),
+                    model: model.classScheduleModel,
                     as: 'timeTableMapping',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "teacher_subject_mapping_id", "time_table_routine_id", "time_table_creation_id", "class_room_section_id", "elective_subject_id", "subject_id"] },
                     include: [
                         {
-                            model: model.employeeModel.unscoped(),
+                            model: model.employeeModel,
                             as: 'employeeDetails',
                             attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
                         },
                         {
-                            model: model.electiveSubjectModel.unscoped(),
+                            model: model.electiveSubjectModel,
                             as: 'timeTableElective',
                             attributes: ["electiveSubjectName", "electiveSubjectCode"],
                         },
                         {
-                            model: model.subjectModel.unscoped(),
+                            model: model.subjectModel,
                             as: 'timeTableSubject',
                             attributes: ["subjectName", "subjectCode"],
                         },
                         {
-                            model: model.timeTableRoutineModel.unscoped(),
+                            model: model.timeTableRoutineModel,
                             as: 'timeTablecreate',
                             attributes: ['classSectionsId', 'timeTableType'],
                         },
                         {
-                            model: model.teacherSubjectMappingModel.unscoped(),
+                            model: model.teacherSubjectMappingModel,
                             as: 'timeTableTeacherSubject',
                             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "employee_id", "class_subject_mapper_id"] },
                             include: [
                                 {
-                                    model: model.classSubjectMapperModel.unscoped(),
+                                    model: model.classSubjectMapperModel,
                                     as: 'employeeSubject',
                                     attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "semester_id", "subject_id"] },
                                     include: [
                                         {
-                                            model: model.subjectModel.unscoped(),
+                                            model: model.subjectModel,
                                             as: 'subjects',
                                             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt"] },
                                         },
@@ -150,7 +150,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
             },
             include: [
                 {
-                    model: model.classSectionModel.unscoped(),
+                    model: model.classSectionModel,
                     as: "classAttendance",
                     attributes: {
                         exclude: [
@@ -168,13 +168,13 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                     },
                     include: [
                         {
-                            model: model.courseModel.unscoped(),
+                            model: model.courseModel,
                             as: "courseSection",
                         },
                     ],
                 },
                 {
-                    model: model.studentModel.unscoped(),
+                    model: model.studentModel,
                     as: "studentAttendance",
                     attributes: [
                         "firstName",
@@ -206,7 +206,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                 where: { employeeId },
                 include: [
                     {
-                        model: model.classSubjectMapperModel.unscoped(),
+                        model: model.classSubjectMapperModel,
                         as: "employeeSubject",
                         attributes: {
                             exclude: [
@@ -219,7 +219,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                         },
                         include: [
                             {
-                                model: model.subjectModel.unscoped(),
+                                model: model.subjectModel,
                                 as: "subjects",
                                 attributes: {
                                     exclude: [
@@ -260,7 +260,7 @@ export async function getTimetable(timeTableRoutineId) {
         ],
         include: [
             {
-                model: model.timeTableStructurePeriodsModel.unscoped(),
+                model: model.timeTableStructurePeriodsModel,
                 as: "timeTablecreation",
                 attributes: ["weekOff"],
                 required: true,
@@ -321,28 +321,28 @@ export async function getTeacherMappings(employeeId) {
         },
         include: [
             {
-                model: model.teacherSubjectMappingModel.unscoped(),
+                model: model.teacherSubjectMappingModel,
                 as: "timeTableTeacherSubject",
                 required: false,
             },
             {
-                model: model.subjectModel.unscoped(),
+                model: model.subjectModel,
                 as: "timeTableSubject",
                 required: false,
             },
             {
-                model: model.timeTableRoutineModel.unscoped(),
+                model: model.timeTableRoutineModel,
                 as: "timeTablecreate",
                 required: true,
                 where: buildScope(model.timeTableRoutineModel),
                 include: [
                     {
-                        model: model.classSectionModel.unscoped(),
+                        model: model.classSectionModel,
                         as: "timeTableClassSection",
                         required: false,
                         include: [
                             {
-                                model: model.classModel.unscoped(),
+                                model: model.classModel,
                                 as: "classGroup",
                                 required: false,
                             },
@@ -351,7 +351,7 @@ export async function getTeacherMappings(employeeId) {
                 ],
             },
             {
-                model: model.timeTableStructurePeriodsModel.unscoped(),
+                model: model.timeTableStructurePeriodsModel,
                 as: "timeTablecreation",
                 required: true,
             },
@@ -374,13 +374,13 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
                 {
-                    model: model.attendanceModel.unscoped(),
+                    model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
                     attributes: ['attendanceId', 'date', 'attendanceStatus'],
                     include: [
                         {
-                            model: model.classScheduleModel.unscoped(),
+                            model: model.classScheduleModel,
                             as: 'timeTableMapping',
                             required: true,
                             where: {
@@ -390,7 +390,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
                             attributes: ['timeTableMappingId'],
                             include: [
                                 {
-                                    model: model.timeTableStructurePeriodsModel.unscoped(),
+                                    model: model.timeTableStructurePeriodsModel,
                                     as: 'timeTablecreation',
                                     attributes: ['timeTableCreationId', 'periodName'],
                                     where: {
@@ -427,14 +427,14 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
             },
             include: [
                 {
-                    model: model.timeTableRoutineModel.unscoped(),
+                    model: model.timeTableRoutineModel,
                     as: 'timeTablecreate',
                     attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
                     required: true,
                     where: { classSectionsId, ...buildScope(model.timeTableRoutineModel) },
                 },
                 {
-                    model: model.timeTableStructurePeriodsModel.unscoped(),
+                    model: model.timeTableStructurePeriodsModel,
                     as: 'timeTablecreation',
                     attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
                     required: true,
@@ -454,7 +454,7 @@ export async function getStudentsBatchAttendance(classSectionsId, filters) {
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
                 {
-                    model: model.attendanceModel.unscoped(),
+                    model: model.attendanceModel,
                     as: 'studentAttendance',
                     required: false,
                     attributes: ['attendanceId', 'date', 'attendanceStatus', 'timeTableMappingId'],

@@ -23,14 +23,14 @@ export async function getBlueprints(filters = {}) {
             where: whereClause,
             include: [
                 {
-                    model: model.subjectModel.unscoped(),
+                    model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
                     where: buildScope(model.subjectModel),
                     required: false,
                 },
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },

@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import studentFeePaymentModel from "./studentFeePaymentModel.js";
 
-export default sequelize.define(
+const paymentItemModel = sequelize.define(
   "payment_item",
   {
     paymentItemId: {
@@ -51,3 +51,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+paymentItemModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default paymentItemModel;

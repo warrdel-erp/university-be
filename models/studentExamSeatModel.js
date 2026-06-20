@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import student from "./studentModel.js";
 import examScheduleRoomCapacity from "./examScheduleRoomCapacityModel.js";
 
-export default sequelize.define(
+const studentExamSeatModel = sequelize.define(
     'student_exam_seat',
     {
         studentExamSeatId: {
@@ -75,3 +75,7 @@ export default sequelize.define(
         timestamps: true
     }
 );
+
+studentExamSeatModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentExamSeatModel;

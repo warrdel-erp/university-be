@@ -2,10 +2,18 @@ import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
+function buildScopeWithoutAcademicYear(model) {
+  return buildScope({
+    rawAttributes: model.rawAttributes,
+    name: model.name,
+    scopeConfig: { ...(model.scopeConfig || {}), academicYear: false },
+  });
+}
+
 function profileIncludes() {
   return [
     {
-      model: model.sessionCouseMappingModel.unscoped(),
+      model: model.sessionCouseMappingModel,
       as: "courseSessionMapping",
       attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
       where: buildScope(model.sessionCouseMappingModel),
@@ -17,24 +25,24 @@ function profileIncludes() {
 function profileIncludesForDetail() {
   return [
     {
-      model: model.sessionCouseMappingModel.unscoped(),
+      model: model.sessionCouseMappingModel,
       as: "courseSessionMapping",
       attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
       where: buildScope(model.sessionCouseMappingModel),
       required: true,
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courses",
           attributes: ["courseId", "courseName"],
           where: buildScope(model.courseModel),
           required: false,
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: "session",
           attributes: ["sessionId", "sessionName"],
-          where: buildScope(model.sessionModel),
+          where: buildScopeWithoutAcademicYear(model.sessionModel),
           required: false,
         },
       ],
@@ -44,25 +52,25 @@ function profileIncludesForDetail() {
 
 function feePlanItemsWithSubItemsInclude() {
   return {
-    model: model.feePlanItemModel.unscoped(),
+    model: model.feePlanItemModel,
     as: "feePlanItems",
     required: false,
     where: buildScope(model.feePlanItemModel),
     include: [
       {
-        model: model.feePlanSubItemsModel.unscoped(),
+        model: model.feePlanSubItemsModel,
         as: "feePlanSubItems",
         required: false,
         where: buildScope(model.feePlanSubItemsModel),
         include: [
           {
-            model: model.feeTypeCatalogModel.unscoped(),
+            model: model.feeTypeCatalogModel,
             as: "feeTypeCatalog",
             required: false,
             where: buildScope(model.feeTypeCatalogModel),
             include: [
               {
-                model: model.feeTypeCategoryModel.unscoped(),
+                model: model.feeTypeCategoryModel,
                 as: "feeTypeCategory",
                 required: false,
                 where: buildScope(model.feeTypeCategoryModel),
@@ -152,7 +160,7 @@ export async function findFeePlanSubItemForProfile(feePlanSubitemId, feePlanProf
     where: { feePlanSubitemId },
     include: [
       {
-        model: model.feePlanItemModel.unscoped(),
+        model: model.feePlanItemModel,
         as: "feePlanItem",
         required: true,
         where: { ...{ feePlanProfileId }, ...itemScope },
@@ -281,11 +289,11 @@ export async function findSessionCourseMappingWithSession(sessionCourseMappingId
     where: { sessionCourseMappingId },
     include: [
       {
-        model: model.sessionModel.unscoped(),
+        model: model.sessionModel,
         as: "session",
         required: true,
         attributes: ["sessionId", "acedmicYearId"],
-        where: buildScope(model.sessionModel),
+        where: buildScopeWithoutAcademicYear(model.sessionModel),
       },
     ],
     transaction: options.transaction,
@@ -338,7 +346,7 @@ export async function countStudentFeeInvoicesGroupedByFeePlanProfile(options = {
     },
     include: [
       {
-        model: model.feePlanItemModel.unscoped(),
+        model: model.feePlanItemModel,
         as: "feePlanItem",
         where: itemScope,
         required: true,

@@ -6,26 +6,26 @@ import { buildScope, scoped } from "../utility/scoped.js";
 function bookMappingIncludes() {
   return [
     {
-      model: model.libraryBookCategoryMappingModel.unscoped(),
+      model: model.libraryBookCategoryMappingModel,
       as: "categoryMappings",
       attributes: ["libraryCategoryMappingId", "libraryCategoryId"],
       required: false,
       include: [
         {
-          model: model.libraryCategoryModel.unscoped(),
+          model: model.libraryCategoryModel,
           as: "category",
           attributes: ["libraryCategoryId", "name"],
         },
       ],
     },
     {
-      model: model.libraryBookSubjectMappingModel.unscoped(),
+      model: model.libraryBookSubjectMappingModel,
       as: "subjectMappings",
       attributes: ["librarySubjectMappingId", "librarySubjectId"],
       required: false,
       include: [
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subject",
           attributes: ["subjectId", "subjectName"],
         },
@@ -36,7 +36,7 @@ function bookMappingIncludes() {
 
 function userLibraryCreationInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userLibraryCreation",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),
@@ -46,7 +46,7 @@ function userLibraryCreationInclude() {
 
 function scopedLibraryInclude(required = true) {
   return {
-    model: model.libraryCreationModel.unscoped(),
+    model: model.libraryCreationModel,
     as: "library",
     attributes: ["libraryCreationId", "instituteId"],
     where: buildScope(model.libraryCreationModel),
@@ -56,7 +56,7 @@ function scopedLibraryInclude(required = true) {
 
 function scopedLibraryFloorInclude() {
   return {
-    model: model.libraryFloorModel.unscoped(),
+    model: model.libraryFloorModel,
     as: "floorDetails",
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "instituteId", "createdBy", "updatedBy"],
@@ -67,12 +67,12 @@ function scopedLibraryFloorInclude() {
 
 function libraryInstituteInclude() {
   return {
-    model: model.instituteModel.unscoped(),
+    model: model.instituteModel,
     as: "libraryCreationInstitute",
     attributes: ["instituteName"],
     include: [
       {
-        model: model.campusModel.unscoped(),
+        model: model.campusModel,
         as: "campues",
         attributes: ["campusName"],
       },
@@ -82,7 +82,7 @@ function libraryInstituteInclude() {
 
 function scopedFloorJoin(as = "floor", required = true) {
   return {
-    model: model.libraryFloorModel.unscoped(),
+    model: model.libraryFloorModel,
     as,
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     where: buildScope(model.libraryFloorModel),
@@ -99,7 +99,7 @@ async function assertScopedLibraryCreation(libraryCreationId, transaction) {
 }
 
 async function assertScopedLibraryBook(libraryBookId, transaction) {
-  return model.libraryBookModel.unscoped().findOne({
+  return scoped(model.libraryBookModel).findOne({
     attributes: ["libraryBookId", "libraryCreationId"],
     where: { libraryBookId },
     include: [scopedLibraryInclude()],
@@ -108,12 +108,12 @@ async function assertScopedLibraryBook(libraryBookId, transaction) {
 }
 
 async function assertScopedInventory(inventoryId, transaction) {
-  return model.libraryBookInventoryModel.unscoped().findOne({
+  return scoped(model.libraryBookInventoryModel).findOne({
     where: { inventoryId },
     attributes: ["inventoryId", "libraryBookId"],
     include: [
       {
-        model: model.libraryBookModel.unscoped(),
+        model: model.libraryBookModel,
         as: "bookDetails",
         attributes: ["libraryBookId"],
         required: true,
@@ -158,7 +158,7 @@ export async function deleteCategoryMappingsByCategoryId(libraryCategoryId, tran
   if (!category) {
     return 0;
   }
-  return model.libraryBookCategoryMappingModel.unscoped().destroy({
+  return scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryCategoryId },
     transaction,
   });
@@ -169,7 +169,7 @@ export async function deleteCategoryMappingsByBookId(libraryBookId, transaction)
   if (!book) {
     return 0;
   }
-  return model.libraryBookCategoryMappingModel.unscoped().destroy({
+  return scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryBookId },
     transaction,
   });
@@ -180,7 +180,7 @@ export async function deleteSubjectMappingsByBookId(libraryBookId, transaction) 
   if (!book) {
     return 0;
   }
-  return model.libraryBookSubjectMappingModel.unscoped().destroy({
+  return scoped(model.libraryBookSubjectMappingModel).destroy({
     where: { libraryBookId },
     transaction,
   });
@@ -316,7 +316,7 @@ export async function createBook(bookData, transaction) {
         throw new Error("Library not found");
       }
     }
-    return await model.libraryBookModel.unscoped().create(bookData, { transaction });
+    return await scoped(model.libraryBookModel).create(bookData, { transaction });
   } catch (error) {
     console.error("Error creating book:", error);
     throw error;
@@ -337,7 +337,7 @@ export async function createInventory(inventoryData, transaction) {
   if (!book) {
     throw new Error("Book not found");
   }
-  return model.libraryBookInventoryModel.unscoped().create(inventoryData, { transaction });
+  return scoped(model.libraryBookInventoryModel).create(inventoryData, { transaction });
 }
 
 function buildBookListWhere(libraryCreationId, filters = {}) {
@@ -396,7 +396,7 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
   const inventoryWhere = {};
 
   if (libraryFloorId) {
-    const aisles = await model.libraryAisleModel.unscoped().findAll({
+    const aisles = await scoped(model.libraryAisleModel).findAll({
       attributes: ["libraryAisleId"],
       where: { libraryFloorId },
       include: [scopedFloorJoin()],
@@ -412,7 +412,7 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
   }
 
   const inventoryInclude = {
-    model: model.libraryBookInventoryModel.unscoped(),
+    model: model.libraryBookInventoryModel,
     as: "inventoryCopies",
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt"],
@@ -421,19 +421,19 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
     required: true,
     include: [
       {
-        model: model.libraryAisleModel.unscoped(),
+        model: model.libraryAisleModel,
         as: "aisleDetails",
         attributes: ["libraryAisleId", "name", "libraryFloorId"],
         required: false,
       },
       {
-        model: model.libraryRackModel.unscoped(),
+        model: model.libraryRackModel,
         as: "rackDetails",
         attributes: ["libraryRackId", "name"],
         required: false,
       },
       {
-        model: model.libraryRowModel.unscoped(),
+        model: model.libraryRowModel,
         as: "rowDetails",
         attributes: ["libraryRowId", "name"],
         required: false,
@@ -443,7 +443,7 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
 
   const { limit, offset } = pagination;
 
-  const { count, rows } = await model.libraryBookModel.unscoped().findAndCountAll({
+  const { count, rows } = await scoped(model.libraryBookModel).findAndCountAll({
     where: buildBookListWhere(libraryCreationId, filters),
     subQuery: false,
     distinct: true,
@@ -456,7 +456,7 @@ export async function getAllBooks(libraryCreationId, libraryFloorId, filters = {
     offset,
     order: [
       ["libraryBookId", "DESC"],
-      [{ model: model.libraryBookInventoryModel.unscoped(), as: "inventoryCopies" }, "inventoryId", "DESC"],
+      [{ model: model.libraryBookInventoryModel, as: "inventoryCopies" }, "inventoryId", "DESC"],
     ],
   });
 
@@ -474,7 +474,7 @@ const AVAILABLE_INVENTORY_STATUS = "available";
 
 function buildBookDetailsInclude() {
   return {
-    model: model.libraryBookModel.unscoped(),
+    model: model.libraryBookModel,
     as: "bookDetails",
     attributes: [],
     required: true,
@@ -506,7 +506,7 @@ async function resolveBookSummaryScope(libraryCreationId, libraryFloorId) {
       return null;
     }
 
-    const aisles = await model.libraryAisleModel.unscoped().findAll({
+    const aisles = await scoped(model.libraryAisleModel).findAll({
       attributes: ["libraryAisleId"],
       where: { libraryFloorId },
       include: [scopedFloorJoin()],
@@ -571,7 +571,7 @@ export async function getBookSummaryStats(
     fn("IF", where(col("status"), AVAILABLE_INVENTORY_STATUS), 1, 0),
   );
   const inventoryIncludeForBookCount = {
-    model: model.libraryBookInventoryModel.unscoped(),
+    model: model.libraryBookInventoryModel,
     as: "inventoryCopies",
     attributes: [],
     where: hasInventoryWhere ? inventoryWhere : undefined,
@@ -581,13 +581,13 @@ export async function getBookSummaryStats(
   const bookWhere = libraryCreationId ? { libraryCreationId } : {};
 
   const [totalBooks, perBookStats] = await Promise.all([
-    model.libraryBookModel.unscoped().count({
+    scoped(model.libraryBookModel).count({
       where: bookWhere,
       include: [scopedLibraryInclude(), inventoryIncludeForBookCount],
       distinct: true,
       col: "library_book_id",
     }),
-    model.libraryBookInventoryModel.unscoped().findAll({
+    scoped(model.libraryBookInventoryModel).findAll({
       attributes: [
         "libraryBookId",
         [fn("COUNT", col("library_book_inventory.inventory_id")), "totalCopies"],
@@ -627,7 +627,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
     return null;
   }
 
-  return model.libraryBookModel.unscoped().findOne({
+  return scoped(model.libraryBookModel).findOne({
     where: { libraryBookId },
     transaction,
     attributes: {
@@ -636,29 +636,29 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
     include: [
       ...bookMappingIncludes(),
       {
-        model: model.libraryBookInventoryModel.unscoped(),
+        model: model.libraryBookInventoryModel,
         as: "inventoryCopies",
         attributes: {
           exclude: ["createdAt", "updatedAt", "deletedAt"],
         },
         include: [
           {
-            model: model.libraryAisleModel.unscoped(),
+            model: model.libraryAisleModel,
             as: "aisleDetails",
             attributes: ["libraryAisleId", "name", "description", "libraryFloorId"],
           },
           {
-            model: model.libraryRackModel.unscoped(),
+            model: model.libraryRackModel,
             as: "rackDetails",
             attributes: ["libraryRackId", "name", "description"],
           },
           {
-            model: model.libraryRowModel.unscoped(),
+            model: model.libraryRowModel,
             as: "rowDetails",
             attributes: ["libraryRowId", "name", "description"],
           },
           {
-            model: model.studentModel.unscoped(),
+            model: model.studentModel,
             as: "studentDetailsBook",
             attributes: [
               "student_id",
@@ -672,7 +672,7 @@ export async function getSingleBookDetails(libraryBookId, transaction) {
             ],
           },
           {
-            model: model.employeeModel.unscoped(),
+            model: model.employeeModel,
             as: "employeeDetailsBook",
             attributes: ["employee_id", "employeeCode", "department", "employeeName"],
           },
@@ -689,7 +689,7 @@ export async function updateBook(libraryBookId, data, transaction) {
       throw new Error(`No book found with ID ${libraryBookId}`);
     }
 
-    const result = await model.libraryBookModel.unscoped().update(data, {
+    const result = await scoped(model.libraryBookModel).update(data, {
       where: { libraryBookId },
       transaction,
     });
@@ -712,7 +712,7 @@ export async function updateInventory(inventoryId, data, transaction) {
       throw new Error(`No inventory copy found with ID ${inventoryId}`);
     }
 
-    const result = await model.libraryBookInventoryModel.unscoped().update(data, {
+    const result = await scoped(model.libraryBookInventoryModel).update(data, {
       where: { inventoryId },
       transaction,
     });
@@ -740,12 +740,12 @@ export async function deleteBook(libraryBookId) {
     await deleteCategoryMappingsByBookId(libraryBookId, t);
     await deleteSubjectMappingsByBookId(libraryBookId, t);
 
-    await model.libraryBookInventoryModel.unscoped().destroy({
+    await scoped(model.libraryBookInventoryModel).destroy({
       where: { libraryBookId },
       transaction: t,
     });
 
-    const deletedBook = await model.libraryBookModel.unscoped().destroy({
+    const deletedBook = await scoped(model.libraryBookModel).destroy({
       where: { libraryBookId },
       transaction: t,
     });
@@ -772,7 +772,7 @@ export async function deleteInventoryCopy(inventoryId) {
       throw new Error(`No inventory copy found with ID ${inventoryId}`);
     }
 
-    const deleted = await model.libraryBookInventoryModel.unscoped().destroy({
+    const deleted = await scoped(model.libraryBookInventoryModel).destroy({
       where: { inventoryId },
     });
 
@@ -794,12 +794,12 @@ export async function getLibraryBookIdByInventoryId(inventoryId, transaction) {
 
 export async function getAllIssuedBooks() {
   try {
-    return await model.libraryBookInventoryModel.unscoped().findAll({
+    return await scoped(model.libraryBookInventoryModel).findAll({
       where: { status: "issued" },
       attributes: { exclude: ["deletedAt"] },
       include: [
         {
-          model: model.libraryBookModel.unscoped(),
+          model: model.libraryBookModel,
           as: "bookDetails",
           required: true,
           attributes: [
@@ -819,7 +819,7 @@ export async function getAllIssuedBooks() {
           include: [...bookMappingIncludes(), scopedLibraryInclude()],
         },
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: "studentDetailsBook",
           attributes: [
             "student_id",
@@ -833,12 +833,12 @@ export async function getAllIssuedBooks() {
           ],
         },
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeDetailsBook",
           attributes: ["employee_id", "employeeCode", "department", "employeeName"],
         },
         {
-          model: model.libraryAisleModel.unscoped(),
+          model: model.libraryAisleModel,
           as: "aisleDetails",
           include: [scopedFloorJoin()],
         },
@@ -985,7 +985,7 @@ export async function findBookByTitle(title, libraryCreationId, transaction) {
     whereClause.libraryCreationId = libraryCreationId;
   }
 
-  return model.libraryBookModel.unscoped().findOne({
+  return scoped(model.libraryBookModel).findOne({
     where: whereClause,
     include: libraryCreationId != null ? [scopedLibraryInclude()] : [],
     transaction,

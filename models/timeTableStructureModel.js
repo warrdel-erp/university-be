@@ -7,7 +7,7 @@ import instituteModel from "./instituteModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const timeTableStructureModel = sequelize.define(
     'time_table_structure',
     {
         timeTableNameId: {
@@ -132,3 +132,7 @@ export default sequelize.define(
         paranoid: true
     },
 );
+
+timeTableStructureModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default timeTableStructureModel;

@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const jobSettingModel = sequelize.define(
   "job_settings",
   {
     jobSettingId: {
@@ -103,3 +103,7 @@ export default sequelize.define(
     paranoid: true,
   }
 );
+
+jobSettingModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default jobSettingModel;

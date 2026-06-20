@@ -90,4 +90,6 @@ const examAttendanceModel = sequelize.define(
 );
 
 
+examAttendanceModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
 export default examAttendanceModel;

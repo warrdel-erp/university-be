@@ -25,12 +25,12 @@ export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, optio
 
 // Invoice total = SUM(amount - waiver) from student_fee_invoice_items (not invoice.total).
 export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, options = {}) {
-  const row = await model.studentFeeInvoiceItemsModel.unscoped().findOne({
+  const row = await scoped(model.studentFeeInvoiceItemsModel).findOne({
     attributes: [[fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"]],
     where: { studentFeeInvoiceId },
     include: [
       {
-        model: model.studentFeeInvoiceModel.unscoped(),
+        model: model.studentFeeInvoiceModel,
         as: "studentFeeInvoice",
         attributes: [],
         required: true,
@@ -48,7 +48,7 @@ export async function sumInvoiceTotalsByInvoiceIds(studentFeeInvoiceIds, options
   const totals = new Map();
   if (!studentFeeInvoiceIds.length) return totals;
 
-  const rows = await model.studentFeeInvoiceItemsModel.unscoped().findAll({
+  const rows = await scoped(model.studentFeeInvoiceItemsModel).findAll({
     attributes: [
       "studentFeeInvoiceId",
       [fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"],
@@ -56,7 +56,7 @@ export async function sumInvoiceTotalsByInvoiceIds(studentFeeInvoiceIds, options
     where: { studentFeeInvoiceId: { [Op.in]: studentFeeInvoiceIds } },
     include: [
       {
-        model: model.studentFeeInvoiceModel.unscoped(),
+        model: model.studentFeeInvoiceModel,
         as: "studentFeeInvoice",
         attributes: [],
         required: true,
@@ -93,12 +93,12 @@ export async function sumPaidAmountFromPaymentItemsByReference(
   referenceType,
   options = {}
 ) {
-  const row = await model.paymentItemModel.unscoped().findOne({
+  const row = await scoped(model.paymentItemModel).findOne({
     attributes: [[fn("SUM", col("payment_item.amount")), "paidAmount"]],
     where: { referenceId, referenceType },
     include: [
       {
-        model: model.studentFeePaymentModel.unscoped(),
+        model: model.studentFeePaymentModel,
         as: "payment",
         attributes: [],
         required: true,
@@ -132,7 +132,7 @@ export async function createStudentFeePayment(data, options = {}) {
 }
 
 export async function createPaymentItem(data, options = {}) {
-  return model.paymentItemModel.unscoped().create(data, { transaction: options.transaction });
+  return scoped(model.paymentItemModel).create(data, { transaction: options.transaction });
 }
 
 export async function updateInvoicePaymentStatus(
@@ -320,7 +320,7 @@ export async function findGeneratedInvoicesForPaymentDetails(studentId, options 
 export async function sumPaidAmountByReferenceIds(referenceIds, referenceType, options = {}) {
   if (!referenceIds.length) return new Map();
 
-  const rows = await model.paymentItemModel.unscoped().findAll({
+  const rows = await scoped(model.paymentItemModel).findAll({
     attributes: [
       "referenceId",
       [fn("SUM", col("payment_item.amount")), "paidAmount"],
@@ -331,7 +331,7 @@ export async function sumPaidAmountByReferenceIds(referenceIds, referenceType, o
     },
     include: [
       {
-        model: model.studentFeePaymentModel.unscoped(),
+        model: model.studentFeePaymentModel,
         as: "payment",
         attributes: [],
         required: true,

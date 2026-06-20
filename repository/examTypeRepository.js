@@ -19,7 +19,7 @@ export async function getExamType(acedmicYearId) {
                 ...(acedmicYearId && { acedmicYearId }),
             },
             include: [{
-                model: model.userModel.unscoped(),
+                model: model.userModel,
                 as: 'examTypeUser',
                 attributes: ["universityId", "userId"],
             }],
@@ -38,7 +38,7 @@ export async function getSingleExamType(examTypeId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { examTypeId },
             include: [{
-                model: model.userModel.unscoped(),
+                model: model.userModel,
                 as: 'examTypeUser',
                 attributes: ["universityId", "userId"],
             }],

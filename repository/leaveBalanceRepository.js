@@ -20,7 +20,7 @@ export async function addBalance(data, options = {}) {
     throw new Error("Leave policy not found");
   }
 
-  return model.leaveBalanceModel.unscoped().create(data, { transaction: options.transaction });
+  return scoped(model.leaveBalanceModel).create(data, { transaction: options.transaction });
 }
 
 export async function getBalancesByEmployee(employeeId) {
@@ -32,11 +32,11 @@ export async function getBalancesByEmployee(employeeId) {
     return [];
   }
 
-  return model.leaveBalanceModel.unscoped().findAll({
+  return scoped(model.leaveBalanceModel).findAll({
     where: { employeeId },
     include: [
       {
-        model: model.leavePolicyModel.unscoped(),
+        model: model.leavePolicyModel,
         as: "leaveBalancePolicy",
         where: buildScope(model.leavePolicyModel),
         required: true,
@@ -54,11 +54,11 @@ export async function getBalance(employeeId, policyId) {
     return null;
   }
 
-  return model.leaveBalanceModel.unscoped().findOne({
+  return scoped(model.leaveBalanceModel).findOne({
     where: { employeeId, policyId },
     include: [
       {
-        model: model.leavePolicyModel.unscoped(),
+        model: model.leavePolicyModel,
         as: "leaveBalancePolicy",
         where: buildScope(model.leavePolicyModel),
         required: true,
@@ -68,12 +68,12 @@ export async function getBalance(employeeId, policyId) {
 }
 
 export async function updateBalance(balanceId, data, options = {}) {
-  const balance = await model.leaveBalanceModel.unscoped().findOne({
+  const balance = await scoped(model.leaveBalanceModel).findOne({
     attributes: ["balanceId", "employeeId", "policyId"],
     where: { balanceId },
     include: [
       {
-        model: model.leavePolicyModel.unscoped(),
+        model: model.leavePolicyModel,
         as: "leaveBalancePolicy",
         where: buildScope(model.leavePolicyModel),
         required: true,
@@ -94,7 +94,7 @@ export async function updateBalance(balanceId, data, options = {}) {
     return [0];
   }
 
-  return model.leaveBalanceModel.unscoped().update(data, {
+  return scoped(model.leaveBalanceModel).update(data, {
     where: { balanceId },
     transaction: options.transaction,
   });

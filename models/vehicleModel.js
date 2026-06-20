@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import employee from './employeeModel.js'
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const vehicleModel = sequelize.define(
     'transport_vehicle',
     {
         vehicleId: {
@@ -93,3 +93,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+vehicleModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default vehicleModel;

@@ -7,7 +7,7 @@ function recordExcludedAttributes() {
 
 function userFeeInvoiceInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userFeeInvoice",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),
@@ -16,12 +16,12 @@ function userFeeInvoiceInclude() {
 }
 
 async function assertScopedStudentInvoiceMapper(studentInvoiceMapperId, transaction) {
-  return model.studentInvoiceMapperModel.unscoped().findOne({
+  return scoped(model.studentInvoiceMapperModel).findOne({
     attributes: ["studentInvoiceMapperId"],
     where: { studentInvoiceMapperId, ...buildScope(model.studentInvoiceMapperModel) },
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "studentinvoice",
         attributes: [],
         where: buildScope(model.studentModel),
@@ -55,17 +55,17 @@ export async function addFeeInvoiceDetailRecord(feeInvoiceArray, options = {}) {
 
 export async function getAllFeeInvoiceDetailRecord() {
   try {
-    return model.feeInvoiceDetailRecordModel.unscoped().findAll({
+    return scoped(model.feeInvoiceDetailRecordModel).findAll({
       attributes: { exclude: recordExcludedAttributes() },
       include: [
         {
-          model: model.studentInvoiceMapperModel.unscoped(),
+          model: model.studentInvoiceMapperModel,
           as: "studentMakePayment",
           required: true,
           where: buildScope(model.studentInvoiceMapperModel),
           include: [
             {
-              model: model.studentModel.unscoped(),
+              model: model.studentModel,
               as: "studentinvoice",
               attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
               where: buildScope(model.studentModel),
@@ -83,20 +83,20 @@ export async function getAllFeeInvoiceDetailRecord() {
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
   try {
-    return model.feeInvoiceModel.unscoped().findOne({
+    return scoped(model.feeInvoiceModel).findOne({
       attributes: { exclude: [...recordExcludedAttributes(), "fee_type_id"] },
       where: { feeInvoiceId },
       include: [
         userFeeInvoiceInclude(),
         {
-          model: model.feePlanModel.unscoped(),
+          model: model.feePlanModel,
           as: "feeInvoicePlan",
           attributes: { exclude: [...recordExcludedAttributes(), "fee_group_id"] },
           where: buildScope(model.feePlanModel),
           required: false,
         },
         {
-          model: model.classStudentMapperModel.unscoped(),
+          model: model.classStudentMapperModel,
           as: "feeStudentMapper",
           attributes: {
             exclude: [
@@ -112,21 +112,21 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
           where: buildScope(model.classStudentMapperModel),
           include: [
             {
-              model: model.studentModel.unscoped(),
+              model: model.studentModel,
               as: "studentMapped",
               attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
               where: buildScope(model.studentModel),
               required: true,
             },
             {
-              model: model.classSectionModel.unscoped(),
+              model: model.classSectionModel,
               as: "studentSectionDetail",
               attributes: ["section", "classSectionsId", "class"],
             },
           ],
         },
         {
-          model: model.feeInvoiceDetailModel.unscoped(),
+          model: model.feeInvoiceDetailModel,
           as: "feeInvoiceDetails",
           attributes: [
             "feeInvoiceDetailsId",
@@ -139,12 +139,12 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
           ],
           include: [
             {
-              model: model.feePlanTypeModel.unscoped(),
+              model: model.feePlanTypeModel,
               as: "feeInvoiceTypePlan",
               attributes: { exclude: recordExcludedAttributes() },
             },
             {
-              model: model.feePlanSemesterModel.unscoped(),
+              model: model.feePlanSemesterModel,
               as: "feeInvoiceTypeSemester",
               attributes: { exclude: recordExcludedAttributes() },
             },

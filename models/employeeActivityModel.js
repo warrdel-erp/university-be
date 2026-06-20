@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
 import users from "./userModel.js"
 
-export default sequelize.define(
+const employeeActivityModel = sequelize.define(
     'employee_activity',
     {
         employeeActivityId: {
@@ -71,3 +71,7 @@ export default sequelize.define(
         paranoid: false
     }
 );
+
+employeeActivityModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default employeeActivityModel;

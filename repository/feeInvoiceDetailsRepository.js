@@ -1,5 +1,5 @@
 import * as model from "../models/index.js";
-import { buildScope } from "../utility/scoped.js";
+import { buildScope, scoped } from '../utility/scoped.js';
 
 function feeInvoiceDetailExcludedAttributes() {
   return ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "fee_type_id"];
@@ -7,7 +7,7 @@ function feeInvoiceDetailExcludedAttributes() {
 
 function userFeeInvoiceInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userFeeInvoice",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),
@@ -17,7 +17,7 @@ function userFeeInvoiceInclude() {
 
 function scopedFeeInvoiceParentInclude() {
   return {
-    model: model.feeInvoiceModel.unscoped(),
+    model: model.feeInvoiceModel,
     as: "feeInvoiceDetails",
     attributes: {
       exclude: [
@@ -36,7 +36,7 @@ function scopedFeeInvoiceParentInclude() {
 }
 
 async function assertScopedFeeInvoiceDetail(feeInvoiceDetailsId, transaction) {
-  return model.feeInvoiceDetailModel.unscoped().findOne({
+  return scoped(model.feeInvoiceDetailModel).findOne({
     attributes: ["feeInvoiceDetailsId"],
     where: { feeInvoiceDetailsId },
     include: [scopedFeeInvoiceParentInclude()],
@@ -45,7 +45,7 @@ async function assertScopedFeeInvoiceDetail(feeInvoiceDetailsId, transaction) {
 }
 
 async function assertScopedFeeInvoice(feeInvoiceId, transaction) {
-  return model.feeInvoiceModel.unscoped().findOne({
+  return scoped(model.feeInvoiceModel).findOne({
     attributes: ["feeInvoiceId"],
     where: { feeInvoiceId },
     include: [userFeeInvoiceInclude()],
@@ -60,7 +60,7 @@ export async function addFeeInvoiceDetails(feeInvoiceDetailsData, transaction) {
       throw new Error("Fee invoice not found");
     }
 
-    return model.feeInvoiceDetailModel.unscoped().create(feeInvoiceDetailsData, { transaction });
+    return scoped(model.feeInvoiceDetailModel).create(feeInvoiceDetailsData, { transaction });
   } catch (error) {
     console.error("Error in add Fee Invoice Details :", error);
     throw error;
@@ -69,7 +69,7 @@ export async function addFeeInvoiceDetails(feeInvoiceDetailsData, transaction) {
 
 export async function getFeeInvoiceDetailsDetails() {
   try {
-    return model.feeInvoiceDetailModel.unscoped().findAll({
+    return scoped(model.feeInvoiceDetailModel).findAll({
       attributes: { exclude: feeInvoiceDetailExcludedAttributes() },
       include: [scopedFeeInvoiceParentInclude()],
     });
@@ -81,7 +81,7 @@ export async function getFeeInvoiceDetailsDetails() {
 
 export async function getSingleFeeInvoiceDetails(feeInvoiceDetailsId) {
   try {
-    return model.feeInvoiceDetailModel.unscoped().findOne({
+    return scoped(model.feeInvoiceDetailModel).findOne({
       attributes: { exclude: feeInvoiceDetailExcludedAttributes() },
       where: { feeInvoiceDetailsId },
       include: [scopedFeeInvoiceParentInclude()],
@@ -99,7 +99,7 @@ export async function updateFeeInvoiceDetails(feeInvoiceDetailsId, feeInvoiceDet
       return [0];
     }
 
-    return model.feeInvoiceDetailModel.unscoped().update(feeInvoiceDetailsData, {
+    return scoped(model.feeInvoiceDetailModel).update(feeInvoiceDetailsData, {
       where: { feeInvoiceDetailsId },
       transaction,
     });
@@ -115,7 +115,7 @@ export async function deleteFeeInvoiceDetails(feeInvoiceDetailsId) {
     return false;
   }
 
-  const deleted = await model.feeInvoiceDetailModel.unscoped().destroy({
+  const deleted = await scoped(model.feeInvoiceDetailModel).destroy({
     where: { feeInvoiceDetailsId },
   });
   return deleted > 0;

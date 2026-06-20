@@ -4,7 +4,7 @@ import student from "./studentModel.js"
 import users from "./userModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
-export default sequelize.define(
+const studentCorsAddressModel = sequelize.define(
     'student_cor_address',
     {
         studentCorAddressId: {
@@ -99,3 +99,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentCorsAddressModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentCorsAddressModel;

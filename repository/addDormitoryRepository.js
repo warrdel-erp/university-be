@@ -19,7 +19,7 @@ export async function addDormitoryRoom(DormitoryRoomData) {
       throw new Error("Room type not found");
     }
 
-    return model.addDormitoryModel.unscoped().create(DormitoryRoomData);
+    return scoped(model.addDormitoryModel).create(DormitoryRoomData);
   } catch (error) {
     console.error("Error in add DormitoryRoom :", error);
     throw error;
@@ -28,18 +28,18 @@ export async function addDormitoryRoom(DormitoryRoomData) {
 
 export async function getDormitoryRoomDetails() {
   try {
-    return model.addDormitoryModel.unscoped().findAll({
+    return scoped(model.addDormitoryModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       include: [
         {
-          model: model.dormitoryListModel.unscoped(),
+          model: model.dormitoryListModel,
           as: "dormitoryList",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.dormitoryListModel),
           required: true,
         },
         {
-          model: model.roomTypeModel.unscoped(),
+          model: model.roomTypeModel,
           as: "roomType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.roomTypeModel),
@@ -55,19 +55,19 @@ export async function getDormitoryRoomDetails() {
 
 export async function getSingleDormitoryRoomDetails(dormitoryListId) {
   try {
-    return model.addDormitoryModel.unscoped().findOne({
+    return scoped(model.addDormitoryModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: { dormitoryListId },
       include: [
         {
-          model: model.dormitoryListModel.unscoped(),
+          model: model.dormitoryListModel,
           as: "dormitoryList",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.dormitoryListModel),
           required: true,
         },
         {
-          model: model.roomTypeModel.unscoped(),
+          model: model.roomTypeModel,
           as: "roomType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.roomTypeModel),
@@ -87,7 +87,7 @@ export async function deleteDormitoryRoom(dormitoryListId) {
     return false;
   }
 
-  const deleted = await model.addDormitoryModel.unscoped().destroy({ where: { dormitoryListId } });
+  const deleted = await scoped(model.addDormitoryModel).destroy({ where: { dormitoryListId } });
   return deleted > 0;
 }
 
@@ -118,7 +118,7 @@ export async function updateDormitoryRoom(dormitoryListId, DormitoryRoomData) {
       }
     }
 
-    return model.addDormitoryModel.unscoped().update(DormitoryRoomData, {
+    return scoped(model.addDormitoryModel).update(DormitoryRoomData, {
       where: { dormitoryListId },
     });
   } catch (error) {

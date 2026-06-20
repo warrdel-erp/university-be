@@ -12,7 +12,7 @@ export async function clearAllUserPermissions(userId, transaction = null) {
       return 0;
     }
 
-    return model.userPermissionModel.unscoped().destroy({
+    return scoped(model.userPermissionModel).destroy({
       where: { userId },
       transaction,
     });
@@ -38,7 +38,7 @@ export async function setUserPermissions(userId, permissions, transaction = null
       permission: perm,
     }));
 
-    return model.userPermissionModel.unscoped().bulkCreate(dataToInsert, { transaction });
+    return model.userPermissionModel.bulkCreate(dataToInsert, { transaction });
   } catch (error) {
     console.error("Repository: Error in setUserPermissions:", error);
     throw error;
@@ -69,7 +69,7 @@ export async function getUserPermissionsByUserId(userId) {
       return [];
     }
 
-    const permissions = await model.userPermissionModel.unscoped().findAll({
+    const permissions = await scoped(model.userPermissionModel).findAll({
       where: { userId },
       attributes: ["permission"],
     });

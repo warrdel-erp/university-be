@@ -40,11 +40,18 @@ const getTeacherSectionQuerySchema = z.object({
         .default(20),
 });
 
+const getTeacherSubjectQuerySchema = z.object({
+    employeeId: positiveIntegerId.optional(),
+    subjectId: positiveIntegerId.optional(),
+    sessionId: positiveIntegerId.optional(),
+    acedmicYearId: positiveIntegerId.optional(),
+});
+
 router.post('/teacherSubject',userAuth , teacherSubjectMapping);
 
 router.post('/teacherSection',userAuth , teacherSectionMapping);
 
-router.get('/teacherSubject',userAuth , getTeacherSubjectMapping);
+router.get('/teacherSubject', userAuth, validate({ query: getTeacherSubjectQuerySchema }), getTeacherSubjectMapping);
 
 // router.get('/teacherSubject/employee',userAuth , getTeacherSubjectMappingByEmployee);
 

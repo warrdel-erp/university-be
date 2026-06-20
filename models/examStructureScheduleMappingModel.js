@@ -7,7 +7,7 @@ import university from "./universityModel.js";
 import session from "./sessionModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js"
 
-export default sequelize.define(
+const examStructureScheduleMappingModel = sequelize.define(
     'exam_structure_schedule_mapper',
     {
         examStructureScheduleMapperId: {
@@ -112,3 +112,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+examStructureScheduleMappingModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examStructureScheduleMappingModel;

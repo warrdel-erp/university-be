@@ -4,15 +4,15 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { requestContext } from "../utility/requestContext.js";
 
 export async function register(data) {
-  return model.userModel.unscoped().create(data);
+  return scoped(model.userModel).create(data);
 }
 
 export async function adminUser(data, transaction) {
-  return model.userStudentEmployeeModel.unscoped().create(data, { transaction });
+  return scoped(model.userStudentEmployeeModel).create(data, { transaction });
 }
 
 export async function findEmailByEmail(email) {
-  const result = await model.userModel.unscoped().findOne({
+  const result = await scoped(model.userModel).findOne({
     where: {
       email: { [Op.eq]: email },
     },
@@ -22,7 +22,7 @@ export async function findEmailByEmail(email) {
     return null;
   }
 
-  const institute = await model.instituteModel.unscoped().findOne({
+  const institute = await scoped(model.instituteModel).findOne({
     where: { instituteId: result.defaultInstituteId },
   });
 
@@ -31,52 +31,52 @@ export async function findEmailByEmail(email) {
 }
 
 export async function adminRegisterStudentAndEmployee(data, transaction) {
-  return model.userModel.unscoped().create(data, { transaction });
+  return scoped(model.userModel).create(data, { transaction });
 }
 
 export async function getAdminRegisterStudent() {
   try {
-    return model.userStudentEmployeeModel.unscoped().findAll({
+    return scoped(model.userStudentEmployeeModel).findAll({
       where: {
         student_id: { [Op.ne]: null },
       },
       attributes: ["userStudentEmployeeId", "userId", "studentId", "employeeId"],
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "userDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
           where: buildScope(model.userModel),
           required: true,
         },
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: "studentDetails",
           required: true,
           attributes: ["studentId", "scholarNumber", "enrollNumber", "firstName"],
           where: buildScope(model.studentModel),
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "course",
               attributes: ["courseName", "courseId", "courseCode", "capacity"],
               where: buildScope(model.courseModel),
               required: false,
             },
             {
-              model: model.classStudentMapperModel.unscoped(),
+              model: model.classStudentMapperModel,
               as: "studentMapped",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "student_id", "class_sections_id"] },
             },
             {
-              model: model.classSectionModel.unscoped(),
+              model: model.classSectionModel,
               as: "studentSections",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
               where: buildScope(model.classSectionModel),
               required: false,
             },
             {
-              model: model.semesterModel.unscoped(),
+              model: model.semesterModel,
               as: "studentSemester",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
               where: buildScope(model.semesterModel),
@@ -94,14 +94,14 @@ export async function getAdminRegisterStudent() {
 
 export async function getAdminRegisterEmployee() {
   try {
-    const users = await model.userStudentEmployeeModel.unscoped().findAll({
+    const users = await scoped(model.userStudentEmployeeModel).findAll({
       where: {
         employee_id: { [Op.ne]: null },
       },
       attributes: ["userStudentEmployeeId", "employeeId", "userId"],
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "userDetails",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
           where: {
@@ -111,14 +111,14 @@ export async function getAdminRegisterEmployee() {
           required: true,
         },
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeDetails",
           required: true,
           attributes: ["employee_id", "employeeName"],
           where: buildScope(model.employeeModel),
           include: [
             {
-              model: model.roleModel.unscoped(),
+              model: model.roleModel,
               as: "employeeRole",
               attributes: ["roleId", "role"],
             },
@@ -143,7 +143,7 @@ export async function getAdminRegisterEmployee() {
 
 export async function changePassword(email, data, transaction) {
   try {
-    return model.userModel.unscoped().update(data, {
+    return scoped(model.userModel).update(data, {
       where: { email },
       transaction,
     });
@@ -154,27 +154,27 @@ export async function changePassword(email, data, transaction) {
 }
 
 export async function saveToUserRolePermission(data, transaction) {
-  return model.userRolePermissionModel.unscoped().bulkCreate(data, { transaction });
+  return model.userRolePermissionModel.bulkCreate(data, { transaction });
 }
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
   try {
-    return model.userRolePermissionModel.unscoped().findAll({
+    return scoped(model.userRolePermissionModel).findAll({
       attributes: ["role_id", "permission_id", "user_id"],
       where: { user_id: userId },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "user",
           attributes: ["userName", "email", "userId"],
         },
         {
-          model: model.roleModel.unscoped(),
+          model: model.roleModel,
           as: "userRole",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
         {
-          model: model.permissionModel.unscoped(),
+          model: model.permissionModel,
           as: "userPermission",
           attributes: ["permissionId", "permission"],
         },

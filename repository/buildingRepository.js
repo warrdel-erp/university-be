@@ -6,7 +6,7 @@ function campusBuildingInclude() {
     const campusScope = buildScope(model.campusModel);
 
     return {
-        model: model.campusModel.unscoped(),
+        model: model.campusModel,
         as: "campusbuilding",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         where: campusScope,
@@ -132,13 +132,13 @@ export async function getAllbuildingNested(buildingType, instituteId) {
             include: [
                 campusBuildingInclude(),
                 {
-                    model: model.floorModel.unscoped(),
+                    model: model.floorModel,
                     as: "floorBuilding",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     required: false,
                     include: [
                         {
-                            model: model.classRoomModel.unscoped(),
+                            model: model.classRoomModel,
                             as: "roomFloor",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                             required: false,

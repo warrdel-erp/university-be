@@ -6,7 +6,7 @@ import universityModel from "./universityModel.js";
 import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
 import feeTypeModel from "./feeTypeModel.js";
 
-export default sequelize.define(
+const studentInvoiceMapperModel = sequelize.define(
     'student_invoice_mapper',
     {
         studentInvoiceMapperId: {
@@ -104,3 +104,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentInvoiceMapperModel.scopeConfig = { university: true, institute: false, academicYear: false };
+
+export default studentInvoiceMapperModel;

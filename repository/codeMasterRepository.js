@@ -27,14 +27,14 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.employeeCodeMasterType.unscoped(),
+          model: model.employeeCodeMasterType,
           as: "codes",
           attributes: {
             exclude: ["createdAt", "updatedAt", "deletedAt", "employeeCodeMasterId", "employee_code_master_id"],
           },
           include: [
             {
-              model: model.userModel.unscoped(),
+              model: model.userModel,
               as: "userEmployeeCodeType",
               attributes: ["universityId", "userId"],
               where: buildScope(model.userModel),
@@ -107,12 +107,12 @@ export async function getEmployeeCodesTypesForStudentImport() {
       attributes: ["employeeCodeMasterId", "codeMasterType"],
       include: [
         {
-          model: model.employeeCodeMasterType.unscoped(),
+          model: model.employeeCodeMasterType,
           as: "codes",
           attributes: ["employeeCodeMasterTypeId", "code"],
           include: [
             {
-              model: model.userModel.unscoped(),
+              model: model.userModel,
               as: "userEmployeeCodeType",
               attributes: ["universityId"],
               where: buildScope(model.userModel),

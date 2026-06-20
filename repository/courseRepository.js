@@ -67,7 +67,7 @@ export async function getAllCourseByInstituteId(instituteId) {
       throw new Error('University scope required');
     }
 
-    return await model.courseModel.unscoped().findAll({
+    return await scoped(model.courseModel).findAll({
       where: {
         instituteId,
         universityId: store.universityId,
@@ -99,7 +99,7 @@ export async function getCourseByName(courseName) {
 
 export async function getClassByName(className, Section) {
   try {
-    const results = await model.classSectionModel.unscoped().findAll({
+    const results = await scoped(model.classSectionModel).findAll({
       where: {
         class: {
           [Op.like]: `%${className}%`,
@@ -138,7 +138,7 @@ export async function getStudentBySectionId(classSectionId) {
       attributes: ['studentId'],
       include: [
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: 'studentMapped',
           attributes: ['scholarNumber', 'email', 'phoneNumber'],
         },
@@ -159,7 +159,7 @@ export async function getEmployeeByemployeeId(employeeId) {
       attributes: ['employeeName'],
       include: [
         {
-          model: model.employeeAddressModel.unscoped(),
+          model: model.employeeAddressModel,
           as: 'address',
           attributes: ['phoneNumber', 'mobileNumber', 'personal_email', 'officalEmailId'],
         },
@@ -180,32 +180,32 @@ export async function getAllCourses({ acedmicYearId, campusId } = {}) {
     return await scoped(model.courseModel).findAll({
       include: [
         {
-          model: model.instituteModel.unscoped(),
+          model: model.instituteModel,
           as: 'instituted',
           attributes: ['instituteId', 'instituteName', 'instituteCode', 'campusId'],
           where: { ...instituteScope, ...(campusId && { campusId }) },
           required: true,
         },
         {
-          model: model.affiliatedIniversityModel.unscoped(),
+          model: model.affiliatedIniversityModel,
           as: 'affiliated',
           attributes: ['affiliatedUniversityId', 'affiliatedUniversityName'],
           required: false,
         },
         {
-          model: model.employeeCodeMasterType.unscoped(),
+          model: model.employeeCodeMasterType,
           as: 'courseLevelCourses',
           attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
           required: false,
         },
         {
-          model: model.sessionCouseMappingModel.unscoped(),
+          model: model.sessionCouseMappingModel,
           as: 'sessionCourseMappings',
           attributes: ['sessionCourseMappingId'],
           required: false,
           include: [
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: 'session',
               attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
               where: {
@@ -233,7 +233,7 @@ export async function getCourseWithSessionsData(
     const courseInstituteRow = await scoped(model.courseModel).findOne({
       where: { courseId },
       attributes: ['instituteId'],
-      include: [{ model: model.instituteModel.unscoped(), as: 'instituted', attributes: ['campusId'] }],
+      include: [{ model: model.instituteModel, as: 'instituted', attributes: ['campusId'] }],
     });
     if (!courseInstituteRow) return null;
 
@@ -272,14 +272,14 @@ export async function getCourseWithSessionsData(
       where: { courseId },
       include: [
         {
-          model: model.sessionCouseMappingModel.unscoped(),
+          model: model.sessionCouseMappingModel,
           as: 'sessionCourseMappings',
           attributes: ['sessionCourseMappingId', 'courseId', 'sessionId'],
           where: mappingScope,
           required: false,
           include: [
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: 'session',
               attributes: [
                 'sessionId',
@@ -296,14 +296,14 @@ export async function getCourseWithSessionsData(
               required: Boolean(acedmicYearId),
               include: [
                 {
-                  model: model.classSectionModel.unscoped(),
+                  model: model.classSectionModel,
                   as: 'classSession',
                   attributes: ['classSectionsId', 'section'],
                   required: false,
                   where: { courseId, ...instituteScopeWhere },
                 },
                 {
-                  model: model.classModel.unscoped(),
+                  model: model.classModel,
                   as: 'classes',
                   attributes: ['classId', 'term'],
                   required: false,
@@ -371,7 +371,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
       where: { courseId, sessionId },
       include: [
         {
-          model: model.classModel.unscoped(),
+          model: model.classModel,
           as: 'classGroup',
           attributes: ['term'],
         },
@@ -391,7 +391,7 @@ export async function getCourseListWithSubjects(acedmicYearId) {
     return await scoped(model.courseModel).findAll({
       include: [
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: 'subjectInfo',
           attributes: ['subjectId', 'subjectCode'],
           where: {
@@ -401,13 +401,13 @@ export async function getCourseListWithSubjects(acedmicYearId) {
           required: false,
         },
         {
-          model: model.affiliatedIniversityModel.unscoped(),
+          model: model.affiliatedIniversityModel,
           as: 'affiliated',
           attributes: ['affiliatedUniversityId', 'affiliatedUniversityName'],
           required: false,
         },
         {
-          model: model.employeeCodeMasterType.unscoped(),
+          model: model.employeeCodeMasterType,
           as: 'courseLevelCourses',
           attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
           required: false,
@@ -436,7 +436,7 @@ export async function getSessionAcademicYearId(sessionId) {
 
 export async function getSemestersByCourseId(courseId) {
   try {
-    return model.semesterModel.unscoped().findAll({
+    return scoped(model.semesterModel).findAll({
       where: {
         courseId,
         ...omitAcademicYearScope(buildScope(model.semesterModel)),

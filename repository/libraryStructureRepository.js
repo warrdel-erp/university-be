@@ -8,7 +8,7 @@ function excludeAuditFields() {
 
 function campusFloorInclude() {
   return {
-    model: model.campusModel.unscoped(),
+    model: model.campusModel,
     as: "campusFloor",
     attributes: { exclude: excludeAuditFields() },
   };
@@ -16,7 +16,7 @@ function campusFloorInclude() {
 
 function instituteFloorInclude(businessWhere = {}) {
   return {
-    model: model.instituteModel.unscoped(),
+    model: model.instituteModel,
     as: "instituteFloor",
     attributes: { exclude: excludeAuditFields() },
     where: { ...businessWhere, ...buildScope(model.instituteModel) },
@@ -25,7 +25,7 @@ function instituteFloorInclude(businessWhere = {}) {
 
 function scopedFloorJoin(as = "floor", required = true) {
   return {
-    model: model.libraryFloorModel.unscoped(),
+    model: model.libraryFloorModel,
     as,
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     where: buildScope(model.libraryFloorModel),
@@ -35,19 +35,19 @@ function scopedFloorJoin(as = "floor", required = true) {
 
 function aisleStructureInclude() {
   return {
-    model: model.libraryAisleModel.unscoped(),
+    model: model.libraryAisleModel,
     as: "aisles",
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     required: false,
     include: [
       {
-        model: model.libraryRackModel.unscoped(),
+        model: model.libraryRackModel,
         as: "racks",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         required: false,
         include: [
           {
-            model: model.libraryRowModel.unscoped(),
+            model: model.libraryRowModel,
             as: "rows",
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             required: false,
@@ -67,7 +67,7 @@ async function assertScopedFloor(libraryFloorId, transaction) {
 }
 
 async function assertScopedAisle(libraryAisleId, transaction) {
-  return model.libraryAisleModel.unscoped().findOne({
+  return scoped(model.libraryAisleModel).findOne({
     where: { libraryAisleId },
     attributes: ["libraryAisleId", "libraryFloorId"],
     include: [scopedFloorJoin()],
@@ -76,12 +76,12 @@ async function assertScopedAisle(libraryAisleId, transaction) {
 }
 
 async function assertScopedRack(libraryRackId, transaction) {
-  return model.libraryRackModel.unscoped().findOne({
+  return scoped(model.libraryRackModel).findOne({
     where: { libraryRackId },
     attributes: ["libraryRackId", "libraryAisleId"],
     include: [
       {
-        model: model.libraryAisleModel.unscoped(),
+        model: model.libraryAisleModel,
         as: "aisle",
         attributes: ["libraryAisleId"],
         required: true,
@@ -93,18 +93,18 @@ async function assertScopedRack(libraryRackId, transaction) {
 }
 
 async function assertScopedRow(libraryRowId, transaction) {
-  return model.libraryRowModel.unscoped().findOne({
+  return scoped(model.libraryRowModel).findOne({
     where: { libraryRowId },
     attributes: ["libraryRowId", "libraryRackId"],
     include: [
       {
-        model: model.libraryRackModel.unscoped(),
+        model: model.libraryRackModel,
         as: "rack",
         attributes: ["libraryRackId"],
         required: true,
         include: [
           {
-            model: model.libraryAisleModel.unscoped(),
+            model: model.libraryAisleModel,
             as: "aisle",
             attributes: ["libraryAisleId"],
             required: true,
@@ -204,19 +204,19 @@ export async function findFloorStructureById(libraryFloorId) {
     where: { libraryFloorId },
     include: [
       {
-        model: model.libraryAisleModel.unscoped(),
+        model: model.libraryAisleModel,
         as: "aisles",
         attributes: ["libraryAisleId", "libraryFloorId", "name", "description"],
         required: false,
         include: [
           {
-            model: model.libraryRackModel.unscoped(),
+            model: model.libraryRackModel,
             as: "racks",
             attributes: ["libraryRackId", "libraryAisleId", "name", "description"],
             required: false,
             include: [
               {
-                model: model.libraryRowModel.unscoped(),
+                model: model.libraryRowModel,
                 as: "rows",
                 attributes: ["libraryRowId", "libraryRackId", "name", "description"],
                 required: false,
@@ -235,7 +235,7 @@ export async function getMaxNumericAisleNameByFloorId(libraryFloorId, transactio
     return 0;
   }
 
-  const row = await model.libraryAisleModel.unscoped().findOne({
+  const row = await scoped(model.libraryAisleModel).findOne({
     attributes: [[sequelize.literal("MAX(CAST(`name` AS UNSIGNED))"), "maxName"]],
     where: { libraryFloorId },
     transaction,
@@ -251,7 +251,7 @@ export async function bulkCreateAisles(rows, transaction) {
   if (!floor) {
     throw new Error("Library floor not found");
   }
-  return model.libraryAisleModel.unscoped().bulkCreate(rows, { transaction });
+  return model.libraryAisleModel.bulkCreate(rows, { transaction });
 }
 
 export async function bulkCreateRacks(rows, transaction) {
@@ -262,7 +262,7 @@ export async function bulkCreateRacks(rows, transaction) {
       throw new Error("Library aisle not found");
     }
   }
-  return model.libraryRackModel.unscoped().bulkCreate(rows, { transaction });
+  return model.libraryRackModel.bulkCreate(rows, { transaction });
 }
 
 export async function bulkCreateRows(rows, transaction) {
@@ -273,7 +273,7 @@ export async function bulkCreateRows(rows, transaction) {
       throw new Error("Library rack not found");
     }
   }
-  return model.libraryRowModel.unscoped().bulkCreate(rows, { transaction });
+  return model.libraryRowModel.bulkCreate(rows, { transaction });
 }
 
 export async function addAisle(data) {
@@ -281,18 +281,18 @@ export async function addAisle(data) {
   if (!scopedFloor) {
     throw new Error("Library floor not found");
   }
-  return model.libraryAisleModel.unscoped().create(data);
+  return scoped(model.libraryAisleModel).create(data);
 }
 
 export async function getAisleDetails() {
-  return model.libraryAisleModel.unscoped().findAll({
+  return scoped(model.libraryAisleModel).findAll({
     attributes: { exclude: excludeAuditFields() },
     include: [scopedFloorJoin()],
   });
 }
 
 export async function getSingleAisle(libraryAisleId) {
-  return model.libraryAisleModel.unscoped().findOne({
+  return scoped(model.libraryAisleModel).findOne({
     where: { libraryAisleId },
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     include: [scopedFloorJoin()],
@@ -304,7 +304,7 @@ export async function updateAisle(libraryAisleId, data) {
   if (!existing) {
     return [0];
   }
-  return model.libraryAisleModel.unscoped().update(data, { where: { libraryAisleId } });
+  return scoped(model.libraryAisleModel).update(data, { where: { libraryAisleId } });
 }
 
 export async function deleteAisle(libraryAisleId) {
@@ -312,7 +312,7 @@ export async function deleteAisle(libraryAisleId) {
   if (!existing) {
     return 0;
   }
-  return model.libraryAisleModel.unscoped().destroy({ where: { libraryAisleId } });
+  return scoped(model.libraryAisleModel).destroy({ where: { libraryAisleId } });
 }
 
 export async function addRack(data) {
@@ -320,15 +320,15 @@ export async function addRack(data) {
   if (!aisle) {
     throw new Error("Library aisle not found");
   }
-  return model.libraryRackModel.unscoped().create(data);
+  return scoped(model.libraryRackModel).create(data);
 }
 
 export async function getRackDetails() {
-  return model.libraryRackModel.unscoped().findAll({
+  return scoped(model.libraryRackModel).findAll({
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     include: [
       {
-        model: model.libraryAisleModel.unscoped(),
+        model: model.libraryAisleModel,
         as: "aisle",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         required: true,
@@ -339,11 +339,11 @@ export async function getRackDetails() {
 }
 
 export async function getSingleRack(libraryRackId) {
-  return model.libraryRackModel.unscoped().findOne({
+  return scoped(model.libraryRackModel).findOne({
     where: { libraryRackId },
     include: [
       {
-        model: model.libraryAisleModel.unscoped(),
+        model: model.libraryAisleModel,
         as: "aisle",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         required: true,
@@ -358,7 +358,7 @@ export async function updateRack(libraryRackId, data) {
   if (!existing) {
     return [0];
   }
-  return model.libraryRackModel.unscoped().update(data, { where: { libraryRackId } });
+  return scoped(model.libraryRackModel).update(data, { where: { libraryRackId } });
 }
 
 export async function deleteRack(libraryRackId) {
@@ -366,7 +366,7 @@ export async function deleteRack(libraryRackId) {
   if (!existing) {
     return 0;
   }
-  return model.libraryRackModel.unscoped().destroy({ where: { libraryRackId } });
+  return scoped(model.libraryRackModel).destroy({ where: { libraryRackId } });
 }
 
 export async function addRow(data) {
@@ -374,21 +374,21 @@ export async function addRow(data) {
   if (!rack) {
     throw new Error("Library rack not found");
   }
-  return model.libraryRowModel.unscoped().create(data);
+  return scoped(model.libraryRowModel).create(data);
 }
 
 export async function getRowDetails() {
-  return model.libraryRowModel.unscoped().findAll({
+  return scoped(model.libraryRowModel).findAll({
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     include: [
       {
-        model: model.libraryRackModel.unscoped(),
+        model: model.libraryRackModel,
         as: "rack",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         required: true,
         include: [
           {
-            model: model.libraryAisleModel.unscoped(),
+            model: model.libraryAisleModel,
             as: "aisle",
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             required: true,
@@ -401,17 +401,17 @@ export async function getRowDetails() {
 }
 
 export async function getSingleRow(libraryRowId) {
-  return model.libraryRowModel.unscoped().findOne({
+  return scoped(model.libraryRowModel).findOne({
     where: { libraryRowId },
     include: [
       {
-        model: model.libraryRackModel.unscoped(),
+        model: model.libraryRackModel,
         as: "rack",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         required: true,
         include: [
           {
-            model: model.libraryAisleModel.unscoped(),
+            model: model.libraryAisleModel,
             as: "aisle",
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             required: true,
@@ -428,7 +428,7 @@ export async function updateRow(libraryRowId, data) {
   if (!existing) {
     return [0];
   }
-  return model.libraryRowModel.unscoped().update(data, { where: { libraryRowId } });
+  return scoped(model.libraryRowModel).update(data, { where: { libraryRowId } });
 }
 
 export async function deleteRow(libraryRowId) {
@@ -436,12 +436,12 @@ export async function deleteRow(libraryRowId) {
   if (!existing) {
     return 0;
   }
-  return model.libraryRowModel.unscoped().destroy({ where: { libraryRowId } });
+  return scoped(model.libraryRowModel).destroy({ where: { libraryRowId } });
 }
 
 export async function getAisleIdByName(name) {
   try {
-    const aisle = await model.libraryAisleModel.unscoped().findOne({
+    const aisle = await scoped(model.libraryAisleModel).findOne({
       where: { name },
       include: [scopedFloorJoin()],
     });
@@ -457,11 +457,11 @@ export async function getAisleIdByName(name) {
 
 export async function getRackIdByName(name) {
   try {
-    const rack = await model.libraryRackModel.unscoped().findOne({
+    const rack = await scoped(model.libraryRackModel).findOne({
       where: { name },
       include: [
         {
-          model: model.libraryAisleModel.unscoped(),
+          model: model.libraryAisleModel,
           as: "aisle",
           required: true,
           include: [scopedFloorJoin()],
@@ -480,16 +480,16 @@ export async function getRackIdByName(name) {
 
 export async function getRowIdByName(name) {
   try {
-    const row = await model.libraryRowModel.unscoped().findOne({
+    const row = await scoped(model.libraryRowModel).findOne({
       where: { name },
       include: [
         {
-          model: model.libraryRackModel.unscoped(),
+          model: model.libraryRackModel,
           as: "rack",
           required: true,
           include: [
             {
-              model: model.libraryAisleModel.unscoped(),
+              model: model.libraryAisleModel,
               as: "aisle",
               required: true,
               include: [scopedFloorJoin()],

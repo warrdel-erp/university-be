@@ -5,7 +5,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const dormitoryListModel = sequelize.define(
     'dormitory_list',
     {
         dormitoryListId: {
@@ -104,3 +104,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+dormitoryListModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default dormitoryListModel;

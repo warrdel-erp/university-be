@@ -15,7 +15,7 @@ async function assertScopedExamSetup(examSetupId, transaction) {
         attributes: ['examSetupId', 'examTypeId'],
         transaction,
         include: [{
-            model: model.examTypeModel.unscoped(),
+            model: model.examTypeModel,
             as: 'examType',
             required: true,
             where: buildScope(model.examTypeModel),
@@ -55,42 +55,42 @@ export async function getExamSetup(acedmicYearId) {
             },
             include: [
                 {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "course",
                     attributes: ["courseName", "capacity"],
                     where: buildScope(model.courseModel),
                     required: true,
                 },
                 {
-                    model: model.subjectModel.unscoped(),
+                    model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
                     where: buildScope(model.subjectModel),
                     required: true,
                 },
                 {
-                    model: model.examTypeModel.unscoped(),
+                    model: model.examTypeModel,
                     as: "examType",
                     attributes: ["examTypeId", "examName"],
                     where: examTypeWhere,
                     required: true,
                 },
                 {
-                    model: model.employeeModel.unscoped(),
+                    model: model.employeeModel,
                     as: "employee",
                     attributes: ["employee_id", "employee_name"],
                     where: employeeWhere,
                     required: false,
                 },
                 {
-                    model: model.classRoomModel.unscoped(),
+                    model: model.classRoomModel,
                     as: "room",
                     attributes: ["room_number", "capacity", "classRoomSectionId"],
                     where: buildScope(model.classRoomModel),
                     required: false,
                 },
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: 'examSetUpUser',
                     attributes: ["universityId", "userId"],
                 },
@@ -114,7 +114,7 @@ export async function getSingleExamSetup(examSetupId) {
             where: { examSetupId },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: 'examSetUpUser',
                     attributes: ["universityId", "userId"],
                 },

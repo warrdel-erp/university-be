@@ -16,7 +16,7 @@ export async function findAllTransportRoutes() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "transportUser",
           attributes: ["universityId", "userId"],
           where: buildScope(model.userModel),
@@ -37,7 +37,7 @@ export async function findTransportRouteById(transportRouteId) {
       where: { transportRouteId },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "transportUser",
           attributes: ["universityId", "userId"],
           where: buildScope(model.userModel),

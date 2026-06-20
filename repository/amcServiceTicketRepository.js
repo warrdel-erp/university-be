@@ -5,19 +5,19 @@ import { scoped } from "../utility/scoped.js";
 
 const ticketListInclude = [
   {
-    model: model.assetModel.unscoped(),
+    model: model.assetModel,
     as: "ticketAsset",
     attributes: [],
     required: true,
   },
   {
-    model: model.amcVendorModel.unscoped(),
+    model: model.amcVendorModel,
     as: "ticketVendor",
     attributes: [],
     required: false,
   },
   {
-    model: model.assetCategoryModel.unscoped(),
+    model: model.assetCategoryModel,
     as: "ticketAssetCategory",
     attributes: [],
     required: true,

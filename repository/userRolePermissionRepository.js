@@ -11,7 +11,7 @@ export async function addUserRolePermission(UserRolePermissionData) {
       throw new Error("User not found");
     }
 
-    return model.userRolePermissionModel.unscoped().create(UserRolePermissionData);
+    return scoped(model.userRolePermissionModel).create(UserRolePermissionData);
   } catch (error) {
     console.error("Error in add UserRolePermission :", error);
     throw error;
@@ -20,11 +20,11 @@ export async function addUserRolePermission(UserRolePermissionData) {
 
 export async function getUserRolePermissionDetails() {
   try {
-    return model.userRolePermissionModel.unscoped().findAll({
+    return scoped(model.userRolePermissionModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "user",
           attributes: ["userName", "email", "role", "phone"],
           where: buildScope(model.userModel),
@@ -50,11 +50,11 @@ export async function getUserRolePermissionDetails() {
 
 export async function getSingleUserRolePermissionDetails(userRolePermissionId) {
   try {
-    return model.userRolePermissionModel.unscoped().findOne({
+    return scoped(model.userRolePermissionModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "user",
           attributes: ["userName", "email", "role", "phone"],
           where: buildScope(model.userModel),
@@ -79,12 +79,12 @@ export async function getSingleUserRolePermissionDetails(userRolePermissionId) {
 }
 
 export async function deleteUserRolePermission(userRolePermissionId) {
-  const existing = await model.userRolePermissionModel.unscoped().findOne({
+  const existing = await scoped(model.userRolePermissionModel).findOne({
     attributes: ["userRolePermissionId"],
     where: { userRolePermissionId },
     include: [
       {
-        model: model.userModel.unscoped(),
+        model: model.userModel,
         as: "user",
         attributes: ["userId"],
         where: buildScope(model.userModel),
@@ -96,7 +96,7 @@ export async function deleteUserRolePermission(userRolePermissionId) {
     return false;
   }
 
-  const deleted = await model.userRolePermissionModel.unscoped().destroy({
+  const deleted = await scoped(model.userRolePermissionModel).destroy({
     where: { userRolePermissionId },
   });
   return deleted > 0;
@@ -104,12 +104,12 @@ export async function deleteUserRolePermission(userRolePermissionId) {
 
 export async function updateUserRolePermission(userRolePermissionId, UserRolePermissionData) {
   try {
-    const existing = await model.userRolePermissionModel.unscoped().findOne({
+    const existing = await scoped(model.userRolePermissionModel).findOne({
       attributes: ["userRolePermissionId"],
       where: { userRolePermissionId },
       include: [
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "user",
           attributes: ["userId"],
           where: buildScope(model.userModel),
@@ -121,7 +121,7 @@ export async function updateUserRolePermission(userRolePermissionId, UserRolePer
       return [0];
     }
 
-    return model.userRolePermissionModel.unscoped().update(UserRolePermissionData, {
+    return scoped(model.userRolePermissionModel).update(UserRolePermissionData, {
       where: { userRolePermissionId },
     });
   } catch (error) {
@@ -341,12 +341,12 @@ export async function getEmployeeRolePermissionByUserId(userId) {
       return [];
     }
 
-    return model.userStudentEmployeeModel.unscoped().findAll({
+    return scoped(model.userStudentEmployeeModel).findAll({
             attributes: ["userId"],
             limit: 1,
             include: [
                 {
-                    model: model.employeeModel.unscoped(),
+                    model: model.employeeModel,
                     as: 'employeeDetails',
                     required: true,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },

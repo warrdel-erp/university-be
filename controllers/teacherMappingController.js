@@ -1,21 +1,21 @@
 import * as teacherMapping from '../services/teacherMappingServices.js'
 
 export const teacherSubjectMapping = async (req, res) => {
-    let { employeeId, classSubjectMapperId } = req.body;
-    const data = req.body
+    const data = req.body;
     const createdBy = req.user.userId;
+    const { employeeId, subjectId } = data;
     try {
-        // required fields
-        if (!(employeeId && classSubjectMapperId)) {
-            return res.status(400).send("employeeId, classSubjectMapperId is required");
+        const hasSubjectIds = [].concat(subjectId ?? []).filter(Boolean).length > 0;
+
+        if (!employeeId || !hasSubjectIds) {
+            return res.status(400).send("employeeId and subjectId are required");
         }
 
-        // Add the teacher subject mapping
         const result = await teacherMapping.teacherSubjectMappingService(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in teacher subject mapping:", error);
-        return res.status(500).send("Internal Server Error");
+        return res.status(500).send(error.message || "Internal Server Error");
     }
 };
 
@@ -38,10 +38,7 @@ export const teacherSectionMapping = async (req, res) => {
 };
 
 export const getTeacherSubjectMapping = async (req, res) => {
-    const employeeId = req.query.employeeId ? Number(req.query.employeeId) : undefined;
-    const subjectId = req.query.subjectId ? Number(req.query.subjectId) : undefined;
-    const sessionId = req.query.sessionId ? Number(req.query.sessionId) : undefined;
-    const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
+    const { employeeId, subjectId, sessionId, acedmicYearId } = req.query;
     try {
         const result = await teacherMapping.getTeacherSubjectMappingService(
             employeeId,

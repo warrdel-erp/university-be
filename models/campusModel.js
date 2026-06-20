@@ -107,6 +107,8 @@ const campusModel = sequelize.define(
     }
 );
 
-campusModel.scopeConfig = { institute: false, academicYear: false };
+
+
+campusModel.scopeConfig = { university: true, institute: false, academicYear: false };
 
 export default campusModel;

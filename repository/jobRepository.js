@@ -18,27 +18,27 @@ export async function getAllJobs() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.jobSettingModel.unscoped(),
+          model: model.jobSettingModel,
           as: "jobType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "facultyJobs",
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
-          model: model.subAccountModel.unscoped(),
+          model: model.subAccountModel,
           as: "departmentJobs",
           attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subjectJobs",
           attributes: ["subjectName", "subjectCode", "subjectId"],
         },
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseJobs",
           attributes: ["courseId", "courseName", "courseCode"],
         },
@@ -57,27 +57,27 @@ export async function getSingleJob(jobId) {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.jobSettingModel.unscoped(),
+          model: model.jobSettingModel,
           as: "jobType",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
         },
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "facultyJobs",
           attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
         },
         {
-          model: model.subAccountModel.unscoped(),
+          model: model.subAccountModel,
           as: "departmentJobs",
           attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "subjectJobs",
           attributes: ["subjectName", "subjectCode", "subjectId"],
         },
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseJobs",
           attributes: ["courseId", "courseName", "courseCode"],
         },
@@ -186,27 +186,27 @@ export async function getCalendarJobs(view, date) {
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     include: [
       {
-        model: model.jobSettingModel.unscoped(),
+        model: model.jobSettingModel,
         as: "jobType",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
       {
-        model: model.employeeModel.unscoped(),
+        model: model.employeeModel,
         as: "facultyJobs",
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
-        model: model.subAccountModel.unscoped(),
+        model: model.subAccountModel,
         as: "departmentJobs",
         attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
       },
       {
-        model: model.subjectModel.unscoped(),
+        model: model.subjectModel,
         as: "subjectJobs",
         attributes: ["subjectName", "subjectCode", "subjectId"],
       },
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "courseJobs",
         attributes: ["courseId", "courseName", "courseCode"],
       },
@@ -305,27 +305,27 @@ export async function getFilteredJobs(filters) {
     ],
     include: [
       {
-        model: model.jobSettingModel.unscoped(),
+        model: model.jobSettingModel,
         as: "jobType",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       },
       {
-        model: model.employeeModel.unscoped(),
+        model: model.employeeModel,
         as: "facultyJobs",
         attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
       },
       {
-        model: model.subAccountModel.unscoped(),
+        model: model.subAccountModel,
         as: "departmentJobs",
         attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
       },
       {
-        model: model.subjectModel.unscoped(),
+        model: model.subjectModel,
         as: "subjectJobs",
         attributes: ["subjectName", "subjectCode", "subjectId"],
       },
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "courseJobs",
         attributes: ["courseId", "courseName", "courseCode"],
       },
@@ -349,8 +349,8 @@ export async function getJobData(filters, targetDate) {
       ...(filters.status && { status: filters.status }),
     },
     include: [
-      { model: model.employeeModel.unscoped(), as: "facultyJobs" },
-      { model: model.subAccountModel.unscoped(), as: "departmentJobs" },
+      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.subAccountModel, as: "departmentJobs" },
     ],
   });
 }
@@ -373,8 +373,8 @@ export async function fetchJobs(filters, fromDate, toDate) {
   const jobs = await scoped(model.jobModel).findAll({
     where,
     include: [
-      { model: model.employeeModel.unscoped(), as: "facultyJobs" },
-      { model: model.subAccountModel.unscoped(), as: "departmentJobs" },
+      { model: model.employeeModel, as: "facultyJobs" },
+      { model: model.subAccountModel, as: "departmentJobs" },
     ],
   });
 
@@ -425,7 +425,7 @@ export async function fetchTimetableAsJobs(filters, fromDate, toDate) {
             day: dayName,
             ...(filters.employeeId && { employeeId: filters.employeeId }),
           },
-          include: [{ model: model.employeeModel.unscoped(), as: "employeeDetails" }],
+          include: [{ model: model.employeeModel, as: "employeeDetails" }],
         });
 
         for (const l of lectures) {

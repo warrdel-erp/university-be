@@ -4,7 +4,7 @@ import student from "./studentModel.js"
 import users from "./userModel.js"
 import { city, country, state } from "../constant.js";
 
-export default sequelize.define(
+const studentsAddressModel = sequelize.define(
     'students_address',
     {
         studentsAddressId: {
@@ -78,3 +78,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentsAddressModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentsAddressModel;

@@ -13,7 +13,7 @@ function uniquePositiveIds(ids) {
 
 function scopedLibraryInclude(required = true) {
   return {
-    model: model.libraryCreationModel.unscoped(),
+    model: model.libraryCreationModel,
     as: "library",
     attributes: ["libraryCreationId", "instituteId"],
     where: buildScope(model.libraryCreationModel),
@@ -62,7 +62,7 @@ export async function findExistingBookKeysByLibraryId(libraryCreationId) {
     return [];
   }
 
-  return model.libraryBookModel.unscoped().findAll({
+  return scoped(model.libraryBookModel).findAll({
     where: { libraryCreationId },
     attributes: ["libraryBookId", "title", "isbn"],
   });
@@ -79,7 +79,7 @@ export async function bulkInsertLibraryBooks(bookPayloadList, transaction) {
     }
   }
 
-  return model.libraryBookModel.unscoped().bulkCreate(bookPayloadList, { transaction });
+  return model.libraryBookModel.bulkCreate(bookPayloadList, { transaction });
 }
 
 export async function bulkInsertLibraryBookInventory(inventoryPayloadList, transaction) {
@@ -87,7 +87,7 @@ export async function bulkInsertLibraryBookInventory(inventoryPayloadList, trans
 
   const libraryBookIds = [...new Set(inventoryPayloadList.map((row) => row.libraryBookId).filter(Boolean))];
   for (const libraryBookId of libraryBookIds) {
-    const book = await model.libraryBookModel.unscoped().findOne({
+    const book = await scoped(model.libraryBookModel).findOne({
       attributes: ["libraryBookId"],
       where: { libraryBookId },
       include: [scopedLibraryInclude()],
@@ -98,11 +98,11 @@ export async function bulkInsertLibraryBookInventory(inventoryPayloadList, trans
     }
   }
 
-  return model.libraryBookInventoryModel.unscoped().bulkCreate(inventoryPayloadList, { transaction });
+  return model.libraryBookInventoryModel.bulkCreate(inventoryPayloadList, { transaction });
 }
 
 export async function replaceBookCategoryMappings(libraryBookId, categoryId, transaction) {
-  const book = await model.libraryBookModel.unscoped().findOne({
+  const book = await scoped(model.libraryBookModel).findOne({
     attributes: ["libraryBookId"],
     where: { libraryBookId },
     include: [scopedLibraryInclude()],
@@ -112,7 +112,7 @@ export async function replaceBookCategoryMappings(libraryBookId, categoryId, tra
     throw new Error("Library book not found");
   }
 
-  await model.libraryBookCategoryMappingModel.unscoped().destroy({
+  await scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryBookId },
     transaction,
   });
@@ -130,7 +130,7 @@ export async function replaceBookCategoryMappings(libraryBookId, categoryId, tra
 }
 
 export async function replaceBookSubjectMappings(libraryBookId, subjectId, transaction) {
-  const book = await model.libraryBookModel.unscoped().findOne({
+  const book = await scoped(model.libraryBookModel).findOne({
     attributes: ["libraryBookId"],
     where: { libraryBookId },
     include: [scopedLibraryInclude()],
@@ -140,7 +140,7 @@ export async function replaceBookSubjectMappings(libraryBookId, subjectId, trans
     throw new Error("Library book not found");
   }
 
-  await model.libraryBookSubjectMappingModel.unscoped().destroy({
+  await scoped(model.libraryBookSubjectMappingModel).destroy({
     where: { libraryBookId },
     transaction,
   });
@@ -214,12 +214,12 @@ export async function findExistingAccessionNumbersInList(accessionNumbers) {
 
   for (let index = 0; index < unique.length; index += chunkSize) {
     const chunk = unique.slice(index, index + chunkSize);
-    const rows = await model.libraryBookInventoryModel.unscoped().findAll({
+    const rows = await scoped(model.libraryBookInventoryModel).findAll({
       where: { accessionNumber: { [Op.in]: chunk } },
       attributes: ["accessionNumber"],
       include: [
         {
-          model: model.libraryBookModel.unscoped(),
+          model: model.libraryBookModel,
           as: "bookDetails",
           attributes: [],
           required: true,

@@ -4,7 +4,7 @@ import userModel from "./userModel.js";
 import employeeModel from "./employeeModel.js";
 import studentModel from "./studentModel.js";
 
-export default sequelize.define(
+const userStudentEmployeeModel = sequelize.define(
   'user_student_employee',
   {
     userStudentEmployeeId: {
@@ -64,4 +64,8 @@ export default sequelize.define(
     timestamps: true,
     paranoid: true
 }
-)
+);
+
+userStudentEmployeeModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default userStudentEmployeeModel;

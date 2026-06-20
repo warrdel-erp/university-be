@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const studentFeePaymentModel = sequelize.define(
   "student_fee_payment",
   {
     studentFeePaymentId: {
@@ -87,3 +87,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+studentFeePaymentModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default studentFeePaymentModel;

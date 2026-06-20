@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -7,7 +7,7 @@ export async function findExamSetupTypeTermById(examSetupTypeTermId, transaction
         transaction,
         include: [
             {
-                model: model.examSetupTypeModel.unscoped(),
+                model: model.examSetupTypeModel,
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName", "isPublish"],
                 where: buildScope(model.examSetupTypeModel),
@@ -32,14 +32,14 @@ export async function getSchedulesWithSubjectsForExamTermSession(examSetupTypeTe
         attributes: ["examScheduleId", "subjectId", "semesterId", "examDate", "examTime", "duration", "type"],
         include: [
             {
-                model: model.subjectModel.unscoped(),
+                model: model.subjectModel,
                 as: "subjectSchedule",
                 required: false,
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
                 where: buildScope(model.subjectModel),
             },
             {
-                model: model.semesterModel.unscoped(),
+                model: model.semesterModel,
                 as: "semesterexam",
                 required: false,
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
@@ -63,7 +63,7 @@ export async function getEligibleStudents(sessionId, courseId, term, transaction
         },
         include: [
             {
-                model: model.classSectionModel.unscoped(),
+                model: model.classSectionModel,
                 as: "studentSections",
                 required: true,
                 attributes: [],
@@ -75,7 +75,7 @@ export async function getEligibleStudents(sessionId, courseId, term, transaction
                 },
                 include: [
                     {
-                        model: model.classModel.unscoped(),
+                        model: model.classModel,
                         as: "classGroup",
                         required: true,
                         attributes: [],
@@ -134,27 +134,49 @@ export async function countHallTickets(filters = {}, transaction) {
     return scoped(model.studentHallTicketModel).count({ where, transaction });
 }
 
+export async function countHallTicketsByTermIds(examSetupTypeTermIds, sessionId, transaction) {
+    if (!examSetupTypeTermIds?.length || !sessionId) {
+        return new Map();
+    }
+
+    const rows = await scoped(model.studentHallTicketModel).findAll({
+        attributes: [
+            "examSetupTypeTermId",
+            [fn("COUNT", col("student_hall_ticket.id")), "count"],
+        ],
+        where: {
+            examSetupTypeTermId: { [Op.in]: examSetupTypeTermIds },
+            sessionId,
+        },
+        group: ["examSetupTypeTermId"],
+        raw: true,
+        transaction,
+    });
+
+    return new Map(rows.map((row) => [row.examSetupTypeTermId, Number(row.count)]));
+}
+
 function getHallTicketIncludes() {
     return [
         {
-            model: model.instituteModel.unscoped(),
+            model: model.instituteModel,
             as: "institute",
             attributes: ["instituteId", "instituteName"],
         },
         {
-            model: model.universityModel.unscoped(),
+            model: model.universityModel,
             as: "university",
             attributes: ["universityId", "universityName"],
         },
         {
-            model: model.studentModel.unscoped(),
+            model: model.studentModel,
             as: "student",
             attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
             where: buildScope(model.studentModel),
             required: false,
             include: [
                 {
-                    model: model.classSectionModel.unscoped(),
+                    model: model.classSectionModel,
                     as: "studentSections",
                     attributes: ["classSectionsId", "class", "section", "sessionId"],
                     required: false,
@@ -162,30 +184,30 @@ function getHallTicketIncludes() {
             ],
         },
         {
-            model: model.sessionModel.unscoped(),
+            model: model.sessionModel,
             as: "session",
             attributes: ["sessionId", "sessionName"],
         },
         {
-            model: model.examSetupTypeTermModel.unscoped(),
+            model: model.examSetupTypeTermModel,
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "examSetupTypeId", "term", "courseId"],
             where: buildScope(model.examSetupTypeTermModel),
             required: true,
             include: [
                 {
-                    model: model.examSetupTypeModel.unscoped(),
+                    model: model.examSetupTypeModel,
                     as: "examSetupType",
                     attributes: ["examSetupTypeId", "examType", "examName"],
                     where: buildScope(model.examSetupTypeModel),
                 },
                 {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "course",
                     attributes: ["courseId", "courseName", "courseCode"],
                 },
                 {
-                    model: model.acedmicYearModel.unscoped(),
+                    model: model.acedmicYearModel,
                     as: "acedmicYear",
                     attributes: ["acedmicYearId", "yearTitle"],
                 },

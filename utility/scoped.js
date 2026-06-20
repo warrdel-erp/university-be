@@ -1,164 +1,156 @@
-
 import { requestContext } from "./requestContext.js";
+
+/**
+ * Multi-tenant query scoping for Sequelize models.
+ *
+ * Reads tenant context from requestContext (set in authUser middleware):
+ *   universityId, instituteId, academicYearId, userId, role
+ *
+ * Use explicit scoping only:
+ *   scoped(model.departmentModel).findAll({ where: { ... } })
+ *
+ * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
+ * or when store.bypass is true (set for routes like /institute, /acedmicYear).
+ */
 
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
 
-export function buildScope(model) {
-    const store = requestContext.getStore();
+function isScoped(configValue, field, attrs) {
+  return configValue === true && field in attrs;
+}
 
-    if (!store || store.bypass) {
-        return {};
+function getOriginal(model, method) {
+  if (model._scopeOriginals?.[method]) {
+    return model._scopeOriginals[method];
+  }
+  return model[method].bind(model);
+}
+
+function mergeScopedWhere(baseWhere, optionsWhere = {}, pkField, pkValue) {
+  const where = { ...optionsWhere, ...baseWhere };
+  if (pkField != null && pkValue != null) {
+    where[pkField] = pkValue;
+  }
+  return where;
+}
+
+function scopeFieldsForModel(model, scopeWhere) {
+  const attrs = model.rawAttributes || {};
+  const filtered = {};
+  for (const [key, value] of Object.entries(scopeWhere)) {
+    if (key in attrs) {
+      filtered[key] = value;
     }
+  }
+  return filtered;
+}
 
-    const attrs = model.rawAttributes || {};
-    const config = model.scopeConfig || {};
+/**
+ * Builds tenant WHERE filters for a model based on requestContext.
+ * Override per model via model.scopeConfig: { university, institute, academicYear, teacherRestricted }
+ */
+export const buildScope = (model) => {
+  const where = {};
+  const config = model.scopeConfig || {};
+  const store = requestContext.getStore();
+  const attrs = model.rawAttributes || {};
 
-    const where = {};
-
-    // DEFAULT → institute scope
-    if ("instituteId" in attrs) {
-        if (!store.instituteId) {
-            throw new Error("Institute missing");
-        }
-
-        where.instituteId =
-            store.instituteId;
-    }
-
-    // OPTIONAL → academic year scope
-    if (
-        config.academicYear === true &&
-        ACADEMIC_YEAR_FIELD in attrs
-    ) {
-        if (!store.academicYearId) {
-            throw new Error(
-                "Academic year missing"
-            );
-        }
-
-        where[
-            ACADEMIC_YEAR_FIELD
-        ] = store.academicYearId;
-    }
-
-    // OPTIONAL → teacher scope
-    if (
-        store.role === "teacher" &&
-        (
-            config.teacherRestricted === true
-        )
-    ) {
-        const field =
-            "teacherId" in attrs
-                ? "teacherId"
-                : "userId";
-
-        where[field] =
-            store.userId;
-    }
-
+  if (!store || store.bypass) {
     return where;
-}
+  }
 
-function mergeWhere(scope, where = {}) {
-    return {
-        ...where,
-        ...scope,
-    };
-}
+  if (isScoped(config.university, "universityId", attrs)) {
+    if (!store.universityId) {
+      throw new Error(`Error in university scope ${model.name}`);
+    }
+    where.universityId = store.universityId;
+  }
 
-export function scoped(model) {
-    const scope =
-        buildScope(model);
+  if (isScoped(config.institute, "instituteId", attrs)) {
+    if (!store.instituteId) {
+      throw new Error(`Error in institute scope ${model.name}`);
+    }
+    where.instituteId = store.instituteId;
+  }
 
-    return {
-        findAll: (options = {}) =>
-            model.findAll({
-                ...options,
-                where: mergeWhere(
-                    scope,
-                    options.where
-                ),
-            }),
+  if (isScoped(config.academicYear, ACADEMIC_YEAR_FIELD, attrs)) {
+    if (!store.academicYearId) {
+      throw new Error(`Error in academic year scope ${model.name}`);
+    }
+    where[ACADEMIC_YEAR_FIELD] = store.academicYearId;
+  }
 
-        findOne: (options = {}) =>
-            model.findOne({
-                ...options,
-                where: mergeWhere(
-                    scope,
-                    options.where
-                ),
-            }),
+  if (store.role === "teacher" && (config.teacherRestricted || "teacherId" in attrs)) {
+    if (!store.userId) {
+      throw new Error(`Error in teacher scope ${model.name}`);
+    }
+    where["teacherId" in attrs ? "teacherId" : "userId"] = store.userId;
+  }
 
-        findByPk: (
-            id,
-            options = {}
-        ) =>
-            model.findOne({
-                ...options,
-                where: mergeWhere(
-                    scope,
-                    {
-                        ...(options.where || {}),
-                        [
-                            model.primaryKeyAttribute ||
-                            "id"
-                        ]: id,
-                    }
-                ),
-            }),
+  return where;
+};
 
-        create: (
-            data,
-            options = {}
-        ) =>
-            model.create(
-                {
-                    ...data,
-                    ...scope,
-                },
-                options
-            ),
+export const scoped = (model) => {
+  const baseWhere = buildScope(model);
+  const pk = model.primaryKeyAttribute || "id";
+  const writeScope = scopeFieldsForModel(model, baseWhere);
 
-        update: (
-            data,
-            options = {}
-        ) =>
-            model.update(
-                data,
-                {
-                    ...options,
-                    where:
-                        mergeWhere(
-                            scope,
-                            options.where
-                        ),
-                }
-            ),
+  return {
+    findAll: (options = {}) =>
+      getOriginal(model, "findAll")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
 
-        destroy: (
-            options = {}
-        ) =>
-            model.destroy({
-                ...options,
-                where:
-                    mergeWhere(
-                        scope,
-                        options.where
-                    ),
-            }),
+    findOne: (options = {}) =>
+      getOriginal(model, "findOne")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
 
-        count: (
-            options = {}
-        ) =>
-            model.count({
-                ...options,
-                where:
-                    mergeWhere(
-                        scope,
-                        options.where
-                    ),
-            }),
-    };
-}
+    findByPk: (id, options = {}) =>
+      getOriginal(model, "findOne")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where, pk, id),
+      }),
 
+    findAndCountAll: (options = {}) =>
+      getOriginal(model, "findAndCountAll")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    update: (data, options = {}) =>
+      getOriginal(model, "update")(data, {
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    delete: (options = {}) =>
+      getOriginal(model, "destroy")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    count: (options = {}) =>
+      getOriginal(model, "count")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    destroy: (options = {}) =>
+      getOriginal(model, "destroy")({
+        ...options,
+        where: mergeScopedWhere(baseWhere, options.where),
+      }),
+
+    create: (data, options = {}) =>
+      getOriginal(model, "create")({ ...data, ...writeScope }, options),
+
+    bulkCreate: (rows, options = {}) =>
+      getOriginal(model, "bulkCreate")(
+        rows.map((row) => ({ ...row, ...writeScope })),
+        { validate: true, ...options }
+      ),
+  };
+};

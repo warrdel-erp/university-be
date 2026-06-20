@@ -130,7 +130,7 @@ app.use((req, res, next) => {
 app.use("/campus", campus);
 app.use("/institute", institute);
 app.use("/specialization", specialization);
-app.use("/acedmicYear", acedmicYear);
+app.use("/acedmicYear", acedmicYear); 
 // Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
 
 app.use("/course", course);

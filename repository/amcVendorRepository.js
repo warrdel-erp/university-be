@@ -7,7 +7,7 @@ import { normalizeVendorName } from "../utility/amcVendorCode.js";
 const excludeTs = ["createdAt", "updatedAt"];
 
 const vendorCategoryInclude = {
-  model: model.assetCategoryModel.unscoped(),
+  model: model.assetCategoryModel,
   as: "vendorCategory",
   attributes: ["assetCategoryId", "name", "codePrefix"],
 };

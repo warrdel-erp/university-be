@@ -28,7 +28,7 @@ export async function getSingleSubAccountDetails(subAccountId) {
             where: { subAccountId },
             include: [
                 {
-                    model: model.accountModel.unscoped(),
+                    model: model.accountModel,
                     as: 'accountDetail',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                 },
@@ -75,7 +75,7 @@ export async function updateSubAccount(subAccountId, SubAccountData) {
 /** Global account master list — no tenant columns on account model. */
 export async function getAllAccount() {
     try {
-        return await model.accountModel.unscoped().findAll({
+        return await scoped(model.accountModel).findAll({
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
     } catch (error) {

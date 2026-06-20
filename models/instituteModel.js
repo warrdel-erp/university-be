@@ -83,7 +83,8 @@ const instituteModel = sequelize.define(
         paranoid: true
     }
 );
+
 
-instituteModel.scopeConfig = { institute: false, academicYear: false };
+instituteModel.scopeConfig = { university: true, institute: false, academicYear: false };
 
 export default instituteModel;

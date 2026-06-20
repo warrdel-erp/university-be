@@ -26,29 +26,29 @@ export async function getSingleJobType(jobSettingId) {
       where: { jobSettingId },
       include: [
         {
-          model: model.jobModel.unscoped(),
+          model: model.jobModel,
           as: "jobs",
           attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.jobModel),
           required: false,
           include: [
             {
-              model: model.employeeModel.unscoped(),
+              model: model.employeeModel,
               as: "facultyJobs",
               attributes: ["employeeCode", "department", "employmentType", "employeeName", "pickColor"],
             },
             {
-              model: model.subAccountModel.unscoped(),
+              model: model.subAccountModel,
               as: "departmentJobs",
               attributes: ["departmentName", "subAccountId", "alternateName", "departmentCode"],
             },
             {
-              model: model.subjectModel.unscoped(),
+              model: model.subjectModel,
               as: "subjectJobs",
               attributes: ["subjectName", "subjectCode", "subjectId"],
             },
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "courseJobs",
               attributes: ["courseId", "courseName", "courseCode"],
             },

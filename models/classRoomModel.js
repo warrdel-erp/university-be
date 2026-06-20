@@ -94,6 +94,7 @@ const classRoomModel = sequelize.define(
     }
 );
 
-classRoomModel.scopeConfig = { academicYear: false };
+
+classRoomModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default classRoomModel;

@@ -24,7 +24,7 @@ function inventoryListAttributes() {
 
 function scopedLibraryInclude(required = true) {
   return {
-    model: model.libraryCreationModel.unscoped(),
+    model: model.libraryCreationModel,
     as: "library",
     attributes: ["libraryCreationId", "instituteId"],
     where: buildScope(model.libraryCreationModel),
@@ -34,7 +34,7 @@ function scopedLibraryInclude(required = true) {
 
 function buildBookDetailsInclude(required = true) {
   return {
-    model: model.libraryBookModel.unscoped(),
+    model: model.libraryBookModel,
     as: "bookDetails",
     attributes: ["libraryBookId", "title", "subtitle", "authors", "isbn"],
     required,
@@ -44,7 +44,7 @@ function buildBookDetailsInclude(required = true) {
 
 function buildInventoryItemInclude({ forList = false } = {}) {
   return {
-    model: model.libraryBookIssueInventoryItemModel.unscoped(),
+    model: model.libraryBookIssueInventoryItemModel,
     as: "inventoryItems",
     attributes: [
       "libraryBookIssueInventoryItemId",
@@ -55,14 +55,14 @@ function buildInventoryItemInclude({ forList = false } = {}) {
     required: true,
     include: [
       {
-        model: model.libraryBookInventoryModel.unscoped(),
+        model: model.libraryBookInventoryModel,
         as: "inventory",
         attributes: inventoryListAttributes(),
         required: true,
         include: [buildBookDetailsInclude()],
       },
       {
-        model: model.libraryReturnBookTransactionModel.unscoped(),
+        model: model.libraryReturnBookTransactionModel,
         as: "returnBookTransaction",
         attributes: ["libraryReturnBookTransactionId", "returnDate"],
         required: false,
@@ -74,12 +74,12 @@ function buildInventoryItemInclude({ forList = false } = {}) {
 function buildTransactionInclude({ forList = false } = {}) {
   return [
     {
-      model: model.studentModel.unscoped(),
+      model: model.studentModel,
       as: "studentMember",
       attributes: studentMemberAttributes(),
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "course",
           attributes: ["courseId", "courseName", "courseCode"],
         },
@@ -87,7 +87,7 @@ function buildTransactionInclude({ forList = false } = {}) {
       required: false,
     },
     {
-      model: model.employeeModel.unscoped(),
+      model: model.employeeModel,
       as: "teacherMember",
       attributes: teacherMemberAttributes(),
       required: false,
@@ -97,7 +97,7 @@ function buildTransactionInclude({ forList = false } = {}) {
 }
 
 async function assertScopedInventory(inventoryId, transaction) {
-  return model.libraryBookInventoryModel.unscoped().findOne({
+  return scoped(model.libraryBookInventoryModel).findOne({
     where: { inventoryId },
     attributes: inventoryListAttributes(),
     include: [buildBookDetailsInclude()],
@@ -106,7 +106,7 @@ async function assertScopedInventory(inventoryId, transaction) {
 }
 
 async function assertScopedIssueTransaction(libraryIssueBookTransactionId, transaction) {
-  return model.libraryIssueBookTransactionModel.unscoped().findOne({
+  return scoped(model.libraryIssueBookTransactionModel).findOne({
     where: { libraryIssueBookTransactionId },
     include: [buildInventoryItemInclude()],
     transaction,
@@ -128,7 +128,7 @@ function toPlainTransaction(row) {
 async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   if (!transactionIds.length) return new Map();
 
-  const pendingRows = await model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  const pendingRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
       libraryReturnBookTransactionId: null,
@@ -141,7 +141,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
     transaction,
   });
 
-  const returnedRows = await model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  const returnedRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
       libraryReturnBookTransactionId: { [Op.ne]: null },
@@ -206,7 +206,7 @@ export async function countTeacherMemberById(employeeId, transaction) {
 
 export async function findInventoriesByIds(inventoryIds, transaction) {
   if (!inventoryIds.length) return [];
-  return model.libraryBookInventoryModel.unscoped().findAll({
+  return scoped(model.libraryBookInventoryModel).findAll({
     where: { inventoryId: { [Op.in]: inventoryIds } },
     attributes: inventoryListAttributes(),
     include: [buildBookDetailsInclude()],
@@ -216,7 +216,7 @@ export async function findInventoriesByIds(inventoryIds, transaction) {
 
 export async function countExistingInventoriesByIds(inventoryIds, transaction) {
   if (!inventoryIds.length) return 0;
-  return model.libraryBookInventoryModel.unscoped().count({
+  return scoped(model.libraryBookInventoryModel).count({
     where: { inventoryId: { [Op.in]: inventoryIds } },
     include: [buildBookDetailsInclude()],
     transaction,
@@ -235,7 +235,7 @@ export async function findActiveIssueItemsByTransactionId(
     return [];
   }
 
-  return model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  return scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     transaction,
   });
@@ -267,7 +267,7 @@ export async function findActiveIssueItemsForReturn(
     return [];
   }
 
-  return model.libraryBookIssueInventoryItemModel.unscoped().findAll({ where, transaction });
+  return scoped(model.libraryBookIssueInventoryItemModel).findAll({ where, transaction });
 }
 
 export async function returnAllActiveIssueItemsForTransaction(
@@ -283,7 +283,7 @@ export async function returnAllActiveIssueItemsForTransaction(
     return { matchedCount: 0 };
   }
 
-  const activeItems = await model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  const activeItems = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
     transaction,
@@ -328,7 +328,7 @@ export async function returnIssueItemsForTransaction(
       where.inventoryId = returnItem.inventoryId;
     }
 
-    const issueItem = await model.libraryBookIssueInventoryItemModel.unscoped().findOne({
+    const issueItem = await scoped(model.libraryBookIssueInventoryItemModel).findOne({
       where,
       attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
       transaction,
@@ -363,7 +363,7 @@ export async function returnIssueItemsForTransaction(
 export async function markInventoriesIssued(inventoryIds, payload, transaction) {
   if (!inventoryIds.length) return 0;
 
-  const scopedRows = await model.libraryBookInventoryModel.unscoped().findAll({
+  const scopedRows = await scoped(model.libraryBookInventoryModel).findAll({
     where: {
       inventoryId: { [Op.in]: inventoryIds },
       status: "available",
@@ -376,7 +376,7 @@ export async function markInventoriesIssued(inventoryIds, payload, transaction) 
   const scopedIds = scopedRows.map((row) => row.inventoryId);
   if (!scopedIds.length) return 0;
 
-  const [affected] = await model.libraryBookInventoryModel.unscoped().update(payload, {
+  const [affected] = await scoped(model.libraryBookInventoryModel).update(payload, {
     where: {
       inventoryId: { [Op.in]: scopedIds },
       status: "available",
@@ -399,7 +399,7 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
 
   if (!scopedIds.length) return;
 
-  return model.libraryBookInventoryModel.unscoped().update(
+  return scoped(model.libraryBookInventoryModel).update(
     {
       status: "available",
       issueDate: null,
@@ -420,7 +420,7 @@ export async function markIssueItemsReturned(
   transaction,
 ) {
   if (!libraryBookIssueInventoryItemIds.length) return;
-  return model.libraryBookIssueInventoryItemModel.unscoped().update(
+  return scoped(model.libraryBookIssueInventoryItemModel).update(
     { libraryReturnBookTransactionId },
     {
       where: {
@@ -445,7 +445,7 @@ export async function syncOutstandingInventoryDueDate(
     return;
   }
 
-  const activeInventoryRows = await model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  const activeInventoryRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["inventoryId"],
     raw: true,
@@ -464,7 +464,7 @@ export async function syncOutstandingInventoryDueDate(
 
   if (!scopedIds.length) return;
 
-  return model.libraryBookInventoryModel.unscoped().update(
+  return scoped(model.libraryBookInventoryModel).update(
     { dueDate },
     {
       where: { inventoryId: { [Op.in]: scopedIds } },
@@ -474,11 +474,11 @@ export async function syncOutstandingInventoryDueDate(
 }
 
 export async function createLibraryIssueBookTransaction(data, transaction) {
-  return model.libraryIssueBookTransactionModel.unscoped().create(data, { transaction });
+  return scoped(model.libraryIssueBookTransactionModel).create(data, { transaction });
 }
 
 export async function createLibraryReturnBookTransaction(data, transaction) {
-  const [row] = await model.libraryReturnBookTransactionModel.unscoped().findOrCreate({
+  const [row] = await model.libraryReturnBookTransactionModel.findOrCreate({
     where: { returnDate: data.returnDate },
     defaults: { returnDate: data.returnDate },
     transaction,
@@ -496,7 +496,7 @@ export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction
     }
   }
 
-  return model.libraryBookIssueInventoryItemModel.unscoped().bulkCreate(rows, { transaction });
+  return model.libraryBookIssueInventoryItemModel.bulkCreate(rows, { transaction });
 }
 
 export async function getLibraryIssueBookTransactions(query = {}) {
@@ -530,7 +530,7 @@ export async function getLibraryIssueBookTransactions(query = {}) {
     ];
   }
 
-  const { rows, count } = await model.libraryIssueBookTransactionModel.unscoped().findAndCountAll({
+  const { rows, count } = await scoped(model.libraryIssueBookTransactionModel).findAndCountAll({
     where,
     include: buildTransactionInclude({ forList: true }),
     order: [["libraryIssueBookTransactionId", "DESC"]],
@@ -564,7 +564,7 @@ export async function getLibraryIssueBookTransactions(query = {}) {
 }
 
 export async function getLibraryIssueBookTransactionById(libraryIssueBookTransactionId, transaction) {
-  const row = await model.libraryIssueBookTransactionModel.unscoped().findOne({
+  const row = await scoped(model.libraryIssueBookTransactionModel).findOne({
     where: { libraryIssueBookTransactionId },
     include: buildTransactionInclude(),
     transaction,
@@ -596,14 +596,14 @@ export async function updateLibraryIssueBookTransaction(
     return [0];
   }
 
-  return model.libraryIssueBookTransactionModel.unscoped().update(data, {
+  return scoped(model.libraryIssueBookTransactionModel).update(data, {
     where: { libraryIssueBookTransactionId },
     transaction,
   });
 }
 
 export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId) {
-  const inventoryRow = await model.libraryBookInventoryModel.unscoped().findOne({
+  const inventoryRow = await scoped(model.libraryBookInventoryModel).findOne({
     where: { inventoryId },
     attributes: ["inventoryId", "accessionNumber", "status", "condition"],
     include: [buildBookDetailsInclude()],
@@ -613,7 +613,7 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     return null;
   }
 
-  const issueRows = await model.libraryBookIssueInventoryItemModel.unscoped().findAll({
+  const issueRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { inventoryId },
     attributes: [
       "libraryBookIssueInventoryItemId",
@@ -624,13 +624,13 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
     ],
     include: [
       {
-        model: model.libraryReturnBookTransactionModel.unscoped(),
+        model: model.libraryReturnBookTransactionModel,
         as: "returnBookTransaction",
         attributes: ["libraryReturnBookTransactionId", "returnDate"],
         required: false,
       },
       {
-        model: model.libraryIssueBookTransactionModel.unscoped(),
+        model: model.libraryIssueBookTransactionModel,
         as: "issueBookTransaction",
         attributes: [
           "libraryIssueBookTransactionId",
@@ -641,7 +641,7 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
         ],
         include: [
           {
-            model: model.studentModel.unscoped(),
+            model: model.studentModel,
             as: "studentMember",
             attributes: [
               "studentId",
@@ -656,14 +656,14 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
             required: false,
             include: [
               {
-                model: model.courseModel.unscoped(),
+                model: model.courseModel,
                 as: "course",
                 attributes: ["courseId", "courseName", "courseCode"],
               },
             ],
           },
           {
-            model: model.employeeModel.unscoped(),
+            model: model.employeeModel,
             as: "teacherMember",
             attributes: ["employeeId", "employeeName", "employeeCode", "department"],
             required: false,
@@ -698,7 +698,7 @@ export async function getLibraryMembersList(query = {}) {
       attributes: studentMemberAttributes(),
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "course",
           attributes: ["courseId", "courseName", "courseCode"],
         },
@@ -769,35 +769,35 @@ export async function getLibraryReturnBookTransactions(query = {}) {
   const limit = Number(query.limit ?? 20);
   const offset = (page - 1) * limit;
   const search = query.search?.trim().toLowerCase();
-  const rows = await model.libraryReturnBookTransactionModel.unscoped().findAll({
+  const rows = await scoped(model.libraryReturnBookTransactionModel).findAll({
     attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
     include: [
       {
-        model: model.libraryBookIssueInventoryItemModel.unscoped(),
+        model: model.libraryBookIssueInventoryItemModel,
         as: "inventoryItems",
         attributes: ["libraryBookIssueInventoryItemId", "inventoryId", "libraryIssueBookTransactionId"],
         required: true,
         include: [
           {
-            model: model.libraryBookInventoryModel.unscoped(),
+            model: model.libraryBookInventoryModel,
             as: "inventory",
             attributes: ["inventoryId", "accessionNumber", "status", "condition"],
             required: true,
             include: [buildBookDetailsInclude()],
           },
           {
-            model: model.libraryIssueBookTransactionModel.unscoped(),
+            model: model.libraryIssueBookTransactionModel,
             as: "issueBookTransaction",
             attributes: ["libraryIssueBookTransactionId", "memberId", "memberType", "issueDate", "dueDate"],
             required: true,
             include: [
               {
-                model: model.studentModel.unscoped(),
+                model: model.studentModel,
                 as: "studentMember",
                 attributes: studentMemberAttributes(),
                 include: [
                   {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "course",
                     attributes: ["courseId", "courseName", "courseCode"],
                   },
@@ -805,7 +805,7 @@ export async function getLibraryReturnBookTransactions(query = {}) {
                 required: false,
               },
               {
-                model: model.employeeModel.unscoped(),
+                model: model.employeeModel,
                 as: "teacherMember",
                 attributes: teacherMemberAttributes(),
                 required: false,
@@ -818,7 +818,7 @@ export async function getLibraryReturnBookTransactions(query = {}) {
     order: [
       ["libraryReturnBookTransactionId", "DESC"],
       [
-        { model: model.libraryBookIssueInventoryItemModel.unscoped(), as: "inventoryItems" },
+        { model: model.libraryBookIssueInventoryItemModel, as: "inventoryItems" },
         "libraryBookIssueInventoryItemId",
         "DESC",
       ],

@@ -50,7 +50,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
       attributes: ['classSectionsId', 'section'],
       include: [
         {
-          model: model.classModel.unscoped(),
+          model: model.classModel,
           as: 'classGroup',
           attributes: ['classId', 'term'],
         },
@@ -70,7 +70,7 @@ export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, ace
       where: { courseId, acedmicYearId },
       include: [
         {
-          model: model.examSetupTypeModel.unscoped(),
+          model: model.examSetupTypeModel,
           as: 'examSetupType',
         },
       ],

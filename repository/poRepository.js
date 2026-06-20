@@ -24,14 +24,14 @@ export async function getPoDetails() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseDetail",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.courseModel),
           required: true,
           include: [
             {
-              model: model.subjectModel.unscoped(),
+              model: model.subjectModel,
               as: "subjectInfo",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               where: buildScope(model.subjectModel),
@@ -54,14 +54,14 @@ export async function getSinglePoDetails(poId) {
       where: { poId },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseDetail",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.courseModel),
           required: true,
           include: [
             {
-              model: model.subjectModel.unscoped(),
+              model: model.subjectModel,
               as: "subjectInfo",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               where: buildScope(model.subjectModel),

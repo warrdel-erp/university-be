@@ -30,11 +30,11 @@ export async function getHistoryByStudentId(studentId) {
         where: { studentId },
         include: [
             {
-                model: model.studentModel.unscoped(),
+                model: model.studentModel,
                 as: "student",
             },
             {
-                model: model.classSectionModel.unscoped(),
+                model: model.classSectionModel,
                 as: "classSection",
             },
         ],

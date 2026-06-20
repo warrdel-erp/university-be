@@ -141,6 +141,8 @@ const employeeModel = sequelize.define(
     }
 );
 
-employeeModel.scopeConfig = { academicYear: false };
+
+
+employeeModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default employeeModel;

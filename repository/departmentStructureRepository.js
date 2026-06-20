@@ -18,12 +18,12 @@ export async function getdepartmentStructureDetails() {
             include:
                 [
                     {
-                        model: model.accountModel.unscoped(),
+                        model: model.accountModel,
                         as: "mainAccount",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
                     {
-                        model: model.subAccountModel.unscoped(),
+                        model: model.subAccountModel,
                         as: "subAccountDetails",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
@@ -46,12 +46,12 @@ export async function getSingledepartmentStructureDetails(departmentStructureId)
             include:
             [
                 {
-                    model: model.accountModel.unscoped(),
+                    model: model.accountModel,
                     as: "mainAccount",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
                 {
-                    model: model.subAccountModel.unscoped(),
+                    model: model.subAccountModel,
                     as: "subAccountDetails",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },

@@ -4,7 +4,7 @@ import libraryIssueBookTransactionModel from "./libraryIssueBookTransactionModel
 import libraryBookInventoryModel from "./libraryBookInventoryModel.js";
 import libraryReturnBookTransactionModel from "./libraryReturnBookTransactionModel.js";
 
-export default sequelize.define(
+const libraryBookIssueInventoryItemModel = sequelize.define(
   "library_book_issue_inventory_item",
   {
     libraryBookIssueInventoryItemId: {
@@ -60,3 +60,6 @@ export default sequelize.define(
   },
 );
 
+libraryBookIssueInventoryItemModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryBookIssueInventoryItemModel;

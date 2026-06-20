@@ -9,13 +9,13 @@ import {
 
 const contractListInclude = [
   {
-    model: model.amcVendorModel.unscoped(),
+    model: model.amcVendorModel,
     as: "contractVendor",
     attributes: ["vendorName", "vendorCode", "assetCategoryId"],
     required: true,
     include: [
       {
-        model: model.assetCategoryModel.unscoped(),
+        model: model.assetCategoryModel,
         as: "vendorCategory",
         attributes: ["name"],
         required: true,

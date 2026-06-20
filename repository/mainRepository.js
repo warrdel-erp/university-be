@@ -47,7 +47,7 @@ export async function getAllAffiliatedUniversity(instituteId) {
             ...(instituteId && { where: { instituteId } }),
             include: [
                 {
-                    model: model.instituteModel.unscoped(),
+                    model: model.instituteModel,
                     as: "affiliateInstitute",
                     attributes: ["instituteId", "instituteName"],
                     required: false,
@@ -66,21 +66,21 @@ export async function getAllCourse(campusId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             include: [
                 {
-                    model: model.semesterModel.unscoped(),
+                    model: model.semesterModel,
                     as: 'semesterCourse',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
                     where: buildScope(model.semesterModel),
                     required: false,
                 },
                 {
-                    model: model.sessionCouseMappingModel.unscoped(),
+                    model: model.sessionCouseMappingModel,
                     as: 'sessionCourseMappings',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
                     where: buildScope(model.sessionCouseMappingModel),
                     required: false,
                     include: [
                         {
-                            model: model.sessionModel.unscoped(),
+                            model: model.sessionModel,
                             as: 'session',
                             attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
                             where: buildScope(model.sessionModel),
@@ -89,14 +89,14 @@ export async function getAllCourse(campusId) {
                     ]
                 },
                 {
-                    model: model.instituteModel.unscoped(),
+                    model: model.instituteModel,
                     as: 'instituted',
                     attributes: [],
                     where: buildScope(model.instituteModel),
                     required: false,
                     include: [
                         {
-                            model: model.campusModel.unscoped(),
+                            model: model.campusModel,
                             as: 'campues',
                             attributes: [],
                             where: {
@@ -122,7 +122,7 @@ export async function getAllSpecialization(acedmicYearId) {
             ...(acedmicYearId && { where: { acedmicYearId } }),
             include: [
                 {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "specializationCourse",
                     attributes: ["courseId", "courseName", "courseCode"],
                     where: buildScope(model.courseModel),
@@ -265,35 +265,35 @@ export async function getClassDetails(classSectionsId, acedmicYearId) {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "userClassSection",
                     attributes: ["universityId", "userId"],
                     where: buildScope(model.userModel),
                     required: false,
                 },
                 {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "courseSectionAdd",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "course_levelId", "universityId"] },
                     where: buildScope(model.courseModel),
                     required: false,
                 },
                 {
-                    model: model.specializationModel.unscoped(),
+                    model: model.specializationModel,
                     as: "specializationSectionAdd",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "course_Id", "specializationId"] },
                     where: buildScope(model.specializationModel),
                     required: false,
                 },
                 {
-                    model: model.semesterModel.unscoped(),
+                    model: model.semesterModel,
                     as: "semesterDetail",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
                     where: buildScope(model.semesterModel),
                     required: false,
                     include: [
                         {
-                            model: model.classSectionModel.unscoped(),
+                            model: model.classSectionModel,
                             as: 'classSections',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                             where: buildScope(model.classSectionModel),
@@ -326,7 +326,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
             },
             include: [
                 {
-                    model: model.instituteModel.unscoped(),
+                    model: model.instituteModel,
                     as: "instituteData",
                     attributes: ["instituteId", "instituteName"],
                     required: false,
@@ -336,7 +336,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                     },
                     include: [
                         {
-                            model: model.courseModel.unscoped(),
+                            model: model.courseModel,
                             as: "instituted",
                             required: false,
                             attributes: ["courseId", "courseName", "courseCode", "instituteId", "affiliatedUniversityId", "courseDuration", "capacity", "isActive",],
@@ -346,7 +346,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                             },
                             include: [
                                 {
-                                    model: model.subjectModel.unscoped(),
+                                    model: model.subjectModel,
                                     as: "subjectInfo",
                                     required: false,
                                     attributes: ["subjectId", "subjectName", "subjectCode", "subjectType",],
@@ -358,19 +358,19 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                 ...(courseId
                                     ? [
                                         {
-                                            model: model.affiliatedIniversityModel.unscoped(),
+                                            model: model.affiliatedIniversityModel,
                                             as: "affiliated",
                                             required: false,
                                             attributes: ["affiliatedUniversityName", "instituteId",],
                                         },
                                         {
-                                            model: model.employeeCodeMasterType.unscoped(),
+                                            model: model.employeeCodeMasterType,
                                             as: "courseLevelCourses",
                                             required: false,
                                             attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code",],
                                         },
                                         {
-                                            model: model.semesterModel.unscoped(),
+                                            model: model.semesterModel,
                                             as: "semesterCourse",
                                             required: false,
                                             attributes: ["termType", "totalTerms", "semesterId", "name", "acedmicYearId",],
@@ -380,7 +380,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                             },
                                             include: [
                                                 {
-                                                    model: model.classSectionModel.unscoped(),
+                                                    model: model.classSectionModel,
                                                     as: "classSections",
                                                     required: false,
                                                     attributes: ["classSectionsId", "sessionId", "sectionId", "classId", "semesterId", "section", "class",],
@@ -390,14 +390,14 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                                     },
                                                 },
                                                 {
-                                                    model: model.classSubjectMapperModel.unscoped(),
+                                                    model: model.classSubjectMapperModel,
                                                     as: "semestermapping",
                                                     required: false,
                                                     attributes: ["classSubjectMapperId", "subjectId", "semesterId",],
                                                     where: buildScope(model.classSubjectMapperModel),
                                                     include: [
                                                         {
-                                                            model: model.subjectModel.unscoped(),
+                                                            model: model.subjectModel,
                                                             as: "subjects",
                                                             required: false,
                                                             attributes: ["subjectId", "subjectName", "subjectCode", "subjectType",],
@@ -408,14 +408,14 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                             ],
                                         },
                                         {
-                                            model: model.sessionCouseMappingModel.unscoped(),
+                                            model: model.sessionCouseMappingModel,
                                             as: "sessionCourseMappings",
                                             required: false,
                                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy",], },
                                             where: buildScope(model.sessionCouseMappingModel),
                                             include: [
                                                 {
-                                                    model: model.sessionModel.unscoped(),
+                                                    model: model.sessionModel,
                                                     as: "session",
                                                     required: false,
                                                     attributes: ["sessionName", "startingDate", "endingDate", "classTillDate",],
@@ -426,19 +426,19 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                     ]
                                     : [
                                         {
-                                            model: model.affiliatedIniversityModel.unscoped(),
+                                            model: model.affiliatedIniversityModel,
                                             as: "affiliated",
                                             required: false,
                                             attributes: ["affiliatedUniversityName", "instituteId",],
                                         },
                                         {
-                                            model: model.employeeCodeMasterType.unscoped(),
+                                            model: model.employeeCodeMasterType,
                                             as: "courseLevelCourses",
                                             required: false,
                                             attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code",],
                                         },
                                         {
-                                            model: model.semesterModel.unscoped(),
+                                            model: model.semesterModel,
                                             as: "semesterCourse",
                                             required: false,
                                             attributes: ["termType", "totalTerms", "semesterId", "name", "acedmicYearId",],
@@ -473,14 +473,14 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
             ...(semesterId && { where: { semesterId } }),
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "userClassSubjectMapper",
                     attributes: ["universityId", "userId"],
                     where: buildScope(model.userModel),
                     required: true,
                 },
                 {
-                    model: model.semesterModel.unscoped(),
+                    model: model.semesterModel,
                     as: "semestermapping",
                     where: {
                         ...buildScope(model.semesterModel),
@@ -492,7 +492,7 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
                     },
                     include: [
                         {
-                            model: model.classSectionModel.unscoped(),
+                            model: model.classSectionModel,
                             as: "classSections",
                             attributes: {
                                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
@@ -500,7 +500,7 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
                             where: buildScope(model.classSectionModel),
                             include: [
                                 {
-                                    model: model.acedmicYearModel.unscoped(),
+                                    model: model.acedmicYearModel,
                                     as: "acedmicYearSection",
                                     attributes: {
                                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
@@ -509,25 +509,25 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
                             ],
                         },
                         {
-                            model: model.courseModel.unscoped(),
+                            model: model.courseModel,
                             as: "semesterCourse",
                             attributes: ["courseName", "capacity", "courseId"],
                             where: buildScope(model.courseModel),
                             required: true,
                             include: [
                                 {
-                                    model: model.affiliatedIniversityModel.unscoped(),
+                                    model: model.affiliatedIniversityModel,
                                     as: "affiliated",
                                     attributes: ["affiliatedUniversityName"],
                                     include: [
                                         {
-                                            model: model.instituteModel.unscoped(),
+                                            model: model.instituteModel,
                                             as: "institut",
                                             attributes: ["instituteName", "instituteId"],
                                             where: buildScope(model.instituteModel),
                                             include: [
                                                 {
-                                                    model: model.campusModel.unscoped(),
+                                                    model: model.campusModel,
                                                     as: "campues",
                                                     attributes: ["campusName", "campusId"],
                                                     where: buildScope(model.campusModel),
@@ -539,7 +539,7 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
                             ],
                         },
                         {
-                            model: model.specializationModel.unscoped(),
+                            model: model.specializationModel,
                             as: "specializationSemester",
                             attributes: ["specializationName"],
                             where: buildScope(model.specializationModel),
@@ -548,7 +548,7 @@ export async function getClassSubjectMapper(semesterId, acedmicYearId) {
                     ],
                 },
                 {
-                    model: model.subjectModel.unscoped(),
+                    model: model.subjectModel,
                     as: "subjects",
                     attributes: ["subjectName", "subjectId", "subjectType", "subjectCode"],
                     where: {
@@ -579,7 +579,7 @@ export async function getSemester(courseId, specializationId, acedmicYearId) {
         return scoped(model.semesterModel).findAll({
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "userSemester",
                     attributes: ["universityId", "userId"],
                     where: buildScope(model.userModel),
@@ -624,7 +624,7 @@ export async function getSemesterById(semesterId) {
 
 export async function getMonthlyIncomeRepository() {
     try {
-        return model.feeInvoiceDetailRecordModel.unscoped().findAll({
+        return scoped(model.feeInvoiceDetailRecordModel).findAll({
             attributes: [
                 [
                     sequelize.fn("DATE_FORMAT", sequelize.col("payment_date"), "%Y-%m-01"),
@@ -637,14 +637,14 @@ export async function getMonthlyIncomeRepository() {
             },
             include: [
                 {
-                    model: model.studentInvoiceMapperModel.unscoped(),
+                    model: model.studentInvoiceMapperModel,
                     as: "studentMakePayment",
                     attributes: [],
                     required: true,
                     where: buildScope(model.studentInvoiceMapperModel),
                     include: [
                         {
-                            model: model.studentModel.unscoped(),
+                            model: model.studentModel,
                             as: "studentinvoice",
                             attributes: [],
                             where: buildScope(model.studentModel),
@@ -685,7 +685,7 @@ export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearI
                 },
                 include: [
                     {
-                        model: model.timeTableRoutineModel.unscoped(),
+                        model: model.timeTableRoutineModel,
                         as: "timeTableClassSection",
                         attributes: ['timeTableRoutineId', 'endingDate', 'startingDate']
                     }

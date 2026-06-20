@@ -7,7 +7,7 @@ async function assertScopedExamSetup(examSetupId, transaction) {
         attributes: ['examSetupId'],
         transaction,
         include: [{
-            model: model.examTypeModel.unscoped(),
+            model: model.examTypeModel,
             as: 'examType',
             required: true,
             where: buildScope(model.examTypeModel),
@@ -38,20 +38,20 @@ export async function getAllExamAttendance(acedmicYearId) {
         },
         include: [
             {
-                model: model.studentModel.unscoped(),
+                model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
                 where: studentWhere,
                 required: false,
             },
             {
-                model: model.examSetupModel.unscoped(),
+                model: model.examSetupModel,
                 as: "examSetup",
                 attributes: ["exam_setup_id", "exam_type_id", "subject_id"],
                 required: false,
             },
             {
-                model: model.userModel.unscoped(),
+                model: model.userModel,
                 as: 'examAttendanceUser',
                 attributes: ["universityId", "userId"],
             },
@@ -67,19 +67,19 @@ export async function getSingleExamAttendance(examAttendanceId) {
         where: { examAttendanceId },
         include: [
             {
-                model: model.studentModel.unscoped(),
+                model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
                 where: buildScope(model.studentModel),
                 required: false,
             },
             {
-                model: model.examSetupModel.unscoped(),
+                model: model.examSetupModel,
                 as: "examSetup",
                 attributes: ["exam_setup_id", "exam_type_id", "subject_id"],
             },
             {
-                model: model.userModel.unscoped(),
+                model: model.userModel,
                 as: 'examAttendanceUser',
                 attributes: ["universityId", "userId"],
             },

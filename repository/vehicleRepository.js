@@ -21,7 +21,7 @@ export async function getAllVehicles() {
       },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employee",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: buildScope(model.employeeModel),
@@ -41,7 +41,7 @@ export async function getVehicleById(vehicleId) {
     where: { vehicleId },
     include: [
       {
-        model: model.employeeModel.unscoped(),
+        model: model.employeeModel,
         as: "employee",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         where: buildScope(model.employeeModel),

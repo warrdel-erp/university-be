@@ -11,7 +11,7 @@ export async function addFaculityLoad(data) {
       throw new Error("Employee not found");
     }
 
-    return model.faculityLoadModel.unscoped().create(data);
+    return scoped(model.faculityLoadModel).create(data);
   } catch (error) {
     console.error("Error in create faculity load:", error);
     throw error;
@@ -20,11 +20,11 @@ export async function addFaculityLoad(data) {
 
 export async function getFaculityLoadDetails() {
   try {
-    return model.faculityLoadModel.unscoped().findAll({
+    return scoped(model.faculityLoadModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeFaculity",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
           where: buildScope(model.employeeModel),
@@ -48,7 +48,7 @@ export async function getSingleFaculityLoadDetails(employeeId) {
       return [];
     }
 
-    return model.faculityLoadModel.unscoped().findAll({
+    return scoped(model.faculityLoadModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: { employeeId },
     });
@@ -60,12 +60,12 @@ export async function getSingleFaculityLoadDetails(employeeId) {
 
 export async function updateFaculityLoad(faculityLoadId, info) {
   try {
-    const existing = await model.faculityLoadModel.unscoped().findOne({
+    const existing = await scoped(model.faculityLoadModel).findOne({
       attributes: ["faculityLoadId"],
       where: { faculityLoadId },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeFaculity",
           attributes: ["employeeId"],
           where: buildScope(model.employeeModel),
@@ -77,7 +77,7 @@ export async function updateFaculityLoad(faculityLoadId, info) {
       return [0];
     }
 
-    return model.faculityLoadModel.unscoped().update(info, {
+    return scoped(model.faculityLoadModel).update(info, {
       where: { faculityLoadId },
     });
   } catch (error) {
@@ -88,12 +88,12 @@ export async function updateFaculityLoad(faculityLoadId, info) {
 
 export async function deleteFaculityLoad(faculityLoadId) {
   try {
-    const existing = await model.faculityLoadModel.unscoped().findOne({
+    const existing = await scoped(model.faculityLoadModel).findOne({
       attributes: ["faculityLoadId"],
       where: { faculityLoadId },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeFaculity",
           attributes: ["employeeId"],
           where: buildScope(model.employeeModel),
@@ -105,7 +105,7 @@ export async function deleteFaculityLoad(faculityLoadId) {
       throw new Error("Faculity load not found");
     }
 
-    await model.faculityLoadModel.unscoped().destroy({
+    await scoped(model.faculityLoadModel).destroy({
       where: { faculityLoadId },
       individualHooks: true,
     });
@@ -127,7 +127,7 @@ export async function updateFaculityLoadByEmployeeId(employeeId, info, transacti
       return [0];
     }
 
-    return model.faculityLoadModel.unscoped().update(info, {
+    return scoped(model.faculityLoadModel).update(info, {
       where: { employeeId },
       transaction,
     });

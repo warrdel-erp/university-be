@@ -5,7 +5,7 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const sectionModel = sequelize.define(
     'section',
     {
         sectionId: {
@@ -88,3 +88,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+sectionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default sectionModel;

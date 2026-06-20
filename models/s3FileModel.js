@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const s3FileModel = sequelize.define(
   "s3_files",
   {
     id: {
@@ -85,3 +85,7 @@ export default sequelize.define(
     timestamps: true,
   }
 );
+
+s3FileModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default s3FileModel;

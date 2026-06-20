@@ -4,18 +4,18 @@ import { buildScope, scoped } from "../utility/scoped.js";
 import { toMoneyNumber } from "../utility/decimalMoney.js";
 
 const classRoomHierarchyInclude = {
-  model: model.classRoomModel.unscoped(),
+  model: model.classRoomModel,
   as: "classRoom",
   attributes: ["classRoomSectionId", "roomNumber", "floorId"],
   required: false,
   include: [
     {
-      model: model.floorModel.unscoped(),
+      model: model.floorModel,
       as: "roomFloor",
       attributes: ["floorId", "name", "buildingId"],
       include: [
         {
-          model: model.buildingModel.unscoped(),
+          model: model.buildingModel,
           as: "floorBuilding",
           attributes: ["buildingId", "name", "buildingType", "campusId"],
         },
@@ -26,12 +26,12 @@ const classRoomHierarchyInclude = {
 
 const issueInventoryItemIncludes = [
   {
-    model: model.assetInventoryItemModel.unscoped(),
+    model: model.assetInventoryItemModel,
     as: "inventoryItem",
     attributes: ["assetInventoryItemId", "code", "barcode", "assetId", "classRoomSectionId", "status"],
     include: [
       {
-        model: model.assetModel.unscoped(),
+        model: model.assetModel,
         as: "asset",
         attributes: ["assetId", "name", "code", "status", "condition"],
       },
@@ -39,7 +39,7 @@ const issueInventoryItemIncludes = [
     ],
   },
   {
-    model: model.assetReturnTransactionModel.unscoped(),
+    model: model.assetReturnTransactionModel,
     as: "returnTransaction",
     attributes: ["assetReturnTransactionId", "returnDate"],
     required: false,
@@ -48,7 +48,7 @@ const issueInventoryItemIncludes = [
 
 const issueIncludes = [
   {
-    model: model.assetIssueInventoryItemModel.unscoped(),
+    model: model.assetIssueInventoryItemModel,
     as: "items",
     attributes: {
       exclude: ["createdAt", "updatedAt"],
@@ -58,13 +58,13 @@ const issueIncludes = [
 ];
 
 const studentMemberInclude = {
-  model: model.studentModel.unscoped(),
+  model: model.studentModel,
   as: "studentMember",
   attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
   required: false,
   include: [
     {
-      model: model.courseModel.unscoped(),
+      model: model.courseModel,
       as: "course",
       attributes: ["courseId", "courseName"],
     },
@@ -72,7 +72,7 @@ const studentMemberInclude = {
 };
 
 const teacherMemberInclude = {
-  model: model.employeeModel.unscoped(),
+  model: model.employeeModel,
   as: "teacherMember",
   attributes: ["employeeId", "employeeName", "employeeCode", "department"],
   required: false,
@@ -82,20 +82,20 @@ const memberIncludes = [studentMemberInclude, teacherMemberInclude];
 
 const paymentPayeeIncludes = [
   {
-    model: model.studentModel.unscoped(),
+    model: model.studentModel,
     as: "studentPayee",
     attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "courseId"],
     required: false,
     include: [
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "course",
         attributes: ["courseId", "courseName"],
       },
     ],
   },
   {
-    model: model.employeeModel.unscoped(),
+    model: model.employeeModel,
     as: "employeePayee",
     attributes: ["employeeId", "employeeName", "employeeCode", "department"],
     required: false,
@@ -103,14 +103,14 @@ const paymentPayeeIncludes = [
 ];
 
 const securityPaymentInclude = {
-  model: model.paymentItemModel.unscoped(),
+  model: model.paymentItemModel,
   as: "securityPaymentItems",
   attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
   required: false,
   separate: true,
   include: [
     {
-      model: model.studentFeePaymentModel.unscoped(),
+      model: model.studentFeePaymentModel,
       as: "payment",
       attributes: [
         "studentFeePaymentId",
@@ -166,7 +166,7 @@ function buildIssueDetailIncludes({
       ...securityPaymentInclude,
       include: [
         {
-          model: model.studentFeePaymentModel.unscoped(),
+          model: model.studentFeePaymentModel,
           as: "payment",
           attributes: studentFeePaymentAttributes,
           required: true,
@@ -243,7 +243,7 @@ export async function findReturnTransactionIdsByIssueTransactionId(
     },
     include: [
       {
-        model: model.assetIssueTransactionModel.unscoped(),
+        model: model.assetIssueTransactionModel,
         as: "transaction",
         attributes: [],
         where: issueScope,
@@ -264,7 +264,7 @@ export async function findReturnTransactionIdsByIssueTransactionId(
 
 export async function findAssetSecurityPaymentsByIssueIds(assetIssueTransactionIds, options = {}) {
   if (!assetIssueTransactionIds.length) return [];
-  return model.paymentItemModel.unscoped().findAll({
+  return scoped(model.paymentItemModel).findAll({
     attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
     where: {
       referenceId: assetIssueTransactionIds,
@@ -272,7 +272,7 @@ export async function findAssetSecurityPaymentsByIssueIds(assetIssueTransactionI
     },
     include: [
       {
-        model: model.studentFeePaymentModel.unscoped(),
+        model: model.studentFeePaymentModel,
         as: "payment",
         attributes: studentFeePaymentAttributes,
         required: true,
@@ -307,14 +307,14 @@ export async function findAssetIssuePaymentsWithPayeesByIssueId(
     });
   }
 
-  return model.paymentItemModel.unscoped().findAll({
+  return scoped(model.paymentItemModel).findAll({
     attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
     where: {
       [Op.or]: referenceFilters,
     },
     include: [
       {
-        model: model.studentFeePaymentModel.unscoped(),
+        model: model.studentFeePaymentModel,
         as: "payment",
         attributes: studentFeePaymentAttributes,
         required: true,
@@ -469,7 +469,7 @@ export async function countIssueItemStatsByTransactionIds(assetIssueTransactionI
     where: { assetIssueTransactionId: assetIssueTransactionIds },
     include: [
       {
-        model: model.assetIssueTransactionModel.unscoped(),
+        model: model.assetIssueTransactionModel,
         as: "transaction",
         attributes: [],
         where: issueScope,
@@ -509,7 +509,7 @@ export async function findStudentMemberDetailsById(studentId, options = {}) {
     where: { studentId },
     include: [
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "course",
         attributes: ["courseId", "courseName"],
       },
@@ -541,7 +541,7 @@ export async function findStudentMemberDetailsByIds(studentIds, options = {}) {
     where: { studentId: studentIds },
     include: [
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "course",
         attributes: ["courseId", "courseName"],
       },
@@ -655,7 +655,7 @@ export async function findSecurityAmountByIssueIds(assetIssueTransactionIds, opt
     return {};
   }
 
-  const rows = await model.paymentItemModel.unscoped().findAll({
+  const rows = await scoped(model.paymentItemModel).findAll({
     attributes: ["referenceId", "amount"],
     where: {
       referenceId: assetIssueTransactionIds,
@@ -663,7 +663,7 @@ export async function findSecurityAmountByIssueIds(assetIssueTransactionIds, opt
     },
     include: [
       {
-        model: model.studentFeePaymentModel.unscoped(),
+        model: model.studentFeePaymentModel,
         as: "payment",
         attributes: ["amount"],
         required: true,

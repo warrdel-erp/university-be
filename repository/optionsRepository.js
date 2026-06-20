@@ -27,7 +27,7 @@ export async function getClassSectionOptions(courseId, term) {
             ...(courseId && { courseId }),
         },
         include: [{
-            model: model.classModel.unscoped(),
+            model: model.classModel,
             as: 'classGroup',
             where: {
                 ...(term && { term }),
@@ -64,12 +64,12 @@ export async function getTeacherOptions(campusId) {
             ...(campusId && { campusId }),
         },
         include: [{
-            model: model.userModel.unscoped(),
+            model: model.userModel,
             as: 'user',
             attributes: [],
             required: true,
             include: [{
-                model: model.userRoleModel.unscoped(),
+                model: model.userRoleModel,
                 as: 'userRoles',
                 attributes: [],
                 where: {

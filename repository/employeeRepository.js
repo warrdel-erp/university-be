@@ -1,6 +1,10 @@
 import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import {
+    resolveSubjectIdsForTeacherFilters,
+    teacherSubjectWhere,
+} from './teacherSubjectMappingRepository.js';
 
 async function assertScopedEmployee(employeeId, options = {}) {
     return scoped(model.employeeModel).findOne({
@@ -451,51 +455,60 @@ export async function getPreviousEnrollNumber(instituteCode) {
     }
 };
 
-export async function getTeacherSubject(employeeId) {
+export async function getTeacherSubject(employeeId, filters = {}) {
     try {
         const employee = await assertScopedEmployee(employeeId);
         if (!employee) {
             return [];
         }
 
-        return await model.teacherSubjectMappingModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { employeeId },
+        const acedmicYearId = filters.acedmicYearId != null ? Number(filters.acedmicYearId) : undefined;
+        const sessionId = filters.sessionId != null ? Number(filters.sessionId) : undefined;
+        const subjectIds = await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId });
+
+        const subjectWhere = {
+            ...(acedmicYearId != null && { acedmicYearId }),
+            ...buildScope(model.subjectModel),
+        };
+
+        return scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: {
+                employeeId,
+                ...teacherSubjectWhere(subjectIds),
+            },
             include: [
                 {
-                    model: model.classSubjectMapperModel.unscoped(),
-                    as: "employeeSubject",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    model: model.subjectModel,
+                    as: 'employeeSubject',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    where: subjectWhere,
+                    required: true,
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
-                            as: "subjects",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                            model: model.courseModel,
+                            as: 'courseInfo',
+                            attributes: ['courseId', 'courseName', 'courseCode'],
+                            required: false,
+                        },
+                        {
+                            model: model.internalAssessmentModel,
+                            as: 'subjectAssessments',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                            where: { employeeId },
+                            required: false,
                             include: [
                                 {
-                                    model: model.syllabusDetailsModel.unscoped(),
-                                    as: "syllabusSubject",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                    where: {
-                                        type: 'internalAssessment',
-                                    },
+                                    model: model.examSetupTypeModel,
+                                    as: 'assessmentExamType',
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                                     required: false,
                                     include: [
                                         {
-                                            model: model.examSetupTypeModel.unscoped(),
-                                            as: 'examSetupTypeSyllabus',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                            where: {
-                                                examType: 'internalAssessment',
-                                            },
+                                            model: model.examStructureModel,
+                                            as: 'examStructure',
+                                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                                             required: false,
-                                            include: [
-                                                {
-                                                    model: model.examStructureModel.unscoped(),
-                                                    as: 'examStructure',
-                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                                },
-                                            ],
                                         },
                                     ],
                                 },
@@ -506,7 +519,7 @@ export async function getTeacherSubject(employeeId) {
             ],
         });
     } catch (error) {
-        console.error("Error in getting employee subjects:", error);
+        console.error('Error in getting employee subjects:', error);
         throw error;
     }
 };

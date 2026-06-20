@@ -5,7 +5,7 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import employeeCodeMaster from "./employeeCodeMasterModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const studentMetaData = sequelize.define(
     'students_meta_data',
     {
         studentMetaDataId: {
@@ -89,3 +89,7 @@ export default sequelize.define(
         ]
     }
 );
+
+studentMetaData.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentMetaData;

@@ -7,7 +7,7 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const electiveSubjectModel = sequelize.define(
     'elective_subject',
     {
         electiveSubjectId: {
@@ -118,3 +118,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+electiveSubjectModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default electiveSubjectModel;

@@ -6,7 +6,7 @@ import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 import semester from "./semesterModel.js";
 
-export default sequelize.define(
+const classSubjectMapperModel = sequelize.define(
     'class_subject_mapper',
     {
         classSubjectMapperId: {
@@ -84,3 +84,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+classSubjectMapperModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default classSubjectMapperModel;

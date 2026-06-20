@@ -12,7 +12,7 @@ export async function addUserRole(userId, role, transaction = null) {
       throw new Error("User not found");
     }
 
-    return model.userRoleModel.unscoped().create({ userId, role }, { transaction });
+    return scoped(model.userRoleModel).create({ userId, role }, { transaction });
   } catch (error) {
     console.error("Repository: Error in addUserRole:", error);
     throw error;
@@ -30,7 +30,7 @@ export async function removeUserRole(userId, role, transaction = null) {
       return 0;
     }
 
-    return model.userRoleModel.unscoped().destroy({
+    return scoped(model.userRoleModel).destroy({
       where: { userId, role },
       transaction,
     });
@@ -50,7 +50,7 @@ export async function getUserRoles(userId) {
       return [];
     }
 
-    const roles = await model.userRoleModel.unscoped().findAll({
+    const roles = await scoped(model.userRoleModel).findAll({
       where: { userId },
       attributes: ["role"],
     });
@@ -71,7 +71,7 @@ export async function checkUserRoleExists(userId, role) {
       return false;
     }
 
-    const count = await model.userRoleModel.unscoped().count({
+    const count = await scoped(model.userRoleModel).count({
       where: { userId, role },
     });
     return count > 0;

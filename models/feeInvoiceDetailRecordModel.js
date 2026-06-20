@@ -5,7 +5,7 @@ import feeInvoice from "./feeInvoiceModel.js";
 import feeInvoiceDetail from "./feeInvoiceDetailModel.js";
 import studentInvoiceMapperModel from "./studentInvoiceMapperModel.js";
 
-export default sequelize.define(
+const feeInvoiceDetailRecordModel = sequelize.define(
     'fee_invoice_detail_record',
     {
         feeInvoiceDetailsRecordId: {
@@ -118,3 +118,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+feeInvoiceDetailRecordModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default feeInvoiceDetailRecordModel;

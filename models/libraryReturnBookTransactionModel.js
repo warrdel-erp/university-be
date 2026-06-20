@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const libraryReturnBookTransactionModel = sequelize.define(
   "library_return_book_transaction",
   {
     libraryReturnBookTransactionId: {
@@ -34,3 +34,7 @@ export default sequelize.define(
     paranoid: false,
   },
 );
+
+libraryReturnBookTransactionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryReturnBookTransactionModel;

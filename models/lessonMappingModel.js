@@ -6,7 +6,7 @@ import topicModel from "./topicModel.js";
 import classScheduleModel from "./classScheduleModel.js";
 import universityModel from "./universityModel.js";
 
-export default sequelize.define(
+const lessonMappingModel = sequelize.define(
     'lesson_mapping',
     {
         lessonMappingId: {
@@ -120,3 +120,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+lessonMappingModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default lessonMappingModel;

@@ -4,7 +4,7 @@ import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const studentClassSectionsHistoryModel = sequelize.define(
     'student_class_sections_history',
     {
         id: {
@@ -64,3 +64,7 @@ export default sequelize.define(
         paranoid: false
     }
 );
+
+studentClassSectionsHistoryModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default studentClassSectionsHistoryModel;

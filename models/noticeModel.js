@@ -5,7 +5,7 @@ import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import universityModel from "./universityModel.js";
 
-export default sequelize.define(
+const noticeModel = sequelize.define(
     'notice',
     {
         noticeId: {
@@ -110,3 +110,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+noticeModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default noticeModel;

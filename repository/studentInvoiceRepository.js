@@ -3,7 +3,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 function feePlanStudentInclude() {
   return {
-    model: model.feePlanModel.unscoped(),
+    model: model.feePlanModel,
     as: "studentFeePlan",
     attributes: {
       exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "description"],
@@ -12,29 +12,29 @@ function feePlanStudentInclude() {
     required: false,
     include: [
       {
-        model: model.feeNewInvoiceModel.unscoped(),
+        model: model.feeNewInvoiceModel,
         as: "invoices",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         include: [
           {
-            model: model.feePlanSemesterModel.unscoped(),
+            model: model.feePlanSemesterModel,
             as: "semesters",
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           },
           {
-            model: model.feePlanTypeModel.unscoped(),
+            model: model.feePlanTypeModel,
             as: "additionalFees",
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           },
         ],
       },
       {
-        model: model.sessionModel.unscoped(),
+        model: model.sessionModel,
         as: "sessionFee",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "acedmic_year_id"] },
       },
       {
-        model: model.courseModel.unscoped(),
+        model: model.courseModel,
         as: "courseFee",
         attributes: {
           exclude: [
@@ -50,7 +50,7 @@ function feePlanStudentInclude() {
         },
       },
       {
-        model: model.acedmicYearModel.unscoped(),
+        model: model.acedmicYearModel,
         as: "acedmicYearFee",
         attributes: {
           exclude: [
@@ -72,7 +72,7 @@ function studentListIncludes() {
   return [
     feePlanStudentInclude(),
     {
-      model: model.classSectionModel.unscoped(),
+      model: model.classSectionModel,
       as: "studentSections",
       attributes: {
         exclude: [
@@ -129,51 +129,51 @@ export async function getStudentCount(type) {
 
 export async function getAllActiveInvoice() {
   try {
-    return model.studentInvoiceMapperModel.unscoped().findAll({
+    return scoped(model.studentInvoiceMapperModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: buildScope(model.studentInvoiceMapperModel),
       include: [
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: "studentinvoice",
           attributes: ["scholarNumber", "firstName", "middleName", "lastName", "admisssionDate", "enrollDate"],
           where: buildScope(model.studentModel),
           required: true,
         },
         {
-          model: model.feeNewInvoiceModel.unscoped(),
+          model: model.feeNewInvoiceModel,
           as: "feeInvoicedata",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.feePlanSemesterModel.unscoped(),
+              model: model.feePlanSemesterModel,
               as: "semesters",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.feePlanTypeModel.unscoped(),
+              model: model.feePlanTypeModel,
               as: "additionalFees",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
           ],
         },
         {
-          model: model.feeInvoiceDetailRecordModel.unscoped(),
+          model: model.feeInvoiceDetailRecordModel,
           as: "studentMakePayment",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
-          model: model.feeTypeGroupModel.unscoped(),
+          model: model.feeTypeGroupModel,
           as: "feeTypeGroup",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.feeTypeModel.unscoped(),
+              model: model.feeTypeModel,
               as: "feeTypes",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               include: [
                 {
-                  model: model.feeGroupModel.unscoped(),
+                  model: model.feeGroupModel,
                   as: "feeGroup",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                   where: buildScope(model.feeGroupModel),
@@ -192,12 +192,12 @@ export async function getAllActiveInvoice() {
 }
 
 async function assertScopedStudentInvoiceMapper(studentInvoiceMapperId, transaction) {
-  return model.studentInvoiceMapperModel.unscoped().findOne({
+  return scoped(model.studentInvoiceMapperModel).findOne({
     attributes: ["studentInvoiceMapperId"],
     where: { studentInvoiceMapperId },
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "studentinvoice",
         attributes: [],
         where: buildScope(model.studentModel),
@@ -210,12 +210,12 @@ async function assertScopedStudentInvoiceMapper(studentInvoiceMapperId, transact
 
 export async function updateFeeNewInvoice(feeNewInvoiceId, data, options = {}) {
   try {
-    const mapper = await model.studentInvoiceMapperModel.unscoped().findOne({
+    const mapper = await scoped(model.studentInvoiceMapperModel).findOne({
       attributes: ["studentInvoiceMapperId"],
       where: { feeNewInvoiceId },
       include: [
         {
-          model: model.studentModel.unscoped(),
+          model: model.studentModel,
           as: "studentinvoice",
           attributes: [],
           where: buildScope(model.studentModel),
@@ -228,7 +228,7 @@ export async function updateFeeNewInvoice(feeNewInvoiceId, data, options = {}) {
       return [0];
     }
 
-    return model.studentInvoiceMapperModel.unscoped().update(data, {
+    return scoped(model.studentInvoiceMapperModel).update(data, {
       where: { feeNewInvoiceId },
       transaction: options.transaction,
     });
@@ -265,7 +265,7 @@ export async function addMultipleFeeTypeGroup(dataArray, transaction = null) {
       }
     }
 
-    return model.feeTypeGroupModel.unscoped().bulkCreate(dataArray, { transaction });
+    return model.feeTypeGroupModel.bulkCreate(dataArray, { transaction });
   } catch (error) {
     console.error("Error in bulk insert fee type group:", error);
     throw error;

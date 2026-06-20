@@ -9,18 +9,18 @@ import {
 const excludeTs = ["createdAt", "updatedAt"];
 
 const classRoomHierarchyInclude = {
-  model: model.classRoomModel.unscoped(),
+  model: model.classRoomModel,
   as: "classRoom",
   attributes: ["classRoomSectionId", "roomNumber", "floorId"],
   required: false,
   include: [
     {
-      model: model.floorModel.unscoped(),
+      model: model.floorModel,
       as: "roomFloor",
       attributes: ["floorId", "name", "buildingId"],
       include: [
         {
-          model: model.buildingModel.unscoped(),
+          model: model.buildingModel,
           as: "floorBuilding",
           attributes: ["buildingId", "name", "buildingType", "campusId"],
         },
@@ -46,7 +46,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
 
   if (includeOpenIssues) {
     nestedIncludes.push({
-      model: model.assetIssueInventoryItemModel.unscoped(),
+      model: model.assetIssueInventoryItemModel,
       as: "issueInventoryItems",
       attributes: ["assetIssueInventoryItemId"],
       required: false,
@@ -55,7 +55,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
   }
 
   return {
-    model: model.assetInventoryItemModel.unscoped(),
+    model: model.assetInventoryItemModel,
     as: "inventoryItems",
     attributes: { exclude: excludeTs },
     where,
@@ -68,7 +68,7 @@ function buildInventoryItemsInclude(inventoryStatus = "all", options = {}) {
 function buildAssetDetailIncludes(inventoryStatus = "all", options = {}) {
   return [
     {
-      model: model.assetCategoryModel.unscoped(),
+      model: model.assetCategoryModel,
       as: "assetCategory",
       attributes: ["assetCategoryId", "name"],
     },
@@ -104,7 +104,7 @@ function buildAssetListSearchInclude(filters = {}) {
 
   return [
     {
-      model: model.assetCategoryModel.unscoped(),
+      model: model.assetCategoryModel,
       as: "assetCategory",
       attributes: [],
       required: false,
@@ -308,7 +308,7 @@ export async function countInventoryStatsByAssetIds(assetIds, options = {}) {
       ],
       include: [
         {
-          model: model.assetInventoryItemModel.unscoped(),
+          model: model.assetInventoryItemModel,
           as: "inventoryItem",
           attributes: [],
           where: { assetId: assetIds },
@@ -359,7 +359,7 @@ export async function countOpenIssuesForAsset(assetId, options = {}) {
     where: { assetReturnTransactionId: null },
     include: [
       {
-        model: model.assetInventoryItemModel.unscoped(),
+        model: model.assetInventoryItemModel,
         as: "inventoryItem",
         attributes: [],
         where: { assetId },

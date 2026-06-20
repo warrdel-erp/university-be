@@ -140,7 +140,8 @@ const headModel = sequelize.define(
         paranoid: true
     }
 );
+
 
-headModel.scopeConfig = { institute: false, academicYear: false };
+headModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
 export default headModel;

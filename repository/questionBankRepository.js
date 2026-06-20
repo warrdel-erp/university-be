@@ -32,17 +32,17 @@ export async function getQuestions(filters = {}, pagination = {}) {
             where: whereClause,
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },
                 {
-                    model: model.universityModel.unscoped(),
+                    model: model.universityModel,
                     as: "university",
                     attributes: ["university_id", "universityName"],
                 },
                 {
-                    model: model.subjectModel.unscoped(),
+                    model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName"],
                     where: buildScope(model.subjectModel),
@@ -118,12 +118,12 @@ export async function getSingleQuestion(id) {
             where: { id },
             include: [
                 {
-                    model: model.userModel.unscoped(),
+                    model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
                 },
                 {
-                    model: model.universityModel.unscoped(),
+                    model: model.universityModel,
                     as: "university",
                     attributes: ["university_id", "universityName"],
                 },

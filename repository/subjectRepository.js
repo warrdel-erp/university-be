@@ -46,7 +46,7 @@ export async function getAllSubjects(filter = {}) {
 
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
 
           as: "courseInfo",
 

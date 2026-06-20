@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import libraryRackModel from "./libraryRackModel.js";
 
-export default sequelize.define(
+const libraryRowModel = sequelize.define(
     'library_row',
     {
         libraryRowId: {
@@ -71,3 +71,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+libraryRowModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryRowModel;

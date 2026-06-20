@@ -1189,8 +1189,8 @@ export async function getTeacherTimeTable(employeeId) {
 
 };
 
-export async function getTeacherSubject(employeeId) {
-  return await employeeRepository.getTeacherSubject(employeeId);
+export async function getTeacherSubject(employeeId, filters = {}) {
+  return await employeeRepository.getTeacherSubject(employeeId, filters);
 };
 
 export async function getSubjectEvalution(employeeId) {

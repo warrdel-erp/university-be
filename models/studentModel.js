@@ -15,7 +15,7 @@ import classSectionModel from "./classSectionModel.js";
 import feePlanModel from "./feePlanModel.js";
 import feePlanProfileModel from "./feePlanProfileModel.js";
 
-export default sequelize.define(
+const studentModel = sequelize.define(
     'students',
     {
         studentId: {
@@ -403,3 +403,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default studentModel;

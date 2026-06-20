@@ -22,31 +22,31 @@ export async function getAnswerSheetQrById(id, transaction) {
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel.unscoped(),
+        model: model.examScheduleModel,
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel.unscoped(),
+            model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel.unscoped(),
+            model: model.examSetupTypeTermModel,
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel.unscoped(),
+                model: model.examSetupTypeModel,
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -56,7 +56,7 @@ export async function getAnswerSheetQrById(id, transaction) {
         ],
       },
       {
-        model: model.userModel.unscoped(),
+        model: model.userModel,
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,
@@ -112,31 +112,31 @@ export async function getAnswerSheetQrsByRequestId(
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "instituteId", "universityId", "createdAt"],
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel.unscoped(),
+        model: model.examScheduleModel,
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel.unscoped(),
+            model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel.unscoped(),
+            model: model.examSetupTypeTermModel,
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel.unscoped(),
+                model: model.examSetupTypeModel,
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -146,7 +146,7 @@ export async function getAnswerSheetQrsByRequestId(
         ],
       },
       {
-        model: model.userModel.unscoped(),
+        model: model.userModel,
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,
@@ -175,7 +175,7 @@ export async function getScopedExamSchedule(examScheduleId, transaction) {
     attributes: ["examScheduleId", "examSetupTypeTermId", "sessionId"],
     include: [
       {
-        model: model.examSetupTypeTermModel.unscoped(),
+        model: model.examSetupTypeTermModel,
         as: "examSetupTypeTerm",
         attributes: ["examSetupTypeTermId", "instituteId", "universityId"],
         where: termScope,
@@ -296,31 +296,31 @@ export async function getScriptsAssignedToTeacher(
     attributes: ["id", "qr", "requestId", "studentId", "examScheduleId", "assignedToUser", "evaluatedAt", "obtainedMarks", "fileUploadId", "createdAt"],
     include: [
       {
-        model: model.studentModel.unscoped(),
+        model: model.studentModel,
         as: "student",
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         required: false,
       },
       {
-        model: model.examScheduleModel.unscoped(),
+        model: model.examScheduleModel,
         as: "examSchedule",
         attributes: ["examScheduleId", "examDate", "examTime", "duration", "semesterId", "sessionId", "type"],
         required: false,
         include: [
           {
-            model: model.subjectModel.unscoped(),
+            model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode"],
             required: false,
           },
           {
-            model: model.examSetupTypeTermModel.unscoped(),
+            model: model.examSetupTypeTermModel,
             as: "examSetupTypeTerm",
             attributes: ["examSetupTypeTermId", "term", "courseId"],
             required: false,
             include: [
               {
-                model: model.examSetupTypeModel.unscoped(),
+                model: model.examSetupTypeModel,
                 as: "examSetupType",
                 attributes: ["examSetupTypeId", "examType", "examName"],
                 required: false,
@@ -330,7 +330,7 @@ export async function getScriptsAssignedToTeacher(
         ],
       },
       {
-        model: model.userModel.unscoped(),
+        model: model.userModel,
         as: "assignedTeacher",
         attributes: ["userId", "userName", "email"],
         required: false,

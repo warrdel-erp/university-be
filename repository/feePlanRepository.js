@@ -10,34 +10,34 @@ function feePlanDetailIncludes() {
 
   return [
     {
-      model: model.sessionModel.unscoped(),
+      model: model.sessionModel,
       as: "sessionFee",
       attributes: { exclude: [...excludeAttrs, "acedmic_year_id"] },
     },
     {
-      model: model.courseModel.unscoped(),
+      model: model.courseModel,
       as: "courseFee",
       attributes: {
         exclude: [...excludeAttrs, "affiliated_university_id", "institute_id", "acedmic_year_id"],
       },
     },
     {
-      model: model.acedmicYearModel.unscoped(),
+      model: model.acedmicYearModel,
       as: "acedmicYearFee",
       attributes: { exclude: [...excludeAttrs, "affiliated_university_id", "institute_id"] },
     },
     {
-      model: model.feeNewInvoiceModel.unscoped(),
+      model: model.feeNewInvoiceModel,
       as: "invoices",
       attributes: { exclude: excludeAttrs },
       include: [
         {
-          model: model.feePlanSemesterModel.unscoped(),
+          model: model.feePlanSemesterModel,
           as: "semesters",
           attributes: { exclude: excludeAttrs },
         },
         {
-          model: model.feePlanTypeModel.unscoped(),
+          model: model.feePlanTypeModel,
           as: "additionalFees",
           attributes: { exclude: excludeAttrs },
         },
@@ -51,17 +51,17 @@ function feePlanInvoiceIncludes() {
 
   return [
     {
-      model: model.feeNewInvoiceModel.unscoped(),
+      model: model.feeNewInvoiceModel,
       as: "invoices",
       attributes: { exclude: excludeAttrs },
       include: [
         {
-          model: model.feePlanSemesterModel.unscoped(),
+          model: model.feePlanSemesterModel,
           as: "semesters",
           attributes: { exclude: excludeAttrs },
         },
         {
-          model: model.feePlanTypeModel.unscoped(),
+          model: model.feePlanTypeModel,
           as: "additionalFees",
           attributes: { exclude: excludeAttrs },
         },
@@ -81,7 +81,7 @@ export async function addFeePlan(data, transaction) {
 
 export async function addFeeNewInvoice(data, transaction) {
   try {
-    return model.feeNewInvoiceModel.unscoped().create(data, { transaction });
+    return scoped(model.feeNewInvoiceModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee New Invoice :", error);
     throw error;
@@ -90,7 +90,7 @@ export async function addFeeNewInvoice(data, transaction) {
 
 export async function addFeePlanSemester(data, transaction) {
   try {
-    return model.feePlanSemesterModel.unscoped().create(data, { transaction });
+    return scoped(model.feePlanSemesterModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee Plan Semester :", error);
     throw error;
@@ -99,7 +99,7 @@ export async function addFeePlanSemester(data, transaction) {
 
 export async function addFeePlanType(data, transaction) {
   try {
-    return model.feePlanTypeModel.unscoped().create(data, { transaction });
+    return scoped(model.feePlanTypeModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee Plan Type :", error);
     throw error;
@@ -181,7 +181,7 @@ export async function findByPlanId(feePlanId, options = {}) {
       return [];
     }
 
-    return model.feeNewInvoiceModel.unscoped().findAll({
+    return scoped(model.feeNewInvoiceModel).findAll({
       attributes: { exclude: feePlanExcludedAttributes() },
       where: { feePlanId },
       transaction: options.transaction,

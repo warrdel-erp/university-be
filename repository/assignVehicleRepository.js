@@ -18,32 +18,32 @@ export async function addAssignVehicle(assignVehicleData) {
     throw new Error("Vehicle not found");
   }
 
-  return model.assignVehicleModel.unscoped().create(assignVehicleData);
+  return scoped(model.assignVehicleModel).create(assignVehicleData);
 }
 
 export async function getAssignVehicle() {
   try {
-    return model.assignVehicleModel.unscoped().findAll({
+    return scoped(model.assignVehicleModel).findAll({
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       include: [
         {
-          model: model.transportRouteModel.unscoped(),
+          model: model.transportRouteModel,
           as: "transportRoute",
           attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
           where: buildScope(model.transportRouteModel),
           required: true,
         },
         {
-          model: model.vehicleModel.unscoped(),
+          model: model.vehicleModel,
           as: "vehicle",
           attributes: ["vehicleNumber", "vehicleModel", "instituteId"],
           where: buildScope(model.vehicleModel),
           required: true,
         },
         {
-          model: model.userModel.unscoped(),
+          model: model.userModel,
           as: "assignVehicleUser",
           attributes: ["universityId", "userId"],
           where: buildScope(model.userModel),
@@ -58,26 +58,26 @@ export async function getAssignVehicle() {
 }
 
 export async function getSingleAssignVehicle(assignVehicleId) {
-  return model.assignVehicleModel.unscoped().findOne({
+  return scoped(model.assignVehicleModel).findOne({
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
     where: { assignVehicleId },
     include: [
       {
-        model: model.transportRouteModel.unscoped(),
+        model: model.transportRouteModel,
         as: "transportRoute",
         attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
         where: buildScope(model.transportRouteModel),
         required: true,
       },
       {
-        model: model.vehicleModel.unscoped(),
+        model: model.vehicleModel,
         as: "vehicle",
         attributes: ["vehicleNumber", "vehicleModel", "instituteId"],
         where: buildScope(model.vehicleModel),
         required: true,
       },
       {
-        model: model.userModel.unscoped(),
+        model: model.userModel,
         as: "assignVehicleUser",
         attributes: ["universityId", "userId"],
         where: buildScope(model.userModel),
@@ -113,7 +113,7 @@ export async function updateAssignVehicle(assignVehicleId, vehicleData) {
     }
   }
 
-  return model.assignVehicleModel.unscoped().update(vehicleData, {
+  return scoped(model.assignVehicleModel).update(vehicleData, {
     where: { assignVehicleId },
   });
 }
@@ -124,7 +124,7 @@ export async function deleteAssignVehicle(assignVehicleId) {
     return 0;
   }
 
-  return model.assignVehicleModel.unscoped().destroy({
+  return scoped(model.assignVehicleModel).destroy({
     where: { assignVehicleId },
   });
 }

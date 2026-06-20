@@ -404,32 +404,60 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
   });
 }
 
+async function getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId) {
+  const classSections = await scoped(model.classSectionModel).findAll({
+    attributes: ["classSectionsId"],
+    where: {
+      courseId,
+      acedmicYearId,
+      ...(sessionId && { sessionId }),
+    },
+    include: [
+      {
+        model: model.classModel,
+        as: "classGroup",
+        required: true,
+        attributes: [],
+        where: { term },
+      },
+    ],
+    raw: true,
+  });
+
+  return classSections.map((section) => section.classSectionsId);
+}
+
+async function getCurrentStudentIdsForClassSections(classSectionIds) {
+  if (!classSectionIds.length) {
+    return [];
+  }
+
+  const historyRows = await model.studentClassSectionsHistoryModel.findAll({
+    attributes: ["studentId"],
+    where: {
+      classSectionsId: { [Op.in]: classSectionIds },
+      status: "current",
+    },
+    raw: true,
+  });
+
+  return [...new Set(historyRows.map((row) => row.studentId))];
+}
+
+async function resolveCurrentStudentIdsForTerm(courseId, acedmicYearId, term, sessionId) {
+  const classSectionIds = await getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId);
+  return getCurrentStudentIdsForClassSections(classSectionIds);
+}
+
 export async function countStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
   try {
-    return await scoped(model.studentModel).count({
-      include: [
-        {
-          model: model.classSectionModel,
-          as: "studentSections",
-          required: true,
-          attributes: [],
-          where: {
-            courseId,
-            acedmicYearId,
-            ...buildScope(model.classSectionModel),
-            ...(sessionId && { sessionId }),
-          },
-          include: [
-            {
-              model: model.classModel,
-              as: "classGroup",
-              required: true,
-              attributes: [],
-              where: { term },
-            },
-          ],
-        },
-      ],
+    const studentIds = await resolveCurrentStudentIdsForTerm(courseId, acedmicYearId, term, sessionId);
+    if (!studentIds.length) {
+      return 0;
+    }
+
+    return scoped(model.studentModel).count({
+      where: { studentId: { [Op.in]: studentIds } },
     });
   } catch (error) {
     console.error("Error fetching student count for term:", error.message);
@@ -439,6 +467,19 @@ export async function countStudentsForTerm(courseId, acedmicYearId, term, sessio
 
 export async function findStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
   try {
+    const classSectionIds = await getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId);
+    const studentIds = await getCurrentStudentIdsForClassSections(classSectionIds);
+    if (!studentIds.length) {
+      return [];
+    }
+
+    const classSectionWhere = {
+      courseId,
+      acedmicYearId,
+      ...buildScope(model.classSectionModel),
+      ...(sessionId && { sessionId }),
+    };
+
     return await scoped(model.studentModel).findAll({
       attributes: [
         "studentId",
@@ -461,45 +502,55 @@ export async function findStudentsForTerm(courseId, acedmicYearId, term, session
         "email",
         "phoneNumber",
         "mobileNumber",
-        [sequelize.col("studentSections->courseSection.course_name"), "courseName"],
+        [sequelize.col("sectionHistory->classSection->courseSection.course_name"), "courseName"],
         [
           sequelize.literal(
-            "COALESCE(`studentSections->semesterDetail`.`name`, `studentSections->classGroup`.`class_name`, CONCAT('Term ', `studentSections->classGroup`.`term`))",
+            "COALESCE(`sectionHistory->classSection->semesterDetail`.`name`, `sectionHistory->classSection->classGroup`.`class_name`, CONCAT('Term ', `sectionHistory->classSection->classGroup`.`term`))",
           ),
           "termName",
         ],
       ],
+      where: {
+        studentId: { [Op.in]: studentIds },
+      },
       include: [
         {
-          model: model.classSectionModel,
-          as: "studentSections",
+          model: model.studentClassSectionsHistoryModel,
+          as: "sectionHistory",
           required: true,
           attributes: [],
           where: {
-            courseId,
-            acedmicYearId,
-            ...buildScope(model.classSectionModel),
-            ...(sessionId && { sessionId }),
+            status: "current",
+            classSectionsId: { [Op.in]: classSectionIds },
           },
           include: [
             {
-              model: model.courseModel,
-              as: "courseSection",
+              model: model.classSectionModel,
+              as: "classSection",
               required: true,
               attributes: [],
-            },
-            {
-              model: model.semesterModel,
-              as: "semesterDetail",
-              required: false,
-              attributes: [],
-            },
-            {
-              model: model.classModel,
-              as: "classGroup",
-              required: true,
-              attributes: [],
-              where: { term },
+              where: classSectionWhere,
+              include: [
+                {
+                  model: model.courseModel,
+                  as: "courseSection",
+                  required: true,
+                  attributes: [],
+                },
+                {
+                  model: model.semesterModel,
+                  as: "semesterDetail",
+                  required: false,
+                  attributes: [],
+                },
+                {
+                  model: model.classModel,
+                  as: "classGroup",
+                  required: true,
+                  attributes: [],
+                  where: { term },
+                },
+              ],
             },
           ],
         },

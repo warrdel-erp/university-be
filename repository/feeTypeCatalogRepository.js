@@ -5,7 +5,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 function catalogIncludeCategory() {
   return [
     {
-      model: model.feeTypeCategoryModel.unscoped(),
+      model: model.feeTypeCategoryModel,
       as: "feeTypeCategory",
       attributes: ["feeTypeCategoryId", "name", "description", "instituteId"],
       where: buildScope(model.feeTypeCategoryModel),
@@ -97,11 +97,11 @@ export async function countInvoiceItemsForCatalog(feeTypeCatalogId, options = {}
     return 0;
   }
 
-  return model.studentFeeInvoiceItemsModel.unscoped().count({
+  return scoped(model.studentFeeInvoiceItemsModel).count({
     where: { feeTypeId: feeTypeCatalogId },
     include: [
       {
-        model: model.studentFeeInvoiceModel.unscoped(),
+        model: model.studentFeeInvoiceModel,
         as: "studentFeeInvoice",
         attributes: [],
         required: true,

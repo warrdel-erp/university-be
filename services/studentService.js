@@ -1923,6 +1923,16 @@ export async function getStudentSubject(studentId) {
 
 export async function getFeeDetailsByStudentId(studentId) {
   try {
+    if (!(await studentRepository.assertStudentInRequestAcademicYear(studentId))) {
+      return {
+        studentInfo: {},
+        personalInfo: {},
+        parentInfo: {},
+        invoices: [],
+        summary: {},
+      };
+    }
+
     const invoices =
       await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
 
@@ -2114,6 +2124,10 @@ export async function getFeeDetailsByStudentId(studentId) {
 }
 
 export async function getBooksIssuedToStudent(studentId) {
+  if (!(await isStudentInAcademicYear(studentId))) {
+    return { message: "No issued books found", books: [] };
+  }
+
   const rawData = await libraryRepository.getBooksIssuedToStudent(studentId);
 
   if (!rawData || rawData.length === 0) {

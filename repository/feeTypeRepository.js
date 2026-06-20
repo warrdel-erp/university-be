@@ -7,7 +7,7 @@ function feeTypeExcludedAttributes() {
 
 function scopedUserInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userFeeType",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),
@@ -17,7 +17,7 @@ function scopedUserInclude() {
 
 function scopedFeeGroupInclude(businessWhere = {}) {
   return {
-    model: model.feeGroupModel.unscoped(),
+    model: model.feeGroupModel,
     as: "feeGroup",
     attributes: { exclude: feeTypeExcludedAttributes() },
     where: { ...businessWhere, ...buildScope(model.feeGroupModel) },
@@ -26,7 +26,7 @@ function scopedFeeGroupInclude(businessWhere = {}) {
 }
 
 async function assertScopedFeeType(feeTypeId, transaction) {
-  return model.feeTypeModel.unscoped().findOne({
+  return scoped(model.feeTypeModel).findOne({
     attributes: ["feeTypeId"],
     where: { feeTypeId },
     include: [scopedUserInclude()],
@@ -47,7 +47,7 @@ export async function addFeeType(feeTypeData, options = {}) {
       }
     }
 
-    return model.feeTypeModel.unscoped().create(feeTypeData, { transaction: options.transaction });
+    return scoped(model.feeTypeModel).create(feeTypeData, { transaction: options.transaction });
   } catch (error) {
     console.error("Error in add FeeType :", error);
     throw error;
@@ -60,7 +60,7 @@ export async function getFeeTypeDetails(filters = {}) {
       ? { acedmicYearId: filters.acedmicYearId }
       : {};
 
-    return model.feeTypeModel.unscoped().findAll({
+    return scoped(model.feeTypeModel).findAll({
       attributes: { exclude: feeTypeExcludedAttributes() },
       include: [scopedUserInclude(), scopedFeeGroupInclude(feeGroupBusinessWhere)],
     });
@@ -72,7 +72,7 @@ export async function getFeeTypeDetails(filters = {}) {
 
 export async function getSingleFeeTypeDetails(feeTypeId) {
   try {
-    return model.feeTypeModel.unscoped().findOne({
+    return scoped(model.feeTypeModel).findOne({
       attributes: { exclude: feeTypeExcludedAttributes() },
       where: { feeTypeId },
       include: [scopedUserInclude(), scopedFeeGroupInclude()],
@@ -100,7 +100,7 @@ export async function updateFeeType(feeTypeId, feeTypeData) {
       }
     }
 
-    return model.feeTypeModel.unscoped().update(feeTypeData, {
+    return scoped(model.feeTypeModel).update(feeTypeData, {
       where: { feeTypeId },
     });
   } catch (error) {
@@ -115,6 +115,6 @@ export async function deleteFeeType(feeTypeId) {
     return false;
   }
 
-  const deleted = await model.feeTypeModel.unscoped().destroy({ where: { feeTypeId } });
+  const deleted = await scoped(model.feeTypeModel).destroy({ where: { feeTypeId } });
   return deleted > 0;
 }

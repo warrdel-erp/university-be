@@ -443,12 +443,12 @@ employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: "c_city", 
 employeeModel.hasMany(teacherSubjectMappingModel, { foreignKey: "employee_id", as: "teacherEmployeeData" });
 teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "teacherEmployeeData" });
 
-classSubjectMapperModel.hasMany(teacherSubjectMappingModel, {
-  foreignKey: "class_subject_mapper_id",
+subjectModel.hasMany(teacherSubjectMappingModel, {
+  foreignKey: "subject_id",
   as: "employeeSubject",
 });
-teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, {
-  foreignKey: "class_subject_mapper_id",
+teacherSubjectMappingModel.belongsTo(subjectModel, {
+  foreignKey: "subject_id",
   as: "employeeSubject",
 });
 

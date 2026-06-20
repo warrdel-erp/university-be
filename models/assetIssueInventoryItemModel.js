@@ -5,7 +5,7 @@ import assetInventoryItemModel from "./assetInventoryItemModel.js";
 import assetReturnTransactionModel from "./assetReturnTransactionModel.js";
 import { assetConditions } from "../constant.js";
 
-export default sequelize.define(
+const assetIssueInventoryItemModel = sequelize.define(
   "asset_issue_inventory_item",
   {
     assetIssueInventoryItemId: {
@@ -62,3 +62,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetIssueInventoryItemModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetIssueInventoryItemModel;

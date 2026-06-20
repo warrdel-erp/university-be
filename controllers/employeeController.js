@@ -165,13 +165,17 @@ export const getTeacherTimeTable = async (req, res) => {
 
 export const getTeacherSubject = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { employeeId, sessionId, acedmicYearId: queryYear } = req.query;
+        const acedmicYearId = queryYear ?? req.user.defaultAcademicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
         }
 
-        const result = await employee.getTeacherSubject(employeeId);
+        const result = await employee.getTeacherSubject(employeeId, {
+            sessionId: sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
+            acedmicYearId: acedmicYearId != null && acedmicYearId !== '' ? Number(acedmicYearId) : undefined,
+        });
 
         res.status(200).send(result);
 

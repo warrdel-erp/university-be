@@ -54,7 +54,7 @@ export async function getSubjectsWithWeightages(sessionId, courseId, term) {
     },
     include: [
       {
-        model: model.subjectWeightageModel.unscoped(),
+        model: model.subjectWeightageModel,
         as: 'subjectWeightages',
         where: { sessionId },
         required: false,

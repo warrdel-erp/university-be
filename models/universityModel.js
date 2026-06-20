@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const universityModel = sequelize.define(
     'university',
     {
         universityId: {
@@ -39,3 +39,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+universityModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default universityModel;

@@ -16,12 +16,12 @@ export async function getRolePermissionMappingDetails() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id"] },
       include: [
         {
-          model: model.roleModel.unscoped(),
+          model: model.roleModel,
           as: "userMapped",
           attributes: ["role"],
         },
         {
-          model: model.permissionModel.unscoped(),
+          model: model.permissionModel,
           as: "permissionMapped",
           attributes: ["permission"],
         },
@@ -40,12 +40,12 @@ export async function getSingleRolePermissionMappingDetails(rolePermissionMappin
       where: { rolePermissionMappingId },
       include: [
         {
-          model: model.roleModel.unscoped(),
+          model: model.roleModel,
           as: "userMapped",
           attributes: ["role"],
         },
         {
-          model: model.permissionModel.unscoped(),
+          model: model.permissionModel,
           as: "permissionMapped",
           attributes: ["permission"],
         },

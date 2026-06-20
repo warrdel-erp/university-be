@@ -50,60 +50,101 @@ function resolveTerm(termNumber, termRows) {
     return termRows[0]?.term ?? null;
 }
 
+function collectTermIds(rows) {
+    return [
+        ...new Set(
+            rows.flatMap((row) =>
+                (toPlain(row).examSetupTypeTerms ?? [])
+                    .map((termItem) => termItem?.examSetupTypeTermId)
+                    .filter(Boolean),
+            ),
+        ),
+    ];
+}
+
+/** One count per unique session + course + term + academic year (not per exam type row). */
+async function buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, termNumber) {
+    const countMap = new Map();
+    if (!sessionId || !courseId) {
+        return countMap;
+    }
+
+    const pending = [];
+    for (const row of rows) {
+        const plain = toPlain(row);
+        const term = resolveTerm(termNumber, plain.examSetupTypeTerms ?? []);
+        const yearId = acedmicYearId ?? plain.examStructure?.acedmicYearId;
+        if (term == null || yearId == null) {
+            continue;
+        }
+
+        const key = `${term}:${yearId}`;
+        if (!countMap.has(key)) {
+            pending.push(
+                examScheduleRepository
+                    .getStudentCountByGroup(sessionId, courseId, term, yearId)
+                    .then((count) => countMap.set(key, count)),
+            );
+        }
+    }
+
+    await Promise.all(pending);
+    return countMap;
+}
+
+function resolveStudentCount(plain, sessionId, courseId, acedmicYearId, termNumber, countMap) {
+    if (!sessionId || !courseId) {
+        return 0;
+    }
+    const term = resolveTerm(termNumber, plain.examSetupTypeTerms ?? []);
+    const yearId = acedmicYearId ?? plain.examStructure?.acedmicYearId;
+    if (term == null || yearId == null) {
+        return 0;
+    }
+    return countMap.get(`${term}:${yearId}`) ?? 0;
+}
+
 export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
-    const result = await examStructureRepository.getSingleExamType(
+    const rows = await examStructureRepository.getSingleExamType(
         courseId,
         sessionId,
         acedmicYearId,
         termNumber,
     );
 
-    const rows = result ?? [];
-    if (!rows.length) {
+    if (!rows?.length) {
         return [];
     }
 
-    return Promise.all(
-        rows.map(async (row) => {
-            const plain = toPlain(row);
-            const termRows = Array.isArray(plain?.examSetupTypeTerms) ? plain.examSetupTypeTerms : [];
-            const term = resolveTerm(termNumber, termRows);
-            const acedmicYearId = plain?.examStructure?.acedmicYearId;
+    const termIds = collectTermIds(rows);
+    const [studentCountMap, hallTicketCountByTermId] = await Promise.all([
+        buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, termNumber),
+        sessionId && termIds.length
+            ? studentHallTicketRepository.countHallTicketsByTermIds(termIds, sessionId)
+            : Promise.resolve(new Map()),
+    ]);
 
-            let studentCount = 0;
-            if (sessionId && courseId && term != null && acedmicYearId) {
-                studentCount = await examScheduleRepository.getStudentCountByGroup(
-                    sessionId,
-                    courseId,
-                    term,
-                    acedmicYearId,
-                );
-            }
+    return rows.map((row) => {
+        const plain = toPlain(row);
+        const rowTermIds = (plain.examSetupTypeTerms ?? [])
+            .map((termItem) => termItem?.examSetupTypeTermId)
+            .filter(Boolean);
 
-            const termIds = termRows
-                .map((termItem) => termItem?.examSetupTypeTermId)
-                .filter(Boolean);
-
-            let isHallTicketGenerated = false;
-            if (termIds.length > 0 && sessionId) {
-                const counts = await Promise.all(
-                    termIds.map((examSetupTypeTermId) =>
-                        studentHallTicketRepository.countHallTickets({
-                            examSetupTypeTermId,
-                            sessionId,
-                        }),
-                    ),
-                );
-                isHallTicketGenerated = counts.some((count) => Number(count) > 0);
-            }
-
-            return {
-                ...plain,
-                isHallTicketGenerated,
-                studentCount,
-            };
-        }),
-    );
+        return {
+            ...plain,
+            studentCount: resolveStudentCount(
+                plain,
+                sessionId,
+                courseId,
+                acedmicYearId,
+                termNumber,
+                studentCountMap,
+            ),
+            isHallTicketGenerated: rowTermIds.some(
+                (termId) => (hallTicketCountByTermId.get(termId) ?? 0) > 0,
+            ),
+        };
+    });
 };
 
 export async function deleteExamType(examSetupTypeId) {

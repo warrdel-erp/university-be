@@ -22,17 +22,17 @@ export async function getCreditDetails(courseId, sessionId) {
       },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: 'courseCredit',
           attributes: ['courseId', 'courseName'],
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: 'sessionCredit',
           attributes: ['sessionId', 'sessionName'],
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: 'subjectCredit',
           attributes: ['subjectId', 'subjectName', 'subjectCode'],
         },
@@ -53,17 +53,17 @@ export async function getSingleCreditDetails(creditId) {
       },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: 'courseCredit',
           attributes: ['courseId', 'courseName'],
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: 'sessionCredit',
           attributes: ['sessionId', 'sessionName'],
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: 'subjectCredit',
           attributes: ['subjectId', 'subjectName', 'subjectCode'],
         },

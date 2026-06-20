@@ -702,7 +702,7 @@ export async function getTimeTableElective(courseId) {
       }
       const sameTeacher = curr?.isSameTeacher;
       const subject = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectName ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName)
         : curr?.timeTableSubject?.subjectName;
 
       const teacherName = sameTeacher
@@ -710,7 +710,7 @@ export async function getTimeTableElective(courseId) {
         : curr?.employeeDetails?.employeeName;
 
       const subjectCode = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectCode ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode)
         : curr?.timeTableSubject?.subjectCode;
 
       const employeeCode = sameTeacher
@@ -718,7 +718,7 @@ export async function getTimeTableElective(courseId) {
         : curr?.employeeDetails?.employeeCode;
 
       const subjectId = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectId ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId)
         : curr?.timeTableSubject?.subjectId;
 
       const employeeId = sameTeacher
@@ -1031,7 +1031,9 @@ export async function getTimeTableCellData(courseId, classSectionsId) {
 
         if (isSameTeacher === true) {
           teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
-          subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
+          subjectData = timeTableTeacherSubject?.employeeSubject?.subjectId
+            ? timeTableTeacherSubject.employeeSubject
+            : (timeTableTeacherSubject?.employeeSubject?.subjects || null);
         } else {
           teacherData = employeeDetails || null;
           subjectData = timeTableSubject || null;
@@ -1478,7 +1480,9 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYear
 
             if (item.timeTableTeacherSubject) {
               teacher = item.timeTableTeacherSubject.teacherEmployeeData;
-              subject = item.timeTableTeacherSubject.employeeSubject?.subjects;
+              subject = item.timeTableTeacherSubject.employeeSubject?.subjectId
+                ? item.timeTableTeacherSubject.employeeSubject
+                : item.timeTableTeacherSubject.employeeSubject?.subjects;
             }
 
             const subjectName = subject?.subjectName || "N/A";

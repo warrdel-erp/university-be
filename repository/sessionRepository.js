@@ -33,7 +33,7 @@ export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, u
             where.universityId = universityId;
         }
 
-        const existingMapping = await model.sessionCouseMappingModel.unscoped().findOne({
+        const existingMapping = await scoped(model.sessionCouseMappingModel).findOne({
             where,
         });
         return !!existingMapping;
@@ -169,7 +169,7 @@ export async function deleteSession(sessionId) {
 }
 
 export async function getMappingByCourseAndSession(courseId, sessionId) {
-    return model.sessionCouseMappingModel.unscoped().findOne({
+    return scoped(model.sessionCouseMappingModel).findOne({
         where: { courseId, sessionId },
     });
 }
@@ -334,7 +334,7 @@ async function findMappedCourseIds(sessionId, courseIds, transaction) {
         return [];
     }
 
-    const rows = await model.sessionCouseMappingModel.unscoped().findAll({
+    const rows = await scoped(model.sessionCouseMappingModel).findAll({
         where: {
             sessionId,
             courseId: { [Op.in]: courseIds },

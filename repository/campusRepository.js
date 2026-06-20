@@ -77,14 +77,14 @@ export async function getCampusHierarchy(universityId) {
       attributes: { exclude: excludeMeta },
       include: [
         {
-          model: model.instituteModel.unscoped(),
+          model: model.instituteModel,
           as: "instituteData",
           attributes: { exclude: [...excludeMeta, "universityId"] },
           where: { universityId },
           required: false,
           include: [
             {
-              model: model.affiliatedIniversityModel.unscoped(),
+              model: model.affiliatedIniversityModel,
               as: "affiliateInstitute",
               attributes: {
                 exclude: [...excludeMeta, "universityId", "instituteId"],
@@ -97,7 +97,7 @@ export async function getCampusHierarchy(universityId) {
       ],
       order: [
         ["campusName", "ASC"],
-        [{ model: model.instituteModel.unscoped(), as: "instituteData" }, "instituteName", "ASC"],
+        [{ model: model.instituteModel, as: "instituteData" }, "instituteName", "ASC"],
       ],
     });
 
@@ -107,7 +107,7 @@ export async function getCampusHierarchy(universityId) {
 
     const specializations =
       instituteIds.length > 0
-        ? await model.specializationModel.unscoped().findAll({
+        ? await scoped(model.specializationModel).findAll({
             attributes: { exclude: [...excludeMeta, "universityId"] },
             where: {
               universityId,

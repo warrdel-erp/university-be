@@ -88,14 +88,14 @@ export async function getAssignTeacher() {
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
-                    model: model.scheduleModel.unscoped(),
+                    model: model.scheduleModel,
                     as: 'schedule',
                     required: true,
                     where: scheduleWhere,
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                 },
                 {
-                    model: model.employeeModel.unscoped(),
+                    model: model.employeeModel,
                     as: 'employeeSchedule',
                     required: false,
                     where: employeeWhere,
@@ -163,14 +163,14 @@ export async function getAllAttendence(page, limit, fromDate, toDate) {
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     include: [
                         {
-                            model: model.scheduleModel.unscoped(),
+                            model: model.scheduleModel,
                             as: 'schedule',
                             required: true,
                             where: scheduleWhere,
                             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                         },
                         {
-                            model: model.employeeModel.unscoped(),
+                            model: model.employeeModel,
                             as: 'employeeSchedule',
                             attributes: [
                                 'employeeId',

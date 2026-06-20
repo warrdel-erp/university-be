@@ -12,7 +12,7 @@ const structureInclude = (extra = {}) => ({
     where: buildScope(model.timeTableStructureModel),
     include: [
         {
-            model: model.courseModel.unscoped(),
+            model: model.courseModel,
             as: 'timeTableStructureCourse',
             attributes: ['courseId', 'courseName'],
         },
@@ -38,7 +38,7 @@ export async function getCourseInScope(courseId) {
         return null;
     }
 
-    return await model.courseModel.unscoped().findOne({
+    return await scoped(model.courseModel).findOne({
         where: {
             courseId,
             universityId: store.universityId,
@@ -94,7 +94,7 @@ export async function getTimeTableStructures(courseId, acedmicYearId, role, sess
             where,
             include: [
                 {
-                    model: model.sessionModel.unscoped(),
+                    model: model.sessionModel,
                     as: "timeTableSession",
                     attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId", "instituteId"],
                     required: false,
@@ -105,7 +105,7 @@ export async function getTimeTableStructures(courseId, acedmicYearId, role, sess
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                 },
                 {
-                    model: model.courseModel.unscoped(),
+                    model: model.courseModel,
                     as: "timeTableStructureCourse",
                     attributes: ["courseId", "courseName", "courseCode"],
                     required: false,

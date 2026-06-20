@@ -30,12 +30,12 @@ export async function getExamStructure(acedmicYearId) {
       },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseExam",
           exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: "sessionExam",
           exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
@@ -56,12 +56,12 @@ export async function getSingleExamStructure(courseId, sessionId, acedmicYearId)
       where: { courseId, sessionId, acedmicYearId: yearId },
       include: [
         {
-          model: model.courseModel.unscoped(),
+          model: model.courseModel,
           as: "courseExam",
           exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: "sessionExam",
           exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
@@ -138,23 +138,23 @@ export async function getDetailByExamType(examSetupTypeId) {
       where: { examSetupTypeId },
       include: [
         {
-          model: model.examStructureModel.unscoped(),
+          model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
           required: true,
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "courseExam",
               attributes: ["courseId", "courseName", "capacity"],
             },
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: "sessionExam",
               attributes: ["sessionId", "sessionName"],
             },
             {
-              model: model.acedmicYearModel.unscoped(),
+              model: model.acedmicYearModel,
               as: "acedmicExam",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
@@ -180,7 +180,7 @@ export async function getSingleExamType(courseId, sessionId, acedmicYearId, term
     };
 
     const termInclude = {
-      model: model.examSetupTypeTermModel.unscoped(),
+      model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: {
@@ -189,30 +189,39 @@ export async function getSingleExamType(courseId, sessionId, acedmicYearId, term
         ...(termNumber != null && { term: termNumber }),
       },
       required: termNumber != null,
+      include: [
+        {
+          model: model.examScheduleModel,
+          as: "examSchedules",
+          attributes: ["examScheduleId", "subjectId", "examDate", "examTime"],
+          where: { sessionId },
+          required: false,
+        },
+      ],
     };
 
     return await scoped(model.examSetupTypeModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       include: [
         {
-          model: model.examStructureModel.unscoped(),
+          model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
           where: structureWhere,
           required: true,
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "courseExam",
               attributes: ["courseId", "courseName", "capacity"],
             },
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: "sessionExam",
               attributes: ["sessionId", "sessionName"],
             },
             {
-              model: model.acedmicYearModel.unscoped(),
+              model: model.acedmicYearModel,
               as: "acedmicExam",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },

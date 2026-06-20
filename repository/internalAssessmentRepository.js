@@ -15,7 +15,7 @@ async function assertScopedInternalAssessment(examAssessmentId, transaction) {
         attributes: ['examAssessmentId', 'examSetupTypeId'],
         transaction,
         include: [{
-            model: model.examSetupTypeModel.unscoped(),
+            model: model.examSetupTypeModel,
             as: 'assessmentExamType',
             required: true,
             where: buildScope(model.examSetupTypeModel),
@@ -25,22 +25,22 @@ async function assertScopedInternalAssessment(examAssessmentId, transaction) {
 }
 
 const assessmentIncludes = [
-    { model: model.subjectModel.unscoped(), as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: false },
-    { model: model.semesterModel.unscoped(), as: "assessmentSemester", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.semesterModel), required: false },
+    { model: model.subjectModel, as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: false },
+    { model: model.semesterModel, as: "assessmentSemester", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.semesterModel), required: false },
     {
-        model: model.examSetupTypeModel.unscoped(),
+        model: model.examSetupTypeModel,
         as: "assessmentExamType",
         attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
         where: buildScope(model.examSetupTypeModel),
         required: true,
         include: [
             {
-                model: model.syllabusDetailsModel.unscoped(),
+                model: model.syllabusDetailsModel,
                 as: 'syllabusDetailsExam',
                 attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
             },
             {
-                model: model.examStructureModel.unscoped(),
+                model: model.examStructureModel,
                 as: 'examStructure',
                 attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
                 where: buildScope(model.examStructureModel),
@@ -112,23 +112,23 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
     return await model.internalAssessmentModel.findOne({
         where: { subjectId, employeeId },
         include: [
-            { model: model.subjectModel.unscoped(), as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: true },
+            { model: model.subjectModel, as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: true },
             {
-                model: model.semesterModel.unscoped(),
+                model: model.semesterModel,
                 as: "assessmentSemester",
                 attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
                 where: buildScope(model.semesterModel),
                 required: false,
                 include: [
                     {
-                        model: model.studentModel.unscoped(),
+                        model: model.studentModel,
                         as: 'studentSemester',
                         attributes: ["studentId", "scholarNumber", "firstName", "middleName", "lastName"],
                         where: buildScope(model.studentModel),
                         required: false,
                         include: [
                             {
-                                model: model.assessmentEvaluationModel.unscoped(),
+                                model: model.assessmentEvaluationModel,
                                 as: 'studentresult',
                                 attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
                             },
@@ -137,7 +137,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
                 ],
             },
             ...assessmentIncludes.filter((i) => i.as !== 'assessmentSubject' && i.as !== 'assessmentSemester'),
-            { model: model.employeeModel.unscoped(), as: "employees", attributes: ["employeeId", "employeeCode", "employeeName"], where: buildScope(model.employeeModel), required: true },
+            { model: model.employeeModel, as: "employees", attributes: ["employeeId", "employeeCode", "employeeName"], where: buildScope(model.employeeModel), required: true },
         ],
     });
 };

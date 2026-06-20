@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const pdfSplitJobModel = sequelize.define(
   "pdf_split_job",
   {
     id: {
@@ -122,3 +122,7 @@ export default sequelize.define(
     timestamps: true,
   }
 );
+
+pdfSplitJobModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default pdfSplitJobModel;

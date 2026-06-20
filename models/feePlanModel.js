@@ -7,7 +7,7 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
 
-export default sequelize.define(
+const feePlanModel = sequelize.define(
     'fee_plan',
     {
         feePlanId: {
@@ -116,3 +116,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+feePlanModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feePlanModel;

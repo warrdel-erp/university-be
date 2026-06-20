@@ -7,7 +7,7 @@ function feeGroupExcludedAttributes() {
 
 function userInclude() {
   return {
-    model: model.userModel.unscoped(),
+    model: model.userModel,
     as: "userFeeGroup",
     attributes: ["universityId", "userId"],
     where: buildScope(model.userModel),

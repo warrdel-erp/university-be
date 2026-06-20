@@ -20,25 +20,25 @@ export async function addRequest(data, options = {}) {
     throw new Error("Leave policy not found");
   }
 
-  return model.leaveRequestModel.unscoped().create(data, { transaction: options.transaction });
+  return scoped(model.leaveRequestModel).create(data, { transaction: options.transaction });
 }
 
 export async function getRequests(filters = {}) {
   const businessWhere = filters.employeeId ? { employeeId: filters.employeeId } : {};
 
-  return model.leaveRequestModel.unscoped().findAll({
+  return scoped(model.leaveRequestModel).findAll({
     attributes: { exclude: ["deletedAt"] },
     where: businessWhere,
     include: [
       {
-        model: model.leavePolicyModel.unscoped(),
+        model: model.leavePolicyModel,
         as: "leaveRequestsPolicy",
         where: buildScope(model.leavePolicyModel),
         required: true,
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.employeeModel.unscoped(),
+        model: model.employeeModel,
         as: "employeeRequest",
         where: buildScope(model.employeeModel),
         required: true,
@@ -48,19 +48,19 @@ export async function getRequests(filters = {}) {
 }
 
 export async function getRequestById(requestId) {
-  return model.leaveRequestModel.unscoped().findOne({
+  return scoped(model.leaveRequestModel).findOne({
     where: { requestId },
     attributes: { exclude: ["deletedAt"] },
     include: [
       {
-        model: model.leavePolicyModel.unscoped(),
+        model: model.leavePolicyModel,
         as: "leaveRequestsPolicy",
         where: buildScope(model.leavePolicyModel),
         required: true,
         attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
-        model: model.employeeModel.unscoped(),
+        model: model.employeeModel,
         as: "employeeRequest",
         where: buildScope(model.employeeModel),
         required: true,
@@ -75,7 +75,7 @@ export async function updateRequest(requestId, data, options = {}) {
     return [0];
   }
 
-  return model.leaveRequestModel.unscoped().update(data, {
+  return scoped(model.leaveRequestModel).update(data, {
     where: { requestId },
     transaction: options.transaction,
   });

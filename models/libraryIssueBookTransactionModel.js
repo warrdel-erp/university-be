@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const libraryIssueBookTransactionModel = sequelize.define(
   "library_issue_book_transaction",
   {
     libraryIssueBookTransactionId: {
@@ -56,3 +56,6 @@ export default sequelize.define(
   },
 );
 
+libraryIssueBookTransactionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryIssueBookTransactionModel;

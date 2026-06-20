@@ -7,7 +7,7 @@ import acedmicYearModel from "./acedmicYearModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import subjectModel from "./subjectModel.js";
 
-export default sequelize.define(
+const coModel = sequelize.define(
     'co',
     {
         coId: {
@@ -108,3 +108,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+coModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default coModel;

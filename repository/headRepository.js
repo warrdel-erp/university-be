@@ -17,12 +17,12 @@ export async function getHeadDetails() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       include: [
         {
-          model: model.campusModel.unscoped(),
+          model: model.campusModel,
           as: "headCampus",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
-          model: model.instituteModel.unscoped(),
+          model: model.instituteModel,
           as: "headInstitute",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
@@ -41,12 +41,12 @@ export async function getSingleHeadDetails(headId) {
       where: { headId },
       include: [
         {
-          model: model.campusModel.unscoped(),
+          model: model.campusModel,
           as: "headCampus",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
-          model: model.instituteModel.unscoped(),
+          model: model.instituteModel,
           as: "headInstitute",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
@@ -93,7 +93,7 @@ export async function updateHead(headId, headData) {
 /** Login lookup — intentionally unscoped (no tenant context at auth). */
 export async function getHeadDetailsByEmail(email) {
   try {
-    const head = await model.headModel.unscoped().findOne({
+    const head = await scoped(model.headModel).findOne({
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },

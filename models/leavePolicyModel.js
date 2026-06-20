@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import universityModel from "./universityModel.js";
 import institute from "./instituteModel.js";
 
-export default sequelize.define(
+const leavePolicyModel = sequelize.define(
   "leave_policies",
   {
     policyId: {
@@ -91,3 +91,7 @@ export default sequelize.define(
     paranoid: true
   }
 );
+
+leavePolicyModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default leavePolicyModel;

@@ -44,12 +44,12 @@ export async function getAllGrades() {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
       include: [
         {
-          model: model.gradeCourseModel.unscoped(),
+          model: model.gradeCourseModel,
           as: "coursesGrade",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "Allcourse",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
               where: buildScope(model.courseModel),
@@ -71,33 +71,33 @@ export async function getSingleGrade(gradeId) {
       where: { gradeId },
       include: [
         {
-          model: model.gradeScaleModel.unscoped(),
+          model: model.gradeScaleModel,
           as: "scales",
         },
         {
-          model: model.gradeCourseModel.unscoped(),
+          model: model.gradeCourseModel,
           as: "coursesGrade",
           include: [
             {
-              model: model.gradePassFailModel.unscoped(),
+              model: model.gradePassFailModel,
               as: "passFail",
             },
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "Allcourse",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
               where: buildScope(model.courseModel),
               required: false,
             },
             {
-              model: model.sessionModel.unscoped(),
+              model: model.sessionModel,
               as: "sessions",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
               where: buildScope(model.sessionModel),
               required: false,
             },
             {
-              model: model.acedmicYearModel.unscoped(),
+              model: model.acedmicYearModel,
               as: "academicYear",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"] },
               where: buildScope(model.acedmicYearModel),

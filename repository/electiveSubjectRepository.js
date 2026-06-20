@@ -46,7 +46,7 @@ export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
 
 export async function getSingleElectiveSubjectByAcedmicId(acedmicYearId) {
     try {
-        return await model.electiveSubjectModel.unscoped().findAll({
+        return await scoped(model.electiveSubjectModel).findAll({
             attributes: { exclude: excludeMeta },
             where: { acedmicYearId: parseInt(acedmicYearId, 10) },
         });

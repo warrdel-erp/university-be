@@ -20,12 +20,12 @@ export async function getLessonDetails(acedmicYearId) {
       },
       include: [
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "lessonSubject",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "courseInfo",
               attributes: {
                 exclude: [
@@ -42,7 +42,7 @@ export async function getLessonDetails(acedmicYearId) {
           ],
         },
         {
-          model: model.semesterModel.unscoped(),
+          model: model.semesterModel,
           as: "lessionSemester",
           attributes: {
             exclude: [
@@ -57,12 +57,12 @@ export async function getLessonDetails(acedmicYearId) {
           },
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
         {
-          model: model.topicModel.unscoped(),
+          model: model.topicModel,
           as: "topicSession",
           attributes: {
             exclude: [
@@ -77,7 +77,7 @@ export async function getLessonDetails(acedmicYearId) {
           },
         },
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "employeeLesson",
           attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
         },
@@ -99,12 +99,12 @@ export async function getSingleLessonDetails(lessonId) {
       },
       include: [
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: "lessonSubject",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           include: [
             {
-              model: model.courseModel.unscoped(),
+              model: model.courseModel,
               as: "courseInfo",
               attributes: {
                 exclude: [
@@ -122,7 +122,7 @@ export async function getSingleLessonDetails(lessonId) {
           ],
         },
         {
-          model: model.semesterModel.unscoped(),
+          model: model.semesterModel,
           as: "lessionSemester",
           attributes: {
             exclude: [
@@ -137,12 +137,12 @@ export async function getSingleLessonDetails(lessonId) {
           },
         },
         {
-          model: model.sessionModel.unscoped(),
+          model: model.sessionModel,
           as: "lessionSession",
           attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
         },
         {
-          model: model.topicModel.unscoped(),
+          model: model.topicModel,
           as: "topicSession",
           attributes: {
             exclude: [
@@ -203,27 +203,27 @@ export async function getMapping(acedmicYearId) {
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       include: [
         {
-          model: model.topicModel.unscoped(),
+          model: model.topicModel,
           as: "mappingTopic",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           required: true,
           include: [
             {
-              model: model.lessonModel.unscoped(),
+              model: model.lessonModel,
               as: "lessonTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               where: lessonWhereClause,
               required: true,
               include: [
                 {
-                  model: model.subjectModel.unscoped(),
+                  model: model.subjectModel,
                   as: "lessonSubject",
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 },
               ],
             },
             {
-              model: model.subTopicModel.unscoped(),
+              model: model.subTopicModel,
               as: "subTopic",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               required: false,
@@ -231,7 +231,7 @@ export async function getMapping(acedmicYearId) {
           ],
         },
         {
-          model: model.classScheduleModel.unscoped(),
+          model: model.classScheduleModel,
           as: "timeTableMapping",
           attributes: {
             exclude: [
@@ -250,7 +250,7 @@ export async function getMapping(acedmicYearId) {
           },
           include: [
             {
-              model: model.timeTableRoutineModel.unscoped(),
+              model: model.timeTableRoutineModel,
               as: "timeTablecreate",
               required: true,
               where: buildScope(model.timeTableRoutineModel),
@@ -270,24 +270,24 @@ export async function getMapping(acedmicYearId) {
               },
               include: [
                 {
-                  model: model.classSectionModel.unscoped(),
+                  model: model.classSectionModel,
                   as: "timeTableClassSection",
                   attributes: ["section", "class", "section_id", "class_sections_id"],
                 },
               ],
             },
             {
-              model: model.timeTableStructurePeriodsModel.unscoped(),
+              model: model.timeTableStructurePeriodsModel,
               as: "timeTablecreation",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             },
             {
-              model: model.employeeModel.unscoped(),
+              model: model.employeeModel,
               as: "employeeDetails",
               attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
             },
             {
-              model: model.teacherSubjectMappingModel.unscoped(),
+              model: model.teacherSubjectMappingModel,
               as: "timeTableTeacherSubject",
               attributes: {
                 exclude: [
@@ -302,7 +302,7 @@ export async function getMapping(acedmicYearId) {
               },
               include: [
                 {
-                  model: model.employeeModel.unscoped(),
+                  model: model.employeeModel,
                   as: "teacherEmployeeData",
                   attributes: ["employeeName", "employeeCode", "pickColor", "employeeId"],
                 },
@@ -448,12 +448,12 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //                   where:{sessionId},
 //                   include:[
 //                     {
-//                       model: model.topicModel.unscoped(),
+//                       model: model.topicModel,
 //                       as: 'topicSession',
 //                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
 //                     },
 //                     {
-//                       model: model.semesterModel.unscoped(),
+//                       model: model.semesterModel,
 //                       as: 'lessionSemester',
 //                       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "specialization_id", "course_id"] },
 //                       where:{courseId}
@@ -497,21 +497,21 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: "teacherEmployeeData",
           required: true,
           attributes: [],
           where: employeeWhere,
         },
         {
-          model: model.classSubjectMapperModel.unscoped(),
+          model: model.classSubjectMapperModel,
           as: "employeeSubject",
           required: false,
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
           where: mapperWhere,
           include: [
             {
-              model: model.subjectModel.unscoped(),
+              model: model.subjectModel,
               as: "subjects",
               required: Boolean(subjectSearch?.trim()),
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
@@ -519,7 +519,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 
               include: [
                 {
-                  model: model.lessonModel.unscoped(),
+                  model: model.lessonModel,
                   as: "lessonSubject",
                   required: false,
                   attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
@@ -527,7 +527,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
 
                   include: [
                     {
-                      model: model.topicModel.unscoped(),
+                      model: model.topicModel,
                       as: "topicSession",
                       required: false,
                       attributes: {
@@ -543,7 +543,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
                       },
                     },
                     {
-                      model: model.semesterModel.unscoped(),
+                      model: model.semesterModel,
                       as: "lessionSemester",
                       required: false,
                       attributes: {

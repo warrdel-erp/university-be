@@ -5,13 +5,13 @@ function floorBuildingInclude() {
     const campusScope = buildScope(model.campusModel);
 
     return {
-        model: model.buildingModel.unscoped(),
+        model: model.buildingModel,
         as: "floorBuilding",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         required: true,
         include: [
             {
-                model: model.campusModel.unscoped(),
+                model: model.campusModel,
                 as: "campusbuilding",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                 where: campusScope,

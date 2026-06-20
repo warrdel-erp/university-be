@@ -14,7 +14,7 @@ export async function findAssignment(whereClause) {
         return await scoped(model.teacherExamAssignmentModel).findOne({
             where: whereClause,
             include: [{
-                model: model.examScheduleModel.unscoped(),
+                model: model.examScheduleModel,
                 as: 'examSchedule',
                 required: true,
                 where: buildScope(model.examScheduleModel),
@@ -47,31 +47,31 @@ export async function getAssignments(whereClause) {
             where: whereClause,
             include: [
                 {
-                    model: model.examScheduleModel.unscoped(),
+                    model: model.examScheduleModel,
                     as: 'examSchedule',
                     required: true,
                     where: buildScope(model.examScheduleModel),
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
+                            model: model.subjectModel,
                             as: 'subjectSchedule',
                             where: buildScope(model.subjectModel),
                             required: false,
                             include: [
                                 {
-                                    model: model.courseModel.unscoped(),
+                                    model: model.courseModel,
                                     as: "courseInfo",
                                 },
                             ],
                         },
                         {
-                            model: model.examSetupTypeTermModel.unscoped(),
+                            model: model.examSetupTypeTermModel,
                             as: "examSetupTypeTerm",
                             where: buildScope(model.examSetupTypeTermModel),
                             required: false,
                             include: [
                                 {
-                                    model: model.examSetupTypeModel.unscoped(),
+                                    model: model.examSetupTypeModel,
                                     as: "examSetupType",
                                     where: buildScope(model.examSetupTypeModel),
                                 },
@@ -80,7 +80,7 @@ export async function getAssignments(whereClause) {
                     ],
                 },
                 {
-                    model: model.employeeModel.unscoped(),
+                    model: model.employeeModel,
                     as: 'teacherEmployee',
                     where: buildScope(model.employeeModel),
                     required: false,
