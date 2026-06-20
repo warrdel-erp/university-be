@@ -1,160 +1,164 @@
+
 import { requestContext } from "./requestContext.js";
 
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
 
-/*
-Example:
+export function buildScope(model) {
+    const store = requestContext.getStore();
 
-model.scopeConfig = {
-    university: true,
-    institute: true,
-    academicYear: false,
-    teacherRestricted: true
-}
-*/
-
-function getScope(model) {
-  const store = requestContext.getStore();
-  const scope = {};
-
-  if (!store || store.bypass) {
-    return scope;
-  }
-
-  const config = model.scopeConfig || {};
-  const attrs = model.rawAttributes || {};
-
-  if (config.university !== false && attrs.universityId) {
-    if (!store.universityId) {
-      throw new Error("University missing");
+    if (!store || store.bypass) {
+        return {};
     }
 
-    scope.universityId = store.universityId;
-  }
+    const attrs = model.rawAttributes || {};
+    const config = model.scopeConfig || {};
 
-  if (config.institute !== false && attrs.instituteId) {
-    if (!store.instituteId) {
-      throw new Error("Institute missing");
+    const where = {};
+
+    // DEFAULT → institute scope
+    if ("instituteId" in attrs) {
+        if (!store.instituteId) {
+            throw new Error("Institute missing");
+        }
+
+        where.instituteId =
+            store.instituteId;
     }
 
-    scope.instituteId = store.instituteId;
-  }
+    // OPTIONAL → academic year scope
+    if (
+        config.academicYear === true &&
+        ACADEMIC_YEAR_FIELD in attrs
+    ) {
+        if (!store.academicYearId) {
+            throw new Error(
+                "Academic year missing"
+            );
+        }
 
-  if (config.academicYear !== false && attrs[ACADEMIC_YEAR_FIELD]) {
-    if (!store.academicYearId) {
-      throw new Error("Academic year missing");
+        where[
+            ACADEMIC_YEAR_FIELD
+        ] = store.academicYearId;
     }
 
-    scope[ACADEMIC_YEAR_FIELD] = store.academicYearId;
-  }
+    // OPTIONAL → teacher scope
+    if (
+        store.role === "teacher" &&
+        (
+            config.teacherRestricted === true
+        )
+    ) {
+        const field =
+            "teacherId" in attrs
+                ? "teacherId"
+                : "userId";
 
-  if (
-    store.role === "teacher" &&
-    (config.teacherRestricted || attrs.teacherId)
-  ) {
-    if (!store.userId) {
-      throw new Error("Teacher missing");
+        where[field] =
+            store.userId;
     }
 
-    if (attrs.teacherId) {
-      scope.teacherId = store.userId;
-    } else {
-      scope.userId = store.userId;
-    }
-  }
-
-  return scope;
+    return where;
 }
 
 function mergeWhere(scope, where = {}) {
-  return {
-    ...where,
-    ...scope,
-  };
-}
-
-function getCreateData(model, data) {
-  const scope = getScope(model);
-
-  const allowed = {};
-
-  Object.keys(scope).forEach((key) => {
-    if (model.rawAttributes[key]) {
-      allowed[key] = scope[key];
-    }
-  });
-
-  return {
-    ...data,
-    ...allowed,
-  };
+    return {
+        ...where,
+        ...scope,
+    };
 }
 
 export function scoped(model) {
-  const scope = getScope(model);
+    const scope =
+        buildScope(model);
 
-  return {
-    findAll(options = {}) {
-      return model.findAll({
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
+    return {
+        findAll: (options = {}) =>
+            model.findAll({
+                ...options,
+                where: mergeWhere(
+                    scope,
+                    options.where
+                ),
+            }),
 
-    findOne(options = {}) {
-      return model.findOne({
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
+        findOne: (options = {}) =>
+            model.findOne({
+                ...options,
+                where: mergeWhere(
+                    scope,
+                    options.where
+                ),
+            }),
 
-    findByPk(id, options = {}) {
-      return model.findOne({
-        ...options,
-        where: mergeWhere(scope, {
-          ...(options.where || {}),
-          [model.primaryKeyAttribute || "id"]: id,
-        }),
-      });
-    },
+        findByPk: (
+            id,
+            options = {}
+        ) =>
+            model.findOne({
+                ...options,
+                where: mergeWhere(
+                    scope,
+                    {
+                        ...(options.where || {}),
+                        [
+                            model.primaryKeyAttribute ||
+                            "id"
+                        ]: id,
+                    }
+                ),
+            }),
 
-    count(options = {}) {
-      return model.count({
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
+        create: (
+            data,
+            options = {}
+        ) =>
+            model.create(
+                {
+                    ...data,
+                    ...scope,
+                },
+                options
+            ),
 
-    findAndCountAll(options = {}) {
-      return model.findAndCountAll({
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
+        update: (
+            data,
+            options = {}
+        ) =>
+            model.update(
+                data,
+                {
+                    ...options,
+                    where:
+                        mergeWhere(
+                            scope,
+                            options.where
+                        ),
+                }
+            ),
 
-    update(data, options = {}) {
-      return model.update(data, {
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
+        destroy: (
+            options = {}
+        ) =>
+            model.destroy({
+                ...options,
+                where:
+                    mergeWhere(
+                        scope,
+                        options.where
+                    ),
+            }),
 
-    destroy(options = {}) {
-      return model.destroy({
-        ...options,
-        where: mergeWhere(scope, options.where),
-      });
-    },
-
-    create(data, options = {}) {
-      return model.create(getCreateData(model, data), options);
-    },
-
-    bulkCreate(rows, options = {}) {
-      return model.bulkCreate(
-        rows.map((row) => getCreateData(model, row)),
-        options,
-      );
-    },
-  };
+        count: (
+            options = {}
+        ) =>
+            model.count({
+                ...options,
+                where:
+                    mergeWhere(
+                        scope,
+                        options.where
+                    ),
+            }),
+    };
 }
+
