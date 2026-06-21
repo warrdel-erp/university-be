@@ -38,14 +38,8 @@ export const teacherSectionMapping = async (req, res) => {
 };
 
 export const getTeacherSubjectMapping = async (req, res) => {
-    const { employeeId, subjectId, sessionId, acedmicYearId } = req.query;
     try {
-        const result = await teacherMapping.getTeacherSubjectMappingService(
-            employeeId,
-            subjectId,
-            sessionId,
-            acedmicYearId,
-        );
+        const result = await teacherMapping.getTeacherSubjectMapping(req.query);
         res.status(200).send(result);
     } catch (error) {
         console.error('Error in getting Teacher Subject Mapping:', error);
@@ -55,7 +49,7 @@ export const getTeacherSubjectMapping = async (req, res) => {
 
 export const getTeacherSectionMapping = async (req, res) => {
     try {
-        const result = await teacherMapping.getTeacherSectionMappingService(req.query);
+        const result = await teacherMapping.getTeacherSectionMapping(req.query);
         res.status(200).send(result);
     } catch (error) {
         console.error('Error in getting Teacher Section Mapping:', error);

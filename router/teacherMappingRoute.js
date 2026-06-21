@@ -45,11 +45,70 @@ const getTeacherSubjectQuerySchema = z.object({
     subjectId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     acedmicYearId: positiveIntegerId.optional(),
+    page: z.coerce
+        .number()
+        .int('page must be an integer')
+        .min(1, 'page must be at least 1')
+        .optional()
+        .default(1),
+    limit: z.coerce
+        .number()
+        .int('limit must be an integer')
+        .min(1, 'limit must be at least 1')
+        .max(100, 'limit must be at most 100')
+        .optional()
+        .default(20),
 });
 
-router.post('/teacherSubject',userAuth , teacherSubjectMapping);
+const idOrNonEmptyIdArray = z
+    .union([
+        z.array(positiveIntegerId).min(1),
+        positiveIntegerId,
+    ])
+    .transform((val) => (Array.isArray(val) ? val : [val]));
 
-router.post('/teacherSection',userAuth , teacherSectionMapping);
+const createTeacherSubjectSchema = z.object({
+    employeeId: positiveIntegerId,
+    subjectId: idOrNonEmptyIdArray,
+    instituteId: positiveIntegerId.optional(),
+    campusId: positiveIntegerId.optional(),
+    acedmicYearId: positiveIntegerId.optional(),
+});
+
+const createTeacherSectionSchema = z.object({
+    employeeId: positiveIntegerId,
+    classSectionsId: idOrNonEmptyIdArray,
+});
+
+const teacherSubjectMappingItemSchema = z.object({
+    teacherSubjectMappingId: positiveIntegerId.optional(),
+    employeeId: positiveIntegerId,
+    subjectId: positiveIntegerId,
+});
+
+const updateTeacherSubjectSchema = z.object({
+    data: z.array(teacherSubjectMappingItemSchema).min(1, 'data must be a non-empty array'),
+    instituteId: positiveIntegerId.optional(),
+    acedmicYearId: positiveIntegerId.optional(),
+});
+
+const updateTeacherSectionSchema = z.object({
+    teacherSectionMappingId: positiveIntegerId,
+    employeeId: positiveIntegerId,
+    classSectionsId: idOrNonEmptyIdArray,
+});
+
+const teacherSubjectMappingIdParamSchema = z.object({
+    teacherSubjectMappingId: positiveIntegerId,
+});
+
+const teacherSectionMappingIdParamSchema = z.object({
+    teacherSectionMappingId: positiveIntegerId,
+});
+
+router.post('/teacherSubject', userAuth, validate({ body: createTeacherSubjectSchema }), teacherSubjectMapping);
+
+router.post('/teacherSection', userAuth, validate({ body: createTeacherSectionSchema }), teacherSectionMapping);
 
 router.get('/teacherSubject', userAuth, validate({ query: getTeacherSubjectQuerySchema }), getTeacherSubjectMapping);
 
@@ -57,12 +116,22 @@ router.get('/teacherSubject', userAuth, validate({ query: getTeacherSubjectQuery
 
 router.get('/teacherSection', userAuth, validate({ query: getTeacherSectionQuerySchema }), getTeacherSectionMapping);
 
-router.patch('/teacherSubject',userAuth , updateTeacherSubjectMapping);
+router.patch('/teacherSubject', userAuth, validate({ body: updateTeacherSubjectSchema }), updateTeacherSubjectMapping);
 
-router.patch('/teacherSection',userAuth , updateTeacherSectionMapping);
+router.patch('/teacherSection', userAuth, validate({ body: updateTeacherSectionSchema }), updateTeacherSectionMapping);
 
-router.delete('/:teacherSubjectMappingId',userAuth , deleteTeacherSubjectMapping);
+router.delete(
+    '/teacherSubject/:teacherSubjectMappingId',
+    userAuth,
+    validate({ params: teacherSubjectMappingIdParamSchema }),
+    deleteTeacherSubjectMapping,
+);
 
-router.delete('/:teacherSectionMappingId',userAuth , deleteTeacherSectionMapping);
+router.delete(
+    '/teacherSection/:teacherSectionMappingId',
+    userAuth,
+    validate({ params: teacherSectionMappingIdParamSchema }),
+    deleteTeacherSectionMapping,
+);
 
 export default router;

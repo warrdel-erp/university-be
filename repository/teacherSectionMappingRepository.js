@@ -2,16 +2,7 @@ import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
-
-function teacherSubjectWhere(subjectIds) {
-    if (subjectIds == null) {
-        return {};
-    }
-    if (!subjectIds.length) {
-        return { subjectId: -1 };
-    }
-    return { subjectId: { [Op.in]: subjectIds } };
-}
+import { resolveSubjectIdsForTeacherFilters, teacherSubjectWhere } from './teacherSubjectMappingRepository.js';
 
 function subjectInclude() {
     return {
@@ -80,17 +71,20 @@ export async function teacherSectionMapping(data) {
 export async function getTeacherSectionMapping({
     employeeId,
     sessionId,
-    yearId,
-    subjectIds,
+    acedmicYearId = requestContext.getStore()?.academicYearId,
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
+        const subjectIds = acedmicYearId != null || sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId })
+            : null;
+
         const universityId = requestContext.getStore()?.universityId;
 
         const classSectionWhere = {
-            ...(yearId != null && { acedmicYearId: yearId }),
+            ...(acedmicYearId != null && { acedmicYearId }),
             ...(sessionId && { sessionId }),
             ...buildScope(model.classSectionModel),
         };

@@ -118,17 +118,22 @@ export async function teacherSubjectMapping(data) {
     }
 }
 
-export async function getTeacherSubjectMapping(employeeId, subjectId, yearId, subjectIds) {
+export async function getTeacherSubjectMapping({
+    employeeId,
+    subjectId,
+    sessionId,
+    page = 1,
+    limit = 20,
+} = {}) {
     try {
-        const subjectWhere = {
-            ...(subjectId && { subjectId }),
-            ...(yearId != null && { acedmicYearId: yearId }),
-            ...buildScope(model.subjectModel),
-        };
+        const subjectIds = sessionId != null || buildScope(model.subjectModel).acedmicYearId != null
+            ? await resolveSubjectIdsForTeacherFilters({
+                acedmicYearId: buildScope(model.subjectModel).acedmicYearId,
+                sessionId,
+            })
+            : null;
 
-        const employeeWhere = buildScope(model.employeeModel);
-
-        return await scoped(model.teacherSubjectMappingModel).findAll({
+        const { rows: result, count: totalCount } = await scoped(model.teacherSubjectMappingModel).findAndCountAll({
             where: {
                 ...(employeeId && { employeeId }),
                 ...teacherSubjectWhere(subjectIds),
@@ -139,7 +144,7 @@ export async function getTeacherSubjectMapping(employeeId, subjectId, yearId, su
                     model: model.employeeModel,
                     as: 'teacherEmployeeData',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                    where: employeeWhere,
+                    where: buildScope(model.employeeModel),
                     required: true,
                     include: [
                         {
@@ -154,7 +159,10 @@ export async function getTeacherSubjectMapping(employeeId, subjectId, yearId, su
                     model: model.subjectModel,
                     as: 'employeeSubject',
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                    where: subjectWhere,
+                    where: {
+                        ...(subjectId && { subjectId }),
+                        ...buildScope(model.subjectModel),
+                    },
                     required: true,
                     include: [
                         {
@@ -166,7 +174,20 @@ export async function getTeacherSubjectMapping(employeeId, subjectId, yearId, su
                     ],
                 },
             ],
+            offset: (page - 1) * limit,
+            limit,
+            order: [['teacherSubjectMappingId', 'DESC']],
+            distinct: true,
+            col: 'teacher_subject_mapping_id',
         });
+
+        return {
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit),
+        };
     } catch (error) {
         throw new Error(`Failed to fetch teacher subject mapping: ${error.message}`);
     }

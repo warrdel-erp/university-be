@@ -65,6 +65,6 @@ const teacherSubjectMappingModel = sequelize.define(
     }
 );
 
-teacherSubjectMappingModel.scopeConfig = { university: false, institute: false, academicYear: false };
+teacherSubjectMappingModel.scopeConfig = { university: true, institute: true, academicYear: true };
 
 export default teacherSubjectMappingModel;

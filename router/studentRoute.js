@@ -338,6 +338,7 @@ router.post("/studentMapping", userAuth, studentCourseMapping);
 router.post("/classStudentMapping", userAuth, classStudentMapping);
 router.get("/classStudentMapping", userAuth, getclassStudentMapping);
 router.post("/electiveSubject", userAuth, addElectiveSubject);
+
 router.post("/promoteStudent", userAuth, promoteStudent);
 
 const promotionAvailableClassSectionQuerySchema = z.object({
