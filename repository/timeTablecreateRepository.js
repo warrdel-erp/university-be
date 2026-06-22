@@ -1253,94 +1253,243 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
   }
 }
 
-export async function getRoutinesByTeacherIdRepository(employeeId) {
-  try {
-    const mappings = await model.classScheduleModel.findAll({
-      where: {
-        employeeId,
-      },
-      attributes: ['timeTableRoutineId'],
-      include: [{
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        attributes: [],
-        where: buildScope(model.timeTableRoutineModel),
-      }],
-    });
+const teacherRoutineStructureInclude = {
+  model: model.timeTableStructureModel,
+  as: 'timeTableCreateName',
+  attributes: ['name', 'timeTableNameId', 'weekOff'],
+  where: buildScope(model.timeTableStructureModel),
+  required: false,
+  include: [
+    {
+      model: model.timeTableStructurePeriodsModel,
+      as: 'timeTableName',
+      attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
+    },
+  ],
+};
 
-    const routineIds = [...new Set(mappings.map(m => m.timeTableRoutineId))];
-    if (!routineIds.length) return [];
+const teacherClassSectionInclude = (courseId, sessionId) => ({
+  model: model.classSectionModel,
+  as: 'timeTableClassSection',
+  required: true,
+  where: {
+    courseId,
+    sessionId,
+    ...buildScope(model.classSectionModel),
+  },
+  attributes: ['classSectionsId', 'section', 'class', 'semesterId', 'sessionId', 'courseId'],
+  include: [
+    {
+      model: model.courseModel,
+      as: 'courseSection',
+      attributes: ['courseId', 'courseName', 'courseCode'],
+      where: buildScope(model.courseModel),
+      required: false,
+    },
+    {
+      model: model.classModel,
+      as: 'classGroup',
+      attributes: ['classId', 'className', 'term'],
+    },
+  ],
+});
 
-    return await scoped(model.timeTableRoutineModel).findAll({
-      where: {
-        timeTableRoutineId: { [Op.in]: routineIds },
-        timeTableType: 'normal'
-      },
-      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionsId'],
+const teacherNormalScheduleInclude = (employeeId) => ({
+  model: model.classScheduleModel,
+  as: 'timeTablecreate',
+  required: true,
+  where: { employeeId },
+  include: [
+    {
+      model: model.employeeModel,
+      as: 'employeeDetails',
+      attributes: ['employeeId', 'employeeName', 'pickColor'],
+      where: buildScope(model.employeeModel),
+      required: false,
+    },
+    {
+      model: model.subjectModel,
+      as: 'timeTableSubject',
+      attributes: ['subjectId', 'subjectName'],
+      where: buildScope(model.subjectModel),
+      required: false,
+    },
+    {
+      model: model.classRoomModel,
+      as: 'classRoom',
+      attributes: ['classRoomSectionId', 'roomNumber'],
+    },
+    {
+      model: model.teacherSubjectMappingModel,
+      as: 'timeTableTeacherSubject',
       include: [
         {
-          model: model.timeTableStructureModel,
-          as: 'timeTableCreateName',
-          attributes: ['name', 'timeTableNameId', 'weekOff'],
-          include: [
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: 'timeTableName',
-              attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime', 'isBreak'],
-            }
-          ]
+          model: model.employeeModel,
+          as: 'teacherEmployeeData',
+          attributes: ['employeeId', 'employeeName', 'pickColor'],
+          where: buildScope(model.employeeModel),
+          required: false,
         },
         {
-          model: model.classScheduleModel,
-          where: {
-            employeeId,
-          },
-          as: 'timeTablecreate',
-          include: [
-            {
-              model: model.employeeModel,
-              as: 'employeeDetails',
-              attributes: ['employeeId', 'employeeName', "pickColor"]
-            },
-            {
-              model: model.subjectModel,
-              as: 'timeTableSubject',
-              attributes: ['subjectId', 'subjectName']
-            },
-            {
-              model: model.classRoomModel,
-              as: 'classRoom',
-              attributes: ['classRoomSectionId', 'roomNumber']
-            },
-            {
-              model: model.teacherSubjectMappingModel,
-              as: 'timeTableTeacherSubject',
-              include: [
-                {
-                  model: model.employeeModel,
-                  as: 'teacherEmployeeData',
-                  attributes: ['employeeId', 'employeeName', "pickColor"]
-                },
-                {
-                  model: model.subjectModel,
-                  as: 'employeeSubject',
-                  attributes: ['subjectId', 'subjectName'],
-                }
-              ]
-            }
-          ]
+          model: model.subjectModel,
+          as: 'employeeSubject',
+          attributes: ['subjectId', 'subjectName'],
+          where: buildScope(model.subjectModel),
+          required: false,
         },
+      ],
+    },
+  ],
+});
+
+const teacherElectiveScheduleInclude = (employeeId) => ({
+  model: model.classScheduleModel,
+  as: 'timeTablecreate',
+  required: true,
+  where: { employeeId },
+  include: [
+    {
+      model: model.employeeModel,
+      as: 'employeeDetails',
+      attributes: ['employeeId', 'employeeName', 'pickColor'],
+      where: buildScope(model.employeeModel),
+      required: false,
+    },
+    {
+      model: model.electiveSubjectModel,
+      as: 'timeTableElective',
+      attributes: ['electiveSubjectId', 'electiveSubjectName'],
+    },
+    {
+      model: model.classRoomModel,
+      as: 'classRoom',
+      attributes: ['classRoomSectionId', 'roomNumber'],
+    },
+  ],
+});
+
+async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
+  return Promise.all([
+    scoped(model.employeeModel).findOne({
+      where: { employeeId },
+      attributes: ['employeeId', 'employeeName', 'employeeCode', 'pickColor'],
+    }),
+    scoped(model.courseModel).findOne({
+      where: { courseId },
+      attributes: ['courseId', 'courseName', 'courseCode'],
+    }),
+    scoped(model.sessionModel).findOne({
+      where: { sessionId },
+      attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'acedmicYearId'],
+    }),
+    scoped(model.classSectionModel).findAll({
+      where: { courseId, sessionId },
+      attributes: ['classSectionsId', 'section', 'class', 'semesterId', 'courseId', 'sessionId'],
+      include: [
         {
-          model: model.classSectionModel,
-          as: 'timeTableClassSection',
-          attributes: ['classSectionsId', 'section', 'class'],
-          include: [{ model: model.courseModel, as: 'courseSection', attributes: ['courseId', 'courseName', 'courseCode'] }]
-        }
-      ]
-    });
+          model: model.classModel,
+          as: 'classGroup',
+          attributes: ['classId', 'className', 'term'],
+        },
+      ],
+      order: [['class', 'ASC'], ['section', 'ASC']],
+    }),
+  ]);
+}
+
+async function fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId) {
+  return scoped(model.timeTableRoutineModel).findAll({
+    where: {
+      courseId,
+      timeTableType: 'normal',
+    },
+    attributes: [
+      'timeTableRoutineId',
+      'timeTableNameId',
+      'startingDate',
+      'endingDate',
+      'isPublish',
+      'timeTableType',
+      'classSectionsId',
+      'courseId',
+    ],
+    include: [
+      teacherRoutineStructureInclude,
+      teacherNormalScheduleInclude(employeeId),
+      teacherClassSectionInclude(courseId, sessionId),
+    ],
+    order: [['timeTableRoutineId', 'ASC']],
+  });
+}
+
+async function fetchElectiveScheduleItemsForTeacher(
+  employeeId,
+  courseId,
+  sessionId,
+  timeTableNameIds,
+) {
+  if (!timeTableNameIds.length) {
+    return new Map();
+  }
+
+  const electiveRoutines = await scoped(model.timeTableRoutineModel).findAll({
+    where: {
+      courseId,
+      timeTableType: 'elective',
+      timeTableNameId: { [Op.in]: timeTableNameIds },
+    },
+    attributes: ['timeTableRoutineId', 'timeTableNameId'],
+    include: [
+      teacherElectiveScheduleInclude(employeeId),
+      teacherClassSectionInclude(courseId, sessionId),
+    ],
+  });
+
+  const electiveItemsByTableNameId = new Map();
+  for (const electiveRoutine of electiveRoutines) {
+    const items = electiveRoutine.timeTablecreate || [];
+    if (!items.length) {
+      continue;
+    }
+    const existing = electiveItemsByTableNameId.get(electiveRoutine.timeTableNameId) || [];
+    electiveItemsByTableNameId.set(
+      electiveRoutine.timeTableNameId,
+      existing.concat(items),
+    );
+  }
+
+  return electiveItemsByTableNameId;
+}
+
+export async function getTeacherRoutineBundle(employeeId, courseId, sessionId) {
+  try {
+    const [[employee, course, session, classSections], normalRoutines] = await Promise.all([
+      fetchTeacherRoutineContext(employeeId, courseId, sessionId),
+      fetchNormalRoutinesForTeacher(employeeId, courseId, sessionId),
+    ]);
+
+    const timeTableNameIds = [
+      ...new Set(normalRoutines.map((routine) => routine.timeTableNameId).filter(Boolean)),
+    ];
+    const electiveItemsByTableNameId = await fetchElectiveScheduleItemsForTeacher(
+      employeeId,
+      courseId,
+      sessionId,
+      timeTableNameIds,
+    );
+
+    return {
+      employee,
+      course,
+      session,
+      classSections,
+      routines: normalRoutines.map((routine) => ({
+        routine,
+        electiveScheduleItems: electiveItemsByTableNameId.get(routine.timeTableNameId) || [],
+      })),
+    };
   } catch (error) {
-    console.error("Error in getRoutinesByTeacherIdRepository:", error);
+    console.error('Error in getTeacherRoutineBundle:', error);
     throw error;
   }
 }

@@ -1472,25 +1472,85 @@ export async function getRoutineByClassSectionId(classSectionsId) {
   }
 }
 
-export async function getRoutineByTeacherAndAcademicYear(employeeId) {
+function mapRoutineClassSection(classSection) {
+  if (!classSection) return null;
+  const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.class,
+    semesterId: plain.semesterId ?? null,
+    term: plain.classGroup?.term ?? null,
+    course: plain.courseSection
+      ? {
+          courseId: plain.courseSection.courseId,
+          courseName: plain.courseSection.courseName,
+          courseCode: plain.courseSection.courseCode,
+        }
+      : null,
+  };
+}
+
+function mapClassSectionSummary(classSection) {
+  const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.class,
+    semesterId: plain.semesterId ?? null,
+    term: plain.classGroup?.term ?? null,
+  };
+}
+
+export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId) {
   try {
-    const normalRoutines = await timeTableCreateRepository.getRoutinesByTeacherIdRepository(employeeId);
+    const {
+      employee,
+      course,
+      session,
+      classSections,
+      routines: routineRows,
+    } = await timeTableCreateRepository.getTeacherRoutineBundle(employeeId, courseId, sessionId);
 
-    if (!normalRoutines || !normalRoutines.length) return { routines: [] };
+    const common = {
+      employee: employee
+        ? {
+            employeeId: employee.employeeId,
+            employeeName: employee.employeeName,
+            employeeCode: employee.employeeCode,
+            pickColor: employee.pickColor,
+          }
+        : null,
+      course: course
+        ? {
+            courseId: course.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+          }
+        : null,
+      session: session
+        ? {
+            sessionId: session.sessionId,
+            sessionName: session.sessionName,
+            startingDate: session.startingDate,
+            endingDate: session.endingDate,
+            acedmicYearId: session.acedmicYearId,
+          }
+        : null,
+      classSections: classSections.map(mapClassSectionSummary),
+    };
 
-    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
-    const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds, employeeId);
+    if (!routineRows.length) {
+      return { ...common, routines: [] };
+    }
 
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    const formattedRoutines = normalRoutines.map(routine => {
+    const formattedRoutines = routineRows.map(({ routine, electiveScheduleItems }) => {
       const timeTableCreateName = routine.timeTableCreateName || {};
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
-      const classSection = routine.timeTableClassSection || {};
-
-      const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
-      const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
+      const classSection = mapRoutineClassSection(routine.timeTableClassSection);
 
       let weekOffList = [];
       try {
@@ -1646,7 +1706,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId) {
       };
     });
 
-    return { routines: formattedRoutines };
+    return { ...common, routines: formattedRoutines };
   } catch (error) {
     console.error("Error in getRoutineByTeacherAndAcademicYear Service:", error);
     throw error;

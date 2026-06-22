@@ -473,11 +473,17 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //   }
 // };
 
-export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
+export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch, subjectId) {
   try {
+    const parsedSubjectId = subjectId != null && subjectId !== ''
+      ? Number(subjectId)
+      : null;
+    const hasSubjectId = Number.isInteger(parsedSubjectId) && parsedSubjectId > 0;
+
     const subjectWhere = {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId: Number(courseId) }),
+      ...(hasSubjectId && { subjectId: parsedSubjectId }),
       ...(subjectSearch?.trim() && {
         subjectName: { [Op.like]: `%${subjectSearch.trim()}%` },
       }),
@@ -488,11 +494,13 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         sessionId: Number(sessionId),
         ...(employeeId && { employeeId: Number(employeeId) }),
       }),
+      ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
     return await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
         ...(employeeId && { employeeId: Number(employeeId) }),
+        ...(hasSubjectId && { subjectId: parsedSubjectId }),
       },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
       include: [
@@ -506,7 +514,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         {
           model: model.subjectModel.unscoped(),
           as: 'employeeSubject',
-          required: Boolean(subjectSearch?.trim()),
+          required: Boolean(subjectSearch?.trim() || hasSubjectId),
           attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
           where: subjectWhere,
           include: [

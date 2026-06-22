@@ -28,6 +28,8 @@ const getRoutineSchema = z.object({
 
 const getRoutineByTeacherSchema = z.object({
     employeeId: positiveIntegerId,
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
     acedmicYearId: optionalAcademicYearId,
 });
 

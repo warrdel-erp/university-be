@@ -213,9 +213,13 @@ export const getRoutineByClassSectionId = async (req, res) => {
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-    const { employeeId } = req.query;
+    const { employeeId, courseId, sessionId } = req.query;
     try {
-        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(employeeId);
+        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(
+            employeeId,
+            courseId,
+            sessionId,
+        );
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting routine by teacher and academic year:", error);

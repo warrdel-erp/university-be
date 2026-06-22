@@ -14,7 +14,7 @@ export async function addacedmicYear(acedmicYearData) {
 
 export async function getacedmicYearDetails() {
     try {
-        return await scoped(model.acedmicYearModel).findAll({
+        return await model.acedmicYearModel.findAll({
             attributes: { exclude: excludeMeta },
         });
     } catch (error) {
@@ -83,7 +83,7 @@ export async function deleteacedmicYear(acedmicYearId) {
 
 export async function getAllActiveAcedmicYear() {
     try {
-        return await scoped(model.acedmicYearModel).findAll({
+        return await model.acedmicYearModel.findAll({
             where: { isActive: true },
             attributes: { exclude: excludeMeta },
         });
