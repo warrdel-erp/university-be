@@ -17,11 +17,6 @@ export const cloneTimeTableRoutine = async (req, res) => {
     const { previousRoutineId, startingDate, endingDate } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-
-    if (!previousRoutineId || !startingDate || !endingDate) {
-        return res.status(400).send("previousRoutineId, startingDate, and endingDate are required");
-    }
-
     try {
         const result = await timeTableCreateServices.cloneTimeTableRoutine(
             previousRoutineId,
@@ -48,7 +43,7 @@ export const gettimeTableCreateDetails = async (req, res) => {
 };
 
 export const getSingletimeTableCreateDetails = async (req, res) => {
-    let { courseId } = req.query
+    const { courseId } = req.query;
     try {
         const result = await timeTableCreateServices.getSingletimeTableCreateDetails(courseId);
         res.status(200).send(result);
@@ -60,19 +55,12 @@ export const getSingletimeTableCreateDetails = async (req, res) => {
 
 export const getTimeTableByCourseAndSection = async (req, res) => {
     const { courseId, classSectionsId, timeTableType } = req.query;
-
-    if (!courseId) {
-        return res.status(400).send("courseId is required");
-    }
-
     try {
-        const result =
-            await timeTableCreateServices.getTimeTableByCourseAndSection(
-                courseId,
-                classSectionsId,
-                timeTableType
-            );
-
+        const result = await timeTableCreateServices.getTimeTableByCourseAndSection(
+            courseId,
+            classSectionsId,
+            timeTableType
+        );
         res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching timetable:", error);
@@ -85,15 +73,12 @@ export const addtimeTableMapping = async (req, res) => {
         const data = req.body;
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-
         const result = await timeTableCreateServices.addtimeTableMapping(
             data,
             createdBy,
             updatedBy
         );
-
         res.status(200).send(result);
-
     } catch (error) {
         res.status(400).send({
             success: false,
@@ -103,8 +88,7 @@ export const addtimeTableMapping = async (req, res) => {
 };
 
 export const getTimeTableMappingDetail = async (req, res) => {
-    const timeTableRoutineId = req.body.timeTableRoutineId;
-
+    const { timeTableRoutineId } = req.body;
     try {
         const result = await timeTableCreateServices.getTimeTableMappingDetail(timeTableRoutineId);
         res.status(200).send(result);
@@ -115,7 +99,7 @@ export const getTimeTableMappingDetail = async (req, res) => {
 };
 
 export const getSingletimeTableMappingDetail = async (req, res) => {
-    let { courseId } = req.query
+    const { courseId } = req.query;
     try {
         const result = await timeTableCreateServices.getSingletimeTableMappingDetail(courseId);
         res.status(200).send(result);
@@ -125,15 +109,9 @@ export const getSingletimeTableMappingDetail = async (req, res) => {
     }
 };
 
-// change time table 
 export const changeTimeTableCreate = async (req, res) => {
-    const { timeTableRoutineId } = req.body
     const updatedBy = req.user.userId;
     try {
-        if (!timeTableRoutineId) {
-            return res.status(400).send("timeTableRoutineId is required for each object.");
-        }
-
         const result = await timeTableCreateServices.changeTimeTableCreate(req.body, updatedBy);
         res.status(200).send(result);
     } catch (error) {
@@ -142,15 +120,10 @@ export const changeTimeTableCreate = async (req, res) => {
     }
 };
 
-// update time table 
 export const updatetimeTableCreate = async (req, res) => {
-    const { timeTableType, timeTableMappingId } = req.body
+    const { timeTableType, timeTableMappingId } = req.body;
     const updatedBy = req.user.userId;
     try {
-        if (!(timeTableType && timeTableMappingId)) {
-            return res.status(400).send("timeTableType and timeTableMappingId are required for each object.");
-        }
-
         const result = await timeTableCreateServices.updatetimeTableCreate(timeTableMappingId, timeTableType, updatedBy);
         res.status(200).send(result);
     } catch (error) {
@@ -163,52 +136,23 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
     try {
         const createdBy = req.user.userId;
         const updatedBy = req.user.userId;
-
-        const data = req.body;
-
         const result = await timeTableCreateServices.updateSimpleTeacherMapping(
-            data,
+            req.body,
             createdBy,
             updatedBy
         );
-
         res.status(200).send(result);
-
     } catch (err) {
         console.error("Error in updateSimpleTeacherMappingController:", err);
         res.status(500).send({ success: false, message: err.message });
     }
 };
 
-// // update time table 
-// export const updateFaculityLoad = async (req,res) => {
-//     const info = req.body;   
-//     const {timeTableRoutineId,employeeId}= req.body
-//     const updatedBy = req.user.userId;
-//     try {
-//             if (!(timeTableRoutineId && employeeId)) {
-//                 return res.status(400).send("Both timeTableRoutineId and employeeId are required for each object.");
-//             }
-
-//         const result = await timeTableCreateServices.updateFaculityLoad(timeTableRoutineId,req.body,updatedBy);
-//         res.status(200).send(result);
-//     } catch (error) {
-//         console.error(`Error in updating faculity load`, error);
-//         res.status(500).send("Internal Server Error");
-//     }
-// };
-
-// delete time table
-
 export const deletetimeTableMapping = async (req, res) => {
     const { timeTableMappingId } = req.query;
     try {
-        if (!timeTableMappingId) {
-            res.status(400).send("time table mapping id is required");
-        } else {
-            const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId);
-            res.status(200).send(result);
-        }
+        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId);
+        res.status(200).send(result);
     } catch (error) {
         console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
         res.status(500).send("Internal Server Error");
@@ -216,10 +160,7 @@ export const deletetimeTableMapping = async (req, res) => {
 };
 
 export const getTimeTableCellData = async (req, res) => {
-    const { courseId, classSectionsId } = req.query
-    if (!(courseId)) {
-        return res.status(400).send("courseId  is required");
-    }
+    const { courseId, classSectionsId } = req.query;
     try {
         const result = await timeTableCreateServices.getTimeTableCellData(courseId, classSectionsId);
         res.status(200).send(result);
@@ -230,10 +171,7 @@ export const getTimeTableCellData = async (req, res) => {
 };
 
 export const getTimeTableElective = async (req, res) => {
-    const { courseId } = req.query
-    if (!(courseId)) {
-        return res.status(400).send("courseId  is required");
-    }
+    const { courseId } = req.query;
     try {
         const result = await timeTableCreateServices.getTimeTableElective(courseId);
         res.status(200).send(result);
@@ -246,15 +184,8 @@ export const getTimeTableElective = async (req, res) => {
 export const publishTimeTable = async (req, res) => {
     try {
         const { timeTableRoutineId } = req.query;
-
-        if (!timeTableRoutineId) {
-            return res.status(400).send("timeTableRoutineId is required");
-        }
-
         const response = await timeTableCreateServices.publishTimeTableService(timeTableRoutineId);
-
         res.status(200).send(response);
-
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -263,15 +194,8 @@ export const publishTimeTable = async (req, res) => {
 export const ClassSubjectCount = async (req, res) => {
     try {
         const { classSectionsId } = req.query;
-
-        if (!classSectionsId) {
-            return res.status(400).send("classSectionsId is required");
-        }
-
         const response = await timeTableCreateServices.getSubjectWithCount(classSectionsId);
-
         res.status(200).send(response);
-
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -279,9 +203,6 @@ export const ClassSubjectCount = async (req, res) => {
 
 export const getRoutineByClassSectionId = async (req, res) => {
     const { classSectionsId } = req.query;
-    if (!classSectionsId) {
-        return res.status(400).send("classSectionsId is required");
-    }
     try {
         const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionsId);
         res.status(200).send(result);
@@ -292,12 +213,9 @@ export const getRoutineByClassSectionId = async (req, res) => {
 };
 
 export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
-    const { employeeId, acedmicYearId } = req.query;
-    if (!employeeId) {
-        return res.status(400).send("employeeId is required");
-    }
+    const { employeeId } = req.query;
     try {
-        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(employeeId, acedmicYearId);
+        const result = await timeTableCreateServices.getRoutineByTeacherAndAcademicYear(employeeId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting routine by teacher and academic year:", error);

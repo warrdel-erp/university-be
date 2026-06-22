@@ -72,22 +72,12 @@ export async function addTimeTable(data, transaction) {
     }
 }
 
-export async function getTimeTableStructures(courseId, acedmicYearId, role, sessionId) {
+export async function getTimeTableStructures({ courseId, sessionId } = {}) {
     try {
-        const scopeWhere = buildScope(model.timeTableStructureModel);
         const where = {
-            ...(courseId && { courseId }),
-            ...(sessionId && { sessionId }),
+            ...(courseId && { courseId: Number(courseId) }),
+            ...(sessionId && { sessionId: Number(sessionId) }),
         };
-
-        if (courseId) {
-            if (acedmicYearId) where.acedmicYearId = acedmicYearId;
-        } else {
-            if (acedmicYearId) where.acedmicYearId = acedmicYearId;
-            if (role === 'Head' && scopeWhere.instituteId) {
-                where.instituteId = scopeWhere.instituteId;
-            }
-        }
 
         return await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },

@@ -154,16 +154,16 @@ export async function addTimeTable(data, createdBy, updatedBy, universityId, ins
     }
 }
 
-export async function getAllTimeTableName(courseId, acedmicYearId, role, sessionId) {
-    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role, sessionId);
+export async function getAllTimeTableName(courseId, sessionId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
 }
 
-export async function getTimeTableDetails(acedmicYearId, role, courseId) {
-    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role);
+export async function getTimeTableDetails(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
 }
 
-export async function getSingleTimeTableDetails(courseId, acedmicYearId, role, sessionId) {
-    return await timeTableRepository.getTimeTableStructures(courseId, acedmicYearId, role, sessionId);
+export async function getSingleTimeTableDetails(courseId, sessionId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
 }
 
 export async function updateTimeTable(info) {

@@ -1196,7 +1196,7 @@ export async function getElectiveRoutinesByTableNamesRepository(timeTableNameIds
   }
 }
 
-export async function getRoutinesByTeacherIdRepository(employeeId, acedmicYearId) {
+export async function getRoutinesByTeacherIdRepository(employeeId) {
   try {
     const mappings = await model.classScheduleModel.findAll({
       where: {
@@ -1218,7 +1218,6 @@ export async function getRoutinesByTeacherIdRepository(employeeId, acedmicYearId
     return await scoped(model.timeTableRoutineModel).findAll({
       where: {
         timeTableRoutineId: { [Op.in]: routineIds },
-        ...(acedmicYearId && { acedmicYearId }),
         timeTableType: 'normal'
       },
       attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionsId'],

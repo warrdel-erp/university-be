@@ -380,16 +380,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
   const transaction = await sequelize.transaction();
 
   try {
-    if (!Array.isArray(mappingArray) || mappingArray.length === 0) {
-      throw new Error("Request body must be a non-empty array");
-    }
-
     const base = mappingArray[0];
-
-    if (!base.timeTableMappingId) {
-      throw new Error("Base row must contain timeTableMappingId");
-    }
-
     let baseRow = await timeTableCreateRepository.findMappingById(base.timeTableMappingId);
 
     if (!baseRow) {
@@ -1408,9 +1399,9 @@ export async function getRoutineByClassSectionId(classSectionsId) {
   }
 }
 
-export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYearId) {
+export async function getRoutineByTeacherAndAcademicYear(employeeId) {
   try {
-    const normalRoutines = await timeTableCreateRepository.getRoutinesByTeacherIdRepository(employeeId, acedmicYearId);
+    const normalRoutines = await timeTableCreateRepository.getRoutinesByTeacherIdRepository(employeeId);
 
     if (!normalRoutines || !normalRoutines.length) return { routines: [] };
 

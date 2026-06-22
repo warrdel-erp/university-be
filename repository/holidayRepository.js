@@ -1,13 +1,17 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
 import { Op } from 'sequelize';
-import { scoped, buildScope } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
+import { scoped } from '../utility/scoped.js';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
+const stripTenantFields = (data = {}) => {
+    const { holidayId, instituteId, acedmicYearId, universityId, createdBy, updatedBy, ...rest } = data;
+    return rest;
+};
+
 export async function addHoliday(holidayData) {
     try {
-        return await scoped(model.holidayModel).create(holidayData);
+        return await scoped(model.holidayModel).create(stripTenantFields(holidayData));
     } catch (error) {
         console.error('Error in add Holiday :', error);
         throw error;
@@ -39,7 +43,7 @@ export async function getSingleHolidayDetails(holidayId) {
     try {
         return await scoped(model.holidayModel).findOne({
             attributes: { exclude: excludeMeta },
-            where: { holidayId },
+            where: { holidayId: Number(holidayId) },
         });
     } catch (error) {
         console.error('Error fetching Holiday details:', error);
@@ -64,14 +68,16 @@ export async function getHolidayStartEndDate(startDate, endingDate) {
 }
 
 export async function deleteHoliday(holidayId) {
-    const deleted = await model.holidayModel.destroy({ where: { holidayId } });
+    const deleted = await scoped(model.holidayModel).destroy({
+        where: { holidayId: Number(holidayId) },
+    });
     return deleted > 0;
 }
 
 export async function updateHoliday(holidayId, holidayData) {
     try {
-        const result = await model.holidayModel.update(holidayData, {
-            where: { holidayId },
+        const result = await scoped(model.holidayModel).update(stripTenantFields(holidayData), {
+            where: { holidayId: Number(holidayId) },
         });
         return result;
     } catch (error) {
