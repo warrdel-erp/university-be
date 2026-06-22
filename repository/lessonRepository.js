@@ -475,91 +475,80 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 
 export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
   try {
-    const employeeWhere = buildScope(model.employeeModel);
-    const mapperWhere = buildScope(model.classSubjectMapperModel);
     const subjectWhere = {
       ...buildScope(model.subjectModel),
-      ...(courseId && { courseId }),
+      ...(courseId && { courseId: Number(courseId) }),
       ...(subjectSearch?.trim() && {
         subjectName: { [Op.like]: `%${subjectSearch.trim()}%` },
       }),
     };
     const lessonWhere = {
       ...buildScope(model.lessonModel),
-      ...(sessionId && { sessionId, employeeId }),
+      ...(sessionId && {
+        sessionId: Number(sessionId),
+        ...(employeeId && { employeeId: Number(employeeId) }),
+      }),
     };
 
-    const lesson = await model.teacherSubjectMappingModel.findAll({
+    return await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
-        ...(employeeId && { employeeId }),
+        ...(employeeId && { employeeId: Number(employeeId) }),
       },
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
       include: [
         {
-          model: model.employeeModel,
-          as: "teacherEmployeeData",
+          model: model.employeeModel.unscoped(),
+          as: 'teacherEmployeeData',
           required: true,
           attributes: [],
-          where: employeeWhere,
+          where: buildScope(model.employeeModel),
         },
         {
-          model: model.classSubjectMapperModel,
-          as: "employeeSubject",
-          required: false,
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-          where: mapperWhere,
+          model: model.subjectModel.unscoped(),
+          as: 'employeeSubject',
+          required: Boolean(subjectSearch?.trim()),
+          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+          where: subjectWhere,
           include: [
             {
-              model: model.subjectModel,
-              as: "subjects",
-              required: Boolean(subjectSearch?.trim()),
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              ...(Object.keys(subjectWhere).length && { where: subjectWhere }),
-
+              model: model.lessonModel.unscoped(),
+              as: 'lessonSubject',
+              required: false,
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+              where: lessonWhere,
               include: [
                 {
-                  model: model.lessonModel,
-                  as: "lessonSubject",
+                  model: model.topicModel.unscoped(),
+                  as: 'topicSession',
                   required: false,
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                  where: lessonWhere,
-
-                  include: [
-                    {
-                      model: model.topicModel,
-                      as: "topicSession",
-                      required: false,
-                      attributes: {
-                        exclude: [
-                          "createdAt",
-                          "updatedAt",
-                          "deletedAt",
-                          "createdBy",
-                          "updatedBy",
-                          "specialization_id",
-                          "course_id",
-                        ],
-                      },
-                    },
-                    {
-                      model: model.semesterModel,
-                      as: "lessionSemester",
-                      required: false,
-                      attributes: {
-                        exclude: [
-                          "createdAt",
-                          "updatedAt",
-                          "deletedAt",
-                          "createdBy",
-                          "updatedBy",
-                          "specialization_id",
-                          "course_id",
-                        ],
-                      },
-                      ...(courseId && { where: { courseId } }),
-                    },
-                  ],
+                  attributes: {
+                    exclude: [
+                      'createdAt',
+                      'updatedAt',
+                      'deletedAt',
+                      'createdBy',
+                      'updatedBy',
+                      'specialization_id',
+                      'course_id',
+                    ],
+                  },
+                },
+                {
+                  model: model.semesterModel.unscoped(),
+                  as: 'lessionSemester',
+                  required: false,
+                  attributes: {
+                    exclude: [
+                      'createdAt',
+                      'updatedAt',
+                      'deletedAt',
+                      'createdBy',
+                      'updatedBy',
+                      'specialization_id',
+                      'course_id',
+                    ],
+                  },
+                  ...(courseId && { where: { courseId: Number(courseId) } }),
                 },
               ],
             },
@@ -567,10 +556,8 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         },
       ],
     });
-
-    return lesson;
   } catch (error) {
-    console.error("Error fetching lesson details:", error);
+    console.error('Error fetching lesson details:', error);
     throw error;
   }
 }

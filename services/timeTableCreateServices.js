@@ -1155,71 +1155,144 @@ export async function publishTimeTableService(timeTableRoutineId) {
   }
 }
 
+function mergeSubjectLists(...lists) {
+  const subjectMap = new Map();
+
+  for (const list of lists) {
+    for (const subject of list) {
+      if (!subject?.subjectId) continue;
+      const subjectId = Number(subject.subjectId);
+      const existing = subjectMap.get(subjectId);
+      subjectMap.set(subjectId, {
+        subjectId,
+        subject: existing?.subject || subject.subject || subject.subjectName || null,
+        subjectCode: existing?.subjectCode || subject.subjectCode || null,
+      });
+    }
+  }
+
+  return [...subjectMap.values()].sort((a, b) => a.subjectId - b.subjectId);
+}
+
+function subjectsFromClassSectionStudents(sectionData) {
+  const subjectMap = new Map();
+
+  for (const student of sectionData?.students ?? []) {
+    for (const mapping of student.studentSubjectMapper ?? []) {
+      const sub = mapping.subjects;
+      if (!sub?.subjectId) continue;
+      const subjectId = Number(sub.subjectId);
+      if (!subjectMap.has(subjectId)) {
+        subjectMap.set(subjectId, {
+          subjectId,
+          subject: sub.subjectName,
+          subjectCode: sub.subjectCode,
+        });
+      }
+    }
+  }
+
+  return [...subjectMap.values()];
+}
+
+function resolveScheduleSubjectId(cell) {
+  if (cell?.subjectId) {
+    return Number(cell.subjectId);
+  }
+  if (cell?.timeTableSubject?.subjectId) {
+    return Number(cell.timeTableSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.employeeSubject.subjectId);
+  }
+  return null;
+}
+
+function resolveScheduleSubjectDetails(cell, subjectId) {
+  const sub = cell?.timeTableSubject || cell?.timeTableTeacherSubject?.employeeSubject;
+  if (sub?.subjectId === subjectId) {
+    return {
+      subjectId,
+      subject: sub.subjectName,
+      subjectCode: sub.subjectCode,
+    };
+  }
+  return { subjectId, subject: null, subjectCode: null };
+}
+
+function countSubjectsInRoutine(cells = []) {
+  const countMap = {};
+  const subjectsFromCells = [];
+  const countedSlots = new Set();
+
+  for (const cell of cells) {
+    if (cell?.timeTablecreation?.isBreak) {
+      continue;
+    }
+
+    const subjectId = resolveScheduleSubjectId(cell);
+    if (!subjectId) {
+      continue;
+    }
+
+    subjectsFromCells.push(resolveScheduleSubjectDetails(cell, subjectId));
+
+    const slotKey = `${cell.day}-${cell.period}-${subjectId}`;
+    if (!countedSlots.has(slotKey)) {
+      countMap[subjectId] = (countMap[subjectId] || 0) + 1;
+      countedSlots.add(slotKey);
+    }
+  }
+
+  return { countMap, subjectsFromCells };
+}
+
 export async function getSubjectWithCount(classSectionsId) {
   const [subjectsData, timeTableData] = await Promise.all([
     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
     timeTableCreateRepository.timeTableData(classSectionsId),
   ]);
 
-  //  Master subject list (same as before)
-  const subjectsList =
-    subjectsData?.semesterDetail?.semestermapping?.map((s) => ({
-      subjectId: Number(s.subjectId),
-      subject: s.subjects?.subjectName,
-      subjectCode: s.subjects?.subjectCode,
-    })) || [];
-
-  const validSubjectIds = new Set(subjectsList.map((s) => s.subjectId));
-
-  //  Result per timetable
+  const studentSubjects = subjectsFromClassSectionStudents(subjectsData);
   const finalResult = [];
 
-  //  Loop each timetableCreate (A / B / C / D)
-  for (const tt of timeTableData) {
-    const countMap = {};
-    validSubjectIds.forEach((id) => (countMap[id] = 0));
+  for (const routine of timeTableData) {
+    const { countMap, subjectsFromCells } = countSubjectsInRoutine(routine?.timeTablecreate);
 
-    const countedSlots = new Set();
-    const mappings = tt?.timeTablecreate || [];
-
-    //  Count subjects INSIDE THIS timetable
-    mappings.forEach((t) => {
-      let foundSubjectId = null;
-
-      if (t.subjectId) {
-        foundSubjectId = Number(t.subjectId);
-      } else if (t.timeTableSubject?.subjectId) {
-        foundSubjectId = Number(t.timeTableSubject.subjectId);
-      } else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
-        foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
-      } else if (t.timeTableElective?.subjectId) {
-        foundSubjectId = Number(t.timeTableElective.subjectId);
-      }
-
-      if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
-        const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
-
-        if (!countedSlots.has(slotKey)) {
-          countMap[foundSubjectId]++;
-          countedSlots.add(slotKey);
-        }
-      }
-    });
-
-    //  Attach subject counts to this timetable
     finalResult.push({
-      timeTableNameId: tt.timeTableCreateName?.timeTableNameId,
-      timeTableName: tt.timeTableCreateName?.name,
-      subjects: subjectsList.map((s) => ({
-        subjectId: s.subjectId,
-        subject: s.subject,
-        subjectCode: s.subjectCode,
-        count: countMap[s.subjectId] || 0,
-      })),
+      routine,
+      countMap,
+      subjectsFromCells,
     });
   }
 
-  return finalResult;
+  let subjectsList = mergeSubjectLists(
+    studentSubjects,
+    ...finalResult.map((entry) => entry.subjectsFromCells),
+  );
+
+  const unresolvedIds = subjectsList
+    .filter((subject) => !subject.subject && !subject.subjectCode)
+    .map((subject) => subject.subjectId);
+
+  if (unresolvedIds.length) {
+    const resolvedSubjects = await timeTableCreateRepository.getSubjectsByIds(unresolvedIds);
+    subjectsList = mergeSubjectLists(subjectsList, resolvedSubjects);
+  }
+
+  return finalResult.map(({ routine, countMap }) => ({
+    timeTableNameId: routine.timeTableCreateName?.timeTableNameId,
+    timeTableName: routine.timeTableCreateName?.name,
+    subjects: subjectsList.map((subject) => ({
+      subjectId: subject.subjectId,
+      subject: subject.subject,
+      subjectCode: subject.subjectCode,
+      count: countMap[subject.subjectId] || 0,
+    })),
+  }));
 }
 
 export async function getRoutineByClassSectionId(classSectionsId) {

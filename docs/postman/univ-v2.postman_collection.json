@@ -1351,7 +1351,7 @@
     },
     {
       "name": "syllabus",
-      "description": "Syllabus CRUD, course/semester subject lookups, and **syllabus units** (topic slabs per subject).\n\n**Base path:** `/syllabus`\n\n**Auth:** Bearer `{{token}}`. Tenant scope from token/headers (`X-Academic-Year-Id` for year-scoped reads).\n\n**Suggested flow:**\n1. **GET courseSubject** — subjects for course + session\n2. **POST /** — create syllabus with subject term marks\n3. **POST addUnit** — add unit slabs for a subject\n4. **GET getUnit?subjectId=** — list units for a subject\n5. **PATCH unit** / **DELETE unit** — maintain units",
+      "description": "Syllabus CRUD, course/semester subject lookups, and **syllabus units** (topic slabs per subject).\n\n**Base path:** `/syllabus`\n\n**Auth:** Bearer `{{token}}`. Tenant scope from token/headers (`X-Academic-Year-Id` for year-scoped reads).\n\n**Suggested flow:**\n1. **GET courseSubject** — subjects for course + session\n2. **POST /** — create syllabus with subject term marks\n3. **POST addUnit** — add unit slabs for a subject\n4. **GET getUnit?subjectId=** — list units for a subject\n5. **PATCH unit** / **DELETE unit?syllabusUnitId=** — maintain units (DELETE uses scoped tenant only; no `acedmicYearId` in query)",
       "item": [
         {
           "name": "get all",
@@ -1950,7 +1950,7 @@
     },
     {
       "name": "time table",
-      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Bell schedule template + period rows |\n| Routine | `/timeTableCreate` | Link structure to section + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Suggested flow:** structure → create routine → mapping cells → subjectCount → publish → getRoutine.\n\nFolder vars `timetable_*` on Variables tab. Auth: Bearer `{{token}}`.",
+      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Bell schedule template + period rows |\n| Routine | `/timeTableCreate` | Link structure to section + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Tenant scope:** GET structure/routine lists use `scoped()` — institute + academic year from auth context. Query `acedmicYearId` is optional (accepted for frontend compat, **not used** by API).\n\n**Validation:** All `/timeTable` and `/timeTableCreate` routes use Zod. Invalid input → **400** `{ status: \"error\", message, errors[] }`.\n\n**Suggested flow:** structure → create routine → mapping cells → subjectCount → publish → getRoutine.\n\nFolder vars `timetable_*` on Variables tab. Auth: Bearer `{{token}}`.",
       "variable": [
         {
           "key": "timetable_courseId",
@@ -2081,7 +2081,7 @@
                     "timeTable"
                   ]
                 },
-                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots) for a course.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `name` | Structure name |\n| `maximumPeriod` | Number of periods |\n| `periodLength` | Minutes |\n| `periodGap` | Minutes between periods |\n| `startingTime` | e.g. `09:00 AM` |\n| `type` | `Automatic` or `Manual` |\n\n### Course scope\nWhen `courseId` is sent, also send **`sessionId`** (or `acedmicYearId` in body). Server resolves:\n- `instituteId` from the course\n- `acedmicYearId` from the session (or body / user `defaultAcademicYearId`)\n- Validates session is mapped to the course\n\n### Optional\n- `weekOff` — JSON array on structure row, e.g. `[\"Sunday\"]`\n- `isCourse` — boolean on each generated period\n- `acedmicYearId` — only if not inferable from session\n\n### Success\n**200** — array of created period rows (`timeTableCreationId`, `periodName`, `startTime`, `endTime`, …). Test script saves first `timeTableCreationId` to `timetable_creationId`."
+                "description": "**POST /timeTable**\n\nCreates a timetable **structure** (period slots).\n\n**Body (Zod — all optional at route; controller may still validate):** `name`, `maximumPeriod`, `periodLength`, `periodGap`, `startingTime`, `type` (`Automatic`|`Manual`), optional `courseId`, `sessionId`, `acedmicYearId`, `weekOff`, `isCourse`.\n\nWhen `courseId` is sent, controller expects `sessionId` or `acedmicYearId` in body. Tenant scope on create via `scoped(timeTableStructureModel)`.\n\n**200** — array of created period rows. **400** — Zod or business validation JSON/text."
               },
               "response": []
             },
@@ -2112,16 +2112,17 @@
                     {
                       "key": "courseId",
                       "value": "{{timetable_courseId}}",
-                      "description": "Optional — when set, filters by course institute + academic year"
+                      "description": "Optional course filter"
                     },
                     {
                       "key": "acedmicYearId",
                       "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — defaults to user defaultAcademicYearId when courseId is set"
+                      "description": "Optional — ignored; tenant scope from auth context",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTable**\n\nLists timetable structures with periods, course, session (`timeTableSession`), and `weekOff` on the structure row.\n\nWhen `courseId` is in query, results are scoped to that course's institute and academic year."
+                "description": "**GET /timeTable**\n\nLists timetable structures with periods, course, session (`timeTableSession`), and `weekOff`.\n\n**Query:** optional `courseId`. Scoped via `scoped(timeTableStructureModel)` (institute + academic year from token).\n\n**Optional ignored:** `acedmicYearId` (frontend compat)."
               },
               "response": []
             },
@@ -2153,7 +2154,7 @@
                     {
                       "key": "courseId",
                       "value": "{{timetable_courseId}}",
-                      "description": "Scopes institute + academic year when provided"
+                      "description": "Optional course filter"
                     },
                     {
                       "key": "sessionId",
@@ -2163,11 +2164,12 @@
                     {
                       "key": "acedmicYearId",
                       "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — defaults when courseId is set"
+                      "description": "Optional — ignored; tenant scope from auth context",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTable/all_name**\n\nSame payload shape as **GET /timeTable** — structures with `weekOff`, `timeTableSession`, course, and nested periods."
+                "description": "**GET /timeTable/all_name**\n\nSame shape as **GET /timeTable**. Optional `courseId`, `sessionId`. Tenant scope from `scoped(timeTableStructureModel)`."
               },
               "response": []
             },
@@ -2206,11 +2208,13 @@
                     },
                     {
                       "key": "acedmicYearId",
-                      "value": "{{timetable_acedmicYearId}}"
+                      "value": "{{timetable_acedmicYearId}}",
+                      "description": "Optional — ignored; tenant scope from auth context",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTable/single**\n\nFiltered list for one course/session (institute + academic year scope when `courseId` is set). Includes session info and `weekOff`."
+                "description": "**GET /timeTable/single**\n\nOptional `courseId`, `sessionId`. Scoped via `scoped(timeTableStructureModel)`. Includes session info and `weekOff`."
               },
               "response": []
             },
@@ -2252,7 +2256,7 @@
                     "timeTable"
                   ]
                 },
-                "description": "**PATCH /timeTable**\n\nArray of period updates. Each object must include `timeTableCreationId`."
+                "description": "**PATCH /timeTable**\n\nNon-empty array of period updates. Each item **requires** `timeTableCreationId`. Optional: `startTime`, `endTime`, `periodName`, `isCourse`, `isBreak`, `type`.\n\n**400** — Zod validation JSON on invalid body."
               },
               "response": []
             },
@@ -2287,7 +2291,7 @@
                     }
                   ]
                 },
-                "description": "**DELETE /timeTable?timeTableCreationId=**\n\nSoft-deletes one period row."
+                "description": "**DELETE /timeTable?timeTableCreationId=**\n\nSoft-deletes one period row. **Required query:** `timeTableCreationId`."
               },
               "response": []
             }
@@ -2350,7 +2354,7 @@
                     "timeTableCreate"
                   ]
                 },
-                "description": "**POST /timeTableCreate**\n\nCreates a **routine** — links a structure (`timeTableNameId`) to a class section for a date range.\n\n**Required:** `timeTableNameId`, `courseId`, `acedmicYearId`, `classSectionsId`, `campusId`, `startingDate`, `endingDate`.\n\n**Optional:** `timeTableType` (`normal` | `elective`), `previousDate` + `timeTableRoutineId` to split an existing routine.\n\nValidates no overlapping date range for the same section. Saves `timeTableRoutineId` to `timetable_routineId`."
+                "description": "**POST /timeTableCreate**\n\nCreates a **routine** — links a structure to a class section for a date range.\n\n**Body (Zod — fields optional at route):** `timeTableNameId`, `courseId`, `classSectionsId`, `campusId`, `startingDate`, `endingDate`, `timeTableType`, optional `acedmicYearId` (ignored on create — `scoped` injects tenant).\n\n**Optional split flow:** `previousDate` + `timeTableRoutineId`.\n\nValidates no overlapping date range for the section. Saves `timeTableRoutineId` to `timetable_routineId`."
               },
               "response": []
             },
@@ -3031,11 +3035,12 @@
                     {
                       "key": "acedmicYearId",
                       "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional"
+                      "description": "Optional — ignored; scoped via auth context",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher's weekly timetable for an academic year."
+                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher weekly timetable from published schedule cells.\n\n**Required:** `employeeId`.\n\n**Scoped:** `timeTableRoutineModel` + `subjectModel` academic year from auth context. `acedmicYearId` query is optional and ignored."
               },
               "response": []
             }
@@ -3342,7 +3347,222 @@
       ]
     },
     {
+      "name": "holiday",
+      "description": "Institute holidays under `/holiday`.\n\n**Auth:** Bearer `{{token}}`.\n\n**Tenant scope:** All CRUD via `scoped(holidayModel)` — institute + academic year from auth context. Query/body `acedmicYearId` / `instituteId` optional (frontend compat, **ignored**).\n\n**Validation:** Zod on all routes. **400** → `{ status: \"error\", message, errors[] }`.",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Republic Day\",\n  \"date\": \"2026-01-26\",\n  \"event\": \"National holiday\",\n  \"remark\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/holiday",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ]
+            },
+            "description": "**POST /holiday**\n\nOptional body: `name`, `date`, `event`, `remark`. Tenant fields injected on create."
+          },
+          "response": []
+        },
+        {
+          "name": "list",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday?page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "name",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "event",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /holiday**\n\nPaginated holidays for current institute + academic year.\n\n**200:** `{ holidays, total, page, limit }`."
+          },
+          "response": []
+        },
+        {
+          "name": "single",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday/single?holidayId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "holidayId",
+                  "value": "1",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**GET /holiday/single?holidayId=**"
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayId\": 1,\n  \"name\": \"Updated holiday name\",\n  \"remark\": \"Optional\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/holiday",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ]
+            },
+            "description": "**PATCH /holiday**\n\n**Required body:** `holidayId`. Optional: `name`, `date`, `event`, `remark`."
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday?holidayId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ],
+              "query": [
+                {
+                  "key": "holidayId",
+                  "value": "1",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**DELETE /holiday?holidayId=**\n\nSoft-delete. Scoped — only holidays in current tenant."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "employee",
+      "description": "Employee APIs under `/employee`.\n\n**Teacher helpers:** `courses` (mapping-based courses), `coursesFromSchedule` (timetable-based courses/subjects) — both scoped by auth academic year; no `acedmicYearId` query.",
       "item": [
         {
           "name": "schedule",
@@ -3466,7 +3686,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/courses?employeeId=49&acedmicYearId=59",
+              "raw": "{{baseurl}}/employee/courses?employeeId=49",
               "host": [
                 "{{baseurl}}"
               ],
@@ -3477,14 +3697,12 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "49"
-                },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59"
+                  "value": "49",
+                  "description": "Required"
                 }
               ]
-            }
+            },
+            "description": "**GET /employee/courses?employeeId=**\n\nDistinct courses for a teacher from `teacher_subject_mapping` → `subject` → `courseInfo`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` (academic year from auth). No `acedmicYearId` query param.\n\n**200:** `{ success: true, result: [{ courseId, courseName, courseCode }] }`."
           },
           "response": []
         },
@@ -3515,54 +3733,12 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "49"
-                },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "courses from schedule Copy",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
+                  "value": "49",
+                  "description": "Required"
                 }
               ]
             },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/coursesFromSchedule?employeeId=49",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "coursesFromSchedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49"
-                },
-                {
-                  "key": "acedmicYearId",
-                  "value": "59",
-                  "disabled": true
-                }
-              ]
-            }
+            "description": "**GET /employee/coursesFromSchedule?employeeId=**\n\nCourses + subjects assigned via timetable cells (`class_schedule_item`) for the teacher.\n\n**Scoped:** `timeTableRoutineModel` + `subjectModel` academic year from auth context.\n\n**200:** `{ success: true, result: { courses: [...], subjects: [...] } }`."
           },
           "response": []
         },
@@ -4602,6 +4778,7 @@
     },
     {
       "name": "lesson",
+      "description": "Lesson plans under `/lesson`.\n\n**GET /lesson/employee** — teacher mappings via `teacher_subject_mapping` → `subject` (`employeeSubject`) → `lessonSubject` → topics/semester. Scoped by auth academic year.",
       "item": [
         {
           "name": "get simple lessons",
@@ -4695,7 +4872,7 @@
                 }
               ]
             },
-            "description": "**GET /lesson/employee**\n\nTeacher subject mappings with nested subject, lessons, topics, and semester.\n\nQuery: `employeeId`, optional `courseId`, `sessionId`, `subjectSearch`. No `acedmicYearId` needed — session scopes lessons."
+            "description": "**GET /lesson/employee**\n\nTeacher `teacher_subject_mapping` rows with nested subject, lessons, topics, and semester.\n\n**Query:** `employeeId` (typical), optional `courseId`, `sessionId`, `subjectSearch`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` / `buildScope(lessonModel)`. No `acedmicYearId` in query.\n\n**Response shape:** `employeeSubject` is the **subject** row; lessons at `employeeSubject.lessonSubject[]` (not `employeeSubject.subjects`)."
           },
           "response": []
         }

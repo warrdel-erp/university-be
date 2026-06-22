@@ -1214,12 +1214,12 @@ export async function getTodayClassSchedule(employeeId, currentDate, dayString, 
   return resultWithDate;
 }
 
-export async function getTeacherCourses(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
+export async function getTeacherCourses(employeeId) {
+  return await employeeRepository.getTeacherCourses(employeeId);
 }
 
-export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+export async function getTeacherSubjectsFromSchedule(employeeId) {
+  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId);
 }
 
 function getTeacherDetails(rawSchedules) {

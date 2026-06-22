@@ -524,37 +524,27 @@ export async function getTeacherSubject(employeeId, filters = {}) {
     }
 };
 
-export async function getTeacherCourses(employeeId, acedmicYearId) {
+export async function getTeacherCourses(employeeId) {
     try {
         const employee = await assertScopedEmployee(employeeId);
         if (!employee) {
             return [];
         }
 
-        const result = await model.teacherSubjectMappingModel.findAll({
-            where: { employeeId },
+        const result = await scoped(model.teacherSubjectMappingModel).findAll({
+            where: { employeeId: Number(employeeId) },
             include: [
                 {
-                    model: model.classSubjectMapperModel.unscoped(),
-                    as: "employeeSubject",
+                    model: model.subjectModel.unscoped(),
+                    as: 'employeeSubject',
                     required: true,
+                    where: buildScope(model.subjectModel),
                     include: [
                         {
-                            model: model.subjectModel.unscoped(),
-                            as: "subjects",
+                            model: model.courseModel.unscoped(),
+                            as: 'courseInfo',
                             required: true,
-                            where: {
-                                acedmicYearId,
-                                ...buildScope(model.subjectModel),
-                            },
-                            include: [
-                                {
-                                    model: model.courseModel.unscoped(),
-                                    as: "courseInfo",
-                                    required: true,
-                                    attributes: ["courseId", "courseName", "courseCode"],
-                                },
-                            ],
+                            attributes: ['courseId', 'courseName', 'courseCode'],
                         },
                     ],
                 },
@@ -564,8 +554,8 @@ export async function getTeacherCourses(employeeId, acedmicYearId) {
         const courses = [];
         const seen = new Set();
 
-        result.forEach(mapping => {
-            const course = mapping.employeeSubject?.subjects?.courseInfo;
+        result.forEach((mapping) => {
+            const course = mapping.employeeSubject?.courseInfo;
             if (course && !seen.has(course.courseId)) {
                 courses.push(course);
                 seen.add(course.courseId);
@@ -579,28 +569,26 @@ export async function getTeacherCourses(employeeId, acedmicYearId) {
     }
 };
 
-export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
+export async function getTeacherSubjectsFromSchedule(employeeId) {
     try {
         const employee = await assertScopedEmployee(employeeId);
         if (!employee) {
             return { courses: [], subjects: [] };
         }
 
-        const routineWhere = {
-            ...(acedmicYearId && { acedmicYearId }),
-            ...buildScope(model.timeTableRoutineModel),
-        };
+        const scopedEmployeeId = Number(employeeId);
+        const routineWhere = buildScope(model.timeTableRoutineModel);
 
         const result = await model.classScheduleModel.findAll({
             where: {
                 [Op.or]: [
-                    { employeeId },
+                    { employeeId: scopedEmployeeId },
                     Sequelize.literal(`
                       EXISTS (
                         SELECT 1
                         FROM teacher_subject_mapping tsm
                         WHERE tsm.teacher_subject_mapping_id = class_schedule_item.teacher_subject_mapping_id
-                        AND tsm.employee_id = ${employeeId}
+                        AND tsm.employee_id = ${scopedEmployeeId}
                       )
                     `),
                 ],
@@ -608,46 +596,43 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
             include: [
                 {
                     model: model.timeTableRoutineModel.unscoped(),
-                    as: "timeTablecreate",
+                    as: 'timeTablecreate',
                     required: true,
                     where: routineWhere,
                 },
                 {
                     model: model.subjectModel.unscoped(),
-                    as: "timeTableSubject",
+                    as: 'timeTableSubject',
                     required: false,
+                    where: buildScope(model.subjectModel),
                     include: [
                         {
                             model: model.courseModel.unscoped(),
-                            as: "courseInfo",
-                            attributes: ["courseId", "courseName", "courseCode"],
+                            as: 'courseInfo',
+                            attributes: ['courseId', 'courseName', 'courseCode'],
                         },
                     ],
                 },
                 {
                     model: model.electiveSubjectModel.unscoped(),
-                    as: "timeTableElective",
+                    as: 'timeTableElective',
                     required: false,
                 },
                 {
                     model: model.teacherSubjectMappingModel.unscoped(),
-                    as: "timeTableTeacherSubject",
+                    as: 'timeTableTeacherSubject',
                     required: false,
                     include: [
                         {
-                            model: model.classSubjectMapperModel.unscoped(),
+                            model: model.subjectModel.unscoped(),
                             as: 'employeeSubject',
+                            where: buildScope(model.subjectModel),
+                            required: false,
                             include: [
                                 {
-                                    model: model.subjectModel.unscoped(),
-                                    as: "subjects",
-                                    include: [
-                                        {
-                                            model: model.courseModel.unscoped(),
-                                            as: "courseInfo",
-                                            attributes: ["courseId", "courseName", "courseCode"],
-                                        },
-                                    ],
+                                    model: model.courseModel.unscoped(),
+                                    as: 'courseInfo',
+                                    attributes: ['courseId', 'courseName', 'courseCode'],
                                 },
                             ],
                         },
@@ -659,7 +644,7 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
         const coursesMap = new Map();
         const subjectsMap = new Map();
 
-        result.forEach(item => {
+        result.forEach((item) => {
             let subject = null;
             let course = null;
 
@@ -676,8 +661,8 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
                     subjectName: item.timeTableElective.electiveSubjectName,
                     subjectCode: item.timeTableElective.electiveSubjectCode,
                 };
-            } else if (item.timeTableTeacherSubject?.employeeSubject?.subjects) {
-                const sub = item.timeTableTeacherSubject.employeeSubject.subjects;
+            } else if (item.timeTableTeacherSubject?.employeeSubject) {
+                const sub = item.timeTableTeacherSubject.employeeSubject;
                 subject = {
                     subjectId: sub.subjectId,
                     subjectName: sub.subjectName,
@@ -697,10 +682,10 @@ export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) 
 
         return {
             courses: Array.from(coursesMap.values()),
-            subjects: Array.from(subjectsMap.values())
+            subjects: Array.from(subjectsMap.values()),
         };
     } catch (error) {
-        console.error("Error in getTeacherSubjectsFromSchedule repository:", error);
+        console.error('Error in getTeacherSubjectsFromSchedule repository:', error);
         throw error;
     }
 }

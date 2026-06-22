@@ -1034,28 +1034,50 @@ export async function publishTimeTableRepository(timeTableRoutineId) {
 
 export async function ClassSubjectCount(classSectionsId) {
   try {
-    return await scoped(model.classSectionModel).findOne({
+    const section = await scoped(model.classSectionModel).findOne({
       where: { classSectionsId },
-      include: [
-        {
-          model: model.semesterModel,
-          as: 'semesterDetail',
-          include: [
-            {
-              model: model.classSubjectMapperModel,
-              as: 'semestermapping',
-              include: [
-                {
-                  model: model.subjectModel,
-                  as: 'subjects'
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      attributes: ['classSectionsId'],
+    });
+    if (!section) {
+      return null;
+    }
+
+    const students = await scoped(model.studentModel).findAll({
+      where: { classSectionsId },
+      attributes: ['studentId'],
+    });
+    if (!students.length) {
+      return { classSectionsId, students: [] };
+    }
+
+    const studentIds = students.map((s) => s.studentId);
+    const mappings = await model.subjectMapperModel.findAll({
+      where: { studentId: { [Op.in]: studentIds } },
+      attributes: ['subjectMapperId', 'subjectId', 'studentId'],
     });
 
+    const subjectIds = [...new Set(mappings.map((m) => m.subjectId).filter(Boolean))];
+    const subjects = subjectIds.length
+      ? await scoped(model.subjectModel).findAll({
+          where: { subjectId: { [Op.in]: subjectIds } },
+          attributes: ['subjectId', 'subjectName', 'subjectCode'],
+        })
+      : [];
+
+    const subjectById = new Map(subjects.map((s) => [s.subjectId, s]));
+
+    return {
+      classSectionsId,
+      students: students.map((student) => ({
+        studentId: student.studentId,
+        studentSubjectMapper: mappings
+          .filter((m) => m.studentId === student.studentId)
+          .map((m) => ({
+            subjectId: m.subjectId,
+            subjects: subjectById.get(m.subjectId) ?? null,
+          })),
+      })),
+    };
   } catch (error) {
     console.error("Error in subject Count repository:", error);
     throw error;
@@ -1065,46 +1087,81 @@ export async function ClassSubjectCount(classSectionsId) {
 export async function timeTableData(classSectionsId) {
   try {
     return await scoped(model.timeTableRoutineModel).findAll({
-      where: { classSectionsId },
+      where: {
+        classSectionsId,
+        timeTableType: 'normal',
+      },
       include: [
         {
           model: model.classScheduleModel,
           as: 'timeTablecreate',
+          attributes: [
+            'timeTableMappingId',
+            'day',
+            'period',
+            'subjectId',
+            'teacherSubjectMappingId',
+            'electiveSubjectId',
+            'timeTableCreationId',
+          ],
           include: [
             {
+              model: model.timeTableStructurePeriodsModel,
+              as: 'timeTablecreation',
+              attributes: ['isBreak'],
+            },
+            {
               model: model.teacherSubjectMappingModel,
-              as: "timeTableTeacherSubject",
+              as: 'timeTableTeacherSubject',
+              attributes: ['teacherSubjectMappingId', 'subjectId'],
               include: [
                 {
                   model: model.subjectModel,
-                  as: "employeeSubject",
-                  attributes: ["subjectId", "subjectName", "subjectCode"],
-                }
-              ]
+                  as: 'employeeSubject',
+                  attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                  where: buildScope(model.subjectModel),
+                  required: false,
+                },
+              ],
             },
-
             {
               model: model.subjectModel,
-              as: "timeTableSubject"
+              as: 'timeTableSubject',
+              attributes: ['subjectId', 'subjectName', 'subjectCode'],
+              where: buildScope(model.subjectModel),
+              required: false,
             },
-
             {
               model: model.electiveSubjectModel,
-              as: "timeTableElective"
-            }
-          ]
+              as: 'timeTableElective',
+              attributes: ['electiveSubjectId', 'electiveSubjectName'],
+            },
+          ],
         },
         {
           model: model.timeTableStructureModel,
-          as: 'timeTableCreateName'
-        }
-      ]
+          as: 'timeTableCreateName',
+          attributes: ['timeTableNameId', 'name', 'instituteId', 'acedmicYearId'],
+          where: buildScope(model.timeTableStructureModel),
+          required: false,
+        },
+      ],
     });
-
   } catch (error) {
     console.error("Error in subject Count time table repository:", error);
     throw error;
   }
+};
+
+export async function getSubjectsByIds(subjectIds) {
+  if (!subjectIds?.length) {
+    return [];
+  }
+
+  return scoped(model.subjectModel).findAll({
+    where: { subjectId: { [Op.in]: subjectIds } },
+    attributes: ['subjectId', 'subjectName', 'subjectCode'],
+  });
 };
 
 export async function getNormalRoutinesBySectionIdRepository(classSectionsId) {

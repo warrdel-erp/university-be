@@ -12,36 +12,10 @@ export const addTimeTable = async (req, res) => {
 
         const updatedBy = req.user.userId;
 
-        const universityId = req.user.universityId;
-
-        const instituteId = req.user.defaultInstituteId;
-
-        const acedmicYearId = req.body.acedmicYearId || req.user.defaultAcademicYearId;
-
-
-
-        if (data.courseId && !(data.sessionId || acedmicYearId)) {
-
-            return res.status(400).send('sessionId or acedmicYearId is required when courseId is provided');
-
-        }
-
-
-
         const result = await timeTableServices.addTimeTable(
-
             data,
-
             createdBy,
-
             updatedBy,
-
-            universityId,
-
-            instituteId,
-
-            acedmicYearId
-
         );
 
         res.status(200).send(result);

@@ -1,6 +1,7 @@
 import * as model from '../models/index.js'
 import { requestContext } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import * as sessionRepository from './sessionRepository.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -48,14 +49,110 @@ export async function getCourseInScope(courseId) {
     });
 }
 
-export async function addTimeTableName(data, transaction) {
-    try {
+async function resolveSessionForStructure(data, scopeWhere, transaction) {
+    const { sessionId, courseId } = data;
+
+    if (sessionId) {
+        const session = await scoped(model.sessionModel).findOne({
+            where: { sessionId },
+            attributes: ['sessionId', 'universityId', 'instituteId', 'acedmicYearId'],
+            transaction,
+        });
+        if (!session) {
+            throw new Error('Session not found');
+        }
+        if (Number(session.universityId) !== Number(scopeWhere.universityId)) {
+            throw new Error('Session does not belong to this university');
+        }
+        if (Number(session.instituteId) !== Number(scopeWhere.instituteId)) {
+            throw new Error('Session does not belong to this institute');
+        }
+        if (Number(session.acedmicYearId) !== Number(scopeWhere.acedmicYearId)) {
+            throw new Error('Session does not belong to this academic year');
+        }
+        return session.sessionId;
+    }
+
+    if (!courseId) {
+        throw new Error('sessionId is required');
+    }
+
+    const mappings = await scoped(model.sessionCouseMappingModel).findAll({
+        where: { courseId },
+        attributes: ['sessionId'],
+        include: [{
+            model: model.sessionModel,
+            as: 'session',
+            required: true,
+            where: {
+                instituteId: scopeWhere.instituteId,
+                universityId: scopeWhere.universityId,
+                acedmicYearId: scopeWhere.acedmicYearId,
+            },
+            attributes: ['sessionId'],
+        }],
+        transaction,
+    });
+
+    const resolvedSessionIds = [...new Set(mappings.map((mapping) => mapping.sessionId))];
+    if (!resolvedSessionIds.length) {
+        throw new Error('No session mapped to this course for the current academic year');
+    }
+    if (resolvedSessionIds.length > 1) {
+        throw new Error('sessionId is required when multiple sessions are mapped to this course');
+    }
+
+    return resolvedSessionIds[0];
+}
+
+export async function buildTimeTableStructureCreatePayload(data, transaction) {
+    const scopeWhere = buildScope(model.timeTableStructureModel);
+    if (!scopeWhere.universityId || !scopeWhere.instituteId || !scopeWhere.acedmicYearId) {
+        throw new Error('universityId, instituteId and academicYearId are required in request context');
+    }
+
+    if (data.courseId) {
         const course = await getCourseInScope(data.courseId);
         if (!course) {
             throw new Error('Course not found for this university and institute');
         }
+    }
 
-        return await scoped(model.timeTableStructureModel).create(data, { transaction });
+    const sessionId = await resolveSessionForStructure(data, scopeWhere, transaction);
+
+    if (data.courseId) {
+        const isMapped = await sessionRepository.isSessionAlreadyMapped(
+            sessionId,
+            data.courseId,
+            scopeWhere.instituteId,
+            scopeWhere.universityId,
+        );
+        if (!isMapped) {
+            throw new Error('Session is not mapped to this course');
+        }
+    }
+
+    return {
+        name: data.name,
+        maximumPeriod: data.maximumPeriod,
+        courseId: data.courseId ?? null,
+        periodLength: data.periodLength,
+        periodGap: data.periodGap,
+        startingTime: data.startingTime,
+        weekOff: data.weekOff,
+        createdBy: data.createdBy,
+        updatedBy: data.updatedBy,
+        sessionId,
+        universityId: scopeWhere.universityId,
+        instituteId: scopeWhere.instituteId,
+        acedmicYearId: scopeWhere.acedmicYearId,
+    };
+}
+
+export async function addTimeTableName(data, transaction) {
+    try {
+        const payload = await buildTimeTableStructureCreatePayload(data, transaction);
+        return await scoped(model.timeTableStructureModel).create(payload, { transaction });
     } catch (error) {
         console.error("Error in create time table name:", error);
         throw error;

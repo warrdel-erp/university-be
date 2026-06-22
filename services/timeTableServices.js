@@ -1,82 +1,14 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
-import * as sessionRepository from '../repository/sessionRepository.js';
-import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
 
-async function resolveTimeTableScope({
-    courseId,
-    sessionId,
-    universityId,
-    instituteId,
-    acedmicYearId,
-}) {
-    const scope = {
-        universityId,
-        instituteId,
-        acedmicYearId,
-        sessionId,
-    };
-
-    if (courseId) {
-        const course = await model.courseModel.findOne({
-            where: { courseId, universityId },
-            attributes: ["courseId", "instituteId", "universityId"],
-        });
-        if (!course) {
-            throw new Error('Course not found');
-        }
-        scope.instituteId = course.instituteId;
-    }
-
-    if (sessionId) {
-        const session = await model.sessionModel.findOne({
-            where: { sessionId, universityId },
-            attributes: ["sessionId", "acedmicYearId", "instituteId", "universityId"],
-        });
-        if (!session) {
-            throw new Error('Session not found');
-        }
-        scope.acedmicYearId = session.acedmicYearId;
-
-        if (courseId) {
-            const isMapped = await sessionRepository.isSessionAlreadyMapped(
-                sessionId,
-                courseId,
-                scope.instituteId,
-                universityId
-            );
-            if (!isMapped) {
-                throw new Error('Session is not mapped to this course');
-            }
-        }
-    }
-
-    if (courseId && !scope.acedmicYearId) {
-        throw new Error('acedmicYearId or sessionId is required when courseId is provided');
-    }
-
-    return scope;
-}
-
-export async function addTimeTable(data, createdBy, updatedBy, universityId, instituteId, acedmicYearId) {
+export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
     try {
-        const scope = await resolveTimeTableScope({
-            courseId: data.courseId,
-            sessionId: data.sessionId,
-            universityId,
-            instituteId,
-            acedmicYearId,
-        });
-
         const structureItem = {
             name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
-            sessionId: scope.sessionId,
-            universityId: scope.universityId,
-            instituteId: scope.instituteId,
-            acedmicYearId: scope.acedmicYearId,
+            sessionId: data.sessionId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,

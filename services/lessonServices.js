@@ -229,9 +229,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         subjectSearch
     );
 
-    return data.filter(item =>
-        item?.employeeSubject?.subjects !== null
-    );
+    return data.filter((item) => item?.employeeSubject != null);
 }
 
 export async function getSimpleLessonList(whereClause) {

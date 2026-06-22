@@ -234,42 +234,32 @@ export const getTodayClassSchedule = async (req, res) => {
 export const getTeacherCourses = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return res.status(400).send('employeeId is required');
         }
 
-        if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
-
-        const result = await employee.getTeacherCourses(employeeId, acedmicYearId);
+        const result = await employee.getTeacherCourses(employeeId);
         res.status(200).send({ success: true, result });
     } catch (error) {
-        console.error("Error in getTeacherCourses controller:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        console.error('Error in getTeacherCourses controller:', error);
+        res.status(500).send({ message: 'Internal Server Error', success: false });
     }
 };
 
 export const getTeacherSubjectsFromSchedule = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return res.status(400).send('employeeId is required');
         }
 
-        if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
-
-        const result = await employee.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+        const result = await employee.getTeacherSubjectsFromSchedule(employeeId);
         res.status(200).send({ success: true, result });
     } catch (error) {
-        console.error("Error in getTeacherSubjectsFromSchedule controller:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        console.error('Error in getTeacherSubjectsFromSchedule controller:', error);
+        res.status(500).send({ message: 'Internal Server Error', success: false });
     }
 };
 
