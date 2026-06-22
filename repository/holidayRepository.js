@@ -5,7 +5,7 @@ import { scoped } from '../utility/scoped.js';
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 const stripTenantFields = (data = {}) => {
-    const { holidayId, instituteId, acedmicYearId, universityId, createdBy, updatedBy, ...rest } = data;
+    const { holidayId, instituteId, acedmicYearId, universityId, ...rest } = data;
     return rest;
 };
 
