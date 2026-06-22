@@ -14,7 +14,7 @@ export async function createInstitute(data, affiliatedUniversities = []) {
           affiliatedUniversityName: item.affiliatedUniversityName,
           affiliatedUniversityCode: item.affiliatedUniversityCode,
           instituteId: institute.instituteId,
-          universityId: data.universityId,
+          universityId: institute.universityId,
           createdBy: data.createdBy,
         },
         { transaction }
@@ -32,11 +32,10 @@ export async function createInstitute(data, affiliatedUniversities = []) {
   }
 }
 
-export async function getInstitutes(universityId, campusId) {
+export async function getInstitutes(campusId) {
   try {
     return await scoped(model.instituteModel).findAll({
       where: {
-        universityId,
         ...(campusId && { campusId }),
       },
       include: [
@@ -73,10 +72,10 @@ export async function getInstituteByCampusAndId(campusId, instituteId) {
   }
 }
 
-export async function getInstituteById(instituteId, universityId) {
+export async function getInstituteById(instituteId) {
   try {
     return scoped(model.instituteModel).findOne({
-      where: { instituteId, universityId },
+      where: { instituteId },
       include: [
         {
           model: model.affiliatedIniversityModel,
@@ -94,30 +93,30 @@ export async function getInstituteById(instituteId, universityId) {
   }
 }
 
-export async function updateInstitute(instituteId, universityId, data) {
+export async function updateInstitute(instituteId, data) {
   try {
     const existing = await scoped(model.instituteModel).findOne({
-      where: { instituteId, universityId },
+      where: { instituteId },
     });
     if (!existing) {
       return null;
     }
 
     await scoped(model.instituteModel).update(data, {
-      where: { instituteId, universityId },
+      where: { instituteId },
     });
 
-    return getInstituteById(instituteId, universityId);
+    return getInstituteById(instituteId);
   } catch (error) {
     console.error("Error in Institute Repository (updateInstitute):", error);
     throw error;
   }
 }
 
-export async function getAffiliatedUniversityById(affiliatedUniversityId, universityId) {
+export async function getAffiliatedUniversityById(affiliatedUniversityId) {
   try {
     return scoped(model.affiliatedIniversityModel).findOne({
-      where: { affiliatedUniversityId, universityId },
+      where: { affiliatedUniversityId },
     });
   } catch (error) {
     console.error("Error in Institute Repository (getAffiliatedUniversityById):", error);
@@ -125,18 +124,18 @@ export async function getAffiliatedUniversityById(affiliatedUniversityId, univer
   }
 }
 
-export async function updateAffiliatedUniversity(affiliatedUniversityId, universityId, data) {
+export async function updateAffiliatedUniversity(affiliatedUniversityId, data) {
   try {
-    const existing = await getAffiliatedUniversityById(affiliatedUniversityId, universityId);
+    const existing = await getAffiliatedUniversityById(affiliatedUniversityId);
     if (!existing) {
       return null;
     }
 
     await scoped(model.affiliatedIniversityModel).update(data, {
-      where: { affiliatedUniversityId, universityId },
+      where: { affiliatedUniversityId },
     });
 
-    return getAffiliatedUniversityById(affiliatedUniversityId, universityId);
+    return getAffiliatedUniversityById(affiliatedUniversityId);
   } catch (error) {
     console.error("Error in Institute Repository (updateAffiliatedUniversity):", error);
     throw error;

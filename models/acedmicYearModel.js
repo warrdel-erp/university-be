@@ -85,7 +85,8 @@ const acedmicYearModel = sequelize.define(
         paranoid: true
     }
 );
-
+
+
 
 acedmicYearModel.scopeConfig = { university: true, institute: true, academicYear: false };
 

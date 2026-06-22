@@ -84,6 +84,6 @@ const affiliatedUniversityModel = sequelize.define(
     }
 );
 
-affiliatedUniversityModel.scopeConfig = { university: true, institute: true, academicYear: false };
+affiliatedUniversityModel.scopeConfig = { university: true, institute: false, academicYear: false };
 
 export default affiliatedUniversityModel;

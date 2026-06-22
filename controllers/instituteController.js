@@ -2,19 +2,10 @@ import * as instituteService from "../services/instituteService.js";
 
 export const createInstitute = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
     const createdBy = req.user.userId;
-
-    if (!universityId) {
-      return res.status(400).json({
-        status: "error",
-        message: "University Id is missing from user session",
-      });
-    }
 
     const data = {
       ...req.body,
-      universityId,
       createdBy,
     };
 
@@ -38,16 +29,8 @@ export const createInstitute = async (req, res) => {
 
 export const updateInstitute = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
-    if (!universityId) {
-      return res.status(400).json({
-        status: "error",
-        message: "University Id is missing from user session",
-      });
-    }
-
     const { instituteId, ...body } = req.body;
-    const result = await instituteService.updateInstitute(instituteId, universityId, body);
+    const result = await instituteService.updateInstitute(instituteId, body);
 
     return res.status(200).json({
       status: "success",
@@ -67,18 +50,9 @@ export const updateInstitute = async (req, res) => {
 
 export const updateAffiliatedUniversity = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
-    if (!universityId) {
-      return res.status(400).json({
-        status: "error",
-        message: "University Id is missing from user session",
-      });
-    }
-
     const { affiliatedUniversityId, ...body } = req.body;
     const result = await instituteService.updateAffiliatedUniversity(
       affiliatedUniversityId,
-      universityId,
       body
     );
 
@@ -100,17 +74,8 @@ export const updateAffiliatedUniversity = async (req, res) => {
 
 export const listInstitutes = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
     const { campusId } = req.query;
-
-    if (!universityId) {
-      return res.status(400).json({
-        status: "error",
-        message: "University Id is missing from user session",
-      });
-    }
-
-    const result = await instituteService.listInstitutes(universityId, campusId);
+    const result = await instituteService.listInstitutes(campusId);
 
     return res.status(200).json({
       status: "success",

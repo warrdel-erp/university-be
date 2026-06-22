@@ -1,12 +1,14 @@
 import * as instituteRepository from "../repository/instituteRepository.js";
 import * as campusRepository from "../repository/campusRepository.js";
+import { requestContext } from "../utility/requestContext.js";
 
 export const createInstitute = async (data) => {
   try {
     const { campusId, affiliatedUniversity = [], ...instituteData } = data;
+    const universityId = requestContext.getStore()?.universityId;
 
     const campus = await campusRepository.getCampusById(campusId);
-    if (!campus || campus.universityId !== data.universityId) {
+    if (!campus || Number(campus.universityId) !== Number(universityId)) {
       const error = new Error("Campus not found or does not belong to this university");
       error.statusCode = 404;
       throw error;
@@ -23,14 +25,15 @@ export const createInstitute = async (data) => {
   }
 };
 
-export const updateInstitute = async (instituteId, universityId, body) => {
+export const updateInstitute = async (instituteId, body) => {
   try {
+    const universityId = requestContext.getStore()?.universityId;
     const { campusId, instituteName, instituteCode } = body;
     const data = {};
 
     if (campusId !== undefined) {
       const campus = await campusRepository.getCampusById(campusId);
-      if (!campus || campus.universityId !== universityId) {
+      if (!campus || Number(campus.universityId) !== Number(universityId)) {
         const error = new Error("Campus not found or does not belong to this university");
         error.statusCode = 404;
         throw error;
@@ -40,7 +43,7 @@ export const updateInstitute = async (instituteId, universityId, body) => {
     if (instituteName !== undefined) data.instituteName = instituteName;
     if (instituteCode !== undefined) data.instituteCode = instituteCode;
 
-    const row = await instituteRepository.updateInstitute(instituteId, universityId, data);
+    const row = await instituteRepository.updateInstitute(instituteId, data);
     if (!row) {
       const error = new Error("Institute not found");
       error.statusCode = 404;
@@ -53,7 +56,7 @@ export const updateInstitute = async (instituteId, universityId, body) => {
   }
 };
 
-export const updateAffiliatedUniversity = async (affiliatedUniversityId, universityId, body) => {
+export const updateAffiliatedUniversity = async (affiliatedUniversityId, body) => {
   try {
     const data = {};
     if (body.affiliatedUniversityName !== undefined) {
@@ -65,7 +68,6 @@ export const updateAffiliatedUniversity = async (affiliatedUniversityId, univers
 
     const row = await instituteRepository.updateAffiliatedUniversity(
       affiliatedUniversityId,
-      universityId,
       data
     );
     if (!row) {
@@ -101,9 +103,9 @@ function mapInstituteRow(row) {
   };
 }
 
-export const listInstitutes = async (universityId, campusId) => {
+export const listInstitutes = async (campusId) => {
   try {
-    const rows = await instituteRepository.getInstitutes(universityId, campusId);
+    const rows = await instituteRepository.getInstitutes(campusId);
     return rows.map(mapInstituteRow);
   } catch (error) {
     console.error("Error in Institute Service (listInstitutes):", error);

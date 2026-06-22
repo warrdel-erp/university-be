@@ -9,8 +9,7 @@ import { requestContext } from "./requestContext.js";
  * Use explicit scoping only:
  *   scoped(model.departmentModel).findAll({ where: { ... } })
  *
- * Scoping is skipped when no requestContext exists (e.g. login, background jobs)
- * or when store.bypass is true (set for routes like /institute, /acedmicYear).
+ * Scoping is skipped when no requestContext exists (e.g. background jobs).
  */
 
 const ACADEMIC_YEAR_FIELD = "acedmicYearId";
@@ -55,7 +54,7 @@ export const buildScope = (model) => {
   const store = requestContext.getStore();
   const attrs = model.rawAttributes || {};
 
-  if (!store || store.bypass) {
+  if (!store) {
     return where;
   }
 

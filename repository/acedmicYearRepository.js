@@ -1,20 +1,21 @@
 import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addacedmicYear(acedmicYearData) {
     try {
-        return await model.acedmicYearModel.create(acedmicYearData);
+        return await scoped(model.acedmicYearModel).create(acedmicYearData);
     } catch (error) {
         console.error('Error in add acedmicYear :', error);
         throw error;
     }
 }
 
-export async function getacedmicYearDetails(universityId) {
+export async function getacedmicYearDetails() {
     try {
-        const where = universityId != null ? { universityId } : {};
-        return await model.acedmicYearModel.findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-            where,
+        return await scoped(model.acedmicYearModel).findAll({
+            attributes: { exclude: excludeMeta },
         });
     } catch (error) {
         console.error('Error fetching acedmicYear details:', error);
@@ -24,8 +25,8 @@ export async function getacedmicYearDetails(universityId) {
 
 export async function getSingleacedmicYearDetails(acedmicYearId) {
     try {
-        return await model.acedmicYearModel.findOne({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+        return await scoped(model.acedmicYearModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { acedmicYearId },
         });
     } catch (error) {
@@ -36,8 +37,8 @@ export async function getSingleacedmicYearDetails(acedmicYearId) {
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     try {
-        return await model.acedmicYearModel.findOne({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+        return await scoped(model.acedmicYearModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { yearTitle },
         });
     } catch (error) {
@@ -48,7 +49,7 @@ export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
 
 export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
     try {
-        const existing = await model.acedmicYearModel.findOne({
+        const existing = await scoped(model.acedmicYearModel).findOne({
             where: { acedmicYearId },
             attributes: ['acedmicYearId'],
         });
@@ -56,7 +57,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
             return [0];
         }
 
-        return await model.acedmicYearModel.update(acedmicYearData, {
+        return await scoped(model.acedmicYearModel).update(acedmicYearData, {
             where: { acedmicYearId },
         });
     } catch (error) {
@@ -66,7 +67,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
 }
 
 export async function deleteacedmicYear(acedmicYearId) {
-    const existing = await model.acedmicYearModel.findOne({
+    const existing = await scoped(model.acedmicYearModel).findOne({
         where: { acedmicYearId },
         attributes: ['acedmicYearId'],
     });
@@ -74,7 +75,7 @@ export async function deleteacedmicYear(acedmicYearId) {
         return false;
     }
 
-    const deleted = await model.acedmicYearModel.destroy({
+    const deleted = await scoped(model.acedmicYearModel).destroy({
         where: { acedmicYearId },
     });
     return deleted > 0;
@@ -82,9 +83,9 @@ export async function deleteacedmicYear(acedmicYearId) {
 
 export async function getAllActiveAcedmicYear() {
     try {
-        return await model.acedmicYearModel.findAll({
+        return await scoped(model.acedmicYearModel).findAll({
             where: { isActive: true },
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            attributes: { exclude: excludeMeta },
         });
     } catch (error) {
         console.error('Error fetching acedmicYear details:', error);

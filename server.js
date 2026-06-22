@@ -114,19 +114,9 @@ app.use(json());
 app.use(cors());
 app.use(urlencoded({ extended: true }));
 
-// Routes that manage tenant setup — skip institute/academic-year scoping only.
-const UNSCOPED_ROUTE_PREFIXES = ["/institute", "/acedmicYear"];
-app.use((req, res, next) => {
-  const path = req.originalUrl.split("?")[0];
-  if (UNSCOPED_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix))) {
-    req.bypassScope = true;
-  }
-  next();
-});
-
 //routes
 
-// Tenant setup — institute/academic year bypass scoping; campus is university-scoped
+// Tenant setup — campus, institute, and academic year use explicit scoped() in repositories
 app.use("/campus", campus);
 app.use("/institute", institute);
 app.use("/specialization", specialization);
