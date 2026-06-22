@@ -102,13 +102,17 @@ export async function addSyllabusUnit(req, res) {
       res.status(404).json({ message: 'something went wrong' });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    const status = error.message?.includes('not found') ||
+      error.message?.includes('not mapped')
+      ? 400
+      : 500;
+    res.status(status).json({ error: error.message });
   }
 }
 
 export async function syllabusUnitGet(req, res) {
   try {
-    const syllabus = await syllabusCreation.syllabusUnitGet(req.query);
+    const syllabus = await syllabusCreation.syllabusUnitGet(req.query.subjectId);
     res.status(200).json(syllabus);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -138,11 +142,8 @@ export async function updateSyllabusUnit(req, res) {
 
 export async function deleteSyllabusUnit(req, res) {
   try {
-    const { syllabusUnitId, acedmicYearId } = req.query;
-    const deleted = await syllabusCreation.deleteSyllabusUnit(
-      Number(syllabusUnitId),
-      Number(acedmicYearId)
-    );
+    const { syllabusUnitId } = req.query;
+    const deleted = await syllabusCreation.deleteSyllabusUnit(Number(syllabusUnitId));
 
     if (!deleted) {
       return res.status(404).json({ message: 'Syllabus unit not found' });

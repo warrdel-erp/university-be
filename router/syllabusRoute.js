@@ -33,21 +33,9 @@ const addSyllabusUnitSchema = z.object({
   slab: z.array(syllabusUnitSlabSchema).min(1, 'At least one unit is required'),
 });
 
-const getSyllabusUnitQuerySchema = z
-  .object({
-    acedmicYearId: z.coerce.number().int().positive().optional(),
-    subjectId: z.coerce.number().int().positive().optional(),
-    sessionId: z.coerce.number().int().positive().optional(),
-    semesterId: z.coerce.number().int().positive().optional(),
-  })
-  .refine(
-    (data) =>
-      data.acedmicYearId != null ||
-      data.subjectId != null ||
-      data.sessionId != null ||
-      data.semesterId != null,
-    { message: 'At least one of acedmicYearId, subjectId, sessionId or semesterId is required' },
-  );
+const getSyllabusUnitQuerySchema = z.object({
+  subjectId: z.coerce.number({ required_error: 'subjectId is required' }).int().positive(),
+});
 
 const updateSyllabusUnitSchema = z
   .object({
@@ -75,7 +63,6 @@ const deleteSyllabusUnitQuerySchema = z.object({
     .number({ required_error: 'syllabusUnitId is required' })
     .int()
     .positive(),
-  acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
 });
 
 router.post('/', userAuth, addSyllabus);

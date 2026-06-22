@@ -143,6 +143,12 @@ async function resolveSemesterIdForSubject({ subjectId, acedmicYearId }) {
 export async function addSyllabusUnit(data, createdBy, updatedBy) {
   const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
 
+  await SyllabusCreationRepository.validateSubjectForSyllabusUnit({
+    subjectId,
+    acedmicYearId,
+    sessionId,
+  });
+
   await SyllabusCreationRepository.backfillSubjectCampusId(subjectId);
 
   let resolvedSemesterId = semesterId ?? null;
@@ -150,17 +156,11 @@ export async function addSyllabusUnit(data, createdBy, updatedBy) {
     resolvedSemesterId = await resolveSemesterIdForSubject({ subjectId, acedmicYearId });
   }
 
-  if (!resolvedSemesterId) {
-    throw new Error(
-      'semesterId could not be resolved from subject course/term; pass semesterId or configure semesters for the course',
-    );
-  }
-
   const syllabusUnits = slab.map((unit) => ({
     sessionId,
     acedmicYearId,
-    semesterId: resolvedSemesterId,
     subjectId,
+    ...(resolvedSemesterId != null && { semesterId: resolvedSemesterId }),
     unitNumber: unit.unitNumber,
     name: unit.name,
     description: unit.description,
@@ -198,8 +198,8 @@ function mapSyllabusUnit(unit) {
   };
 }
 
-export async function syllabusUnitGet(filters) {
-  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(filters);
+export async function syllabusUnitGet(subjectId) {
+  const syllabusUnits = await SyllabusCreationRepository.syllabusUnitGet(subjectId);
   return syllabusUnits.map(mapSyllabusUnit);
 }
 
@@ -235,8 +235,8 @@ export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data, up
   };
 }
 
-export async function deleteSyllabusUnit(syllabusUnitId, acedmicYearId) {
-  return SyllabusCreationRepository.deleteSyllabusUnit(syllabusUnitId, acedmicYearId);
+export async function deleteSyllabusUnit(syllabusUnitId) {
+  return SyllabusCreationRepository.deleteSyllabusUnit(syllabusUnitId);
 }
 
 export async function semesterAllSubject(semesterId) {
