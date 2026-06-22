@@ -45,6 +45,7 @@ const getTeacherSubjectQuerySchema = z.object({
     subjectId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     acedmicYearId: positiveIntegerId.optional(),
+    search: z.string().trim().optional(),
     page: z.coerce
         .number()
         .int('page must be an integer')

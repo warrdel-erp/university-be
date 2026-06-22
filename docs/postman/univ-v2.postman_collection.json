@@ -5655,7 +5655,7 @@
                 }
               ]
             },
-            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings with employee, subject, semester, and course.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`, `acedmicYearId`, `page`, `limit`.\n\n**Academic year:** Uses query `acedmicYearId` when sent; otherwise defaults to the request context (`X-Academic-Year-Id` header / token default).\n\nWhen a year is active, only mappings whose subject belongs to that year are returned. With `sessionId`, results are further limited to subjects in that session.\n\n**Response:** `{ result, totalCount, page, limit, totalPages }`."
+            "description": "**GET /teacher/teacherSubject**\n\nTeacher–subject mappings grouped by employee + course.\n\n**Query (all optional):** `employeeId`, `subjectId`, `sessionId`, `search`, `page`, `limit`.\n\n**Academic year:** From auth scope (`X-Academic-Year-Id` header / token default) via `buildScope(subject)` — no `acedmicYearId` query param.\n\nWith `sessionId`, results are limited to subjects in that session.\n\n**Search:** Matches employee name/code, subject name, or course name/code.\n\n**Response:** `{ result: [{ relation, subjects: [{ name, id }] }], totalCount, page, limit, totalPages }` where `totalCount` is the number of employee+course groups."
           },
           "response": []
         },

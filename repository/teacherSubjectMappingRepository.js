@@ -122,22 +122,34 @@ export async function getTeacherSubjectMapping({
     employeeId,
     subjectId,
     sessionId,
+    search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const subjectIds = sessionId != null || buildScope(model.subjectModel).acedmicYearId != null
-            ? await resolveSubjectIdsForTeacherFilters({
-                acedmicYearId: buildScope(model.subjectModel).acedmicYearId,
-                sessionId,
-            })
+        const subjectIds = sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ sessionId })
             : null;
 
-        const { rows: result, count: totalCount } = await scoped(model.teacherSubjectMappingModel).findAndCountAll({
-            where: {
-                ...(employeeId && { employeeId }),
-                ...teacherSubjectWhere(subjectIds),
-            },
+        const mappingWhere = {
+            ...(employeeId && { employeeId }),
+            ...teacherSubjectWhere(subjectIds),
+        };
+
+        const trimmedSearch = search?.trim();
+        if (trimmedSearch) {
+            const term = `%${trimmedSearch}%`;
+            mappingWhere[Op.or] = [
+                { '$teacherEmployeeData.employee_name$': { [Op.like]: term } },
+                { '$teacherEmployeeData.employee_Code$': { [Op.like]: term } },
+                { '$employeeSubject.subject_name$': { [Op.like]: term } },
+                { '$employeeSubject.courseInfo.course_name$': { [Op.like]: term } },
+                { '$employeeSubject.courseInfo.course_code$': { [Op.like]: term } },
+            ];
+        }
+
+        const rows = await scoped(model.teacherSubjectMappingModel).findAll({
+            where: mappingWhere,
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             include: [
                 {
@@ -174,19 +186,39 @@ export async function getTeacherSubjectMapping({
                     ],
                 },
             ],
-            offset: (page - 1) * limit,
-            limit,
             order: [['teacherSubjectMappingId', 'DESC']],
-            distinct: true,
-            col: 'teacher_subject_mapping_id',
+            ...(trimmedSearch && { subQuery: false }),
         });
+
+        const allGrouped = Object.values(
+            rows.reduce((acc, relation) => {
+                const plain = relation.get({ plain: true });
+                const courseId = plain?.employeeSubject?.courseId;
+                const empId = plain?.teacherEmployeeData?.employeeId;
+                const key = `${empId}_${courseId}`;
+
+                if (!acc[key]) {
+                    acc[key] = { relation: plain, subjects: [] };
+                }
+
+                acc[key].subjects.push({
+                    name: plain?.employeeSubject?.subjectName ?? 'N/A',
+                    id: plain?.teacherSubjectMappingId,
+                });
+                return acc;
+            }, {}),
+        );
+
+        const totalCount = allGrouped.length;
+        const offset = (page - 1) * limit;
+        const result = allGrouped.slice(offset, offset + limit);
 
         return {
             result,
             totalCount,
             page,
             limit,
-            totalPages: Math.ceil(totalCount / limit),
+            totalPages: Math.ceil(totalCount / limit) || 0,
         };
     } catch (error) {
         throw new Error(`Failed to fetch teacher subject mapping: ${error.message}`);
