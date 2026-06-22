@@ -198,12 +198,17 @@ export async function getTeacherSubjectMapping({
                 const key = `${empId}_${courseId}`;
 
                 if (!acc[key]) {
-                    acc[key] = { relation: plain, subjects: [] };
+                    acc[key] = {
+                        employeeId: empId,
+                        createdBy: plain.createdBy,
+                        teacherEmployeeData: plain.teacherEmployeeData,
+                        employeeSubject: [],
+                    };
                 }
 
-                acc[key].subjects.push({
-                    name: plain?.employeeSubject?.subjectName ?? 'N/A',
-                    id: plain?.teacherSubjectMappingId,
+                acc[key].employeeSubject.push({
+                    ...plain.employeeSubject,
+                    teacherSubjectMappingId: plain.teacherSubjectMappingId,
                 });
                 return acc;
             }, {}),
