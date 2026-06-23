@@ -481,12 +481,77 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
     const parsedSessionId = sessionId != null && sessionId !== ''
       ? Number(sessionId)
       : null;
-    const parsedSubjectId = subjectId != null && subjectId !== ''
+    const parsedSubjectId = subjectId != null && subjectId !== '' && subjectId !== 'undefined'
       ? Number(subjectId)
       : null;
     const hasEmployeeId = Number.isInteger(parsedEmployeeId) && parsedEmployeeId > 0;
     const hasSessionId = Number.isInteger(parsedSessionId) && parsedSessionId > 0;
     const hasSubjectId = Number.isInteger(parsedSubjectId) && parsedSubjectId > 0;
+
+    const subjectAttributes = {
+      exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'],
+    };
+    const classSectionWhere = {
+      ...buildScope(model.classSectionModel),
+      ...(hasSessionId && { sessionId: parsedSessionId }),
+    };
+    const subjectTermInclude = {
+      model: model.classSubjectMapperModel,
+      as: 'subjects',
+      required: false,
+      attributes: ['classSubjectMapperId'],
+      where: buildScope(model.classSubjectMapperModel),
+      include: [{
+        model: model.semesterModel,
+        as: 'semestermapping',
+        required: false,
+        attributes: ['name'],
+        where: buildScope(model.semesterModel),
+      }],
+    };
+    const subjectCourseInclude = {
+      model: model.courseModel,
+      as: 'courseInfo',
+      required: false,
+      attributes: ['termType'],
+      where: buildScope(model.courseModel),
+      include: [{
+        model: model.classSectionModel,
+        as: 'courseSection',
+        required: false,
+        attributes: ['class', 'section', 'sessionId'],
+        where: classSectionWhere,
+        include: [{
+          model: model.classModel,
+          as: 'classGroup',
+          required: false,
+          attributes: ['term', 'className'],
+        }],
+      }],
+    };
+    const toEmployeeSubject = (employeeSubject) => {
+      if (!employeeSubject) {
+        return employeeSubject;
+      }
+
+      const { subjects, courseInfo, term, ...subjectData } = employeeSubject;
+      const sections = [].concat(courseInfo?.courseSection ?? []);
+      const matchedSection = sections.find((section) => {
+        if (hasSessionId && Number(section.sessionId) !== parsedSessionId) {
+          return false;
+        }
+        if (term != null && section.classGroup?.term != null) {
+          return Number(section.classGroup.term) === Number(term);
+        }
+        return term != null && String(section.class) === String(term);
+      });
+
+      const termName = matchedSection?.class && courseInfo?.termType
+        ? `${courseInfo.termType} ${matchedSection.class}`
+        : subjects?.[0]?.semestermapping?.name ?? null;
+
+      return { ...subjectData, term, termName };
+    };
 
     const topicAttributes = {
       exclude: [
@@ -512,17 +577,21 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
     };
     const lessonInclude = [
       {
-        model: model.topicModel.unscoped(),
+        model: model.topicModel,
         as: 'topicSession',
         required: false,
         attributes: topicAttributes,
+        where: buildScope(model.topicModel),
       },
       {
-        model: model.semesterModel.unscoped(),
+        model: model.semesterModel,
         as: 'lessionSemester',
         required: false,
         attributes: semesterAttributes,
-        ...(courseId && { where: { courseId: Number(courseId) } }),
+        where: {
+          ...buildScope(model.semesterModel),
+          ...(courseId && { courseId: Number(courseId) }),
+        },
       },
     ];
 
@@ -536,7 +605,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         include: [
           {
-            model: model.employeeModel.unscoped(),
+            model: model.employeeModel,
             as: 'employeeLesson',
             required: true,
             paranoid: false,
@@ -544,15 +613,16 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
             where: buildScope(model.employeeModel),
           },
           {
-            model: model.subjectModel.unscoped(),
+            model: model.subjectModel,
             as: 'lessonSubject',
             required: true,
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            attributes: subjectAttributes,
             where: {
               ...buildScope(model.subjectModel),
               subjectId: parsedSubjectId,
               ...(courseId && { courseId: Number(courseId) }),
             },
+            include: [subjectTermInclude, subjectCourseInclude],
           },
           ...lessonInclude,
         ],
@@ -571,7 +641,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         subjectId: parsedSubjectId,
         teacherEmployeeData: employeeLesson,
         employeeSubject: {
-          ...lessonSubject,
+          ...toEmployeeSubject(lessonSubject),
           lessonSubject: plainLessons.map(({
             employeeLesson: _employee,
             lessonSubject: _subject,
@@ -602,7 +672,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
       ...(hasSubjectId && { subjectId: parsedSubjectId }),
     };
 
-    return await scoped(model.teacherSubjectMappingModel).findAll({
+    const rows = await scoped(model.teacherSubjectMappingModel).findAll({
       where: {
         ...(hasEmployeeId && { employeeId: parsedEmployeeId }),
         ...(hasSubjectId && { subjectId: parsedSubjectId }),
@@ -610,7 +680,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
       include: [
         {
-          model: model.employeeModel.unscoped(),
+          model: model.employeeModel,
           as: 'teacherEmployeeData',
           required: true,
           paranoid: false,
@@ -618,14 +688,16 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           where: buildScope(model.employeeModel),
         },
         {
-          model: model.subjectModel.unscoped(),
+          model: model.subjectModel,
           as: 'employeeSubject',
           required: Boolean(subjectSearch?.trim() || hasSubjectId),
-          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+          attributes: subjectAttributes,
           where: subjectWhere,
           include: [
+            subjectTermInclude,
+            subjectCourseInclude,
             {
-              model: model.lessonModel.unscoped(),
+              model: model.lessonModel,
               as: 'lessonSubject',
               required: false,
               attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
@@ -635,6 +707,14 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
           ],
         },
       ],
+    });
+
+    return rows.map((row) => {
+      const plain = row.get({ plain: true });
+      if (plain.employeeSubject) {
+        plain.employeeSubject = toEmployeeSubject(plain.employeeSubject);
+      }
+      return plain;
     });
   } catch (error) {
     console.error('Error fetching lesson details:', error);

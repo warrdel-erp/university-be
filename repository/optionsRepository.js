@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { Op } from 'sequelize';
 import { scoped } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
 
@@ -47,13 +48,34 @@ export async function getSpecializationOptions(courseId) {
 }
 
 export async function getSubjectOptions(courseId, term, acedmicYearId) {
-    return await scoped(model.subjectModel).findAll({
-        attributes: [["subject_name", "label"], ["subject_id", "value"]],
+    const subjectWhere = {
+        ...(courseId && { courseId: Number(courseId) }),
+        ...(term && { term: Number(term) }),
+        ...(acedmicYearId && { acedmicYearId: Number(acedmicYearId) }),
+    };
+
+    const mappedRows = await scoped(model.classSubjectMapperModel).findAll({
+        attributes: ['subjectId'],
+        include: [{
+            model: model.subjectModel,
+            as: 'subjects',
+            attributes: [],
+            required: true,
+            where: subjectWhere,
+        }],
+    });
+
+    const mappedSubjectIds = [...new Set(mappedRows.map((row) => row.subjectId))];
+
+    return scoped(model.subjectModel).findAll({
+        attributes: [['subject_name', 'label'], ['subject_id', 'value']],
         where: {
-            ...(courseId && { courseId }),
-            ...(term && { term }),
-            ...(acedmicYearId && { acedmicYearId }),
+            ...subjectWhere,
+            ...(mappedSubjectIds.length > 0 && {
+                subjectId: { [Op.notIn]: mappedSubjectIds },
+            }),
         },
+        order: [['subject_name', 'ASC']],
     });
 }
 

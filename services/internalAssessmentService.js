@@ -276,7 +276,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
      assessmentType: ia.type ?? null,
 
       subject: ia.assessmentSubject?.subjectName ?? null,
-      term: ia.assessmentSemester?.termName ?? null,
+      term: ia.assessmentSemester?.name ?? null,
       marks: totalMarks,
       attachedFile: ia.file ?? null,
       description: ia.description ?? null,

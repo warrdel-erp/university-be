@@ -54,7 +54,7 @@ const classModel = sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'semester_id',
             references: {
                 model: semesterModel,
