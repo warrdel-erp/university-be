@@ -1,11 +1,10 @@
 import * as departmentCreationRepository  from "../repository/departmentRepository.js";
 import { getSingleSubAccountDetails } from "../repository/subAccountRepository.js";
 
-export async function addDepartment(departmentData, createdBy, updatedBy, universityId) {
+export async function addDepartment(departmentData, createdBy, updatedBy) {
     try {
         departmentData.createdBy = createdBy;
         departmentData.updatedBy = updatedBy;
-        departmentData.universityId = universityId;
 
         const subAccountId = departmentData.subAccountId;
         const department = await departmentCreationRepository.getlatestEntry(subAccountId);
@@ -27,12 +26,12 @@ export async function addDepartment(departmentData, createdBy, updatedBy, univer
     }
 };
 
-export async function getDepartmentDetails(universityId,instituteId) {
-    return await departmentCreationRepository.getDepartmentDetails(universityId,instituteId);
+export async function getDepartmentDetails() {
+    return await departmentCreationRepository.getDepartmentDetails();
 }
 
-export async function getSingleDepartmentDetails(departmentId,universityId) {
-    return await departmentCreationRepository.getSingleDepartmentDetails(departmentId,universityId);
+export async function getSingleDepartmentDetails(departmentId) {
+    return await departmentCreationRepository.getSingleDepartmentDetails(departmentId);
 }
 
 export async function deleteDepartment(departmentId) {
@@ -45,16 +44,12 @@ export async function updateDepartment(departmentId, departmentData, updatedBy) 
     await departmentCreationRepository.updateDepartment(departmentId, departmentData);
 };
 
-export async function getAllAccount() {
-    return await departmentCreationRepository.getAllAccount();
-};
-
-export async function getDepartmentByIdEmployee(departmentId, universityId) {
+export async function getDepartmentByIdEmployee(departmentId) {
     try {
         const result = await getSingleSubAccountDetails(departmentId);
 
         if (!result) {
-            throw new Error(`Department not found with ID: ${departmentId} and University ID: ${universityId}`);
+            throw new Error(`Department not found with ID: ${departmentId}`);
         }
 
         const departmentName = result.dataValues.departmentName;

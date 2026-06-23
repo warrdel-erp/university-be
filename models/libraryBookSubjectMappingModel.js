@@ -4,7 +4,7 @@ import libraryBookModel from "./libraryBookModel.js";
 import subjectModel from "./subjectModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const libraryBookSubjectMappingModel = sequelize.define(
   "library_book_subject_mappings",
   {
     librarySubjectMappingId: {
@@ -47,3 +47,7 @@ export default sequelize.define(
     paranoid: false,
   },
 );
+
+libraryBookSubjectMappingModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default libraryBookSubjectMappingModel;

@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import users from "./userModel.js"
 
-export default sequelize.define(
+const studentsEntranceDetailModel = sequelize.define(
     'students_entrance_detail',
     {
         studentsEntranceDetailId: {
@@ -115,3 +115,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentsEntranceDetailModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default studentsEntranceDetailModel;

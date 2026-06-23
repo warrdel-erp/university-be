@@ -1,103 +1,230 @@
-import * as model from '../models/index.js'
+import { Op } from 'sequelize';
+import * as model from '../models/index.js';
+import { buildScope, scoped } from '../utility/scoped.js';
+
+export function teacherSubjectWhere(subjectIds) {
+    if (subjectIds == null) {
+        return {};
+    }
+    if (!subjectIds.length) {
+        return { subjectId: -1 };
+    }
+    return { subjectId: { [Op.in]: subjectIds } };
+}
+
+async function findEmployeeInInstitute(employeeId) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+    });
+}
+
+async function findSubjectInInstitute(subjectId) {
+    return scoped(model.subjectModel).findOne({
+        attributes: ['subjectId'],
+        where: { subjectId },
+    });
+}
+
+export async function findSubjectIdsForYear(acedmicYearId) {
+    const rows = await scoped(model.subjectModel).findAll({
+        attributes: ['subjectId'],
+        where: { acedmicYearId },
+        raw: true,
+    });
+    return rows.map((row) => row.subjectId);
+}
+
+export async function findSubjectIdsForSession(sessionId, acedmicYearId) {
+    const mappings = await scoped(model.sessionCouseMappingModel).findAll({
+        attributes: ['courseId'],
+        where: { sessionId },
+        raw: true,
+    });
+    const courseIds = [...new Set(mappings.map((row) => row.courseId))];
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const where = { courseId: { [Op.in]: courseIds } };
+    if (acedmicYearId != null) {
+        where.acedmicYearId = acedmicYearId;
+    }
+
+    const rows = await scoped(model.subjectModel).findAll({
+        attributes: ['subjectId'],
+        where,
+        raw: true,
+    });
+    return rows.map((row) => row.subjectId);
+}
+
+export async function resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId } = {}) {
+    let subjectIds = null;
+
+    if (acedmicYearId != null) {
+        subjectIds = await findSubjectIdsForYear(acedmicYearId);
+    }
+
+    if (sessionId != null) {
+        const sessionSubjectIds = await findSubjectIdsForSession(sessionId, acedmicYearId);
+        subjectIds = subjectIds != null
+            ? subjectIds.filter((id) => sessionSubjectIds.includes(id))
+            : sessionSubjectIds;
+    }
+
+    return subjectIds;
+}
+
+async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
+    return scoped(model.teacherSubjectMappingModel).findOne({
+        where: { teacherSubjectMappingId },
+        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+        include: [
+            {
+                model: model.employeeModel,
+                as: 'teacherEmployeeData',
+                where: buildScope(model.employeeModel),
+                required: true,
+                attributes: ['employeeId'],
+            },
+            {
+                model: model.subjectModel,
+                as: 'employeeSubject',
+                where: buildScope(model.subjectModel),
+                required: true,
+                attributes: ['subjectId'],
+            },
+        ],
+    });
+}
 
 export async function teacherSubjectMapping(data) {
     try {
-        const result = await model.teacherSubjectMappingModel.create(data);
-        return result;
+        const employee = await findEmployeeInInstitute(data.employeeId);
+        if (!employee) {
+            throw new Error(`Employee ID ${data.employeeId} not found`);
+        }
+
+        const subject = await findSubjectInInstitute(data.subjectId);
+        if (!subject) {
+            throw new Error(`Subject ID ${data.subjectId} not found`);
+        }
+
+        return await scoped(model.teacherSubjectMappingModel).create(data);
     } catch (error) {
-        console.error("Error in teacher Subject Mapping:", error);
+        console.error('Error in teacher Subject Mapping:', error);
         throw error;
     }
 }
 
-export async function getTeacherSubjectMapping(employeeId, universityId, instituteId, role, subjectId, sessionId) {
+export async function getTeacherSubjectMapping({
+    employeeId,
+    subjectId,
+    sessionId,
+    search,
+    page = 1,
+    limit = 20,
+} = {}) {
     try {
-        const subjectWhere = {
-            universityId,
-            ...(instituteId && { instituteId }),
-            ...(subjectId && { subjectId }),
+        const subjectIds = sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ sessionId })
+            : null;
+
+        const mappingWhere = {
+            ...(employeeId && { employeeId }),
+            ...teacherSubjectWhere(subjectIds),
         };
 
-        const mapperWhere = {
-            ...(instituteId && { instituteId }),
-            ...(subjectId && { subjectId }),
-        };
+        const trimmedSearch = search?.trim();
+        if (trimmedSearch) {
+            const term = `%${trimmedSearch}%`;
+            mappingWhere[Op.or] = [
+                { '$teacherEmployeeData.employee_name$': { [Op.like]: term } },
+                { '$teacherEmployeeData.employee_Code$': { [Op.like]: term } },
+                { '$employeeSubject.subject_name$': { [Op.like]: term } },
+                { '$employeeSubject.courseInfo.course_name$': { [Op.like]: term } },
+                { '$employeeSubject.courseInfo.course_code$': { [Op.like]: term } },
+            ];
+        }
 
-        const classSectionWhere = {
-            ...(instituteId && { instituteId }),
-            ...(sessionId && { sessionId }),
-        };
-
-        return await model.teacherSubjectMappingModel.findAll({
-            where: employeeId ? { employeeId } : undefined,
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        const rows = await scoped(model.teacherSubjectMappingModel).findAll({
+            where: mappingWhere,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             include: [
                 {
                     model: model.employeeModel,
-                    as: "teacherEmployeeData",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    ...(instituteId && {
-                        where: { instituteId },
-                        required: true,
-                    }),
+                    as: 'teacherEmployeeData',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    where: buildScope(model.employeeModel),
+                    required: true,
                     include: [
                         {
                             model: model.instituteModel,
-                            as: "employeeInstitute",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "campusId", "instituteCode"] },
+                            as: 'employeeInstitute',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
                             required: false,
                         },
                     ],
                 },
                 {
-                    model: model.classSubjectMapperModel,
-                    as: "employeeSubject",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: mapperWhere,
+                    model: model.subjectModel,
+                    as: 'employeeSubject',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    where: {
+                        ...(subjectId && { subjectId }),
+                        ...buildScope(model.subjectModel),
+                    },
                     required: true,
                     include: [
                         {
-                            model: model.subjectModel,
-                            as: "subjects",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                            where: subjectWhere,
-                            required: true,
-                            include: [
-                                {
-                                    model: model.courseModel,
-                                    as: "courseInfo",
-                                    attributes: ["courseId", "courseName", "courseCode"],
-                                    required: false,
-                                },
-                            ],
-                        },
-                        {
-                            model: model.semesterModel,
-                            as: "employeeClassSection",
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                            required: Boolean(sessionId),
-                            include: [
-                                {
-                                    model: model.classSectionModel,
-                                    as: "semesterDetail",
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                                    required: Boolean(sessionId),
-                                    ...(Object.keys(classSectionWhere).length && { where: classSectionWhere }),
-                                    include: [
-                                        {
-                                            model: model.sessionModel,
-                                            as: "classSession",
-                                            attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
-                                            required: false,
-                                        },
-                                    ],
-                                },
-                            ],
+                            model: model.courseModel,
+                            as: 'courseInfo',
+                            attributes: ['courseId', 'courseName', 'courseCode'],
+                            required: false,
                         },
                     ],
                 },
             ],
+            order: [['teacherSubjectMappingId', 'DESC']],
+            ...(trimmedSearch && { subQuery: false }),
         });
+
+        const allGrouped = Object.values(
+            rows.reduce((acc, relation) => {
+                const plain = relation.get({ plain: true });
+                const courseId = plain?.employeeSubject?.courseId;
+                const empId = plain?.teacherEmployeeData?.employeeId;
+                const key = `${empId}_${courseId}`;
+
+                if (!acc[key]) {
+                    acc[key] = {
+                        employeeId: empId,
+                        createdBy: plain.createdBy,
+                        teacherEmployeeData: plain.teacherEmployeeData,
+                        employeeSubject: [],
+                    };
+                }
+
+                acc[key].employeeSubject.push({
+                    ...plain.employeeSubject,
+                    teacherSubjectMappingId: plain.teacherSubjectMappingId,
+                });
+                return acc;
+            }, {}),
+        );
+
+        const totalCount = allGrouped.length;
+        const offset = (page - 1) * limit;
+        const result = allGrouped.slice(offset, offset + limit);
+
+        return {
+            result,
+            totalCount,
+            page,
+            limit,
+            totalPages: Math.ceil(totalCount / limit) || 0,
+        };
     } catch (error) {
         throw new Error(`Failed to fetch teacher subject mapping: ${error.message}`);
     }
@@ -105,13 +232,28 @@ export async function getTeacherSubjectMapping(employeeId, universityId, institu
 
 export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info) {
     try {
-        const result = await model.teacherSubjectMappingModel.update(info, {
-            where: {
-                teacherSubjectMappingId
-            },
-        });
+        const existing = await findTeacherSubjectMappingInInstitute(teacherSubjectMappingId);
+        if (!existing) {
+            throw new Error('Mapping not found');
+        }
 
-        return result;
+        if (info.employeeId != null) {
+            const employee = await findEmployeeInInstitute(info.employeeId);
+            if (!employee) {
+                throw new Error(`Employee ID ${info.employeeId} not found`);
+            }
+        }
+
+        if (info.subjectId != null) {
+            const subject = await findSubjectInInstitute(info.subjectId);
+            if (!subject) {
+                throw new Error(`Subject ID ${info.subjectId} not found`);
+            }
+        }
+
+        return await scoped(model.teacherSubjectMappingModel).update(info, {
+            where: { teacherSubjectMappingId },
+        });
     } catch (error) {
         console.error(`Error updating teacher subject mapping details ${teacherSubjectMappingId}:`, error);
         throw error;
@@ -120,24 +262,27 @@ export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info
 
 export async function deleteTeachersSubjectMapping(teacherSubjectMappingId) {
     try {
-        await model.teacherSubjectMappingModel.destroy({
+        const existing = await findTeacherSubjectMappingInInstitute(teacherSubjectMappingId);
+        if (!existing) {
+            throw new Error('Mapping not found');
+        }
+
+        await scoped(model.teacherSubjectMappingModel).destroy({
             where: { teacherSubjectMappingId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'teacher Subject Mapping deleted successfully' };
     } catch (error) {
         console.error('Error during soft delete:', error);
-        throw new Error('Unable to soft delete account');
+        throw error;
     }
 }
 
 export async function getTeacherDetailsByTeacherSubjectId(teacherSubjectMappingId) {
     try {
-        return await model.teacherSubjectMappingModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: {
-                teacherSubjectMappingId,
-            }
+        return await scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: { teacherSubjectMappingId },
         });
     } catch (error) {
         console.error(`Error in getting teacher details by teacher subject mapper id ${teacherSubjectMappingId}:`, error);

@@ -6,7 +6,7 @@ import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const courseModel = sequelize.define(
     'course',
     {
         courseId: {
@@ -136,3 +136,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+courseModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default courseModel;

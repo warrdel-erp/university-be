@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
 
-export default sequelize.define(
+const libraryAisleModel = sequelize.define(
     'library_aisle',
     {
         libraryAisleId: {
@@ -71,3 +71,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+libraryAisleModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryAisleModel;

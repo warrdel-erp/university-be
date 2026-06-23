@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import leavePolicies from "./leavePolicyModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const leaveBalanceModel = sequelize.define(
   "leave_balance",
   {
     balanceId: {
@@ -34,3 +34,7 @@ export default sequelize.define(
   },
   { tableName: "leave_balance", timestamps: false }
 );
+
+leaveBalanceModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default leaveBalanceModel;

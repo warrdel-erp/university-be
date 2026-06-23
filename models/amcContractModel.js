@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 import amcVendorModel from "./amcVendorModel.js";
 
-export default sequelize.define(
+const amcContractModel = sequelize.define(
   "amc_contract",
   {
     amcContractId: {
@@ -101,3 +101,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+amcContractModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default amcContractModel;

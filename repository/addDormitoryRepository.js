@@ -1,87 +1,128 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addDormitoryRoom(DormitoryRoomData) {        
-    try {
-        const result = await model.addDormitoryModel.create(DormitoryRoomData);
-        return result;
-    } catch (error) {
-        console.error("Error in add DormitoryRoom :", error);
-        throw error;
+export async function addDormitoryRoom(DormitoryRoomData) {
+  try {
+    const dormitory = await scoped(model.dormitoryListModel).findOne({
+      attributes: ["dormitoryListId"],
+      where: { dormitoryListId: DormitoryRoomData.dormitory },
+    });
+    if (!dormitory) {
+      throw new Error("Dormitory not found");
     }
-};
 
-export async function getDormitoryRoomDetails(universityId,acedmicYearId,role,instituteId) {
-    try {
-        const DormitoryRoom = await model.addDormitoryModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            include:[
-                {
-                    model:model.dormitoryListModel,
-                    as: 'dormitoryList',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
-                    where :{
-                        universityId : universityId,
-                        ...(role === 'Head' && { instituteId })
-                    }
-                },
-                {
-                    model:model.roomTypeModel,
-                    as: 'roomType',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]},
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId })
-                    },
-                }
-            ]
-        });
-
-        return DormitoryRoom;
-    } catch (error) {
-        console.error('Error fetching DormitoryRoom details:', error);
-        throw error;
+    const roomType = await scoped(model.roomTypeModel).findOne({
+      attributes: ["roomTypeId"],
+      where: { roomTypeId: DormitoryRoomData.type },
+    });
+    if (!roomType) {
+      throw new Error("Room type not found");
     }
-};
+
+    return scoped(model.addDormitoryModel).create(DormitoryRoomData);
+  } catch (error) {
+    console.error("Error in add DormitoryRoom :", error);
+    throw error;
+  }
+}
+
+export async function getDormitoryRoomDetails() {
+  try {
+    return scoped(model.addDormitoryModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      include: [
+        {
+          model: model.dormitoryListModel,
+          as: "dormitoryList",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: buildScope(model.dormitoryListModel),
+          required: true,
+        },
+        {
+          model: model.roomTypeModel,
+          as: "roomType",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: buildScope(model.roomTypeModel),
+          required: true,
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching DormitoryRoom details:", error);
+    throw error;
+  }
+}
 
 export async function getSingleDormitoryRoomDetails(dormitoryListId) {
-    try {
-        const DormitoryRoom = await model.addDormitoryModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { dormitoryListId },
-            include:[
-                {
-                    model:model.dormitoryListModel,
-                    as: 'dormitoryList',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
-                },
-                {
-                    model:model.roomTypeModel,
-                    as: 'roomType',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"]}
-                }
-            ]
-        });
-
-        return DormitoryRoom;
-    } catch (error) {
-        console.error('Error fetching DormitoryRoom details:', error);
-        throw error;
-    }
-};
+  try {
+    return scoped(model.addDormitoryModel).findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: { dormitoryListId },
+      include: [
+        {
+          model: model.dormitoryListModel,
+          as: "dormitoryList",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: buildScope(model.dormitoryListModel),
+          required: true,
+        },
+        {
+          model: model.roomTypeModel,
+          as: "roomType",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          where: buildScope(model.roomTypeModel),
+          required: true,
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching DormitoryRoom details:", error);
+    throw error;
+  }
+}
 
 export async function deleteDormitoryRoom(dormitoryListId) {
-    const deleted = await model.addDormitoryModel.destroy({ where: { dormitoryListId: dormitoryListId } });
-    return deleted > 0;
-};
+  const existing = await getSingleDormitoryRoomDetails(dormitoryListId);
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await scoped(model.addDormitoryModel).destroy({ where: { dormitoryListId } });
+  return deleted > 0;
+}
 
 export async function updateDormitoryRoom(dormitoryListId, DormitoryRoomData) {
-    try {
-        const result = await model.addDormitoryModel.update(DormitoryRoomData, {
-            where: { dormitoryListId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating DormitoryRoom creation ${dormitoryListId}:`, error);
-        throw error; 
+  try {
+    const existing = await getSingleDormitoryRoomDetails(dormitoryListId);
+    if (!existing) {
+      return [0];
     }
-};
+
+    if (DormitoryRoomData.dormitory) {
+      const dormitory = await scoped(model.dormitoryListModel).findOne({
+        attributes: ["dormitoryListId"],
+        where: { dormitoryListId: DormitoryRoomData.dormitory },
+      });
+      if (!dormitory) {
+        return [0];
+      }
+    }
+
+    if (DormitoryRoomData.type) {
+      const roomType = await scoped(model.roomTypeModel).findOne({
+        attributes: ["roomTypeId"],
+        where: { roomTypeId: DormitoryRoomData.type },
+      });
+      if (!roomType) {
+        return [0];
+      }
+    }
+
+    return scoped(model.addDormitoryModel).update(DormitoryRoomData, {
+      where: { dormitoryListId },
+    });
+  } catch (error) {
+    console.error(`Error updating DormitoryRoom creation ${dormitoryListId}:`, error);
+    throw error;
+  }
+}

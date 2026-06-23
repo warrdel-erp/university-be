@@ -7,7 +7,7 @@ import classScheduleModel from "./classScheduleModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const attendanceModel = sequelize.define(
     'attendance',
     {
         attendanceId: {
@@ -120,3 +120,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+attendanceModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default attendanceModel;

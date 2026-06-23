@@ -7,7 +7,7 @@ import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 import subjectModel from "./subjectModel.js";
 
-export default sequelize.define(
+const creditModel = sequelize.define(
     'credits',
     {
         creditId: {
@@ -107,3 +107,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+creditModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default creditModel;

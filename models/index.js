@@ -443,12 +443,12 @@ employeeCodeMasterType.hasMany(employeeCorAddressModel, { foreignKey: "c_city", 
 employeeModel.hasMany(teacherSubjectMappingModel, { foreignKey: "employee_id", as: "teacherEmployeeData" });
 teacherSubjectMappingModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "teacherEmployeeData" });
 
-classSubjectMapperModel.hasMany(teacherSubjectMappingModel, {
-  foreignKey: "class_subject_mapper_id",
+subjectModel.hasMany(teacherSubjectMappingModel, {
+  foreignKey: "subject_id",
   as: "employeeSubject",
 });
-teacherSubjectMappingModel.belongsTo(classSubjectMapperModel, {
-  foreignKey: "class_subject_mapper_id",
+teacherSubjectMappingModel.belongsTo(subjectModel, {
+  foreignKey: "subject_id",
   as: "employeeSubject",
 });
 
@@ -461,9 +461,6 @@ teacherSectionMappingModel.belongsTo(employeeModel, { foreignKey: "employee_id",
 
 employeeModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "employeeCampus" });
 campusModel.hasMany(employeeModel, { foreignKey: "campus_id", as: "employeeCampus" });
-
-employeeModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
-acedmicYearModel.hasMany(employeeModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
 
 employeeModel.belongsTo(roleModel, { foreignKey: "role_id", as: "employeeRole" });
 roleModel.hasMany(employeeModel, { foreignKey: "role_id", as: "employeeRole" });
@@ -590,6 +587,31 @@ classRoomModel.hasMany(classScheduleModel, { foreignKey: "class_room_section_id"
 
 classScheduleModel.belongsTo(electiveSubjectModel, { foreignKey: "elective_subject_id", as: "timeTableElective" });
 electiveSubjectModel.hasMany(classScheduleModel, { foreignKey: "elective_subject_id", as: "timeTableElective" });
+
+// elective_subject tenant + academic chain (used for institute_id backfill / scoped queries)
+electiveSubjectModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(electiveSubjectModel, { foreignKey: "university_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(electiveSubjectModel, { foreignKey: "institute_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYear" });
+acedmicYearModel.hasMany(electiveSubjectModel, { foreignKey: "acedmic_year_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(courseModel, { foreignKey: "course_id", as: "course" });
+courseModel.hasMany(electiveSubjectModel, { foreignKey: "course_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(specializationModel, { foreignKey: "specialization_id", as: "specialization" });
+specializationModel.hasMany(electiveSubjectModel, { foreignKey: "specialization_id", as: "electiveSubjects" });
+
+electiveSubjectModel.belongsTo(userModel, { foreignKey: "created_by", as: "createdByUser" });
+userModel.hasMany(electiveSubjectModel, { foreignKey: "created_by", as: "createdElectiveSubjects" });
+
+studentElectiveSubjectModel.belongsTo(electiveSubjectModel, { foreignKey: "elective_subject_id", as: "electiveSubject" });
+electiveSubjectModel.hasMany(studentElectiveSubjectModel, { foreignKey: "elective_subject_id", as: "studentMappings" });
+
+studentElectiveSubjectModel.belongsTo(studentModel, { foreignKey: "student_id", as: "student" });
+studentModel.hasMany(studentElectiveSubjectModel, { foreignKey: "student_id", as: "electiveSubjectMappings" });
 
 classScheduleModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "timeTableSubject" });
 subjectModel.hasMany(classScheduleModel, { foreignKey: "subject_id", as: "timeTableSubject" });
@@ -1804,3 +1826,6 @@ export {
   s3FileModel,
   pdfSplitJobModel,
 };
+
+import sequelize from "../database/sequelizeConfig.js";
+

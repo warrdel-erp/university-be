@@ -1,103 +1,93 @@
-import * as libraryStructureRepository  from "../repository/libraryStructureRepository.js";
+import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 
-export async function addFloor(floorData, createdBy, updatedBy,universityId) {
-
-        floorData.createdBy = createdBy;
-        floorData.updatedBy = updatedBy;
-        floorData.universityId = universityId;
-        const Floor = await libraryStructureRepository.addFloor(floorData);
-        return Floor;
-};
-
-export async function getFloorDetails(universityId, instituteId) {
-    return await libraryStructureRepository.getFloorDetails(universityId, instituteId);
+export async function addFloor(floorData, createdBy, updatedBy) {
+  floorData.createdBy = createdBy;
+  floorData.updatedBy = updatedBy;
+  return libraryStructureRepository.addFloor(floorData);
 }
 
-export async function getSingleFloorDetails(libraryFloorId, universityId, instituteId) {
-    return await libraryStructureRepository.getSingleFloorDetails(libraryFloorId, universityId, instituteId);
+export async function getFloorDetails() {
+  return libraryStructureRepository.getFloorDetails();
 }
 
-export async function updateFloor(libraryFloorId, floorData, updatedBy) {    
-        floorData.updatedBy = updatedBy;
-       return await libraryStructureRepository.updateFloor(libraryFloorId, floorData);
+export async function getSingleFloorDetails(libraryFloorId) {
+  return libraryStructureRepository.getSingleFloorDetails(libraryFloorId);
+}
+
+export async function updateFloor(libraryFloorId, floorData, updatedBy) {
+  floorData.updatedBy = updatedBy;
+  return libraryStructureRepository.updateFloor(libraryFloorId, floorData);
 }
 
 export async function deleteFloor(libraryFloorId) {
-    return await libraryStructureRepository.deleteFloor(libraryFloorId);
+  return libraryStructureRepository.deleteFloor(libraryFloorId);
 }
 
-// ------------------------ AISLE ------------------------
 export async function addAisle(aisleData, createdBy, updatedBy) {
-    aisleData.createdBy = createdBy;
-    aisleData.updatedBy = updatedBy;
-    return await libraryStructureRepository.addAisle(aisleData);
+  aisleData.createdBy = createdBy;
+  aisleData.updatedBy = updatedBy;
+  return libraryStructureRepository.addAisle(aisleData);
 }
 
-export async function getAisleDetails(universityId, instituteId) {
-    return await libraryStructureRepository.getAisleDetails(universityId, instituteId);
+export async function getAisleDetails() {
+  return libraryStructureRepository.getAisleDetails();
 }
 
-export async function getSingleAisle(libraryAisleId, universityId, instituteId) {
-    return await libraryStructureRepository.getSingleAisle(libraryAisleId, universityId, instituteId);
+export async function getSingleAisle(libraryAisleId) {
+  return libraryStructureRepository.getSingleAisle(libraryAisleId);
 }
 
 export async function updateAisle(libraryAisleId, aisleData, updatedBy) {
-    aisleData.updatedBy = updatedBy;
-    return await libraryStructureRepository.updateAisle(libraryAisleId, aisleData);
+  aisleData.updatedBy = updatedBy;
+  return libraryStructureRepository.updateAisle(libraryAisleId, aisleData);
 }
 
 export async function deleteAisle(libraryAisleId) {
-    return await libraryStructureRepository.deleteAisle(libraryAisleId);
+  return libraryStructureRepository.deleteAisle(libraryAisleId);
 }
 
-
-
-// ------------------------ RACK ------------------------
 export async function addRack(rackData, createdBy, updatedBy) {
-    rackData.createdBy = createdBy;
-    rackData.updatedBy = updatedBy;
-    return await libraryStructureRepository.addRack(rackData);
+  rackData.createdBy = createdBy;
+  rackData.updatedBy = updatedBy;
+  return libraryStructureRepository.addRack(rackData);
 }
 
-export async function getRackDetails(universityId, instituteId) {
-    return await libraryStructureRepository.getRackDetails(universityId, instituteId);
+export async function getRackDetails() {
+  return libraryStructureRepository.getRackDetails();
 }
 
-export async function getSingleRack(libraryRackId, universityId, instituteId) {
-    return await libraryStructureRepository.getSingleRack(libraryRackId, universityId, instituteId);
+export async function getSingleRack(libraryRackId) {
+  return libraryStructureRepository.getSingleRack(libraryRackId);
 }
 
 export async function updateRack(libraryRackId, rackData, updatedBy) {
-    rackData.updatedBy = updatedBy;
-    return await libraryStructureRepository.updateRack(libraryRackId, rackData);
+  rackData.updatedBy = updatedBy;
+  return libraryStructureRepository.updateRack(libraryRackId, rackData);
 }
 
 export async function deleteRack(libraryRackId) {
-    return await libraryStructureRepository.deleteRack(libraryRackId);
+  return libraryStructureRepository.deleteRack(libraryRackId);
 }
 
-
-
-// ------------------------ ROW ------------------------
 export async function addRow(rowData, createdBy, updatedBy) {
-    rowData.createdBy = createdBy;
-    rowData.updatedBy = updatedBy;
-    return await libraryStructureRepository.addRow(rowData);
+  rowData.createdBy = createdBy;
+  rowData.updatedBy = updatedBy;
+  return libraryStructureRepository.addRow(rowData);
 }
 
-export async function getRowDetails(universityId, instituteId) {
-    return await libraryStructureRepository.getRowDetails(universityId, instituteId);
+export async function getRowDetails() {
+  return libraryStructureRepository.getRowDetails();
 }
 
-export async function getSingleRow(libraryRowId, universityId, instituteId) {
-    return await libraryStructureRepository.getSingleRow(libraryRowId, universityId, instituteId);
+export async function getSingleRow(libraryRowId) {
+  return libraryStructureRepository.getSingleRow(libraryRowId);
 }
 
 export async function updateRow(libraryRowId, rowData, updatedBy) {
-    rowData.updatedBy = updatedBy;
-    return await libraryStructureRepository.updateRow(libraryRowId, rowData);
+  rowData.updatedBy = updatedBy;
+  return libraryStructureRepository.updateRow(libraryRowId, rowData);
 }
 
 export async function deleteRow(libraryRowId) {
-    return await libraryStructureRepository.deleteRow(libraryRowId);
+  return libraryStructureRepository.deleteRow(libraryRowId);
 }

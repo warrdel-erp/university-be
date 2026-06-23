@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import dormitoryList from "./dormitoryListModel.js";
 import roomType from "./roomTypeModel.js";
 
-export default sequelize.define(
+const addDormitoryModel = sequelize.define(
     'add_dormitory',
     {
         dormitoryListId: {
@@ -90,3 +90,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+addDormitoryModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default addDormitoryModel;

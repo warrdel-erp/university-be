@@ -163,6 +163,10 @@ export const STUDENT_CANCELLATION_STATUSES = [
   "Left Student",
   "Long Absent",
   "Non Attendant",
+  "active",
+  "deactive",
+  "transferred",
+  "graduated",
 ];
 
 export const studentStatus = STUDENT_STATUS_VALUES;

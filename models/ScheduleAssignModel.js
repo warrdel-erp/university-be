@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import scheduleModel from "./scheduleModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const scheduleAssignModel = sequelize.define(
     "schedule_assign",
     {
         scheduleAssignId: {
@@ -73,3 +73,7 @@ export default sequelize.define(
         paranoid: true,
     }
 );
+
+scheduleAssignModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default scheduleAssignModel;

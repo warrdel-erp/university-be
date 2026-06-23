@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import role from './roleModel.js';
 import permission from './permissionModel.js';
 
-export default sequelize.define(
+const rolePermissionMappingModel = sequelize.define(
     'role_permission_mapping',
     {
         rolePermissionMappingId: {
@@ -54,3 +54,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+rolePermissionMappingModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default rolePermissionMappingModel;

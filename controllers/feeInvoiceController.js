@@ -1,86 +1,80 @@
 import * as feeInvoiceCreation from "../services/feeInvoiceServices.js";
 
 export async function addFeeInvoice(req, res) {
-    const { classStudentMapperId, feePlanId } = req.body
-    const createdBy = req.user.userId;
-    const updatedBy = req.user.userId;
-    const instituteId = req.user.defaultInstituteId;
-    try {
-        if (!(classStudentMapperId && feePlanId)) {
-            return res.status(400).send('classStudentMapperId and feePlanId is required')
-        }
-        const feeInvoice = await feeInvoiceCreation.addFeeInvoice(req.body, createdBy, updatedBy, instituteId);
-        res.status(201).json({ message: "Data added successfully", feeInvoice });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  const { classStudentMapperId, feePlanId } = req.body;
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+  try {
+    if (!(classStudentMapperId && feePlanId)) {
+      return res.status(400).send("classStudentMapperId and feePlanId is required");
     }
-};
+    const feeInvoice = await feeInvoiceCreation.addFeeInvoice(req.body, createdBy, updatedBy);
+    res.status(201).json({ message: "Data added successfully", feeInvoice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export async function getAllFeeInvoice(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const { acedmicYearId } = req.query
-    try {
-        const feeInvoice = await feeInvoiceCreation.getFeeInvoiceDetails(universityId, acedmicYearId, instituteId, role);
-        res.status(200).json(feeInvoice);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+  const { acedmicYearId } = req.query;
+  try {
+    const feeInvoice = await feeInvoiceCreation.getFeeInvoiceDetails({ acedmicYearId });
+    res.status(200).json(feeInvoice);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export async function getSingleFeeInvoiceDetails(req, res) {
-    const universityId = req.user.universityId;
-    try {
-        const { feeInvoiceId } = req.query;
-        const feeInvoice = await feeInvoiceCreation.getSingleFeeInvoiceDetails(feeInvoiceId, universityId);
-        if (feeInvoice) {
-            res.status(200).json(feeInvoice);
-        } else {
-            res.status(404).json({ message: "FeeInvoice not found" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const { feeInvoiceId } = req.query;
+    const feeInvoice = await feeInvoiceCreation.getSingleFeeInvoiceDetails(feeInvoiceId);
+    if (feeInvoice) {
+      res.status(200).json(feeInvoice);
+    } else {
+      res.status(404).json({ message: "FeeInvoice not found" });
     }
-};
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export async function updateFeeInvoice(req, res) {
-    try {
-        const { feeInvoiceId, feeGroupId, classStudentMapperId } = req.body
-        if (!(feeInvoiceId && feeGroupId && classStudentMapperId)) {
-            return res.status(400).send('FeeInvoiceId , feeGroupId abd classStudentMapperId is required')
-        }
-        const updatedBy = req.user.userId;
-        const updatedFeeInvoice = await feeInvoiceCreation.updateFeeInvoice(feeInvoiceId, req.body, updatedBy);
-        res.status(200).json({ message: "FeeInvoice update succesfully", updatedFeeInvoice });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const { feeInvoiceId, feeGroupId, classStudentMapperId } = req.body;
+    if (!(feeInvoiceId && feeGroupId && classStudentMapperId)) {
+      return res.status(400).send("FeeInvoiceId , feeGroupId abd classStudentMapperId is required");
     }
-};
+    const updatedBy = req.user.userId;
+    const updatedFeeInvoice = await feeInvoiceCreation.updateFeeInvoice(feeInvoiceId, req.body, updatedBy);
+    res.status(200).json({ message: "FeeInvoice update succesfully", updatedFeeInvoice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export async function deleteFeeInvoice(req, res) {
-    try {
-        const { feeInvoiceId } = req.query;
-        if (!feeInvoiceId) {
-            return res.status(400).json({ message: "FeeInvoiceId is required" });
-        }
-        const deleted = await feeInvoiceCreation.deleteFeeInvoice(feeInvoiceId);
-        if (deleted) {
-            res.status(200).json({ message: `Delete successful for FeeInvoice ID ${feeInvoiceId}` });
-        } else {
-            res.status(404).json({ message: "FeeInvoice not found" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const { feeInvoiceId } = req.query;
+    if (!feeInvoiceId) {
+      return res.status(400).json({ message: "FeeInvoiceId is required" });
     }
-};
+    const deleted = await feeInvoiceCreation.deleteFeeInvoice(feeInvoiceId);
+    if (deleted) {
+      res.status(200).json({ message: `Delete successful for FeeInvoice ID ${feeInvoiceId}` });
+    } else {
+      res.status(404).json({ message: "FeeInvoice not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
 
 export async function getInvoiceNumber(req, res) {
-    const instituteId = req.user.defaultInstituteId;
-    try {
-        const invoiceNumber = await feeInvoiceCreation.getInvoiceNumber(instituteId);
-        res.status(200).json(invoiceNumber);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+  try {
+    const invoiceNumber = await feeInvoiceCreation.getInvoiceNumber();
+    res.status(200).json(invoiceNumber);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}

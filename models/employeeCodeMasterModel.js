@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const employeeCodeMasterModel = sequelize.define(
   'employee_code_master',
   {
     employeeCodeMasterId: {
@@ -39,3 +39,7 @@ export default sequelize.define(
     paranoid:true
 },
 );
+
+employeeCodeMasterModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default employeeCodeMasterModel;

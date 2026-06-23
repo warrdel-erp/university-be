@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import leavePolicies from "./leavePolicyModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const leaveRequestModel = sequelize.define(
   "leave_requests",
   {
     requestId: {
@@ -79,3 +79,7 @@ export default sequelize.define(
   },
   { tableName: "leave_requests", timestamps: true, paranoid: true }
 );
+
+leaveRequestModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default leaveRequestModel;

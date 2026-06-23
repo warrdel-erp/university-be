@@ -1,65 +1,69 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-const catalogExclude = ["createdAt", "updatedAt"];
-
-const catalogIncludeCategory = [
-  {
-    model: model.feeTypeCategoryModel,
-    as: "feeTypeCategory",
-    attributes: ["feeTypeCategoryId", "name", "description", "instituteId"],
-  },
-];
-
-export async function createFeeTypeCatalog(data, options = {}) {
-  return model.feeTypeCatalogModel.create(data, { transaction: options.transaction });
+function catalogIncludeCategory() {
+  return [
+    {
+      model: model.feeTypeCategoryModel,
+      as: "feeTypeCategory",
+      attributes: ["feeTypeCategoryId", "name", "description", "instituteId"],
+      where: buildScope(model.feeTypeCategoryModel),
+      required: true,
+    },
+  ];
 }
 
-export async function findFeeTypeCatalogsByInstitute(instituteId, options = {}) {
+export async function createFeeTypeCatalog(data, options = {}) {  return scoped(model.feeTypeCatalogModel).create(data, { transaction: options.transaction });
+}
+
+export async function findFeeTypeCatalogsByInstitute(options = {}) {
   const { transaction } = options;
-  return model.feeTypeCatalogModel.findAll({
-    attributes: { exclude: catalogExclude },
-    where: { instituteId },
-    include: catalogIncludeCategory,
+  return scoped(model.feeTypeCatalogModel).findAll({
+    attributes: { exclude: ["createdAt", "updatedAt"] },
+    include: catalogIncludeCategory(),
     order: [["feeTypeCatalogId", "ASC"]],
     transaction,
   });
 }
 
-export async function findFeeTypeCatalogById(feeTypeCatalogId, instituteId, options = {}) {
+export async function findFeeTypeCatalogById(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  return model.feeTypeCatalogModel.findOne({
-    attributes: { exclude: catalogExclude },
-    where: { feeTypeCatalogId, instituteId },
-    include: catalogIncludeCategory,
+  return scoped(model.feeTypeCatalogModel).findOne({
+    attributes: { exclude: ["createdAt", "updatedAt"] },
+    where: { feeTypeCatalogId },
+    include: catalogIncludeCategory(),
     transaction,
   });
 }
 
-export async function findFeeTypeCatalogsByIds(feeTypeCatalogIds, instituteId, options = {}) {
+export async function findFeeTypeCatalogsByIds(feeTypeCatalogIds, options = {}) {
   const { transaction } = options;
-  return model.feeTypeCatalogModel.findAll({
-    attributes: { exclude: catalogExclude },
+  if (!feeTypeCatalogIds.length) {
+    return [];
+  }
+
+  return scoped(model.feeTypeCatalogModel).findAll({
+    attributes: { exclude: ["createdAt", "updatedAt"] },
     where: {
       feeTypeCatalogId: { [Op.in]: feeTypeCatalogIds },
-      instituteId,
     },
     transaction,
   });
 }
 
-export async function findFeeTypeCategoryByIdForInstitute(feeTypeCategoryId, instituteId, options = {}) {
-  return model.feeTypeCategoryModel.findOne({
+export async function findFeeTypeCategoryByIdForInstitute(feeTypeCategoryId, options = {}) {
+  return scoped(model.feeTypeCategoryModel).findOne({
     attributes: ["feeTypeCategoryId", "instituteId"],
-    where: { feeTypeCategoryId, instituteId },
+    where: { feeTypeCategoryId },
     transaction: options.transaction,
   });
 }
 
-export async function updateFeeTypeCatalog(feeTypeCatalogId, instituteId, payload, options = {}) {
+export async function updateFeeTypeCatalog(feeTypeCatalogId, payload, options = {}) {
   const { transaction } = options;
-  const [affected] = await model.feeTypeCatalogModel.update(payload, {
-    where: { feeTypeCatalogId, instituteId },
+  const [affected] = await scoped(model.feeTypeCatalogModel).update(payload, {
+    where: { feeTypeCatalogId },
     transaction,
   });
   return affected;
@@ -67,7 +71,16 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, instituteId, payloa
 
 export async function countPlanSubItemsForCatalog(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.count({
+  const catalog = await scoped(model.feeTypeCatalogModel).findOne({
+    attributes: ["feeTypeCatalogId"],
+    where: { feeTypeCatalogId },
+    transaction,
+  });
+  if (!catalog) {
+    return 0;
+  }
+
+  return scoped(model.feePlanSubItemsModel).count({
     where: { feeTypeId: feeTypeCatalogId },
     transaction,
   });
@@ -75,16 +88,34 @@ export async function countPlanSubItemsForCatalog(feeTypeCatalogId, options = {}
 
 export async function countInvoiceItemsForCatalog(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  return model.studentFeeInvoiceItemsModel.count({
+  const catalog = await scoped(model.feeTypeCatalogModel).findOne({
+    attributes: ["feeTypeCatalogId"],
+    where: { feeTypeCatalogId },
+    transaction,
+  });
+  if (!catalog) {
+    return 0;
+  }
+
+  return scoped(model.studentFeeInvoiceItemsModel).count({
     where: { feeTypeId: feeTypeCatalogId },
+    include: [
+      {
+        model: model.studentFeeInvoiceModel,
+        as: "studentFeeInvoice",
+        attributes: [],
+        required: true,
+        where: buildScope(model.studentFeeInvoiceModel),
+      },
+    ],
     transaction,
   });
 }
 
-export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId, options = {}) {
+export async function deleteFeeTypeCatalog(feeTypeCatalogId, options = {}) {
   const { transaction } = options;
-  const deleted = await model.feeTypeCatalogModel.destroy({
-    where: { feeTypeCatalogId, instituteId },
+  const deleted = await scoped(model.feeTypeCatalogModel).destroy({
+    where: { feeTypeCatalogId },
     transaction,
   });
   return deleted > 0;

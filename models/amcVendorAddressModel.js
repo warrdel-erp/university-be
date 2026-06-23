@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import amcVendorModel from "./amcVendorModel.js";
 
-export default sequelize.define(
+const amcVendorAddressModel = sequelize.define(
   "amc_vendor_address",
   {
     amcVendorAddressId: {
@@ -53,3 +53,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+amcVendorAddressModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default amcVendorAddressModel;

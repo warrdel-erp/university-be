@@ -5,7 +5,7 @@ import account from "./accountModel.js";
 import university from "./universityModel.js";
 import subAccount from "./subAccountModel.js";
 
-export default sequelize.define(
+const departmentStructureModel = sequelize.define(
     'department_structure',
     {
         departmentStructureId: {
@@ -92,3 +92,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+    departmentStructureModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default departmentStructureModel;

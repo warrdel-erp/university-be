@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 
 const ticketListInclude = [
   {
@@ -23,8 +24,8 @@ const ticketListInclude = [
   },
 ];
 
-function buildTicketWhere(instituteId, { search, status, priority, amcVendorId } = {}) {
-  const where = { instituteId };
+function buildTicketWhere({ search, status, priority, amcVendorId } = {}) {
+  const where = {};
 
   if (status) {
     where.status = status;
@@ -54,7 +55,7 @@ function buildTicketWhere(instituteId, { search, status, priority, amcVendorId }
   return where;
 }
 
-function ticketListQuery(instituteId, filters, options = {}) {
+function ticketListQuery(filters, options = {}) {
   return {
     attributes: {
       include: [
@@ -65,7 +66,7 @@ function ticketListQuery(instituteId, filters, options = {}) {
         [sequelize.col("ticketAssetCategory.name"), "assetCategoryName"],
       ],
     },
-    where: buildTicketWhere(instituteId, filters),
+    where: buildTicketWhere(filters),
     include: ticketListInclude,
     order: [["serviceTicketId", "DESC"]],
     raw: true,
@@ -74,35 +75,34 @@ function ticketListQuery(instituteId, filters, options = {}) {
   };
 }
 
-export async function findAssetForTicket(assetId, instituteId, options = {}) {
-  return model.assetModel.findOne({
+export async function findAssetForTicket(assetId, options = {}) {
+  return scoped(model.assetModel).findOne({
     attributes: ["assetId", "assetCategoryId"],
-    where: { assetId, instituteId },
+    where: { assetId },
     transaction: options.transaction,
   });
 }
 
-export async function findAmcVendorForTicket(amcVendorId, instituteId, options = {}) {
-  return model.amcVendorModel.findOne({
+export async function findAmcVendorForTicket(amcVendorId, options = {}) {
+  return scoped(model.amcVendorModel).findOne({
     attributes: ["amcVendorId", "assetCategoryId"],
-    where: { amcVendorId, instituteId },
+    where: { amcVendorId },
     transaction: options.transaction,
   });
 }
 
-export async function findAmcVendorByCategoryId(assetCategoryId, instituteId, options = {}) {
-  return model.amcVendorModel.findOne({
+export async function findAmcVendorByCategoryId(assetCategoryId, options = {}) {
+  return scoped(model.amcVendorModel).findOne({
     attributes: ["amcVendorId"],
-    where: { assetCategoryId, instituteId },
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
 }
 
-export async function findLatestTicketNumberByYear(instituteId, year, options = {}) {
-  return model.amcServiceTicketModel.findOne({
+export async function findLatestTicketNumberByYear(year, options = {}) {
+  return scoped(model.amcServiceTicketModel).findOne({
     attributes: ["ticketNumber"],
     where: {
-      instituteId,
       ticketNumber: { [Op.like]: `TKT-${year}-%` },
     },
     order: [["ticketNumber", "DESC"]],
@@ -111,57 +111,57 @@ export async function findLatestTicketNumberByYear(instituteId, year, options = 
 }
 
 export async function createServiceTicket(data, options = {}) {
-  return model.amcServiceTicketModel.create(data, { transaction: options.transaction });
+  return scoped(model.amcServiceTicketModel).create(data, { transaction: options.transaction });
 }
 
-export async function findAndCountServiceTickets(instituteId, options = {}) {
+export async function findAndCountServiceTickets(options = {}) {
   const { search, status, priority, amcVendorId, page = 1, limit = 20, transaction } = options;
 
-  return model.amcServiceTicketModel.findAndCountAll({
-    ...ticketListQuery(instituteId, { search, status, priority, amcVendorId }, { transaction }),
+  return scoped(model.amcServiceTicketModel).findAndCountAll({
+    ...ticketListQuery({ search, status, priority, amcVendorId }, { transaction }),
     limit,
     offset: (page - 1) * limit,
   });
 }
 
-export async function findServiceTicketById(serviceTicketId, instituteId, options = {}) {
-  return model.amcServiceTicketModel.findOne({
-    ...ticketListQuery(instituteId, {}, options),
-    where: { serviceTicketId, instituteId },
+export async function findServiceTicketById(serviceTicketId, options = {}) {
+  return scoped(model.amcServiceTicketModel).findOne({
+    ...ticketListQuery({}, options),
+    where: { serviceTicketId },
   });
 }
 
-export async function findServiceTicketMetaById(serviceTicketId, instituteId, options = {}) {
-  return model.amcServiceTicketModel.findOne({
+export async function findServiceTicketMetaById(serviceTicketId, options = {}) {
+  return scoped(model.amcServiceTicketModel).findOne({
     attributes: ["serviceTicketId", "status"],
-    where: { serviceTicketId, instituteId },
+    where: { serviceTicketId },
     raw: true,
     transaction: options.transaction,
   });
 }
 
-export async function updateServiceTicket(serviceTicketId, instituteId, payload, options = {}) {
-  const [affected] = await model.amcServiceTicketModel.update(payload, {
-    where: { serviceTicketId, instituteId },
+export async function updateServiceTicket(serviceTicketId, payload, options = {}) {
+  const [affected] = await scoped(model.amcServiceTicketModel).update(payload, {
+    where: { serviceTicketId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function deleteServiceTicket(serviceTicketId, instituteId, options = {}) {
-  const deleted = await model.amcServiceTicketModel.destroy({
-    where: { serviceTicketId, instituteId },
+export async function deleteServiceTicket(serviceTicketId, options = {}) {
+  const deleted = await scoped(model.amcServiceTicketModel).destroy({
+    where: { serviceTicketId },
     transaction: options.transaction,
   });
   return deleted > 0;
 }
 
-export async function findServiceTicketSummaryStats(instituteId, options = {}) {
+export async function findServiceTicketSummaryStats(options = {}) {
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const row = await model.amcServiceTicketModel.findOne({
+  const row = await scoped(model.amcServiceTicketModel).findOne({
     attributes: [
       [
         sequelize.fn("SUM", sequelize.literal("CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END")),
@@ -192,7 +192,6 @@ export async function findServiceTicketSummaryStats(instituteId, options = {}) {
         "resolvedMtd",
       ],
     ],
-    where: { instituteId },
     raw: true,
     transaction: options.transaction,
   });

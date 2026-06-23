@@ -1,8 +1,35 @@
 import * as model from "../models/index.js";
-import sequelize from "../database/sequelizeConfig.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+async function assertScopedExamSchedule(examScheduleId, transaction) {
+    return scoped(model.examScheduleModel).findOne({
+        where: { examScheduleId },
+        attributes: ['examScheduleId'],
+        transaction,
+    });
+}
+
+async function assertScopedQuestionPaper(id, transaction) {
+    return model.questionPaperModel.findOne({
+        where: { id },
+        attributes: ['id', 'examScheduleId'],
+        transaction,
+        include: [{
+            model: model.examScheduleModel,
+            as: 'examSchedule',
+            required: true,
+            where: buildScope(model.examScheduleModel),
+            attributes: ['examScheduleId'],
+        }],
+    });
+}
 
 export async function addQuestionPaper(questionPaperData) {
     try {
+        const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId);
+        if (!schedule) {
+            throw new Error('Exam schedule not found');
+        }
         const result = await model.questionPaperModel.create(questionPaperData);
         return result;
     } catch (error) {
@@ -24,7 +51,7 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
         const { count, rows } = await model.questionPaperModel.findAndCountAll({
             where: whereClause,
             attributes: {
-                exclude: ["deletedAt"]
+                exclude: ["deletedAt"],
             },
             include: [
                 {
@@ -35,11 +62,13 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
                 {
                     model: model.examScheduleModel,
                     as: "examSchedule",
-                }
+                    required: true,
+                    where: buildScope(model.examScheduleModel),
+                },
             ],
             limit: limit ? parseInt(limit, 10) : undefined,
             offset: offset ? parseInt(offset, 10) : undefined,
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC']],
         });
         return { total: count, questionPapers: rows };
     } catch (error) {
@@ -50,6 +79,10 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
 
 export async function getSingleQuestionPaper(id) {
     try {
+        const existing = await assertScopedQuestionPaper(id);
+        if (!existing) {
+            return null;
+        }
         const result = await model.questionPaperModel.findOne({
             attributes: { exclude: ["deletedAt"] },
             where: { id },
@@ -58,8 +91,8 @@ export async function getSingleQuestionPaper(id) {
                     model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
-                }
-            ]
+                },
+            ],
         });
         return result;
     } catch (error) {
@@ -70,6 +103,16 @@ export async function getSingleQuestionPaper(id) {
 
 export async function updateQuestionPaper(id, questionPaperData) {
     try {
+        const existing = await assertScopedQuestionPaper(id);
+        if (!existing) {
+            return [0];
+        }
+        if (questionPaperData.examScheduleId) {
+            const schedule = await assertScopedExamSchedule(questionPaperData.examScheduleId);
+            if (!schedule) {
+                throw new Error('Exam schedule not found');
+            }
+        }
         const result = await model.questionPaperModel.update(questionPaperData, {
             where: { id },
         });
@@ -82,6 +125,10 @@ export async function updateQuestionPaper(id, questionPaperData) {
 
 export async function deleteQuestionPaper(id) {
     try {
+        const existing = await assertScopedQuestionPaper(id);
+        if (!existing) {
+            return false;
+        }
         const deleted = await model.questionPaperModel.destroy({ where: { id } });
         return deleted > 0;
     } catch (error) {
@@ -92,10 +139,9 @@ export async function deleteQuestionPaper(id) {
 
 export async function getExamScheduleById(id) {
     try {
-        return await model.examScheduleModel.findByPk(id);
+        return await scoped(model.examScheduleModel).findByPk(id);
     } catch (error) {
         console.error("Error fetching exam schedule:", error);
         throw error;
     }
 }
-

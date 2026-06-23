@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import employee from "./employeeModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const employeeRoleModel = sequelize.define(
   "employee_rolls",
   {
     employeeRoleId: {
@@ -67,3 +67,7 @@ export default sequelize.define(
     paranoid: true,
   },
 );
+
+employeeRoleModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default employeeRoleModel;

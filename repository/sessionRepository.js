@@ -1,87 +1,86 @@
 import * as model from '../models/index.js'
 import { Op } from 'sequelize';
+import sequelize from '../database/sequelizeConfig.js';
+import { scoped, buildScope } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addSession(sessionData, transaction) {
     try {
-        const result = await model.sessionModel.create(sessionData, { transaction });
-        return result;
+        return await scoped(model.sessionModel).create(sessionData, { transaction });
     } catch (error) {
         console.error("Error in add Session :", error);
         throw error;
     }
-};
+}
 
 export async function addBulkSession(sessionData) {
     try {
-        const result = await model.sessionModel.bulkCreate(sessionData);
-
-        return result;
+        return await model.sessionModel.bulkCreate(sessionData);
     } catch (error) {
         console.error("Error in add Session bulk:", error);
         throw error;
     }
-};
+}
 
 export async function isSessionAlreadyMapped(sessionId, courseId, instituteId, universityId) {
-  try {
-    const existingMapping = await model.sessionCouseMappingModel.findOne({
-      where: {
-        sessionId,
-        courseId,
-        instituteId,
-        universityId
-      }
-    });
-    return !!existingMapping;
-  } catch (error) {
-    console.error('Error checking if session is already mapped:', error);
-    throw error;
-  }
+    try {
+        const where = { sessionId, courseId };
+        if (instituteId != null) {
+            where.instituteId = instituteId;
+        }
+        if (universityId != null) {
+            where.universityId = universityId;
+        }
+
+        const existingMapping = await scoped(model.sessionCouseMappingModel).findOne({
+            where,
+        });
+        return !!existingMapping;
+    } catch (error) {
+        console.error('Error checking if session is already mapped:', error);
+        throw error;
+    }
 }
 
 export async function courseSectionMapping(sessionData, transaction) {
     try {
-        const result = await model.sessionCouseMappingModel.bulkCreate(sessionData, { transaction });
-        return result;
+        return await scoped(model.sessionCouseMappingModel).bulkCreate(sessionData, { transaction });
     } catch (error) {
         console.error("Error in course Session :", error);
         throw error;
     }
-};
+}
 
 export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
     try {
-        const result = await model.sessionCouseMappingModel.update(data, {
+        return await scoped(model.sessionCouseMappingModel).update(data, {
             where: { sessionCourseMappingId }
         });
-        return result;
     } catch (error) {
         console.error(`Error updating course session mapping for ${sessionCourseMappingId}:`, error);
         throw error;
     }
-};
+}
 
-export async function getSessionDetails(universityId, instituteId, role, acedmicYearId) {
+export async function getSessionDetails() {
     try {
-        const session = await model.sessionModel.findAll({
-            where: {
-                instituteId,
-                ...(acedmicYearId && { acedmicYearId }),
-                ...(universityId && { universityId }),
-            },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        const mappingScope = buildScope(model.sessionCouseMappingModel);
+
+        return await scoped(model.sessionModel).findAll({
+            attributes: { exclude: excludeMeta },
             include: [
                 {
                     model: model.acedmicYearModel,
                     as: 'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                 },
                 {
                     model: model.sessionCouseMappingModel,
                     as: "courseMappings",
-                    where: { instituteId },
+                    where: mappingScope,
                     required: false,
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                     include: [
                         {
                             model: model.courseModel,
@@ -92,8 +91,6 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
                 }
             ]
         });
-
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -102,19 +99,17 @@ export async function getSessionDetails(universityId, instituteId, role, acedmic
 
 export async function getSingleSessionDetails(sessionId) {
     try {
-        const Session = await model.sessionModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.sessionModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { sessionId },
             include: [
                 {
                     model: model.acedmicYearModel,
                     as: 'sessionAcedmic',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                    attributes: { exclude: excludeMeta },
                 }
             ]
         });
-
-        return Session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -123,58 +118,45 @@ export async function getSingleSessionDetails(sessionId) {
 
 export async function getSessionDetailsByAcedmic(acedmicYearId) {
     try {
-        const Session = await model.sessionModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await model.sessionModel.findAll({
+            attributes: { exclude: excludeMeta },
             where: { acedmicYearId },
         });
-
-        return Session;
     } catch (error) {
         console.error('Error fetching Session details By Acedmic Id:', error);
         throw error;
     }
 }
 
-export async function getSessionByInstituteAndAcademicYear(instituteId, acedmicYearId) {
+export async function getSessionByInstituteAndAcademicYear() {
     try {
-        const session = await model.sessionModel.findAll({
-            where: {
-                instituteId, acedmicYearId
-            },
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.sessionModel).findAll({
+            attributes: { exclude: excludeMeta },
         });
-
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
     }
 }
 
-
-export async function updateSession(sessionId, sessionData) {
+export async function updateSession(sessionId, sessionData, transaction) {
     try {
-        const result = await model.sessionModel.update(sessionData, {
-            where: { sessionId }
+        return await scoped(model.sessionModel).update(sessionData, {
+            where: { sessionId },
+            transaction,
         });
-        return result;
     } catch (error) {
         console.error(`Error updating Session creation ${sessionId}:`, error);
         throw error;
     }
 }
 
-export async function isSessionMappedwithcourse(sessionId, instituteId, universityId) {
+export async function isSessionMappedwithcourse(sessionId) {
     try {
-        const session = await model.sessionCouseMappingModel.findAll({
-            where: {
-                sessionId,
-                instituteId,
-                universityId
-            },
+        return await scoped(model.sessionCouseMappingModel).findAll({
+            where: { sessionId },
             attributes: ["sessionCourseMappingId"]
         });
-        return session;
     } catch (error) {
         console.error('Error fetching Session details:', error);
         throw error;
@@ -182,18 +164,32 @@ export async function isSessionMappedwithcourse(sessionId, instituteId, universi
 }
 
 export async function deleteSession(sessionId) {
-    const deleted = await model.sessionModel.destroy({ where: { session_id: sessionId } });
+    const deleted = await scoped(model.sessionModel).destroy({ where: { sessionId } });
     return deleted > 0;
-};
+}
 
 export async function getMappingByCourseAndSession(courseId, sessionId) {
-    return await model.sessionCouseMappingModel.findOne({
-        where: { courseId, sessionId }
+    return scoped(model.sessionCouseMappingModel).findOne({
+        where: { courseId, sessionId },
+    });
+}
+
+export async function assertCourseInScope(courseId) {
+    return scoped(model.courseModel).findOne({
+        where: { courseId },
+        attributes: ['courseId', 'instituteId'],
+    });
+}
+
+export async function assertSessionInScope(sessionId) {
+    return scoped(model.sessionModel).findOne({
+        where: { sessionId },
+        attributes: ['sessionId', 'instituteId', 'acedmicYearId'],
     });
 }
 
 export async function getMappingById(sessionCourseMappingId) {
-    return await model.sessionCouseMappingModel.findOne({
+    return await scoped(model.sessionCouseMappingModel).findOne({
         where: { sessionCourseMappingId }
     });
 }
@@ -302,8 +298,170 @@ export async function getCourseSessionMappingBlocker({ courseId, sessionId, sess
 }
 
 export async function deleteCourseSessionMapping(sessionCourseMappingId) {
-    const deleted = await model.sessionCouseMappingModel.destroy({
+    const deleted = await scoped(model.sessionCouseMappingModel).destroy({
         where: { sessionCourseMappingId }
     });
     return deleted > 0;
+}
+
+function normalizeCourseIds(courseId) {
+    if (courseId == null || courseId === '') {
+        return [];
+    }
+    const ids = Array.isArray(courseId) ? courseId : [courseId];
+    return [...new Set(ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))];
+}
+
+function pickSessionUpdateFields(sessionData, updatedBy) {
+    const { courseId: _courseId, sessionId: _sessionId, ...sessionFields } = sessionData;
+    return { ...sessionFields, updatedBy };
+}
+
+async function findCoursesInScope(courseIds, transaction) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    return scoped(model.courseModel).findAll({
+        where: { courseId: { [Op.in]: courseIds } },
+        attributes: ['courseId'],
+        transaction,
+    });
+}
+
+async function findMappedCourseIds(sessionId, courseIds, transaction) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const rows = await scoped(model.sessionCouseMappingModel).findAll({
+        where: {
+            sessionId,
+            courseId: { [Op.in]: courseIds },
+        },
+        attributes: ['courseId'],
+        transaction,
+    });
+
+    return rows.map((row) => row.courseId);
+}
+
+export async function syncCourseSessionMappings({
+    sessionId,
+    courseIds,
+    userId,
+    transaction,
+    rejectExisting = false,
+}) {
+    const normalizedCourseIds = normalizeCourseIds(courseIds);
+    if (!normalizedCourseIds.length) {
+        if (rejectExisting) {
+            throw new Error('courseId must be a non-empty array');
+        }
+        return { inserted: 0 };
+    }
+
+    const coursesInScope = await findCoursesInScope(normalizedCourseIds, transaction);
+    const scopedCourseIds = new Set(coursesInScope.map((course) => course.courseId));
+    const missingCourseId = normalizedCourseIds.find((courseId) => !scopedCourseIds.has(courseId));
+    if (missingCourseId) {
+        throw new Error(`Course ID ${missingCourseId} not found`);
+    }
+
+    const mappedCourseIds = new Set(
+        await findMappedCourseIds(sessionId, normalizedCourseIds, transaction),
+    );
+
+    if (rejectExisting) {
+        const duplicateCourseId = normalizedCourseIds.find((courseId) => mappedCourseIds.has(courseId));
+        if (duplicateCourseId) {
+            throw new Error(`Course ID ${duplicateCourseId} is already mapped to Session ID ${sessionId}`);
+        }
+    }
+
+    const courseIdsToInsert = rejectExisting
+        ? normalizedCourseIds
+        : normalizedCourseIds.filter((courseId) => !mappedCourseIds.has(courseId));
+
+    if (!courseIdsToInsert.length) {
+        return { inserted: 0 };
+    }
+
+    await scoped(model.sessionCouseMappingModel).bulkCreate(
+        courseIdsToInsert.map((courseId) => ({
+            sessionId,
+            courseId,
+            createdBy: userId,
+            updatedBy: userId,
+        })),
+        { transaction },
+    );
+
+    return { inserted: courseIdsToInsert.length };
+}
+
+export async function createSessionWithCourseMappings(sessionData, createdBy, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const courseIds = normalizeCourseIds(sessionData.courseId);
+        const payload = {
+            ...sessionData,
+            createdBy,
+            updatedBy,
+        };
+        delete payload.courseId;
+
+        const session = await addSession(payload, transaction);
+
+        await syncCourseSessionMappings({
+            sessionId: session.sessionId,
+            courseIds,
+            userId: createdBy,
+            transaction,
+        });
+
+        await transaction.commit();
+        return session;
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error creating session and mapping:', error);
+        throw error;
+    }
+}
+
+export async function updateSessionWithCourseMappings(sessionId, sessionData, updatedBy) {
+    const transaction = await sequelize.transaction();
+
+    try {
+        const numericSessionId = Number(sessionId);
+        if (!Number.isInteger(numericSessionId) || numericSessionId <= 0) {
+            throw new Error('sessionId is required');
+        }
+
+        const session = await assertSessionInScope(numericSessionId);
+        if (!session) {
+            throw new Error(`Session ID ${numericSessionId} not found`);
+        }
+
+        await updateSession(
+            numericSessionId,
+            pickSessionUpdateFields(sessionData, updatedBy),
+            transaction,
+        );
+
+        await syncCourseSessionMappings({
+            sessionId: numericSessionId,
+            courseIds: sessionData.courseId,
+            userId: updatedBy,
+            transaction,
+        });
+
+        await transaction.commit();
+        return getSingleSessionDetails(numericSessionId);
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error updating session and course mappings:', error);
+        throw error;
+    }
 }

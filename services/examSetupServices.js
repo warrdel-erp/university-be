@@ -3,16 +3,15 @@ import * as examSetupRepository from "../repository/examSetupRepository.js";
 export async function addExamSetup(examDetail, createdBy, updatedBy) {
     examDetail.createdBy = createdBy;
     examDetail.updatedBy = updatedBy;
-    const result = await examSetupRepository.addExamSetup(examDetail);
-    return result;
+    return await examSetupRepository.addExamSetup(examDetail);
 }
 
-export async function getExamSetup(universityId,acedmicYearId,role,instituteId) {
-    return await examSetupRepository.getExamSetup(universityId,acedmicYearId,role,instituteId);
+export async function getExamSetup(acedmicYearId) {
+    return await examSetupRepository.getExamSetup(acedmicYearId);
 }
 
-export async function getSingleExamSetup(examSetupId, universityId) {
-    return await examSetupRepository.getSingleExamSetup(examSetupId, universityId);
+export async function getSingleExamSetup(examSetupId) {
+    return await examSetupRepository.getSingleExamSetup(examSetupId);
 }
 
 export async function deleteExamSetup(examSetupId) {

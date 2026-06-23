@@ -89,4 +89,6 @@ const questionPaperModel = sequelize.define(
     }
 );
 
+questionPaperModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
 export default questionPaperModel;

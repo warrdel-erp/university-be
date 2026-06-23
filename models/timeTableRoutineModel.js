@@ -8,7 +8,7 @@ import classSectionModel from "./classSectionModel.js";
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 
-export default sequelize.define(
+const timeTableRoutineModel = sequelize.define(
     'time_table_routine',
     {
         timeTableRoutineId: {
@@ -135,3 +135,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+timeTableRoutineModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default timeTableRoutineModel;

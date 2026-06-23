@@ -635,9 +635,9 @@ async function validateAccessionNumbersBeforeUpload(parsedRows) {
 /**
  * Run every check that can fail before we open a DB transaction.
  */
-async function runAllPreUploadValidations(parsedRows, instituteId) {
+async function runAllPreUploadValidations(parsedRows) {
   const [categoryRows, subjectRows] = await Promise.all([
-    libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(instituteId),
+    libraryBookBulkUploadRepository.findLibraryCategoriesForBulkUpload(),
     libraryBookBulkUploadRepository.findAllSubjectsForBulkUpload(),
   ]);
 
@@ -739,7 +739,6 @@ function buildMasterRecordNameToIdMap(masterRows, nameField, idField) {
  */
 async function resolveBulkUploadCategoryIds(
   cellValues,
-  instituteId,
   categoryNameToIdMap,
   excelRowNumber,
   transaction,
@@ -750,7 +749,7 @@ async function resolveBulkUploadCategoryIds(
   for (const name of names) {
     let libraryCategoryId =
       categoryNameToIdMap.get(name.toLowerCase()) ??
-      (await libraryBookBulkUploadRepository.getCategoryIdByName(name, instituteId, transaction));
+      (await libraryBookBulkUploadRepository.getCategoryIdByName(name, transaction));
 
     if (!libraryCategoryId) {
       throw new Error(
@@ -794,7 +793,6 @@ async function resolveBulkUploadSubjectIds(
 async function buildBulkUploadNewBookRecord(
   book,
   libraryCreationId,
-  instituteId,
   createdBy,
   updatedBy,
   categoryNameToIdMap,
@@ -818,7 +816,6 @@ async function buildBulkUploadNewBookRecord(
     rawCategoryId !== undefined && rawCategoryId !== null
       ? await resolveBulkUploadCategoryIds(
           rawCategoryId,
-          instituteId,
           categoryNameToIdMap,
           excelRowNumber,
           transaction,
@@ -838,14 +835,7 @@ async function buildBulkUploadNewBookRecord(
   };
 }
 
-async function validateBulkUploadBookMappingIds(
-  { subjectId, categoryId, instituteId },
-  transaction,
-) {
-  if (!instituteId && (subjectId?.length || categoryId?.length)) {
-    throw new Error("instituteId is required for book subject/category mappings");
-  }
-
+async function validateBulkUploadBookMappingIds({ subjectId, categoryId }, transaction) {
   if (subjectId?.length) {
     const subjects = await libraryBookBulkUploadRepository.getSubjectsByIds(subjectId, transaction);
     const foundIds = new Set(subjects.map((row) => row.subjectId));
@@ -874,20 +864,19 @@ async function validateBulkUploadBookMappingIds(
 
 async function syncBulkUploadBookMappings(
   libraryBookId,
-  { subjectId, categoryId, instituteId },
+  { subjectId, categoryId },
   transaction,
 ) {
   const hasSubjects = subjectId?.length > 0;
   const hasCategories = categoryId?.length > 0;
   if (!hasSubjects && !hasCategories) return;
 
-  await validateBulkUploadBookMappingIds({ subjectId, categoryId, instituteId }, transaction);
+  await validateBulkUploadBookMappingIds({ subjectId, categoryId }, transaction);
 
   if (hasSubjects) {
     await libraryBookBulkUploadRepository.replaceBookSubjectMappings(
       libraryBookId,
       subjectId,
-      instituteId,
       transaction,
     );
   }
@@ -896,7 +885,6 @@ async function syncBulkUploadBookMappings(
     await libraryBookBulkUploadRepository.replaceBookCategoryMappings(
       libraryBookId,
       categoryId,
-      instituteId,
       transaction,
     );
   }
@@ -994,7 +982,6 @@ async function persistBulkUploadBatchInTransaction({
   categoryNameToIdMap,
   subjectNameToIdMap,
   libraryCreationId,
-  instituteId,
   createdBy,
   updatedBy,
   aisleCache,
@@ -1033,7 +1020,6 @@ async function persistBulkUploadBatchInTransaction({
         await buildBulkUploadNewBookRecord(
           book,
           libraryCreationId,
-          instituteId,
           createdBy,
           updatedBy,
           categoryNameToIdMap,
@@ -1070,7 +1056,6 @@ async function persistBulkUploadBatchInTransaction({
         {
           subjectId: record.subjectId,
           categoryId: record.categoryId,
-          instituteId,
         },
         transaction,
       );
@@ -1165,7 +1150,6 @@ function parseAndValidateBulkUploadExcelRows(excelRows) {
 async function executeBulkUploadInTransaction({
   parsedRows,
   libraryCreationId,
-  instituteId,
   categoryNameToIdMap,
   subjectNameToIdMap,
   createdBy,
@@ -1178,13 +1162,6 @@ async function executeBulkUploadInTransaction({
     buildExistingBookLookupIndexes(existingBooks);
 
   return sequelize.transaction(async (transaction) => {
-    const instituteIdForMappings =
-      instituteId ??
-      (await libraryBookBulkUploadRepository.getInstituteIdByLibraryCreationId(
-        Number(libraryCreationId),
-        transaction,
-      ));
-
     const bookCache = {};
     const aisleCache = new Map();
     const rackCache = new Map();
@@ -1209,7 +1186,6 @@ async function executeBulkUploadInTransaction({
         categoryNameToIdMap,
         subjectNameToIdMap,
         libraryCreationId,
-        instituteId: instituteIdForMappings,
         createdBy,
         updatedBy,
         aisleCache,
@@ -1274,7 +1250,6 @@ export async function bulkUploadLibraryBooks(uploadFile, user, query) {
     user.userId,
     user.userId,
     query.libraryCreationId,
-    user.defaultInstituteId,
   );
 
   throwIfBulkUploadFailed(result);
@@ -1290,7 +1265,6 @@ export async function importLibraryBooksFromExcel(
   createdBy,
   updatedBy,
   libraryCreationId,
-  instituteId,
 ) {
   if (libraryCreationId == null || libraryCreationId === "") {
     return { status: "error", message: "libraryCreationId is required" };
@@ -1327,11 +1301,7 @@ export async function importLibraryBooksFromExcel(
     return parseResult.result;
   }
 
-  const resolvedInstituteId = instituteId ?? library.instituteId ?? null;
-  const preUpload = await runAllPreUploadValidations(
-    parseResult.parsedRows,
-    resolvedInstituteId,
-  );
+  const preUpload = await runAllPreUploadValidations(parseResult.parsedRows);
   if (!preUpload.ok) {
     return preUpload.result;
   }
@@ -1340,7 +1310,6 @@ export async function importLibraryBooksFromExcel(
     return await executeBulkUploadInTransaction({
       parsedRows: parseResult.parsedRows,
       libraryCreationId,
-      instituteId: resolvedInstituteId,
       categoryNameToIdMap: preUpload.categoryNameToIdMap,
       subjectNameToIdMap: preUpload.subjectNameToIdMap,
       createdBy,

@@ -1,29 +1,24 @@
 import * as DormitoryListCreationService from "../repository/dormitoryListRepository.js";
 
-export async function addDormitoryList(dormitoryListData, createdBy, updatedBy, instituteId, universityId) {
-    dormitoryListData.createdBy = createdBy;
-    dormitoryListData.updatedBy = updatedBy;
-    dormitoryListData.instituteId = instituteId;
-    dormitoryListData.universityId = universityId;
-
-    const DormitoryList = await DormitoryListCreationService.addDormitoryList(dormitoryListData);
-    return DormitoryList;
+export async function addDormitoryList(dormitoryListData, createdBy, updatedBy) {
+  dormitoryListData.createdBy = createdBy;
+  dormitoryListData.updatedBy = updatedBy;
+  return DormitoryListCreationService.addDormitoryList(dormitoryListData);
 }
 
-export async function getDormitoryListDetails(universityId, acedmicYearId, role, instituteId) {
-    return await DormitoryListCreationService.getDormitoryListDetails(universityId, acedmicYearId, role, instituteId);
+export async function getDormitoryListDetails() {
+  return DormitoryListCreationService.getDormitoryListDetails();
 }
 
-export async function getSingleDormitoryListDetails(dormitoryListId, universityId) {
-    return await DormitoryListCreationService.getSingleDormitoryListDetails(dormitoryListId, universityId);
+export async function getSingleDormitoryListDetails(dormitoryListId) {
+  return DormitoryListCreationService.getSingleDormitoryListDetails(dormitoryListId);
 }
 
 export async function deleteDormitoryList(dormitoryListId) {
-    return await DormitoryListCreationService.deleteDormitoryList(dormitoryListId);
+  return DormitoryListCreationService.deleteDormitoryList(dormitoryListId);
 }
 
 export async function updateDormitoryList(dormitoryListId, dormitoryListData, updatedBy) {
-
-    dormitoryListData.updatedBy = updatedBy;
-    await DormitoryListCreationService.updateDormitoryList(dormitoryListId, dormitoryListData);
+  dormitoryListData.updatedBy = updatedBy;
+  return DormitoryListCreationService.updateDormitoryList(dormitoryListId, dormitoryListData);
 }

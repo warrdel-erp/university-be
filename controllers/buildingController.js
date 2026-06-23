@@ -12,9 +12,8 @@ export async function addbuilding(req, res) {
 }
 
 export async function getAllbuilding(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const building = await buildingCreation.getbuildingDetails(universityId);
+        const building = await buildingCreation.getbuildingDetails();
         res.status(200).json(building);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -22,10 +21,9 @@ export async function getAllbuilding(req, res) {
 }
 
 export async function getSinglebuildingDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { buildingId } = req.query;
-        const building = await buildingCreation.getSinglebuildingDetails(buildingId,universityId);
+        const building = await buildingCreation.getSinglebuildingDetails(buildingId);
         if (building) {
             res.status(200).json(building);
         } else {
@@ -63,10 +61,9 @@ export async function deletebuilding(req, res) {
 
 export async function getAllbuildingNested(req, res) {
     try {
-        const universityId = req.user.universityId;
         const { buildingType } = req.query;
         const instituteId = req.user.defaultInstituteId;
-        const building = await buildingCreation.getAllbuildingNested(universityId, buildingType, instituteId);
+        const building = await buildingCreation.getAllbuildingNested(buildingType, instituteId);
         res.status(200).json(building);
     } catch (error) {
         res.status(500).json({ error: error.message });

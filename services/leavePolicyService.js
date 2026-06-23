@@ -8,12 +8,12 @@ export async function addPolicy(policyData) {
   }
 }
 
-export async function getPolicies(universityId, instituteId) {
-  return await repo.getPolicies(universityId, instituteId);
+export async function getPolicies() {
+  return repo.getPolicies();
 }
 
-export async function getPolicyById(policyId, universityId) {
-  return await repo.getPolicyById(policyId, universityId);
+export async function getPolicyById(policyId) {
+  return repo.getPolicyById(policyId);
 }
 
 export async function updatePolicy(policyId, data) {

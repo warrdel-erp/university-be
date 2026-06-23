@@ -1,6 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 import { normalizeVendorName } from "../utility/amcVendorCode.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
@@ -56,8 +57,16 @@ function formatVendorRow(row) {
   };
 }
 
+async function assertScopedVendor(amcVendorId, options = {}) {
+  return scoped(model.amcVendorModel).findOne({
+    where: { amcVendorId },
+    attributes: ["amcVendorId"],
+    transaction: options.transaction,
+  });
+}
+
 export async function createAmcVendor(data, options = {}) {
-  return model.amcVendorModel.create(data, { transaction: options.transaction });
+  return scoped(model.amcVendorModel).create(data, { transaction: options.transaction });
 }
 
 export async function createAmcVendorAddress(data, options = {}) {
@@ -65,6 +74,11 @@ export async function createAmcVendorAddress(data, options = {}) {
 }
 
 export async function findAmcVendorAddressByVendorId(amcVendorId, options = {}) {
+  const vendor = await assertScopedVendor(amcVendorId, options);
+  if (!vendor) {
+    return null;
+  }
+
   return model.amcVendorAddressModel.findOne({
     where: { amcVendorId },
     transaction: options.transaction,
@@ -72,7 +86,15 @@ export async function findAmcVendorAddressByVendorId(amcVendorId, options = {}) 
 }
 
 export async function upsertAmcVendorAddress(amcVendorId, payload, options = {}) {
-  const existing = await findAmcVendorAddressByVendorId(amcVendorId, options);
+  const vendor = await assertScopedVendor(amcVendorId, options);
+  if (!vendor) {
+    return;
+  }
+
+  const existing = await model.amcVendorAddressModel.findOne({
+    where: { amcVendorId },
+    transaction: options.transaction,
+  });
 
   if (existing) {
     await model.amcVendorAddressModel.update(payload, {
@@ -85,28 +107,27 @@ export async function upsertAmcVendorAddress(amcVendorId, payload, options = {})
   await createAmcVendorAddress({ amcVendorId, ...payload }, options);
 }
 
-export async function findAssetCategoryByIdForInstitute(assetCategoryId, instituteId, options = {}) {
-  return model.assetCategoryModel.findOne({
+export async function findAssetCategoryByIdForInstitute(assetCategoryId, options = {}) {
+  return scoped(model.assetCategoryModel).findOne({
     attributes: ["assetCategoryId", "name", "codePrefix"],
-    where: { assetCategoryId, instituteId },
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
 }
 
-export async function findAmcVendorByCode(instituteId, vendorCode, options = {}) {
-  return model.amcVendorModel.findOne({
+export async function findAmcVendorByCode(vendorCode, options = {}) {
+  return scoped(model.amcVendorModel).findOne({
     attributes: ["amcVendorId"],
-    where: { instituteId, vendorCode },
+    where: { vendorCode },
     transaction: options.transaction,
   });
 }
 
-export async function findAmcVendorByName(instituteId, vendorName, options = {}) {
+export async function findAmcVendorByName(vendorName, options = {}) {
   const { excludeAmcVendorId, transaction } = options;
   const normalized = normalizeVendorName(vendorName).toLowerCase();
 
   const where = {
-    instituteId,
     [Op.and]: sequelize.where(
       sequelize.fn("LOWER", sequelize.fn("TRIM", sequelize.col("vendor_name"))),
       normalized
@@ -117,16 +138,16 @@ export async function findAmcVendorByName(instituteId, vendorName, options = {})
     where.amcVendorId = { [Op.ne]: excludeAmcVendorId };
   }
 
-  return model.amcVendorModel.findOne({
+  return scoped(model.amcVendorModel).findOne({
     attributes: ["amcVendorId", "vendorName", "vendorCode"],
     where,
     transaction,
   });
 }
 
-export async function findAmcVendorsByInstitute(instituteId, options = {}) {
+export async function findAmcVendors(options = {}) {
   const { search, page = 1, limit = 20 } = options;
-  const where = { instituteId };
+  const where = {};
 
   if (search) {
     const term = `%${search}%`;
@@ -148,7 +169,7 @@ export async function findAmcVendorsByInstitute(instituteId, options = {}) {
 
   const offset = (page - 1) * limit;
 
-  const { rows, count } = await model.amcVendorModel.findAndCountAll({
+  const { rows, count } = await scoped(model.amcVendorModel).findAndCountAll({
     attributes: { exclude: excludeTs },
     where,
     include: vendorDetailIncludes,
@@ -167,10 +188,10 @@ export async function findAmcVendorsByInstitute(instituteId, options = {}) {
   };
 }
 
-export async function findAmcVendorById(amcVendorId, instituteId, options = {}) {
-  const row = await model.amcVendorModel.findOne({
+export async function findAmcVendorById(amcVendorId, options = {}) {
+  const row = await scoped(model.amcVendorModel).findOne({
     attributes: { exclude: excludeTs },
-    where: { amcVendorId, instituteId },
+    where: { amcVendorId },
     include: vendorDetailIncludes,
     transaction: options.transaction,
   });
@@ -178,17 +199,17 @@ export async function findAmcVendorById(amcVendorId, instituteId, options = {}) 
   return row ? formatVendorRow(row) : null;
 }
 
-export async function updateAmcVendor(amcVendorId, instituteId, payload, options = {}) {
-  const [affected] = await model.amcVendorModel.update(payload, {
-    where: { amcVendorId, instituteId },
+export async function updateAmcVendor(amcVendorId, payload, options = {}) {
+  const [affected] = await scoped(model.amcVendorModel).update(payload, {
+    where: { amcVendorId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function deleteAmcVendor(amcVendorId, instituteId, options = {}) {
-  const deleted = await model.amcVendorModel.destroy({
-    where: { amcVendorId, instituteId },
+export async function deleteAmcVendor(amcVendorId, options = {}) {
+  const deleted = await scoped(model.amcVendorModel).destroy({
+    where: { amcVendorId },
     transaction: options.transaction,
   });
   return deleted > 0;

@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 import {
   buildExpiryStatusWhere,
   deriveContractStatus,
@@ -54,9 +55,8 @@ function formatContractRow(row) {
   };
 }
 
-function buildContractWhere(instituteId, { search, approvalStatus, status } = {}) {
+function buildContractWhere({ search, approvalStatus, status } = {}) {
   const where = {
-    instituteId,
     ...buildExpiryStatusWhere(status, Op),
   };
 
@@ -82,34 +82,33 @@ function buildContractWhere(instituteId, { search, approvalStatus, status } = {}
   return where;
 }
 
-export async function findAmcVendorForContract(amcVendorId, instituteId, options = {}) {
-  return model.amcVendorModel.findOne({
+export async function findAmcVendorForContract(amcVendorId, options = {}) {
+  return scoped(model.amcVendorModel).findOne({
     attributes: ["amcVendorId", "vendorName", "vendorCode", "assetCategoryId"],
-    where: { amcVendorId, instituteId },
+    where: { amcVendorId },
     transaction: options.transaction,
   });
 }
 
-export async function findContractByVendorId(amcVendorId, instituteId, options = {}) {
+export async function findContractByVendorId(amcVendorId, options = {}) {
   const { excludeAmcContractId, transaction } = options;
 
-  const where = { amcVendorId, instituteId };
+  const where = { amcVendorId };
   if (excludeAmcContractId !== undefined) {
     where.amcContractId = { [Op.ne]: excludeAmcContractId };
   }
 
-  return model.amcContractModel.findOne({
+  return scoped(model.amcContractModel).findOne({
     attributes: ["amcContractId", "contractNumber"],
     where,
     transaction,
   });
 }
 
-export async function findLatestContractNumberByPrefix(instituteId, prefix, options = {}) {
-  return model.amcContractModel.findOne({
+export async function findLatestContractNumberByPrefix(prefix, options = {}) {
+  return scoped(model.amcContractModel).findOne({
     attributes: ["contractNumber"],
     where: {
-      instituteId,
       contractNumber: { [Op.like]: `${prefix}%` },
     },
     order: [["contractNumber", "DESC"]],
@@ -118,15 +117,15 @@ export async function findLatestContractNumberByPrefix(instituteId, prefix, opti
 }
 
 export async function createAmcContract(data, options = {}) {
-  return model.amcContractModel.create(data, { transaction: options.transaction });
+  return scoped(model.amcContractModel).create(data, { transaction: options.transaction });
 }
 
-export async function findAndCountAmcContracts(instituteId, options = {}) {
+export async function findAndCountAmcContracts(options = {}) {
   const { search, approvalStatus, status, page = 1, limit = 20, transaction } = options;
   const offset = (page - 1) * limit;
 
-  const { rows, count } = await model.amcContractModel.findAndCountAll({
-    where: buildContractWhere(instituteId, { search, approvalStatus, status }),
+  const { rows, count } = await scoped(model.amcContractModel).findAndCountAll({
+    where: buildContractWhere({ search, approvalStatus, status }),
     include: contractListInclude,
     order: [["amcContractId", "DESC"]],
     limit,
@@ -141,9 +140,9 @@ export async function findAndCountAmcContracts(instituteId, options = {}) {
   };
 }
 
-export async function findAmcContractById(amcContractId, instituteId, options = {}) {
-  const row = await model.amcContractModel.findOne({
-    where: { amcContractId, instituteId },
+export async function findAmcContractById(amcContractId, options = {}) {
+  const row = await scoped(model.amcContractModel).findOne({
+    where: { amcContractId },
     include: contractListInclude,
     transaction: options.transaction,
   });
@@ -151,54 +150,52 @@ export async function findAmcContractById(amcContractId, instituteId, options = 
   return row ? formatContractRow(row) : null;
 }
 
-export async function findAmcContractMetaById(amcContractId, instituteId, options = {}) {
-  return model.amcContractModel.findOne({
+export async function findAmcContractMetaById(amcContractId, options = {}) {
+  return scoped(model.amcContractModel).findOne({
     attributes: ["amcContractId", "approvalStatus", "startDate", "endDate"],
-    where: { amcContractId, instituteId },
+    where: { amcContractId },
     raw: true,
     transaction: options.transaction,
   });
 }
 
-export async function updateAmcContract(amcContractId, instituteId, payload, options = {}) {
-  const [affected] = await model.amcContractModel.update(payload, {
-    where: { amcContractId, instituteId },
+export async function updateAmcContract(amcContractId, payload, options = {}) {
+  const [affected] = await scoped(model.amcContractModel).update(payload, {
+    where: { amcContractId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function deleteAmcContract(amcContractId, instituteId, options = {}) {
-  const deleted = await model.amcContractModel.destroy({
-    where: { amcContractId, instituteId },
+export async function deleteAmcContract(amcContractId, options = {}) {
+  const deleted = await scoped(model.amcContractModel).destroy({
+    where: { amcContractId },
     transaction: options.transaction,
   });
   return deleted > 0;
 }
 
-export async function findContractSummaryStats(instituteId, options = {}) {
-  const baseWhere = { instituteId };
+export async function findContractSummaryStats(options = {}) {
   const { transaction } = options;
 
   const [totalContracts, sumRow, expiredContracts, nearExpiryContracts, activeContracts] =
     await Promise.all([
-      model.amcContractModel.count({ where: baseWhere, transaction }),
-      model.amcContractModel.findOne({
+      scoped(model.amcContractModel).count({ transaction }),
+      scoped(model.amcContractModel).findOne({
         attributes: [[sequelize.fn("SUM", sequelize.col("contract_value")), "totalContractsValue"]],
-        where: baseWhere,
         raw: true,
         transaction,
       }),
-      model.amcContractModel.count({
-        where: { ...baseWhere, ...buildExpiryStatusWhere("EXPIRED", Op) },
+      scoped(model.amcContractModel).count({
+        where: buildExpiryStatusWhere("EXPIRED", Op),
         transaction,
       }),
-      model.amcContractModel.count({
-        where: { ...baseWhere, ...buildExpiryStatusWhere("NEAR_EXPIRY", Op) },
+      scoped(model.amcContractModel).count({
+        where: buildExpiryStatusWhere("NEAR_EXPIRY", Op),
         transaction,
       }),
-      model.amcContractModel.count({
-        where: { ...baseWhere, ...buildExpiryStatusWhere("ACTIVE", Op) },
+      scoped(model.amcContractModel).count({
+        where: buildExpiryStatusWhere("ACTIVE", Op),
         transaction,
       }),
     ]);

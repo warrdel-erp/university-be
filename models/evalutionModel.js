@@ -7,7 +7,7 @@ import subjectModel from "./subjectModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const evalutionModel = sequelize.define(
     'evalutions',
     {
         evalutionId: {
@@ -107,3 +107,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+evalutionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default evalutionModel;

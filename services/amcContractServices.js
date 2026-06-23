@@ -38,12 +38,12 @@ function resolveContractValue(body) {
   return value;
 }
 
-async function resolveNextContractNumber(instituteId, transaction) {
+async function resolveNextContractNumber(transaction) {
   const year = currentContractYear();
   const yearSuffix = String(year).slice(-2);
   const prefix = `AMC${yearSuffix}`;
 
-  const latest = await repo.findLatestContractNumberByPrefix(instituteId, prefix, { transaction });
+  const latest = await repo.findLatestContractNumberByPrefix(prefix, { transaction });
   const parsed = parseContractNumberSequence(latest?.contractNumber);
   const nextSequence =
     parsed?.yearSuffix === yearSuffix ? parsed.sequence + 1 : 1;
@@ -51,13 +51,13 @@ async function resolveNextContractNumber(instituteId, transaction) {
   return formatContractNumber(year, nextSequence);
 }
 
-async function assertVendorAvailable(amcVendorId, instituteId, transaction, excludeAmcContractId) {
-  const vendor = await repo.findAmcVendorForContract(amcVendorId, instituteId, { transaction });
+async function assertVendorAvailable(amcVendorId, transaction, excludeAmcContractId) {
+  const vendor = await repo.findAmcVendorForContract(amcVendorId, { transaction });
   if (!vendor) {
     throw new Error("amcVendorId not found or not in your institute");
   }
 
-  const duplicate = await repo.findContractByVendorId(amcVendorId, instituteId, {
+  const duplicate = await repo.findContractByVendorId(amcVendorId, {
     transaction,
     excludeAmcContractId,
   });
@@ -84,7 +84,7 @@ function assertContractExists(row) {
   return row;
 }
 
-export async function addAmcContract(body, instituteId) {
+export async function addAmcContract(body) {
   const contractValue = resolveContractValue(body);
   if (contractValue === null || contractValue === undefined) {
     throw new Error("contractValue is required");
@@ -93,13 +93,12 @@ export async function addAmcContract(body, instituteId) {
   const transaction = await sequelize.transaction();
 
   try {
-    await assertVendorAvailable(body.amcVendorId, instituteId, transaction);
+    await assertVendorAvailable(body.amcVendorId, transaction);
 
-    const contractNumber = await resolveNextContractNumber(instituteId, transaction);
+    const contractNumber = await resolveNextContractNumber(transaction);
 
     const created = await repo.createAmcContract(
       {
-        instituteId,
         contractNumber,
         contractName: body.contractName,
         approvalStatus: "DRAFT",
@@ -117,7 +116,7 @@ export async function addAmcContract(body, instituteId) {
       { transaction }
     );
 
-    const row = await repo.findAmcContractById(created.amcContractId, instituteId, { transaction });
+    const row = await repo.findAmcContractById(created.amcContractId, { transaction });
 
     await transaction.commit();
 
@@ -128,11 +127,11 @@ export async function addAmcContract(body, instituteId) {
   }
 }
 
-export async function listAmcContracts(instituteId, query = {}) {
+export async function listAmcContracts(query = {}) {
   try {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const { rows, count } = await repo.findAndCountAmcContracts(instituteId, { ...query, page, limit });
+    const { rows, count } = await repo.findAndCountAmcContracts({ ...query, page, limit });
 
     return {
       rows,
@@ -145,20 +144,20 @@ export async function listAmcContracts(instituteId, query = {}) {
   }
 }
 
-export async function getSingleAmcContract(amcContractId, instituteId) {
+export async function getSingleAmcContract(amcContractId) {
   try {
-    return await repo.findAmcContractById(amcContractId, instituteId);
+    return await repo.findAmcContractById(amcContractId);
   } catch (error) {
     throw new Error(`Failed to fetch AMC contract: ${error.message}`);
   }
 }
 
-export async function updateAmcContract(amcContractId, body, instituteId) {
+export async function updateAmcContract(amcContractId, body) {
   const transaction = await sequelize.transaction();
 
   try {
     const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, instituteId, { transaction })
+      await repo.findAmcContractMetaById(amcContractId, { transaction })
     );
 
     assertDraftContract(existing.approvalStatus, "updated");
@@ -176,7 +175,7 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
     }
 
     if (Object.keys(payload).length) {
-      const affected = await repo.updateAmcContract(amcContractId, instituteId, payload, {
+      const affected = await repo.updateAmcContract(amcContractId, payload, {
         transaction,
       });
       if (!affected) {
@@ -184,7 +183,7 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
       }
     }
 
-    const row = await repo.findAmcContractById(amcContractId, instituteId, { transaction });
+    const row = await repo.findAmcContractById(amcContractId, { transaction });
 
     await transaction.commit();
 
@@ -195,17 +194,17 @@ export async function updateAmcContract(amcContractId, body, instituteId) {
   }
 }
 
-export async function deleteAmcContract(amcContractId, instituteId) {
+export async function deleteAmcContract(amcContractId) {
   const transaction = await sequelize.transaction();
 
   try {
     const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, instituteId, { transaction })
+      await repo.findAmcContractMetaById(amcContractId, { transaction })
     );
 
     assertDraftContract(existing.approvalStatus, "deleted");
 
-    const ok = await repo.deleteAmcContract(amcContractId, instituteId, { transaction });
+    const ok = await repo.deleteAmcContract(amcContractId, { transaction });
     if (!ok) {
       throw new Error("AMC contract not found or not in your institute");
     }
@@ -218,24 +217,23 @@ export async function deleteAmcContract(amcContractId, instituteId) {
   }
 }
 
-export async function submitAmcContractForApproval(amcContractId, instituteId) {
+export async function submitAmcContractForApproval(amcContractId) {
   const transaction = await sequelize.transaction();
 
   try {
     const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, instituteId, { transaction })
+      await repo.findAmcContractMetaById(amcContractId, { transaction })
     );
 
     assertDraftContract(existing.approvalStatus, "submitted for approval");
 
     await repo.updateAmcContract(
       amcContractId,
-      instituteId,
       { approvalStatus: "PUBLISHED" },
       { transaction }
     );
 
-    const row = await repo.findAmcContractById(amcContractId, instituteId, { transaction });
+    const row = await repo.findAmcContractById(amcContractId, { transaction });
 
     await transaction.commit();
 
@@ -246,12 +244,12 @@ export async function submitAmcContractForApproval(amcContractId, instituteId) {
   }
 }
 
-export async function approveAmcContract(amcContractId, instituteId) {
+export async function approveAmcContract(amcContractId) {
   const transaction = await sequelize.transaction();
 
   try {
     const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, instituteId, { transaction })
+      await repo.findAmcContractMetaById(amcContractId, { transaction })
     );
 
     if (existing.approvalStatus !== "PUBLISHED") {
@@ -260,12 +258,11 @@ export async function approveAmcContract(amcContractId, instituteId) {
 
     await repo.updateAmcContract(
       amcContractId,
-      instituteId,
       { approvalStatus: "APPROVED" },
       { transaction }
     );
 
-    const row = await repo.findAmcContractById(amcContractId, instituteId, { transaction });
+    const row = await repo.findAmcContractById(amcContractId, { transaction });
 
     await transaction.commit();
 
@@ -276,19 +273,19 @@ export async function approveAmcContract(amcContractId, instituteId) {
   }
 }
 
-export async function getAmcContractSummary(instituteId) {
+export async function getAmcContractSummary() {
   try {
-    return await repo.findContractSummaryStats(instituteId);
+    return await repo.findContractSummaryStats();
   } catch (error) {
     throw new Error(`Failed to fetch AMC contract summary: ${error.message}`);
   }
 }
 
-export async function previewContractNumber(instituteId) {
+export async function previewContractNumber() {
   const transaction = await sequelize.transaction();
 
   try {
-    const contractNumber = await resolveNextContractNumber(instituteId, transaction);
+    const contractNumber = await resolveNextContractNumber(transaction);
 
     await transaction.commit();
 

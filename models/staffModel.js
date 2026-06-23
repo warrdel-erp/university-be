@@ -5,7 +5,7 @@ import department from "./departmentModel.js";
 import university from "./universityModel.js";
 import employee from "./employeeModel.js";
 
-export default sequelize.define(
+const staffModel = sequelize.define(
     'staff',
     {
         staffId: {
@@ -83,3 +83,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+staffModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default staffModel;

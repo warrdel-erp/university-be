@@ -10,11 +10,8 @@ export const bulkCreateExamSetupTypeTerm = async (req, res) => {
 
         const data = examSetupTypeTerms.map(item => ({
             ...item,
-            universityId: req.user.universityId,
-            instituteId: req.user.defaultInstituteId,
-            acedmicYearId: req.user.defaultAcademicYearId,
             createdBy: req.user.userId,
-            updatedBy: req.user.userId
+            updatedBy: req.user.userId,
         }));
 
         const result = await examSetupTypeTermServices.bulkCreateExamSetupTypeTerm(data);
@@ -34,9 +31,8 @@ export const deleteExamSetupTypeTerm = async (req, res) => {
         const result = await examSetupTypeTermServices.deleteExamSetupTypeTerm(id);
         if (result) {
             return SuccessResponse(res, 200, "Exam setup type term deleted successfully");
-        } else {
-            return ErrorResponse(res, 404, "Exam setup type term not found");
         }
+        return ErrorResponse(res, 404, "Exam setup type term not found");
     } catch (error) {
         console.error("Error in deleteExamSetupTypeTerm:", error);
         if (error.message === "This exam setup type term cannot be deleted because it is already used in an exam schedule.") {
@@ -45,4 +41,3 @@ export const deleteExamSetupTypeTerm = async (req, res) => {
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
-

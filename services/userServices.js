@@ -53,7 +53,6 @@ const formatEmployeeDetailsDeep = (employee) => {
     role: employee?.employeeRole?.role,
     campusId: employee.campusId,
     instituteId: employee.instituteId,
-    academicYearId: employee.acedmicYearId,
     instituteName: employee?.employeeInstitute?.instituteName,
   };
   // Subjects Taught
@@ -240,11 +239,11 @@ export async function dataSaveUerRolePermission(userId, roleId, permissionIds, t
 }
 
 
-export async function getAdminRegisterStudentAndEmployee(universityId, instituteId, role) {
+export async function getAdminRegisterStudentAndEmployee() {
   try {
     const [students, employees] = await Promise.all([
-      registerRepository.getAdminRegisterStudent(universityId, instituteId, role),
-      registerRepository.getAdminRegisterEmployee(universityId, instituteId, role),
+      registerRepository.getAdminRegisterStudent(),
+      registerRepository.getAdminRegisterEmployee(),
     ]);
 
     return { students, employees };
@@ -483,11 +482,11 @@ export const forgotSendLink = async (email) => {
   }
 };
 
-export const getAllUsers = async (universityId, instituteId, page = 1, limit = 10, search = "") => {
+export const getAllUsers = async (page = 1, limit = 10, search = "") => {
   try {
-    return await registerRepository.getAllUsers(universityId, instituteId, page, limit, search);
+    return registerRepository.getAllUsers(page, limit, search);
   } catch (error) {
-    console.error('Error in getAllUsers service:', error);
+    console.error("Error in getAllUsers service:", error);
     throw error;
   }
 };

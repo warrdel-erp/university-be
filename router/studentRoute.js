@@ -11,6 +11,7 @@ import {
   addElectiveSubject,
   getclassStudentMapping,
   promoteStudent,
+  getPromotionAvailableClassSection,
   getFeePlanInitiate,
   getEmptyFeeDetails,
   getStudentSubject,
@@ -337,7 +338,25 @@ router.post("/studentMapping", userAuth, studentCourseMapping);
 router.post("/classStudentMapping", userAuth, classStudentMapping);
 router.get("/classStudentMapping", userAuth, getclassStudentMapping);
 router.post("/electiveSubject", userAuth, addElectiveSubject);
+
 router.post("/promoteStudent", userAuth, promoteStudent);
+
+const promotionAvailableClassSectionQuerySchema = z.object({
+  courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
+  term: z.coerce.number({ required_error: "term is required" }).int().positive(),
+  classSectionId: z.coerce
+    .number({ required_error: "classSectionId is required" })
+    .int()
+    .positive(),
+});
+
+router.get(
+  "/promotion/available-class-section",
+  userAuth,
+  validate({ query: promotionAvailableClassSectionQuerySchema }),
+  getPromotionAvailableClassSection,
+);
+
 router.get(
   "/feePlanProfiles/all",
   userAuth,

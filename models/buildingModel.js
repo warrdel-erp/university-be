@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import campus from "./campusModel.js";
 import { buildingTypes } from "../constant.js";
 
-export default sequelize.define(
+const buildingModel = sequelize.define(
     'building',
     {
         buildingId: {
@@ -87,3 +87,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+buildingModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default buildingModel;

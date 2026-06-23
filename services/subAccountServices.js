@@ -1,32 +1,27 @@
-import * as SubAccountCreationService  from "../repository/subAccountRepository.js";
+import * as SubAccountCreationService from '../repository/subAccountRepository.js';
 
-export async function addSubAccount(SubAccountData, createdBy, updatedBy,universityId) {
-
-        SubAccountData.createdBy = createdBy;
-        SubAccountData.updatedBy = updatedBy;
-        SubAccountData.universityId = universityId;
-        const SubAccount = await SubAccountCreationService.addSubAccount(SubAccountData);
-        return SubAccount;
-};
-
-export async function getSubAccountDetails(universityId) {
-    const data = await SubAccountCreationService.getSubAccountDetails(universityId);
-        return data;
+export async function addSubAccount(SubAccountData, createdBy, updatedBy) {
+    SubAccountData.createdBy = createdBy;
+    SubAccountData.updatedBy = updatedBy;
+    return await SubAccountCreationService.addSubAccount(SubAccountData);
 }
 
-export async function getSingleSubAccountDetails(subAccountId,universityId) {
-    return await SubAccountCreationService.getSingleSubAccountDetails(subAccountId,universityId);
+export async function getSubAccountDetails(universityId) {
+    return await SubAccountCreationService.getSubAccountDetails(universityId);
+}
+
+export async function getSingleSubAccountDetails(subAccountId) {
+    return await SubAccountCreationService.getSingleSubAccountDetails(subAccountId);
 }
 
 export async function deleteSubAccount(subAccountId) {
     return await SubAccountCreationService.deleteSubAccount(subAccountId);
 }
 
-export async function updateSubAccount(subAccountId, SubAccountData, updatedBy) {    
-
+export async function updateSubAccount(subAccountId, SubAccountData, updatedBy) {
     SubAccountData.updatedBy = updatedBy;
     await SubAccountCreationService.updateSubAccount(subAccountId, SubAccountData);
-};
+}
 
 export async function getAllAccount() {
     return await SubAccountCreationService.getAllAccount();

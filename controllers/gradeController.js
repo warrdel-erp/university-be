@@ -3,8 +3,6 @@ import * as gradeSchemeService from "../services/gradeService.js";
 export async function addGradeScheme(req, res) {
   try {
     const data = {
-      universityId: req.user.universityId,
-      instituteId: req.user.defaultInstituteId,
       createdBy: req.user.userId,
       updatedBy: req.user.userId,
       ...req.body
@@ -26,12 +24,7 @@ export async function addGradeScheme(req, res) {
 
 export async function getAllGradeSchemes(req, res) {
   try {
-    const { universityId, instituteId, role } = req.user;
-    const result = await gradeSchemeService.getAllGradeSchemes(
-      universityId,
-      instituteId,
-      role
-    );
+    const result = await gradeSchemeService.getAllGradeSchemes();
 
     return res.status(200).json({ success: true, data: result });
   } catch (error) {

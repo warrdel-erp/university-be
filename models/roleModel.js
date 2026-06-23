@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const roleModel = sequelize.define(
     'role',
     {
         roleId: {
@@ -38,3 +38,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+roleModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default roleModel;

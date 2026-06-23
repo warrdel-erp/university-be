@@ -4,7 +4,7 @@ import studentModel from "./studentModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const studentFeeInvoiceModel = sequelize.define(
   "student_fee_invoice",
   {
     studentFeeInvoiceId: {
@@ -82,3 +82,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+studentFeeInvoiceModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default studentFeeInvoiceModel;

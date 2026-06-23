@@ -1,9 +1,10 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
+import { scoped } from '../utility/scoped.js';
 
 export async function bulkCreateExamSetupTypeTerm(data) {
     try {
-        const result = await model.examSetupTypeTermModel.bulkCreate(data);
+        const result = await scoped(model.examSetupTypeTermModel).bulkCreate(data);
         return result;
     } catch (error) {
         console.error("Error in bulkCreateExamSetupTypeTerm:", error);
@@ -13,35 +14,45 @@ export async function bulkCreateExamSetupTypeTerm(data) {
 
 export async function deleteExamSetupTypeTerm(examSetupTypeTermId) {
     try {
-        const deleted = await model.examSetupTypeTermModel.destroy({ where: { examSetupTypeTermId } });
+        const existing = await scoped(model.examSetupTypeTermModel).findOne({
+            where: { examSetupTypeTermId },
+            attributes: ['examSetupTypeTermId'],
+        });
+        if (!existing) {
+            return false;
+        }
+        const deleted = await scoped(model.examSetupTypeTermModel).destroy({ where: { examSetupTypeTermId } });
         return deleted > 0;
     } catch (error) {
         console.error("Error in deleteExamSetupTypeTerm:", error);
         throw error;
     }
 }
+
 export async function checkExistingExamSetupTypeTerms(data) {
     try {
         const conditions = data.map(item => ({
             examSetupTypeId: item.examSetupTypeId,
             term: item.term,
-            courseId: item.courseId
+            courseId: item.courseId,
         }));
 
-        return await model.examSetupTypeTermModel.findAll({
+        return await scoped(model.examSetupTypeTermModel).findAll({
             where: {
-                [Op.or]: conditions
-            }
+                [Op.or]: conditions,
+            },
         });
     } catch (error) {
         console.error("Error in checkExistingExamSetupTypeTerms:", error);
         throw error;
     }
 }
+
 export async function checkExamSetupTypeTermUsage(examSetupTypeTermId) {
     try {
-        const usage = await model.examScheduleModel.findOne({
-            where: { examSetupTypeTermId }
+        const usage = await scoped(model.examScheduleModel).findOne({
+            where: { examSetupTypeTermId },
+            attributes: ['examScheduleId'],
         });
         return usage;
     } catch (error) {

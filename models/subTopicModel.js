@@ -5,7 +5,7 @@ import instituteModel from "./instituteModel.js";
 import universityModel from "./universityModel.js";
 import topicModel from "./topicModel.js"
 
-export default sequelize.define(
+const subTopicModel = sequelize.define(
     'sub_topic',
     {
         subTopicId: {
@@ -91,3 +91,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+subTopicModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default subTopicModel;

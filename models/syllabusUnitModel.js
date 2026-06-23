@@ -8,7 +8,7 @@ import users from './userModel.js';
 import universityModel from "./universityModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const syllabusUnitModel = sequelize.define(
     'syllabus_unit',
     {
         syllabusUnitId: {
@@ -119,15 +119,14 @@ export default sequelize.define(
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        }
     },
     {
         tableName: 'syllabus_unit',
         timestamps: true,
-        paranoid: true
+        paranoid: false
     }
 );
+
+syllabusUnitModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default syllabusUnitModel;

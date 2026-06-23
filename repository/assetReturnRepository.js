@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import { findSecurityAmountByIssueIds } from "./assetIssueRepository.js";
 
 const classRoomHierarchyInclude = {
@@ -102,12 +103,21 @@ const returnedIssueInventoryItemIncludes = [
   },
 ];
 
+function scopedStudentFeePaymentWhere(extra = {}) {
+  return {
+    ...extra,
+    ...buildScope(model.studentFeePaymentModel),
+  };
+}
+
 function toPlainRow(row) {
   if (!row) return null;
   return typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
-function buildReturnedIssueItemDetailIncludes(instituteId, includeMember = false) {
+function buildReturnedIssueItemDetailIncludes(includeMember = false) {
+  const issueScope = buildScope(model.assetIssueTransactionModel);
+
   const transactionInclude = {
     model: model.assetIssueTransactionModel,
     as: "transaction",
@@ -120,7 +130,7 @@ function buildReturnedIssueItemDetailIncludes(instituteId, includeMember = false
       "instituteId",
     ],
     required: true,
-    where: { instituteId },
+    where: issueScope,
   };
 
   if (includeMember) {
@@ -198,11 +208,12 @@ function buildIssueTransactionIdsByReturnId(issueItemRows) {
 
 export async function findIssueInventoryItemsForReturn(
   assetIssueInventoryItemIds,
-  instituteId,
   options = {}
 ) {
   if (!assetIssueInventoryItemIds.length) return [];
-  return model.assetIssueInventoryItemModel.findAll({
+  const issueScope = buildScope(model.assetIssueTransactionModel);
+
+  return scoped(model.assetIssueInventoryItemModel).findAll({
     attributes: [
       "assetIssueInventoryItemId",
       "assetInventoryItemId",
@@ -223,7 +234,7 @@ export async function findIssueInventoryItemsForReturn(
           "memberId",
           "memberType",
         ],
-        where: { instituteId },
+        where: issueScope,
         required: true,
       },
       {
@@ -245,9 +256,31 @@ export async function createAssetReturnTransaction(returnDate, options = {}) {
 }
 
 export async function returnIssueInventoryItems(items, assetReturnTransactionId, options = {}) {
+  const issueScope = buildScope(model.assetIssueTransactionModel);
   let affected = 0;
 
   for (const item of items) {
+    const line = await scoped(model.assetIssueInventoryItemModel).findOne({
+      where: {
+        assetIssueInventoryItemId: item.assetIssueInventoryItemId,
+        assetReturnTransactionId: null,
+      },
+      include: [
+        {
+          model: model.assetIssueTransactionModel,
+          as: "transaction",
+          attributes: ["assetIssueTransactionId"],
+          where: issueScope,
+          required: true,
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    if (!line) {
+      continue;
+    }
+
     const [count] = await model.assetIssueInventoryItemModel.update(
       {
         assetReturnTransactionId,
@@ -270,12 +303,11 @@ export async function returnIssueInventoryItems(items, assetReturnTransactionId,
 
 export async function findReturnSettlementPaymentsByReturnIds(
   assetReturnTransactionIds,
-  instituteId,
   options = {}
 ) {
   if (!assetReturnTransactionIds.length) return [];
 
-  return model.paymentItemModel.findAll({
+  return scoped(model.paymentItemModel).findAll({
     attributes: ["paymentItemId", "paymentId", "referenceId", "referenceType", "amount"],
     where: {
       referenceId: assetReturnTransactionIds,
@@ -287,10 +319,9 @@ export async function findReturnSettlementPaymentsByReturnIds(
         as: "payment",
         attributes: studentFeePaymentAttributes,
         required: true,
-        where: {
-          instituteId,
+        where: scopedStudentFeePaymentWhere({
           remark: { [Op.like]: "Asset return%" },
-        },
+        }),
         include: paymentPayeeIncludes,
       },
     ],
@@ -300,12 +331,23 @@ export async function findReturnSettlementPaymentsByReturnIds(
 
 export async function findIssueInventoryItemsByIds(assetIssueInventoryItemIds, options = {}) {
   if (!assetIssueInventoryItemIds.length) return [];
-  return model.assetIssueInventoryItemModel.findAll({
+  const issueScope = buildScope(model.assetIssueTransactionModel);
+
+  return scoped(model.assetIssueInventoryItemModel).findAll({
     attributes: {
       exclude: ["createdAt", "updatedAt"],
     },
     where: { assetIssueInventoryItemId: assetIssueInventoryItemIds },
-    include: returnedIssueInventoryItemIncludes,
+    include: [
+      {
+        model: model.assetIssueTransactionModel,
+        as: "transaction",
+        attributes: ["assetIssueTransactionId", "issueDate", "instituteId"],
+        where: issueScope,
+        required: true,
+      },
+      ...returnedIssueInventoryItemIncludes,
+    ],
     order: [["assetIssueInventoryItemId", "ASC"]],
     transaction: options.transaction,
   });
@@ -313,10 +355,11 @@ export async function findIssueInventoryItemsByIds(assetIssueInventoryItemIds, o
 
 export async function findAssetReturnTransactionByIdForInstitute(
   assetReturnTransactionId,
-  instituteId,
   options = {}
 ) {
-  return model.assetReturnTransactionModel.findOne({
+  const issueScope = buildScope(model.assetIssueTransactionModel);
+
+  return scoped(model.assetReturnTransactionModel).findOne({
     attributes: ["assetReturnTransactionId", "returnDate"],
     where: { assetReturnTransactionId },
     include: [
@@ -330,7 +373,7 @@ export async function findAssetReturnTransactionByIdForInstitute(
             model: model.assetIssueTransactionModel,
             as: "transaction",
             attributes: [],
-            where: { instituteId },
+            where: issueScope,
             required: true,
           },
         ],
@@ -341,15 +384,15 @@ export async function findAssetReturnTransactionByIdForInstitute(
 }
 
 export async function findAssetReturnTransactionsPaginated(
-  instituteId,
   pagination = {},
   options = {}
 ) {
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || 20;
   const offset = (page - 1) * limit;
+  const issueScope = buildScope(model.assetIssueTransactionModel);
 
-  const { count, rows } = await model.assetReturnTransactionModel.findAndCountAll({
+  const { count, rows } = await scoped(model.assetReturnTransactionModel).findAndCountAll({
     attributes: ["assetReturnTransactionId", "returnDate"],
     include: [
       {
@@ -362,7 +405,7 @@ export async function findAssetReturnTransactionsPaginated(
             model: model.assetIssueTransactionModel,
             as: "transaction",
             attributes: [],
-            where: { instituteId },
+            where: issueScope,
             required: true,
           },
         ],
@@ -382,14 +425,13 @@ export async function findAssetReturnTransactionsPaginated(
 
 export async function findReturnedIssueItemsByReturnTransactionIds(
   assetReturnTransactionIds,
-  instituteId,
   options = {}
 ) {
   if (!assetReturnTransactionIds.length) return [];
 
   const { transaction, includeMember = false } = options;
 
-  return model.assetIssueInventoryItemModel.findAll({
+  return scoped(model.assetIssueInventoryItemModel).findAll({
     attributes: [
       "assetIssueInventoryItemId",
       "assetInventoryItemId",
@@ -401,7 +443,7 @@ export async function findReturnedIssueItemsByReturnTransactionIds(
     where: {
       assetReturnTransactionId: assetReturnTransactionIds,
     },
-    include: buildReturnedIssueItemDetailIncludes(instituteId, includeMember),
+    include: buildReturnedIssueItemDetailIncludes(includeMember),
     order: [
       ["assetReturnTransactionId", "ASC"],
       ["assetIssueInventoryItemId", "ASC"],
@@ -411,12 +453,10 @@ export async function findReturnedIssueItemsByReturnTransactionIds(
 }
 
 export async function findAssetReturnTransactionsListBundle(
-  instituteId,
   pagination = {},
   options = {}
 ) {
   const { rows, total, page, limit } = await findAssetReturnTransactionsPaginated(
-    instituteId,
     pagination,
     options
   );
@@ -436,11 +476,11 @@ export async function findAssetReturnTransactionsListBundle(
   }
 
   const [issueItemRows, settlementPaymentRows] = await Promise.all([
-    findReturnedIssueItemsByReturnTransactionIds(returnIds, instituteId, {
+    findReturnedIssueItemsByReturnTransactionIds(returnIds, {
       ...options,
       includeMember: true,
     }),
-    findReturnSettlementPaymentsByReturnIds(returnIds, instituteId, options),
+    findReturnSettlementPaymentsByReturnIds(returnIds, options),
   ]);
 
   const issueTransactionIds = [
@@ -451,11 +491,7 @@ export async function findAssetReturnTransactionsListBundle(
     ),
   ];
 
-  const securityAmountByIssueId = await findSecurityAmountByIssueIds(
-    issueTransactionIds,
-    instituteId,
-    options
-  );
+  const securityAmountByIssueId = await findSecurityAmountByIssueIds(issueTransactionIds, options);
 
   return {
     rows,

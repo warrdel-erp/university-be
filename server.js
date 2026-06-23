@@ -12,6 +12,7 @@ import download from "./router/downloadRoute.js";
 import codeMaster from "./router/codeMasterRoute.js";
 import campus from "./router/campusRoute.js";
 import institute from "./router/instituteRoute.js";
+import specialization from "./router/specializationRoute.js";
 import course from "./router/courseRoute.js";
 import user from "./router/auth/userRoute.js";
 import employee from "./router/employeeRoute.js";
@@ -115,112 +116,111 @@ app.use(urlencoded({ extended: true }));
 
 //routes
 
+// Tenant setup — campus, institute, and academic year use explicit scoped() in repositories
 app.use("/campus", campus);
 app.use("/institute", institute);
+app.use("/specialization", specialization);
+app.use("/acedmicYear", acedmicYear); 
+// Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
+
 app.use("/course", course);
-app.use("/session", session);
-app.use("/subject", subjects);
-app.use("/terms", terms);
-app.use("/syllabus", syllabus);
-app.use("/authorization", userPermission);
-app.use("/resultStudent", resultStudent);
 app.use("/questionPaper", questionPaper);
 app.use("/questionBank", questionBank);
-app.use("/classSections", classSection);
-app.use("/attendance", attendance);
-app.use("/teacherExamAssignment", teacherExamAssignment);
-app.use("/questionPaperBlueprint", questionPaperBlueprint);
-app.use("/examSetupTypeTerm", examSetupTypeTerm);
 app.use("/examSetupType", examSetupType);
-app.use("/examSchedule", examSchedule);
-app.use("/fileUpload", s3FileRoute);
-
-app.use("/studentHallTicket", studentHallTicket);
-app.use("/options", options);
-app.use("/subjectWeightage", subjectWeightage);
-
-app.use("/libraryIssueBook", libraryIssueBookTransaction);
-
-app.use("/main", main);
-app.use("/setting", setting);
-app.use("/student", student);
-app.use("/download", download);
-app.use("/codeMaster", codeMaster);
-app.use("/user", user);
-app.use("/employee", employee);
-app.use("/teacher", teacher);
+app.use("/grade", grade);
+app.use("/credit", credit);
+app.use("/evalution", evalution);
+app.use("/feeTypeCategory", feeTypeCategory);
+app.use("/feeTypeCatalog", feeTypeCatalog);
+app.use("/feePlanProfile", feePlanProfile);
+app.use("/authorization", userPermission);
+app.use("/attendance", attendance);
 app.use("/libraryCreation", libraryCreation);
-app.use("/timeTable", timeTable);
-app.use("/faculityLoad", faculityLoad);
-app.use("/timeTableCreate", timeTableCreate);
-app.use("/classRoom", classRoom);
-
-app.use("/feeGroup", feeGroup);
-app.use("/feeType", feeType);
-app.use("/feePlan", feePlan);
-
-app.use("/feeInvoiceRecord", feeInvoiceRecord);
-app.use("/studentInvoice", studentInvoice);
-app.use("/feeInvoice", feeInvoice);
-app.use("/feeInvoiceDetails", feeInvoiceDetails);
-
-app.use("/role", role);
-app.use("/permission", permission);
-app.use("/rolePermissionMapping", rolePermissionMapping);
-app.use("/userRolePermission", userRolePermission);
-app.use("/dormitoryRoomType", dormitoryRoomType);
-app.use("/dormitoryList", dormitoryList);
-app.use("/addDormitory", addDormitory);
-app.use("/examType", examType);
-app.use("/examSetup", examSetup);
-app.use("/examAttendance", examAttendance);
-app.use("/transportRoute", transportRoute);
-app.use("/vehicle", vehicleRoute);
-app.use("/assignVehicle", assignVehicleRoute);
-app.use("/acedmicYear", acedmicYear);
-app.use("/section", section);
-app.use("/holiday", holiday);
-app.use("/electiveSubject", electiveSubject);
+app.use("/libraryStructure", libraryStructure);
+app.use("/head", head);
 app.use("/building", building);
 app.use("/floor", floor);
-app.use("/head", head);
 app.use("/subAccount", subAccount); // this is department
 app.use("/department", department); // this is sub_account
 app.use("/staff", staff);
 app.use("/departmentStructure", departmentStructure);
-app.use("/po", po);
-app.use("/co", co);
-
-app.use("/lesson", lesson);
-app.use("/notice", notice);
-app.use("/examStructure", examStructure);
-app.use("/schedule", schedule);
-app.use("/leave-policies", leavePolicy);
-app.use("/leave-requests", leaveRequest);
-app.use("/leave-balance", leaveBalance);
-app.use("/examScheduleMapping", examScheduleMapping);
-app.use("/libraryStructure", libraryStructure);
-app.use("/internalAssessment", internalAssessment);
-app.use("/jobSetting", jobSetting);
-app.use("/jobs", jobs);
-app.use("/grade", grade);
-app.use("/credit", credit);
-app.use("/evalution", evalution);
-app.use("/answerSheetQr", answerSheetQr);
-
-//New fee management routes
-app.use("/feeTypeCategory", feeTypeCategory);
-app.use("/feeTypeCatalog", feeTypeCatalog);
-app.use("/feePlanProfile", feePlanProfile);
-app.use("/studentFeeInvoice", studentFeeInvoice);
-app.use("/studentFeePayment", studentFeePayment);
-
 app.use("/assetCategory", assetCategory);
 app.use("/asset", asset);
 app.use("/assetIssue", assetIssue);
+
 app.use("/amcVendor", amcVendor);
 app.use("/amcContract", amcContract);
 app.use("/serviceTicket", amcServiceTicket);
+
+// Institute + University + Academic Year scoped (X-Institute-Id + X-Academic-Year-Id via authUser)
+app.use("/session", session);
+app.use("/subject", subjects);
+app.use("/terms", terms);
+app.use("/syllabus", syllabus);
+app.use("/resultStudent", resultStudent);
+app.use("/classSections", classSection);
+app.use("/teacherExamAssignment", teacherExamAssignment);
+app.use("/questionPaperBlueprint", questionPaperBlueprint);
+app.use("/examSetupTypeTerm", examSetupTypeTerm);
+app.use("/examSchedule", examSchedule);
+app.use("/examStructure", examStructure);
+app.use("/examScheduleMapping", examScheduleMapping);
+app.use("/internalAssessment", internalAssessment);
+app.use("/examType", examType);
+app.use("/examSetup", examSetup);
+app.use("/examAttendance", examAttendance);
+app.use("/studentHallTicket", studentHallTicket);
+app.use("/options", options);
+app.use("/subjectWeightage", subjectWeightage);
+app.use("/electiveSubject", electiveSubject);
+app.use("/student", student);
+app.use("/employee", employee);
+app.use("/teacher", teacher);
+app.use("/timeTable", timeTable);
+app.use("/faculityLoad", faculityLoad);
+app.use("/timeTableCreate", timeTableCreate);
+app.use("/lesson", lesson);
+app.use("/feePlan", feePlan);
+app.use("/studentFeeInvoice", studentFeeInvoice);
+app.use("/studentFeePayment", studentFeePayment);
+app.use("/feeInvoiceRecord", feeInvoiceRecord);
+app.use("/studentInvoice", studentInvoice);
+app.use("/feeInvoice", feeInvoice);
+app.use("/feeInvoiceDetails", feeInvoiceDetails);
+app.use("/feeGroup", feeGroup);
+app.use("/feeType", feeType);
+app.use("/libraryIssueBook", libraryIssueBookTransaction);
+app.use("/section", section);
+app.use("/holiday", holiday);
+app.use("/notice", notice);
+app.use("/schedule", schedule);
+app.use("/po", po);
+app.use("/co", co);
+app.use("/dormitoryRoomType", dormitoryRoomType);
+app.use("/dormitoryList", dormitoryList);
+app.use("/addDormitory", addDormitory);
+app.use("/transportRoute", transportRoute);
+app.use("/answerSheetQr", answerSheetQr);
+
+app.use("/fileUpload", s3FileRoute);
+
+app.use("/main", main);
+app.use("/setting", setting);
+app.use("/download", download);
+app.use("/codeMaster", codeMaster);
+app.use("/user", user);
+app.use("/classRoom", classRoom);
+app.use("/role", role);
+app.use("/permission", permission);
+app.use("/rolePermissionMapping", rolePermissionMapping);
+app.use("/userRolePermission", userRolePermission);
+app.use("/vehicle", vehicleRoute);
+app.use("/assignVehicle", assignVehicleRoute);
+app.use("/leave-policies", leavePolicy);
+app.use("/leave-requests", leaveRequest);
+app.use("/leave-balance", leaveBalance);
+app.use("/jobSetting", jobSetting);
+app.use("/jobs", jobs);
 
 app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

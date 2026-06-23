@@ -2,6 +2,7 @@ import * as libraryCreationService from "../repository/libraryCreationRepository
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { LOW_STOCK_THRESHOLD } from "../constant.js";
+import { requestContext } from "../utility/requestContext.js";
 
 const httpError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -120,7 +121,8 @@ function splitBookMappingPayload(bookData) {
   };
 }
 
-async function validateBookMappingIds({ subjectId, categoryId, instituteId }, transaction) {
+async function validateBookMappingIds({ subjectId, categoryId }, transaction) {
+  const instituteId = requestContext.getStore()?.instituteId;
   if (!instituteId) {
     throw httpError("instituteId is required for book subject/category mappings");
   }
@@ -150,34 +152,20 @@ async function validateBookMappingIds({ subjectId, categoryId, instituteId }, tr
   }
 }
 
-async function syncBookMappings(
-  libraryBookId,
-  { subjectId, categoryId, instituteId },
-  transaction,
-) {
+async function syncBookMappings(libraryBookId, { subjectId, categoryId }, transaction) {
   const syncSubjects = subjectId !== undefined;
   const syncCategories = categoryId !== undefined;
 
   if (!syncSubjects && !syncCategories) return;
 
-  await validateBookMappingIds({ subjectId, categoryId, instituteId }, transaction);
+  await validateBookMappingIds({ subjectId, categoryId }, transaction);
 
   if (syncSubjects) {
-    await libraryCreationService.replaceBookSubjectMappings(
-      libraryBookId,
-      subjectId,
-      instituteId,
-      transaction,
-    );
+    await libraryCreationService.replaceBookSubjectMappings(libraryBookId, subjectId, transaction);
   }
 
   if (syncCategories) {
-    await libraryCreationService.replaceBookCategoryMappings(
-      libraryBookId,
-      categoryId,
-      instituteId,
-      transaction,
-    );
+    await libraryCreationService.replaceBookCategoryMappings(libraryBookId, categoryId, transaction);
   }
 }
 
@@ -276,15 +264,14 @@ function filterBooksByFloor(books, libraryFloorId) {
 export async function addCategory(body, user) {
   const data = {
     name: body.name,
-    instituteId: user.defaultInstituteId,
     createdBy: user.userId,
     updatedBy: user.userId,
   };
-  return await libraryCreationService.addCategory(data);
+  return libraryCreationService.addCategory(data);
 }
 
-export async function getAllCategories(user) {
-  return await libraryCreationService.getAllCategories(user.defaultInstituteId);
+export async function getAllCategories() {
+  return libraryCreationService.getAllCategories();
 }
 
 export async function updateCategory(body, user) {
@@ -383,11 +370,7 @@ function buildRowPayloads(racks, rowsPerRack, aisleNameByAisleId, audit) {
 export async function bulkGenerateFloorStructure(libraryFloorId, body, user) {
   const { aisles, racksPerAisle, rowsPerRack } = body;
 
-  const floor = await libraryStructureRepository.findFloorById(
-    libraryFloorId,
-    user.universityId,
-    user.defaultInstituteId,
-  );
+  const floor = await libraryStructureRepository.findFloorById(libraryFloorId);
 
   if (!floor) {
     throw httpError("Library floor not found", 404);
@@ -493,11 +476,7 @@ function formatFloorStructureResponse(floor) {
 }
 
 export async function getFloorStructure(libraryFloorId, user) {
-  const floor = await libraryStructureRepository.findFloorStructureById(
-    libraryFloorId,
-    user.universityId,
-    user.defaultInstituteId,
-  );
+  const floor = await libraryStructureRepository.findFloorStructureById(libraryFloorId);
 
   if (!floor) {
     throw httpError("Library floor not found", 404);
@@ -515,17 +494,10 @@ export async function addLibrary(body, user) {
     floors,
   };
 
-  return createLibraryWithFloors(
-    payload,
-    user.userId,
-    user.userId,
-    instituteId,
-    user.universityId,
-    campusId,
-  );
+  return createLibraryWithFloors(payload, user.userId, user.userId, instituteId, campusId);
 }
 
-async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, universityId, campusId) {
+async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, campusId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -551,8 +523,6 @@ async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, 
           description: floor.description || null,
           createdBy,
           updatedBy,
-          instituteId,
-          universityId,
           campusId,
         },
         transaction,
@@ -568,19 +538,12 @@ async function createLibraryWithFloors(data, createdBy, updatedBy, instituteId, 
   }
 }
 
-export async function getLibraryDetails(user) {
-  return await libraryCreationService.getLibraryDetails(
-    user.universityId,
-    user.defaultInstituteId,
-  );
+export async function getLibraryDetails() {
+  return libraryCreationService.getLibraryDetails();
 }
 
-export async function getSingleLibraryDetails(libraryCreationId, user) {
-  const library = await libraryCreationService.getSingleLibraryDetails(
-    libraryCreationId,
-    user.universityId,
-    user.defaultInstituteId,
-  );
+export async function getSingleLibraryDetails(libraryCreationId) {
+  const library = await libraryCreationService.getSingleLibraryDetails(libraryCreationId);
   if (!library) {
     throw httpError("Library not found", 404);
   }
@@ -633,31 +596,18 @@ export async function addBookWithInventory(body, user) {
   const { book, inventory } = body;
   const inventoryList = Array.isArray(inventory) ? inventory : [inventory];
 
-  return addBookWithInventoryRecord(
-    book,
-    inventoryList,
-    user.userId,
-    user.userId,
-    user.defaultInstituteId,
-  );
+  return addBookWithInventoryRecord(book, inventoryList, user.userId, user.userId);
 }
 
-async function addBookWithInventoryRecord(
-  bookData,
-  inventoryList,
-  createdBy,
-  updatedBy,
-  instituteId,
-) {
+async function addBookWithInventoryRecord(bookData, inventoryList, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
     const { bookFields, subjectId, categoryId } = splitBookMappingPayload(bookData);
-    const resolvedInstituteId =
-      (await libraryCreationService.getInstituteIdByLibraryCreationId(
-        bookFields.libraryCreationId,
-        transaction,
-      )) ?? instituteId;
+    const resolvedInstituteId = await libraryCreationService.getInstituteIdByLibraryCreationId(
+      bookFields.libraryCreationId,
+      transaction,
+    );
 
     const title = bookFields.title?.trim?.() || bookFields.title;
     if (title) {
@@ -683,11 +633,10 @@ async function addBookWithInventoryRecord(
     const bookId = newBook.libraryBookId;
 
     if (subjectId !== undefined || categoryId !== undefined) {
-      await syncBookMappings(
-        bookId,
-        { subjectId, categoryId, instituteId: resolvedInstituteId },
-        transaction,
-      );
+      if (!resolvedInstituteId) {
+        throw httpError("Library not found for book mappings");
+      }
+      await syncBookMappings(bookId, { subjectId, categoryId }, transaction);
     }
 
     for (const inv of inventoryList) {
@@ -747,19 +696,17 @@ async function enrichBooksWithCategoriesAndSubjects(books) {
   return books.map(applyBookMappingLists);
 }
 
-export async function getBookSummaryStats(query, user) {
+export async function getBookSummaryStats(query) {
   const { libraryCreationId, libraryFloorId } = query;
 
   return libraryCreationService.getBookSummaryStats(
-    user.universityId,
     libraryCreationId,
     libraryFloorId,
-    user.defaultInstituteId,
     LOW_STOCK_THRESHOLD,
   );
 }
 
-export async function getAllBooks(query, user) {
+export async function getAllBooks(query) {
   const {
     libraryCreationId,
     libraryFloorId,
@@ -775,12 +722,10 @@ export async function getAllBooks(query, user) {
   const filters = { search };
 
   const { total, books } = await libraryCreationService.getAllBooks(
-    user.universityId,
     libraryCreationId,
     libraryFloorId,
     filters,
     { limit: safeLimit, offset },
-    user.defaultInstituteId,
   );
 
   if (!books?.length) {
@@ -815,7 +760,7 @@ export async function updateBookFromRequest(body, user) {
   const { libraryBookId, ...bookData } = body;
   bookData.updatedBy = user.userId;
 
-  await updateBook(libraryBookId, bookData, undefined, user.defaultInstituteId);
+  await updateBook(libraryBookId, bookData, undefined);
   return getSingleBookDetails(libraryBookId);
 }
 
@@ -824,7 +769,7 @@ export async function updateInventoryFromRequest(body) {
   return updateInventory(inventoryId, inventoryData);
 }
 
-export async function updateBook(libraryBookId, bookData, transaction, fallbackInstituteId) {
+export async function updateBook(libraryBookId, bookData, transaction) {
   const { bookFields, subjectId, categoryId } = splitBookMappingPayload(bookData);
   const hasBookFields = Object.keys(bookFields).length > 0;
 
@@ -834,23 +779,19 @@ export async function updateBook(libraryBookId, bookData, transaction, fallbackI
 
   if (subjectId !== undefined || categoryId !== undefined) {
     const instituteId =
-      (await libraryCreationService.getInstituteIdByLibraryBookId(
-        libraryBookId,
-        transaction,
-      )) ??
+      (await libraryCreationService.getInstituteIdByLibraryBookId(libraryBookId, transaction)) ??
       (bookFields.libraryCreationId
         ? await libraryCreationService.getInstituteIdByLibraryCreationId(
             bookFields.libraryCreationId,
             transaction,
           )
-        : null) ??
-      fallbackInstituteId;
+        : null);
 
-    await syncBookMappings(
-      libraryBookId,
-      { subjectId, categoryId, instituteId },
-      transaction,
-    );
+    if (!instituteId) {
+      throw httpError("Book not found for mapping update");
+    }
+
+    await syncBookMappings(libraryBookId, { subjectId, categoryId }, transaction);
   }
 
   if (!hasBookFields && subjectId === undefined && categoryId === undefined) {
@@ -957,15 +898,10 @@ export async function updateBookWithInventory(body, user) {
       inventoryKeyPresent: "inventory" in body,
     },
     user.userId,
-    user.defaultInstituteId,
   );
 }
 
-async function updateBookWithInventoryRecord(
-  { book, inventory, inventoryKeyPresent },
-  userId,
-  fallbackInstituteId,
-) {
+async function updateBookWithInventoryRecord({ book, inventory, inventoryKeyPresent }, userId) {
   const transaction = await sequelize.transaction();
 
   try {
@@ -976,7 +912,7 @@ async function updateBookWithInventoryRecord(
       const { libraryBookId: bookId, ...bookData } = book;
       libraryBookId = bookId;
       bookData.updatedBy = userId;
-      await updateBook(bookId, bookData, transaction, fallbackInstituteId);
+      await updateBook(bookId, bookData, transaction);
     }
 
     if (inventoryKeyPresent) {
@@ -1012,10 +948,8 @@ async function updateBookWithInventoryRecord(
   }
 }
 
-export async function getAllIssuedBooks(user) {
-  const issuedInventories = await libraryCreationService.getAllIssuedBooks(
-    user.defaultInstituteId,
-  );
+export async function getAllIssuedBooks() {
+  const issuedInventories = await libraryCreationService.getAllIssuedBooks();
   const plainInventories = [];
   const books = [];
 

@@ -3,22 +3,18 @@ import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 
 export const getExamSchedules = async (req, res) => {
     try {
-        const universityId = req.user.universityId;
-        const acedmicYearId = req.user.defaultAcademicYearId
-        const instituteId = req.user.defaultInstituteId;
-
         const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = req.query;
 
         const filters = {
-            ...(subjectId && { subjectId: parseInt(subjectId) }),
-            ...(semesterId && { semesterId: parseInt(semesterId) }),
-            ...(examSetupTypeTermId && { examSetupTypeTermId: parseInt(examSetupTypeTermId) }),
-            ...(courseId && { courseId: parseInt(courseId) }),
-            ...(term && { term: parseInt(term) }),
-            ...(sessionId && { sessionId: parseInt(sessionId) })
+            ...(subjectId && { subjectId: parseInt(subjectId, 10) }),
+            ...(semesterId && { semesterId: parseInt(semesterId, 10) }),
+            ...(examSetupTypeTermId && { examSetupTypeTermId: parseInt(examSetupTypeTermId, 10) }),
+            ...(courseId && { courseId: parseInt(courseId, 10) }),
+            ...(term && { term: parseInt(term, 10) }),
+            ...(sessionId && { sessionId: parseInt(sessionId, 10) }),
         };
 
-        const result = await examScheduleServices.getExamSchedules(universityId, acedmicYearId, instituteId, filters);
+        const result = await examScheduleServices.getExamSchedules(filters);
         return SuccessResponse(res, 200, "Exam schedules fetched successfully", result);
     } catch (error) {
         console.error("Error in getExamSchedules controller:", error);
@@ -45,8 +41,7 @@ export const getExamScheduleById = async (req, res) => {
 export const allocateSeats = async (req, res) => {
     try {
         const { examScheduleId } = req.body;
-        const userId = req.user.userId;
-        const result = await examScheduleServices.allocateSeatsRandomly(examScheduleId, userId);
+        const result = await examScheduleServices.allocateSeatsRandomly(examScheduleId, req.user.userId);
         return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
     } catch (error) {
         console.error("Error in allocateSeats controller:", error);
@@ -57,8 +52,7 @@ export const allocateSeats = async (req, res) => {
 export const allocateSeatsAscending = async (req, res) => {
     try {
         const { examScheduleId } = req.body;
-        const userId = req.user.userId;
-        const result = await examScheduleServices.allocateSeatsAscending(examScheduleId, userId);
+        const result = await examScheduleServices.allocateSeatsAscending(examScheduleId, req.user.userId);
         return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
     } catch (error) {
         console.error("Error in allocateSeatsAscending controller:", error);
@@ -69,8 +63,7 @@ export const allocateSeatsAscending = async (req, res) => {
 export const allocateSeatsDescending = async (req, res) => {
     try {
         const { examScheduleId } = req.body;
-        const userId = req.user.userId;
-        const result = await examScheduleServices.allocateSeatsDescending(examScheduleId, userId);
+        const result = await examScheduleServices.allocateSeatsDescending(examScheduleId, req.user.userId);
         return SuccessResponse(res, 200, "Students allocated to seats successfully", result);
     } catch (error) {
         console.error("Error in allocateSeatsDescending controller:", error);

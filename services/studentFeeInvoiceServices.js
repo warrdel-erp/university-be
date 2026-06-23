@@ -52,14 +52,9 @@ function httpError(message, statusCode = 400) {
   return err;
 }
 
-async function assertStudentFeePlanProfilePublished(
-  feePlanProfileId,
-  instituteId,
-  transaction
-) {
+async function assertStudentFeePlanProfilePublished(feePlanProfileId, transaction) {
   const profile = await feePlanProfileRepo.findFeePlanProfileByIdForInstitute(
     feePlanProfileId,
-    instituteId,
     { transaction }
   );
   if (!profile) {
@@ -208,48 +203,38 @@ function formatStudentFeeInvoiceListRow(row) {
   };
 }
 
-export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, instituteId) {
+export async function generateStudentFeeInvoice({ studentId, feePlanItemId }) {
   const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
     const feePlanItem = toPlain(
-      await repo.findFeePlanItemById(feePlanItemId, instituteId, { transaction })
+      await repo.findFeePlanItemById(feePlanItemId, { transaction })
     );
     if (!feePlanItem) throw httpError("Fee plan item not found", 404);
 
-    const student = toPlain(await repo.findStudentById(studentId, instituteId, { transaction }));
+    const student = toPlain(await repo.findStudentById(studentId, { transaction }));
     if (!student) throw httpError("Student not found", 404);
     if (!student.feePlanProfileId) {
       throw httpError("Student has no fee plan profile assigned", 400);
     }
 
-    await assertStudentFeePlanProfilePublished(
-      student.feePlanProfileId,
-      instituteId,
-      transaction
-    );
+    await assertStudentFeePlanProfilePublished(student.feePlanProfileId, transaction);
 
     if (feePlanItem.feePlanProfileId !== student.feePlanProfileId) {
       throw httpError("Fee plan item does not belong to the student's fee plan profile", 400);
     }
     if (
-      await repo.findStudentFeeInvoiceByStudentAndItem(
-        studentId,
-        feePlanItemId,
-        instituteId,
-        { transaction }
-      )
+      await repo.findStudentFeeInvoiceByStudentAndItem(studentId, feePlanItemId, { transaction })
     ) {
       throw httpError("Invoice already exists for this student and fee plan item", 409);
     }
 
     const planFeesPlain = (
-      await repo.findFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, { transaction })
+      await repo.findFeePlanSubItemsByFeePlanItemId(feePlanItemId, { transaction })
     ).map(toPlain);
 
     const invoice = await repo.createStudentFeeInvoice(
       {
         studentId,
         feePlanItemId,
-        instituteId,
         total: decimalSum(planFeesPlain.map((line) => toMoneyNumber(line.amount))),
         createDate: feePlanItem.createDate,
         dueDate: feePlanItem.dueDate ?? null,
@@ -274,14 +259,17 @@ export async function generateStudentFeeInvoice({ studentId, feePlanItemId }, in
   });
 
   return formatStudentFeeInvoiceResponse(
-    await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId)
+    await repo.findStudentFeeInvoiceById(studentFeeInvoiceId)
   );
 }
 
-export async function generateAdhocStudentFeeInvoice(
-  { studentId, feeTypeCatalogs, total, createDate, dueDate },
-  instituteId
-) {
+export async function generateAdhocStudentFeeInvoice({
+  studentId,
+  feeTypeCatalogs,
+  total,
+  createDate,
+  dueDate,
+}) {
   const feeLines = feeTypeCatalogs.map((line) => ({
     feeTypeId: line.feeTypeCatalogId,
     amount: toMoneyNumber(line.amount),
@@ -296,14 +284,14 @@ export async function generateAdhocStudentFeeInvoice(
   }
 
   const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
-    if (!(await repo.findStudentById(studentId, instituteId, { transaction }))) {
+    if (!(await repo.findStudentById(studentId, { transaction }))) {
       throw httpError("Student not found", 404);
     }
 
     const catalogIds = [...new Set(feeLines.map((line) => line.feeTypeId))];
     if (
       (
-        await feeTypeCatalogRepo.findFeeTypeCatalogsByIds(catalogIds, instituteId, {
+        await feeTypeCatalogRepo.findFeeTypeCatalogsByIds(catalogIds, {
           transaction,
         })
       ).length !== catalogIds.length
@@ -315,7 +303,6 @@ export async function generateAdhocStudentFeeInvoice(
       {
         studentId,
         feePlanItemId: null,
-        instituteId,
         total: invoiceTotal,
         createDate,
         dueDate: dueDate ?? null,
@@ -349,21 +336,21 @@ export async function generateAdhocStudentFeeInvoice(
   };
 }
 
-export async function getStudentFeeInvoiceById(studentFeeInvoiceId, instituteId) {
-  const row = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId, instituteId);
+export async function getStudentFeeInvoiceById(studentFeeInvoiceId) {
+  const row = await repo.findStudentFeeInvoiceById(studentFeeInvoiceId);
   if (!row) throw httpError("Student fee invoice not found", 404);
   return formatStudentFeeInvoiceResponse(row);
 }
 
-export async function listStudentFeeInvoicesByStudentId(studentId, instituteId) {
-  const student = await repo.findStudentById(studentId, instituteId, {
+export async function listStudentFeeInvoicesByStudentId(studentId) {
+  const student = await repo.findStudentById(studentId, {
     attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
   });
   if (!student) throw httpError("Student not found", 404);
 
   return {
     student: formatStudentFeeInvoiceListStudent(student),
-    invoices: (await repo.findStudentFeeInvoicesByStudentId(studentId, instituteId)).map(
+    invoices: (await repo.findStudentFeeInvoicesByStudentId(studentId)).map(
       formatStudentFeeInvoiceListRow
     ),
   };
@@ -389,11 +376,11 @@ function formatFeesInvoiceTableRow(row) {
   };
 }
 
-export async function listAllStudentFeeInvoices(instituteId, status = "all") {
+export async function listAllStudentFeeInvoices(status = "all") {
   return {
     status,
     invoices: (
-      await repo.findAllStudentFeeInvoicesByInstitute(instituteId, {
+      await repo.findAllStudentFeeInvoicesByInstitute({
         paymentStatuses:
           status === "pending"
             ? ["unpaid", "partial"]

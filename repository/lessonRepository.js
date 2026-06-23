@@ -1,26 +1,23 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addLesson(data) {
   try {
-    const result = await model.lessonModel.create(data);
-    return result;
+    return await scoped(model.lessonModel).create(data);
   } catch (error) {
     console.error("Error in add lesson :", error);
     throw error;
   }
 }
 
-export async function getLessonDetails(universityId, instituteId, role, acedmicYearId) {
+export async function getLessonDetails(acedmicYearId) {
   try {
-    const whereClause = {
-      ...(universityId && { universityId }),
-      ...(acedmicYearId && { acedmicYearId }),
-      ...(role === "Head" && { institute_id: instituteId }),
-    };
-    const lesson = await model.lessonModel.findAll({
+    const lesson = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: whereClause,
+      where: {
+        ...(acedmicYearId && { acedmicYearId }),
+      },
       include: [
         {
           model: model.subjectModel,
@@ -95,7 +92,7 @@ export async function getLessonDetails(universityId, instituteId, role, acedmicY
 
 export async function getSingleLessonDetails(lessonId) {
   try {
-    const lesson = await model.lessonModel.findOne({
+    const lesson = await scoped(model.lessonModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: {
         lessonId,
@@ -171,8 +168,7 @@ export async function getSingleLessonDetails(lessonId) {
 
 export async function addTopic(data) {
   try {
-    const result = await model.topicModel.create(data);
-    return result;
+    return await scoped(model.topicModel).create(data);
   } catch (error) {
     console.error("Error in add topic :", error);
     throw error;
@@ -181,8 +177,7 @@ export async function addTopic(data) {
 
 export async function addSubTopic(data, transaction) {
   try {
-    const result = await model.subTopicModel.create(data, { transaction });
-    return result;
+    return await scoped(model.subTopicModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add sub topic :", error);
     throw error;
@@ -191,27 +186,21 @@ export async function addSubTopic(data, transaction) {
 
 export async function addLessionMapping(data, transaction) {
   try {
-    const result = await model.lessonMappingModel.create(data, { transaction });
-    return result;
+    return await scoped(model.lessonMappingModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Lession Mapping:", error);
     throw error;
   }
 }
 
-export async function getMapping(universityId, instituteId, role, acedmicYearId) {
+export async function getMapping(acedmicYearId) {
   try {
-    const mainWhereClause = {
-      ...(universityId && { universityId }),
-      ...(role === "Head" && { instituteId }),
-    };
     const lessonWhereClause = {
-      ...(universityId && { universityId }),
       ...(acedmicYearId && { acedmicYearId }),
+      ...buildScope(model.lessonModel),
     };
-    const lesson = await model.lessonMappingModel.findAll({
+    const lesson = await scoped(model.lessonMappingModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-      where: mainWhereClause,
       include: [
         {
           model: model.topicModel,
@@ -263,6 +252,8 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
             {
               model: model.timeTableRoutineModel,
               as: "timeTablecreate",
+              required: true,
+              where: buildScope(model.timeTableRoutineModel),
               attributes: {
                 exclude: [
                   "createdAt",
@@ -330,13 +321,17 @@ export async function getMapping(universityId, instituteId, role, acedmicYearId)
 
 export async function updateMapping(lessonMappingId, data) {
   try {
-    const [updatedRowsCount] = await model.lessonMappingModel.update(data, {
+    const existing = await scoped(model.lessonMappingModel).findOne({
       where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
     });
-
-    if (updatedRowsCount === 0) {
+    if (!existing) {
       throw new Error("No lesson mapping found with the given ID.");
     }
+
+    const [updatedRowsCount] = await scoped(model.lessonMappingModel).update(data, {
+      where: { lessonMappingId },
+    });
 
     return { success: true, message: "Mapping updated successfully." };
   } catch (error) {
@@ -347,11 +342,18 @@ export async function updateMapping(lessonMappingId, data) {
 
 export async function updateLessionMapping(lessonMappingId, data, transaction) {
   try {
-    const result = await model.lessonMappingModel.update(data, {
+    const existing = await scoped(model.lessonMappingModel).findOne({
+      where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
+      transaction,
+    });
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.lessonMappingModel).update(data, {
       where: { lessonMappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in update Lession Mapping:", error);
     throw error;
@@ -360,11 +362,18 @@ export async function updateLessionMapping(lessonMappingId, data, transaction) {
 
 export async function updateSubTopic(subTopicId, data, transaction) {
   try {
-    const result = await model.subTopicModel.update(data, {
+    const existing = await scoped(model.subTopicModel).findOne({
+      where: { subTopicId },
+      attributes: ['subTopicId'],
+      transaction,
+    });
+    if (!existing) {
+      return [0];
+    }
+    return await scoped(model.subTopicModel).update(data, {
       where: { subTopicId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in update SubTopic:", error);
     throw error;
@@ -373,11 +382,18 @@ export async function updateSubTopic(subTopicId, data, transaction) {
 
 export async function deleteLessionMapping(lessonMappingId, transaction) {
   try {
-    const result = await model.lessonMappingModel.destroy({
+    const existing = await scoped(model.lessonMappingModel).findOne({
+      where: { lessonMappingId },
+      attributes: ['lessonMappingId'],
+      transaction,
+    });
+    if (!existing) {
+      return 0;
+    }
+    return await scoped(model.lessonMappingModel).destroy({
       where: { lessonMappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in delete Lession Mapping:", error);
     throw error;
@@ -386,11 +402,18 @@ export async function deleteLessionMapping(lessonMappingId, transaction) {
 
 export async function deleteSubTopicsByMapping(mappingId, transaction) {
   try {
-    const result = await model.subTopicModel.destroy({
+    const topic = await scoped(model.topicModel).findOne({
+      where: { topicId: mappingId },
+      attributes: ['topicId'],
+      transaction,
+    });
+    if (!topic) {
+      return 0;
+    }
+    return await scoped(model.subTopicModel).destroy({
       where: { topicId: mappingId },
       transaction,
     });
-    return result;
   } catch (error) {
     console.error("Error in delete SubTopics:", error);
     throw error;
@@ -450,98 +473,178 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
 //   }
 // };
 
-export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch) {
+export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionId, subjectSearch, subjectId) {
   try {
-    const whereClause = {
-      ...(employeeId && { employeeId }),
+    const parsedEmployeeId = employeeId != null && employeeId !== ''
+      ? Number(employeeId)
+      : null;
+    const parsedSessionId = sessionId != null && sessionId !== ''
+      ? Number(sessionId)
+      : null;
+    const parsedSubjectId = subjectId != null && subjectId !== ''
+      ? Number(subjectId)
+      : null;
+    const hasEmployeeId = Number.isInteger(parsedEmployeeId) && parsedEmployeeId > 0;
+    const hasSessionId = Number.isInteger(parsedSessionId) && parsedSessionId > 0;
+    const hasSubjectId = Number.isInteger(parsedSubjectId) && parsedSubjectId > 0;
+
+    const topicAttributes = {
+      exclude: [
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+        'createdBy',
+        'updatedBy',
+        'specialization_id',
+        'course_id',
+      ],
     };
+    const semesterAttributes = {
+      exclude: [
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+        'createdBy',
+        'updatedBy',
+        'specialization_id',
+        'course_id',
+      ],
+    };
+    const lessonInclude = [
+      {
+        model: model.topicModel.unscoped(),
+        as: 'topicSession',
+        required: false,
+        attributes: topicAttributes,
+      },
+      {
+        model: model.semesterModel.unscoped(),
+        as: 'lessionSemester',
+        required: false,
+        attributes: semesterAttributes,
+        ...(courseId && { where: { courseId: Number(courseId) } }),
+      },
+    ];
+
+    if (hasEmployeeId && hasSubjectId) {
+      const lessons = await scoped(model.lessonModel).findAll({
+        where: {
+          employeeId: parsedEmployeeId,
+          subjectId: parsedSubjectId,
+          ...(hasSessionId && { sessionId: parsedSessionId }),
+        },
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+        include: [
+          {
+            model: model.employeeModel.unscoped(),
+            as: 'employeeLesson',
+            required: true,
+            paranoid: false,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: buildScope(model.employeeModel),
+          },
+          {
+            model: model.subjectModel.unscoped(),
+            as: 'lessonSubject',
+            required: true,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            where: {
+              ...buildScope(model.subjectModel),
+              subjectId: parsedSubjectId,
+              ...(courseId && { courseId: Number(courseId) }),
+            },
+          },
+          ...lessonInclude,
+        ],
+        order: [['lessonId', 'ASC']],
+      });
+
+      if (!lessons.length) {
+        return [];
+      }
+
+      const plainLessons = lessons.map((row) => row.get({ plain: true }));
+      const { employeeLesson, lessonSubject } = plainLessons[0];
+
+      return [{
+        employeeId: parsedEmployeeId,
+        subjectId: parsedSubjectId,
+        teacherEmployeeData: employeeLesson,
+        employeeSubject: {
+          ...lessonSubject,
+          lessonSubject: plainLessons.map(({
+            employeeLesson: _employee,
+            lessonSubject: _subject,
+            topicSession,
+            lessionSemester,
+            ...lesson
+          }) => ({
+            ...lesson,
+            topicSession,
+            lessionSemester,
+          })),
+        },
+      }];
+    }
 
     const subjectWhere = {
-      ...(courseId && { courseId }),
+      ...buildScope(model.subjectModel),
+      ...(courseId && { courseId: Number(courseId) }),
+      ...(hasSubjectId && { subjectId: parsedSubjectId }),
       ...(subjectSearch?.trim() && {
         subjectName: { [Op.like]: `%${subjectSearch.trim()}%` },
       }),
     };
+    const lessonWhere = {
+      ...buildScope(model.lessonModel),
+      ...(hasSessionId && { sessionId: parsedSessionId }),
+      ...(hasEmployeeId && { employeeId: parsedEmployeeId }),
+      ...(hasSubjectId && { subjectId: parsedSubjectId }),
+    };
 
-    const lesson = await model.teacherSubjectMappingModel.findAll({
-      where: whereClause,
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-
+    return await scoped(model.teacherSubjectMappingModel).findAll({
+      where: {
+        ...(hasEmployeeId && { employeeId: parsedEmployeeId }),
+        ...(hasSubjectId && { subjectId: parsedSubjectId }),
+      },
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
       include: [
         {
-          model: model.classSubjectMapperModel,
-          as: "employeeSubject",
-          required: false,
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          model: model.employeeModel.unscoped(),
+          as: 'teacherEmployeeData',
+          required: true,
+          paranoid: false,
+          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+          where: buildScope(model.employeeModel),
+        },
+        {
+          model: model.subjectModel.unscoped(),
+          as: 'employeeSubject',
+          required: Boolean(subjectSearch?.trim() || hasSubjectId),
+          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+          where: subjectWhere,
           include: [
             {
-              model: model.subjectModel,
-              as: "subjects",
-              required: Boolean(subjectSearch?.trim()),
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              ...(Object.keys(subjectWhere).length && { where: subjectWhere }),
-
-              include: [
-                {
-                  model: model.lessonModel,
-                  as: "lessonSubject",
-                  required: false,
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                  ...(sessionId && { where: { sessionId, employeeId } }),
-
-                  include: [
-                    {
-                      model: model.topicModel,
-                      as: "topicSession",
-                      required: false,
-                      attributes: {
-                        exclude: [
-                          "createdAt",
-                          "updatedAt",
-                          "deletedAt",
-                          "createdBy",
-                          "updatedBy",
-                          "specialization_id",
-                          "course_id",
-                        ],
-                      },
-                    },
-                    {
-                      model: model.semesterModel,
-                      as: "lessionSemester",
-                      required: false,
-                      attributes: {
-                        exclude: [
-                          "createdAt",
-                          "updatedAt",
-                          "deletedAt",
-                          "createdBy",
-                          "updatedBy",
-                          "specialization_id",
-                          "course_id",
-                        ],
-                      },
-                      ...(courseId && { where: { courseId } }),
-                    },
-                  ],
-                },
-              ],
+              model: model.lessonModel.unscoped(),
+              as: 'lessonSubject',
+              required: false,
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+              where: lessonWhere,
+              include: lessonInclude,
             },
           ],
         },
       ],
     });
-
-    return lesson;
   } catch (error) {
-    console.error("Error fetching lesson details:", error);
+    console.error('Error fetching lesson details:', error);
     throw error;
   }
 }
 
 export async function getSimpleLessonList(whereClause) {
   try {
-    const lessons = await model.lessonModel.findAll({
+    const lessons = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: whereClause,
     });

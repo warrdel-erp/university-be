@@ -6,7 +6,7 @@ import subject from "./subjectModel.js";
 import { questionStatus, questionTypes } from "../constant.js";
 
 
-export default sequelize.define(
+const questionBankModel = sequelize.define(
     'questionBank',
     {
         id: {
@@ -111,3 +111,7 @@ export default sequelize.define(
         paranoid: false
     }
 );
+
+questionBankModel.scopeConfig = { university: true, institute: false, academicYear: false };
+
+export default questionBankModel;

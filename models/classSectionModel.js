@@ -10,7 +10,7 @@ import instituteModel from "./instituteModel.js";
 import semesterModel from "./semesterModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const classSectionModel = sequelize.define(
     'class_sections',
     {
         classSectionsId: {
@@ -141,3 +141,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+classSectionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default classSectionModel;

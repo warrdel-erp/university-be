@@ -4,12 +4,11 @@ export async function addDepartment(req, res) {
     const {subAccountId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
     try {
         if(!(subAccountId)){
            return res.status(400).send('subAccountId is required')
         }
-        const departmentDetails = await DepartmentCreation.addDepartment(req.body,createdBy,updatedBy,universityId);
+        const departmentDetails = await DepartmentCreation.addDepartment(req.body,createdBy,updatedBy);
         res.status(201).json({ message: "Data added successfully", departmentDetails });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -17,10 +16,8 @@ export async function addDepartment(req, res) {
 };
 
 export async function getAllDepartment(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
-        const departmentDetails = await DepartmentCreation.getDepartmentDetails(universityId,instituteId);
+        const departmentDetails = await DepartmentCreation.getDepartmentDetails();
         res.status(200).json(departmentDetails);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -28,10 +25,9 @@ export async function getAllDepartment(req, res) {
 };
 
 export async function getSingleDepartmentDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { departmentId } = req.query;
-        const departmentDetails = await DepartmentCreation.getSingleDepartmentDetails(departmentId,universityId);
+        const departmentDetails = await DepartmentCreation.getSingleDepartmentDetails(departmentId);
         if (departmentDetails) {
             res.status(200).json(departmentDetails);
         } else {
@@ -73,21 +69,10 @@ export async function deleteDepartment(req, res) {
     }
 };
 
-export async function getAllAccount(req, res) {
-    const universityId = req.user.universityId;
-    try {
-        const departmentDetails = await DepartmentCreation.getAllAccount();
-        res.status(200).json(departmentDetails);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
 export async function getDepartmentByIdEmployee(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { departmentId } = req.query;
-        const departmentDetails = await DepartmentCreation.getDepartmentByIdEmployee(departmentId,universityId);
+        const departmentDetails = await DepartmentCreation.getDepartmentByIdEmployee(departmentId);
         if (departmentDetails) {
             res.status(200).json(departmentDetails);
         } else {

@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const assetCategoryModel = sequelize.define(
   "asset_category",
   {
     assetCategoryId: {
@@ -40,3 +40,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetCategoryModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetCategoryModel;

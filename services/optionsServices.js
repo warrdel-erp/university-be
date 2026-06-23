@@ -1,12 +1,13 @@
 import * as optionsRepository from '../repository/optionsRepository.js';
 import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function getAffiliatedUniversityOptions(instituteId) {
-    return await optionsRepository.getAffiliatedUniversityOptions(instituteId);
+export async function getAffiliatedUniversityOptions() {
+    return await optionsRepository.getAffiliatedUniversityOptions();
 }
 
-export async function getCourseOptions(universityId, instituteId) {
-    return await optionsRepository.getCourseOptions(universityId, instituteId);
+export async function getCourseOptions() {
+    return await optionsRepository.getCourseOptions();
 }
 
 export async function getTermOptions(courseId) {
@@ -28,16 +29,16 @@ export async function getClassSectionOptions(courseId, term) {
     return await optionsRepository.getClassSectionOptions(courseId, term);
 }
 
-export async function getSpecializationOptions(courseId, instituteId, universityId) {
-    return await optionsRepository.getSpecializationOptions(courseId, instituteId, universityId);
+export async function getSpecializationOptions(courseId) {
+    return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, universityId, acedmicYearId, sessionId, instituteId) {
+export async function getSubjectOptions(courseId, term, acedmicYearId, sessionId) {
     let resolvedAcademicYearId = acedmicYearId;
 
     if (sessionId) {
-        const session = await model.sessionModel.findOne({
-            where: { sessionId, universityId },
+        const session = await scoped(model.sessionModel).findOne({
+            where: { sessionId },
             attributes: ["acedmicYearId"],
         });
         if (!session) {
@@ -49,7 +50,6 @@ export async function getSubjectOptions(courseId, term, universityId, acedmicYea
             const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(
                 Number(courseId),
                 Number(sessionId),
-                instituteId
             );
             if (!mapping) {
                 throw new Error("Session is not mapped to this course");
@@ -60,27 +60,24 @@ export async function getSubjectOptions(courseId, term, universityId, acedmicYea
     return await optionsRepository.getSubjectOptions(
         courseId,
         term,
-        universityId,
         resolvedAcademicYearId,
-        instituteId
     );
 }
 
-export async function getTeacherOptions(instituteId, campusId) {
-    return await optionsRepository.getTeacherOptions(instituteId, campusId);
+export async function getTeacherOptions(campusId) {
+    return await optionsRepository.getTeacherOptions(campusId);
 }
 
 export async function getFeePlanOptions(filters) {
     const empty = { courseSessionId: null, profiles: [] };
-    const { courseId, sessionId, instituteId } = filters;
-    if (!courseId || !sessionId || !instituteId) {
+    const { courseId, sessionId } = filters;
+    if (!courseId || !sessionId) {
         return empty;
     }
 
     const { courseSessionId, rows } = await optionsRepository.getFeePlanProfileOptions(
         Number(courseId),
         Number(sessionId),
-        instituteId
     );
 
     return {
@@ -95,6 +92,3 @@ export async function getFeePlanOptions(filters) {
 export async function getTopicOptions(filters) {
     return await optionsRepository.getTopicOptions(filters);
 }
-
-
-

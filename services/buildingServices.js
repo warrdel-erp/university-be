@@ -8,12 +8,12 @@ export async function addbuilding(buildingData, user, createdBy, updatedBy) {
     return await buildingCreationService.addbuilding(buildingData);
 }
 
-export async function getbuildingDetails(universityId) {
-    return await buildingCreationService.getbuildingDetails(universityId);
+export async function getbuildingDetails() {
+    return await buildingCreationService.getbuildingDetails();
 }
 
-export async function getSinglebuildingDetails(buildingId,universityId) {
-    return await buildingCreationService.getSinglebuildingDetails(buildingId,universityId);
+export async function getSinglebuildingDetails(buildingId) {
+    return await buildingCreationService.getSinglebuildingDetails(buildingId);
 }
 
 export async function updatebuilding(buildingId, buildingData, updatedBy) {
@@ -26,6 +26,6 @@ export async function deletebuilding(buildingId) {
     return await buildingCreationService.deletebuilding(buildingId);
 }
 
-export async function getAllbuildingNested(universityId, buildingType, instituteId) {
-    return await buildingCreationService.getAllbuildingNested(universityId, buildingType, instituteId);
+export async function getAllbuildingNested(buildingType, instituteId) {
+    return await buildingCreationService.getAllbuildingNested(buildingType, instituteId);
 }

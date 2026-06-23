@@ -7,7 +7,7 @@ import specialization from "./specializationModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js"
 
-export default sequelize.define(
+const subjectMapperModel = sequelize.define(
     'subject_mapper',
     {
         subjectMapperId: {
@@ -103,3 +103,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+subjectMapperModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default subjectMapperModel;

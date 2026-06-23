@@ -1,16 +1,37 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
+import { buildScope, scoped } from '../utility/scoped.js';
+import { requestContext } from '../utility/requestContext.js';
+
+function omitAcademicYearScope(scopeWhere = {}) {
+    const { acedmicYearId, ...rest } = scopeWhere;
+    return rest;
+}
+
+/** Class-section reads for promotion may target a different academic year than request context. */
+function promotionClassSectionWhere(filters = {}) {
+    const { acedmicYearId, ...rest } = filters;
+    return {
+        ...omitAcademicYearScope(buildScope(model.classSectionModel)),
+        ...rest,
+        ...(acedmicYearId != null && { acedmicYearId }),
+    };
+}
 
 function buildStudentName({ firstName, middleName, lastName }) {
     return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
 }
 
-function buildStudentListWhere(instituteId, role, search, courseId) {
-    const where = {};
+async function assertScopedStudent(studentId, options = {}) {
+    return scoped(model.studentModel).findOne({
+        where: { studentId },
+        attributes: ['studentId'],
+        transaction: options.transaction,
+    });
+}
 
-    if (role === 'Head') {
-        where.instituteId = instituteId;
-    }
+function buildStudentListWhere(search, courseId) {
+    const where = {};
 
     if (courseId) {
         where.courseId = courseId;
@@ -35,15 +56,23 @@ function buildStudentListWhere(instituteId, role, search, courseId) {
 
 const sessionAcedmicYearAttrs = { exclude: ["createdAt", "updatedAt", "deletedAt"] };
 
+function getRequestAcademicYearId() {
+    return requestContext.getStore()?.academicYearId;
+}
+
 function studentSessionWithAcademicYearInclude(options = {}) {
-    const { acedmicYearId, attributes } = options;
+    const { attributes } = options;
+    const acedmicYearId = options.acedmicYearId ?? getRequestAcademicYearId();
     return {
         model: model.sessionModel,
         as: "studentSession",
         attributes: attributes ?? sessionAcedmicYearAttrs,
         ...(acedmicYearId != null && {
             required: true,
-            where: { acedmicYearId },
+            where: {
+                acedmicYearId,
+                ...buildScope(model.sessionModel),
+            },
         }),
         include: [
             {
@@ -55,9 +84,24 @@ function studentSessionWithAcademicYearInclude(options = {}) {
     };
 }
 
+/** Scoped read: student must belong to the logged-in academic year (via session). */
+export async function assertStudentInRequestAcademicYear(studentId, options = {}) {
+    const acedmicYearId = getRequestAcademicYearId();
+    if (acedmicYearId == null) {
+        return null;
+    }
+
+    return scoped(model.studentModel).findOne({
+        where: { studentId },
+        attributes: options.attributes ?? ['studentId'],
+        include: [studentSessionWithAcademicYearInclude({ acedmicYearId, attributes: [] })],
+        transaction: options.transaction,
+    });
+}
+
 export async function addStudent(data, transaction) {
     try {
-        const result = await model.studentModel.create(data, { transaction });
+        const result = await scoped(model.studentModel).create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add Student:", error);
@@ -67,7 +111,7 @@ export async function addStudent(data, transaction) {
 
 export async function addStudentExcel(data, transaction) {
     try {
-        const result = await model.studentModel.create(data, { transaction });
+        const result = await scoped(model.studentModel).create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add Student bluk  error:", error);
@@ -116,11 +160,8 @@ export async function studentMetaData(data, transaction) {
 };
 
 export async function getAllStudents({
-    universityId,
     page,
     limit,
-    instituteId,
-    role,
     search,
     courseId,
 }) {
@@ -130,31 +171,26 @@ export async function getAllStudents({
                 model: model.userModel,
                 as: "userStudent",
                 attributes: ["universityId", "userId"],
-                where: { universityId },
             },
             {
                 model: model.campusModel,
                 as: "campus",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
-                where: { universityId },
             },
             {
                 model: model.instituteModel,
                 as: "institute",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                where: { universityId },
             },
             {
                 model: model.affiliatedIniversityModel,
                 as: "affiliatedUniversity",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
-                where: { universityId },
             },
             {
                 model: model.courseModel,
                 as: "course",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
-                where: { universityId },
             },
             {
                 model: model.semesterModel,
@@ -166,7 +202,7 @@ export async function getAllStudents({
                         as: 'classSections',
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                     },
-                ]
+                ],
             },
             studentSessionWithAcademicYearInclude(),
             {
@@ -194,7 +230,7 @@ export async function getAllStudents({
                         as: "codes",
                         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                     },
-                ]
+                ],
             },
             {
                 model: model.studentMetaData,
@@ -211,9 +247,9 @@ export async function getAllStudents({
                                 as: "codes",
                                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                             },
-                        ]
+                        ],
                     },
-                ]
+                ],
             },
             {
                 model: model.feePlanProfileModel,
@@ -223,12 +259,7 @@ export async function getAllStudents({
             },
         ];
 
-        const whereCondition = buildStudentListWhere(
-            instituteId,
-            role,
-            search,
-            courseId
-        );
+        const whereCondition = buildStudentListWhere(search, courseId);
 
         const offset = (page - 1) * limit;
         const queryOptions = {
@@ -241,7 +272,7 @@ export async function getAllStudents({
             ...(search && { subQuery: false }),
         };
 
-        const rows = await model.studentModel.findAll(queryOptions);
+        const rows = await scoped(model.studentModel).findAll(queryOptions);
         const result = rows.map((row) => {
             const student = row.get({ plain: true });
             return {
@@ -250,7 +281,7 @@ export async function getAllStudents({
             };
         });
 
-        const totalCount = await model.studentModel.count({
+        const totalCount = await scoped(model.studentModel).count({
             where: whereCondition,
             include: baseInclude,
             distinct: true,
@@ -272,42 +303,35 @@ export async function getAllStudents({
     }
 };
 
-export async function getSingleStudentDetail(studentId, universityId) {
+export async function getSingleStudentDetail(studentId) {
     try {
-        const result = await model.studentModel.findOne({
+        const inAcademicYear = await assertStudentInRequestAcademicYear(studentId);
+        if (!inAcademicYear) {
+            return null;
+        }
+
+        const result = await scoped(model.studentModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             include: [
                 {
                     model: model.userModel,
                     as: "userStudent",
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.campusModel,
                     as: "campus",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "campusId", "campusCode"] },
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.instituteModel,
                     as: "institute",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.affiliatedIniversityModel,
                     as: "affiliatedUniversity",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "affiliatedUniversityId", "instituteId", "affiliatedUniversityCode"] },
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.employeeCodeMasterType,
@@ -319,7 +343,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
                             as: "codes",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         },
-                    ]
+                    ],
                 },
                 {
                     model: model.studentMetaData,
@@ -336,17 +360,14 @@ export async function getSingleStudentDetail(studentId, universityId) {
                                     as: "codes",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
-                            ]
+                            ],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: model.courseModel,
                     as: "course",
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "courseId", "course_levelId", "courseCode"] },
-                    where: {
-                        universityId: universityId
-                    },
                 },
                 {
                     model: model.specializationModel,
@@ -363,7 +384,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
                             as: 'classSections',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                         },
-                    ]
+                    ],
                 },
                 {
                     model: model.sessionModel,
@@ -402,7 +423,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
                                     as: "codes",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
-                            ]
+                            ],
                         },
                         {
                             model: model.employeeCodeMasterType,
@@ -414,7 +435,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
                                     as: "codes",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
-                            ]
+                            ],
                         },
                         {
                             model: model.employeeCodeMasterType,
@@ -426,9 +447,9 @@ export async function getSingleStudentDetail(studentId, universityId) {
                                     as: "codes",
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
-                            ]
+                            ],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: model.feePlanProfileModel,
@@ -442,7 +463,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
                             attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
                         },
                     ],
-                }
+                },
             ],
             where: {
                 studentId,
@@ -458,7 +479,7 @@ export async function getSingleStudentDetail(studentId, universityId) {
 export async function getPreviousScholarNumber(instituteCode) {
     try {
         const attribute = ["scholar_number"];
-        const result = await model.studentModel.findOne({
+        const result = await scoped(model.studentModel).findOne({
             attributes: attribute,
             where: {
                 scholar_number: {
@@ -474,10 +495,10 @@ export async function getPreviousScholarNumber(instituteCode) {
     }
 };
 
-export async function findStudentByIdForInstitute(studentId, instituteId, options = {}) {
+export async function findStudentByIdForInstitute(studentId, options = {}) {
     const { transaction, attributes } = options;
-    return model.studentModel.findOne({
-        where: { studentId, instituteId },
+    return scoped(model.studentModel).findOne({
+        where: { studentId },
         attributes: attributes ?? [
             "studentId",
             "instituteId",
@@ -492,21 +513,30 @@ export async function findStudentByIdForInstitute(studentId, instituteId, option
 
 export async function updateStudentFeePlanProfileId(
     studentId,
-    instituteId,
     feePlanProfileId,
     options = {}
 ) {
     const { transaction } = options;
-    const [affected] = await model.studentModel.update(
+    const existing = await assertScopedStudent(studentId, { transaction });
+    if (!existing) {
+        return 0;
+    }
+
+    const [affected] = await scoped(model.studentModel).update(
         { feePlanProfileId },
-        { where: { studentId, instituteId }, transaction }
+        { where: { studentId }, transaction }
     );
     return affected;
 }
 
 export async function updateStudentDetails(studentId, data, transaction) {
     try {
-        const result = await model.studentModel.update(data, {
+        const existing = await assertScopedStudent(studentId, { transaction });
+        if (!existing) {
+            return [0];
+        }
+
+        const result = await scoped(model.studentModel).update(data, {
             where: {
                 studentId: studentId
             },
@@ -521,6 +551,19 @@ export async function updateStudentDetails(studentId, data, transaction) {
 
 export async function updateStudentEntranceDetails(studentsEntranceDetailId, data, transaction) {
     try {
+        const entrance = await model.studentsEntranceDetail.findOne({
+            where: { studentsEntranceDetailId },
+            attributes: ['studentId'],
+            transaction,
+        });
+        if (!entrance) {
+            return [0];
+        }
+        const student = await assertScopedStudent(entrance.studentId, { transaction });
+        if (!student) {
+            return [0];
+        }
+
         const result = await model.studentsEntranceDetail.update(data, {
             where: {
                 studentsEntranceDetailId: studentsEntranceDetailId
@@ -536,6 +579,19 @@ export async function updateStudentEntranceDetails(studentsEntranceDetailId, dat
 
 export async function updateStudentAddressDetails(studentsAddressId, data, transaction) {
     try {
+        const address = await model.studentsAddress.findOne({
+            where: { studentsAddressId },
+            attributes: ['studentId'],
+            transaction,
+        });
+        if (!address) {
+            return [0];
+        }
+        const student = await assertScopedStudent(address.studentId, { transaction });
+        if (!student) {
+            return [0];
+        }
+
         const result = await model.studentsAddress.update(data, {
             where: {
                 studentsAddressId: studentsAddressId
@@ -551,6 +607,19 @@ export async function updateStudentAddressDetails(studentsAddressId, data, trans
 
 export async function updateStudentCorsAddressDetails(studentCorAddressId, data, transaction) {
     try {
+        const corsAddress = await model.studentCorsAddressModel.findOne({
+            where: { studentCorAddressId },
+            attributes: ['studentId'],
+            transaction,
+        });
+        if (!corsAddress) {
+            return [0];
+        }
+        const student = await assertScopedStudent(corsAddress.studentId, { transaction });
+        if (!student) {
+            return [0];
+        }
+
         const result = await model.studentCorsAddressModel.update(data, {
             where: {
                 studentCorAddressId: studentCorAddressId
@@ -568,6 +637,11 @@ export async function updateStudentMetaData(studentId, type, code, transaction) 
     // code gender
     // type male,female
     try {
+        const student = await assertScopedStudent(studentId, { transaction });
+        if (!student) {
+            return [0];
+        }
+
         const result = await model.studentMetaData.update(
             {
                 types: type
@@ -589,7 +663,7 @@ export async function updateStudentMetaData(studentId, type, code, transaction) 
 
 export async function findStudentByEmail(email) {
     try {
-        return await model.studentModel.findOne({
+        return await scoped(model.studentModel).findOne({
             attributes: ["email"],
             where: {
                 email,
@@ -604,7 +678,7 @@ export async function findStudentByEmail(email) {
 
 export async function findStudentByEnrollNumber(enrollNumber) {
     try {
-        return await model.studentModel.findOne({
+        return await scoped(model.studentModel).findOne({
             attributes: ["enroll_number"],
             where: { enrollNumber },
         });
@@ -624,31 +698,30 @@ export async function checkEnroll(enrollNumber) {
     return findStudentByEnrollNumber(enrollNumber);
 }
 
-export async function getEmptyEnrollNumber(universityId, acedmicYearId, instituteId, role) {
+export async function getEmptyEnrollNumber(acedmicYearId) {
     try {
-        const result = await model.studentModel.findAll({
+        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+            return [];
+        }
+
+        return await scoped(model.studentModel).findAll({
             where: {
                 enrollNumber: {
-                    [Op.or]: [null, '']
+                    [Op.or]: [null, ''],
                 },
-                ...(role === 'Head' && { instituteId })
             },
             include: [
-                ...(acedmicYearId
-                    ? [studentSessionWithAcademicYearInclude({ acedmicYearId, attributes: [] })]
-                    : []),
+                studentSessionWithAcademicYearInclude({
+                    ...(acedmicYearId != null && { acedmicYearId }),
+                    attributes: [],
+                }),
                 {
                     model: model.userModel,
                     as: "userStudent",
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
-            ]
+                },
+            ],
         });
-
-        return result;
     } catch (error) {
         console.error('Error in checkEnroll Empty:', error);
         throw error;
@@ -657,9 +730,14 @@ export async function getEmptyEnrollNumber(universityId, acedmicYearId, institut
 
 export async function deleteStudentDetail(studentId) {
     try {
-        const result = await model.studentModel.destroy({
+        const existing = await assertScopedStudent(studentId);
+        if (!existing) {
+            throw new Error('Student not found');
+        }
+
+        await scoped(model.studentModel).destroy({
             where: { studentId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'Student deleted successfully' };
     } catch (error) {
@@ -670,7 +748,19 @@ export async function deleteStudentDetail(studentId) {
 
 export async function deleteStudentEntranceDetail(studentsEntranceDetailId) {
     try {
-        const result = await model.studentsEntranceDetail.destroy({
+        const entrance = await model.studentsEntranceDetail.findOne({
+            where: { studentsEntranceDetailId },
+            attributes: ['studentId'],
+        });
+        if (!entrance) {
+            throw new Error('Entrance detail not found');
+        }
+        const student = await assertScopedStudent(entrance.studentId);
+        if (!student) {
+            throw new Error('Student not found');
+        }
+
+        await model.studentsEntranceDetail.destroy({
             where: { studentsEntranceDetailId },
             individualHooks: true
         });
@@ -683,7 +773,19 @@ export async function deleteStudentEntranceDetail(studentsEntranceDetailId) {
 
 export async function deleteStudentAddressDetail(studentsAddressId) {
     try {
-        const result = await model.studentsAddress.destroy({
+        const address = await model.studentsAddress.findOne({
+            where: { studentsAddressId },
+            attributes: ['studentId'],
+        });
+        if (!address) {
+            throw new Error('Address not found');
+        }
+        const student = await assertScopedStudent(address.studentId);
+        if (!student) {
+            throw new Error('Student not found');
+        }
+
+        await model.studentsAddress.destroy({
             where: { studentsAddressId },
             individualHooks: true
         });
@@ -696,6 +798,11 @@ export async function deleteStudentAddressDetail(studentsAddressId) {
 
 export async function findEntranceDetailsByStudentId(studentId) {
     try {
+        const student = await assertScopedStudent(studentId);
+        if (!student) {
+            return [];
+        }
+
         const attribute = ["students_entrance_detail_id"];
         const result = await model.studentsEntranceDetail.findAll({
             attributes: attribute,
@@ -713,6 +820,11 @@ export async function findEntranceDetailsByStudentId(studentId) {
 
 export async function findStudentAddressByStudentId(StudentId) {
     try {
+        const student = await assertScopedStudent(StudentId);
+        if (!student) {
+            return null;
+        }
+
         const attribute = ["students_address_id"];
         const result = await model.studentsAddress.findOne({
             attributes: attribute,
@@ -738,9 +850,83 @@ export async function studentCourseMapping(data) {
     }
 };
 
+export async function buildClassStudentMapperCreatePayload(
+    {
+        studentId,
+        classSectionsId,
+        createdBy,
+        semesterId,
+        sessionId,
+        acedmicYearId,
+    },
+    transaction,
+) {
+    const student = await scoped(model.studentModel).findOne({
+        where: { studentId },
+        attributes: ['studentId', 'semesterId', 'sessionId', 'classSectionsId'],
+        transaction,
+    });
+    if (!student) {
+        const error = new Error('Student not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const sectionId = classSectionsId ?? student.classSectionsId;
+    let resolvedSemesterId = semesterId ?? student.semesterId ?? null;
+    let resolvedSessionId = sessionId ?? student.sessionId ?? null;
+    let resolvedAcedmicYearId = acedmicYearId ?? null;
+
+    if (sectionId) {
+        const section = await getTargetClassSectionForPromotion(sectionId);
+        const plain = section?.get({ plain: true });
+        if (plain) {
+            resolvedSemesterId = resolvedSemesterId ?? plain.semesterId ?? null;
+            resolvedSessionId = resolvedSessionId ?? plain.sessionId ?? null;
+            resolvedAcedmicYearId = resolvedAcedmicYearId ?? plain.acedmicYearId ?? null;
+        }
+    }
+
+    if (!resolvedAcedmicYearId && resolvedSessionId) {
+        const session = await model.sessionModel.findByPk(resolvedSessionId, {
+            attributes: ['acedmicYearId'],
+            transaction,
+        });
+        resolvedAcedmicYearId = session?.acedmicYearId ?? null;
+    }
+
+    if (!resolvedSemesterId) {
+        const error = new Error('semesterId is required for class_student_mapper');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (!resolvedSessionId || !resolvedAcedmicYearId) {
+        const error = new Error('sessionId and acedmicYearId are required for class_student_mapper');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return {
+        studentId,
+        semesterId: resolvedSemesterId,
+        sessionId: resolvedSessionId,
+        acedmicYearId: resolvedAcedmicYearId,
+        createdBy,
+    };
+}
+
 export async function classStudentMapping(data, transaction) {
     try {
-        const result = await model.classStudentMapperModel.create(data, { transaction });
+        if (!data?.semesterId) {
+            const error = new Error('semesterId is required for class_student_mapper');
+            error.statusCode = 400;
+            throw error;
+        }
+        const student = await assertScopedStudent(data.studentId, { transaction });
+        if (!student) {
+            throw new Error('Student not found');
+        }
+        const result = await scoped(model.classStudentMapperModel).create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in student mapping course:", error);
@@ -750,7 +936,18 @@ export async function classStudentMapping(data, transaction) {
 
 export async function classStudentMappingExcel(data, transaction) {
     try {
-        const result = await model.classStudentMapperModel.bulkCreate(data, { transaction });
+        for (const row of data) {
+            const student = await assertScopedStudent(row.studentId, { transaction });
+            if (!student) {
+                throw new Error(`Student not found: ${row.studentId}`);
+            }
+            if (!row.semesterId) {
+                const error = new Error(`semesterId is required for class_student_mapper (student ${row.studentId})`);
+                error.statusCode = 400;
+                throw error;
+            }
+        }
+        const result = await scoped(model.classStudentMapperModel).bulkCreate(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in student mapping course excel:", error);
@@ -758,15 +955,19 @@ export async function classStudentMappingExcel(data, transaction) {
     }
 };
 
-export async function getclassStudentMapping(semesterId, universityId, acedmicYearId, instituteId, role) {
+export async function getclassStudentMapping(semesterId, acedmicYearId) {
     try {
-        const studentWhere = {
-            ...(role === 'Head' && { instituteId }),
-        };
+        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+            return [];
+        }
 
-        const whereConditions = {};
+        const studentScope = buildScope(model.studentModel);
+
+        const whereConditions = {
+            ...buildScope(model.classStudentMapperModel),
+            ...(acedmicYearId != null && { acedmicYearId }),
+        };
         if (semesterId !== 0) whereConditions.semester_id = semesterId;
-        if (acedmicYearId) whereConditions.acedmicYearId = acedmicYearId;
 
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -776,7 +977,6 @@ export async function getclassStudentMapping(semesterId, universityId, acedmicYe
                     model: model.userModel,
                     as: "userClassStudentMapper",
                     attributes: ["universityId", "userId"],
-                    where: { universityId },
                 },
                 {
                     model: model.semesterModel,
@@ -788,14 +988,19 @@ export async function getclassStudentMapping(semesterId, universityId, acedmicYe
                             as: 'classSections',
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
                         },
-                    ]
+                    ],
                 },
                 {
                     model: model.studentModel,
                     as: "studentMapped",
+                    required: true,
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    where: studentWhere,
+                    where: studentScope,
                     include: [
+                        studentSessionWithAcademicYearInclude({
+                            ...(acedmicYearId != null && { acedmicYearId }),
+                            attributes: [],
+                        }),
                         {
                             model: model.campusModel,
                             as: "campus",
@@ -851,8 +1056,7 @@ export async function getclassStudentMapping(semesterId, universityId, acedmicYe
             ],
         };
 
-        const result = await model.classStudentMapperModel.findAll(queryOptions);
-        return result;
+        return await model.classStudentMapperModel.findAll(queryOptions);
     } catch (error) {
         console.error(`Error in getting mapped student ${semesterId}:`, error);
         throw error;
@@ -869,9 +1073,21 @@ export async function addElectiveSubject(data) {
     }
 };
 
-export async function promoteStudent(studentId, data) {
+export async function promoteStudent(studentId, data, transaction) {
     try {
-        const { acedmicYearId, semesterId, classSectionsId, sessionId, ...rest } = data;
+        const existing = await assertScopedStudent(studentId, { transaction });
+        if (!existing) {
+            return { result1: [0], result2: [0] };
+        }
+
+        const {
+            acedmicYearId,
+            semesterId,
+            classSectionsId,
+            sessionId,
+            classStudentMapperId,
+            ...rest
+        } = data;
         const studentUpdate = {
             ...(semesterId != null && { semesterId }),
             ...(classSectionsId != null && { classSectionsId }),
@@ -880,20 +1096,30 @@ export async function promoteStudent(studentId, data) {
         };
         const mapperUpdate = {
             ...(acedmicYearId != null && { acedmicYearId }),
-            ...(semesterId != null && { semesterId }),
             ...(sessionId != null && { sessionId }),
         };
+        if (semesterId == null) {
+            const error = new Error('semesterId is required when updating class_student_mapper');
+            error.statusCode = 400;
+            throw error;
+        }
+        mapperUpdate.semesterId = semesterId;
 
-        const result1 = await model.studentModel.update(studentUpdate, {
-            where: {
-                studentId: studentId
-            },
+        const result1 = await scoped(model.studentModel).update(studentUpdate, {
+            where: { studentId },
+            transaction,
         });
 
-        const result2 = await model.classStudentMapperModel.update(mapperUpdate, {
+        const mapperWhere = classStudentMapperId
+            ? { classStudentMapperId }
+            : { studentId };
+
+        const result2 = await scoped(model.classStudentMapperModel).update(mapperUpdate, {
             where: {
-                studentId: studentId
+                ...omitAcademicYearScope(buildScope(model.classStudentMapperModel)),
+                ...mapperWhere,
             },
+            transaction,
         });
         return { result1, result2 };
     } catch (error) {
@@ -902,9 +1128,27 @@ export async function promoteStudent(studentId, data) {
     }
 };
 
+export async function getClassStudentMapperByStudentId(studentId) {
+    try {
+        const student = await assertScopedStudent(studentId);
+        if (!student) {
+            return null;
+        }
+
+        return model.classStudentMapperModel.findOne({
+            where: { studentId },
+            attributes: ["classStudentMapperId", "acedmicYearId", "semesterId", "sessionId"],
+            order: [["classStudentMapperId", "DESC"]],
+        });
+    } catch (error) {
+        console.error(`Error fetching class student mapper for ${studentId}:`, error);
+        throw error;
+    }
+}
+
 export async function getStudentForPromate(studentId) {
     try {
-        const result = await model.studentModel.findOne({
+        const result = await scoped(model.studentModel).findOne({
             where: {
                 studentId: studentId
             },
@@ -940,16 +1184,125 @@ export async function getStudentForPromate(studentId) {
 
 export async function getSemesterByCourseId(courseId) {
     try {
-        return await model.semesterModel.findAll({
-            where: { courseId },
-            order: [['semesterId', 'ASC']],
-            raw: true
-        });
+        return await getSemesterProgressionByCourseId(courseId);
     } catch (error) {
         console.error(`Error get semester By course Id ${courseId} :`, error);
         throw error;
     }
-};
+}
+
+export async function getSemesterProgressionByCourseId(courseId) {
+    return scoped(model.semesterModel).findAll({
+        where: {
+            courseId,
+            ...omitAcademicYearScope(buildScope(model.semesterModel)),
+        },
+        attributes: ["semesterId", "acedmicYearId", "semesterDuration", "name"],
+        order: [
+            ["acedmicYearId", "ASC"],
+            ["semesterId", "ASC"],
+        ],
+        raw: true,
+    });
+}
+
+export async function getTargetClassSectionForPromotion(classSectionsId) {
+    return scoped(model.classSectionModel).findOne({
+        where: promotionClassSectionWhere({ classSectionsId }),
+        attributes: [
+            "classSectionsId",
+            "courseId",
+            "instituteId",
+            "sessionId",
+            "acedmicYearId",
+            "semesterId",
+            "specializationId",
+        ],
+        include: [
+            {
+                model: model.classModel,
+                as: "classGroup",
+                attributes: ["term"],
+            },
+        ],
+    });
+}
+
+export async function getNextAcedmicYearAfter(currentAcedmicYearId) {
+    const current = await model.acedmicYearModel.findOne({
+        where: { acedmicYearId: currentAcedmicYearId },
+        attributes: ['acedmicYearId', 'universityId', 'startingDate', 'yearTitle'],
+    });
+
+    if (!current) {
+        return null;
+    }
+
+    // Academic years are university-scoped; institute_id on the row reflects who created it
+    // and can differ between consecutive years (see acedmic year backfill migration).
+    const nextById = await model.acedmicYearModel.findOne({
+        where: {
+            universityId: current.universityId,
+            acedmicYearId: { [Op.gt]: current.acedmicYearId },
+        },
+        attributes: ['acedmicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        order: [['acedmicYearId', 'ASC']],
+    });
+
+    if (nextById) {
+        return nextById;
+    }
+
+    // Fallback when ids are not sequential (legacy data)
+    return model.acedmicYearModel.findOne({
+        where: {
+            universityId: current.universityId,
+            startingDate: { [Op.gt]: current.startingDate },
+        },
+        attributes: ['acedmicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        order: [['startingDate', 'ASC']],
+    });
+}
+
+export async function getPromotionClassSections({
+    courseId,
+    acedmicYearId,
+    term,
+    specializationId,
+    instituteId,
+}) {
+    const where = promotionClassSectionWhere({
+        courseId,
+        acedmicYearId,
+        ...(instituteId != null && { instituteId }),
+    });
+
+    if (specializationId != null) {
+        where[Op.or] = [{ specializationId }, { specializationId: null }];
+    }
+
+    return scoped(model.classSectionModel).findAll({
+        where,
+        attributes: [
+            'classSectionsId',
+            'section',
+            'sessionId',
+            'acedmicYearId',
+            'semesterId',
+            'specializationId',
+        ],
+        include: [
+            {
+                model: model.classModel,
+                as: 'classGroup',
+                attributes: ['term', 'className'],
+                where: { term },
+                required: true,
+            },
+        ],
+        order: [['section', 'ASC']],
+    });
+}
 
 export async function addStudentInvoiceMapper(dataList, transaction) {
     try {
@@ -963,7 +1316,12 @@ export async function addStudentInvoiceMapper(dataList, transaction) {
 
 export async function updateStudentfeeStatus(studentId, data) {
     try {
-        const result = await model.studentModel.update(data, {
+        const existing = await assertScopedStudent(studentId);
+        if (!existing) {
+            return [0];
+        }
+
+        const result = await scoped(model.studentModel).update(data, {
             where: {
                 studentId: studentId
             }
@@ -975,14 +1333,18 @@ export async function updateStudentfeeStatus(studentId, data) {
     }
 };
 
-export async function countStudentsWithFeePlanForInitiate(instituteId, options = {}) {
+export async function countStudentsWithFeePlanForInitiate(options = {}) {
     try {
         const { transaction } = options;
-        return await model.studentModel.count({
+        if (getRequestAcademicYearId() == null) {
+            return 0;
+        }
+
+        return await scoped(model.studentModel).count({
             where: {
-                instituteId,
                 feePlanProfileId: { [Op.ne]: null },
             },
+            include: [studentSessionWithAcademicYearInclude({ attributes: [] })],
             transaction,
         });
     } catch (error) {
@@ -991,14 +1353,16 @@ export async function countStudentsWithFeePlanForInitiate(instituteId, options =
     }
 }
 
-export async function findStudentsWithFeePlanForInitiate(instituteId, options = {}) {
+export async function findStudentsWithFeePlanForInitiate(options = {}) {
     try {
         const { page = 1, limit = 20, transaction } = options;
         const offset = (page - 1) * limit;
+        if (getRequestAcademicYearId() == null) {
+            return [];
+        }
 
-        return await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where: {
-                instituteId,
                 feePlanProfileId: { [Op.ne]: null },
             },
             attributes: [
@@ -1012,15 +1376,13 @@ export async function findStudentsWithFeePlanForInitiate(instituteId, options = 
                 "feePlanProfileId",
             ],
             include: [
+                studentSessionWithAcademicYearInclude({
+                    attributes: ["sessionId", "sessionName"],
+                }),
                 {
                     model: model.courseModel,
                     as: "course",
                     attributes: ["courseId", "courseName"],
-                },
-                {
-                    model: model.sessionModel,
-                    as: "studentSession",
-                    attributes: ["sessionId", "sessionName"],
                 },
                 {
                     model: model.classSectionModel,
@@ -1047,15 +1409,14 @@ export async function findStudentsWithFeePlanForInitiate(instituteId, options = 
     }
 }
 
-export async function findFeePlanItemsByProfileIds(profileIds, instituteId, options = {}) {
+export async function findFeePlanItemsByProfileIds(profileIds, options = {}) {
     try {
         const { transaction } = options;
         if (!profileIds?.length) return [];
 
-        return await model.feePlanItemModel.findAll({
+        return await scoped(model.feePlanItemModel).findAll({
             where: {
                 feePlanProfileId: { [Op.in]: profileIds },
-                instituteId,
             },
             attributes: [
                 "feePlanItemId",
@@ -1097,15 +1458,14 @@ export async function findFeePlanItemsByProfileIds(profileIds, instituteId, opti
     }
 }
 
-export async function findInvoicesByStudentIds(studentIds, instituteId, options = {}) {
+export async function findInvoicesByStudentIds(studentIds, options = {}) {
     try {
         const { transaction } = options;
         if (!studentIds.length) return [];
 
-        return await model.studentFeeInvoiceModel.findAll({
+        return await scoped(model.studentFeeInvoiceModel).findAll({
             where: {
                 studentId: { [Op.in]: studentIds },
-                instituteId,
             },
             attributes: [
                 "studentFeeInvoiceId",
@@ -1124,13 +1484,11 @@ export async function findInvoicesByStudentIds(studentIds, instituteId, options 
 
 export async function findStudentsByFeePlanProfileId(
     feePlanProfileId,
-    instituteId,
     options = {}
 ) {
     try {
         const { acedmicYearId, transaction } = options;
         const where = {
-            instituteId,
             feePlanProfileId,
         };
 
@@ -1146,7 +1504,7 @@ export async function findStudentsByFeePlanProfileId(
                     attributes: ["sessionId", "sessionName"],
                 };
 
-        return await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where,
             attributes: [
                 "studentId",
@@ -1193,13 +1551,12 @@ export async function findStudentsByFeePlanProfileId(
 
 export async function findFeePlanProfileByIdForInitiate(
     feePlanProfileId,
-    instituteId,
     options = {}
 ) {
     try {
         const { transaction } = options;
-        return await model.feePlanProfileModel.findOne({
-            where: { feePlanProfileId, instituteId },
+        return await scoped(model.feePlanProfileModel).findOne({
+            where: { feePlanProfileId },
             attributes: [
                 "feePlanProfileId",
                 "name",
@@ -1218,11 +1575,11 @@ export async function findFeePlanProfileByIdForInitiate(
     }
 }
 
-export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId, options = {}) {
+export async function findFeePlanItemsByProfileId(feePlanProfileId, options = {}) {
     try {
         const { transaction } = options;
-        return await model.feePlanItemModel.findAll({
-            where: { feePlanProfileId, instituteId },
+        return await scoped(model.feePlanItemModel).findAll({
+            where: { feePlanProfileId },
             attributes: [
                 "feePlanItemId",
                 "feePlanProfileId",
@@ -1261,7 +1618,6 @@ export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId,
 export async function findInvoicesByStudentIdsForProfile(
     studentIds,
     feePlanProfileId,
-    instituteId,
     options = {}
 ) {
     try {
@@ -1270,10 +1626,9 @@ export async function findInvoicesByStudentIdsForProfile(
             return [];
         }
 
-        return await model.studentFeeInvoiceModel.findAll({
+        return await scoped(model.studentFeeInvoiceModel).findAll({
             where: {
                 studentId: { [Op.in]: studentIds },
-                instituteId,
             },
             attributes: [
                 "studentFeeInvoiceId",
@@ -1302,16 +1657,14 @@ export async function findInvoicesByStudentIdsForProfile(
     }
 }
 
-export async function getEmptyFeeDetails(
-    universityId,
-    acedmicYearId,
-    instituteId,
-    filters = {},
-) {
+export async function getEmptyFeeDetails(filters = {}) {
     try {
-        const { courseId, sessionId } = filters;
+        const { courseId, sessionId, acedmicYearId } = filters;
+        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+            return [];
+        }
+
         const where = {
-            instituteId,
             feePlanProfileId: { [Op.is]: null },
             ...(courseId != null && { courseId }),
             ...(sessionId != null && { sessionId }),
@@ -1322,9 +1675,6 @@ export async function getEmptyFeeDetails(
                 model: model.courseModel,
                 as: "course",
                 attributes: ["courseName", "courseCode"],
-                where: {
-                    universityId: universityId
-                }
             },
             {
                 model: model.classSectionModel,
@@ -1336,22 +1686,17 @@ export async function getEmptyFeeDetails(
                 as: 'studentSemester',
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             },
+            studentSessionWithAcademicYearInclude({
+                ...(acedmicYearId != null && { acedmicYearId }),
+                attributes: [],
+            }),
         ];
 
-        if (acedmicYearId != null) {
-            include.push(studentSessionWithAcademicYearInclude({
-                acedmicYearId,
-                attributes: [],
-            }));
-        }
-
-        const result = await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where,
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
             include,
         });
-
-        return result;
     } catch (error) {
         console.error('Error in getting feeplan details:', error);
         throw error;
@@ -1360,9 +1705,13 @@ export async function getEmptyFeeDetails(
 
 export async function getStudentSubject(studentId) {
     try {
-        const result = await model.studentModel.findAll({
+        if (!(await assertStudentInRequestAcademicYear(studentId))) {
+            return [];
+        }
+
+        return await scoped(model.studentModel).findAll({
             where: {
-                studentId
+                studentId,
             },
             attributes: ["studentId", "firstName", "middleName", "lastName"],
             include: [
@@ -1379,17 +1728,14 @@ export async function getStudentSubject(studentId) {
                                 {
                                     model: model.subjectModel,
                                     as: 'subjects',
-                                    attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType']
-                                }
-                            ]
-                        }
-                    ]
+                                    attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
+                                },
+                            ],
+                        },
+                    ],
                 },
-
-            ]
+            ],
         });
-
-        return result;
     } catch (error) {
         console.error('Error in getting feeplan details:', error);
         throw error;
@@ -1408,7 +1754,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
             }),
         };
 
-        const student = await model.studentModel.findAll({
+        const student = await scoped(model.studentModel).findAll({
             where: {
                 classSectionsId: classSectionId,
                 courseId,
@@ -1421,13 +1767,13 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
                     model: model.semesterModel,
                     as: 'studentSemester',
                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-                }
-            ]
+                },
+            ],
         });
 
         const teacher = await model.teacherSectionMappingModel.findAll({
             where: {
-                classSectionsId: classSectionId
+                classSectionsId: classSectionId,
             },
             attributes: ["teacherSectionMappingId", "classSectionsId", "employeeId", "isCordinatory"],
             include: [
@@ -1435,29 +1781,24 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
                     model: model.employeeModel,
                     as: 'employeeData',
                     attributes: ["employeeId", "employeeName", "fatherName", "motherName", "employeeCode", "department", "employmentType", "dateOfBirth", "pickColor"],
+                    where: buildScope(model.employeeModel),
+                    required: true,
                     include: [
                         {
                             model: model.teacherSubjectMappingModel,
                             as: 'teacherEmployeeData',
-                            attributes: ['teacherSubjectMappingId', 'classSubjectMapperId'],
+                            attributes: ['teacherSubjectMappingId', 'subjectId'],
                             include: [
                                 {
-                                    model: model.classSubjectMapperModel,
+                                    model: model.subjectModel,
                                     as: 'employeeSubject',
-                                    attributes: ['classSubjectMapperId', 'subjectId'],
-                                    include: [
-                                        {
-                                            model: model.subjectModel,
-                                            as: 'subjects',
-                                            attributes: ['subjectName', 'subjectCode', 'subjectType']
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                                    attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
         });
 
         return { student, teacher };
@@ -1469,13 +1810,16 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
 
 export async function getStudentDetailsRepository(studentId) {
     try {
+        if (!(await assertStudentInRequestAcademicYear(studentId))) {
+            return null;
+        }
 
-        return await model.studentModel.findOne({
+        return await scoped(model.studentModel).findOne({
             where: { studentId },
             include: [
                 {
                     model: model.classSectionModel,
-                    as: "studentSections"
+                    as: "studentSections",
                 },
                 {
                     model: model.semesterModel,
@@ -1487,13 +1831,13 @@ export async function getStudentDetailsRepository(studentId) {
                             include: [
                                 {
                                     model: model.subjectModel,
-                                    as: "subjects"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                                    as: "subjects",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
         });
 
     } catch (error) {
@@ -1505,65 +1849,60 @@ export async function getStudentDetailsRepository(studentId) {
 export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, academicYearId, date) {
 
     try {
+        if (getRequestAcademicYearId() == null && academicYearId == null) {
+            return [];
+        }
 
-        const students = await model.studentModel.findAll({
-
+        const students = await scoped(model.studentModel).findAll({
             attributes: [
                 "studentId",
                 "scholarNumber",
                 "enrollNumber",
                 "firstName",
                 "lastName",
-                "classSectionsId"
+                "classSectionsId",
             ],
-
             where: {
                 classSectionsId,
             },
-
             include: [
-
+                studentSessionWithAcademicYearInclude({
+                    ...(academicYearId != null && { acedmicYearId: academicYearId }),
+                    attributes: [],
+                }),
                 {
                     model: model.classSectionModel,
                     as: "studentSections",
                     attributes: ["classSectionsId", "section"],
-                    ...(academicYearId && {
-                        where: { acedmicYearId: academicYearId },
-                        required: true,
-                    }),
+                    where: {
+                        acedmicYearId: academicYearId ?? getRequestAcademicYearId(),
+                        ...buildScope(model.classSectionModel),
+                    },
+                    required: true,
                 },
-
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseName"]
+                    attributes: ["courseName"],
                 },
-
                 {
                     model: model.attendanceModel,
                     as: "studentAttendance",
-
                     attributes: [
                         "attendanceId",
                         "attendanceStatus",
                         "notes",
                         "description",
                         "date",
-                        "timeTableMappingId"
+                        "timeTableMappingId",
                     ],
-
                     where: {
-                        timeTableMappingId: timeTableMappingId,
-                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)]
+                        timeTableMappingId,
+                        [Op.and]: [Sequelize.where(Sequelize.fn('DATE', Sequelize.col('studentAttendance.date')), date)],
                     },
-
                     required: false,
-
-
                 },
-
-            ]
-
+            ],
         });
 
         return students;
@@ -1574,8 +1913,8 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
     }
 }
 
-export async function getScopedExamScheduleForEvaluation(examScheduleId, instituteId, universityId) {
-    return model.examScheduleModel.findOne({
+export async function getScopedExamScheduleForEvaluation(examScheduleId) {
+    return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
         attributes: ["examScheduleId", "sessionId", "semesterId"],
         include: [
@@ -1583,23 +1922,34 @@ export async function getScopedExamScheduleForEvaluation(examScheduleId, institu
                 model: model.examSetupTypeTermModel,
                 as: "examSetupTypeTerm",
                 attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId", "term"],
-                where: { instituteId, universityId },
-                required: true
-            }
-        ]
+                where: buildScope(model.examSetupTypeTermModel),
+                required: true,
+            },
+        ],
     });
 }
 
+export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId) {
+    const acedmicYearId = getRequestAcademicYearId();
+    if (acedmicYearId == null) {
+        return [];
+    }
 
-export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId, instituteId, universityId) {
-    const studentWhere = { sessionId, instituteId, universityId };
-    const sectionWhere = { sessionId, courseId, instituteId, acedmicYearId: { [Op.ne]: null } };
-    const answerSheetWhere = { examScheduleId, instituteId, universityId };
+    const sectionWhere = {
+        sessionId,
+        courseId,
+        acedmicYearId,
+        ...buildScope(model.classSectionModel),
+    };
+    const answerSheetWhere = {
+        examScheduleId,
+        ...buildScope(model.answerSheetQrModel),
+    };
 
-    return model.studentModel.findAll({
-        where: studentWhere,
+    return scoped(model.studentModel).findAll({
         attributes: ["studentId", "firstName", "middleName", "lastName", "enrollNumber", "scholarNumber"],
         include: [
+            studentSessionWithAcademicYearInclude({ attributes: [] }),
             {
                 model: model.classSectionModel,
                 as: "studentSections",
@@ -1612,20 +1962,19 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
                         as: "classGroup",
                         required: true,
                         attributes: [],
-                        where: { term }
-                    }
-                ]
+                        where: { term },
+                    },
+                ],
             },
             {
                 model: model.answerSheetQrModel,
                 as: "answerSheetQrs",
                 attributes: ["id", "studentId", "examScheduleId"],
-                // LEFT JOIN keeps eligible students even if answer sheet QR is not mapped yet.
                 where: answerSheetWhere,
-                required: false
-            }
+                required: false,
+            },
         ],
-        order: [["firstName", "ASC"], ["studentId", "ASC"]]
+        order: [["firstName", "ASC"], ["studentId", "ASC"]],
     });
 }
 

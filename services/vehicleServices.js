@@ -1,57 +1,49 @@
-import transportVehicleRepository from '../repository/vehicleRepository.js';
+import * as transportVehicleRepository from "../repository/vehicleRepository.js";
 
-const createVehicle = async (vehicleData) => {
-    try {
-        return await transportVehicleRepository.createVehicle(vehicleData);
-    } catch (error) {
-        throw new Error(`Failed to create vehicle: ${error.message}`);
-    }
-};
+export async function createVehicle(vehicleData) {
+  try {
+    return transportVehicleRepository.createVehicle(vehicleData);
+  } catch (error) {
+    throw new Error(`Failed to create vehicle: ${error.message}`);
+  }
+}
 
-const getAllVehicles = async (universityId, acedmicYearId, instituteId) => {
-    try {
-        return await transportVehicleRepository.getAllVehicles(universityId, acedmicYearId, instituteId);
-    } catch (error) {
-        throw new Error(`Failed to fetch vehicles: ${error.message}`);
-    }
-};
+export async function getAllVehicles() {
+  try {
+    return transportVehicleRepository.getAllVehicles();
+  } catch (error) {
+    throw new Error(`Failed to fetch vehicles: ${error.message}`);
+  }
+}
 
-const getVehicleById = async (vehicleId, universityId, instituteId) => {
-    try {
-        const vehicle = await transportVehicleRepository.getVehicleById(vehicleId, universityId, instituteId);
-        if (!vehicle) throw new Error('Vehicle not found');
-        return vehicle;
-    } catch (error) {
-        throw new Error(`Failed to fetch vehicle: ${error.message}`);
-    }
-};
+export async function getVehicleById(vehicleId) {
+  try {
+    const vehicle = await transportVehicleRepository.getVehicleById(vehicleId);
+    if (!vehicle) throw new Error("Vehicle not found");
+    return vehicle;
+  } catch (error) {
+    throw new Error(`Failed to fetch vehicle: ${error.message}`);
+  }
+}
 
-const updateVehicle = async (vehicleId, vehicleData, userId) => {
-    try {
-        const updatedBy = userId;
-        const vehicleUpdate = { ...vehicleData, updatedBy };
-        const [updatedRows] = await transportVehicleRepository.updateVehicle(vehicleId, vehicleUpdate);
-        if (updatedRows === 0) throw new Error('Vehicle not found or no changes made');
-        return updatedRows;
-    } catch (error) {
-        throw new Error(`Failed to update vehicle: ${error.message}`);
-    }
-};
+export async function updateVehicle(vehicleId, vehicleData, userId) {
+  try {
+    const updatedBy = userId;
+    const vehicleUpdate = { ...vehicleData, updatedBy };
+    const [updatedRows] = await transportVehicleRepository.updateVehicle(vehicleId, vehicleUpdate);
+    if (updatedRows === 0) throw new Error("Vehicle not found or no changes made");
+    return updatedRows;
+  } catch (error) {
+    throw new Error(`Failed to update vehicle: ${error.message}`);
+  }
+}
 
-const deleteVehicle = async (vehicleId) => {
-    try {
-        const deletedRows = await transportVehicleRepository.deleteVehicle(vehicleId);
-        if (deletedRows === 0) throw new Error('Vehicle not found');
-        return deletedRows;
-    } catch (error) {
-        throw new Error(`Failed to delete vehicle: ${error.message}`);
-    }
-};
-
-export default {
-    createVehicle,
-    getAllVehicles,
-    getVehicleById,
-    updateVehicle,
-    deleteVehicle
-};
+export async function deleteVehicle(vehicleId) {
+  try {
+    const deletedRows = await transportVehicleRepository.deleteVehicle(vehicleId);
+    if (deletedRows === 0) throw new Error("Vehicle not found");
+    return deletedRows;
+  } catch (error) {
+    throw new Error(`Failed to delete vehicle: ${error.message}`);
+  }
+}

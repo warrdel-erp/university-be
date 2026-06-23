@@ -4,7 +4,7 @@ import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const affiliatedUniversityModel = sequelize.define(
     'affiliated_university',
     {
         affiliatedUniversityId: {
@@ -83,3 +83,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+affiliatedUniversityModel.scopeConfig = { university: true, institute: false, academicYear: false };
+
+export default affiliatedUniversityModel;

@@ -1,26 +1,25 @@
 import * as electiveSubject  from  "../services/electiveSubjectService.js";
 
 export async function addElectiveSubject(req, res) {
-    const {electiveSubjectName,acedmicYearId,electiveSubjectType} = req.body
+    const { electiveSubjectName, acedmicYearId, electiveSubjectType } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
+
     try {
-        if(!(electiveSubjectName && acedmicYearId && electiveSubjectType )){
-           return res.status(400).send('Elective Subject Name,acedmicYearId and electiveSubjectType is required')
+        if (!(electiveSubjectName && acedmicYearId && electiveSubjectType)) {
+            return res.status(400).send('Elective Subject Name, acedmicYearId and electiveSubjectType is required');
         }
-        const electiveSubjects = await electiveSubject.addElectiveSubject(req.body,createdBy,updatedBy,universityId);
-        res.status(201).json({ message: "Data added successfully", electiveSubjects });
+
+        const electiveSubjects = await electiveSubject.addElectiveSubject(req.body, createdBy, updatedBy);
+        res.status(201).json({ message: 'Data added successfully', electiveSubjects });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
 
 export async function getAllElectiveSubject(req, res) {
-    const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query;
     try {
-        const electiveSubjects = await electiveSubject.getElectiveSubjectDetails(universityId,acedmicYearId);
+        const electiveSubjects = await electiveSubject.getElectiveSubjectDetails();
         res.status(200).json(electiveSubjects);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -28,10 +27,9 @@ export async function getAllElectiveSubject(req, res) {
 }
 
 export async function getSingleElectiveSubjectDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { electiveSubjectId } = req.query;
-        const electiveSubjects = await electiveSubject.getSingleElectiveSubjectDetails(electiveSubjectId,universityId);
+        const electiveSubjects = await electiveSubject.getSingleElectiveSubjectDetails(electiveSubjectId);
         if (electiveSubjects) {
             res.status(200).json(electiveSubjects);
         } else {

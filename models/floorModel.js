@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import building from "./buildingModel.js";
 
-export default sequelize.define(
+const floorModel = sequelize.define(
     'floor',
     {
         floorId: {
@@ -71,3 +71,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+floorModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default floorModel;

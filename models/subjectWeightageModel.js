@@ -5,7 +5,7 @@ import subject from "./subjectModel.js";
 import session from "./sessionModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const subjectWeightageModel = sequelize.define(
     'subject_weightage',
     {
         subjectWeightageId: {
@@ -97,3 +97,7 @@ export default sequelize.define(
         ]
     }
 );
+
+subjectWeightageModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default subjectWeightageModel;

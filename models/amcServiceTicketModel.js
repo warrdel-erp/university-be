@@ -10,7 +10,7 @@ import {
   serviceTicketStatuses,
 } from "../constant.js";
 
-export default sequelize.define(
+const amcServiceTicketModel = sequelize.define(
   "amc_service_ticket",
   {
     serviceTicketId: {
@@ -100,3 +100,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+amcServiceTicketModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default amcServiceTicketModel;

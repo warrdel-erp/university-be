@@ -17,12 +17,9 @@ export async function addExamSetup(req, res) {
 }
 
 export async function getAllExamSetup(req, res) {
-    const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query
-    const role = req.user.role;
-    const instituteId = req.user.defaultInstituteId;
+    const { acedmicYearId } = req.query;
     try {
-        const setups = await examSetupServices.getExamSetup(universityId, acedmicYearId, role, instituteId);
+        const setups = await examSetupServices.getExamSetup(acedmicYearId);
         res.status(200).json(setups);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -30,10 +27,9 @@ export async function getAllExamSetup(req, res) {
 }
 
 export async function getSingleExamSetup(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { examSetupId } = req.query;
-        const examDetails = await examSetupServices.getSingleExamSetup(examSetupId, universityId);
+        const examDetails = await examSetupServices.getSingleExamSetup(examSetupId);
         if (examDetails) {
             res.status(200).json(examDetails);
         } else {

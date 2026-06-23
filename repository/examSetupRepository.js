@@ -1,7 +1,35 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+async function assertScopedExamType(examTypeId, transaction) {
+    return scoped(model.examTypeModel).findOne({
+        where: { examTypeId },
+        attributes: ['examTypeId'],
+        transaction,
+    });
+}
+
+async function assertScopedExamSetup(examSetupId, transaction) {
+    return model.examSetupModel.findOne({
+        where: { examSetupId },
+        attributes: ['examSetupId', 'examTypeId'],
+        transaction,
+        include: [{
+            model: model.examTypeModel,
+            as: 'examType',
+            required: true,
+            where: buildScope(model.examTypeModel),
+            attributes: ['examTypeId'],
+        }],
+    });
+}
 
 export async function addExamSetup(examDetail) {
     try {
+        const examType = await assertScopedExamType(examDetail.examTypeId);
+        if (!examType) {
+            throw new Error('Exam type not found');
+        }
         const result = await model.examSetupModel.create(examDetail);
         return result;
     } catch (error) {
@@ -10,57 +38,62 @@ export async function addExamSetup(examDetail) {
     }
 }
 
-export async function getExamSetup(universityId,acedmicYearId,role,instituteId) {
+export async function getExamSetup(acedmicYearId) {
     try {
+        const examTypeWhere = {
+            ...buildScope(model.examTypeModel),
+            ...(acedmicYearId && { acedmicYearId }),
+        };
+        const employeeWhere = {
+            ...buildScope(model.employeeModel),
+            ...(acedmicYearId && { acedmicYearId }),
+        };
+
         const result = await model.examSetupModel.findAll({
             attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
             },
             include: [
                 {
                     model: model.courseModel,
                     as: "course",
-                    attributes: ["courseName","capacity"],
-                    where: { universityId: universityId },
+                    attributes: ["courseName", "capacity"],
+                    where: buildScope(model.courseModel),
+                    required: true,
                 },
                 {
                     model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
-                    where: { universityId: universityId },
+                    where: buildScope(model.subjectModel),
+                    required: true,
                 },
                 {
                     model: model.examTypeModel,
                     as: "examType",
                     attributes: ["examTypeId", "examName"],
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId }),
-                        ...(role === 'Head' && { instituteId }),
-
-                    },
+                    where: examTypeWhere,
+                    required: true,
                 },
                 {
                     model: model.employeeModel,
                     as: "employee",
                     attributes: ["employee_id", "employee_name"],
-                    where: {
-                        ...(acedmicYearId && { acedmicYearId })
-                    },
+                    where: employeeWhere,
+                    required: false,
                 },
                 {
                     model: model.classRoomModel,
                     as: "room",
                     attributes: ["room_number", "capacity", "classRoomSectionId"],
+                    where: buildScope(model.classRoomModel),
+                    required: false,
                 },
                 {
                     model: model.userModel,
                     as: 'examSetUpUser',
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
-               
+                },
             ],
         });
         return result;
@@ -70,9 +103,13 @@ export async function getExamSetup(universityId,acedmicYearId,role,instituteId) 
     }
 }
 
-export async function getSingleExamSetup(examSetupId, universityId) {
+export async function getSingleExamSetup(examSetupId) {
     try {
-        const result = await model.examSetupModel.findOne({
+        const result = await assertScopedExamSetup(examSetupId);
+        if (!result) {
+            return null;
+        }
+        return await model.examSetupModel.findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: { examSetupId },
             include: [
@@ -80,13 +117,9 @@ export async function getSingleExamSetup(examSetupId, universityId) {
                     model: model.userModel,
                     as: 'examSetUpUser',
                     attributes: ["universityId", "userId"],
-                    where: {
-                        universityId: universityId
-                    }
-                }
-            ]
+                },
+            ],
         });
-        return result;
     } catch (error) {
         console.error("Error fetching exam setup:", error);
         throw error;
@@ -95,6 +128,10 @@ export async function getSingleExamSetup(examSetupId, universityId) {
 
 export async function deleteExamSetup(examSetupId) {
     try {
+        const existing = await assertScopedExamSetup(examSetupId);
+        if (!existing) {
+            return false;
+        }
         const deleted = await model.examSetupModel.destroy({ where: { examSetupId } });
         return deleted > 0;
     } catch (error) {
@@ -105,6 +142,16 @@ export async function deleteExamSetup(examSetupId) {
 
 export async function updateExamSetup(examSetupId, examDetail) {
     try {
+        const existing = await assertScopedExamSetup(examSetupId);
+        if (!existing) {
+            return [0];
+        }
+        if (examDetail.examTypeId) {
+            const examType = await assertScopedExamType(examDetail.examTypeId);
+            if (!examType) {
+                throw new Error('Exam type not found');
+            }
+        }
         const result = await model.examSetupModel.update(examDetail, {
             where: { examSetupId },
         });

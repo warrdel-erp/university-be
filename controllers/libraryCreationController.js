@@ -19,7 +19,7 @@ export async function addLibrary(req, res) {
 
 export async function getLibraryDetails(req, res) {
   try {
-    const libraries = await libraryCreation.getLibraryDetails(req.user);
+    const libraries = await libraryCreation.getLibraryDetails();
     return SuccessResponse(res, 200, "Library Details", libraries);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -28,10 +28,7 @@ export async function getLibraryDetails(req, res) {
 
 export async function getSingleLibraryDetails(req, res) {
   try {
-    const library = await libraryCreation.getSingleLibraryDetails(
-      req.query.libraryCreationId,
-      req.user,
-    );
+    const library = await libraryCreation.getSingleLibraryDetails(req.query.libraryCreationId);
     return SuccessResponse(res, 200, "Library Details", library);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -71,7 +68,7 @@ export async function addCategory(req, res) {
 
 export async function getAllCategories(req, res) {
   try {
-    const categories = await libraryCreation.getAllCategories(req.user);
+    const categories = await libraryCreation.getAllCategories();
     return SuccessResponse(res, 200, "Categories fetched successfully", categories);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -107,7 +104,7 @@ export async function addBookWithInventory(req, res) {
 
 export async function getBookSummaryStats(req, res) {
   try {
-    const stats = await libraryCreation.getBookSummaryStats(req.query, req.user);
+    const stats = await libraryCreation.getBookSummaryStats(req.query);
     return SuccessResponse(res, 200, "Book summary fetched successfully", stats);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -116,7 +113,7 @@ export async function getBookSummaryStats(req, res) {
 
 export async function getAllBooks(req, res) {
   try {
-    const result = await libraryCreation.getAllBooks(req.query, req.user);
+    const result = await libraryCreation.getAllBooks(req.query);
     return SuccessResponse(res, 200, "Books", result.books, result.pagination);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -179,7 +176,7 @@ export async function deleteInventoryCopy(req, res) {
 
 export async function getAllIssuedBooks(req, res) {
   try {
-    const issuedBooks = await libraryCreation.getAllIssuedBooks(req.user);
+    const issuedBooks = await libraryCreation.getAllIssuedBooks();
     return SuccessResponse(res, 200, "Issued books fetched successfully", issuedBooks);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

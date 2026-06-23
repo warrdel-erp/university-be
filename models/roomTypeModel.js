@@ -5,7 +5,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const roomTypeModel = sequelize.define(
     'room_type',
     {
         roomTypeId: {
@@ -92,3 +92,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+roomTypeModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default roomTypeModel;

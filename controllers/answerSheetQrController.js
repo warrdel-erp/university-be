@@ -7,10 +7,7 @@ import * as s3FileRepository from "../repository/s3FileRepository.js";
 export async function generateAnswerSheetQrBulk(req, res) {
   try {
     const { count } = req.body;
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
-
-    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(Number(count), instituteId, universityId);
+    const result = await answerSheetQrServices.generateBulkAnswerSheetQr(Number(count));
 
     return SuccessResponse(res, 201, "Answer sheet QR codes generated successfully", result);
   } catch (error) {
@@ -21,16 +18,12 @@ export async function generateAnswerSheetQrBulk(req, res) {
 
 export async function mapAnswerSheetQr(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { qr, studentId, examScheduleId } = req.body;
 
     const result = await answerSheetQrServices.mapAnswerSheetQr(
       qr,
       studentId,
       examScheduleId,
-      instituteId,
-      universityId,
     );
 
     return SuccessResponse(res, 200, "QR code mapped successfully", result);
@@ -42,11 +35,9 @@ export async function mapAnswerSheetQr(req, res) {
 
 export async function getAnswerSheetQrById(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { id } = req.params;
 
-    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(Number(id), instituteId, universityId);
+    const result = await answerSheetQrServices.getAnswerSheetQrDetailById(Number(id));
 
     return SuccessResponse(res, 200, "Answer sheet QR details fetched successfully", result);
   } catch (error) {
@@ -57,12 +48,8 @@ export async function getAnswerSheetQrById(req, res) {
 
 export async function getAnswerSheetQrGenerationRequests(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { page = 1, limit = 10 } = req.query;
     const result = await answerSheetQrServices.getAnswerSheetQrGenerationRequests(
-      instituteId,
-      universityId,
       page,
       limit,
     );
@@ -83,14 +70,10 @@ export async function getAnswerSheetQrGenerationRequests(req, res) {
 
 export async function getAnswerSheetQrsByRequestId(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { requestId } = req.params;
     const { page = 1, limit = 20 } = req.query;
     const result = await answerSheetQrServices.getAnswerSheetQrsByRequestId(
       requestId,
-      instituteId,
-      universityId,
       page,
       limit,
     );
@@ -110,15 +93,11 @@ export async function getAnswerSheetQrsByRequestId(req, res) {
 
 export async function assignAnswerSheetsToTeachers(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { assignedToUserId, answerSheetQrIds } = req.body;
 
     const result = await answerSheetQrServices.assignAnswerSheetsToTeachers(
       assignedToUserId,
       answerSheetQrIds,
-      instituteId,
-      universityId,
     );
 
     return SuccessResponse(res, 200, "Answer sheets assigned to teachers successfully", result);
@@ -130,15 +109,11 @@ export async function assignAnswerSheetsToTeachers(req, res) {
 
 export async function getScriptsAssignedToTeacher(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { assignedToUserId } = req.params;
     const { page = 1, limit = 20 } = req.query;
 
     const result = await answerSheetQrServices.getScriptsAssignedToTeacher(
       assignedToUserId,
-      instituteId,
-      universityId,
       page,
       limit,
     );
@@ -152,16 +127,12 @@ export async function getScriptsAssignedToTeacher(req, res) {
 
 export async function assignObtainedMarksToAnswerSheet(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
     const { id } = req.params;
     const { obtained_marks } = req.body;
 
     const result = await answerSheetQrServices.assignObtainedMarksToAnswerSheet(
       Number(id),
       Number(obtained_marks),
-      instituteId,
-      universityId,
     );
 
     return SuccessResponse(res, 200, "Obtained marks assigned successfully", result);
@@ -173,9 +144,6 @@ export async function assignObtainedMarksToAnswerSheet(req, res) {
 
 export async function splitAnswerSheetPdf(req, res) {
   try {
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
-
     const fileUploadId = req.body.answerSheetS3FileId;
 
     // Find FileUpload record to get the S3 key
@@ -234,8 +202,6 @@ export async function splitAnswerSheetPdf(req, res) {
     // ── Enqueue the job ───────────────────────────────────────────────────────
     const { jobId, jobDbId } = await answerSheetSplitterServices.enqueuePdfSplitJob(
       s3Key,
-      instituteId,
-      universityId,
       req.user.userId,
     );
 

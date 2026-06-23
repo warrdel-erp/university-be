@@ -2,8 +2,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import floor from "./floorModel.js";
+import institute from "./instituteModel.js";
 
-export default sequelize.define(
+const classRoomModel = sequelize.define(
     'class_room_section',
     {
         classRoomSectionId: {
@@ -11,6 +12,15 @@ export default sequelize.define(
             primaryKey: true,
             autoIncrement: true,
             field: 'class_room_section_id'
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
+            }
         },
         floorId: {
             type: DataTypes.INTEGER,
@@ -83,3 +93,8 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+
+classRoomModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default classRoomModel;

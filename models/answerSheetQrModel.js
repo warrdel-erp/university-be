@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const answerSheetQrModel = sequelize.define(
   "answer_sheet_qr",
   {
     id: {
@@ -109,3 +109,7 @@ export default sequelize.define(
     ],
   }
 );
+
+answerSheetQrModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default answerSheetQrModel;

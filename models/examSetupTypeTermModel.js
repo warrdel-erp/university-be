@@ -7,7 +7,7 @@ import universityModel from "./universityModel.js";
 import courseModel from "./courseModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const examSetupTypeTermModel = sequelize.define(
     'examSetupTypeTerm',
     {
         examSetupTypeTermId: {
@@ -110,3 +110,7 @@ export default sequelize.define(
         ]
     }
 );
+
+examSetupTypeTermModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examSetupTypeTermModel;

@@ -1,233 +1,153 @@
-import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
-import { addBulkCourse, getCourseByAcedmicId } from "../repository/courseRepository.js";
-import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from "../repository/electiveSubjectRepository.js";
-import { getAllSubject, subjectBulkCreate } from "../repository/mainRepository.js";
-import { addBulkSession, getSessionDetailsByAcedmic } from "../repository/sessionRepository.js";
+import * as acedmicYearCreationService from '../repository/acedmicYearRepository.js';
+import { addBulkCourse, getCourseByAcedmicId } from '../repository/courseRepository.js';
+import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from '../repository/electiveSubjectRepository.js';
+import { getAllSubject, subjectBulkCreate } from '../repository/mainRepository.js';
+import { addBulkSession, getSessionDetailsByAcedmic } from '../repository/sessionRepository.js';
 
-export async function addacedmicYear(acedmicYearData, createdBy, updatedBy,universityId) {
+export async function addacedmicYear(acedmicYearData, createdBy, updatedBy) {
+    acedmicYearData.createdBy = createdBy;
+    acedmicYearData.updatedBy = updatedBy;
+    return await acedmicYearCreationService.addacedmicYear(acedmicYearData);
+}
 
-        acedmicYearData.createdBy = createdBy;
-        acedmicYearData.updatedBy = updatedBy;
-        acedmicYearData.universityId = universityId;
-        const acedmicYear = await acedmicYearCreationService.addacedmicYear(acedmicYearData);
-        return acedmicYear;
-};
+export async function getacedmicYearDetails() {
+    return await acedmicYearCreationService.getacedmicYearDetails();
+}
 
-export async function getacedmicYearDetails(universityId) {
-    return await acedmicYearCreationService.getacedmicYearDetails(universityId);
-};
-
-export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
-    return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId,universityId);
-};
+export async function getSingleacedmicYearDetails(acedmicYearId) {
+    return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId);
+}
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     return await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
-};
-
-// export async function updateacedmicYear(acedmicYearData, updatedBy) {
-//   const { startingDate, endingDate } = acedmicYearData;
-
-//   const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-//   for (const record of allAcedmicyear) {
-//     const { acedmicYearId, yearTitle } = record.dataValues;
-
-//     if (!yearTitle || !yearTitle.includes('-')) {
-//       console.warn(`>>>>>>>Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
-//       continue;
-//     }
-
-//     const [startYear, endYear] = yearTitle.split('-');
-
-//     const fullStartingDate = `${startYear}-${startingDate}`;
-//     const fullEndingDate = `${endYear}-${endingDate}`;
-
-//     const updatePayload = {
-//       startingDate: fullStartingDate,
-//       endingDate: fullEndingDate,
-//       updatedBy
-//     };
-
-//     console.log(`>>>>>>>>>>>>>Updating ID ${acedmicYearId} =>`, updatePayload);
-
-//      await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
-//   }
-// };
+}
 
 export async function updateacedmicYear(acedmicYearData, updatedBy) {
-  const { startingDate, endingDate } = acedmicYearData;
+    const { startingDate, endingDate } = acedmicYearData;
 
-  const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-  const currentYear = new Date().getFullYear();
-
-  for (const record of allAcedmicyear) {
-    const { acedmicYearId, yearTitle } = record.dataValues;
-
-    if (!yearTitle || !yearTitle.includes('-')) {
-      console.warn(`>>>>>>>Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
-      continue;
-    }
-
-    const [startYear, endYear] = yearTitle.split('-');
-
-    const fullStartingDate = `${startYear}-${startingDate}`;
-    const fullEndingDate = `${endYear}-${endingDate}`;
-
-    // Determine if this academic year is the current one
-    const isActive = Number(startYear) === currentYear;
-
-    const updatePayload = {
-      startingDate: fullStartingDate,
-      endingDate: fullEndingDate,
-      isActive,
-      updatedBy
-    };
-
-    await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
-  }
-};
-
-export async function activateAcedmicYear(acedmicYearId, updatedBy) {    
-  try {
     const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
+    const currentYear = new Date().getFullYear();
 
-    const currentIndex = allAcedmicyear.findIndex(
-      (record) => record.dataValues.acedmicYearId  === Number(acedmicYearId)
-    );
-    
+    for (const record of allAcedmicyear) {
+        const { acedmicYearId, yearTitle } = record.dataValues;
 
-    if (currentIndex === -1) {
-      throw new Error(`Academic year with ID ${acedmicYearId} not found.`);
+        if (!yearTitle || !yearTitle.includes('-')) {
+            console.warn(`Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
+            continue;
+        }
+
+        const [startYear, endYear] = yearTitle.split('-');
+
+        const fullStartingDate = `${startYear}-${startingDate}`;
+        const fullEndingDate = `${endYear}-${endingDate}`;
+        const isActive = Number(startYear) === currentYear;
+
+        const updatePayload = {
+            startingDate: fullStartingDate,
+            endingDate: fullEndingDate,
+            isActive,
+            updatedBy,
+        };
+
+        await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
     }
+}
 
-    const updatePayload = {
-      isActive: true,
-      updatedBy
-    };
+export async function activateAcedmicYear(acedmicYearId, updatedBy) {
+    try {
+        const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
 
-    await acedmicYearCreationService.updateacedmicYear(
-      acedmicYearId,
-      updatePayload
-    );
-    const nextRecord = allAcedmicyear[currentIndex + 1];
-    if (nextRecord) {
-      const nextAcedmicYearId = nextRecord.dataValues.acedmicYearId;
+        const currentIndex = allAcedmicyear.findIndex(
+            (record) => record.dataValues.acedmicYearId === Number(acedmicYearId)
+        );
 
-      await acedmicYearCreationService.updateacedmicYear(
-        nextAcedmicYearId,
-        updatePayload
-      );
+        if (currentIndex === -1) {
+            throw new Error(`Academic year with ID ${acedmicYearId} not found.`);
+        }
 
-      console.log(`Activated current (ID ${acedmicYearId}) and next (ID ${nextAcedmicYearId}) academic years.`);
-    } else {
-      console.log(`Activated current (ID ${acedmicYearId}) academic year. No next year found.`);
+        const updatePayload = {
+            isActive: true,
+            updatedBy,
+        };
+
+        await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
+
+        const nextRecord = allAcedmicyear[currentIndex + 1];
+        if (nextRecord) {
+            const nextAcedmicYearId = nextRecord.dataValues.acedmicYearId;
+            await acedmicYearCreationService.updateacedmicYear(nextAcedmicYearId, updatePayload);
+        }
+    } catch (error) {
+        console.error('Error in activateAcedmicYear:', error);
+        throw error;
     }
-
-  } catch (error) {
-    console.error('Error in activateAcedmicYear:', error);
-    throw error;
-  }
-};
+}
 
 export async function deleteacedmicYear(acedmicYearId) {
     return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
-};
+}
 
-export async function getAllActiveAcedmicYear(universityId) {
-    return await acedmicYearCreationService.getAllActiveAcedmicYear(universityId);
-};
+export async function getAllActiveAcedmicYear() {
+    return await acedmicYearCreationService.getAllActiveAcedmicYear();
+}
 
 export async function newActivateAndCopyData(data, universityId, instituteId, createdBy, updatedBy) {
-  const { acedmicYearId, copyAcedmicYearId, copyData } = data;
-  const updatePayload = {
-      isActive: true,
-      updatedBy
-  };
-  try {
-    if (!copyAcedmicYearId) {
-      await acedmicYearCreationService.updateacedmicYear(
-        acedmicYearId,
-        updatePayload
-      );
-      console.log(`Activated academic year ID: ${acedmicYearId}`);
+    const { acedmicYearId, copyAcedmicYearId, copyData } = data;
+    const updatePayload = {
+        isActive: true,
+        updatedBy,
+    };
+    try {
+        if (!copyAcedmicYearId) {
+            await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
+        } else if (copyAcedmicYearId && Array.isArray(copyData) && copyData.length > 0) {
+            for (const dataType of copyData) {
+                switch (dataType) {
+                    case 'subject':
+                        const subjects = await getAllSubject(copyAcedmicYearId);
+                        const newSubjects = subjects.map((subject) => ({
+                            ...subject.get({ plain: true }),
+                            acedmicYearId,
+                            createdBy,
+                            updated_by: updatedBy,
+                            subjectId: undefined,
+                        }));
+                        await subjectBulkCreate(newSubjects);
+                        break;
 
-    } else if (copyAcedmicYearId && Array.isArray(copyData) && copyData.length > 0) {
-      for (const dataType of copyData) {
-        switch (dataType) {
-          case 'subject':
-            const subjects = await getAllSubject('',copyAcedmicYearId,'','')             
-            const newSubjects = subjects.map(subject => ({
-              ...subject.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updated_by: updatedBy,
-              // createdBy:createdBy,
-              subjectId: undefined  // Remove the id so a new one is generated
-            }));            
+                    case 'electiveSubject':
+                        const electives = await getSingleElectiveSubjectByAcedmicId(copyAcedmicYearId);
+                        const newElectives = electives.map((item) => ({
+                            ...item.get({ plain: true }),
+                            acedmicYearId,
+                            createdBy,
+                            updatedBy,
+                            electiveSubjectId: undefined,
+                        }));
+                        await addBulkElectiveSubject(newElectives);
+                        break;
 
-            await subjectBulkCreate(newSubjects);
-            console.log(`Copied subjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
+                    case 'session':
+                        const sessions = await getSessionDetailsByAcedmic(copyAcedmicYearId);
+                        const newSessions = sessions.map((item) => ({
+                            ...item.get({ plain: true }),
+                            acedmicYearId,
+                            createdBy,
+                            updatedBy,
+                            sessionId: undefined,
+                        }));
+                        await addBulkSession(newSessions);
+                        break;
 
-          case 'electiveSubject':
-            const electives = await getSingleElectiveSubjectByAcedmicId(copyAcedmicYearId);
+                    default:
+                        console.warn(`Unknown data type: ${dataType}`);
+                }
+            }
 
-            const newElectives = electives.map(item => ({
-              ...item.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updatedBy: updatedBy,
-              electiveSubjectId: undefined
-            }));
-            
-            await addBulkElectiveSubject(newElectives);
-            console.log(`Copied electiveSubjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
-
-          case 'session':
-            const sessions = await getSessionDetailsByAcedmic(copyAcedmicYearId)
-
-            const newSessions = sessions.map(item => ({
-              ...item.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updatedBy: updatedBy,
-              sessionId: undefined
-            }));
-
-            await addBulkSession (newSessions);
-            console.log(`Copied session from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
-
-          // case 'course':
-          //   const courses = await getCourseByAcedmicId(copyAcedmicYearId);
-          //   console.log(`>>>>>>>courses`,courses.length);
-            
-          //   const newCourse = courses.map(item => ({
-          //     ...item.get({ plain: true }),
-          //     acedmicYearId: acedmicYearId,
-          //     createdBy: createdBy,
-          //     updatedBy: updatedBy,
-          //     courseId: undefined
-          //   }));
-          //               console.log(`>>>>>>>newCourse`,newCourse.length);
-
-          //   await addBulkCourse (newCourse);
-          //   console.log(`Copied course from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-          //   break;
-
-          default:
-            console.warn(`Unknown data type: ${dataType}`);
+            await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
         }
-      }
-
-      await acedmicYearCreationService.updateacedmicYear(
-        acedmicYearId,
-        updatePayload
-      );
+    } catch (error) {
+        console.error('Error in copy data and academic year:', error);
+        throw error;
     }
-  } catch (error) {
-    console.error('Error in copy data and academic year:', error);
-    throw error;
-  }
-};
+}

@@ -4,7 +4,7 @@ import employee from "./employeeModel.js";
 import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const teacherSectionMappingModel = sequelize.define(
     'teacher_section_mapping',
     {
         teacherSectionMappingId: {
@@ -79,3 +79,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+teacherSectionMappingModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default teacherSectionMappingModel;

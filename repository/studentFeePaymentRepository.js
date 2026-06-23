@@ -1,18 +1,15 @@
 import { col, fn, literal, Op } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 import { toMoneyNumber } from "../utility/decimalMoney.js";
 
 const invoiceItemNetAmountSql = literal(
   "`student_fee_invoice_items`.`amount` - COALESCE(`student_fee_invoice_items`.`waiver`, 0)"
 );
 
-export async function findStudentFeeInvoiceForPayment(
-  studentFeeInvoiceId,
-  instituteId,
-  options = {}
-) {
-  return model.studentFeeInvoiceModel.findOne({
-    where: { studentFeeInvoiceId, instituteId },
+export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options = {}) {
+  return scoped(model.studentFeeInvoiceModel).findOne({
+    where: { studentFeeInvoiceId },
     attributes: [
       "studentFeeInvoiceId",
       "studentId",
@@ -27,12 +24,8 @@ export async function findStudentFeeInvoiceForPayment(
 }
 
 // Invoice total = SUM(amount - waiver) from student_fee_invoice_items (not invoice.total).
-export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(
-  studentFeeInvoiceId,
-  instituteId,
-  options = {}
-) {
-  const row = await model.studentFeeInvoiceItemsModel.findOne({
+export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, options = {}) {
+  const row = await scoped(model.studentFeeInvoiceItemsModel).findOne({
     attributes: [[fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"]],
     where: { studentFeeInvoiceId },
     include: [
@@ -41,7 +34,7 @@ export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(
         as: "studentFeeInvoice",
         attributes: [],
         required: true,
-        where: { studentFeeInvoiceId, instituteId },
+        where: { studentFeeInvoiceId, ...buildScope(model.studentFeeInvoiceModel) },
       },
     ],
     raw: true,
@@ -51,15 +44,11 @@ export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(
   return toMoneyNumber(row?.invoiceTotal ?? 0);
 }
 
-export async function sumInvoiceTotalsByInvoiceIds(
-  studentFeeInvoiceIds,
-  instituteId,
-  options = {}
-) {
+export async function sumInvoiceTotalsByInvoiceIds(studentFeeInvoiceIds, options = {}) {
   const totals = new Map();
   if (!studentFeeInvoiceIds.length) return totals;
 
-  const rows = await model.studentFeeInvoiceItemsModel.findAll({
+  const rows = await scoped(model.studentFeeInvoiceItemsModel).findAll({
     attributes: [
       "studentFeeInvoiceId",
       [fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"],
@@ -71,7 +60,7 @@ export async function sumInvoiceTotalsByInvoiceIds(
         as: "studentFeeInvoice",
         attributes: [],
         required: true,
-        where: { instituteId },
+        where: buildScope(model.studentFeeInvoiceModel),
       },
     ],
     group: ["studentFeeInvoiceId"],
@@ -86,11 +75,11 @@ export async function sumInvoiceTotalsByInvoiceIds(
   return totals;
 }
 
-export async function getInvoicePaymentTotals(studentFeeInvoiceId, instituteId, options = {}) {
+export async function getInvoicePaymentTotals(studentFeeInvoiceId, options = {}) {
   const [invoice, total, paidAmount] = await Promise.all([
-    findStudentFeeInvoiceForPayment(studentFeeInvoiceId, instituteId, options),
-    sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, instituteId, options),
-    sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, instituteId, options),
+    findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options),
+    sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, options),
+    sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, options),
   ]);
 
   if (!invoice) return null;
@@ -102,10 +91,9 @@ export async function getInvoicePaymentTotals(studentFeeInvoiceId, instituteId, 
 export async function sumPaidAmountFromPaymentItemsByReference(
   referenceId,
   referenceType,
-  instituteId,
   options = {}
 ) {
-  const row = await model.paymentItemModel.findOne({
+  const row = await scoped(model.paymentItemModel).findOne({
     attributes: [[fn("SUM", col("payment_item.amount")), "paidAmount"]],
     where: { referenceId, referenceType },
     include: [
@@ -116,7 +104,7 @@ export async function sumPaidAmountFromPaymentItemsByReference(
         required: true,
         where: {
           paymentType: "INCOMING",
-          instituteId,
+          ...buildScope(model.studentFeePaymentModel),
         },
       },
     ],
@@ -127,54 +115,44 @@ export async function sumPaidAmountFromPaymentItemsByReference(
   return toMoneyNumber(row?.paidAmount ?? 0);
 }
 
-export async function sumPaidAmountFromPaymentItemsByInvoiceId(
-  studentFeeInvoiceId,
-  instituteId,
-  options = {}
-) {
+export async function sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, options = {}) {
   return sumPaidAmountFromPaymentItemsByReference(
     studentFeeInvoiceId,
     "STUDENT_FEE_INVOICE",
-    instituteId,
     options
   );
 }
 
-export async function sumPaidAmountByInvoiceId(studentFeeInvoiceId, instituteId, options = {}) {
-  return sumPaidAmountFromPaymentItemsByInvoiceId(
-    studentFeeInvoiceId,
-    instituteId,
-    options
-  );
+export async function sumPaidAmountByInvoiceId(studentFeeInvoiceId, options = {}) {
+  return sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, options);
 }
 
 export async function createStudentFeePayment(data, options = {}) {
-  return model.studentFeePaymentModel.create(data, { transaction: options.transaction });
+  return scoped(model.studentFeePaymentModel).create(data, { transaction: options.transaction });
 }
 
 export async function createPaymentItem(data, options = {}) {
-  return model.paymentItemModel.create(data, { transaction: options.transaction });
+  return scoped(model.paymentItemModel).create(data, { transaction: options.transaction });
 }
 
 export async function updateInvoicePaymentStatus(
   studentFeeInvoiceId,
-  instituteId,
   paymentStatus,
   paidAmount,
   options = {}
 ) {
-  return model.studentFeeInvoiceModel.update(
+  return scoped(model.studentFeeInvoiceModel).update(
     { paymentStatus, paidAmount },
     {
-      where: { studentFeeInvoiceId, instituteId },
+      where: { studentFeeInvoiceId },
       transaction: options.transaction,
     }
   );
 }
 
-export async function findStudentFeePaymentById(studentFeePaymentId, instituteId, options = {}) {
-  return model.studentFeePaymentModel.findOne({
-    where: { studentFeePaymentId, instituteId },
+export async function findStudentFeePaymentById(studentFeePaymentId, options = {}) {
+  return scoped(model.studentFeePaymentModel).findOne({
+    where: { studentFeePaymentId },
     include: [{ model: model.paymentItemModel, as: "paymentItems" }],
     transaction: options.transaction,
   });
@@ -187,13 +165,12 @@ function resolvePagination(pagination = {}) {
   return { page, limit, offset };
 }
 
-async function findStudentIdsMatchingPaymentSearch(search, instituteId, options = {}) {
+async function findStudentIdsMatchingPaymentSearch(search, options = {}) {
   const term = search.trim();
   const pattern = { [Op.like]: `%${term}%` };
 
-  const rows = await model.studentModel.findAll({
+  const rows = await scoped(model.studentModel).findAll({
     where: {
-      instituteId,
       [Op.or]: [
         { firstName: pattern },
         { middleName: pattern },
@@ -216,8 +193,8 @@ async function findStudentIdsMatchingPaymentSearch(search, instituteId, options 
   return ids;
 }
 
-function buildPaymentListWhere(instituteId, filters, matchingStudentIds = []) {
-  const andParts = [{ instituteId }, { paymentType: "INCOMING" }];
+function buildPaymentListWhere(filters, matchingStudentIds = []) {
+  const andParts = [{ paymentType: "INCOMING" }];
 
   if (filters.payeeId != null) {
     andParts.push({ payeeId: filters.payeeId });
@@ -225,7 +202,9 @@ function buildPaymentListWhere(instituteId, filters, matchingStudentIds = []) {
 
   const search = filters.search?.trim();
   if (!search) {
-    return andParts.length === 2 ? { instituteId, paymentType: "INCOMING", ...(filters.payeeId != null ? { payeeId: filters.payeeId } : {}) } : { [Op.and]: andParts };
+    return andParts.length === 1
+      ? { paymentType: "INCOMING", ...(filters.payeeId != null ? { payeeId: filters.payeeId } : {}) }
+      : { [Op.and]: andParts };
   }
 
   const pattern = { [Op.like]: `%${search}%` };
@@ -251,16 +230,16 @@ function buildPaymentListWhere(instituteId, filters, matchingStudentIds = []) {
   return { [Op.and]: andParts };
 }
 
-export async function findAllPaymentsPaginated(instituteId, filters = {}, pagination = {}, options = {}) {
+export async function findAllPaymentsPaginated(filters = {}, pagination = {}, options = {}) {
   const { page, limit, offset } = resolvePagination(pagination);
 
   const matchingStudentIds = filters.search
-    ? await findStudentIdsMatchingPaymentSearch(filters.search, instituteId, options)
+    ? await findStudentIdsMatchingPaymentSearch(filters.search, options)
     : [];
 
-  const where = buildPaymentListWhere(instituteId, filters, matchingStudentIds);
+  const where = buildPaymentListWhere(filters, matchingStudentIds);
 
-  const { count, rows } = await model.studentFeePaymentModel.findAndCountAll({
+  const { count, rows } = await scoped(model.studentFeePaymentModel).findAndCountAll({
     where,
     order: [["studentFeePaymentId", "DESC"]],
     limit,
@@ -271,9 +250,9 @@ export async function findAllPaymentsPaginated(instituteId, filters = {}, pagina
   return { rows, total: count, page, limit };
 }
 
-export async function findStudentForPaymentDetails(studentId, instituteId, options = {}) {
-  return model.studentModel.findOne({
-    where: { studentId, instituteId },
+export async function findStudentForPaymentDetails(studentId, options = {}) {
+  return scoped(model.studentModel).findOne({
+    where: { studentId },
     attributes: [
       "studentId",
       "firstName",
@@ -309,26 +288,21 @@ export async function findStudentForPaymentDetails(studentId, instituteId, optio
 }
 
 // Generated invoices + line items (used to compute total from student_fee_invoice_items).
-export async function findLastIncomingPaymentForStudentPayee(
-  studentId,
-  instituteId,
-  options = {}
-) {
-  return model.studentFeePaymentModel.findOne({
+export async function findLastIncomingPaymentForStudentPayee(studentId, options = {}) {
+  return scoped(model.studentFeePaymentModel).findOne({
     where: {
       payeeId: studentId,
       payeeType: "STUDENT",
       paymentType: "INCOMING",
-      instituteId,
     },
     order: [["studentFeePaymentId", "DESC"]],
     transaction: options.transaction,
   });
 }
 
-export async function findGeneratedInvoicesForPaymentDetails(studentId, instituteId, options = {}) {
-  return model.studentFeeInvoiceModel.findAll({
-    where: { studentId, instituteId, status: "generated" },
+export async function findGeneratedInvoicesForPaymentDetails(studentId, options = {}) {
+  return scoped(model.studentFeeInvoiceModel).findAll({
+    where: { studentId, status: "generated" },
     attributes: [
       "studentFeeInvoiceId",
       "studentId",
@@ -343,15 +317,10 @@ export async function findGeneratedInvoicesForPaymentDetails(studentId, institut
 }
 
 // paidAmount per reference_id for a given reference_type (INCOMING payments only).
-export async function sumPaidAmountByReferenceIds(
-  referenceIds,
-  referenceType,
-  instituteId,
-  options = {}
-) {
+export async function sumPaidAmountByReferenceIds(referenceIds, referenceType, options = {}) {
   if (!referenceIds.length) return new Map();
 
-  const rows = await model.paymentItemModel.findAll({
+  const rows = await scoped(model.paymentItemModel).findAll({
     attributes: [
       "referenceId",
       [fn("SUM", col("payment_item.amount")), "paidAmount"],
@@ -368,7 +337,7 @@ export async function sumPaidAmountByReferenceIds(
         required: true,
         where: {
           paymentType: "INCOMING",
-          instituteId,
+          ...buildScope(model.studentFeePaymentModel),
         },
       },
     ],
@@ -384,13 +353,8 @@ export async function sumPaidAmountByReferenceIds(
   return paidByReferenceId;
 }
 
-export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, instituteId, options = {}) {
-  return sumPaidAmountByReferenceIds(
-    studentFeeInvoiceIds,
-    "STUDENT_FEE_INVOICE",
-    instituteId,
-    options
-  );
+export async function sumPaidAmountByInvoiceIds(studentFeeInvoiceIds, options = {}) {
+  return sumPaidAmountByReferenceIds(studentFeeInvoiceIds, "STUDENT_FEE_INVOICE", options);
 }
 
 export function collectStudentPayeeIdsFromPayments(paymentRows) {
@@ -404,11 +368,11 @@ export function collectStudentPayeeIdsFromPayments(paymentRows) {
   return [...ids];
 }
 
-export async function findStudentsByIdsForPaymentList(studentIds, instituteId, options = {}) {
+export async function findStudentsByIdsForPaymentList(studentIds, options = {}) {
   if (!studentIds.length) return [];
 
-  return model.studentModel.findAll({
-    where: { studentId: { [Op.in]: studentIds }, instituteId },
+  return scoped(model.studentModel).findAll({
+    where: { studentId: { [Op.in]: studentIds } },
     attributes: [
       "studentId",
       "firstName",
@@ -443,9 +407,9 @@ export async function findStudentsByIdsForPaymentList(studentIds, instituteId, o
   });
 }
 
-export async function findStudentCourseSessionById(studentId, instituteId, options = {}) {
-  return model.studentModel.findOne({
-    where: { studentId, instituteId },
+export async function findStudentCourseSessionById(studentId, options = {}) {
+  return scoped(model.studentModel).findOne({
+    where: { studentId },
     attributes: [
       "studentId",
       "firstName",

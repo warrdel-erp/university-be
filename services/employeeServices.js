@@ -31,8 +31,8 @@ import moment from 'moment';
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
-  const campusCode = getCampusCodeDetail.get('campus_code');
-  const institueCode = getInstitueCodeDetail.get('institute_code');
+  const campusCode = getCampusCodeDetail.get('campusCode');
+  const institueCode = getInstitueCodeDetail.get('instituteCode');
   const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
   const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
   let enrollNumber;
@@ -422,8 +422,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(universityId, campusId, instituteId, headInstituteId, role) {
-  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, headInstituteId, role);
+export async function getAllEmployee(campusId, instituteId) {
+  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -443,7 +443,6 @@ export async function getAllEmployee(universityId, campusId, instituteId, headIn
       pickColor: item?.pickColor || "",
       campusId: item?.campusId,
       instituteId: item?.instituteId,
-      acedmicYearId: item?.acedmicYearId,
       roleId: item?.roleId || mappedRoleData?.role || "",
       roleData: mappedRoleData,
       role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
@@ -456,8 +455,8 @@ export async function getAllEmployee(universityId, campusId, instituteId, headIn
   }));
 };
 
-export async function getSingleEmployeeDetails(employeeId, universityId) {
-  const result = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+export async function getSingleEmployeeDetails(employeeId) {
+  const result = await employeeRepository.getSingleEmployeeDetails(employeeId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -590,7 +589,6 @@ function validateEmployeeRow(employee) {
     "campusId",
     "instituteId",
     "roleId",
-    "acedmicYearId",
     "createdBy",
     "department",
     "employmentType",
@@ -635,7 +633,6 @@ export async function importEmployeeData(excelData, commonData) {
         campusId: convertedData.campusId,
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
-        acedmicYearId: convertedData.acedmicYearId,
         createdBy: convertedData.createdBy,
       };
 
@@ -734,7 +731,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     // Sync officialEmailId with user table email
     if (data.officalEmailId) {
-      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId);
       const userId = employeeDetails?.[0]?.userId;
       if (userId) {
         await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
@@ -1061,14 +1058,9 @@ export async function getBooksIssuedToEmployee(employeeId) {
   };
 };
 
-export async function getTeacherTimeTable(employeeId, universityId, instituteId, role) {
+export async function getTeacherTimeTable(employeeId) {
 
-  const allData = await timeTableCreateRepository.getTeacherTimeTable(
-    employeeId,
-    universityId,
-    instituteId,
-    role
-  );
+  const allData = await timeTableCreateRepository.getTeacherTimeTable(employeeId);
 
   const allMappings = [];
 
@@ -1197,8 +1189,8 @@ export async function getTeacherTimeTable(employeeId, universityId, instituteId,
 
 };
 
-export async function getTeacherSubject(employeeId, universityId, instituteId, role) {
-  return await employeeRepository.getTeacherSubject(employeeId, universityId, instituteId, role)
+export async function getTeacherSubject(employeeId, filters = {}) {
+  return await employeeRepository.getTeacherSubject(employeeId, filters);
 };
 
 export async function getSubjectEvalution(employeeId) {
@@ -1222,12 +1214,12 @@ export async function getTodayClassSchedule(employeeId, currentDate, dayString, 
   return resultWithDate;
 }
 
-export async function getTeacherCourses(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
+export async function getTeacherCourses(employeeId) {
+  return await employeeRepository.getTeacherCourses(employeeId);
 }
 
-export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+export async function getTeacherSubjectsFromSchedule(employeeId) {
+  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId);
 }
 
 function getTeacherDetails(rawSchedules) {

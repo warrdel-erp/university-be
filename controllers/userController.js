@@ -96,11 +96,8 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
 };
 
 export async function getAdminRegisterStudentAndEmployee(req, res) {
-  const universityId = req.user.universityId;
-  const instituteId = req.user.defaultInstituteId;
-  const role = req.user.role;
   try {
-    const user = await userService.getAdminRegisterStudentAndEmployee(universityId, instituteId, role);
+    const user = await userService.getAdminRegisterStudentAndEmployee();
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -332,10 +329,9 @@ export const getMyDetails = async (req, res) => {
 };
 export const getAllUsers = async (req, res) => {
   try {
-    const { universityId } = req.user;
-    const { instituteId, page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "" } = req.query;
 
-    const result = await userService.getAllUsers(universityId, instituteId, parseInt(page), parseInt(limit), search);
+    const result = await userService.getAllUsers(parseInt(page), parseInt(limit), search);
 
     return res.status(200).json({
       success: true,

@@ -1,21 +1,17 @@
-import * as coCreationService from "../repository/coRepository.js";
+import * as coCreationService from '../repository/coRepository.js';
 
-export async function addCo(coData, createdBy, updatedBy, universityId, instituteId) {
-
+export async function addCo(coData, createdBy, updatedBy) {
     coData.createdBy = createdBy;
     coData.updatedBy = updatedBy;
-    coData.universityId = universityId;
-    coData.instituteId = instituteId;
-    const co = await coCreationService.addCo(coData);
-    return co;
-};
-
-export async function getAllCo(universityId, instituteId, role, acedmicYearId) {
-    return await coCreationService.getAllCo(universityId, instituteId, role, acedmicYearId);
+    return await coCreationService.addCo(coData);
 }
 
-export async function getSingleCoDetails(coId, universityId) {
-    return await coCreationService.getSingleCoDetails(coId, universityId);
+export async function getAllCo() {
+    return await coCreationService.getAllCo();
+}
+
+export async function getSingleCoDetails(coId) {
+    return await coCreationService.getSingleCoDetails(coId);
 }
 
 export async function updateCo(coId, coData, updatedBy) {
@@ -34,7 +30,7 @@ export async function addCoWeightage(coData, createdBy, updatedBy, universityId,
         throw new Error("Invalid 'data' format. Expected an array.");
     }
 
-    const entries = data.map(item => ({
+    const entries = data.map((item) => ({
         acedmicYearId,
         coId,
         term,
@@ -44,19 +40,18 @@ export async function addCoWeightage(coData, createdBy, updatedBy, universityId,
         createdBy,
         updatedBy,
         universityId,
-        instituteId
+        instituteId,
     }));
 
-    const result = await coCreationService.addCoWeightage(entries);
-    return result;
-};
-
-export async function getAllCoWeightage(universityId, instituteId, role, acedmicYearId) {
-    return await coCreationService.getAllCoWeightage(universityId, instituteId, role, acedmicYearId);
+    return await coCreationService.addCoWeightage(entries);
 }
 
-export async function getSingleCoDetailsWeightage(coWeightageId, universityId) {
-    return await coCreationService.getSingleCoDetailsWeightage(coWeightageId, universityId);
+export async function getAllCoWeightage() {
+    return await coCreationService.getAllCoWeightage();
+}
+
+export async function getSingleCoDetailsWeightage(coWeightageId) {
+    return await coCreationService.getSingleCoDetailsWeightage(coWeightageId);
 }
 
 export async function updateCoWeightage(coData, updatedBy) {
@@ -80,7 +75,7 @@ export async function updateCoWeightage(coData, updatedBy) {
             total,
             name: item.name,
             mark: item.mark,
-            updatedBy
+            updatedBy,
         };
 
         const result = await coCreationService.updateCoWeightage(item.coWeightageId, updatePayload);

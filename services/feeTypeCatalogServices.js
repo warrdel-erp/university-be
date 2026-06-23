@@ -6,13 +6,12 @@ function catalogUpdatePayload(body) {
   return Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
 }
 
-export async function addFeeTypeCatalog(body, instituteId) {
+export async function addFeeTypeCatalog(body) {
   const row = await sequelize.transaction(async (transaction) => {
     const { name, amount, feeTypeCategoryId, ledgerType, description } = body;
 
     const category = await feeTypeCatalogRepo.findFeeTypeCategoryByIdForInstitute(
       feeTypeCategoryId,
-      instituteId,
       { transaction }
     );
     if (!category) {
@@ -25,7 +24,6 @@ export async function addFeeTypeCatalog(body, instituteId) {
         amount,
         feeTypeCategoryId,
         ledgerType,
-        instituteId,
         description: description ?? null,
       },
       { transaction }
@@ -37,31 +35,21 @@ export async function addFeeTypeCatalog(body, instituteId) {
   return row;
 }
 
-export async function listFeeTypeCatalogs(instituteId) {
-  const rows = await sequelize.transaction(async (transaction) => {
-    const list = await feeTypeCatalogRepo.findFeeTypeCatalogsByInstitute(instituteId, {
-      transaction,
-    });
-    return list;
-  });
-
-  return rows;
+export async function listFeeTypeCatalogs() {
+  return sequelize.transaction(async (transaction) =>
+    feeTypeCatalogRepo.findFeeTypeCatalogsByInstitute({ transaction })
+  );
 }
 
-export async function getSingleFeeTypeCatalog(feeTypeCatalogId, instituteId) {
-  const row = await sequelize.transaction(async (transaction) => {
-    const found = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, instituteId, {
-      transaction,
-    });
-    return found;
-  });
-
-  return row;
+export async function getSingleFeeTypeCatalog(feeTypeCatalogId) {
+  return sequelize.transaction(async (transaction) =>
+    feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, { transaction })
+  );
 }
 
-export async function updateFeeTypeCatalog(feeTypeCatalogId, body, instituteId) {
-  const updated = await sequelize.transaction(async (transaction) => {
-    const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, instituteId, {
+export async function updateFeeTypeCatalog(feeTypeCatalogId, body) {
+  return sequelize.transaction(async (transaction) => {
+    const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, {
       transaction,
     });
     if (!existing) {
@@ -73,7 +61,6 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body, instituteId) 
     if (payload.feeTypeCategoryId !== undefined) {
       const cat = await feeTypeCatalogRepo.findFeeTypeCategoryByIdForInstitute(
         payload.feeTypeCategoryId,
-        instituteId,
         { transaction }
       );
       if (!cat) {
@@ -81,27 +68,20 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body, instituteId) 
       }
     }
 
-    const affected = await feeTypeCatalogRepo.updateFeeTypeCatalog(
-      feeTypeCatalogId,
-      instituteId,
-      payload,
-      { transaction }
-    );
+    const affected = await feeTypeCatalogRepo.updateFeeTypeCatalog(feeTypeCatalogId, payload, {
+      transaction,
+    });
     if (!affected) {
       throw new Error("Update failed");
     }
-    const fresh = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, instituteId, {
-      transaction,
-    });
-    return fresh;
-  });
 
-  return updated;
+    return feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, { transaction });
+  });
 }
 
-export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId) {
+export async function deleteFeeTypeCatalog(feeTypeCatalogId) {
   await sequelize.transaction(async (transaction) => {
-    const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, instituteId, {
+    const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, {
       transaction,
     });
     if (!existing) {
@@ -119,9 +99,10 @@ export async function deleteFeeTypeCatalog(feeTypeCatalogId, instituteId) {
       throw new Error(`Cannot delete: catalog is referenced by ${parts.join(" and ")}`);
     }
 
-    await feeTypeCatalogRepo.deleteFeeTypeCatalog(feeTypeCatalogId, instituteId, {
-      transaction,
-    });
+    const ok = await feeTypeCatalogRepo.deleteFeeTypeCatalog(feeTypeCatalogId, { transaction });
+    if (!ok) {
+      throw new Error("Delete failed");
+    }
   });
 
   return true;

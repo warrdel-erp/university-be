@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const permissionModel = sequelize.define(
     'permission',
     {
         permissionId: {
@@ -43,3 +43,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+permissionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default permissionModel;

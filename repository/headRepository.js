@@ -1,114 +1,115 @@
-import * as model from '../models/index.js'
+import * as model from "../models/index.js";
 import { Op } from "sequelize";
+import { scoped } from "../utility/scoped.js";
 
-export async function addHead(headData,transaction) {
-    try {
-        const result = await model.headModel.create(headData,{transaction});
-        return result;
-    } catch (error) {
-        console.error("Error in add head :", error);
-        throw error;
-    }
-};
-
-export async function getHeadDetails(universityId) {
-    try {
-        const head = await model.headModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
-            include:
-                [
-                    {
-                        model: model.campusModel,
-                        as: "headCampus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-                    {
-                        model: model.instituteModel,
-                        as: "headInstitute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
-        });
-
-        return head;
-    } catch (error) {
-        console.error('Error fetching head details:', error);
-        throw error;
-    }
+export async function addHead(headData, transaction) {
+  try {
+    return await scoped(model.headModel).create(headData, { transaction });
+  } catch (error) {
+    console.error("Error in add head :", error);
+    throw error;
+  }
 }
 
+export async function getHeadDetails() {
+  try {
+    return await scoped(model.headModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      include: [
+        {
+          model: model.campusModel,
+          as: "headCampus",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        },
+        {
+          model: model.instituteModel,
+          as: "headInstitute",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching head details:", error);
+    throw error;
+  }
+}
 
 export async function getSingleHeadDetails(headId) {
-    try {
-        const head = await model.headModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { headId },
-            include:
-                [
-                    {
-                        model: model.campusModel,
-                        as: "headCampus",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-                    {
-                        model: model.instituteModel,
-                        as: "headInstitute",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
-        });
-
-        return head;
-    } catch (error) {
-        console.error('Error fetching head details:', error);
-        throw error;
-    }
+  try {
+    return await scoped(model.headModel).findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+      where: { headId },
+      include: [
+        {
+          model: model.campusModel,
+          as: "headCampus",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        },
+        {
+          model: model.instituteModel,
+          as: "headInstitute",
+          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        },
+      ],
+    });
+  } catch (error) {
+    console.error("Error fetching head details:", error);
+    throw error;
+  }
 }
 
 export async function deleteHead(headId) {
-    const deleted = await model.headModel.destroy({ where: { headId: headId } });
-    return deleted > 0;
+  const existing = await scoped(model.headModel).findOne({
+    where: { headId },
+    attributes: ["headId"],
+  });
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await scoped(model.headModel).destroy({ where: { headId } });
+  return deleted > 0;
 }
 
 export async function updateHead(headId, headData) {
-    try {
-        const result = await model.headModel.update(headData, {
-            where: { headId }
-        });
-        return result;
-    } catch (error) {
-        console.error(`Error updating head creation ${headId}:`, error);
-        throw error;
+  try {
+    const existing = await scoped(model.headModel).findOne({
+      where: { headId },
+      attributes: ["headId"],
+    });
+    if (!existing) {
+      return [0];
     }
+
+    return await scoped(model.headModel).update(headData, {
+      where: { headId },
+    });
+  } catch (error) {
+    console.error(`Error updating head creation ${headId}:`, error);
+    throw error;
+  }
 }
 
+/** Login lookup — intentionally unscoped (no tenant context at auth). */
 export async function getHeadDetailsByEmail(email) {
   try {
-    const head = await model.headModel.findOne({
+    const head = await scoped(model.headModel).findOne({
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
+        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
       },
       where: {
-        [Op.or]: [
-          { registerEmail: email },
-          { alternateEmail: email }
-        ]
+        [Op.or]: [{ registerEmail: email }, { alternateEmail: email }],
       },
     });
-    console.log(`>>>>>>head`,head);
-    
 
     if (!head) {
-      return null; 
+      return null;
     }
 
     return {
-  role: head.isAdmin ? "Admin" : "Head",
-  ...head.toJSON()
-};
-
-
+      role: head.isAdmin ? "Admin" : "Head",
+      ...head.toJSON(),
+    };
   } catch (error) {
     console.error("Error fetching head details by email:", error);
     throw error;

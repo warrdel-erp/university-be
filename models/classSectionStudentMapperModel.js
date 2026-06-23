@@ -6,7 +6,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import semesterModel from "./semesterModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const classSectionStudentMapperModel = sequelize.define(
     'class_student_mapper',
     {
         classStudentMapperId: {
@@ -26,7 +26,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'semester_id',
             references: {
                 model: semesterModel,
@@ -99,3 +99,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+classSectionStudentMapperModel.scopeConfig = { university:  true, institute: true, academicYear: true };
+
+export default classSectionStudentMapperModel;

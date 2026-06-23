@@ -11,7 +11,11 @@ const sessionSchema = z.object({
     endingDate: z.string({ required_error: "Ending date is required" }),
     classTillDate: z.string({ required_error: "Class till date is required" }),
     acedmicYearId: z.number({ required_error: "Academic year id is required" }),
-    courseId: z.array(z.number()).optional()
+    courseId: z.array(z.coerce.number().int().positive()).optional()
+});
+
+const updateSessionSchema = sessionSchema.partial().extend({
+    sessionId: z.coerce.number().int().positive(),
 });
 
 const deleteCourseSessionMappingSchema = z.object({
@@ -21,19 +25,43 @@ const deleteCourseSessionMappingSchema = z.object({
     }),
 });
 
+const courseSessionMappingSchema = z.object({
+    sessionId: z.coerce.number().int().positive(),
+    courseId: z.union([
+        z.array(z.coerce.number().int().positive()).min(1),
+        z.coerce.number().int().positive(),
+    ]),
+});
+
+const updateCourseSessionMappingSchema = z.object({
+    sessionCourseMappingId: z.coerce.number().int().positive(),
+    sessionId: z.coerce.number().int().positive().optional(),
+    courseId: z.coerce.number().int().positive().optional(),
+});
+
 router.post('/', userAuth, validate({ body: sessionSchema }), addSession);
 
 router.get('/', userAuth, getAllSession);
 
 router.get('/single', userAuth, getSingleSessionDetails);
 
-router.patch('/', userAuth, updateSession);
+router.patch('/', userAuth, validate({ body: updateSessionSchema }), updateSession);
 
 router.delete('/', userAuth, deleteSession);
 
-router.post('/courseSessionMapping', userAuth, couseSessionMapping);
+router.post(
+    '/courseSessionMapping',
+    userAuth,
+    validate({ body: courseSessionMappingSchema }),
+    couseSessionMapping
+);
 
-router.patch('/courseSessionMapping/update', userAuth, updateCouseSessionMapping);
+router.patch(
+    '/courseSessionMapping/update',
+    userAuth,
+    validate({ body: updateCourseSessionMappingSchema }),
+    updateCouseSessionMapping
+);
 
 router.delete('/courseSessionMapping', userAuth, validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
 

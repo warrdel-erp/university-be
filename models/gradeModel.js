@@ -4,7 +4,7 @@ import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const gradeModel = sequelize.define(
   "grade",
   {
     gradeId: {
@@ -230,3 +230,7 @@ export default sequelize.define(
     paranoid: true,
   }
 );
+
+gradeModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default gradeModel;

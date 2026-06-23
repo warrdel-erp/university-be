@@ -5,8 +5,6 @@ export async function addExamAttendance(req, res) {
     const createdBy = userId;
     const updatedBy = userId;
     const attendanceRecords = req.body;
-    const instituteId = req.user.defaultInstituteId;
-
     if (!Array.isArray(attendanceRecords) || attendanceRecords.length === 0) {
         return res.status(400).send("Attendance records must be a non-empty array");
     }
@@ -21,7 +19,7 @@ export async function addExamAttendance(req, res) {
             const createdAttendance = await examAttendanceServices.addExamAttendance(
                 { examSetupId, studentId, attendanceStatus },
                 createdBy,
-                updatedBy, instituteId
+                updatedBy
             );
             results.push(createdAttendance);
         }
@@ -35,12 +33,9 @@ export async function addExamAttendance(req, res) {
 };
 
 export async function getAllExamAttendance(req, res) {
-    const role = req.user.role;
-    const instituteId = req.user.defaultInstituteId;
-    const universityId = req.user.universityId;
-    const { acedmicYearId } = req.query
+    const { acedmicYearId } = req.query;
     try {
-        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(universityId, acedmicYearId, role, instituteId);
+        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(acedmicYearId);
         res.status(200).json(attendanceRecords);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -48,14 +43,9 @@ export async function getAllExamAttendance(req, res) {
 };
 
 export async function getSingleExamAttendance(req, res) {
-    const universityId = req.user.universityId;
-
     try {
         const { examAttendanceId } = req.query;
-        const attendanceDetails = await examAttendanceServices.getSingleExamAttendance(
-            examAttendanceId,
-            universityId
-        );
+        const attendanceDetails = await examAttendanceServices.getSingleExamAttendance(examAttendanceId);
 
         if (attendanceDetails) {
             res.status(200).json(attendanceDetails);

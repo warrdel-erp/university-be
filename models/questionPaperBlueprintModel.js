@@ -4,7 +4,7 @@ import subject from "./subjectModel.js";
 import university from "./universityModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const questionPaperBlueprintModel = sequelize.define(
     'questionPaperBlueprint',
     {
         id: {
@@ -83,3 +83,7 @@ export default sequelize.define(
         paranoid: false
     }
 );
+
+questionPaperBlueprintModel.scopeConfig = { university: true, institute: false, academicYear: false };
+
+export default questionPaperBlueprintModel;

@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import user from './userModel.js';
 
-export default sequelize.define(
+const userPermissionModel = sequelize.define(
     'user_permissions',
     {
         id: {
@@ -42,3 +42,7 @@ export default sequelize.define(
         timestamps: true,
     }
 );
+
+userPermissionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default userPermissionModel;

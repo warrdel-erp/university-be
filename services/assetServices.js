@@ -21,11 +21,11 @@ export function deriveAssetStatusFromInventory(openIssues, totalInventory) {
   return decimalGreaterThanOrEqual(openIssues, totalInventory) ? "ISSUED" : "IN_STOCK";
 }
 
-export async function syncAssetStatusFromInventory(assetId, instituteId, options = {}) {
-  await syncAssetStatusesFromInventory([assetId], instituteId, options);
+export async function syncAssetStatusFromInventory(assetId, options = {}) {
+  await syncAssetStatusesFromInventory([assetId], options);
 }
 
-export async function syncAssetStatusesFromInventory(assetIds, instituteId, options = {}) {
+export async function syncAssetStatusesFromInventory(assetIds, options = {}) {
   const uniqueAssetIds = [...new Set(assetIds)];
   if (!uniqueAssetIds.length) {
     return;
@@ -33,8 +33,8 @@ export async function syncAssetStatusesFromInventory(assetIds, instituteId, opti
 
   const { transaction } = options;
   const [assets, statsByAssetId] = await Promise.all([
-    repo.findAssetStatusesByIds(uniqueAssetIds, instituteId, { transaction }),
-    repo.countInventoryStatsByAssetIds(uniqueAssetIds, instituteId, { transaction }),
+    repo.findAssetStatusesByIds(uniqueAssetIds, { transaction }),
+    repo.countInventoryStatsByAssetIds(uniqueAssetIds, { transaction }),
   ]);
 
   await Promise.all(
@@ -47,7 +47,7 @@ export async function syncAssetStatusesFromInventory(assetIds, instituteId, opti
       const nextStatus = deriveAssetStatusFromInventory(stats.issuedCount, stats.totalInventory);
 
       if (asset.status !== nextStatus) {
-        await repo.updateAsset(asset.assetId, instituteId, { status: nextStatus }, { transaction });
+        await repo.updateAsset(asset.assetId, { status: nextStatus }, { transaction });
       }
     })
   );
@@ -115,13 +115,12 @@ function hasInventoryAssign(body) {
   return body.inventory !== undefined;
 }
 
-async function assignInventoryItems(items, assetId, instituteId, transaction) {
+async function assignInventoryItems(items, assetId, transaction) {
   for (const item of items) {
     await validateClassRoomSectionId(item.classRoomSectionId, transaction);
 
     const existing = await repo.findInventoryItemById(
       item.assetInventoryItemId,
-      instituteId,
       { transaction }
     );
 
@@ -131,7 +130,6 @@ async function assignInventoryItems(items, assetId, instituteId, transaction) {
 
     const affected = await repo.updateInventoryItem(
       item.assetInventoryItemId,
-      instituteId,
       assetId,
       {
         classRoomSectionId: item.classRoomSectionId,
@@ -146,19 +144,13 @@ async function assignInventoryItems(items, assetId, instituteId, transaction) {
   }
 }
 
-async function appendInventoryOnAsset(body, assetId, instituteId, transaction) {
-  const assetCode = await repo.findAssetCodeById(assetId, instituteId, { transaction });
+async function appendInventoryOnAsset(body, assetId, transaction) {
+  const assetCode = await repo.findAssetCodeById(assetId, { transaction });
   if (!assetCode) {
     throw httpError("Asset not found or not in your institute", 404);
   }
 
-  await createInventoryRowsByBulkGroups(
-    body.inventoryBulk,
-    assetId,
-    instituteId,
-    assetCode,
-    transaction
-  );
+  await createInventoryRowsByBulkGroups(body.inventoryBulk, assetId, assetCode, transaction);
 }
 
 function updatePayload(body) {
@@ -167,23 +159,18 @@ function updatePayload(body) {
   );
 }
 
-async function resolveAssetCategory(assetCategoryId, instituteId, transaction) {
-  const category = await repo.findAssetCategoryByIdForInstitute(
-    assetCategoryId,
-    instituteId,
-    { transaction }
-  );
+async function resolveAssetCategory(assetCategoryId, transaction) {
+  const category = await repo.findAssetCategoryByIdForInstitute(assetCategoryId, { transaction });
   if (!category) {
     throw httpError("assetCategoryId not found or not in your institute", 404);
   }
   return category;
 }
 
-async function resolveNextAssetCode(name, assetCategoryId, instituteId, transaction) {
-  const category = await resolveAssetCategory(assetCategoryId, instituteId, transaction);
+async function resolveNextAssetCode(name, assetCategoryId, transaction) {
+  const category = await resolveAssetCategory(assetCategoryId, transaction);
   const assetNamePrefix = deriveAssetNameCodePrefix(name);
   const { sequence } = await repo.getNextAssetCodeSequence(
-    instituteId,
     category.codePrefix,
     assetNamePrefix,
     { transaction }
@@ -197,9 +184,9 @@ async function resolveNextAssetCode(name, assetCategoryId, instituteId, transact
   };
 }
 
-async function validateAssetReferences(body, instituteId, transaction) {
+async function validateAssetReferences(body, transaction) {
   if (body.assetCategoryId !== undefined) {
-    await resolveAssetCategory(body.assetCategoryId, instituteId, transaction);
+    await resolveAssetCategory(body.assetCategoryId, transaction);
   }
 }
 
@@ -214,14 +201,13 @@ function inventoryStatusForRoom(classRoomSectionId) {
   return classRoomSectionId != null ? "ASSIGNED" : "NOT_ASSIGNED";
 }
 
-function buildInventoryRow(classRoomSectionId, assetId, instituteId, assetCode, copyNumber) {
+function buildInventoryRow(classRoomSectionId, assetId, assetCode, copyNumber) {
   return {
     code: formatInventoryItemCode(assetCode, copyNumber),
     barcode: randomUUID(),
     classRoomSectionId: classRoomSectionId ?? null,
     status: inventoryStatusForRoom(classRoomSectionId),
     assetId,
-    instituteId,
   };
 }
 
@@ -229,7 +215,6 @@ async function appendBulkInventoryPayloads(
   count,
   classRoomSectionId,
   assetId,
-  instituteId,
   assetCode,
   transaction,
   startCopy
@@ -240,22 +225,19 @@ async function appendBulkInventoryPayloads(
   }
 
   let maxCopy =
-    startCopy ??
-    (await repo.getNextInventoryCopyNumber(assetId, instituteId, assetCode, { transaction }));
+    startCopy ?? (await repo.getNextInventoryCopyNumber(assetId, assetCode, { transaction }));
   const rows = [];
 
   for (let i = 0; i < count; i++) {
     maxCopy += 1;
-    rows.push(buildInventoryRow(roomId, assetId, instituteId, assetCode, maxCopy));
+    rows.push(buildInventoryRow(roomId, assetId, assetCode, maxCopy));
   }
 
   return { rows, nextCopy: maxCopy };
 }
 
-async function createInventoryRows(inventoryList, assetId, instituteId, assetCode, transaction) {
-  let maxCopy = await repo.getNextInventoryCopyNumber(assetId, instituteId, assetCode, {
-    transaction,
-  });
+async function createInventoryRows(inventoryList, assetId, assetCode, transaction) {
+  let maxCopy = await repo.getNextInventoryCopyNumber(assetId, assetCode, { transaction });
 
   for (const item of inventoryList) {
     if (item.classRoomSectionId != null) {
@@ -263,22 +245,14 @@ async function createInventoryRows(inventoryList, assetId, instituteId, assetCod
     }
     maxCopy += 1;
     await repo.createInventoryItem(
-      buildInventoryRow(item.classRoomSectionId, assetId, instituteId, assetCode, maxCopy),
+      buildInventoryRow(item.classRoomSectionId, assetId, assetCode, maxCopy),
       { transaction }
     );
   }
 }
 
-async function createInventoryRowsByBulkGroups(
-  groups,
-  assetId,
-  instituteId,
-  assetCode,
-  transaction
-) {
-  let maxCopy = await repo.getNextInventoryCopyNumber(assetId, instituteId, assetCode, {
-    transaction,
-  });
+async function createInventoryRowsByBulkGroups(groups, assetId, assetCode, transaction) {
+  let maxCopy = await repo.getNextInventoryCopyNumber(assetId, assetCode, { transaction });
   const allRows = [];
 
   for (const group of groups) {
@@ -286,7 +260,6 @@ async function createInventoryRowsByBulkGroups(
       group.count,
       group.classRoomSectionId,
       assetId,
-      instituteId,
       assetCode,
       transaction,
       maxCopy
@@ -300,12 +273,8 @@ async function createInventoryRowsByBulkGroups(
   }
 }
 
-export async function previewAssetCode(query, instituteId) {
-  const { code, category } = await resolveNextAssetCode(
-    query.name,
-    query.assetCategoryId,
-    instituteId
-  );
+export async function previewAssetCode(query) {
+  const { code, category } = await resolveNextAssetCode(query.name, query.assetCategoryId);
 
   return {
     name: query.name,
@@ -315,14 +284,13 @@ export async function previewAssetCode(query, instituteId) {
   };
 }
 
-export async function addAsset(body, instituteId) {
+export async function addAsset(body) {
   const row = await sequelize.transaction(async (transaction) => {
-    await validateAssetReferences(body, instituteId, transaction);
+    await validateAssetReferences(body, transaction);
 
     const { code: assetCode } = await resolveNextAssetCode(
       body.name,
       body.assetCategoryId,
-      instituteId,
       transaction
     );
 
@@ -334,32 +302,27 @@ export async function addAsset(body, instituteId) {
         condition: body.condition,
         description: body.description ?? null,
         assetCategoryId: body.assetCategoryId,
-        instituteId,
       },
       { transaction }
     );
 
     if (hasInventoryAppend(body)) {
-      await appendInventoryOnAsset(body, created.assetId, instituteId, transaction);
+      await appendInventoryOnAsset(body, created.assetId, transaction);
     }
 
-    await syncAssetStatusFromInventory(created.assetId, instituteId, { transaction });
+    await syncAssetStatusFromInventory(created.assetId, { transaction });
 
-    return await repo.findAssetById(created.assetId, instituteId, { transaction });
+    return await repo.findAssetById(created.assetId, { transaction });
   });
 
-  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds(
-    [row.assetId],
-    instituteId
-  );
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([row.assetId]);
   return formatAssetResponse(row, inventoryStatsByAssetId);
 }
 
-export async function listAssets(instituteId, query = {}) {
+export async function listAssets(query = {}) {
   const { rows, total, page, limit, inventoryStatsByAssetId } = await sequelize.transaction(
     (transaction) =>
       repo.findAssetsByInstitutePaginated(
-        instituteId,
         { inventoryStatus: query.status, search: query.search },
         { page: query.page, limit: query.limit },
         { transaction }
@@ -374,58 +337,58 @@ export async function listAssets(instituteId, query = {}) {
   };
 }
 
-export async function getSingleAsset(assetId, instituteId) {
-  const asset = await repo.findAssetById(assetId, instituteId);
+export async function getSingleAsset(assetId) {
+  const asset = await repo.findAssetById(assetId);
   if (!asset) {
     return null;
   }
 
-  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId]);
   return formatAssetResponse(asset, inventoryStatsByAssetId);
 }
 
-export async function updateAsset(assetId, body, instituteId) {
+export async function updateAsset(assetId, body) {
   const updated = await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findAssetById(assetId, instituteId, { transaction });
+    const existing = await repo.findAssetById(assetId, { transaction });
     if (!existing) {
       throw httpError("Asset not found or not in your institute", 404);
     }
 
     const payload = updatePayload(body);
     if (Object.keys(payload).length) {
-      await validateAssetReferences(payload, instituteId, transaction);
-      const affected = await repo.updateAsset(assetId, instituteId, payload, { transaction });
+      await validateAssetReferences(payload, transaction);
+      const affected = await repo.updateAsset(assetId, payload, { transaction });
       if (!affected) {
         throw httpError("Update failed", 500);
       }
     }
 
     if (hasInventoryAppend(body)) {
-      await appendInventoryOnAsset(body, assetId, instituteId, transaction);
+      await appendInventoryOnAsset(body, assetId, transaction);
     }
 
     if (hasInventoryAssign(body)) {
-      await assignInventoryItems(body.inventory, assetId, instituteId, transaction);
+      await assignInventoryItems(body.inventory, assetId, transaction);
     }
 
-    await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
+    await syncAssetStatusFromInventory(assetId, { transaction });
 
-    return await repo.findAssetById(assetId, instituteId, { transaction });
+    return await repo.findAssetById(assetId, { transaction });
   });
 
-  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId], instituteId);
+  const inventoryStatsByAssetId = await repo.countInventoryStatsByAssetIds([assetId]);
   return formatAssetResponse(updated, inventoryStatsByAssetId);
 }
 
-export async function deleteAsset(assetId, instituteId) {
+export async function deleteAsset(assetId) {
   await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findAssetById(assetId, instituteId, { transaction });
+    const existing = await repo.findAssetById(assetId, { transaction });
     if (!existing) {
       throw httpError("Asset not found or not in your institute", 404);
     }
 
-    const inventoryCount = await repo.countInventoryItemsByAsset(assetId, instituteId, { transaction });
-    const openIssues = await repo.countOpenIssuesForAsset(assetId, instituteId, { transaction });
+    const inventoryCount = await repo.countInventoryItemsByAsset(assetId, { transaction });
+    const openIssues = await repo.countOpenIssuesForAsset(assetId, { transaction });
 
     if (openIssues > 0) {
       throw httpError(
@@ -441,7 +404,7 @@ export async function deleteAsset(assetId, instituteId) {
       );
     }
 
-    const ok = await repo.deleteAsset(assetId, instituteId, { transaction });
+    const ok = await repo.deleteAsset(assetId, { transaction });
     if (!ok) {
       throw httpError("Delete failed", 500);
     }
@@ -449,26 +412,28 @@ export async function deleteAsset(assetId, instituteId) {
   return true;
 }
 
-export async function deleteAssetInventoryItem(assetInventoryItemId, instituteId) {
+export async function deleteAssetInventoryItem(assetInventoryItemId) {
   await sequelize.transaction(async (transaction) => {
-    const item = await repo.findInventoryItemById(assetInventoryItemId, instituteId, { transaction });
+    const item = await repo.findInventoryItemById(assetInventoryItemId, { transaction });
     if (!item) {
       throw httpError("Inventory item not found or not in your institute", 404);
     }
 
-    const openIssues = await repo.countOpenIssuesForInventoryItem(assetInventoryItemId, { transaction });
+    const openIssues = await repo.countOpenIssuesForInventoryItem(assetInventoryItemId, {
+      transaction,
+    });
     if (openIssues > 0) {
       throw httpError("Cannot delete inventory item that is currently issued", 409);
     }
 
     const assetId = item.assetId;
 
-    const ok = await repo.deleteInventoryItem(assetInventoryItemId, instituteId, { transaction });
+    const ok = await repo.deleteInventoryItem(assetInventoryItemId, { transaction });
     if (!ok) {
       throw httpError("Delete failed", 500);
     }
 
-    await syncAssetStatusFromInventory(assetId, instituteId, { transaction });
+    await syncAssetStatusFromInventory(assetId, { transaction });
   });
   return true;
 }

@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import scheduleAssignModel from "./ScheduleAssignModel.js";
 
-export default sequelize.define(
+const teacherAttendenceModel = sequelize.define(
     "teacher_attendence",
     {
         teacherAttendenceId: {
@@ -77,3 +77,7 @@ export default sequelize.define(
         paranoid: true,
     }
 );
+
+teacherAttendenceModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default teacherAttendenceModel;

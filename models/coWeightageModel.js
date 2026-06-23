@@ -6,7 +6,7 @@ import users from "./userModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import coModel from "./coModel.js";
 
-export default sequelize.define(
+const coWeightageModel = sequelize.define(
     'co_weightage',
     {
         coWeightageId: {
@@ -109,3 +109,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+coWeightageModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default coWeightageModel;

@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const libraryCategoryModel = sequelize.define(
   "library_category",
   {
     libraryCategoryId: {
@@ -62,3 +62,7 @@ export default sequelize.define(
     collate: "latin1_swedish_ci",
   }
 );
+
+libraryCategoryModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default libraryCategoryModel;
