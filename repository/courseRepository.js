@@ -441,7 +441,7 @@ export async function getSemestersByCourseId(courseId) {
         courseId,
         ...omitAcademicYearScope(buildScope(model.semesterModel)),
       },
-      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId'],
+      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId', 'termType', 'semesterDuration', 'courseDuration', 'totalTerms'],
       order: [
         ['acedmicYearId', 'ASC'],
         ['semesterId', 'ASC'],
@@ -450,6 +450,34 @@ export async function getSemestersByCourseId(courseId) {
     });
   } catch (error) {
     console.error('Error in Course Repository (getSemestersByCourseId):', error);
+    throw error;
+  }
+}
+
+/** Explicit academic year — scoped() would override with request context year. */
+export async function getSemestersByCourseAndYear(courseId, acedmicYearId) {
+  try {
+    return model.semesterModel.findAll({
+      where: {
+        courseId: Number(courseId),
+        acedmicYearId: Number(acedmicYearId),
+        ...omitAcademicYearScope(buildScope(model.semesterModel)),
+      },
+      attributes: [
+        'semesterId',
+        'name',
+        'acedmicYearId',
+        'courseId',
+        'termType',
+        'semesterDuration',
+        'courseDuration',
+        'totalTerms',
+      ],
+      order: [['semesterId', 'ASC']],
+      raw: true,
+    });
+  } catch (error) {
+    console.error('Error in Course Repository (getSemestersByCourseAndYear):', error);
     throw error;
   }
 }

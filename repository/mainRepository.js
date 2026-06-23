@@ -7,6 +7,72 @@ function omitAcademicYearScope(scopeWhere = {}) {
     return rest;
 }
 
+function extractTermNumber(name) {
+    const match = String(name ?? '').match(/(\d+)/);
+    return match ? Number(match[1]) : null;
+}
+
+/** Resolve semesterId from existing class_sections.class (= term) or class.term, filtered by courseId. */
+export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYearId = null) {
+    const courseIdNum = Number(courseId);
+    const termNum = Number(term);
+    const classLabel = String(term);
+    const sectionScope = omitAcademicYearScope(buildScope(model.classSectionModel));
+    const classScope = omitAcademicYearScope(buildScope(model.classModel));
+
+    const fromSection = async (where) => {
+        const row = await model.classSectionModel.findOne({
+            where: { ...where, ...sectionScope },
+            attributes: ['semesterId'],
+            order: [['classSectionsId', 'DESC']],
+            raw: true,
+        });
+        return row?.semesterId ?? null;
+    };
+
+    if (acedmicYearId != null) {
+        const inYear = await fromSection({
+            courseId: courseIdNum,
+            class: classLabel,
+            acedmicYearId: Number(acedmicYearId),
+        });
+        if (inYear) return inYear;
+    }
+
+    const anyYear = await fromSection({
+        courseId: courseIdNum,
+        class: classLabel,
+    });
+    if (anyYear) return anyYear;
+
+    const classRow = await model.classModel.findOne({
+        where: { courseId: courseIdNum, term: termNum, ...classScope },
+        attributes: ['semesterId'],
+        order: [['classId', 'DESC']],
+        raw: true,
+    });
+    if (classRow?.semesterId) return classRow.semesterId;
+
+    const semesterScope = omitAcademicYearScope(buildScope(model.semesterModel));
+    const semesters = await model.semesterModel.findAll({
+        where: { courseId: courseIdNum, ...semesterScope },
+        attributes: ['semesterId', 'name', 'acedmicYearId'],
+        order: [['semesterId', 'ASC']],
+        raw: true,
+    });
+
+    const byTermNumber = semesters.filter((s) => extractTermNumber(s.name) === termNum);
+    if (acedmicYearId != null) {
+        const inYear = byTermNumber.find(
+            (s) => Number(s.acedmicYearId) === Number(acedmicYearId),
+        );
+        if (inYear) return inYear.semesterId;
+    }
+    if (byTermNumber[0]?.semesterId) return byTermNumber[0].semesterId;
+
+    return semesters[termNum - 1]?.semesterId ?? null;
+}
+
 export async function getAllUniversity() {
     try {
         return scoped(model.universityModel).findAll({
