@@ -1,4 +1,72 @@
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
+import { getCourseByCourseId, getSemestersByCourseId } from "../repository/courseRepository.js";
+
+function normalizeTermName(name) {
+  return String(name ?? "").trim().replace(/\s+/g, " ");
+}
+
+function buildTermName(termType, term) {
+  return `${termType} ${term}`;
+}
+
+function termNamesMatch(left, right) {
+  return normalizeTermName(left).toLowerCase() === normalizeTermName(right).toLowerCase();
+}
+
+function extractTermNumber(name) {
+  const match = String(name ?? "").match(/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveSemesterIdForTerm({
+  term,
+  termName,
+  name,
+  courseId,
+  acedmicYearId = null,
+  semesters = [],
+}) {
+  const semesterName = name ?? termName ?? null;
+  const normalizedSemesterName = semesterName != null ? normalizeTermName(semesterName) : null;
+
+  const courseSemesters = semesters.filter(
+    (semester) => Number(semester.courseId) === Number(courseId),
+  );
+
+  const pickFromMatches = (matches) => {
+    if (!matches.length) return null;
+    if (acedmicYearId) {
+      const inYear = matches.find(
+        (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+      );
+      if (inYear) return inYear.semesterId;
+    }
+    return matches[0].semesterId;
+  };
+
+  if (term != null) {
+    const byTermNumber = courseSemesters.filter(
+      (semester) => extractTermNumber(semester.name) === Number(term),
+    );
+    const termNumberMatch = pickFromMatches(byTermNumber);
+    if (termNumberMatch) {
+      return termNumberMatch;
+    }
+  }
+
+  if (normalizedSemesterName) {
+    const byExactName = courseSemesters.filter((semester) =>
+      termNamesMatch(semester.name, normalizedSemesterName),
+    );
+    const exactMatch = pickFromMatches(byExactName);
+    if (exactMatch) {
+      return exactMatch;
+    }
+  }
+
+  const byTermIndex = courseSemesters[Number(term) - 1];
+  return byTermIndex?.semesterId ?? null;
+}
 
 const studentListFields = [
   "studentId",
@@ -20,6 +88,42 @@ async function resolveAcedmicYearId(examDetail) {
       examDetail.acedmicYearId = acedmicYearId;
     }
   }
+}
+
+async function resolveSemesterIdForExamDetail(examDetail) {
+  if (examDetail.semesterId != null) {
+    return examDetail.semesterId;
+  }
+  if (!examDetail.examSetupTypeTermId) {
+    return null;
+  }
+
+  const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(
+    examDetail.examSetupTypeTermId,
+  );
+  if (!termDetail) {
+    return null;
+  }
+
+  const courseId = termDetail.courseId;
+  const term = termDetail.term;
+  const acedmicYearId = examDetail.acedmicYearId ?? termDetail.acedmicYearId ?? null;
+  const course = await getCourseByCourseId(courseId);
+  if (!course || term == null) {
+    return null;
+  }
+
+  const termType = course.dataValues?.termType ?? course.termType;
+  const termName = buildTermName(termType, term);
+  const semesters = await getSemestersByCourseId(courseId);
+
+  return resolveSemesterIdForTerm({
+    term,
+    termName,
+    courseId,
+    acedmicYearId,
+    semesters,
+  });
 }
 
 function subjectsToPlain(rows) {
@@ -212,6 +316,13 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
 
+  await resolveAcedmicYearId(examDetail);
+  const resolvedSemesterId = await resolveSemesterIdForExamDetail(examDetail);
+  if (!resolvedSemesterId) {
+    throw new Error('semesterId could not be resolved for exam schedule');
+  }
+  examDetail.semesterId = resolvedSemesterId;
+
   await assertNoStudentExamTimeConflict(examDetail);
 
   return await examStructureScheduleRepository.addExamSchedule(examDetail);
@@ -255,6 +366,12 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
   await resolveAcedmicYearId(examDetail);
+  if (examDetail.semesterId == null && examDetail.examSetupTypeTermId) {
+    const resolvedSemesterId = await resolveSemesterIdForExamDetail(examDetail);
+    if (resolvedSemesterId) {
+      examDetail.semesterId = resolvedSemesterId;
+    }
+  }
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 }
 

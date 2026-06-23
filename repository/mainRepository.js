@@ -2,6 +2,11 @@ import * as model from '../models/index.js';
 import sequelize from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 
+function omitAcademicYearScope(scopeWhere = {}) {
+    const { acedmicYearId, ...rest } = scopeWhere;
+    return rest;
+}
+
 export async function getAllUniversity() {
     try {
         return scoped(model.universityModel).findAll({
@@ -664,17 +669,23 @@ export async function getMonthlyIncomeRepository() {
 
 export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearId) {
     try {
-        const [course, session, classSections] = await Promise.all([
+        const session = await scoped(model.sessionModel).findOne({
+            attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
+            where: {
+                sessionId,
+                ...omitAcademicYearScope(buildScope(model.sessionModel)),
+            },
+        });
+
+        const routineIncludeWhere = {
+            ...omitAcademicYearScope(buildScope(model.timeTableRoutineModel)),
+            ...(courseId && { courseId: Number(courseId) }),
+        };
+
+        const [course, classSections] = await Promise.all([
             scoped(model.courseModel).findOne({
                 attributes: ['courseId', "courseName"],
                 where: { courseId },
-            }),
-            scoped(model.sessionModel).findOne({
-                attributes: ["sessionId", "sessionName"],
-                where: {
-                    sessionId,
-                    ...(acedmicYearId && { acedmicYearId }),
-                },
             }),
             scoped(model.classSectionModel).findAll({
                 attributes: ['classSectionsId', "section"],
@@ -687,10 +698,21 @@ export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearI
                     {
                         model: model.timeTableRoutineModel,
                         as: "timeTableClassSection",
-                        attributes: ['timeTableRoutineId', 'endingDate', 'startingDate']
-                    }
-                ]
-            })
+                        attributes: [
+                            'timeTableRoutineId',
+                            'endingDate',
+                            'startingDate',
+                            'isPublish',
+                            'timeTableType',
+                            'timeTableNameId',
+                        ],
+                        where: routineIncludeWhere,
+                        required: false,
+                        separate: true,
+                        order: [['timeTableRoutineId', 'DESC']],
+                    },
+                ],
+            }),
         ]);
 
         return {

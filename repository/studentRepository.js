@@ -881,7 +881,7 @@ export async function buildClassStudentMapperCreatePayload(
         const section = await getTargetClassSectionForPromotion(sectionId);
         const plain = section?.get({ plain: true });
         if (plain) {
-            resolvedSemesterId = resolvedSemesterId ?? plain.semesterId ?? null;
+            resolvedSemesterId = resolvedSemesterId ?? plain.semesterId ?? plain.classGroup?.semesterId ?? null;
             resolvedSessionId = resolvedSessionId ?? plain.sessionId ?? null;
             resolvedAcedmicYearId = resolvedAcedmicYearId ?? plain.acedmicYearId ?? null;
         }
@@ -1173,6 +1173,20 @@ export async function getStudentForPromate(studentId) {
                     limit: 1,
                     order: [["classStudentMapperId", "DESC"]],
                 },
+                {
+                    model: model.classSectionModel,
+                    as: "studentSections",
+                    attributes: ["classSectionsId", "semesterId", "acedmicYearId", "sessionId"],
+                    required: false,
+                    include: [
+                        {
+                            model: model.classModel,
+                            as: "classGroup",
+                            attributes: ["term", "semesterId"],
+                            required: false,
+                        },
+                    ],
+                },
             ],
         });
         return result;
@@ -1222,7 +1236,7 @@ export async function getTargetClassSectionForPromotion(classSectionsId) {
             {
                 model: model.classModel,
                 as: "classGroup",
-                attributes: ["term"],
+                attributes: ["term", "semesterId"],
             },
         ],
     });
@@ -1295,7 +1309,7 @@ export async function getPromotionClassSections({
             {
                 model: model.classModel,
                 as: 'classGroup',
-                attributes: ['term', 'className'],
+                attributes: ['term', 'className', 'semesterId'],
                 where: { term },
                 required: true,
             },

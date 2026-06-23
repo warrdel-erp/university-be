@@ -33,6 +33,19 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
+    if (data.classSectionsId == null && data.classSectionId != null) {
+      data.classSectionsId = data.classSectionId;
+    }
+
+    if (!data.courseId && data.classSectionsId) {
+      const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
+        data.classSectionsId,
+      );
+      if (section?.courseId) {
+        data.courseId = section.courseId;
+      }
+    }
+
     // Check for routine overlap for the same class section
     if (data.classSectionsId && data.startingDate && data.endingDate) {
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(

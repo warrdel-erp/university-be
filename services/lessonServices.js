@@ -230,7 +230,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         subjectId,
     );
 
-    return data.filter((item) => item?.employeeSubject != null);
+    return data.filter((item) => item?.employeeSubject?.subjectId != null);
 }
 
 export async function getSimpleLessonList(whereClause) {
