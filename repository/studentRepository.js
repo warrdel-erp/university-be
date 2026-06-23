@@ -8,7 +8,7 @@ function omitAcademicYearScope(scopeWhere = {}) {
     return rest;
 }
 
-/** Class-section reads for promotion may target a different academic year than request context. */
+/** Promotion reads use explicit acedmicYearId; scoped() would override it with request context. */
 function promotionClassSectionWhere(filters = {}) {
     const { acedmicYearId, ...rest } = filters;
     return {
@@ -1221,7 +1221,7 @@ export async function getSemesterProgressionByCourseId(courseId) {
 }
 
 export async function getTargetClassSectionForPromotion(classSectionsId) {
-    return scoped(model.classSectionModel).findOne({
+    return model.classSectionModel.findOne({
         where: promotionClassSectionWhere({ classSectionsId }),
         attributes: [
             "classSectionsId",
@@ -1295,7 +1295,7 @@ export async function getPromotionClassSections({
         where[Op.or] = [{ specializationId }, { specializationId: null }];
     }
 
-    return scoped(model.classSectionModel).findAll({
+    return model.classSectionModel.findAll({
         where,
         attributes: [
             'classSectionsId',
