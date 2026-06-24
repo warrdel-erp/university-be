@@ -1,4 +1,5 @@
 import * as acedmicYearCreationService from '../repository/acedmicYearRepository.js';
+import * as instituteRepository from '../repository/instituteRepository.js';
 import { requestContext } from '../utility/requestContext.js';
 import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from '../repository/electiveSubjectRepository.js';
 import { getAllSubject, subjectBulkCreate } from '../repository/mainRepository.js';
@@ -80,10 +81,26 @@ export async function deleteacedmicYear(acedmicYearId) {
 }
 
 export async function getActiveAcedmicYearByInstitute() {
-    const instituteId = requestContext.getStore()?.instituteId;
+    const { universityId, instituteId } = requestContext.getStore() ?? {};
     if (!instituteId) {
         throw new Error('Active institute is required');
     }
+    if (!universityId) {
+        throw new Error('Active university is required');
+    }
+    return acedmicYearCreationService.getActiveAcedmicYearByInstitute(instituteId, universityId);
+}
+
+/** Active academic years for institute selected at login (instituteId from route param). */
+export async function getActiveAcedmicYearListByInstituteId(instituteId) {
+
+    const institute = await instituteRepository.getInstituteById(instituteId);
+    if (!institute) {
+        const error = new Error('Institute not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
     return acedmicYearCreationService.getActiveAcedmicYearByInstitute(instituteId);
 }
 

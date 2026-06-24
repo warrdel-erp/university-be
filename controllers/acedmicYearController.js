@@ -56,6 +56,16 @@ export async function getActiveAcedmicYearByInstitute(req, res) {
     }
 }
 
+export async function getActiveAcedmicYearListByInstituteId(req, res) {
+    try {
+        const instituteId = Number(req.params.instituteId);
+        const acedmicYears = await acedmicYearCreation.getActiveAcedmicYearListByInstituteId(instituteId);
+        res.status(200).json(acedmicYears);
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ error: error.message });
+    }
+}
+
 export async function newActivateAndCopyData(req, res) {
     try {
         const updatedBy = req.user.userId;

@@ -133,11 +133,14 @@ export async function deleteacedmicYear(acedmicYearId) {
     return deleted > 0;
 }
 
-/** Active academic years for one institute (instituteId + isActive only). */
+/** Active academic years for one institute (instituteId + universityId + isActive). */
 export async function getActiveAcedmicYearByInstitute(instituteId) {
     try {
         return await model.acedmicYearModel.findAll({
-            where: { instituteId, isActive: true },
+            where: {
+                instituteId,
+                isActive: true,
+            },
             attributes: listAttributes,
             order: [['createdAt', 'DESC']],
         });

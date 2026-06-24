@@ -6,6 +6,7 @@ import {
     updateacedmicYear,
     deleteacedmicYear,
     getActiveAcedmicYearByInstitute,
+    getActiveAcedmicYearListByInstituteId,
     newActivateAndCopyData,
 } from '../controllers/acedmicYearController.js';
 import userAuth from '../middleware/authUser.js';
@@ -41,6 +42,10 @@ const acedmicYearIdQuerySchema = z.object({
     acedmicYearId: positiveIntegerId,
 });
 
+const instituteIdParamsSchema = z.object({
+    instituteId: positiveIntegerId,
+});
+
 const activateAndCopySchema = acedmicYearBodySchema.extend({
     copyAcedmicYearId: positiveIntegerId.optional(),
     copyData: z.array(z.enum(['subject', 'electiveSubject', 'session'])).optional(),
@@ -57,8 +62,16 @@ router.patch('/', userAuth, validate({ body: updateAcedmicYearSchema }), updatea
 
 router.delete('/', userAuth, validate({ query: acedmicYearIdQuerySchema }), deleteacedmicYear);
 
-/** Active academic years for active institute (instituteId + isActive only) — returns array. */
+/** Active academic years for active institute (from auth context) — returns array. */
 router.get('/active', userAuth, getActiveAcedmicYearByInstitute);
+
+/** Active academic years for institute selected at login — returns array. */
+router.get(
+    '/active/:instituteId',
+    userAuth,
+    validate({ params: instituteIdParamsSchema }),
+    getActiveAcedmicYearListByInstituteId,
+);
 
 /** Activate new year and optionally copy data from a previous year. */
 router.post(
