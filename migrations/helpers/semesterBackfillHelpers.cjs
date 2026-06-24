@@ -47,25 +47,25 @@ async function enforceSemesterIdNotNull(queryInterface, table, transaction) {
     throw new Error(`${table}.semester_id backfill incomplete — ${nullCount} row(s) still null`);
   }
 
-  const fkName = TABLE_FK[table];
-  if (fkName) {
-    const [constraints] = await queryInterface.sequelize.query(
-      `
-      SELECT CONSTRAINT_NAME
-      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = :table
-        AND CONSTRAINT_NAME = :fkName
-        AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-      `,
-      { replacements: { table, fkName }, transaction },
+  // Find and drop any existing foreign key constraint(s) referencing semester_id on this table.
+  // This handles situations where constraints are named differently, e.g. automatically generated ones like students_ibfk_10.
+  const [constraints] = await queryInterface.sequelize.query(
+    `
+    SELECT CONSTRAINT_NAME AS constraintName
+    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = :table
+      AND COLUMN_NAME = 'semester_id'
+      AND REFERENCED_TABLE_NAME IS NOT NULL
+    `,
+    { replacements: { table }, transaction },
+  );
+
+  for (const row of constraints) {
+    await queryInterface.sequelize.query(
+      `ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${row.constraintName}\``,
+      { transaction },
     );
-    if (constraints.length) {
-      await queryInterface.sequelize.query(
-        `ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${fkName}\``,
-        { transaction },
-      );
-    }
   }
 
   await queryInterface.sequelize.query(
@@ -73,6 +73,7 @@ async function enforceSemesterIdNotNull(queryInterface, table, transaction) {
     { transaction },
   );
 
+  const fkName = TABLE_FK[table];
   if (fkName) {
     await queryInterface.sequelize.query(
       `
@@ -92,25 +93,25 @@ async function relaxSemesterIdNullable(queryInterface, table, transaction) {
     return;
   }
 
-  const fkName = TABLE_FK[table];
-  if (fkName) {
-    const [constraints] = await queryInterface.sequelize.query(
-      `
-      SELECT CONSTRAINT_NAME
-      FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = :table
-        AND CONSTRAINT_NAME = :fkName
-        AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-      `,
-      { replacements: { table, fkName }, transaction },
+  // Find and drop any existing foreign key constraint(s) referencing semester_id on this table.
+  // This handles situations where constraints are named differently, e.g. automatically generated ones like students_ibfk_10.
+  const [constraints] = await queryInterface.sequelize.query(
+    `
+    SELECT CONSTRAINT_NAME AS constraintName
+    FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = :table
+      AND COLUMN_NAME = 'semester_id'
+      AND REFERENCED_TABLE_NAME IS NOT NULL
+    `,
+    { replacements: { table }, transaction },
+  );
+
+  for (const row of constraints) {
+    await queryInterface.sequelize.query(
+      `ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${row.constraintName}\``,
+      { transaction },
     );
-    if (constraints.length) {
-      await queryInterface.sequelize.query(
-        `ALTER TABLE \`${table}\` DROP FOREIGN KEY \`${fkName}\``,
-        { transaction },
-      );
-    }
   }
 
   await queryInterface.sequelize.query(
@@ -118,6 +119,7 @@ async function relaxSemesterIdNullable(queryInterface, table, transaction) {
     { transaction },
   );
 
+  const fkName = TABLE_FK[table];
   if (fkName) {
     await queryInterface.sequelize.query(
       `

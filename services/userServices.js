@@ -631,6 +631,8 @@ export async function initialSetup(info) {
 
     // 6. Create Academic Year
     const academicYear = await model.acedmicYearModel.create({
+      universityId: university.universityId,
+      instituteId: institute.instituteId,
       yearTitle,
       startingDate,
       endingDate,
