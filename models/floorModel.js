@@ -72,6 +72,6 @@ const floorModel = sequelize.define(
     }
 );
 
-floorModel.scopeConfig = { university: false, institute: false, academicYear: false };
+floorModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default floorModel;
