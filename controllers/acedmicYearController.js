@@ -1,15 +1,10 @@
 import * as acedmicYearCreation from '../services/acedmicYearServices.js';
 
 export async function addacedmicYear(req, res) {
-    const { year } = req.body;
-    const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!year) {
-            return res.status(400).send('year is required');
-        }
-        const acedmicYear = await acedmicYearCreation.addacedmicYear(req.body, createdBy, updatedBy);
-        res.status(201).json({ message: 'Data added successfully', acedmicYear });
+        const acedmicYear = await acedmicYearCreation.addacedmicYear(req.body, updatedBy);
+        res.status(201).json({ message: 'Academic year activated successfully', acedmicYear });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -24,28 +19,15 @@ export async function getAllacedmicYear(req, res) {
     }
 }
 
-export async function getSingleacedmicYearDetails(req, res) {
-    try {
-        const { acedmicYearId } = req.query;
-        const acedmicYear = await acedmicYearCreation.getSingleacedmicYearDetails(acedmicYearId);
-        if (acedmicYear) {
-            res.status(200).json(acedmicYear);
-        } else {
-            res.status(404).json({ message: 'acedmicYear not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
 export async function updateacedmicYear(req, res) {
     try {
+        const { acedmicYearId, ...updateData } = req.body;
         const updatedBy = req.user.userId;
-        const updatedacedmicYear = await acedmicYearCreation.updateacedmicYear(
-            req.body,
-            updatedBy,
-        );
-        res.status(200).json({ message: 'acedmicYear update succesfully', updatedacedmicYear });
+        const updated = await acedmicYearCreation.updateacedmicYear(acedmicYearId, updateData, updatedBy);
+        if (!updated) {
+            return res.status(404).json({ message: 'acedmicYear not found' });
+        }
+        res.status(200).json({ message: 'acedmicYear update succesfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -54,9 +36,6 @@ export async function updateacedmicYear(req, res) {
 export async function deleteacedmicYear(req, res) {
     try {
         const { acedmicYearId } = req.query;
-        if (!acedmicYearId) {
-            return res.status(400).json({ message: 'acedmicYearId is required' });
-        }
         const deleted = await acedmicYearCreation.deleteacedmicYear(acedmicYearId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for acedmicYear ID ${acedmicYearId}` });
@@ -68,24 +47,10 @@ export async function deleteacedmicYear(req, res) {
     }
 }
 
-export async function getAllActiveAcedmicYear(req, res) {
+export async function getActiveAcedmicYearByInstitute(req, res) {
     try {
-        const acedmicYear = await acedmicYearCreation.getAllActiveAcedmicYear();
-        res.status(200).json(acedmicYear);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
-export async function activateAcedmicYear(req, res) {
-    try {
-        const { acedmicYearId } = req.query;
-        if (!acedmicYearId) {
-            return res.status(400).send('acedmicYearId is required');
-        }
-        const updatedBy = req.user.userId;
-        await acedmicYearCreation.activateAcedmicYear(acedmicYearId, updatedBy);
-        res.status(201).json({ message: 'Data added successfully' });
+        const acedmicYears = await acedmicYearCreation.getActiveAcedmicYearByInstitute();
+        res.status(200).json(acedmicYears);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -93,22 +58,9 @@ export async function activateAcedmicYear(req, res) {
 
 export async function newActivateAndCopyData(req, res) {
     try {
-        const { acedmicYearId } = req.body;
-        if (!acedmicYearId) {
-            return res.status(400).send('acedmicYearId is required');
-        }
         const updatedBy = req.user.userId;
-        const createdBy = req.user.userId;
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const acedmicYear = await acedmicYearCreation.newActivateAndCopyData(
-            req.body,
-            universityId,
-            instituteId,
-            createdBy,
-            updatedBy
-        );
-        res.status(201).json({ message: 'copy data added successfully', acedmicYear });
+        const acedmicYear = await acedmicYearCreation.newActivateAndCopyData(req.body, updatedBy);
+        res.status(201).json({ message: 'Academic year activated and data copied successfully', acedmicYear });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

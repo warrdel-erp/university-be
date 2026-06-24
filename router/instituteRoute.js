@@ -6,6 +6,18 @@ import { validate } from "../utility/validation.js";
 
 const router = Router();
 
+const academicYearSchema = z.object({
+  yearTitle: z
+    .string({ required_error: "yearTitle is required" })
+    .min(1, "yearTitle cannot be empty"),
+  startingDate: z
+    .string({ required_error: "startingDate is required" })
+    .min(1, "startingDate cannot be empty"),
+  endingDate: z
+    .string({ required_error: "endingDate is required" })
+    .min(1, "endingDate cannot be empty"),
+});
+
 const instituteSchema = z.object({
   campusId: z.number({
     required_error: "Campus Id is required",
@@ -20,6 +32,7 @@ const instituteSchema = z.object({
       required_error: "Institute code is required",
     })
     .min(1, "Institute code cannot be empty"),
+  academicYear: academicYearSchema,
   affiliatedUniversity: z
     .array(
       z.object({
@@ -72,6 +85,7 @@ const updateAffiliatedUniversitySchema = z
   );
 
 router.post("/", userAuth, validate({ body: instituteSchema }), instituteController.createInstitute);
+
 router.patch("/", userAuth, validate({ body: updateInstituteSchema }), instituteController.updateInstitute);
 router.patch(
   "/affiliatedUniversity",

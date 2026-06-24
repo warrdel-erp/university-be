@@ -141,9 +141,20 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
     }
 };
 
-export async function getTermsWithExamTypes(courseId, acedmicYearId) {
+export async function getTermsWithExamTypes(courseId, sessionId) {
     try {
-        // 1. Get course to find termType and totalTerms
+        const mapping = await sessionRepository.getMappingByCourseAndSession(courseId, sessionId);
+        if (!mapping) {
+            throw new Error('Course session mapping not found');
+        }
+
+        const session = await sessionRepository.assertSessionInScope(sessionId);
+        if (!session) {
+            throw new Error('Session not found');
+        }
+
+        const acedmicYearId = session.acedmicYearId;
+
         const course = await courseRepository.getCourseByCourseId(courseId);
         if (!course) {
             throw new Error('Course not found');
@@ -152,12 +163,10 @@ export async function getTermsWithExamTypes(courseId, acedmicYearId) {
         const termType = course.termType || 'Term';
         const totalTerms = course.totalTerms || 0;
 
-        // 2. Fetch exam setup type terms
         const examSetupTypeTerms = await termsRepository.getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId);
 
         const plainExamSetupTypeTerms = examSetupTypeTerms.map(e => e.get({ plain: true }));
 
-        // 3. Group by term
         const termsMap = {};
         plainExamSetupTypeTerms.forEach(estt => {
             const termNum = estt.term;
@@ -167,7 +176,6 @@ export async function getTermsWithExamTypes(courseId, acedmicYearId) {
             termsMap[termNum].push(estt);
         });
 
-        // 4. Ensure all terms from 1 to totalTerms (or max term found) are present
         const maxTermFound = Object.keys(termsMap).reduce((max, curr) => Math.max(max, parseInt(curr)), 0);
         const endTerm = Math.max(totalTerms, maxTermFound);
 

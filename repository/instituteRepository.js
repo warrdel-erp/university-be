@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
-export async function createInstitute(data, affiliatedUniversities = []) {
+export async function createInstitute(data, affiliatedUniversities = [], academicYear) {
   const transaction = await sequelize.transaction();
   try {
     const institute = await scoped(model.instituteModel).create(data, { transaction });
@@ -22,8 +22,22 @@ export async function createInstitute(data, affiliatedUniversities = []) {
       affiliateRows.push(row);
     }
 
+    const createdAcademicYear = await model.acedmicYearModel.create(
+      {
+        universityId: institute.universityId,
+        instituteId: institute.instituteId,
+        yearTitle: academicYear.yearTitle,
+        startingDate: academicYear.startingDate,
+        endingDate: academicYear.endingDate,
+        isActive: true,
+        updatedBy: data.createdBy,
+      },
+      { transaction },
+    );
+
     await transaction.commit();
     institute.setDataValue("affiliateInstitute", affiliateRows);
+    institute.setDataValue("academicYear", createdAcademicYear);
     return institute;
   } catch (error) {
     await transaction.rollback();

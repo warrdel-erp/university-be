@@ -30,11 +30,10 @@ export const getTermsWithSubject = async (req, res, next) => {
 };
 
 export async function getTermsWithExamTypes(req, res) {
-  const { courseId } = req.query;
-  const acedmicYearId = req.user.defaultAcademicYearId;
+  const { courseId, sessionId } = req.query;
 
   try {
-    const data = await termsService.getTermsWithExamTypes(courseId, acedmicYearId);
+    const data = await termsService.getTermsWithExamTypes(courseId, sessionId);
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
