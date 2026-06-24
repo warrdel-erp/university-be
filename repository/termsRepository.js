@@ -1,6 +1,37 @@
 import * as model from '../models/index.js';
-import { requestContext } from '../utility/requestContext.js';
 import { scoped } from '../utility/scoped.js';
+
+function whereFromSession(session, model, where = {}) {
+  const s = session.dataValues ?? session;
+  const tenant = {
+    universityId: s.universityId,
+    instituteId: s.instituteId,
+    acedmicYearId: s.acedmicYearId,
+  };
+  const attrs = model.rawAttributes || {};
+  const merged = { ...where, ...tenant };
+  const filtered = {};
+  for (const [key, value] of Object.entries(merged)) {
+    if (key in attrs && value != null) {
+      filtered[key] = value;
+    }
+  }
+  return filtered;
+}
+
+export async function getSubjectsByCourseAndSession(courseId, session) {
+  try {
+    return await model.subjectModel.findAll({
+      where: whereFromSession(session, model.subjectModel, { courseId }),
+      attributes: ['subjectId', 'subjectName', 'term'],
+      raw: true,
+      nest: true,
+    });
+  } catch (error) {
+    console.error('Error fetching subjects:', error);
+    throw error;
+  }
+}
 
 export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId) {
   try {
@@ -43,10 +74,10 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(
   }
 }
 
-export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
+export async function getClassSectionsByCourseAndSession(courseId, sessionId, session) {
   try {
-    return await scoped(model.classSectionModel).findAll({
-      where: { courseId, sessionId },
+    return await model.classSectionModel.findAll({
+      where: whereFromSession(session, model.classSectionModel, { courseId, sessionId }),
       attributes: ['classSectionsId', 'section'],
       include: [
         {
@@ -60,6 +91,36 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
     });
   } catch (error) {
     console.error('Error fetching class sections:', error);
+    throw error;
+  }
+}
+
+export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session) {
+  try {
+    return await model.examSetupTypeTermModel.findAll({
+      where: whereFromSession(session, model.examSetupTypeTermModel, { courseId }),
+      include: [
+        {
+          model: model.examSetupTypeModel,
+          as: 'examSetupType',
+          required: true,
+          include: [
+            {
+              model: model.examStructureModel,
+              as: 'examStructure',
+              required: true,
+              attributes: [],
+              where: whereFromSession(session, model.examStructureModel, {
+                courseId,
+                sessionId,
+              }),
+            },
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching exam setup type terms:', error);
     throw error;
   }
 }

@@ -184,7 +184,7 @@ export async function assertCourseInScope(courseId) {
 export async function assertSessionInScope(sessionId) {
     return scoped(model.sessionModel).findOne({
         where: { sessionId },
-        attributes: ['sessionId', 'instituteId', 'acedmicYearId'],
+        attributes: ['sessionId', 'universityId', 'instituteId', 'acedmicYearId'],
     });
 }
 

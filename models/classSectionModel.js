@@ -142,6 +142,6 @@ const classSectionModel = sequelize.define(
     }
 );
 
-classSectionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+classSectionModel.scopeConfig = { university: false, institute: true, academicYear: true };
 
 export default classSectionModel;
