@@ -84,6 +84,31 @@ function studentSessionWithAcademicYearInclude(options = {}) {
     };
 }
 
+function studentSessionIncludeWithoutAcademicYear(options = {}) {
+    const { attributes } = options;
+    const sessionScope = omitAcademicYearScope(buildScope(model.sessionModel));
+    return {
+        model: model.sessionModel,
+        as: "studentSession",
+        attributes: attributes ?? sessionAcedmicYearAttrs,
+        ...(Object.keys(sessionScope).length > 0 && { where: sessionScope }),
+        include: [
+            {
+                model: model.acedmicYearModel,
+                as: "sessionAcedmic",
+                attributes: sessionAcedmicYearAttrs,
+            },
+        ],
+    };
+}
+
+function studentWithFeePlanInitiateWhere() {
+    return {
+        feePlanProfileId: { [Op.ne]: null },
+        ...omitAcademicYearScope(buildScope(model.studentModel)),
+    };
+}
+
 /** Scoped read: student must belong to the logged-in academic year (via session). */
 export async function assertStudentInRequestAcademicYear(studentId, options = {}) {
     const acedmicYearId = getRequestAcademicYearId();
@@ -1350,15 +1375,9 @@ export async function updateStudentfeeStatus(studentId, data) {
 export async function countStudentsWithFeePlanForInitiate(options = {}) {
     try {
         const { transaction } = options;
-        if (getRequestAcademicYearId() == null) {
-            return 0;
-        }
 
-        return await scoped(model.studentModel).count({
-            where: {
-                feePlanProfileId: { [Op.ne]: null },
-            },
-            include: [studentSessionWithAcademicYearInclude({ attributes: [] })],
+        return await model.studentModel.count({
+            where: studentWithFeePlanInitiateWhere(),
             transaction,
         });
     } catch (error) {
@@ -1371,14 +1390,9 @@ export async function findStudentsWithFeePlanForInitiate(options = {}) {
     try {
         const { page = 1, limit = 20, transaction } = options;
         const offset = (page - 1) * limit;
-        if (getRequestAcademicYearId() == null) {
-            return [];
-        }
 
-        return await scoped(model.studentModel).findAll({
-            where: {
-                feePlanProfileId: { [Op.ne]: null },
-            },
+        return await model.studentModel.findAll({
+            where: studentWithFeePlanInitiateWhere(),
             attributes: [
                 "studentId",
                 "firstName",
@@ -1390,7 +1404,7 @@ export async function findStudentsWithFeePlanForInitiate(options = {}) {
                 "feePlanProfileId",
             ],
             include: [
-                studentSessionWithAcademicYearInclude({
+                studentSessionIncludeWithoutAcademicYear({
                     attributes: ["sessionId", "sessionName"],
                 }),
                 {
