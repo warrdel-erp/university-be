@@ -3,13 +3,7 @@ import * as fileHandler from '../utility/fileHandler.js';
 
 export const getAllCollegesAndCourses = async (req, res) => {
     try {
-        const campusId = req.query.campusId;
-        const instituteId = req.query.instituteId;
-        const acedmicYearId = req.query.acedmicYearId;
-        if (!req.user?.universityId) {
-            return res.status(400).send('University Id is required')
-        }
-        const result = await mainServices.getAllCollegesAndCourses(campusId, instituteId, acedmicYearId);
+        const result = await mainServices.getAllCollegesAndCourses();
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all course:", error);

@@ -1,6 +1,8 @@
 import * as model from '../models/index.js';
 import sequelize from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { requestContext } from "../utility/requestContext.js";
+import { getCampusIdByInstituteId } from "./buildingRepository.js";
 
 function omitAcademicYearScope(scopeWhere = {}) {
     const { acedmicYearId, ...rest } = scopeWhere;
@@ -75,8 +77,10 @@ export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYea
 
 export async function getAllUniversity() {
     try {
+        const { universityId } = requestContext.getStore() ?? {};
         return scoped(model.universityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: { ...(universityId && { universityId }) },
         });
     } catch (error) {
         console.error("Error in get all university details:", error);
@@ -84,11 +88,13 @@ export async function getAllUniversity() {
     }
 }
 
-export async function getAllCampus(campusId) {
+export async function getAllCampus() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
+        const campusId = await getCampusIdByInstituteId(instituteId);
         return scoped(model.campusModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(campusId && { where: { campusId } }),
+            where: { campusId },
         });
     } catch (error) {
         console.error("Error in get all Campus details:", error);
@@ -96,14 +102,12 @@ export async function getAllCampus(campusId) {
     }
 }
 
-export async function getAllInstitute(campusId, instituteId) {
+export async function getAllInstitute() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
         return scoped(model.instituteModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            where: {
-                ...(instituteId && { instituteId }),
-                ...(campusId && { campusId }),
-            },
+            where: { ...(instituteId && { instituteId }) },
         });
     } catch (error) {
         console.error("Error in get all institute details:", error);
@@ -111,16 +115,18 @@ export async function getAllInstitute(campusId, instituteId) {
     }
 }
 
-export async function getAllAffiliatedUniversity(instituteId) {
+export async function getAllAffiliatedUniversity() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
         return scoped(model.affiliatedIniversityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(instituteId && { where: { instituteId } }),
+            where: { ...(instituteId && { instituteId }) },
             include: [
                 {
                     model: model.instituteModel,
                     as: "affiliateInstitute",
                     attributes: ["instituteId", "instituteName"],
+                    where: { ...(instituteId && { instituteId }) },
                     required: false,
                 },
             ],
@@ -131,8 +137,11 @@ export async function getAllAffiliatedUniversity(instituteId) {
     }
 }
 
-export async function getAllCourse(campusId) {
+export async function getAllCourse() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
+        const campusId = instituteId ? await getCampusIdByInstituteId(instituteId) : undefined;
+
         return scoped(model.courseModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             include: [
@@ -163,8 +172,11 @@ export async function getAllCourse(campusId) {
                     model: model.instituteModel,
                     as: 'instituted',
                     attributes: [],
-                    where: buildScope(model.instituteModel),
-                    required: false,
+                    where: {
+                        ...buildScope(model.instituteModel),
+                        ...(instituteId && { instituteId }),
+                    },
+                    required: true,
                     include: [
                         {
                             model: model.campusModel,
@@ -174,7 +186,7 @@ export async function getAllCourse(campusId) {
                                 ...buildScope(model.campusModel),
                                 ...(campusId && { campusId }),
                             },
-                            required: false,
+                            required: true,
                         }
                     ]
                 }
@@ -186,11 +198,10 @@ export async function getAllCourse(campusId) {
     }
 }
 
-export async function getAllSpecialization(acedmicYearId) {
+export async function getAllSpecialization() {
     try {
         return scoped(model.specializationModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(acedmicYearId && { where: { acedmicYearId } }),
             include: [
                 {
                     model: model.courseModel,

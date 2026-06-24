@@ -1,28 +1,40 @@
-import * as DepartmentCreation  from  "../services/departmentService.js";
+import * as DepartmentCreation from '../services/departmentService.js';
+
+function isTenantScopeError(message = '') {
+    return (
+        message.includes('institute scope') ||
+        message.includes('university scope')
+    );
+}
 
 export async function addDepartment(req, res) {
-    const {subAccountId} = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if(!(subAccountId)){
-           return res.status(400).send('subAccountId is required')
-        }
-        const departmentDetails = await DepartmentCreation.addDepartment(req.body,createdBy,updatedBy);
-        res.status(201).json({ message: "Data added successfully", departmentDetails });
+        const departmentDetails = await DepartmentCreation.addDepartment(req.body, createdBy, updatedBy);
+        res.status(201).json({ message: 'Data added successfully', departmentDetails });
     } catch (error) {
+        if (error.message?.includes('Sub account not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function getAllDepartment(req, res) {
     try {
         const departmentDetails = await DepartmentCreation.getDepartmentDetails();
         res.status(200).json(departmentDetails);
     } catch (error) {
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function getSingleDepartmentDetails(req, res) {
     try {
@@ -31,43 +43,52 @@ export async function getSingleDepartmentDetails(req, res) {
         if (departmentDetails) {
             res.status(200).json(departmentDetails);
         } else {
-            res.status(404).json({ message: "departmentDetails not found" });
+            res.status(404).json({ message: 'departmentDetails not found' });
         }
     } catch (error) {
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function updateDepartment(req, res) {
     try {
-        const {departmentId} = req.body
-        if(!(departmentId)){
-            return res.status(400).send('departmentId is required')
-         }
-         const updatedBy = req.user.userId;
-        const updatedDepartment = await DepartmentCreation.updateDepartment(departmentId, req.body,updatedBy);
-            res.status(200).json({message: "departmentDetails update succesfully" });
+        const { departmentId, ...updateData } = req.body;
+        const updatedBy = req.user.userId;
+        const updated = await DepartmentCreation.updateDepartment(departmentId, updateData, updatedBy);
+        if (!updated) {
+            return res.status(404).json({ message: 'departmentDetails not found' });
+        }
+        res.status(200).json({ message: 'departmentDetails update succesfully' });
     } catch (error) {
+        if (error.message?.includes('Sub account not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function deleteDepartment(req, res) {
     try {
         const { departmentId } = req.query;
-        if (!departmentId) {
-            return res.status(400).json({ message: "departmentId is required" });
-        }
         const deleted = await DepartmentCreation.deleteDepartment(departmentId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for departmentDetails ID ${departmentId}` });
         } else {
-            res.status(404).json({ message: "departmentDetails not found" });
+            res.status(404).json({ message: 'departmentDetails not found' });
         }
     } catch (error) {
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function getDepartmentByIdEmployee(req, res) {
     try {
@@ -76,9 +97,12 @@ export async function getDepartmentByIdEmployee(req, res) {
         if (departmentDetails) {
             res.status(200).json(departmentDetails);
         } else {
-            res.status(404).json({ message: "departmentDetails not found" });
+            res.status(404).json({ message: 'departmentDetails not found' });
         }
     } catch (error) {
+        if (isTenantScopeError(error.message)) {
+            return res.status(400).json({ message: error.message });
+        }
         res.status(500).json({ error: error.message });
     }
-};
+}

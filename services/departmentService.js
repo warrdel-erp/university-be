@@ -1,30 +1,22 @@
-import * as departmentCreationRepository  from "../repository/departmentRepository.js";
-import { getSingleSubAccountDetails } from "../repository/subAccountRepository.js";
+import * as departmentCreationRepository from '../repository/departmentRepository.js';
+import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 
 export async function addDepartment(departmentData, createdBy, updatedBy) {
-    try {
-        departmentData.createdBy = createdBy;
-        departmentData.updatedBy = updatedBy;
-
-        const subAccountId = departmentData.subAccountId;
-        const department = await departmentCreationRepository.getlatestEntry(subAccountId);
-
-        let departmentOrder = 1;
-
-        if (department) {
-            departmentOrder = department.dataValues.departmentOrder + 1;
-        }
-
-        const newDepartmentData = { ...departmentData, departmentOrder };
-
-        const newDepartment = await departmentCreationRepository.addDepartment(newDepartmentData);
-
-        return newDepartment;
-    } catch (error) {
-        console.error('Error adding department:', error);
-        throw error;
+    const subAccount = await getSingleSubAccountDetails(departmentData.subAccountId);
+    if (!subAccount) {
+        throw new Error('Sub account not found for this institute');
     }
-};
+
+    departmentData.createdBy = createdBy;
+    departmentData.updatedBy = updatedBy;
+
+    const latest = await departmentCreationRepository.getlatestEntry(departmentData.subAccountId);
+    const departmentOrder = latest
+        ? (latest.departmentOrder ?? latest.dataValues?.departmentOrder) + 1
+        : 1;
+
+    return await departmentCreationRepository.addDepartment({ ...departmentData, departmentOrder });
+}
 
 export async function getDepartmentDetails() {
     return await departmentCreationRepository.getDepartmentDetails();
@@ -38,26 +30,30 @@ export async function deleteDepartment(departmentId) {
     return await departmentCreationRepository.deleteDepartment(departmentId);
 }
 
-export async function updateDepartment(departmentId, departmentData, updatedBy) {    
+export async function updateDepartment(departmentId, departmentData, updatedBy) {
+    if (departmentData.subAccountId) {
+        const subAccount = await getSingleSubAccountDetails(departmentData.subAccountId);
+        if (!subAccount) {
+            throw new Error('Sub account not found for this institute');
+        }
+    }
 
-    departmentData.updatedBy = updatedBy;
-    await departmentCreationRepository.updateDepartment(departmentId, departmentData);
-};
+    const {
+        instituteId: _instituteId,
+        universityId: _universityId,
+        departmentId: _departmentId,
+        ...updateData
+    } = departmentData;
+    updateData.updatedBy = updatedBy;
+    return await departmentCreationRepository.updateDepartment(departmentId, updateData);
+}
 
 export async function getDepartmentByIdEmployee(departmentId) {
-    try {
-        const result = await getSingleSubAccountDetails(departmentId);
-
-        if (!result) {
-            throw new Error(`Department not found with ID: ${departmentId}`);
-        }
-
-        const departmentName = result.dataValues.departmentName;
-        const employeeDetail = await departmentCreationRepository.employeeDetail(departmentName);
-
-        return employeeDetail;
-    } catch (error) {
-        console.error('Error fetching employees by department ID:', error.message);
-        throw error; 
+    const department = await departmentCreationRepository.getSingleDepartmentDetails(departmentId);
+    if (!department) {
+        return null;
     }
+
+    const departmentName = department.departmentName ?? department.dataValues?.departmentName;
+    return await departmentCreationRepository.employeeDetail(departmentName);
 }

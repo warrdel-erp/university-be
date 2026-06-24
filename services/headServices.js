@@ -1,28 +1,33 @@
 import * as headCreationService from "../repository/headRepository.js";
-import * as campusRepository from "../repository/campusRepository.js";
 import * as instituteRepository from "../repository/instituteRepository.js";
 import * as registerRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import sequelize from "../database/sequelizeConfig.js";
+import { requestContext } from "../utility/requestContext.js";
+
+function getActiveInstituteId() {
+  const instituteId = requestContext.getStore()?.instituteId;
+  if (!instituteId) {
+    throw new Error("Active institute is required. Set your default institute or send X-Institute-Id header.");
+  }
+  return instituteId;
+}
 
 export async function addHead(headData, createdBy, updatedBy) {
   const transaction = await sequelize.transaction();
 
   try {
-    const { headName, mobileNumber, registerEmail, alternateEmail, instituteId, campusId } = headData;
+    const { headName, mobileNumber, registerEmail, alternateEmail } = headData;
+    const instituteId = getActiveInstituteId();
 
-    const campus = await campusRepository.getCampusById(campusId);
-    if (!campus) {
-      throw new Error("Campus not found or does not belong to this university");
-    }
-
-    const institute = await instituteRepository.getInstituteByCampusAndId(campusId, instituteId);
+    const institute = await instituteRepository.getInstituteById(instituteId);
     if (!institute) {
-      throw new Error("Institute not found for this campus and university");
+      throw new Error("Institute not found for your active institute");
     }
 
-    const universityId = campus.universityId ?? campus.dataValues?.universityId;
+    const campusId = institute.campusId ?? institute.dataValues?.campusId;
+    const universityId = institute.universityId ?? institute.dataValues?.universityId;
 
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(alternateEmail, salt);
@@ -31,6 +36,8 @@ export async function addHead(headData, createdBy, updatedBy) {
       createdBy,
       updatedBy,
       universityId,
+      instituteId,
+      campusId,
     });
 
     const userPayload = {
@@ -69,6 +76,13 @@ export async function deleteHead(headId) {
 }
 
 export async function updateHead(headId, headData, updatedBy) {
-  headData.updatedBy = updatedBy;
-  await headCreationService.updateHead(headId, headData);
+  const {
+    campusId: _campusId,
+    instituteId: _instituteId,
+    universityId: _universityId,
+    headId: _headId,
+    ...updateData
+  } = headData;
+  updateData.updatedBy = updatedBy;
+  await headCreationService.updateHead(headId, updateData);
 }

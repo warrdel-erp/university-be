@@ -1,68 +1,232 @@
 ---
 description: 
-globs: router/**/*.js, repository/**/*.js, services/**/*.js, controllers/**/*.js
+globs: router//*.js,repository//.js,services/**/.js,controllers//*.js,utils//*.js
 alwaysApply: false
 ---
 
+# University Backend Rules
+
+## Sequelize Multi-Tenancy (strict explicit mode)
+
+Use explicit-only tenant scoping.
+
+### Allowed DB access
+
+Only use:
+
+scoped(model).findAll()
+scoped(model).findOne()
+scoped(model).findByPk()
+scoped(model).findAndCountAll()
+scoped(model).count()
+scoped(model).create()
+scoped(model).bulkCreate()
+scoped(model).update()
+scoped(model).destroy()
+
+Never call model methods directly.
+
+Forbidden:
+
+* model.findAll()
+* model.findOne()
+* model.findByPk()
+* model.findAndCountAll()
+* model.count()
+* model.create()
+* model.bulkCreate()
+* model.update()
+* model.destroy()
+* applyMultiTenancy()
+* monkey patching Sequelize
+* overriding model methods
+
 ---
-description: University BE — scoped Sequelize, minimal layers, route/repository patterns
-globs: router/**/*.js,repository/**/*.js,services/**/*.js,controllers/**/*.js
-alwaysApply: false
+
+## Scope Behavior
+
+Preserve existing buildScope() behavior.
+
+Must continue supporting:
+
+* university scope
+* institute scope
+* academic year scope
+* teacher restriction
+* AsyncLocalStorage requestContext
+* bypass mode
+
+Tenant values:
+
+* come only from buildScope(model)
+* never from request input
+* never default manually from requestContext.getStore()
+
 ---
 
-# University BE Backend Conventions
+## WHERE Merge Rule (mandatory)
 
-## Multi-tenancy (strict)
+Tenant scope must always win.
 
-- Use **only** `scoped(model).findAll|findOne|findByPk|findAndCountAll|count|create|bulkCreate|update|destroy`.
-- Never call model methods directly; never use `applyMultiTenancy()` or monkey-patch models.
-- Tenant WHERE merge order — **scope must win**:
+Use:
 
+where: {
+...(options.where || {}),
+...baseWhere
+}
 
-where: { ...options.where, ...baseWhere }  // baseWhere from buildScope last
+Never:
 
+where: {
+...baseWhere,
+...options.where
+}
 
-- On `create` / `bulkCreate`, inject tenant fields from `buildScope()` filtered by `model.rawAttributes` only.
-- Academic year / institute / university come from `buildScope(model)` + auth `requestContext` — not manual `requestContext.getStore()` defaults in function params.
+Apply everywhere:
 
-## Keep code minimal
+* root queries
+* includes
+* updates
+* deletes
+* counts
 
-- Prefer **direct query keys** (`employeeId`, `sessionId`, `page`, `limit`) — avoid extra resolve/format helper layers.
-- Do **not** split into many intermediate constants (`subjectWhere`, `mappingWhere`, `queryOptions`, `include`).
-- Inline `where` / `include` inside `scoped(...).findAll` or `findAndCountAll`.
-- Service layer: thin — pass `req.query` / `req.body` to repository; re-export repo reads when needed; no pass-through wrappers.
-- Controller → service/repo only; business queries live in **repository**.
+---
 
-## Repository query pattern
+## Create / BulkCreate
 
-// ✅ GOOD — scoped, buildScope on includes, inline query, paginated
-const { rows: result, count: totalCount } = await scoped(model.teacherSubjectMappingModel).findAndCountAll({
-  where: { ...(employeeId && { employeeId }) },
-  include: [{
-    model: model.subjectModel,
-    as: 'employeeSubject',
-    where: { ...(subjectId && { subjectId }), ...buildScope(model.subjectModel) },
-    required: true,
-  }],
-  offset: (page - 1) * limit,
-  limit,
-  distinct: true,
-  col: 'teacher_subject_mapping_id',
+Inject tenant values automatically from buildScope().
+
+Before injection:
+
+* filter scope keys using model.rawAttributes
+* ignore missing tenant fields silently
+
+Example:
+
+Model:
+{
+title
+}
+
+Scope:
+{
+instituteId: 1
+}
+
+Insert:
+{
+title: "Math"
+}
+
+Model:
+{
+title,
+instituteId
+}
+
+Insert:
+{
+title: "Math",
+instituteId: 1
+}
+
+Tenant values always override payload values.
+
+---
+
+## Tenant Isolation
+
+Strict isolation:
+
+* read → scoped
+* update → scoped
+* delete → scoped
+* create → injected tenant fields
+* bulkCreate → same behavior
+
+If record cannot be fetched due to scope:
+
+* never update
+* never delete
+* never modify outside scope
+
+Cross-tenant access must never be possible.
+
+---
+
+## Repository Style
+
+Keep changes minimal.
+
+Prefer:
+
+* inline where/include
+* existing architecture
+* modifying existing functions
+
+Avoid:
+
+* helper explosion
+* extra abstractions
+* deep nesting
+* unnecessary constants
+* rewriting files
+
+Repository owns business queries.
+
+Service:
+
+* thin pass-through
+
+Controller:
+
+* controller → service/repository only
+
+---
+
+## Query Pattern
+
+Prefer:
+
+const { rows: result, count: totalCount } =
+await scoped(model.example).findAndCountAll({
+where: {
+...(id && { id })
+},
+include: [{
+model: model.related,
+where: {
+...buildScope(model.related)
+},
+required: true
+}],
+offset: (page - 1) * limit,
+limit,
+distinct: true
 });
 
-return { result, totalCount, page, limit, totalPages: Math.ceil(totalCount / limit) };
+return {
+result,
+totalCount,
+page,
+limit,
+totalPages: Math.ceil(totalCount / limit)
+};
 
-// ❌ BAD — manual year default, named query constants, double findAll+count
-acedmicYearId = requestContext.getStore()?.academicYearId
-const subjectWhere = { ...(acedmicYearId && { acedmicYearId }), ...buildScope(...) };
+List APIs return:
 
+{
+result,
+totalCount,
+page,
+limit,
+totalPages
+}
 
-- Filter by academic year via `buildScope(model.subjectModel)` / `buildScope(model.classSectionModel)` on related includes.
-- Use `X-Academic-Year-Id` header / token default (auth middleware) — do not duplicate year from query unless explicitly required.
-- List endpoints return `{ result, totalCount, page, limit, totalPages }`.
+---
 
 ## Routes
 
-- Validate with Zod `validate({ body|query|params })` on write routes and list filters.
-- Use distinct REST paths per resource (e.g. `DELETE /teacher/teacherSubject/:id`, not shared `/:id`).
-- Keep Postman `docs/postman/univ-v2.postman_collection.json` in sync when routes or response shapes change.
+* validate() with Zod for write/list filters
+* keep REST resource paths distinct
+* update Postman collection when APIs change

@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subAccount from "./subAccountModel.js";
 import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 
 const departmentModel = sequelize.define(
     'department',
@@ -31,6 +32,15 @@ const departmentModel = sequelize.define(
                     model: university,
                     key: 'university_id'
                 }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id',
+            },
         },
         departmentName: {
             type: DataTypes.STRING,

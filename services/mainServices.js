@@ -3,17 +3,17 @@ import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
-export async function getAllCollegesAndCourses(campusId, instituteId, acedmicYearId) {
+export async function getAllCollegesAndCourses() {
     try {
         const [allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse, allSpecialization, allSubject] =
             await Promise.all([
                 mainRepository.getAllUniversity(),
-                mainRepository.getAllCampus(campusId),
-                mainRepository.getAllInstitute(campusId, instituteId),
-                mainRepository.getAllAffiliatedUniversity(instituteId),
-                mainRepository.getAllCourse(campusId),
-                mainRepository.getAllSpecialization(acedmicYearId),
-                mainRepository.getAllSubject(acedmicYearId, instituteId)
+                mainRepository.getAllCampus(),
+                mainRepository.getAllInstitute(),
+                mainRepository.getAllAffiliatedUniversity(),
+                mainRepository.getAllCourse(),
+                mainRepository.getAllSpecialization(),
+                mainRepository.getAllSubject(),
             ]);
 
         return {
@@ -23,7 +23,7 @@ export async function getAllCollegesAndCourses(campusId, instituteId, acedmicYea
             allAffiliatedIniversity,
             allCourse,
             allSpecialization,
-            allSubject
+            allSubject,
         };
     } catch (error) {
         console.error('Error fetching all Course details:', error);
