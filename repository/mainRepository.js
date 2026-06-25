@@ -125,16 +125,13 @@ export async function getAllInstitute() {
 
 export async function getAllAffiliatedUniversity() {
     try {
-        const { instituteId } = requestContext.getStore() ?? {};
         return scoped(model.affiliatedIniversityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            where: { ...(instituteId && { instituteId }) },
             include: [
                 {
                     model: model.instituteModel,
                     as: "affiliateInstitute",
                     attributes: ["instituteId", "instituteName"],
-                    where: { ...(instituteId && { instituteId }) },
                     required: false,
                 },
             ],

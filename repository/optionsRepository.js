@@ -1,6 +1,6 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
-import { scoped } from '../utility/scoped.js';
+import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
 
 export async function getAffiliatedUniversityOptions() {
@@ -32,6 +32,7 @@ export async function getClassSectionOptions(courseId, term) {
             as: 'classGroup',
             where: {
                 ...(term && { term }),
+                ...buildScope(model.classModel),
             },
             attributes: [],
         }],
@@ -61,7 +62,10 @@ export async function getSubjectOptions(courseId, term, acedmicYearId) {
             as: 'subjects',
             attributes: [],
             required: true,
-            where: subjectWhere,
+            where: {
+                ...subjectWhere,
+                ...buildScope(model.subjectModel),
+            },
         }],
     });
 
@@ -134,8 +138,9 @@ export async function getFeePlanProfileOptions(courseId, sessionId) {
 }
 
 export async function getTopicOptions(filters) {
+    const { instituteId: _i, universityId: _u, ...safeFilters } = filters ?? {};
     return await scoped(model.topicModel).findAll({
         attributes: [['name', 'label'], ['topic_id', 'value']],
-        where: filters,
+        where: safeFilters,
     });
 }

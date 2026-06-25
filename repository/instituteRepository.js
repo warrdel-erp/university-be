@@ -9,7 +9,7 @@ export async function createInstitute(data, affiliatedUniversities = [], academi
 
     const affiliateRows = [];
     for (const item of affiliatedUniversities) {
-      const row = await scoped(model.affiliatedIniversityModel).create(
+      const row = await model.affiliatedIniversityModel.create(
         {
           affiliatedUniversityName: item.affiliatedUniversityName,
           affiliatedUniversityCode: item.affiliatedUniversityCode,
