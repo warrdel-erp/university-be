@@ -152,6 +152,7 @@ import userRoleModel from "./userRoleModel.js";
 import questionPaperModel from "./questionPaperModel.js";
 import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
+import teacherSubstituteModel from "./teacherSubstituteModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
 import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
@@ -1565,6 +1566,15 @@ acedmicYearModel.hasMany(teacherExamAssignmentModel, { foreignKey: "acedmicYearI
 teacherExamAssignmentModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "teacherEmployee" });
 employeeModel.hasMany(teacherExamAssignmentModel, { foreignKey: "employeeId", as: "examAssignments" });
 
+teacherSubstituteModel.belongsTo(employeeModel, { foreignKey: "employeeId", as: "employee" });
+employeeModel.hasMany(teacherSubstituteModel, { foreignKey: "employeeId", as: "teacherSubstitutes" });
+
+teacherSubstituteModel.belongsTo(employeeModel, { foreignKey: "substituteEmployeeId", as: "substituteEmployee" });
+employeeModel.hasMany(teacherSubstituteModel, { foreignKey: "substituteEmployeeId", as: "substituteAssignments" });
+
+teacherSubstituteModel.belongsTo(userModel, { foreignKey: "userId", as: "substituteUser" });
+userModel.hasMany(teacherSubstituteModel, { foreignKey: "userId", as: "substituteTeacherMappings" });
+
 questionPaperModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
 examScheduleModel.hasMany(questionPaperModel, { foreignKey: "examScheduleId", as: "questionPapers" });
 
@@ -1813,6 +1823,7 @@ export {
   questionPaperModel,
   questionBankModel,
   teacherExamAssignmentModel,
+  teacherSubstituteModel,
   questionPaperBlueprintModel,
   examSetupTypeTermModel,
   subjectWeightageModel,
