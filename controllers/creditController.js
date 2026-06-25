@@ -1,12 +1,12 @@
 import * as creditService from '../services/creditServices.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export async function addCredit(req, res) {
   const { credits } = req.body;
 
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
-  const universityId = req.user.universityId;
-  const instituteId = req.user.defaultInstituteId;
+  const { universityId, instituteId } = getTenantStore();
 
   try {
     if (!Array.isArray(credits) || credits.length === 0) {

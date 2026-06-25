@@ -14,9 +14,9 @@ export async function addSession(sessionData, transaction) {
     }
 }
 
-export async function addBulkSession(sessionData) {
+export async function addBulkSession(sessionData, options = {}) {
     try {
-        return await model.sessionModel.bulkCreate(sessionData);
+        return await model.sessionModel.bulkCreate(sessionData, options);
     } catch (error) {
         console.error("Error in add Session bulk:", error);
         throw error;
@@ -184,7 +184,7 @@ export async function assertCourseInScope(courseId) {
 export async function assertSessionInScope(sessionId) {
     return scoped(model.sessionModel).findOne({
         where: { sessionId },
-        attributes: ['sessionId', 'instituteId', 'acedmicYearId'],
+        attributes: ['sessionId', 'universityId', 'instituteId', 'acedmicYearId'],
     });
 }
 

@@ -1,10 +1,20 @@
 import * as model from '../models/index.js';
 import sequelize from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { requestContext } from "../utility/requestContext.js";
+import { getCampusIdByInstituteId } from "./buildingRepository.js";
 
 function omitAcademicYearScope(scopeWhere = {}) {
     const { acedmicYearId, ...rest } = scopeWhere;
     return rest;
+}
+
+function instituteUniversityScope(model) {
+    const scope = omitAcademicYearScope(buildScope(model));
+    if (!scope.instituteId) {
+        throw new Error('Active institute is required');
+    }
+    return scope;
 }
 
 function extractTermNumber(name) {
@@ -16,7 +26,7 @@ function extractTermNumber(name) {
 export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYearId = null) {
     const courseIdNum = Number(courseId);
     const termNum = Number(term);
-    const classLabel = String(term);
+    const classLabel = String(termNum);
     const sectionScope = omitAcademicYearScope(buildScope(model.classSectionModel));
     const classScope = omitAcademicYearScope(buildScope(model.classModel));
 
@@ -75,8 +85,10 @@ export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYea
 
 export async function getAllUniversity() {
     try {
+        const { universityId } = requestContext.getStore() ?? {};
         return scoped(model.universityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            where: { ...(universityId && { universityId }) },
         });
     } catch (error) {
         console.error("Error in get all university details:", error);
@@ -84,11 +96,13 @@ export async function getAllUniversity() {
     }
 }
 
-export async function getAllCampus(campusId) {
+export async function getAllCampus() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
+        const campusId = await getCampusIdByInstituteId(instituteId);
         return scoped(model.campusModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(campusId && { where: { campusId } }),
+            where: { campusId },
         });
     } catch (error) {
         console.error("Error in get all Campus details:", error);
@@ -96,14 +110,12 @@ export async function getAllCampus(campusId) {
     }
 }
 
-export async function getAllInstitute(campusId, instituteId) {
+export async function getAllInstitute() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
         return scoped(model.instituteModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            where: {
-                ...(instituteId && { instituteId }),
-                ...(campusId && { campusId }),
-            },
+            where: { ...(instituteId && { instituteId }) },
         });
     } catch (error) {
         console.error("Error in get all institute details:", error);
@@ -111,11 +123,10 @@ export async function getAllInstitute(campusId, instituteId) {
     }
 }
 
-export async function getAllAffiliatedUniversity(instituteId) {
+export async function getAllAffiliatedUniversity() {
     try {
         return scoped(model.affiliatedIniversityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(instituteId && { where: { instituteId } }),
             include: [
                 {
                     model: model.instituteModel,
@@ -131,8 +142,11 @@ export async function getAllAffiliatedUniversity(instituteId) {
     }
 }
 
-export async function getAllCourse(campusId) {
+export async function getAllCourse() {
     try {
+        const { instituteId } = requestContext.getStore() ?? {};
+        const campusId = instituteId ? await getCampusIdByInstituteId(instituteId) : undefined;
+
         return scoped(model.courseModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             include: [
@@ -163,8 +177,11 @@ export async function getAllCourse(campusId) {
                     model: model.instituteModel,
                     as: 'instituted',
                     attributes: [],
-                    where: buildScope(model.instituteModel),
-                    required: false,
+                    where: {
+                        ...buildScope(model.instituteModel),
+                        ...(instituteId && { instituteId }),
+                    },
+                    required: true,
                     include: [
                         {
                             model: model.campusModel,
@@ -174,7 +191,7 @@ export async function getAllCourse(campusId) {
                                 ...buildScope(model.campusModel),
                                 ...(campusId && { campusId }),
                             },
-                            required: false,
+                            required: true,
                         }
                     ]
                 }
@@ -186,11 +203,10 @@ export async function getAllCourse(campusId) {
     }
 }
 
-export async function getAllSpecialization(acedmicYearId) {
+export async function getAllSpecialization() {
     try {
         return scoped(model.specializationModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-            ...(acedmicYearId && { where: { acedmicYearId } }),
             include: [
                 {
                     model: model.courseModel,
@@ -294,9 +310,9 @@ export async function updateSubject(subjectId, data) {
     }
 }
 
-export async function subjectBulkCreate(data) {
+export async function subjectBulkCreate(data, options = {}) {
     try {
-        return scoped(model.subjectModel).bulkCreate(data);
+        return scoped(model.subjectModel).bulkCreate(data, options);
     } catch (error) {
         console.error("Error in subject bulk create:", error);
         throw error;
@@ -312,18 +328,40 @@ export async function addClass(data) {
     }
 }
 
-export async function createClassSections(data) {
+export async function createClassSections(data, options = {}) {
     try {
-        return scoped(model.classSectionModel).create(data);
+        const tenant = instituteUniversityScope(model.classSectionModel);
+        const existing = await model.classSectionModel.findOne({
+            where: {
+                courseId: data.courseId,
+                sessionId: data.sessionId,
+                sectionId: data.sectionId,
+                acedmicYearId: data.acedmicYearId,
+                ...tenant,
+            },
+            transaction: options.transaction,
+        });
+        return existing ?? model.classSectionModel.create(
+            { ...data, ...tenant },
+            { transaction: options.transaction },
+        );
     } catch (error) {
         console.error("Error in add class directly :", error);
         throw error;
     }
 }
 
-export async function seprateAddClass(data) {
+export async function seprateAddClass(data, options = {}) {
     try {
-        return scoped(model.classModel).create(data);
+        const existing = await scoped(model.classModel).findOne({
+            where: {
+                courseId: data.courseId,
+                sessionId: data.sessionId,
+                term: data.term,
+            },
+            transaction: options.transaction,
+        });
+        return existing ?? scoped(model.classModel).create(data, { transaction: options.transaction });
     } catch (error) {
         console.error("Error in add class seprate :", error);
         throw error;

@@ -3,17 +3,17 @@ import * as mainRepository from '../repository/mainRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
-export async function getAllCollegesAndCourses(campusId, instituteId, acedmicYearId) {
+export async function getAllCollegesAndCourses() {
     try {
         const [allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse, allSpecialization, allSubject] =
             await Promise.all([
                 mainRepository.getAllUniversity(),
-                mainRepository.getAllCampus(campusId),
-                mainRepository.getAllInstitute(campusId, instituteId),
-                mainRepository.getAllAffiliatedUniversity(instituteId),
-                mainRepository.getAllCourse(campusId),
-                mainRepository.getAllSpecialization(acedmicYearId),
-                mainRepository.getAllSubject(acedmicYearId, instituteId)
+                mainRepository.getAllCampus(),
+                mainRepository.getAllInstitute(),
+                mainRepository.getAllAffiliatedUniversity(),
+                mainRepository.getAllCourse(),
+                mainRepository.getAllSpecialization(),
+                mainRepository.getAllSubject(),
             ]);
 
         return {
@@ -23,7 +23,7 @@ export async function getAllCollegesAndCourses(campusId, instituteId, acedmicYea
             allAffiliatedIniversity,
             allCourse,
             allSpecialization,
-            allSubject
+            allSubject,
         };
     } catch (error) {
         console.error('Error fetching all Course details:', error);
@@ -216,7 +216,6 @@ export async function updateSubject(data, updateBy) {
 }
 
 export async function addClass(data, createdBy) {
-    const results = [];
     try {
         if (!data) throw new Error('Data is required');
         if (!createdBy) throw new Error('CreatedBy is required');
@@ -226,56 +225,50 @@ export async function addClass(data, createdBy) {
         if (!courseId) throw new Error('CourseId is required');
         if (!acedmicYearId) throw new Error('AcedmicYearId is required');
         if (!className) throw new Error('ClassName is required');
-        if (!sections || !Array.isArray(sections) || sections.length === 0) throw new Error('Sections are required and must be a non-empty array');
-        if (!term) throw new Error('Term is required');
+        if (!sections?.length) throw new Error('Sections are required and must be a non-empty array');
+        if (term == null || term === '') throw new Error('Term is required');
         if (!sessionId) throw new Error('SessionId is required');
 
-        const termNum = Number(term);
         const semesterId = await mainRepository.findSemesterIdByCourseIdAndTerm(
             Number(courseId),
-            termNum,
+            Number(term),
             Number(acedmicYearId),
         );
-
         if (!semesterId) {
-            throw new Error(
-                `No semesterId found for course ${courseId} with term/class ${termNum}`,
-            );
+            throw new Error(`No semesterId found for course ${courseId} with term/class ${term}`);
         }
 
-        // 1) class — sessionId, courseId, term, semesterId
-        const classData = await mainRepository.seprateAddClass({
-            courseId: Number(courseId),
-            className,
-            term: termNum,
-            sessionId: Number(sessionId),
-            semesterId,
-            createdBy,
-            updatedBy: createdBy,
-        });
-        const classId = classData.dataValues.classId;
+        return sequelize.transaction(async (transaction) => {
+            const classRow = await mainRepository.seprateAddClass({
+                courseId: Number(courseId),
+                className,
+                term: Number(term),
+                sessionId: Number(sessionId),
+                semesterId,
+                createdBy,
+                updatedBy: createdBy,
+            }, { transaction });
 
-        // 2) class_sections — acedmicYearId, class, semesterId, sessionId, courseId, section
-        for (const section of sections) {
-            if (!section.sectionId) {
-                throw new Error('sectionId is required for each section');
-            }
-
-            const result = await mainRepository.createClassSections({
+            const classId = classRow.classId ?? classRow.dataValues?.classId;
+            const sectionPayload = {
                 courseId: Number(courseId),
                 acedmicYearId: Number(acedmicYearId),
                 sessionId: Number(sessionId),
                 semesterId,
                 classId,
-                term: termNum,
-                sectionId: Number(section.sectionId),
-                section: section.section,
-                class: String(termNum),
+                class: String(term),
                 createdBy,
-            });
-            results.push(result);
-        }
-        return results;
+            };
+
+            return Promise.all(sections.map((section) => {
+                if (!section.sectionId) throw new Error('sectionId is required for each section');
+                return mainRepository.createClassSections({
+                    ...sectionPayload,
+                    sectionId: Number(section.sectionId),
+                    section: section.section,
+                }, { transaction });
+            }));
+        });
     } catch (error) {
         console.error('Error adding class:', error);
         throw error;

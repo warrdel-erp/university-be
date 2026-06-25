@@ -1,6 +1,6 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
-import { scoped } from "../utility/scoped.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
 export async function addHead(headData, transaction) {
   try {
@@ -19,11 +19,13 @@ export async function getHeadDetails() {
         {
           model: model.campusModel,
           as: "headCampus",
+          where: { ...buildScope(model.campusModel) },
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
         {
           model: model.instituteModel,
           as: "headInstitute",
+          where: { ...buildScope(model.instituteModel) },
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
         },
       ],

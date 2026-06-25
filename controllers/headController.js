@@ -1,13 +1,9 @@
 import * as headCreation from "../services/headServices.js";
 
 export async function addHead(req, res) {
-  const { campusId, instituteId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    if (!campusId || !instituteId) {
-      return res.status(400).send("campusId,instituteId is required");
-    }
     const headDetails = await headCreation.addHead(req.body, createdBy, updatedBy);
     res.status(201).json({ message: "Data added successfully", headDetails });
   } catch (error) {
@@ -20,6 +16,13 @@ export async function getAllHead(req, res) {
     const headDetails = await headCreation.getHeadDetails();
     res.status(200).json(headDetails);
   } catch (error) {
+    if (
+      error.message?.includes("Active institute") ||
+      error.message?.includes("institute scope") ||
+      error.message?.includes("university scope")
+    ) {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ error: error.message });
   }
 }
@@ -40,12 +43,9 @@ export async function getSingleHeadDetails(req, res) {
 
 export async function updateHead(req, res) {
   try {
-    const { headId } = req.body;
-    if (!headId) {
-      return res.status(400).send("HeadId is required");
-    }
+    const { headId, ...updateData } = req.body;
     const updatedBy = req.user.userId;
-    await headCreation.updateHead(headId, req.body, updatedBy);
+    await headCreation.updateHead(headId, updateData, updatedBy);
     res.status(200).json({ message: "headDetails update succesfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -55,9 +55,6 @@ export async function updateHead(req, res) {
 export async function deleteHead(req, res) {
   try {
     const { headId } = req.query;
-    if (!headId) {
-      return res.status(400).json({ message: "headId is required" });
-    }
     const deleted = await headCreation.deleteHead(headId);
     if (deleted) {
       res.status(200).json({ message: `Delete successful for headDetails ID ${headId}` });

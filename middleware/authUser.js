@@ -1,10 +1,9 @@
 import jwt from "jsonwebtoken";
 import { findEmailByEmail } from "../repository/userRepository.js";
 import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
-import { requestContext } from "../utility/requestContext.js";
+import { requestContext, buildRequestContextStore } from "../utility/requestContext.js";
 
-export default async function useAuth(req, res, next) {
-    const authHeader = req.headers.authorization;
+export default async function useAuth(req, res, next) {    const authHeader = req.headers.authorization;
 
     if (!authHeader) {
         return res.status(401).json({ message: "Authorization header missing" });
@@ -76,26 +75,15 @@ export default async function useAuth(req, res, next) {
             }
         }
 
-        let instituteId = req.header("X-Institute-Id");
-        if (instituteId == null || instituteId === "") {
-            instituteId = req.user.defaultInstituteId;
-        }
-        instituteId = instituteId ? parseInt(instituteId, 10) : undefined;
-
-        let academicYearId = req.header("X-Academic-Year-Id");
-        if (academicYearId == null || academicYearId === "") {
-            academicYearId = req.user.defaultAcademicYearId;
-        }
-        academicYearId = academicYearId ? parseInt(academicYearId, 10) : undefined;
-
-        requestContext.run({
-            universityId: req.user.universityId,
-            instituteId,
-            academicYearId,
+        const store = await buildRequestContextStore({
             userId: req.user.userId,
-            role: role ? role.toLowerCase() : undefined,
-            bypass: req.bypassScope === true,
-        }, () => {
+            defaultInstituteId: req.user.defaultInstituteId,
+            defaultRole: req.user.defaultRole,
+            defaultAcademicYearId: req.user.defaultAcademicYearId,
+            bypass: req.bypassScope,
+        });
+
+        requestContext.run(store, () => {
             next();
         });
     } catch (error) {

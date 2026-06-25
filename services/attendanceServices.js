@@ -3,14 +3,9 @@ import moment from "moment";
 import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
+import { ATTENDANCE_STATUS } from "../constant.js";
 
-export const ATTENDANCE_STATUS = [
-  "Present",
-  "Late",
-  "Absent",
-  "Medical",
-  "Duty Leave"
-];
+export { ATTENDANCE_STATUS };
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   try {

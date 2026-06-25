@@ -1,7 +1,8 @@
 import * as buildingCreationService from "../repository/buildingRepository.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 export async function addbuilding(buildingData, user, createdBy, updatedBy) {
-    const campusId = await buildingCreationService.getCampusIdByInstituteId(user.defaultInstituteId);
+    const campusId = await buildingCreationService.getCampusIdByInstituteId(getTenantStore().instituteId);
     buildingData.campusId = campusId;
     buildingData.createdBy = createdBy;
     buildingData.updatedBy = updatedBy;

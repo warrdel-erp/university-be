@@ -2,6 +2,8 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import employeeCodeMaster from "./employeeCodeMasterModel.js";
 import users from "./userModel.js";
+import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 
 const employeeCodeMasterTypeModel = sequelize.define(
   'employee_code_master_type',
@@ -29,6 +31,24 @@ const employeeCodeMasterTypeModel = sequelize.define(
     description:{
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    universityId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'university_id',
+        references: {
+            model: university,
+            key: 'university_id',
+        },
+    },
+    instituteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'institute_id',
+        references: {
+            model: institute,
+            key: 'institute_id',
+        },
     },
     createdAt: {
         type: DataTypes.DATE,

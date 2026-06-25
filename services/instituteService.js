@@ -4,7 +4,7 @@ import { requestContext } from "../utility/requestContext.js";
 
 export const createInstitute = async (data) => {
   try {
-    const { campusId, affiliatedUniversity = [], ...instituteData } = data;
+    const { campusId, affiliatedUniversity = [], academicYear, ...instituteData } = data;
     const universityId = requestContext.getStore()?.universityId;
 
     const campus = await campusRepository.getCampusById(campusId);
@@ -16,7 +16,8 @@ export const createInstitute = async (data) => {
 
     const row = await instituteRepository.createInstitute(
       { ...instituteData, campusId },
-      affiliatedUniversity
+      affiliatedUniversity,
+      academicYear,
     );
     return mapInstituteRow(row);
   } catch (error) {
@@ -91,9 +92,9 @@ export const updateAffiliatedUniversity = async (affiliatedUniversityId, body) =
 
 function mapInstituteRow(row) {
   const plain = row.get ? row.get({ plain: true }) : row;
-  const { affiliateInstitute, ...institute } = plain;
+  const { affiliateInstitute, academicYear, ...institute } = plain;
 
-  return {
+  const mapped = {
     ...institute,
     affiliatedUniversity: (affiliateInstitute || []).map((item) => ({
       affiliatedUniversityId: item.affiliatedUniversityId,
@@ -101,6 +102,20 @@ function mapInstituteRow(row) {
       affiliatedUniversityCode: item.affiliatedUniversityCode,
     })),
   };
+
+  if (academicYear) {
+    mapped.academicYear = {
+      acedmicYearId: academicYear.acedmicYearId,
+      universityId: academicYear.universityId,
+      instituteId: academicYear.instituteId,
+      yearTitle: academicYear.yearTitle,
+      startingDate: academicYear.startingDate,
+      endingDate: academicYear.endingDate,
+      isActive: academicYear.isActive,
+    };
+  }
+
+  return mapped;
 }
 
 export const listInstitutes = async (campusId) => {

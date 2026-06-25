@@ -74,7 +74,16 @@ const attendanceModel = sequelize.define(
             allowNull: true,
         },
         attendanceStatus: {
-            type: DataTypes.ENUM("Present", "Late", "Absent", "Medical", "Duty Leave"),
+            type: DataTypes.ENUM(
+                "Present",
+                "Absent",
+                "Medical Leave",
+                "Duty Leave",
+                "Sports Leave",
+                "NCC Leave",
+                "Approved Leave",
+                "Holiday",
+            ),
             allowNull: false,
             field: 'attendance_status'
         },

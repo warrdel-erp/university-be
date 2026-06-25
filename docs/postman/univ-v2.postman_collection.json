@@ -83,9 +83,31 @@
     },
     {
       "name": "institute",
+      "description": "Institute setup under `/institute`.\n\n**Auth:** Bearer `{{token}}` only — no `X-Institute-Id` required for create.\n\n**POST /** creates institute + first active `academicYear` + optional `affiliatedUniversity[]` in one transaction.\n\n`universityId` is injected from token; do not send `universityId` / `instituteId` in body.",
       "item": [
         {
           "name": "create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.instituteId) {",
+                  "  pm.collectionVariables.set('institute_id', String(json.data.instituteId));",
+                  "}",
+                  "if (json.data && json.data.affiliatedUniversity && json.data.affiliatedUniversity[0]) {",
+                  "  pm.collectionVariables.set('affiliated_university_id', String(json.data.affiliatedUniversity[0].affiliatedUniversityId));",
+                  "}",
+                  "if (json.data && json.data.academicYear && json.data.academicYear.acedmicYearId) {",
+                  "  pm.collectionVariables.set('acedmicYear_id', String(json.data.academicYear.acedmicYearId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -98,10 +120,15 @@
               ]
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"campusId\": 13,\n    \"instituteName\": \"sample name\",\n    \"instituteCode\": \"23432\"\n}",
+              "raw": "{\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College\",\n  \"instituteCode\": \"ENG-{{$timestamp}}\",\n  \"academicYear\": {\n    \"yearTitle\": \"2025-2026\",\n    \"startingDate\": \"2025-07-01\",\n    \"endingDate\": \"2026-06-30\"\n  },\n  \"affiliatedUniversity\": [\n    {\n      \"affiliatedUniversityName\": \"State Technical University\",\n      \"affiliatedUniversityCode\": \"STU-{{$timestamp}}\"\n    },\n    {\n      \"affiliatedUniversityName\": \"National Board of Education\",\n      \"affiliatedUniversityCode\": \"NBE-{{$timestamp}}\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -116,7 +143,8 @@
               "path": [
                 "institute"
               ]
-            }
+            },
+            "description": "**POST /institute** — create institute, initial active academic year, and affiliated universities in one transaction.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `campusId` | Must belong to authenticated university (`{{campus_id}}`) |\n| `instituteName` | Display name |\n| `instituteCode` | Unique code for institute |\n| `academicYear.yearTitle` | e.g. `2025-2026` |\n| `academicYear.startingDate` | Calendar start |\n| `academicYear.endingDate` | Calendar end |\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `affiliatedUniversity[]` | Array of `{ affiliatedUniversityName, affiliatedUniversityCode }` |\n\n### Auto-filled (not in body)\n- `universityId` — from bearer token\n- `createdBy` — logged-in user\n- `academicYear.isActive` — always `true` for new institute\n\n### 201 response\n```json\n{\n  \"status\": \"success\",\n  \"message\": \"Institute created successfully\",\n  \"data\": {\n    \"instituteId\": 12,\n    \"campusId\": 11,\n    \"instituteName\": \"Engineering College\",\n    \"instituteCode\": \"ENG-...\",\n    \"affiliatedUniversity\": [\n      {\n        \"affiliatedUniversityId\": 1,\n        \"affiliatedUniversityName\": \"State Technical University\",\n        \"affiliatedUniversityCode\": \"STU-...\"\n      }\n    ],\n    \"academicYear\": {\n      \"acedmicYearId\": 60,\n      \"universityId\": 4,\n      \"instituteId\": 12,\n      \"yearTitle\": \"2025-2026\",\n      \"startingDate\": \"2025-07-01\",\n      \"endingDate\": \"2026-06-30\",\n      \"isActive\": true\n    }\n  }\n}\n```\n\nTest script sets `{{institute_id}}`, `{{acedmicYear_id}}`, `{{affiliated_university_id}}`."
           },
           "response": []
         },
@@ -158,6 +186,336 @@
                 }
               ]
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "academic year",
+      "description": "Academic year management under `/acedmicYear`.\n\n**Auth:** Bearer `{{token}}`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/acedmicYear` | Upsert + activate for active institute (`X-Institute-Id` or default) |\n| GET | `/acedmicYear` | All years (active + inactive) for active institute |\n| PATCH | `/acedmicYear` | Update active year (or optional `acedmicYearId` in body) |\n| DELETE | `/acedmicYear?acedmicYearId=` | Soft-delete one year |\n| GET | `/acedmicYear/active` | Active years for **auth context** institute |\n| GET | `/acedmicYear/active/:instituteId` | Active years for **login-selected** institute (no `X-Institute-Id`) |\n| POST | `/acedmicYear/newActivateAndCopyData` | Activate + optional copy subjects/electives/sessions |\n\n**Tenant scope:** Writes and list/update/delete use `scoped(acedmicYearModel)` — `universityId` from token, `instituteId` from `X-Institute-Id` / `defaultInstituteId`. Do **not** send `universityId` / `instituteId` in body.\n\n**Login flow:** After user picks institute at login, call **GET /active/:instituteId** with bearer token only to populate academic year dropdown before `X-Institute-Id` is set.\n\n**Validation:** Zod on POST, PATCH, DELETE, and `/active/:instituteId`. **400** → `{ status: \"error\", message, errors[] }`.",
+      "item": [
+        {
+          "name": "upsert + activate (POST /)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const year = json.acedmicYear;",
+                  "const id = year?.acedmicYearId ?? year?.dataValues?.acedmicYearId;",
+                  "if (id) pm.collectionVariables.set('acedmicYear_id', String(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}",
+                "description": "Active institute — required unless user has defaultInstituteId"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"yearTitle\": \"2025-2026\",\n  \"startingDate\": \"2025-07-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear"
+              ]
+            },
+            "description": "**POST /acedmicYear**\n\nUpsert + **activate** academic year for the **active university + institute**.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `yearTitle` | e.g. `2025-2026` |\n| `startingDate` | Calendar start |\n| `endingDate` | Calendar end |\n\n### Auto-filled (not in body)\n- `universityId`, `instituteId` — from auth context via `scoped().create()` / update\n- `isActive` — always `true` after this call\n- `updatedBy` — logged-in user\n\n### Behavior\n1. Deactivates other active years for this institute\n2. If `yearTitle` exists for this institute → update dates and activate\n3. Else if university-level orphan row (`instituteId` null) → claim for institute and activate\n4. Else → create new row and activate\n\n**201:** `{ message: \"Academic year activated successfully\", acedmicYear }`\n\nSets `{{acedmicYear_id}}` from response."
+          },
+          "response": []
+        },
+        {
+          "name": "get all (institute scoped)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear"
+              ]
+            },
+            "description": "**GET /acedmicYear**\n\nAll academic years for the **active institute** (active + inactive), newest `createdAt` first.\n\nScoped via `universityId` + `instituteId` from auth — no query params.\n\n**200:** array of academic year rows."
+          },
+          "response": []
+        },
+        {
+          "name": "get active (institute scoped)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear/active",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear",
+                "active"
+              ]
+            },
+            "description": "**GET /acedmicYear/active**\n\nOnly **activated** years (`isActive: true`) for the **active institute** from auth context (`X-Institute-Id` or `defaultInstituteId`).\n\n**200:** array of active academic year rows (same shape as `/active/:instituteId`)."
+          },
+          "response": []
+        },
+        {
+          "name": "get active by institute id (login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const years = pm.response.json();",
+                  "if (Array.isArray(years) && years[0]?.acedmicYearId) {",
+                  "  pm.collectionVariables.set('acedmicYear_id', String(years[0].acedmicYearId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear/active/{{institute_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear",
+                "active",
+                "{{institute_id}}"
+              ]
+            },
+            "description": "**GET /acedmicYear/active/:instituteId**\n\nActive academic years (`isActive: true`) for the institute the user **selected at login**.\n\n### When to use\n- Login / institute-picker screen — user has token + chosen `instituteId` but may not have sent `X-Institute-Id` yet\n- Same response array as **GET /active**, but institute comes from **URL param**, not auth header\n\n### Params\n| Param | Required | Notes |\n|-------|----------|--------|\n| `instituteId` | yes | Path param — positive integer, e.g. `{{institute_id}}` |\n\n### Auth\n- Bearer `{{token}}` only (university from token)\n- Institute must belong to user's university — **404** if not found\n- **No** `X-Institute-Id` header required\n\n### 200 response (array)\n```json\n[\n  {\n    \"acedmicYearId\": 60,\n    \"universityId\": 4,\n    \"instituteId\": 12,\n    \"yearTitle\": \"2025-2026\",\n    \"startingDate\": \"2025-07-01\",\n    \"endingDate\": \"2026-06-30\",\n    \"isActive\": true,\n    \"createdAt\": \"...\"\n  }\n]\n```\n\nTest script sets `{{acedmicYear_id}}` from first row when present."
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"yearTitle\": \"2025-2026\",\n  \"startingDate\": \"2025-07-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear"
+              ]
+            },
+            "description": "**PATCH /acedmicYear**\n\nUpdate academic year for active institute (scoped).\n\n**Default target:** active year from `X-Academic-Year-Id` (or token default). Omit `acedmicYearId` in body to update that year.\n\n**Optional:** `acedmicYearId` — update a specific year instead.\n\n**At least one of:** `yearTitle`, `startingDate`, `endingDate`\n\nTenant fields (`universityId`, `instituteId`, `isActive`) stripped from body.\n\n**200** on success. **404** if not found in tenant scope. **400** if no active academic year in context."
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear?acedmicYearId={{acedmicYear_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Required positive integer"
+                }
+              ]
+            },
+            "description": "**DELETE /acedmicYear?acedmicYearId=**\n\nSoft-delete one academic year (scoped to active institute).\n\n**200** on success. **404** if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "activate and copy data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const year = json.acedmicYear;",
+                  "const id = year?.acedmicYearId ?? year?.dataValues?.acedmicYearId;",
+                  "if (id) pm.collectionVariables.set('acedmicYear_id', String(id));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"yearTitle\": \"2026-2027\",\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2027-06-30\",\n  \"copyAcedmicYearId\": 12,\n  \"copyData\": [\"subject\", \"electiveSubject\", \"session\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear/newActivateAndCopyData",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear",
+                "newActivateAndCopyData"
+              ]
+            },
+            "description": "**POST /acedmicYear/newActivateAndCopyData**\n\nSame upsert + activate as **POST /**, then optionally copy data from a previous year.\n\n### Required body\n`yearTitle`, `startingDate`, `endingDate`\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `copyAcedmicYearId` | Source year PK (from **GET /** history) |\n| `copyData` | Array: `subject`, `electiveSubject`, `session` |\n\nOmit `copyAcedmicYearId` / `copyData` to activate only (same as POST /).\n\n**201:** `{ message: \"Academic year activated and data copied successfully\", acedmicYear }`"
           },
           "response": []
         }
@@ -1831,9 +2189,10 @@
     },
     {
       "name": "term",
+      "description": "Term APIs under `/terms`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from `X-Institute-Id` / `defaultInstituteId`.\n\n| Route | Required query |\n|-------|----------------|\n| `GET /withSubjectAndSection` | `courseId`, `sessionId` |\n| `GET /withExamTypesPerCourse` | `courseId`, `sessionId` |\n| `GET /list/withSubject` | `instituteId`, `acedmicYearId` |\n\n**Example:** `GET {{baseurl}}/terms/withExamTypesPerCourse?courseId=35&sessionId=6`",
       "item": [
         {
-          "name": "get",
+          "name": "get withSubjectAndSection",
           "request": {
             "auth": {
               "type": "bearer",
@@ -1846,9 +2205,14 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId=34",
+              "raw": "{{baseurl}}/terms/withSubjectAndSection?courseId={{course_id}}&sessionId={{session_id}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1859,15 +2223,17 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "34"
+                  "value": "{{course_id}}",
+                  "description": "Required"
                 },
                 {
                   "key": "sessionId",
-                  "value": "6",
-                  "disabled": true
+                  "value": "{{session_id}}",
+                  "description": "Required"
                 }
               ]
-            }
+            },
+            "description": "**GET /terms/withSubjectAndSection**\n\n**Required query:** `courseId`, `sessionId`\n\nReturns terms with subjects and class sections for the course–session pair.\n\n**200:** `{ result, session, course }`"
           },
           "response": []
         },
@@ -1885,9 +2251,14 @@
               ]
             },
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
             "url": {
-              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId=34",
+              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId={{course_id}}&sessionId={{session_id}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1898,10 +2269,17 @@
               "query": [
                 {
                   "key": "courseId",
-                  "value": "34"
+                  "value": "{{course_id}}",
+                  "description": "Required — e.g. 35"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{session_id}}",
+                  "description": "Required — course–session mapping; academic year from session"
                 }
               ]
-            }
+            },
+            "description": "**GET /terms/withExamTypesPerCourse**\n\n**Required query:** `courseId`, `sessionId`\n\nValidates `courseId` + `sessionId` mapping, resolves `acedmicYearId` from session, returns exam setup types grouped per term.\n\n**Example:**\n```\nGET http://localhost:8080/terms/withExamTypesPerCourse?courseId=35&sessionId=6\nAuthorization: Bearer {{token}}\nX-Institute-Id: {{institute_id}}\n```\n\n**200:** `{ result, course }`\n\n**400** if `courseId` or `sessionId` missing (Zod).\n\n**500** if course–session mapping not found."
           },
           "response": []
         },
@@ -13059,6 +13437,9 @@
                       "}",
                       "if (json.data && json.data.affiliatedUniversity && json.data.affiliatedUniversity[0]) {",
                       "  pm.collectionVariables.set('affiliated_university_id', String(json.data.affiliatedUniversity[0].affiliatedUniversityId));",
+                      "}",
+                      "if (json.data && json.data.academicYear && json.data.academicYear.acedmicYearId) {",
+                      "  pm.collectionVariables.set('acedmicYear_id', String(json.data.academicYear.acedmicYearId));",
                       "}"
                     ],
                     "type": "text/javascript"
@@ -13085,7 +13466,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College\",\n  \"instituteCode\": \"ENG-{{$timestamp}}\",\n  \"affiliatedUniversity\": [\n    {\n      \"affiliatedUniversityName\": \"State Technical University\",\n      \"affiliatedUniversityCode\": \"STU-{{$timestamp}}\"\n    },\n    {\n      \"affiliatedUniversityName\": \"National Board of Education\",\n      \"affiliatedUniversityCode\": \"NBE-{{$timestamp}}\"\n    }\n  ]\n}",
+                  "raw": "{\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College\",\n  \"instituteCode\": \"ENG-{{$timestamp}}\",\n  \"academicYear\": {\n    \"yearTitle\": \"2025-2026\",\n    \"startingDate\": \"2025-07-01\",\n    \"endingDate\": \"2026-06-30\"\n  },\n  \"affiliatedUniversity\": [\n    {\n      \"affiliatedUniversityName\": \"State Technical University\",\n      \"affiliatedUniversityCode\": \"STU-{{$timestamp}}\"\n    },\n    {\n      \"affiliatedUniversityName\": \"National Board of Education\",\n      \"affiliatedUniversityCode\": \"NBE-{{$timestamp}}\"\n    }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -13101,7 +13482,7 @@
                     "institute"
                   ]
                 },
-                "description": "**POST /institute** — create institute and optional affiliated universities in one transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | Must belong to authenticated university |\n| `instituteName` | yes | |\n| `instituteCode` | yes | |\n| `affiliatedUniversity[]` | no | Each item: `affiliatedUniversityName`, `affiliatedUniversityCode` |\n\nResponse includes `affiliatedUniversity[]` with generated IDs. Sets `{{institute_id}}` and `{{affiliated_university_id}}`."
+                "description": "**POST /institute** — create institute, initial active academic year, and optional affiliated universities in one transaction.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `campusId` | yes | Must belong to authenticated university |\n| `instituteName` | yes | |\n| `instituteCode` | yes | |\n| `academicYear` | yes | `yearTitle`, `startingDate`, `endingDate` — created with `isActive: true` for new institute |\n| `affiliatedUniversity[]` | no | Each item: `affiliatedUniversityName`, `affiliatedUniversityCode` |\n\nResponse includes `academicYear` and `affiliatedUniversity[]`. Sets `{{institute_id}}`, `{{acedmicYear_id}}`, and `{{affiliated_university_id}}`."
               },
               "response": []
             },
@@ -13402,7 +13783,8 @@
     {
       "key": "acedmicYear_id",
       "value": "59",
-      "type": "string"
+      "type": "string",
+      "description": "acedmic_year.acedmicYearId — set from POST /acedmicYear or GET /active"
     },
     {
       "key": "affiliated_university_id",
@@ -13416,8 +13798,9 @@
     },
     {
       "key": "course_id",
-      "value": "34",
-      "type": "string"
+      "value": "35",
+      "type": "string",
+      "description": "course.courseId — terms / syllabus / promotion APIs"
     },
     {
       "key": "student_id",

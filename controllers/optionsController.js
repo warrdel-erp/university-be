@@ -1,5 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
@@ -63,7 +64,7 @@ export const getSpecializationOptions = async (req, res) => {
 export async function getSubjectOptions(req, res) {
     try {
         const { courseId, term, sessionId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,

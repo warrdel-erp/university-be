@@ -1,10 +1,11 @@
 import * as campusService from "../services/campusService.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 export const createCampus = async (req, res) => {
   try {
     const createdBy = req.user.userId;
 
-    if (!req.user.universityId) {
+    if (!getTenantStore().universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",
@@ -30,7 +31,7 @@ export const createCampus = async (req, res) => {
 
 export const updateCampus = async (req, res) => {
   try {
-    if (!req.user.universityId) {
+    if (!getTenantStore().universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",
@@ -58,14 +59,14 @@ export const updateCampus = async (req, res) => {
 
 export const getCampusHierarchy = async (req, res) => {
   try {
-    if (!req.user.universityId) {
+    if (!getTenantStore().universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",
       });
     }
 
-    const result = await campusService.getCampusHierarchy(req.user.universityId);
+    const result = await campusService.getCampusHierarchy(getTenantStore().universityId);
 
     return res.status(200).json({
       status: "success",
@@ -82,7 +83,7 @@ export const getCampusHierarchy = async (req, res) => {
 
 export const listCampuses = async (req, res) => {
   try {
-    if (!req.user.universityId) {
+    if (!getTenantStore().universityId) {
       return res.status(400).json({
         status: "error",
         message: "University Id is missing from user session",

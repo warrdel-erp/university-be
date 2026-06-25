@@ -1,6 +1,9 @@
 import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { ATTENDANCE_PRESENT_STATUSES } from '../constant.js';
+
+const presentStatusSqlList = ATTENDANCE_PRESENT_STATUSES.map((s) => `'${s}'`).join(', ');
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
   const { transaction, attributes = ['timeTableRoutineId'] } = options;
@@ -1547,7 +1550,7 @@ export async function getTodayClassScheduleForEmployee(
             FROM attendance AS a 
             WHERE a.time_table_mapping_id = class_schedule_item.time_table_mapping_id 
               AND a.date BETWEEN '${currentDate} 00:00:00' AND '${currentDate} 23:59:59' 
-              AND a.attendance_status IN ('Present')
+              AND a.attendance_status IN (${presentStatusSqlList})
           )`),
           'attendance'
         ]

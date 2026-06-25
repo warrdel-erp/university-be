@@ -1,6 +1,8 @@
 import * as model from '../models/index.js'
 import { scoped } from '../utility/scoped.js';
 
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
+
 
 export async function addElectiveSubject(electiveSubjectData) {
     try {
@@ -11,9 +13,9 @@ export async function addElectiveSubject(electiveSubjectData) {
     }
 }
 
-export async function addBulkElectiveSubject(electiveSubjectData) {
+export async function addBulkElectiveSubject(electiveSubjectData, options = {}) {
     try {
-        return await scoped(model.electiveSubjectModel).bulkCreate(electiveSubjectData);
+        return await scoped(model.electiveSubjectModel).bulkCreate(electiveSubjectData, options);
     } catch (error) {
         console.error('Error in add electiveSubject :', error);
         throw error;

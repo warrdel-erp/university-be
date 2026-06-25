@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import account from "./accountModel.js";
 import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 
 const subAccountModel = sequelize.define(
     'sub_account',
@@ -31,6 +32,15 @@ const subAccountModel = sequelize.define(
                     model: university,
                     key: 'university_id'
                 }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id',
+            },
         },
         departmentName: {
             type: DataTypes.STRING,
@@ -94,6 +104,6 @@ const subAccountModel = sequelize.define(
     }
 );
 
-subAccountModel.scopeConfig = { university: true, institute: false, academicYear: false };
+subAccountModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default subAccountModel;

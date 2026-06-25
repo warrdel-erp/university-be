@@ -1,15 +1,10 @@
 import * as mainServices from '../services/mainServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export const getAllCollegesAndCourses = async (req, res) => {
     try {
-        const campusId = req.query.campusId;
-        const instituteId = req.query.instituteId;
-        const acedmicYearId = req.query.acedmicYearId;
-        if (!req.user?.universityId) {
-            return res.status(400).send('University Id is required')
-        }
-        const result = await mainServices.getAllCollegesAndCourses(campusId, instituteId, acedmicYearId);
+        const result = await mainServices.getAllCollegesAndCourses();
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all course:", error);
@@ -21,7 +16,7 @@ export const addCampus = async (req, res) => {
     try {
         const createdBy = req.user.userId;
         const data = req.body
-        if (!req.user?.universityId) {
+        if (!getTenantStore().universityId) {
             return res.status(400).send('University Id is required')
         }
         const result = await mainServices.addCampus(data, createdBy);
@@ -70,7 +65,7 @@ export const addCourse = async (req, res) => {
         const createdBy = req.user.userId;
         const data = req.body;
 
-        if (!(req.user?.universityId && course_levelId && affiliatedUniversityId && req.user?.defaultInstituteId)) {
+        if (!(getTenantStore().universityId && course_levelId && affiliatedUniversityId && getTenantStore().instituteId)) {
             return res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
         }
         const result = await mainServices.addCourse(data, createdBy);
@@ -100,7 +95,7 @@ export const addSpecialization = async (req, res) => {
         const { course_Id, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if (!(req.user?.universityId && course_Id && acedmicYearId && req.user?.defaultInstituteId)) {
+        if (!(getTenantStore().universityId && course_Id && acedmicYearId && getTenantStore().instituteId)) {
             return res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
         }
         const result = await mainServices.addSpecialization(data, createdBy);
@@ -116,7 +111,7 @@ export const addSubject = async (req, res) => {
         const { courseId, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if (!(courseId && req.user?.universityId && acedmicYearId && req.user?.defaultInstituteId)) {
+        if (!(courseId && getTenantStore().universityId && acedmicYearId && getTenantStore().instituteId)) {
             return res.status(400).send('universityId ,instituteId, course Id and acedmicYearId is required')
         }
         const result = await mainServices.addSubject(data, createdBy);
@@ -145,17 +140,15 @@ export const updateSubject = async (req, res) => {
 
 export const addClass = async (req, res) => {
     try {
-        const { courseId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body
-        if (!(courseId)) {
-            return res.status(400).send('course Id is required')
+        if (!req.body?.courseId) {
+            return res.status(400).send('course Id is required');
         }
-        const result = await mainServices.addClass(data, createdBy);
+        const result = await mainServices.addClass(req.body, req.user.userId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Class:", error);
-        return res.status(500).send("Internal Server Error");
+        const message = error.message || 'Internal Server Error';
+        return res.status(/required|found|Active institute/.test(message) ? 400 : 500).send(message);
     }
 };
 
@@ -192,7 +185,7 @@ export const addClassSubjectMapper = async (req, res) => {
     try {
         const createdBy = req.user.userId;
         const data = req.body;
-        if (!req.user?.defaultInstituteId) {
+        if (!getTenantStore().instituteId) {
             return res.status(400).send('instituteId is required')
         }
         const result = await mainServices.addClassSubjectMapper(data, createdBy);
@@ -220,7 +213,7 @@ export const addSemester = async (req, res) => {
         const { courseId, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if (!(req.user?.universityId && courseId && acedmicYearId && req.user?.defaultInstituteId)) {
+        if (!(getTenantStore().universityId && courseId && acedmicYearId && getTenantStore().instituteId)) {
             return res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
         }
         const result = await mainServices.addSemester(data, createdBy);
@@ -249,7 +242,7 @@ export const createClass = async (req, res) => {
         const { acedmicYearId, courseId } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if (!(acedmicYearId && courseId && req.user?.defaultInstituteId)) {
+        if (!(acedmicYearId && courseId && getTenantStore().instituteId)) {
             return res.status(400).send('acedmicYearId ,instituteId and courseId is required')
         }
         const result = await mainServices.createClass(data, createdBy);
@@ -264,7 +257,7 @@ export const subjectExcel = async (req, res) => {
     try {
         const { courseId, specializationId, acedmicYearId } = req.body;
         const createdBy = req.user.userId;
-        if (!(courseId && req.user?.defaultInstituteId && acedmicYearId)) {
+        if (!(courseId && getTenantStore().instituteId && acedmicYearId)) {
             return res.status(400).send('acedmicYearId, courseId and instituteId is required')
         }
         const excelFile = req.files?.subject;

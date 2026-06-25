@@ -249,3 +249,27 @@ export const FEE_PLAN_PUBLISH_STATUS = {
 };
 
 export const LOW_STOCK_THRESHOLD = 2;
+
+export const ATTENDANCE_STATUS = [
+  "Present",
+  "Absent",
+  "Medical Leave",
+  "Duty Leave",
+  "Sports Leave",
+  "NCC Leave",
+  "Approved Leave",
+  "Holiday",
+];
+
+/** Statuses that count as present for attendance percentage / counts */
+export const ATTENDANCE_PRESENT_STATUSES = [
+  "Present",
+  "Medical Leave",
+  "Duty Leave",
+  "Sports Leave",
+  "NCC Leave",
+  "Approved Leave",
+];
+
+/** Excluded from present/absent calculations */
+export const ATTENDANCE_IGNORED_STATUSES = ["Holiday"];

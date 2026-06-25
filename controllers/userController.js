@@ -8,6 +8,10 @@ import {
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
+import {
+  requestContext,
+  buildRequestContextStore,
+} from "../utility/requestContext.js";
 
 // register
 export const register = async (req, res) => {
@@ -350,7 +354,7 @@ export const getAllUsers = async (req, res) => {
 export const saveUserDefaults = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { defaultRole } = req.body;
+    const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
       const hasRole = await userRoleRepository.checkUserRoleExists(userId, defaultRole);
@@ -363,6 +367,22 @@ export const saveUserDefaults = async (req, res) => {
     }
 
     const result = await userService.saveUserDefaults(userId, req.body);
+
+    const currentStore = requestContext.getStore();
+    requestContext.enterWith(
+      await buildRequestContextStore({
+        userId,
+        defaultInstituteId,
+        defaultRole,
+        defaultAcademicYearId,
+        bypass: currentStore?.bypass,
+      })
+    );
+
+    req.user.defaultInstituteId = defaultInstituteId;
+    req.user.defaultRole = defaultRole;
+    req.user.defaultAcademicYearId = defaultAcademicYearId;
+
     res.status(200).json({
       success: true,
       message: "User defaults saved successfully",
