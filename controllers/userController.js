@@ -10,8 +10,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
 import {
   requestContext,
-  resolveUniversityIdFromInstitute,
-  buildContextStoreFromDefaults,
+  buildRequestContextStore,
 } from "../utility/requestContext.js";
 
 // register
@@ -369,15 +368,15 @@ export const saveUserDefaults = async (req, res) => {
 
     const result = await userService.saveUserDefaults(userId, req.body);
 
-    const universityId = await resolveUniversityIdFromInstitute(defaultInstituteId);
     const currentStore = requestContext.getStore();
     requestContext.enterWith(
-      buildContextStoreFromDefaults(
-        { defaultInstituteId, defaultRole, defaultAcademicYearId },
+      await buildRequestContextStore({
         userId,
-        universityId,
-        currentStore?.bypass
-      )
+        defaultInstituteId,
+        defaultRole,
+        defaultAcademicYearId,
+        bypass: currentStore?.bypass,
+      })
     );
 
     req.user.defaultInstituteId = defaultInstituteId;

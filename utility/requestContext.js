@@ -3,13 +3,13 @@ import * as model from "../models/index.js";
 
 /**
  * Global request context utilizing AsyncLocalStorage.
- * Populated from user defaults saved via PUT /user/saveUserDefaults:
- * - defaultInstituteId, instituteId (active institute)
+ * Built via buildRequestContextStore() from user defaults (PUT /user/saveUserDefaults):
+ * - defaultInstituteId, instituteId
  * - defaultRole
- * - defaultAcademicYearId, academicYearId (active academic year)
- * - universityId (resolved from defaultInstituteId)
+ * - defaultAcademicYearId, academicYearId
+ * - universityId (from institute row)
  * - userId
- * - bypass (if true, bypasses scope filters)
+ * - bypass
  */
 export const requestContext = new AsyncLocalStorage();
 
@@ -17,16 +17,31 @@ export function getTenantStore() {
     return requestContext.getStore() ?? {};
 }
 
-function parseId(value) {
-    if (value == null || value === "") {
-        return undefined;
+export async function buildRequestContextStore({
+    userId,
+    defaultInstituteId,
+    defaultRole,
+    defaultAcademicYearId,
+    bypass = false,
+}) {
+    let instituteId;
+    if (defaultInstituteId != null && defaultInstituteId !== "") {
+        instituteId = parseInt(defaultInstituteId, 10);
     }
-    return parseInt(value, 10);
-}
 
-function buildStore({ defaultInstituteId, defaultRole, defaultAcademicYearId, universityId, userId, bypass }) {
-    const instituteId = parseId(defaultInstituteId);
-    const academicYearId = parseId(defaultAcademicYearId);
+    let academicYearId;
+    if (defaultAcademicYearId != null && defaultAcademicYearId !== "") {
+        academicYearId = parseInt(defaultAcademicYearId, 10);
+    }
+
+    let universityId;
+    if (instituteId) {
+        const institute = await model.instituteModel.findOne({
+            attributes: ["universityId"],
+            where: { instituteId },
+        });
+        universityId = institute?.universityId;
+    }
 
     return {
         defaultInstituteId: instituteId,
@@ -38,38 +53,4 @@ function buildStore({ defaultInstituteId, defaultRole, defaultAcademicYearId, un
         userId,
         bypass: bypass === true,
     };
-}
-
-export async function resolveUniversityIdFromInstitute(instituteId) {
-    const parsedId = parseId(instituteId);
-    if (!parsedId) {
-        return undefined;
-    }
-    const institute = await model.instituteModel.findOne({
-        attributes: ["universityId"],
-        where: { instituteId: parsedId },
-    });
-    return institute?.universityId;
-}
-
-export function buildContextStore(user, universityId, bypass = false) {
-    return buildStore({
-        defaultInstituteId: user.defaultInstituteId,
-        defaultRole: user.defaultRole,
-        defaultAcademicYearId: user.defaultAcademicYearId,
-        universityId,
-        userId: user.userId,
-        bypass,
-    });
-}
-
-export function buildContextStoreFromDefaults(defaults, userId, universityId, bypass = false) {
-    return buildStore({
-        defaultInstituteId: defaults.defaultInstituteId,
-        defaultRole: defaults.defaultRole,
-        defaultAcademicYearId: defaults.defaultAcademicYearId,
-        universityId,
-        userId,
-        bypass,
-    });
 }

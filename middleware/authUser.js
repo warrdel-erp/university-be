@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { findEmailByEmail } from "../repository/userRepository.js";
 import { getUserRoleAndPermissionsByUserId } from "../services/userServices.js";
-import { requestContext, resolveUniversityIdFromInstitute, buildContextStore } from "../utility/requestContext.js";
+import { requestContext, buildRequestContextStore } from "../utility/requestContext.js";
 
 export default async function useAuth(req, res, next) {    const authHeader = req.headers.authorization;
 
@@ -75,14 +75,17 @@ export default async function useAuth(req, res, next) {    const authHeader = re
             }
         }
 
-        const universityId = await resolveUniversityIdFromInstitute(req.user.defaultInstituteId);
+        const store = await buildRequestContextStore({
+            userId: req.user.userId,
+            defaultInstituteId: req.user.defaultInstituteId,
+            defaultRole: req.user.defaultRole,
+            defaultAcademicYearId: req.user.defaultAcademicYearId,
+            bypass: req.bypassScope,
+        });
 
-        requestContext.run(
-            buildContextStore(req.user, universityId, req.bypassScope),
-            () => {
-                next();
-            }
-        );
+        requestContext.run(store, () => {
+            next();
+        });
     } catch (error) {
         console.error('Token verification failed:', error);
         return res.status(401).json({ message: "Invalid or expired token" });
