@@ -83,9 +83,31 @@
     },
     {
       "name": "institute",
+      "description": "Institute setup under `/institute`.\n\n**Auth:** Bearer `{{token}}` only — no `X-Institute-Id` required for create.\n\n**POST /** creates institute + first active `academicYear` + optional `affiliatedUniversity[]` in one transaction.\n\n`universityId` is injected from token; do not send `universityId` / `instituteId` in body.",
       "item": [
         {
           "name": "create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.instituteId) {",
+                  "  pm.collectionVariables.set('institute_id', String(json.data.instituteId));",
+                  "}",
+                  "if (json.data && json.data.affiliatedUniversity && json.data.affiliatedUniversity[0]) {",
+                  "  pm.collectionVariables.set('affiliated_university_id', String(json.data.affiliatedUniversity[0].affiliatedUniversityId));",
+                  "}",
+                  "if (json.data && json.data.academicYear && json.data.academicYear.acedmicYearId) {",
+                  "  pm.collectionVariables.set('acedmicYear_id', String(json.data.academicYear.acedmicYearId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "bearer",
@@ -98,10 +120,15 @@
               ]
             },
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"campusId\": {{campus_id}},\n    \"instituteName\": \"sample name\",\n    \"instituteCode\": \"23432\",\n    \"academicYear\": {\n        \"yearTitle\": \"2025-2026\",\n        \"startingDate\": \"2025-07-01\",\n        \"endingDate\": \"2026-06-30\"\n    }\n}",
+              "raw": "{\n  \"campusId\": {{campus_id}},\n  \"instituteName\": \"Engineering College\",\n  \"instituteCode\": \"ENG-{{$timestamp}}\",\n  \"academicYear\": {\n    \"yearTitle\": \"2025-2026\",\n    \"startingDate\": \"2025-07-01\",\n    \"endingDate\": \"2026-06-30\"\n  },\n  \"affiliatedUniversity\": [\n    {\n      \"affiliatedUniversityName\": \"State Technical University\",\n      \"affiliatedUniversityCode\": \"STU-{{$timestamp}}\"\n    },\n    {\n      \"affiliatedUniversityName\": \"National Board of Education\",\n      \"affiliatedUniversityCode\": \"NBE-{{$timestamp}}\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -116,7 +143,8 @@
               "path": [
                 "institute"
               ]
-            }
+            },
+            "description": "**POST /institute** — create institute, initial active academic year, and affiliated universities in one transaction.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `campusId` | Must belong to authenticated university (`{{campus_id}}`) |\n| `instituteName` | Display name |\n| `instituteCode` | Unique code for institute |\n| `academicYear.yearTitle` | e.g. `2025-2026` |\n| `academicYear.startingDate` | Calendar start |\n| `academicYear.endingDate` | Calendar end |\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `affiliatedUniversity[]` | Array of `{ affiliatedUniversityName, affiliatedUniversityCode }` |\n\n### Auto-filled (not in body)\n- `universityId` — from bearer token\n- `createdBy` — logged-in user\n- `academicYear.isActive` — always `true` for new institute\n\n### 201 response\n```json\n{\n  \"status\": \"success\",\n  \"message\": \"Institute created successfully\",\n  \"data\": {\n    \"instituteId\": 12,\n    \"campusId\": 11,\n    \"instituteName\": \"Engineering College\",\n    \"instituteCode\": \"ENG-...\",\n    \"affiliatedUniversity\": [\n      {\n        \"affiliatedUniversityId\": 1,\n        \"affiliatedUniversityName\": \"State Technical University\",\n        \"affiliatedUniversityCode\": \"STU-...\"\n      }\n    ],\n    \"academicYear\": {\n      \"acedmicYearId\": 60,\n      \"universityId\": 4,\n      \"instituteId\": 12,\n      \"yearTitle\": \"2025-2026\",\n      \"startingDate\": \"2025-07-01\",\n      \"endingDate\": \"2026-06-30\",\n      \"isActive\": true\n    }\n  }\n}\n```\n\nTest script sets `{{institute_id}}`, `{{acedmicYear_id}}`, `{{affiliated_university_id}}`."
           },
           "response": []
         },
@@ -165,7 +193,7 @@
     },
     {
       "name": "academic year",
-      "description": "Academic year management under `/acedmicYear`.\n\n**Auth:** Bearer `{{token}}` + `X-Institute-Id: {{institute_id}}` (or `defaultInstituteId` on user).\n\n**Tenant scope:** All routes use `scoped(acedmicYearModel)` — `universityId` from token, `instituteId` from active institute context. Do **not** send `universityId` / `instituteId` in body.\n\n**Per-institute rows:** Each institute has its own academic year rows (same `yearTitle` allowed across institutes).\n\n**Suggested flow:**\n1. **POST /** — upsert + activate year for active institute (replaces removed `POST /newActivate`)\n2. **GET /active** — current activated year(s) for institute\n3. **GET /** — full history (active + inactive) for copy-from-year dropdowns\n4. **POST /newActivateAndCopyData** — activate and optionally copy subjects / electives / sessions\n\n**Validation:** Zod on write routes. **400** → `{ status: \"error\", message, errors[] }`.\n\n**Removed APIs:** `GET /single`, `POST /newActivate` (use `POST /` instead).",
+      "description": "Academic year management under `/acedmicYear`.\n\n**Auth:** Bearer `{{token}}`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/acedmicYear` | Upsert + activate for active institute (`X-Institute-Id` or default) |\n| GET | `/acedmicYear` | All years (active + inactive) for active institute |\n| PATCH | `/acedmicYear` | Update by `acedmicYearId` in body |\n| DELETE | `/acedmicYear?acedmicYearId=` | Soft-delete one year |\n| GET | `/acedmicYear/active` | Active years for **auth context** institute |\n| GET | `/acedmicYear/active/:instituteId` | Active years for **login-selected** institute (no `X-Institute-Id`) |\n| POST | `/acedmicYear/newActivateAndCopyData` | Activate + optional copy subjects/electives/sessions |\n\n**Tenant scope:** Writes and list/update/delete use `scoped(acedmicYearModel)` — `universityId` from token, `instituteId` from `X-Institute-Id` / `defaultInstituteId`. Do **not** send `universityId` / `instituteId` in body.\n\n**Login flow:** After user picks institute at login, call **GET /active/:instituteId** with bearer token only to populate academic year dropdown before `X-Institute-Id` is set.\n\n**Validation:** Zod on POST, PATCH, DELETE, and `/active/:instituteId`. **400** → `{ status: \"error\", message, errors[] }`.",
       "item": [
         {
           "name": "upsert + activate (POST /)",
@@ -291,7 +319,52 @@
                 "active"
               ]
             },
-            "description": "**GET /acedmicYear/active**\n\nOnly **activated** years (`isActive: true`) for the **active institute**.\n\nTypically one row per institute after activation. Scoped — no query params.\n\n**200:** array of active academic year rows."
+            "description": "**GET /acedmicYear/active**\n\nOnly **activated** years (`isActive: true`) for the **active institute** from auth context (`X-Institute-Id` or `defaultInstituteId`).\n\n**200:** array of active academic year rows (same shape as `/active/:instituteId`)."
+          },
+          "response": []
+        },
+        {
+          "name": "get active by institute id (login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const years = pm.response.json();",
+                  "if (Array.isArray(years) && years[0]?.acedmicYearId) {",
+                  "  pm.collectionVariables.set('acedmicYear_id', String(years[0].acedmicYearId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/acedmicYear/active/{{institute_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "acedmicYear",
+                "active",
+                "{{institute_id}}"
+              ]
+            },
+            "description": "**GET /acedmicYear/active/:instituteId**\n\nActive academic years (`isActive: true`) for the institute the user **selected at login**.\n\n### When to use\n- Login / institute-picker screen — user has token + chosen `instituteId` but may not have sent `X-Institute-Id` yet\n- Same response array as **GET /active**, but institute comes from **URL param**, not auth header\n\n### Params\n| Param | Required | Notes |\n|-------|----------|--------|\n| `instituteId` | yes | Path param — positive integer, e.g. `{{institute_id}}` |\n\n### Auth\n- Bearer `{{token}}` only (university from token)\n- Institute must belong to user's university — **404** if not found\n- **No** `X-Institute-Id` header required\n\n### 200 response (array)\n```json\n[\n  {\n    \"acedmicYearId\": 60,\n    \"universityId\": 4,\n    \"instituteId\": 12,\n    \"yearTitle\": \"2025-2026\",\n    \"startingDate\": \"2025-07-01\",\n    \"endingDate\": \"2026-06-30\",\n    \"isActive\": true,\n    \"createdAt\": \"...\"\n  }\n]\n```\n\nTest script sets `{{acedmicYear_id}}` from first row when present."
           },
           "response": []
         },
