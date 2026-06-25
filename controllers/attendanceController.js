@@ -1,6 +1,7 @@
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 export async function addAttendance(req, res) {
   const { classSectionsId, timeTableMappingId } = req.body
@@ -49,9 +50,8 @@ export async function updateAttendance(req, res) {
 
 export const importAttendance = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
+    const { universityId, instituteId } = getTenantStore();
     const createdBy = req.user.userId;
-    const instituteId = req.user.defaultInstituteId;
     const updatedBy = req.user.userId;
 
     const data = { universityId, createdBy, instituteId, updatedBy };
@@ -86,9 +86,8 @@ export const importAttendance = async (req, res) => {
 
 export const importBulkAttendance = async (req, res) => {
   try {
-    const universityId = req.user.universityId;
+    const { universityId, instituteId } = getTenantStore();
     const createdBy = req.user.userId;
-    const instituteId = req.user.defaultInstituteId;
     const updatedBy = req.user.userId;
 
     const data = { universityId, createdBy, instituteId, updatedBy };

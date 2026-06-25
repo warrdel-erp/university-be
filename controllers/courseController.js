@@ -1,9 +1,10 @@
 import * as courseService from '../services/courseService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export const listCourses = async (req, res) => {
   try {
-    const acedmicYearId = req.query.acedmicYearId ?? req.user.defaultAcademicYearId;
+    const acedmicYearId = req.query.acedmicYearId ?? getTenantStore().academicYearId;
     const { campusId } = req.query;
 
     const result = await courseService.listCourses({
@@ -47,9 +48,9 @@ export const getCourseWithSubjects = async (req, res) => {
 
 export const getCourseSessions = async (req, res) => {
   try {
-    const acedmicYearId = req.query.acedmicYearId ?? req.user.defaultAcademicYearId;
+    const acedmicYearId = req.query.acedmicYearId ?? getTenantStore().academicYearId;
     const courseId = Number(req.params.courseId);
-    const instituteId = req.user.defaultInstituteId;
+    const instituteId = getTenantStore().instituteId;
 
     if (!courseId) {
       return res.status(400).json({

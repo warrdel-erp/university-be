@@ -1,11 +1,11 @@
 import * as coCreation from '../services/coServices.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export async function addCo(req, res) {
     const { acedmicYearId, syllabusDetailsId, subjectId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
+    const { universityId, instituteId } = getTenantStore();
     try {
         if (!acedmicYearId || !syllabusDetailsId || !subjectId) {
             return res.status(400).send('acedmicYearId,syllabusDetailsId and subjectId is required');
@@ -80,8 +80,7 @@ export async function addCoWeightage(req, res) {
     const { coId, term, acedmicYearId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
+    const { universityId, instituteId } = getTenantStore();
     try {
         if (!acedmicYearId || !coId || !term) {
             return res.status(400).send('acedmicYearId,coId and term is required');

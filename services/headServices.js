@@ -9,7 +9,7 @@ import { requestContext } from "../utility/requestContext.js";
 function getActiveInstituteId() {
   const instituteId = requestContext.getStore()?.instituteId;
   if (!instituteId) {
-    throw new Error("Active institute is required. Set your default institute or send X-Institute-Id header.");
+    throw new Error("Active institute is required. Save your default institute via PUT /user/saveUserDefaults.");
   }
   return instituteId;
 }

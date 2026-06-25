@@ -2,9 +2,10 @@ import * as employee from '../services/employeeServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getTenantStore } from '../utility/requestContext.js';
 
 export const addEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     try {
         const data = req.body
         const file = req.files;
@@ -65,7 +66,7 @@ export const deleteEmployeeDetail = async (req, res) => {
 export const importEmployeeData = async (req, res) => {
     try {
         const { campusId, instituteId, roleId } = req.body;
-        const universityId = req.user.universityId;
+        const universityId = getTenantStore().universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
@@ -98,7 +99,7 @@ export const importEmployeeData = async (req, res) => {
 };
 
 export const updateEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     const employeeId = req.params.id;
     try {
         const data = req.body;
@@ -166,7 +167,7 @@ export const getTeacherTimeTable = async (req, res) => {
 export const getTeacherSubject = async (req, res) => {
     try {
         const { employeeId, sessionId, acedmicYearId: queryYear } = req.query;
-        const acedmicYearId = queryYear ?? req.user.defaultAcademicYearId;
+        const acedmicYearId = queryYear ?? getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
@@ -186,7 +187,7 @@ export const getTeacherSubject = async (req, res) => {
 };
 
 export async function getSubjectEvalution(req, res) {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     try {
         const { employeeId } = req.query;
         const evaluation = await employee.getSubjectEvalution(employeeId);
@@ -266,7 +267,7 @@ export const getTeacherSubjectsFromSchedule = async (req, res) => {
 export const getPastClassSchedules = async (req, res) => {
     try {
         const { employeeId, date, groupPeriods } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return SuccessResponse(res, 400, "employeeId is required");
@@ -296,7 +297,7 @@ export const getPastClassSchedules = async (req, res) => {
 export const getUpcomingClassSchedules = async (req, res) => {
     try {
         const { employeeId, date, groupPeriods } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
@@ -326,7 +327,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
 export const getClassCounts = async (req, res) => {
     try {
         const { employeeId, date } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return ErrorResponse(res, 400, "employeeId is required");
@@ -360,7 +361,7 @@ export const getClassCounts = async (req, res) => {
 export const getUniqueClassSectionSubjects = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");

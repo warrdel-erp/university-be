@@ -1,5 +1,6 @@
 import * as examStructureScheduleServices from "../services/examStructureScheduleMappingServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 export async function addExamStructureSchedule(req, res) {
   const { acedmicYearId, sessionId } = req.body;
@@ -87,7 +88,7 @@ export async function addExamSchedule(req, res) {
     const examSchedule = await examStructureScheduleServices.addExamSchedule(
       {
         ...req.body,
-        acedmicYearId: req.body.acedmicYearId ?? req.user.defaultAcademicYearId,
+        acedmicYearId: req.body.acedmicYearId ?? getTenantStore().academicYearId,
       },
       req.user.userId,
       req.user.userId,

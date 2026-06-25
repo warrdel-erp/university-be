@@ -3,8 +3,8 @@ import { requestContext } from "./requestContext.js";
 /**
  * Multi-tenant query scoping for Sequelize models.
  *
- * Reads tenant context from requestContext (set in authUser middleware):
- *   universityId, instituteId, academicYearId, userId, role
+ * Reads tenant context from requestContext (user defaults from saveUserDefaults):
+ *   universityId, instituteId, academicYearId, defaultRole, userId
  *
  * Use explicit scoping only:
  *   scoped(model.departmentModel).findAll({ where: { ... } })
@@ -79,7 +79,7 @@ export const buildScope = (model) => {
     where[ACADEMIC_YEAR_FIELD] = store.academicYearId;
   }
 
-  if (store.role === "teacher" && (config.teacherRestricted || "teacherId" in attrs)) {
+  if (store.defaultRole?.toLowerCase() === "teacher" && (config.teacherRestricted || "teacherId" in attrs)) {
     if (!store.userId) {
       throw new Error(`Error in teacher scope ${model.name}`);
     }

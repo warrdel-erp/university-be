@@ -4,9 +4,9 @@ import { scoped } from '../utility/scoped.js';
 
 const listAttributes = { exclude: ['updatedAt', 'deletedAt'] };
 
-export async function addacedmicYear(acedmicYearData) {
+export async function addacedmicYear(acedmicYearData, options = {}) {
     try {
-        return await scoped(model.acedmicYearModel).create(acedmicYearData);
+        return await scoped(model.acedmicYearModel).create(acedmicYearData, options);
     } catch (error) {
         console.error('Error in add acedmicYear :', error);
         throw error;
@@ -26,11 +26,12 @@ export async function getacedmicYearDetails() {
     }
 }
 
-export async function getSingleacedmicYearDetails(acedmicYearId) {
+export async function getSingleacedmicYearDetails(acedmicYearId, options = {}) {
     try {
         return await scoped(model.acedmicYearModel).findOne({
             attributes: listAttributes,
             where: { acedmicYearId },
+            ...options,
         });
     } catch (error) {
         console.error('Error fetching acedmicYear details:', error);
@@ -69,7 +70,7 @@ export async function findByYearTitleAndUniversityWithoutInstitute(yearTitle, un
 }
 
 /** Claim a university-level row for the active institute (instituteId must be null on row). */
-export async function claimUniversityAcedmicYear(acedmicYearId, universityId, acedmicYearData) {
+export async function claimUniversityAcedmicYear(acedmicYearId, universityId, acedmicYearData, options = {}) {
     try {
         const [updated] = await model.acedmicYearModel.update(acedmicYearData, {
             where: {
@@ -77,6 +78,7 @@ export async function claimUniversityAcedmicYear(acedmicYearId, universityId, ac
                 universityId,
                 instituteId: { [Op.is]: null },
             },
+            ...options,
         });
         if (!updated) {
             return null;
@@ -84,6 +86,7 @@ export async function claimUniversityAcedmicYear(acedmicYearId, universityId, ac
         return await scoped(model.acedmicYearModel).findOne({
             where: { acedmicYearId },
             attributes: listAttributes,
+            ...options,
         });
     } catch (error) {
         console.error(`Error claiming acedmicYear ${acedmicYearId}:`, error);
@@ -91,18 +94,12 @@ export async function claimUniversityAcedmicYear(acedmicYearId, universityId, ac
     }
 }
 
-export async function deactivateAllAcedmicYears(updatedBy) {
-    return await scoped(model.acedmicYearModel).update(
-        { isActive: false, updatedBy },
-        { where: { isActive: true } },
-    );
-}
-
-export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
+export async function updateacedmicYear(acedmicYearId, acedmicYearData, options = {}) {
     try {
         const existing = await scoped(model.acedmicYearModel).findOne({
             where: { acedmicYearId },
             attributes: ['acedmicYearId'],
+            ...options,
         });
         if (!existing) {
             return false;
@@ -110,6 +107,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData) {
 
         await scoped(model.acedmicYearModel).update(acedmicYearData, {
             where: { acedmicYearId },
+            ...options,
         });
         return true;
     } catch (error) {
@@ -133,14 +131,18 @@ export async function deleteacedmicYear(acedmicYearId) {
     return deleted > 0;
 }
 
-/** Active academic years for one institute (instituteId + universityId + isActive). */
-export async function getActiveAcedmicYearByInstitute(instituteId) {
+/** Active academic years for one institute (optional university filter). */
+export async function getActiveAcedmicYearByInstitute(instituteId, universityId) {
     try {
+        const where = {
+            instituteId: Number(instituteId),
+            isActive: true,
+        };
+        if (universityId != null) {
+            where.universityId = Number(universityId);
+        }
         return await model.acedmicYearModel.findAll({
-            where: {
-                instituteId,
-                isActive: true,
-            },
+            where,
             attributes: listAttributes,
             order: [['createdAt', 'DESC']],
         });

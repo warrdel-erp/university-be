@@ -193,7 +193,7 @@
     },
     {
       "name": "academic year",
-      "description": "Academic year management under `/acedmicYear`.\n\n**Auth:** Bearer `{{token}}`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/acedmicYear` | Upsert + activate for active institute (`X-Institute-Id` or default) |\n| GET | `/acedmicYear` | All years (active + inactive) for active institute |\n| PATCH | `/acedmicYear` | Update by `acedmicYearId` in body |\n| DELETE | `/acedmicYear?acedmicYearId=` | Soft-delete one year |\n| GET | `/acedmicYear/active` | Active years for **auth context** institute |\n| GET | `/acedmicYear/active/:instituteId` | Active years for **login-selected** institute (no `X-Institute-Id`) |\n| POST | `/acedmicYear/newActivateAndCopyData` | Activate + optional copy subjects/electives/sessions |\n\n**Tenant scope:** Writes and list/update/delete use `scoped(acedmicYearModel)` — `universityId` from token, `instituteId` from `X-Institute-Id` / `defaultInstituteId`. Do **not** send `universityId` / `instituteId` in body.\n\n**Login flow:** After user picks institute at login, call **GET /active/:instituteId** with bearer token only to populate academic year dropdown before `X-Institute-Id` is set.\n\n**Validation:** Zod on POST, PATCH, DELETE, and `/active/:instituteId`. **400** → `{ status: \"error\", message, errors[] }`.",
+      "description": "Academic year management under `/acedmicYear`.\n\n**Auth:** Bearer `{{token}}`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/acedmicYear` | Upsert + activate for active institute (`X-Institute-Id` or default) |\n| GET | `/acedmicYear` | All years (active + inactive) for active institute |\n| PATCH | `/acedmicYear` | Update active year (or optional `acedmicYearId` in body) |\n| DELETE | `/acedmicYear?acedmicYearId=` | Soft-delete one year |\n| GET | `/acedmicYear/active` | Active years for **auth context** institute |\n| GET | `/acedmicYear/active/:instituteId` | Active years for **login-selected** institute (no `X-Institute-Id`) |\n| POST | `/acedmicYear/newActivateAndCopyData` | Activate + optional copy subjects/electives/sessions |\n\n**Tenant scope:** Writes and list/update/delete use `scoped(acedmicYearModel)` — `universityId` from token, `instituteId` from `X-Institute-Id` / `defaultInstituteId`. Do **not** send `universityId` / `instituteId` in body.\n\n**Login flow:** After user picks institute at login, call **GET /active/:instituteId** with bearer token only to populate academic year dropdown before `X-Institute-Id` is set.\n\n**Validation:** Zod on POST, PATCH, DELETE, and `/active/:instituteId`. **400** → `{ status: \"error\", message, errors[] }`.",
       "item": [
         {
           "name": "upsert + activate (POST /)",
@@ -390,11 +390,15 @@
               {
                 "key": "X-Institute-Id",
                 "value": "{{institute_id}}"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"acedmicYearId\": {{acedmicYear_id}},\n  \"yearTitle\": \"2025-2026\",\n  \"startingDate\": \"2025-07-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
+              "raw": "{\n  \"yearTitle\": \"2025-2026\",\n  \"startingDate\": \"2025-07-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -410,7 +414,7 @@
                 "acedmicYear"
               ]
             },
-            "description": "**PATCH /acedmicYear**\n\nUpdate one academic year by id (scoped — must belong to active institute).\n\n**Required:** `acedmicYearId`\n\n**Optional:** `yearTitle`, `startingDate`, `endingDate`\n\nTenant fields (`universityId`, `instituteId`, `isActive`) stripped from body.\n\n**200** on success. **404** if not found in tenant scope."
+            "description": "**PATCH /acedmicYear**\n\nUpdate academic year for active institute (scoped).\n\n**Default target:** active year from `X-Academic-Year-Id` (or token default). Omit `acedmicYearId` in body to update that year.\n\n**Optional:** `acedmicYearId` — update a specific year instead.\n\n**At least one of:** `yearTitle`, `startingDate`, `endingDate`\n\nTenant fields (`universityId`, `instituteId`, `isActive`) stripped from body.\n\n**200** on success. **404** if not found in tenant scope. **400** if no active academic year in context."
           },
           "response": []
         },
@@ -494,7 +498,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"yearTitle\": \"2026-2027\",\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2027-06-30\",\n  \"copyAcedmicYearId\": {{acedmicYear_id}},\n  \"copyData\": [\"subject\", \"electiveSubject\", \"session\"]\n}",
+              "raw": "{\n  \"yearTitle\": \"2026-2027\",\n  \"startingDate\": \"2026-07-01\",\n  \"endingDate\": \"2027-06-30\",\n  \"copyAcedmicYearId\": 12,\n  \"copyData\": [\"subject\", \"electiveSubject\", \"session\"]\n}",
               "options": {
                 "raw": {
                   "language": "json"

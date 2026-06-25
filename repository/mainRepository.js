@@ -9,6 +9,14 @@ function omitAcademicYearScope(scopeWhere = {}) {
     return rest;
 }
 
+function instituteUniversityScope(model) {
+    const scope = omitAcademicYearScope(buildScope(model));
+    if (!scope.instituteId) {
+        throw new Error('Active institute is required');
+    }
+    return scope;
+}
+
 function extractTermNumber(name) {
     const match = String(name ?? '').match(/(\d+)/);
     return match ? Number(match[1]) : null;
@@ -18,7 +26,7 @@ function extractTermNumber(name) {
 export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYearId = null) {
     const courseIdNum = Number(courseId);
     const termNum = Number(term);
-    const classLabel = String(term);
+    const classLabel = String(termNum);
     const sectionScope = omitAcademicYearScope(buildScope(model.classSectionModel));
     const classScope = omitAcademicYearScope(buildScope(model.classModel));
 
@@ -305,9 +313,9 @@ export async function updateSubject(subjectId, data) {
     }
 }
 
-export async function subjectBulkCreate(data) {
+export async function subjectBulkCreate(data, options = {}) {
     try {
-        return scoped(model.subjectModel).bulkCreate(data);
+        return scoped(model.subjectModel).bulkCreate(data, options);
     } catch (error) {
         console.error("Error in subject bulk create:", error);
         throw error;
@@ -323,18 +331,40 @@ export async function addClass(data) {
     }
 }
 
-export async function createClassSections(data) {
+export async function createClassSections(data, options = {}) {
     try {
-        return scoped(model.classSectionModel).create(data);
+        const tenant = instituteUniversityScope(model.classSectionModel);
+        const existing = await model.classSectionModel.findOne({
+            where: {
+                courseId: data.courseId,
+                sessionId: data.sessionId,
+                sectionId: data.sectionId,
+                acedmicYearId: data.acedmicYearId,
+                ...tenant,
+            },
+            transaction: options.transaction,
+        });
+        return existing ?? model.classSectionModel.create(
+            { ...data, ...tenant },
+            { transaction: options.transaction },
+        );
     } catch (error) {
         console.error("Error in add class directly :", error);
         throw error;
     }
 }
 
-export async function seprateAddClass(data) {
+export async function seprateAddClass(data, options = {}) {
     try {
-        return scoped(model.classModel).create(data);
+        const existing = await scoped(model.classModel).findOne({
+            where: {
+                courseId: data.courseId,
+                sessionId: data.sessionId,
+                term: data.term,
+            },
+            transaction: options.transaction,
+        });
+        return existing ?? scoped(model.classModel).create(data, { transaction: options.transaction });
     } catch (error) {
         console.error("Error in add class seprate :", error);
         throw error;

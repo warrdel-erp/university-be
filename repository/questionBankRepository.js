@@ -1,7 +1,21 @@
 import * as model from "../models/index.js";
 import { questionStatus } from "../constant.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+
+function questionFiltersWhere(filters, subjectIds) {
+    const { type, difficulty, bloom, marks, createdBy, status } = filters;
+    return {
+        subjectId: { [Op.in]: subjectIds },
+        ...(type && { type }),
+        ...(difficulty && { difficulty }),
+        ...(bloom && { bloom }),
+        ...(createdBy && { createdBy }),
+        ...(status && { status }),
+        ...(marks && { marks: parseInt(marks, 10) }),
+    };
+}
 
 export async function addQuestion(questionData) {
     try {
@@ -15,21 +29,19 @@ export async function addQuestion(questionData) {
 
 export async function getQuestions(filters = {}, pagination = {}) {
     try {
-        const { type, difficulty, bloom, marks, createdBy, subjectId, status } = filters;
+        const { subjectId } = filters;
         const { limit, offset } = pagination;
 
-        const whereClause = {
-            ...(subjectId && { subjectId }),
-            ...(type && { type }),
-            ...(difficulty && { difficulty }),
-            ...(bloom && { bloom }),
-            ...(createdBy && { createdBy }),
-            ...(status && { status }),
-            ...(marks && { marks: parseInt(marks, 10) }),
-        };
+        const subjectIds = (await scoped(model.subjectModel).findAll({
+            where: subjectId ? { subjectId } : {},
+            attributes: ["subjectId"],
+            raw: true,
+        })).map((row) => row.subjectId);
+
+        if (!subjectIds.length) return { total: 0, questions: [] };
 
         const { count, rows } = await scoped(model.questionBankModel).findAndCountAll({
-            where: whereClause,
+            where: questionFiltersWhere(filters, subjectIds),
             include: [
                 {
                     model: model.userModel,
@@ -52,6 +64,7 @@ export async function getQuestions(filters = {}, pagination = {}) {
             limit: limit ? parseInt(limit, 10) : undefined,
             offset: offset ? parseInt(offset, 10) : undefined,
             order: [['createdAt', 'DESC']],
+            distinct: true,
         });
 
         return { total: count, questions: rows };
@@ -63,26 +76,24 @@ export async function getQuestions(filters = {}, pagination = {}) {
 
 export async function countQuestions(filters = {}) {
     try {
-        const { type, difficulty, bloom, marks, createdBy, subjectId, status } = filters;
+        const { subjectId } = filters;
 
-        const baseWhereClause = {
-            ...(subjectId && { subjectId }),
-            ...(type && { type }),
-            ...(difficulty && { difficulty }),
-            ...(bloom && { bloom }),
-            ...(createdBy && { createdBy }),
-            ...(marks && { marks: parseInt(marks, 10) }),
+        const subjectIds = (await scoped(model.subjectModel).findAll({
+            where: subjectId ? { subjectId } : {},
+            attributes: ["subjectId"],
+            raw: true,
+        })).map((row) => row.subjectId);
+
+        if (!subjectIds.length) return { total: 0, approved: 0 };
+
+        const where = questionFiltersWhere(filters, subjectIds);
+
+        return {
+            total: await scoped(model.questionBankModel).count({ where }),
+            approved: await scoped(model.questionBankModel).count({
+                where: { ...where, status: questionStatus[1] },
+            }),
         };
-
-        const total = await scoped(model.questionBankModel).count({
-            where: baseWhereClause,
-        });
-
-        const approved = await scoped(model.questionBankModel).count({
-            where: { ...baseWhereClause, status: questionStatus[1] },
-        });
-
-        return { total, approved };
     } catch (error) {
         console.error("Error counting questions in bank:", error.message);
         throw error;

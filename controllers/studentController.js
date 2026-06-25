@@ -1,6 +1,7 @@
 import * as studentService from '../services/studentService.js'
 import * as fileHandler from '../utility/fileHandler.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { getTenantStore } from '../utility/requestContext.js';
 export const addStudentWithFeePlanProfile = async (req, res) => {
     try {
         const result = await studentService.addStudentWithFeePlanProfile({
@@ -54,7 +55,7 @@ export const getSingleStudentDetail = async (req, res) => {
 export const importStudentData = async (req, res) => {
     try {
         const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
-        const universityId = req.user.universityId;
+        const universityId = getTenantStore().universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
@@ -97,7 +98,7 @@ export const updateStudentDetails = async (req, res) => {
             studentId,
             info,
             file,
-            req.user.defaultInstituteId,
+            getTenantStore().instituteId,
             req.user.userId,
         );
         return SuccessResponse(res, 200, "Student updated successfully", result);

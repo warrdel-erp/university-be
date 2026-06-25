@@ -22,14 +22,13 @@ export async function getAllacedmicYear(req, res) {
 export async function updateacedmicYear(req, res) {
     try {
         const { acedmicYearId, ...updateData } = req.body;
-        const updatedBy = req.user.userId;
-        const updated = await acedmicYearCreation.updateacedmicYear(acedmicYearId, updateData, updatedBy);
+        const updated = await acedmicYearCreation.updateacedmicYear(acedmicYearId, updateData, req.user.userId);
         if (!updated) {
             return res.status(404).json({ message: 'acedmicYear not found' });
         }
         res.status(200).json({ message: 'acedmicYear update succesfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 }
 
@@ -68,10 +67,15 @@ export async function getActiveAcedmicYearListByInstituteId(req, res) {
 
 export async function newActivateAndCopyData(req, res) {
     try {
-        const updatedBy = req.user.userId;
-        const acedmicYear = await acedmicYearCreation.newActivateAndCopyData(req.body, updatedBy);
-        res.status(201).json({ message: 'Academic year activated and data copied successfully', acedmicYear });
+        const acedmicYear = await acedmicYearCreation.newActivateAndCopyData(req.body, req.user.userId);
+        const copied = req.body.copyData?.length;
+        res.status(201).json({
+            message: copied
+                ? 'Academic year activated and data copied successfully'
+                : 'Academic year activated successfully',
+            acedmicYear,
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 }

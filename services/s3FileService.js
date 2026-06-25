@@ -3,6 +3,7 @@ import path from "path";
 import * as s3FileRepository from "../repository/s3FileRepository.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import * as model from "../models/index.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 // Extensible validation configurations for file size and MIME type by entityType
 export const UPLOAD_CONFIGS = {
@@ -87,12 +88,13 @@ export async function generateUploadUrl(user, fileData) {
 
   // 4. Access Control check
   // Verify user has access to the target company context
-  const targetCompanyId = Number(companyId || user.defaultInstituteId || user.universityId);
-  const userRole = user.role || "";
+  const { instituteId, universityId, defaultRole } = getTenantStore();
+  const targetCompanyId = Number(companyId || instituteId || universityId);
+  const userRole = defaultRole || user.role || "";
   const isAuthorized =
-    (userRole === "Admin" && !user.defaultInstituteId && !user.universityId) ||
-    Number(user.defaultInstituteId) === targetCompanyId ||
-    Number(user.universityId) === targetCompanyId;
+    (userRole?.toLowerCase() === "admin" && !instituteId && !universityId) ||
+    Number(instituteId) === targetCompanyId ||
+    Number(universityId) === targetCompanyId;
 
   if (!isAuthorized) {
     const err = new Error("Access Denied: You do not have permissions for the specified company/institute context.");
@@ -105,7 +107,7 @@ export async function generateUploadUrl(user, fileData) {
   const ext = rawExt || MIME_TO_EXT[mimeType] || ".bin";
   const envPrefix = process.env.NODE_ENV === "production" ? "prod" : "stage";
   const uuid = uuidv4();
-  const clientId = user.clientId || user.universityId || "unknown";
+  const clientId = user.clientId || universityId || "unknown";
   const s3Key = `${envPrefix}/${clientId}/${uuid}${ext}`;
 
   // 6. Request pre-signed URL from S3 helper
@@ -154,13 +156,13 @@ export async function confirmUpload(user, fileUploadId) {
   }
 
   // 2. Access Control check: Ensure user is authorized to modify files for this tenant
+  const { instituteId, universityId, defaultRole } = getTenantStore();
   const targetCompanyId = Number(fileRecord.companyId);
-  const userRole = user.role || "";
+  const userRole = defaultRole || user.role || "";
   const isAuthorized =
-    (userRole === "Admin" && !user.defaultInstituteId && !user.universityId) ||
-    // TODO - why you are comparing institute id with company ID
-    Number(user.defaultInstituteId) === targetCompanyId ||
-    Number(user.universityId) === targetCompanyId ||
+    (userRole?.toLowerCase() === "admin" && !instituteId && !universityId) ||
+    Number(instituteId) === targetCompanyId ||
+    Number(universityId) === targetCompanyId ||
     fileRecord.createdBy === user.userId;
 
   if (!isAuthorized) {
@@ -247,12 +249,13 @@ export async function getDownloadUrl(user, fileUploadId) {
   }
 
   // Access Control check
+  const { instituteId, universityId, defaultRole } = getTenantStore();
   const targetCompanyId = Number(fileRecord.companyId);
-  const userRole = user.role || "";
+  const userRole = defaultRole || user.role || "";
   const isAuthorized =
-    (userRole === "Admin" && !user.defaultInstituteId && !user.universityId) ||
-    Number(user.defaultInstituteId) === targetCompanyId ||
-    Number(user.universityId) === targetCompanyId ||
+    (userRole?.toLowerCase() === "admin" && !instituteId && !universityId) ||
+    Number(instituteId) === targetCompanyId ||
+    Number(universityId) === targetCompanyId ||
     fileRecord.createdBy === user.userId;
 
   if (!isAuthorized) {
