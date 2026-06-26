@@ -2,15 +2,22 @@ import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
-import { resolveSubjectIdsForTeacherFilters, teacherSubjectWhere } from './teacherSubjectMappingRepository.js';
 
-function subjectInclude() {
-    return {
-        model: model.subjectModel,
-        as: 'employeeSubject',
-        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-    };
-}
+const employeeListAttributes = {
+    exclude: [
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+        'dateOfBirth',
+        'fatherName',
+        'motherName',
+        'pickColor',
+        'createdBy',
+        'campusId',
+        'roleId',
+        'instituteId',
+    ],
+};
 
 async function findEmployeeInInstitute(employeeId) {
     return scoped(model.employeeModel).findOne({
@@ -77,10 +84,6 @@ export async function getTeacherSectionMapping({
     limit = 20,
 } = {}) {
     try {
-        const subjectIds = acedmicYearId != null || sessionId != null
-            ? await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId })
-            : null;
-
         const universityId = requestContext.getStore()?.universityId;
 
         const classSectionWhere = {
@@ -109,32 +112,6 @@ export async function getTeacherSectionMapping({
             ];
         }
 
-        const employeeInclude = [
-            {
-                model: model.campusModel,
-                as: 'employeeCampus',
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'campusCode'] },
-                where: { universityId, ...buildScope(model.campusModel) },
-                required: true,
-            },
-            {
-                model: model.instituteModel,
-                as: 'employeeInstitute',
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
-            },
-        ];
-
-        if (subjectIds != null) {
-            employeeInclude.push({
-                model: model.teacherSubjectMappingModel,
-                as: 'teacherEmployeeData',
-                required: false,
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                where: teacherSubjectWhere(subjectIds),
-                include: [subjectInclude()],
-            });
-        }
-
         const include = [
             {
                 model: model.userModel,
@@ -146,10 +123,9 @@ export async function getTeacherSectionMapping({
             {
                 model: model.employeeModel,
                 as: 'employeeData',
-                attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                attributes: employeeListAttributes,
                 where: employeeWhere,
                 required: true,
-                include: employeeInclude,
             },
             {
                 model: model.classSectionModel,
@@ -171,6 +147,13 @@ export async function getTeacherSectionMapping({
                         attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'classTillDate'],
                         required: false,
                     },
+                    {
+                        model: model.classModel,
+                        as: 'classGroup',
+                        attributes: ['term'],
+                        where: buildScope(model.classModel),
+                        required: false,
+                    },
                 ],
             },
         ];
@@ -187,6 +170,14 @@ export async function getTeacherSectionMapping({
         };
 
         const result = await scoped(model.teacherSectionMappingModel).findAll(queryOptions);
+        const mappedResult = result.map((row) => {
+            const plain = row.get({ plain: true });
+            if (plain.employeeSection?.classGroup) {
+                plain.employeeSection.classGroup.termType =
+                    plain.employeeSection.employeeCourse?.termType ?? null;
+            }
+            return plain;
+        });
         const totalCount = await scoped(model.teacherSectionMappingModel).count({
             ...(queryOptions.where && { where: queryOptions.where }),
             include,
@@ -196,7 +187,7 @@ export async function getTeacherSectionMapping({
         });
 
         return {
-            result,
+            result: mappedResult,
             totalCount,
             page,
             limit,
