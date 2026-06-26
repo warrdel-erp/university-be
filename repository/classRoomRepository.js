@@ -1,25 +1,13 @@
 import * as model from '../models/index.js'
 import { buildScope, scoped } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
-import { getCampusIdByInstituteId } from './buildingRepository.js';
 
-async function isFloorInInstitute(floorId) {    const instituteId = buildScope(model.classRoomModel).instituteId;
-    const universityId = requestContext.getStore()?.universityId;
-
-    if (!instituteId || !universityId || !floorId) {
+async function isFloorInInstitute(floorId) {
+    const instituteId = buildScope(model.buildingModel).instituteId;
+    if (!instituteId || !floorId) {
         return false;
     }
 
-    const campusId = await getCampusIdByInstituteId(instituteId);
-    const campus = await model.campusModel.findOne({
-        where: { campusId, universityId },
-        attributes: ['campusId'],
-    });
-    if (!campus) {
-        return false;
-    }
-
-    const floor = await model.floorModel.findOne({
+    const floor = await scoped(model.floorModel).findOne({
         where: { floorId },
         attributes: ['floorId'],
         include: [
@@ -27,8 +15,8 @@ async function isFloorInInstitute(floorId) {    const instituteId = buildScope(m
                 model: model.buildingModel,
                 as: 'floorBuilding',
                 required: true,
-                where: { campusId: campus.campusId },
                 attributes: ['buildingId'],
+                where: buildScope(model.buildingModel),
             },
         ],
     });

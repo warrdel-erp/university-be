@@ -1,5 +1,4 @@
 import * as model from '../models/index.js';
-import { Op } from 'sequelize';
 import { buildScope, scoped } from '../utility/scoped.js';
 
 function campusBuildingInclude() {
@@ -99,34 +98,13 @@ export async function deletebuilding(buildingId) {
     return deleted > 0;
 }
 
-export async function getAllbuildingNested(buildingType, instituteId) {
+export async function getAllbuildingNested(buildingType) {
     try {
-        let campusIds = [];
-
-        if (instituteId) {
-            const campusId = await getCampusIdByInstituteId(instituteId);
-            const campus = await scoped(model.campusModel).findOne({
-                where: { campusId },
-                attributes: ["campusId"],
-            });
-            if (campus) {
-                campusIds = [campus.campusId];
-            }
-        } else {
-            const campuses = await scoped(model.campusModel).findAll({
-                attributes: ["campusId"],
-            });
-            campusIds = campuses.map((campus) => campus.campusId);
-        }
-
-        if (!campusIds.length) {
-            return [];
-        }
+        const classRoomScope = buildScope(model.classRoomModel);
 
         const building = await scoped(model.buildingModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: {
-                campusId: { [Op.in]: campusIds },
                 ...(buildingType && { buildingType }),
             },
             include: [
@@ -141,6 +119,7 @@ export async function getAllbuildingNested(buildingType, instituteId) {
                             model: model.classRoomModel,
                             as: "roomFloor",
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                            where: classRoomScope,
                             required: false,
                         },
                     ],

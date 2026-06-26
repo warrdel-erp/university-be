@@ -96,6 +96,12 @@ function resolveSemesterIdForTerm({
   return byTermIndex?.semesterId ?? null;
 }
 
+function normalizeAffiliatedUniversityId(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 function buildStudentRowPayload(info) {
   const {
     entranceDetails,
@@ -323,6 +329,7 @@ export async function addStudent(
       throw new Error('semesterId could not be resolved for student');
     }
     info.semesterId = resolvedSemesterId;
+    info.affiliatedUniversityId = normalizeAffiliatedUniversityId(info.affiliatedUniversityId);
 
     const studentPayload = buildStudentRowPayload(info);
 
@@ -1091,6 +1098,10 @@ function pickStudentUpdatePayload(info) {
   for (const key of STUDENT_SCALAR_UPDATE_FIELDS) {
     if (!(key in info)) continue;
     let value = info[key];
+    if (key === 'affiliatedUniversityId') {
+      payload.affiliatedUniversityId = normalizeAffiliatedUniversityId(value);
+      continue;
+    }
     if (value === undefined) continue;
     if (typeof value === "string" && value.trim() === "") continue;
     if (STUDENT_UPDATE_OPTIONAL_FK_KEYS.has(key) && (value === null || value === 0)) {

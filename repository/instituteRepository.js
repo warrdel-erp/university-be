@@ -138,6 +138,19 @@ export async function getAffiliatedUniversityById(affiliatedUniversityId) {
   }
 }
 
+export async function findDefaultAffiliatedUniversityId() {
+  try {
+    const row = await scoped(model.affiliatedIniversityModel).findOne({
+      attributes: ['affiliatedUniversityId'],
+      order: [['affiliatedUniversityId', 'ASC']],
+    });
+    return row?.get('affiliatedUniversityId') ?? null;
+  } catch (error) {
+    console.error('Error in Institute Repository (findDefaultAffiliatedUniversityId):', error);
+    throw error;
+  }
+}
+
 export async function updateAffiliatedUniversity(affiliatedUniversityId, data) {
   try {
     const existing = await getAffiliatedUniversityById(affiliatedUniversityId);

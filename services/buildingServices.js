@@ -27,6 +27,6 @@ export async function deletebuilding(buildingId) {
     return await buildingCreationService.deletebuilding(buildingId);
 }
 
-export async function getAllbuildingNested(buildingType, instituteId) {
-    return await buildingCreationService.getAllbuildingNested(buildingType, instituteId);
+export async function getAllbuildingNested(buildingType) {
+    return await buildingCreationService.getAllbuildingNested(buildingType);
 }

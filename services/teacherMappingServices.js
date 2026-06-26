@@ -15,7 +15,9 @@ export { getTeacherSubjectMapping, getTeacherSectionMapping };
 
 export async function teacherSubjectMappingService(data, createdBy) {
     const results = [];
-    for (const subjectId of [].concat(data.subjectId ?? [])) {
+    const subjectIds = [...new Set([].concat(data.subjectId ?? []).map(Number).filter(Boolean))];
+
+    for (const subjectId of subjectIds) {
         results.push(await teacherSubjectMapping({ employeeId: data.employeeId, subjectId, createdBy }));
     }
     return results;

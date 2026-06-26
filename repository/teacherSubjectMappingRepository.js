@@ -114,6 +114,13 @@ async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     });
 }
 
+async function findExistingTeacherSubjectMapping(employeeId, subjectId) {
+    return scoped(model.teacherSubjectMappingModel).findOne({
+        where: { employeeId, subjectId },
+        attributes: ['teacherSubjectMappingId', 'employeeId', 'subjectId'],
+    });
+}
+
 export async function teacherSubjectMapping(data) {
     try {
         const employee = await findEmployeeInInstitute(data.employeeId);
@@ -124,6 +131,15 @@ export async function teacherSubjectMapping(data) {
         const subject = await findSubjectInInstitute(data.subjectId);
         if (!subject) {
             throw new Error(`Subject ID ${data.subjectId} not found`);
+        }
+
+        const existing = await findExistingTeacherSubjectMapping(data.employeeId, data.subjectId);
+        if (existing) {
+            const error = new Error(
+                `Teacher is already mapped to subject ${data.subjectId}`,
+            );
+            error.statusCode = 409;
+            throw error;
         }
 
         return await scoped(model.teacherSubjectMappingModel).create(data);
