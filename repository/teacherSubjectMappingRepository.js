@@ -1,6 +1,8 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { requestContext } from '../utility/requestContext.js';
+import { ROLES } from '../const/roles.js';
 
 export function teacherSubjectWhere(subjectIds) {
     if (subjectIds == null) {
@@ -76,6 +78,19 @@ export async function resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessio
     return subjectIds;
 }
 
+function teacherSubjectRowMatchesSearch(row, search) {
+    const term = search.toLowerCase();
+    const emp = row.teacherEmployeeData;
+    if (emp?.employeeName?.toLowerCase().includes(term)) {
+        return true;
+    }
+    return (row.employeeSubject ?? []).some((sub) =>
+        String(sub.term ?? '').includes(term)
+        || sub.subjectName?.toLowerCase().includes(term)
+        || sub.courseInfo?.courseName?.toLowerCase().includes(term),
+    );
+}
+
 async function findTeacherSubjectMappingInInstitute(teacherSubjectMappingId) {
     return scoped(model.teacherSubjectMappingModel).findOne({
         where: { teacherSubjectMappingId },
@@ -122,50 +137,75 @@ export async function getTeacherSubjectMapping({
     employeeId,
     subjectId,
     sessionId,
+    acedmicYearId = requestContext.getStore()?.academicYearId,
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const subjectIds = sessionId != null
-            ? await resolveSubjectIdsForTeacherFilters({ sessionId })
+        const subjectIds = acedmicYearId != null || sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId })
             : null;
 
-        const mappingWhere = {
+        const teacherWhere = {
             ...(employeeId && { employeeId }),
-            ...teacherSubjectWhere(subjectIds),
+            ...buildScope(model.employeeModel),
         };
 
-        const trimmedSearch = search?.trim();
-        if (trimmedSearch) {
-            const term = `%${trimmedSearch}%`;
-            mappingWhere[Op.or] = [
-                { '$teacherEmployeeData.employee_name$': { [Op.like]: term } },
-                { '$teacherEmployeeData.employee_Code$': { [Op.like]: term } },
-                { '$employeeSubject.subject_name$': { [Op.like]: term } },
-                { '$employeeSubject.courseInfo.course_name$': { [Op.like]: term } },
-                { '$employeeSubject.courseInfo.course_code$': { [Op.like]: term } },
-            ];
+        const teachers = await scoped(model.employeeModel).findAll({
+            where: teacherWhere,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            include: [
+                {
+                    model: model.userModel,
+                    as: 'user',
+                    attributes: [],
+                    required: true,
+                    include: [
+                        {
+                            model: model.userRoleModel,
+                            as: 'userRoles',
+                            attributes: [],
+                            where: { role: ROLES.TEACHER },
+                            required: true,
+                        },
+                    ],
+                },
+                {
+                    model: model.instituteModel,
+                    as: 'employeeInstitute',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
+                    required: false,
+                },
+            ],
+            order: [['employeeName', 'ASC']],
+        });
+
+        if (!teachers.length) {
+            return {
+                result: [],
+                totalCount: 0,
+                page,
+                limit,
+                totalPages: 0,
+            };
         }
 
+        const teacherIds = teachers.map((t) => t.employeeId);
+
         const rows = await scoped(model.teacherSubjectMappingModel).findAll({
-            where: mappingWhere,
+            where: {
+                employeeId: teacherIds,
+                ...teacherSubjectWhere(subjectIds),
+            },
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
             include: [
                 {
                     model: model.employeeModel,
                     as: 'teacherEmployeeData',
-                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+                    attributes: [],
                     where: buildScope(model.employeeModel),
                     required: true,
-                    include: [
-                        {
-                            model: model.instituteModel,
-                            as: 'employeeInstitute',
-                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'campusId', 'instituteCode'] },
-                            required: false,
-                        },
-                    ],
                 },
                 {
                     model: model.subjectModel,
@@ -173,6 +213,7 @@ export async function getTeacherSubjectMapping({
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     where: {
                         ...(subjectId && { subjectId }),
+                        ...(acedmicYearId != null && { acedmicYearId }),
                         ...buildScope(model.subjectModel),
                     },
                     required: true,
@@ -188,33 +229,55 @@ export async function getTeacherSubjectMapping({
                 },
             ],
             order: [['teacherSubjectMappingId', 'DESC']],
-            ...(trimmedSearch && { subQuery: false }),
         });
 
-        const allGrouped = Object.values(
-            rows.reduce((acc, relation) => {
-                const plain = relation.get({ plain: true });
-                const courseId = plain?.employeeSubject?.courseId;
-                const empId = plain?.teacherEmployeeData?.employeeId;
-                const key = `${empId}_${courseId}`;
+        const groupsByKey = rows.reduce((acc, relation) => {
+            const plain = relation.get({ plain: true });
+            const courseId = plain?.employeeSubject?.courseId ?? 'none';
+            const empId = plain.employeeId;
+            const key = `${empId}_${courseId}`;
 
-                if (!acc[key]) {
-                    acc[key] = {
-                        employeeId: empId,
-                        createdBy: plain.createdBy,
-                        teacherEmployeeData: plain.teacherEmployeeData,
-                        employeeSubject: [],
-                    };
-                }
+            if (!acc[key]) {
+                acc[key] = {
+                    employeeId: empId,
+                    createdBy: plain.createdBy,
+                    subjects: [],
+                };
+            }
 
-                acc[key].employeeSubject.push({
-                    ...plain.employeeSubject,
-                    teacherSubjectMappingId: plain.teacherSubjectMappingId,
-                    termType: plain.employeeSubject?.courseInfo?.termType ?? null,
-                });
-                return acc;
-            }, {}),
-        );
+            acc[key].subjects.push({
+                ...plain.employeeSubject,
+                teacherSubjectMappingId: plain.teacherSubjectMappingId,
+                termType: plain.employeeSubject?.courseInfo?.termType ?? null,
+            });
+            return acc;
+        }, {});
+
+        let allGrouped = teachers.flatMap((teacher) => {
+            const plainTeacher = teacher.get({ plain: true });
+            const empId = plainTeacher.employeeId;
+            const empGroupKeys = Object.keys(groupsByKey).filter((k) => k.startsWith(`${empId}_`));
+
+            if (!empGroupKeys.length) {
+                return [{
+                    employeeId: empId,
+                    teacherEmployeeData: plainTeacher,
+                    employeeSubject: [],
+                }];
+            }
+
+            return empGroupKeys.map((key) => ({
+                employeeId: empId,
+                createdBy: groupsByKey[key].createdBy,
+                teacherEmployeeData: plainTeacher,
+                employeeSubject: groupsByKey[key].subjects,
+            }));
+        });
+
+        const trimmedSearch = search?.trim();
+        if (trimmedSearch) {
+            allGrouped = allGrouped.filter((row) => teacherSubjectRowMatchesSearch(row, trimmedSearch));
+        }
 
         const totalCount = allGrouped.length;
         const offset = (page - 1) * limit;

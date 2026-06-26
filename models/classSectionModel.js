@@ -7,7 +7,6 @@ import users from "./userModel.js";
 import section from "./sectionModel.js";
 import classModel from "./classModel.js";
 import instituteModel from "./instituteModel.js";
-import semesterModel from "./semesterModel.js";
 import sessionModel from "./sessionModel.js";
 
 const classSectionModel = sequelize.define(
@@ -71,15 +70,6 @@ const classSectionModel = sequelize.define(
             references: {
                 model: classModel,
                 key: 'class_id'
-            }
-        },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
             }
         },
         instituteId: {

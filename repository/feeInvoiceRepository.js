@@ -417,11 +417,16 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               model: model.semesterModel,
               as: "studentSemester",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+            {
+              model: model.classSectionModel,
+              as: "studentSections",
+              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
               include: [
                 {
-                  model: model.classSectionModel,
-                  as: "classSections",
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+                  model: model.classModel,
+                  as: "classGroup",
+                  attributes: ["term", "semesterId", "className", "classId"],
                 },
               ],
             },

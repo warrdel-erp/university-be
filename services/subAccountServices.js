@@ -1,11 +1,16 @@
 import * as SubAccountCreationService from '../repository/subAccountRepository.js';
 
 export async function addSubAccount(SubAccountData, createdBy, updatedBy) {
-    const account = await SubAccountCreationService.getAccountById(SubAccountData.accountId);
+    const accountId = SubAccountData.accountId != null
+        ? Number(SubAccountData.accountId)
+        : await SubAccountCreationService.resolveDefaultAccountId();
+
+    const account = await SubAccountCreationService.getAccountById(accountId);
     if (!account) {
         throw new Error('Account not found');
     }
 
+    SubAccountData.accountId = accountId;
     SubAccountData.createdBy = createdBy;
     SubAccountData.updatedBy = updatedBy;
     return await SubAccountCreationService.addSubAccount(SubAccountData);

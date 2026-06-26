@@ -1492,7 +1492,7 @@ function mapRoutineClassSection(classSection) {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
     class: plain.class,
-    semesterId: plain.semesterId ?? null,
+    semesterId: plain.classGroup?.semesterId ?? null,
     term: plain.classGroup?.term ?? null,
     course: plain.courseSection
       ? {
@@ -1510,7 +1510,7 @@ function mapClassSectionSummary(classSection) {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
     class: plain.class,
-    semesterId: plain.semesterId ?? null,
+    semesterId: plain.classGroup?.semesterId ?? null,
     term: plain.classGroup?.term ?? null,
   };
 }

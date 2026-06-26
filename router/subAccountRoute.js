@@ -18,10 +18,18 @@ const positiveIntegerId = z.coerce
     .int('id must be an integer')
     .positive('id must be greater than 0');
 
+const emptyToUndefined = (val) =>
+    val === '' || val === null || val === undefined ? undefined : val;
+
+const optionalPositiveIntegerId = z.preprocess(
+    emptyToUndefined,
+    positiveIntegerId.optional(),
+);
+
 const optionalString = z.string().optional().nullable();
 
 const addSubAccountSchema = z.object({
-    accountId: positiveIntegerId,
+    accountId: optionalPositiveIntegerId,
     departmentName: z
         .string({ required_error: 'departmentName is required' })
         .min(1, 'departmentName cannot be empty'),
@@ -32,7 +40,7 @@ const addSubAccountSchema = z.object({
 
 const updateSubAccountSchema = z.object({
     subAccountId: positiveIntegerId,
-    accountId: positiveIntegerId.optional(),
+    accountId: optionalPositiveIntegerId,
     departmentName: z.string().min(1).optional(),
     alternateName: optionalString,
     departmentCode: optionalString,

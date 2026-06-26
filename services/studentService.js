@@ -145,7 +145,7 @@ async function resolveSemesterIdForStudent(info) {
   const sectionId = info.classSectionsId ?? info.classSectionId ?? null;
   if (sectionId) {
     const section = await model.classSectionModel.findByPk(sectionId, {
-      attributes: ['semesterId', 'classId', 'acedmicYearId', 'sessionId', 'class'],
+      attributes: ['classId', 'acedmicYearId', 'sessionId', 'class'],
       include: [{
         model: model.classModel,
         as: 'classGroup',
@@ -153,9 +153,6 @@ async function resolveSemesterIdForStudent(info) {
         required: false,
       }],
     });
-    if (section?.semesterId) {
-      return section.semesterId;
-    }
     if (section?.classGroup?.semesterId) {
       return section.classGroup.semesterId;
     }
@@ -203,6 +200,29 @@ async function resolveSemesterIdForStudent(info) {
     termName: buildTermName(termType, termOrId),
     courseId: info.courseId,
     acedmicYearId: info.acedmicYearId ?? null,
+    semesters,
+  });
+}
+
+/** Resolve semester from class.semester_id, or class.term + course when class row has no semester link. */
+async function resolveSemesterIdFromClassSection(sectionPlain) {
+  if (!sectionPlain) return null;
+  if (sectionPlain.classGroup?.semesterId) {
+    return Number(sectionPlain.classGroup.semesterId);
+  }
+  const term = sectionPlain.classGroup?.term;
+  if (term == null || !sectionPlain.courseId) return null;
+
+  const course = await getCourseByCourseId(sectionPlain.courseId);
+  const termType = course?.dataValues?.termType ?? course?.termType;
+  if (!termType) return null;
+
+  const semesters = await getSemestersByCourseId(sectionPlain.courseId);
+  return resolveSemesterIdForTerm({
+    term,
+    termName: buildTermName(termType, term),
+    courseId: sectionPlain.courseId,
+    acedmicYearId: sectionPlain.acedmicYearId ?? null,
     semesters,
   });
 }
@@ -1473,15 +1493,16 @@ function calculateNextPromotionTerm(currentTerm, termsPerYear, totalTerms) {
   };
 }
 
-function mapPromotionClassSectionRow(row) {
+async function mapPromotionClassSectionRow(row) {
   const plain = row.get ? row.get({ plain: true }) : row;
+  const semesterId = await resolveSemesterIdFromClassSection(plain);
   return {
     classSectionsId: plain.classSectionsId,
     name: plain.section,
     term: plain.classGroup?.term ?? null,
     sessionId: plain.sessionId,
     acedmicYearId: plain.acedmicYearId,
-    semesterId: plain.semesterId,
+    semesterId: semesterId ?? null,
     specializationId: plain.specializationId,
   };
 }
@@ -1494,13 +1515,9 @@ function mapPromotionTermFromSection(section, promotionStatus = 'current', promo
   return {
     promotionHistoryId,
     promotionTerm: plain.classGroup?.term ?? null,
-    semesterId:
-      plain.semesterId ??
-      plain.semesterDetail?.semesterId ??
-      plain.classGroup?.semesterId ??
-      null,
-    semesterName: plain.semesterDetail?.name ?? null,
-    semesterTermType: plain.semesterDetail?.termType ?? null,
+    semesterId: plain.classGroup?.semesterId ?? null,
+    semesterName: null,
+    semesterTermType: null,
     acedmicYearId:
       plain.acedmicYearId ?? plain.acedmicYearSection?.acedmicYearId ?? null,
     acedmicYearTitle: plain.acedmicYearSection?.yearTitle ?? null,
@@ -1711,7 +1728,7 @@ export async function getAvailablePromotionClassSections({
     crossYear: promotionStep.crossYear,
     termsPerYear,
     totalTerms,
-    classSections: rows.map(mapPromotionClassSectionRow),
+    classSections: await Promise.all(rows.map(mapPromotionClassSectionRow)),
   };
 }
 
@@ -1785,21 +1802,20 @@ export async function promoteStudent(data) {
     throw new Error("Target class section academic year is invalid for this promotion");
   }
 
-  const targetSemesterId = Number(
-    sectionPlain.semesterId ?? sectionPlain.classGroup?.semesterId,
-  );
+  const targetSemesterId = await resolveSemesterIdFromClassSection(sectionPlain);
   if (!targetSemesterId) {
-    throw new Error("Target class section semester could not be determined");
+    throw new Error(
+      "Target class section semester could not be determined from class term",
+    );
   }
 
-  if (data.semesterId != null && Number(data.semesterId) !== targetSemesterId) {
+  if (data.semesterId != null && Number(data.semesterId) !== Number(targetSemesterId)) {
     throw new Error("semesterId does not match the target class section semester");
   }
 
   const currentSemesterId = Number(
     student.semesterId ??
       studentDetail.studentMapped?.[0]?.semesterId ??
-      currentSection?.semesterId ??
       currentSection?.classGroup?.semesterId,
   );
   const currentAcademicYearId =
@@ -2453,30 +2469,29 @@ export async function getBooksIssuedToStudent(studentId) {
 }
 
 export async function getStudentTimeTable(studentId) {
-  //  Fetch student details
   const student =
     await studentRepository.getStudentDetailsRepository(studentId);
 
   if (!student) return { formatted: [] };
 
-  const classSectionsId = student.dataValues.class_sections_id;
-  const semesterId = student.dataValues.semester_id;
-  const courseId = student.dataValues.course_id;
+  const classSectionsId = student.classSectionsId;
 
-  //  Fetch subjects for student's semester
-  const subjectMaps = student.studentSemester?.semestermapping || [];
-  const subjectIds = subjectMaps.map((item) => item.subjects.subjectId);
+  if (!classSectionsId) {
+    return { formatted: [] };
+  }
+
+  const subjectIds = await studentRepository.getSubjectIdsByClassSection(
+    classSectionsId,
+  );
 
   if (subjectIds.length === 0) return { formatted: [] };
 
-  //  Fetch timetable data
   const timetable =
     await timeTableCreateRepository.getStudentTimeTableRepository(
       classSectionsId,
       subjectIds,
     );
 
-  //  Format output
   return formatStudentTimetable(timetable);
 }
 

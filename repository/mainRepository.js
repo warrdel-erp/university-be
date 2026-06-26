@@ -22,44 +22,41 @@ function extractTermNumber(name) {
     return match ? Number(match[1]) : null;
 }
 
-/** Resolve semesterId from existing class_sections.class (= term) or class.term, filtered by courseId. */
-export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYearId = null) {
+function normalizeTermType(termType) {
+    const raw = String(termType ?? '').trim();
+    return raw || 'Semester';
+}
+
+function buildSemesterName(termType, term) {
+    return `${normalizeTermType(termType)} ${Number(term)}`;
+}
+
+function defaultSemesterDurationMonths(termType) {
+    const normalized = String(termType ?? '').trim().toUpperCase();
+    if (normalized.includes('QUARTER')) return 3;
+    if (normalized.includes('TRIMEST')) return 4;
+    if (normalized.includes('SEMEST')) return 6;
+    return 6;
+}
+
+/** Resolve semesterId from class.term or semester table for a course + term. */
+export async function findSemesterIdByCourseIdAndTerm(
+    courseId,
+    term,
+    acedmicYearId = null,
+    transaction = null,
+) {
     const courseIdNum = Number(courseId);
     const termNum = Number(term);
-    const classLabel = String(termNum);
-    const sectionScope = omitAcademicYearScope(buildScope(model.classSectionModel));
     const classScope = omitAcademicYearScope(buildScope(model.classModel));
-
-    const fromSection = async (where) => {
-        const row = await model.classSectionModel.findOne({
-            where: { ...where, ...sectionScope },
-            attributes: ['semesterId'],
-            order: [['classSectionsId', 'DESC']],
-            raw: true,
-        });
-        return row?.semesterId ?? null;
-    };
-
-    if (acedmicYearId != null) {
-        const inYear = await fromSection({
-            courseId: courseIdNum,
-            class: classLabel,
-            acedmicYearId: Number(acedmicYearId),
-        });
-        if (inYear) return inYear;
-    }
-
-    const anyYear = await fromSection({
-        courseId: courseIdNum,
-        class: classLabel,
-    });
-    if (anyYear) return anyYear;
+    const queryTx = transaction ? { transaction } : {};
 
     const classRow = await model.classModel.findOne({
         where: { courseId: courseIdNum, term: termNum, ...classScope },
         attributes: ['semesterId'],
         order: [['classId', 'DESC']],
         raw: true,
+        ...queryTx,
     });
     if (classRow?.semesterId) return classRow.semesterId;
 
@@ -69,6 +66,7 @@ export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYea
         attributes: ['semesterId', 'name', 'acedmicYearId'],
         order: [['semesterId', 'ASC']],
         raw: true,
+        ...queryTx,
     });
 
     const byTermNumber = semesters.filter((s) => extractTermNumber(s.name) === termNum);
@@ -81,6 +79,92 @@ export async function findSemesterIdByCourseIdAndTerm(courseId, term, acedmicYea
     if (byTermNumber[0]?.semesterId) return byTermNumber[0].semesterId;
 
     return semesters[termNum - 1]?.semesterId ?? null;
+}
+
+/**
+ * Find semester for course + term + academic year, or create one from course metadata.
+ * Name format: "{termType} {term}" (e.g. "Semester 1", "Trimester 2").
+ */
+export async function findOrCreateSemesterIdForClass({
+    courseId,
+    term,
+    acedmicYearId,
+    createdBy,
+    transaction,
+}) {
+    const courseIdNum = Number(courseId);
+    const termNum = Number(term);
+    const yearId = Number(acedmicYearId);
+
+    const existing = await findSemesterIdByCourseIdAndTerm(
+        courseIdNum,
+        termNum,
+        yearId,
+        transaction,
+    );
+    if (existing) return existing;
+
+    const course = await scoped(model.courseModel).findOne({
+        where: { courseId: courseIdNum },
+        attributes: [
+            'courseId',
+            'universityId',
+            'instituteId',
+            'termType',
+            'courseDuration',
+            'totalTerms',
+            'createdBy',
+        ],
+        transaction,
+    });
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    const coursePlain = course.get ? course.get({ plain: true }) : course;
+    const termType = normalizeTermType(coursePlain.termType);
+    const name = buildSemesterName(termType, termNum);
+    const courseDuration = Number(coursePlain.courseDuration) || 1;
+    const totalTerms = Number(coursePlain.totalTerms) || 1;
+
+    const byName = await scoped(model.semesterModel).findOne({
+        where: {
+            courseId: courseIdNum,
+            acedmicYearId: yearId,
+            name,
+        },
+        attributes: ['semesterId'],
+        transaction,
+    });
+    if (byName?.semesterId) return byName.semesterId;
+
+    const semesterScope = omitAcademicYearScope(buildScope(model.semesterModel));
+    const template = await scoped(model.semesterModel).findOne({
+        where: { courseId: courseIdNum, ...semesterScope },
+        attributes: ['semesterDuration'],
+        order: [['semesterId', 'ASC']],
+        transaction,
+    });
+    const semesterDuration =
+        template?.semesterDuration ?? defaultSemesterDurationMonths(termType);
+
+    const row = await scoped(model.semesterModel).create(
+        {
+            universityId: coursePlain.universityId,
+            instituteId: coursePlain.instituteId,
+            courseId: courseIdNum,
+            acedmicYearId: yearId,
+            termType,
+            name,
+            semesterDuration,
+            courseDuration,
+            totalTerms,
+            createdBy: createdBy ?? coursePlain.createdBy,
+        },
+        { transaction },
+    );
+
+    return row.semesterId ?? row.dataValues?.semesterId;
 }
 
 export async function getAllUniversity() {
@@ -330,21 +414,29 @@ export async function addClass(data) {
 
 export async function createClassSections(data, options = {}) {
     try {
-        const tenant = instituteUniversityScope(model.classSectionModel);
-        const existing = await model.classSectionModel.findOne({
-            where: {
-                courseId: data.courseId,
-                sessionId: data.sessionId,
-                sectionId: data.sectionId,
-                acedmicYearId: data.acedmicYearId,
-                ...tenant,
-            },
+        if (!data.classId) {
+            throw new Error('classId is required to create class sections');
+        }
+
+        const where = {
+            courseId: data.courseId,
+            sessionId: data.sessionId,
+            sectionId: data.sectionId,
+            acedmicYearId: data.acedmicYearId,
+            classId: data.classId,
+        };
+
+        const existing = await scoped(model.classSectionModel).findOne({
+            where,
             transaction: options.transaction,
         });
-        return existing ?? model.classSectionModel.create(
-            { ...data, ...tenant },
-            { transaction: options.transaction },
-        );
+        if (existing) {
+            return existing;
+        }
+
+        return scoped(model.classSectionModel).create(data, {
+            transaction: options.transaction,
+        });
     } catch (error) {
         console.error("Error in add class directly :", error);
         throw error;
@@ -394,22 +486,6 @@ export async function getClassDetails(classSectionsId, acedmicYearId) {
                     where: buildScope(model.specializationModel),
                     required: false,
                 },
-                {
-                    model: model.semesterModel,
-                    as: "semesterDetail",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-                    where: buildScope(model.semesterModel),
-                    required: false,
-                    include: [
-                        {
-                            model: model.classSectionModel,
-                            as: 'classSections',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                            where: buildScope(model.classSectionModel),
-                            required: false,
-                        },
-                    ]
-                }
             ],
             where: {
                 ...(classSectionsId && Number(classSectionsId) !== 0 && {
@@ -455,6 +531,17 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                             },
                             include: [
                                 {
+                                    model: model.classSectionModel,
+                                    as: "courseSection",
+                                    required: false,
+                                    attributes: ["classSectionsId", "sessionId", "sectionId", "classId", "section", "class"],
+                                    where: {
+                                        ...buildScope(model.classSectionModel),
+                                        ...(sessionId && { sessionId }),
+                                        ...(acedmicYearId && { acedmicYearId }),
+                                    },
+                                },
+                                {
                                     model: model.subjectModel,
                                     as: "subjectInfo",
                                     required: false,
@@ -488,16 +575,6 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                                 ...(acedmicYearId && { acedmicYearId }),
                                             },
                                             include: [
-                                                {
-                                                    model: model.classSectionModel,
-                                                    as: "classSections",
-                                                    required: false,
-                                                    attributes: ["classSectionsId", "sessionId", "sectionId", "classId", "semesterId", "section", "class",],
-                                                    where: {
-                                                        ...buildScope(model.classSectionModel),
-                                                        ...(sessionId && { sessionId }),
-                                                    },
-                                                },
                                                 {
                                                     model: model.classSubjectMapperModel,
                                                     as: "semestermapping",
