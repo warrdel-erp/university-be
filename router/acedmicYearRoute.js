@@ -20,22 +20,18 @@ const positiveIntegerId = z.coerce
     .positive('id must be greater than 0');
 
 const acedmicYearBodySchema = z.object({
-    yearTitle: z
-        .string({ required_error: 'yearTitle is required' })
-        .min(1, 'yearTitle cannot be empty'),
-    startingDate: z
+    startingDate: z.coerce
         .string({ required_error: 'startingDate is required' })
         .min(1, 'startingDate cannot be empty'),
-    endingDate: z
-        .string({ required_error: 'endingDate is required' })
-        .min(1, 'endingDate cannot be empty'),
+    yearTitle: z.coerce.string().min(1).optional(),
+    endingDate: z.coerce.string().min(1).optional(),
 });
 
 const updateAcedmicYearSchema = z.object({
     acedmicYearId: positiveIntegerId.optional(),
-    yearTitle: z.string().min(1).optional(),
-    startingDate: z.string().min(1).optional(),
-    endingDate: z.string().min(1).optional(),
+    yearTitle: z.coerce.string().min(1).optional(),
+    startingDate: z.coerce.string().min(1).optional(),
+    endingDate: z.coerce.string().min(1).optional(),
 }).refine(
     (data) => data.yearTitle || data.startingDate || data.endingDate,
     { message: 'At least one of yearTitle, startingDate, endingDate is required' },

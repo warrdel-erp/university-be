@@ -6,7 +6,7 @@ export async function addacedmicYear(req, res) {
         const acedmicYear = await acedmicYearCreation.addacedmicYear(req.body, updatedBy);
         res.status(201).json({ message: 'Academic year activated successfully', acedmicYear });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(error.statusCode || 500).json({ error: error.message });
     }
 }
 
