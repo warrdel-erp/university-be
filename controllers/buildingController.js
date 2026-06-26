@@ -1,6 +1,4 @@
 import * as buildingCreation  from  "../services/buildingServices.js";
-import { getTenantStore } from "../utility/requestContext.js";
-
 export async function addbuilding(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
@@ -63,10 +61,10 @@ export async function deletebuilding(req, res) {
 export async function getAllbuildingNested(req, res) {
     try {
         const { buildingType } = req.query;
-        const instituteId = getTenantStore().instituteId;
-        const building = await buildingCreation.getAllbuildingNested(buildingType, instituteId);
+        const building = await buildingCreation.getAllbuildingNested(buildingType);
         res.status(200).json(building);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || (/scope/i.test(error.message) ? 400 : 500);
+        res.status(statusCode).json({ error: error.message });
     }
 }

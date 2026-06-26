@@ -4,6 +4,22 @@ import { validate } from '../utility/validation.js';
 import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, addSemester, getSemester, createClass, subjectExcel, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
 
+const addCourseItemSchema = z.object({
+    courseName: z.string().min(1, 'courseName is required'),
+    courseCode: z.string().min(1, 'courseCode is required'),
+    capacity: z.union([z.string(), z.number()]).optional(),
+    courseDuration: z.coerce.number().positive().optional(),
+    term: z.string().min(1).optional(),
+}).passthrough();
+
+const addCourseSchema = z.object({
+    course_levelId: z.coerce.number().int().positive('course_levelId is required'),
+    acedmicYearId: z.coerce.number().int().positive().optional(),
+    affiliatedUniversityId: z.coerce.number().int().positive().optional(),
+    term: z.string().min(1).optional(),
+    courses: z.array(addCourseItemSchema).min(1, 'courses array is required'),
+}).passthrough();
+
 const classRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
     classSectionsId: z.coerce.number().int().positive().optional(),
@@ -25,9 +41,7 @@ router.post('/institute', userAuth, addInstitute);
 
 router.post('/affiliatedUniversity', userAuth, addAffiliatedUniversity);
 
-router.post('/affiliatedUniversity', userAuth, addAffiliatedUniversity);
-
-router.post('/course', userAuth, addCourse);
+router.post('/course', userAuth, validate({ body: addCourseSchema }), addCourse);
 
 router.patch('/course', userAuth, changeCourseStatus);
 

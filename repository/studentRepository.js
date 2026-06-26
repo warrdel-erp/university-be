@@ -640,15 +640,14 @@ export async function getSingleStudentDetail(studentId) {
 
 export async function getPreviousScholarNumber(instituteCode) {
     try {
-        const attribute = ["scholar_number"];
         const result = await scoped(model.studentModel).findOne({
-            attributes: attribute,
+            attributes: ['scholarNumber'],
             where: {
-                scholar_number: {
+                scholarNumber: {
                     [Op.regexp]: `^${instituteCode}(/|$)`
                 }
             },
-            order: [['scholar_number', 'DESC']]
+            order: [['scholarNumber', 'DESC']]
         });
         return result;
     } catch (error) {

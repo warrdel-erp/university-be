@@ -61,18 +61,13 @@ export const addAffiliatedUniversity = async (req, res) => {
 
 export const addCourse = async (req, res) => {
     try {
-        const { course_levelId, affiliatedUniversityId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body;
-
-        if (!(getTenantStore().universityId && course_levelId && affiliatedUniversityId && getTenantStore().instituteId)) {
-            return res.status(400).send('University Id,instituteId,affiliatedUniversityId and course_level Id is required')
-        }
-        const result = await mainServices.addCourse(data, createdBy);
+        const result = await mainServices.addCourse(req.body, req.user.userId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Course:", error);
-        return res.status(500).send("Internal Server Error");
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|Unknown term|not found|scope/i.test(message) ? 400 : 500;
+        return res.status(statusCode).send(message);
     }
 };
 

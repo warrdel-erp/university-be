@@ -6,20 +6,81 @@ import * as sessionRepository from '../repository/sessionRepository.js';
 import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
 import { requestContext } from '../utility/requestContext.js';
+import moment from 'moment';
+import { parseCustomDate } from '../utility/dateFormat.js';
+
+const ACADEMIC_YEAR_DATE_FORMAT = 'YYYY-MM-DD';
+
+function badRequest(message) {
+    const error = new Error(message);
+    error.statusCode = 400;
+    return error;
+}
+
+function formatAcademicYearDate(value) {
+    const parsed = parseCustomDate(value);
+    if (!parsed) {
+        return null;
+    }
+    const date = moment(parsed, 'YYYY-MM-DD', true).startOf('day');
+    if (!date.isValid()) {
+        return null;
+    }
+    return date.format(ACADEMIC_YEAR_DATE_FORMAT);
+}
+
+function requireFormattedDate(value, fieldName) {
+    const formatted = formatAcademicYearDate(value);
+    if (!formatted) {
+        throw badRequest(`Invalid ${fieldName}`);
+    }
+    return formatted;
+}
+
+/** startingDate only → endingDate is start + 1 year − 1 day; yearTitle is e.g. 2026-2027 */
+function resolveAcademicYearFields({ startingDate, endingDate, yearTitle } = {}) {
+    if (startingDate === undefined || startingDate === null || String(startingDate).trim() === '') {
+        throw badRequest('startingDate is required');
+    }
+
+    const parsedStart = parseCustomDate(startingDate);
+    if (!parsedStart) {
+        throw badRequest('Invalid startingDate');
+    }
+
+    const start = moment(parsedStart, 'YYYY-MM-DD', true).startOf('day');
+    if (!start.isValid()) {
+        throw badRequest('Invalid startingDate');
+    }
+
+    const autoEnd = start.clone().add(1, 'year').subtract(1, 'day');
+    const trimmedTitle = typeof yearTitle === 'string' ? yearTitle.trim() : '';
+
+    const resolvedEndingDate = endingDate != null && String(endingDate).trim() !== ''
+        ? requireFormattedDate(endingDate, 'endingDate')
+        : autoEnd.format(ACADEMIC_YEAR_DATE_FORMAT);
+
+    return {
+        startingDate: start.format(ACADEMIC_YEAR_DATE_FORMAT),
+        endingDate: resolvedEndingDate,
+        yearTitle: trimmedTitle || `${start.year()}-${start.year() + 1}`,
+    };
+}
 
 const yearListAttributes = { exclude: ['updatedAt', 'deletedAt'] };
 const copyExclude = ['createdAt', 'updatedAt', 'deletedAt'];
 const copyExcludeMeta = [...copyExclude, 'createdBy', 'updatedBy'];
 
 async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
-    const { yearTitle, startingDate, endingDate } = acedmicYearData;
+    const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
     const { universityId, instituteId } = requestContext.getStore() ?? {};
 
     if (!universityId || !instituteId) {
-        throw new Error('Active university and institute are required');
+        throw badRequest('Active university and institute are required');
     }
 
     const activatePayload = {
+        yearTitle,
         startingDate,
         endingDate,
         updatedBy,
@@ -29,8 +90,15 @@ async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
     const forInstitute = await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
     if (forInstitute) {
         const acedmicYearId = forInstitute.acedmicYearId ?? forInstitute.dataValues?.acedmicYearId;
-        await acedmicYearCreationService.updateacedmicYear(acedmicYearId, activatePayload, options);
-        return acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId, options);
+        const updated = await acedmicYearCreationService.updateacedmicYear(acedmicYearId, activatePayload, options);
+        if (!updated) {
+            throw badRequest('Failed to update academic year');
+        }
+        const record = await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId, options);
+        if (!record) {
+            throw badRequest('Academic year not found after update');
+        }
+        return record;
     }
 
     const withoutInstitute = await acedmicYearCreationService.findByYearTitleAndUniversityWithoutInstitute(
@@ -58,11 +126,11 @@ async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
 
 /** Always create a new year for active university + institute (scoped create). */
 async function createAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
-    const { yearTitle, startingDate, endingDate } = acedmicYearData;
+    const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
     const { universityId, instituteId } = requestContext.getStore() ?? {};
 
     if (!universityId || !instituteId) {
-        throw new Error('Active university and institute are required');
+        throw badRequest('Active university and institute are required');
     }
 
     return acedmicYearCreationService.addacedmicYear({
@@ -179,6 +247,13 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedB
         isActive: _isActive,
         ...updateData
     } = acedmicYearData;
+
+    if (updateData.startingDate != null && String(updateData.startingDate).trim() !== '') {
+        Object.assign(updateData, resolveAcademicYearFields(updateData));
+    } else if (updateData.endingDate != null && String(updateData.endingDate).trim() !== '') {
+        updateData.endingDate = requireFormattedDate(updateData.endingDate, 'endingDate');
+    }
+
     updateData.updatedBy = updatedBy;
     return await acedmicYearCreationService.updateacedmicYear(resolvedId, updateData);
 }

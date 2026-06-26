@@ -80,6 +80,11 @@ const optionalPositiveIntegerId = z.preprocess(
   positiveIntegerId.optional(),
 );
 
+const nullableAffiliatedUniversityId = z.preprocess(
+  (val) => (val === '' || val === undefined || val === null ? null : val),
+  z.union([z.null(), positiveIntegerId]),
+);
+
 const admissionStatusField = z
   .union([
     z.enum(studentAdmissionStatus),
@@ -178,7 +183,7 @@ const studentUpdateBodyFields = {
   universityId: optionalPositiveIntegerId,
   campusId: optionalPositiveIntegerId,
   instituteId: optionalPositiveIntegerId,
-  affiliatedUniversityId: optionalPositiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
   courseLevelId: optionalPositiveIntegerId,
   courseId: optionalPositiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).optional(),
@@ -197,7 +202,7 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
   universityId: positiveIntegerId,
   campusId: positiveIntegerId,
   instituteId: positiveIntegerId,
-  affiliatedUniversityId: positiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
   courseLevelId: positiveIntegerId,
   courseId: positiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
@@ -301,6 +306,9 @@ const mapStudentBody = (req, res, next) => {
       }
     }
     if (body.currentClass === "") delete body.currentClass;
+    if (body.affiliatedUniversityId === "") {
+      body.affiliatedUniversityId = null;
+    }
     req.body = body;
     next();
   } catch (error) {

@@ -1,7 +1,50 @@
 import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
+import * as instituteRepository from '../repository/instituteRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
+
+function coercePositiveInt(value) {
+    if (value == null || value === '') return null;
+    const n = Number(value);
+    return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function resolveTermConfig(term) {
+    switch (String(term ?? 'semester').toLowerCase()) {
+        case 'semester':
+            return { monthsPerTerm: 6, termLabel: 'Sem' };
+        case 'trimester':
+            return { monthsPerTerm: 4, termLabel: 'Tri' };
+        case 'quarterly':
+            return { monthsPerTerm: 3, termLabel: 'Quar' };
+        case 'yearly':
+            return { monthsPerTerm: 12, termLabel: 'Year' };
+        default:
+            return null;
+    }
+}
+
+function normalizeAddCoursePayload(data) {
+    const rootTerm = data.term ?? 'semester';
+    const courses = Array.isArray(data.courses) ? data.courses : [];
+
+    return {
+        course_levelId: coercePositiveInt(data.course_levelId),
+        affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
+        acedmicYearId: coercePositiveInt(data.acedmicYearId),
+        term: rootTerm,
+        courses: courses.map((course) => ({
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+            courseDuration: course.courseDuration != null && course.courseDuration !== ''
+                ? Number(course.courseDuration)
+                : null,
+            capacity: course.capacity != null ? String(course.capacity) : undefined,
+            term: course.term ?? rootTerm,
+        })),
+    };
+}
 
 export async function getAllCollegesAndCourses() {
     try {
@@ -86,67 +129,71 @@ export async function addAffiliatedUniversity(data, createdBy) {
 }
 
 export async function addCourse(data, createdBy) {
-    const results = [];
+    const normalized = normalizeAddCoursePayload(data);
 
+    if (!normalized.course_levelId) {
+        throw new Error('course_levelId is required');
+    }
+    if (!normalized.courses.length) {
+        throw new Error('courses array is required');
+    }
+
+    let affiliatedUniversityId = normalized.affiliatedUniversityId;
+    if (affiliatedUniversityId) {
+        const affiliated = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
+        if (!affiliated) {
+            throw new Error('affiliatedUniversityId not found for this institute');
+        }
+    } else {
+        affiliatedUniversityId = await instituteRepository.findDefaultAffiliatedUniversityId();
+    }
+    if (!affiliatedUniversityId) {
+        throw new Error('No affiliated university found for this institute. Create one first or pass affiliatedUniversityId.');
+    }
+
+    const results = [];
     const transaction = await sequelize.transaction();
 
     try {
-        const { course_levelId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
-
-        for (const course of courses) {
-
-            const { courseDuration } = course;
-
-            if (term && courseDuration) {
-                let monthsPerTerm = 6;
-                let termLabel = '';
-                switch (term.toLowerCase()) {
-                    case 'semester':
-                        monthsPerTerm = 6;
-                        termLabel = 'Sem';
-                        break;
-                    case 'trimester':
-                        monthsPerTerm = 4;
-                        termLabel = 'Tri';
-                        break;
-                    case 'quarterly':
-                        monthsPerTerm = 3;
-                        termLabel = 'Quar';
-                        break;
-                    case 'yearly':
-                        monthsPerTerm = 12;
-                        termLabel = 'Year';
-                        break;
-                    default:
-                        console.warn(`Unknown term type: ${term}`);
-                        continue;
-                }
-                const totalTerms = Math.floor(courseDuration * 12 / monthsPerTerm);
-
-                const result = await mainRepository.addCourse({
-                    ...course,
-                    course_levelId,
-                    affiliatedUniversityId,
-                    createdBy,
-                    acedmicYearId,
-                    totalTerms,
-                    termType: termLabel
-                }, transaction);
-
-                results.push(result)
-            } else {
-                throw new Error("Term and Course Duration is required")
+        for (const course of normalized.courses) {
+            if (!course.courseName || !course.courseCode) {
+                throw new Error('courseName and courseCode are required for each course');
             }
+
+            const termConfig = resolveTermConfig(course.term);
+            if (!termConfig) {
+                throw new Error(`Unknown term type: ${course.term}`);
+            }
+
+            const payload = {
+                courseName: course.courseName,
+                courseCode: course.courseCode,
+                course_levelId: normalized.course_levelId,
+                affiliatedUniversityId,
+                createdBy,
+                termType: termConfig.termLabel,
+            };
+
+            if (course.capacity != null) {
+                payload.capacity = course.capacity;
+            }
+            if (course.courseDuration != null) {
+                payload.courseDuration = course.courseDuration;
+                payload.totalTerms = Math.floor(
+                    (course.courseDuration * 12) / termConfig.monthsPerTerm,
+                );
+            }
+
+            const result = await mainRepository.addCourse(payload, transaction);
+            results.push(result);
         }
 
         await transaction.commit();
-
         return results;
-
     } catch (error) {
         await transaction.rollback();
         console.error('Error adding courses:', error);
-        throw { message: 'Error adding courses', error };
+        throw error;
     }
 }
 
