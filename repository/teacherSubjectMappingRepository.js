@@ -180,7 +180,8 @@ export async function getTeacherSubjectMapping({
                         {
                             model: model.courseModel,
                             as: 'courseInfo',
-                            attributes: ['courseId', 'courseName', 'courseCode'],
+                            attributes: ['courseId', 'courseName', 'courseCode', 'termType'],
+                            where: buildScope(model.courseModel),
                             required: false,
                         },
                     ],
@@ -209,6 +210,7 @@ export async function getTeacherSubjectMapping({
                 acc[key].employeeSubject.push({
                     ...plain.employeeSubject,
                     teacherSubjectMappingId: plain.teacherSubjectMappingId,
+                    termType: plain.employeeSubject?.courseInfo?.termType ?? null,
                 });
                 return acc;
             }, {}),
