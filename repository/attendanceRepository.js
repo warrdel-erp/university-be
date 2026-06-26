@@ -299,24 +299,30 @@ export async function getAttendanceMarkedMap(mappingIds, from, to) {
         return {};
     }
 
+    const dateCol = sequelize.col("date");
+
     const rows = await scoped(model.attendanceModel).findAll({
         attributes: [
             "timeTableMappingId",
-            "date",
-            [sequelize.fn("COUNT", sequelize.col("student_id")), "markedCount"],
+            [fn("DATE", dateCol), "attendanceDate"],
+            [fn("COUNT", sequelize.col("student_id")), "markedCount"],
         ],
         where: {
             timeTableMappingId: mappingIds,
-            date: { [Op.between]: [from, to] },
+            [Op.and]: [
+                where(fn("DATE", dateCol), { [Op.gte]: from }),
+                where(fn("DATE", dateCol), { [Op.lte]: to }),
+            ],
         },
-        group: ["timeTableMappingId", "date"],
+        group: ["timeTableMappingId", fn("DATE", dateCol)],
+        raw: true,
     });
 
     const map = {};
     for (const r of rows) {
-        const dateKey = moment(r.date).format("YYYY-MM-DD");
+        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
         const key = `${r.timeTableMappingId}_${dateKey}`;
-        map[key] = Number(r.get("markedCount"));
+        map[key] = Number(r.markedCount);
     }
 
     return map;
