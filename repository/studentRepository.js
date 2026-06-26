@@ -328,6 +328,151 @@ export async function getAllStudents({
     }
 };
 
+const promotionClassSectionDetailInclude = [
+    {
+        model: model.classModel,
+        as: 'classGroup',
+        attributes: ['term', 'semesterId', 'className'],
+    },
+    {
+        model: model.semesterModel,
+        as: 'semesterDetail',
+        attributes: ['semesterId', 'name', 'termType'],
+    },
+    {
+        model: model.acedmicYearModel,
+        as: 'acedmicYearSection',
+        attributes: ['acedmicYearId', 'yearTitle'],
+    },
+    {
+        model: model.sectionModel,
+        as: 'sectionDetail',
+        attributes: ['sectionId', 'sectionName'],
+    },
+];
+
+export async function getPromotionStudentList({
+    page = 1,
+    limit = 20,
+    search,
+    courseId,
+    term,
+}) {
+    try {
+        const whereCondition = buildStudentListWhere(search, courseId);
+
+        const currentSectionInclude = {
+            model: model.classSectionModel,
+            as: 'studentSections',
+            attributes: [
+                'classSectionsId',
+                'section',
+                'class',
+                'semesterId',
+                'acedmicYearId',
+                'sessionId',
+                'courseId',
+                'specializationId',
+            ],
+            required: term != null,
+            include: [
+                {
+                    model: model.classModel,
+                    as: 'classGroup',
+                    attributes: ['term', 'semesterId', 'className'],
+                    required: term != null,
+                    ...(term != null && { where: { term } }),
+                },
+                ...promotionClassSectionDetailInclude.slice(1),
+            ],
+        };
+
+        const baseInclude = [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName'],
+            },
+            {
+                model: model.specializationModel,
+                as: 'specialization',
+                attributes: ['specializationId', 'specializationName'],
+                required: false,
+            },
+            {
+                model: model.semesterModel,
+                as: 'studentSemester',
+                attributes: ['semesterId', 'name', 'termType'],
+            },
+            studentSessionWithAcademicYearInclude(),
+            currentSectionInclude,
+            {
+                model: model.studentClassSectionsHistoryModel,
+                as: 'sectionHistory',
+                required: false,
+                separate: true,
+                order: [['createdAt', 'ASC']],
+                include: [
+                    {
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: [
+                            'classSectionsId',
+                            'section',
+                            'class',
+                            'semesterId',
+                            'acedmicYearId',
+                            'sessionId',
+                        ],
+                        include: promotionClassSectionDetailInclude,
+                    },
+                ],
+            },
+        ];
+
+        const offset = (page - 1) * limit;
+        const queryOptions = {
+            attributes: [
+                'studentId',
+                'scholarNumber',
+                'enrollNumber',
+                'firstName',
+                'middleName',
+                'lastName',
+                'courseId',
+                'specializationId',
+                'semesterId',
+                'classSectionsId',
+                'sessionId',
+                'admisssionDate',
+            ],
+            where: whereCondition,
+            include: baseInclude,
+            offset,
+            limit,
+            order: [['studentId', 'DESC']],
+            distinct: true,
+            ...(search && { subQuery: false }),
+        };
+
+        const { count, rows } = await scoped(model.studentModel).findAndCountAll({
+            ...queryOptions,
+            ...(search && { subQuery: false }),
+        });
+
+        return {
+            rows,
+            totalCount: count,
+            page,
+            limit,
+            totalPages: Math.ceil(count / limit),
+        };
+    } catch (error) {
+        console.error('Error in getPromotionStudentList:', error);
+        throw error;
+    }
+}
+
 export async function getSingleStudentDetail(studentId) {
     try {
         const inAcademicYear = await assertStudentInRequestAcademicYear(studentId);
@@ -1770,23 +1915,39 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
+export async function getClassRecord(courseId, classSectionsId) {
     try {
+        const classSection = await scoped(model.classSectionModel).findOne({
+            where: {
+                classSectionsId: classSectionsId,
+                courseId,
+            },
+            attributes: [
+                'classSectionsId',
+                'courseId',
+                'semesterId',
+                'acedmicYearId',
+                'section',
+                'class',
+            ],
+        });
+
+        if (!classSection) {
+            const error = new Error('Class section not found for this course');
+            error.statusCode = 404;
+            throw error;
+        }
+
         const sectionInclude = {
             model: model.classSectionModel,
             as: 'studentSections',
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-            ...(acedmicYearId && {
-                where: { acedmicYearId },
-                required: true,
-            }),
         };
 
         const student = await scoped(model.studentModel).findAll({
             where: {
-                classSectionsId: classSectionId,
+                classSectionsId,
                 courseId,
-                semesterId,
             },
             attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "email", "mobileNumber", "phoneNumber", "courseId", "semesterId", "classSectionsId"],
             include: [
@@ -1801,7 +1962,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
 
         const teacher = await model.teacherSectionMappingModel.findAll({
             where: {
-                classSectionsId: classSectionId,
+                classSectionsId,
             },
             attributes: ["teacherSectionMappingId", "classSectionsId", "employeeId", "isCordinatory"],
             include: [
@@ -1821,6 +1982,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
                                     model: model.subjectModel,
                                     as: 'employeeSubject',
                                     attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
+                                    where: buildScope(model.subjectModel),
                                 },
                             ],
                         },
@@ -1829,7 +1991,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
             ],
         });
 
-        return { student, teacher };
+        return { classSection, student, teacher };
     } catch (error) {
         console.error('Error in getting class record details:', error);
         throw error;

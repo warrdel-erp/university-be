@@ -271,6 +271,30 @@ export const getPromotionAvailableClassSection = async (req, res) => {
     }
 };
 
+export const getPromotionStudentList = async (req, res) => {
+    try {
+        const { page, limit, programCourseId, studentSearch, promotionTerm } = req.query;
+        const result = await studentService.getPromotionStudentList({
+            page,
+            limit,
+            courseId: programCourseId,
+            search: studentSearch,
+            term: promotionTerm,
+        });
+
+        return SuccessResponse(
+            res,
+            200,
+            "Promotion student list fetched successfully",
+            { promotionStudents: result.promotionStudents },
+            result.pagination,
+        );
+    } catch (error) {
+        console.error("Error in getPromotionStudentList:", error);
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+};
+
 export const getFeePlanInitiate = async (req, res) => {
     try {
         const { page, limit } = req.query;

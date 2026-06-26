@@ -75,9 +75,12 @@ export default async function useAuth(req, res, next) {    const authHeader = re
             }
         }
 
+        const headerInstituteId = req.headers["x-institute-id"];
+        const activeInstituteId = headerInstituteId ?? req.user.defaultInstituteId;
+
         const store = await buildRequestContextStore({
             userId: req.user.userId,
-            defaultInstituteId: req.user.defaultInstituteId,
+            defaultInstituteId: activeInstituteId,
             defaultRole: req.user.defaultRole,
             defaultAcademicYearId: req.user.defaultAcademicYearId,
             bypass: req.bypassScope,

@@ -22,6 +22,7 @@ import * as userRoleService from '../services/userRoleService.js';
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
+import * as attendanceRepository from '../repository/attendanceRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
@@ -1258,6 +1259,43 @@ function stripTeacherFieldsFromSchedule(schedule) {
   return cleaned;
 }
 
+function getAttendanceStatusKey(schedule) {
+  return `${schedule.timeTableMappingId}_${schedule.date}`;
+}
+
+async function enrichSchedulesWithAttendance(schedules) {
+  if (!schedules.length) {
+    return schedules;
+  }
+
+  const mappingIds = [...new Set(schedules.map((s) => s.timeTableMappingId).filter(Boolean))];
+  const dates = schedules.map((s) => s.date).filter(Boolean);
+  const from = dates.reduce((min, d) => (d < min ? d : min), dates[0]);
+  const to = dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+
+  const markedMap = await attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to);
+
+  return schedules.map((schedule) => {
+    const markedCount = markedMap[getAttendanceStatusKey(schedule)] || 0;
+    return {
+      ...schedule,
+      attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
+    };
+  });
+}
+
+function applyGroupAttendanceStatus(groups) {
+  for (const group of groups) {
+    const items = group.classScheduleItems || [];
+    const allMarked = items.length > 0 && items.every((item) => item.attendanceStatus === 'MARKED');
+    const anyMarked = items.some((item) => item.attendanceStatus === 'MARKED');
+
+    group.attendanceStatus = allMarked ? 'MARKED' : (anyMarked ? 'PARTIAL' : 'PENDING');
+  }
+
+  return groups;
+}
+
 export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
   const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
 
@@ -1306,10 +1344,12 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const teacher = getTeacherDetails(rawSchedules);
-  const schedules = pastClasses.map(stripTeacherFieldsFromSchedule);
+  const schedules = await enrichSchedulesWithAttendance(
+    pastClasses.map(stripTeacherFieldsFromSchedule)
+  );
 
   if (groupPeriods) {
-    const grouped = groupConsecutivePeriods(schedules);
+    const grouped = applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
     return { teacher, schedules: grouped };
   }

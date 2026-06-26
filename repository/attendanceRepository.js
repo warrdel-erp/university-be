@@ -294,6 +294,40 @@ export async function getAttendanceMap(mappingIds, from, to) {
     return map;
 }
 
+export async function getAttendanceMarkedMap(mappingIds, from, to) {
+    if (!mappingIds?.length) {
+        return {};
+    }
+
+    const dateCol = sequelize.col("date");
+
+    const rows = await scoped(model.attendanceModel).findAll({
+        attributes: [
+            "timeTableMappingId",
+            [fn("DATE", dateCol), "attendanceDate"],
+            [fn("COUNT", sequelize.col("student_id")), "markedCount"],
+        ],
+        where: {
+            timeTableMappingId: mappingIds,
+            [Op.and]: [
+                where(fn("DATE", dateCol), { [Op.gte]: from }),
+                where(fn("DATE", dateCol), { [Op.lte]: to }),
+            ],
+        },
+        group: ["timeTableMappingId", fn("DATE", dateCol)],
+        raw: true,
+    });
+
+    const map = {};
+    for (const r of rows) {
+        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
+        const key = `${r.timeTableMappingId}_${dateKey}`;
+        map[key] = Number(r.markedCount);
+    }
+
+    return map;
+}
+
 export async function getStudentCount(classSectionsId) {
     return await scoped(model.studentModel).count({
         where: {

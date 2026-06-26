@@ -3,6 +3,7 @@ import * as fileHandler from '../utility/fileHandler.js';
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 import { getTenantStore } from '../utility/requestContext.js';
+import { formatQueryDate } from '../utility/helper.js';
 
 export const addEmployee = async (req, res) => {
     const universityId = getTenantStore().universityId;
@@ -209,12 +210,11 @@ export const getTodayClassSchedule = async (req, res) => {
             return res.status(400).send("employeeId is required");
         }
 
-        const currentDate = new Date(date);
+        const currentDate = date ? new Date(date) : new Date();
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayString = days[currentDate.getDay()];
 
-        // formatted currentDate for simple YYYY-MM-DD
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getTodayClassSchedule(
             employeeId,
@@ -278,7 +278,7 @@ export const getPastClassSchedules = async (req, res) => {
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getPastClassSchedules(
             employeeId,
@@ -308,7 +308,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getUpcomingClassSchedules(
             employeeId,
@@ -338,7 +338,7 @@ export const getClassCounts = async (req, res) => {
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const { pastCount, upcomingCount, uniqueCombinationsCount, uniqueSubjectsCount } = await employee.getClassCounts(
             employeeId,

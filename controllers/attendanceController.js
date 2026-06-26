@@ -4,15 +4,16 @@ import { ErrorResponse, SuccessResponse } from "../utility/response.js";
 import { getTenantStore } from "../utility/requestContext.js";
 
 export async function addAttendance(req, res) {
-  const { classSectionsId, timeTableMappingId } = req.body
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    if (!(timeTableMappingId && classSectionsId)) {
-      return res.status(400).send('timeTableMappingId and classSectionsId is required')
+    const result = await AttendanceCreation.addAttendance(req.body, createdBy, updatedBy);
+    const response = { message: "Attendance Add Successfully" };
+    if (result.skippedPeriods?.length) {
+      response.markedPeriods = result.markedPeriods;
+      response.skippedPeriods = result.skippedPeriods;
     }
-    const newAttendance = await AttendanceCreation.addAttendance(req.body, createdBy, updatedBy);
-    res.status(201).json({ message: "Attendance Add Successfully" });
+    res.status(201).json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

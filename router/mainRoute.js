@@ -1,7 +1,21 @@
 import { Router } from 'express';
-const router = Router();
+import { z } from 'zod';
+import { validate } from '../utility/validation.js';
 import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, addSemester, getSemester, createClass, subjectExcel, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
+
+const classRecordQuerySchema = z.object({
+    courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
+    classSectionsId: z.coerce.number().int().positive().optional(),
+    classSectionId: z.coerce.number().int().positive().optional(),
+    semesterId: z.coerce.number().int().positive().optional(),
+    acedmicYearId: z.coerce.number().int().positive().optional(),
+}).refine(
+    (query) => query.classSectionsId != null || query.classSectionId != null,
+    { message: 'classSectionsId is required' },
+);
+
+const router = Router();
 
 router.get('/all', userAuth, getAllCollegesAndCourses);
 
@@ -41,7 +55,12 @@ router.post('/createClass', userAuth, createClass);
 
 router.post('/subjectExcel', userAuth, subjectExcel);
 
-router.get('/classRecord', userAuth, getClassRecord);
+router.get(
+    '/classRecord',
+    userAuth,
+    validate({ query: classRecordQuerySchema }),
+    getClassRecord,
+);
 
 router.get("/monthly-income", getMonthlyIncome);
 

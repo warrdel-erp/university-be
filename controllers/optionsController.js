@@ -25,9 +25,6 @@ export const getCourseOptions = async (req, res) => {
 export const getTermOptions = async (req, res) => {
     try {
         const { courseId } = req.query;
-        if (!courseId) {
-            return ErrorResponse(res, 400, "Course ID is required");
-        }
         const result = await optionsServices.getTermOptions(courseId);
         return SuccessResponse(res, 200, "Term options fetched successfully", result);
     } catch (error) {
@@ -38,11 +35,8 @@ export const getTermOptions = async (req, res) => {
 
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term } = req.query;
-        if (!courseId || !term) {
-            return ErrorResponse(res, 400, "Course ID and term (number) are required");
-        }
-        const result = await optionsServices.getClassSectionOptions(courseId, term);
+        const { courseId, term, sessionId } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);
