@@ -229,46 +229,64 @@ export async function addClass(data, createdBy) {
         if (term == null || term === '') throw new Error('Term is required');
         if (!sessionId) throw new Error('SessionId is required');
 
-        const semesterId = await mainRepository.findSemesterIdByCourseIdAndTerm(
-            Number(courseId),
-            Number(term),
-            Number(acedmicYearId),
-        );
-        if (!semesterId) {
-            throw new Error(`No semesterId found for course ${courseId} with term/class ${term}`);
-        }
+        const transaction = await sequelize.transaction();
+        try {
+            const classSemesterId = await mainRepository.findOrCreateSemesterIdForClass({
+                courseId: Number(courseId),
+                term: Number(term),
+                acedmicYearId: Number(acedmicYearId),
+                createdBy,
+                transaction,
+            });
 
-        return sequelize.transaction(async (transaction) => {
             const classRow = await mainRepository.seprateAddClass({
                 courseId: Number(courseId),
                 className,
                 term: Number(term),
                 sessionId: Number(sessionId),
-                semesterId,
+                semesterId: classSemesterId,
                 createdBy,
                 updatedBy: createdBy,
             }, { transaction });
 
             const classId = classRow.classId ?? classRow.dataValues?.classId;
+            if (!classId) {
+                throw new Error('Class could not be created');
+            }
+
             const sectionPayload = {
                 courseId: Number(courseId),
                 acedmicYearId: Number(acedmicYearId),
                 sessionId: Number(sessionId),
-                semesterId,
                 classId,
                 class: String(term),
                 createdBy,
             };
 
-            return Promise.all(sections.map((section) => {
-                if (!section.sectionId) throw new Error('sectionId is required for each section');
-                return mainRepository.createClassSections({
+            const sectionResults = [];
+            for (const section of sections) {
+                if (!section.sectionId) {
+                    throw new Error('sectionId is required for each section');
+                }
+                const row = await mainRepository.createClassSections({
                     ...sectionPayload,
                     sectionId: Number(section.sectionId),
                     section: section.section,
                 }, { transaction });
-            }));
-        });
+                sectionResults.push(row);
+            }
+
+            await transaction.commit();
+            return {
+                semesterId: classSemesterId,
+                classId,
+                class: classRow,
+                sections: sectionResults,
+            };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
+        }
     } catch (error) {
         console.error('Error adding class:', error);
         throw error;
@@ -341,7 +359,6 @@ export async function createClass(data, createdBy) {
             term,
             sessionId,
             classId,
-            semesterId: payloadSemesterId,
         } = data;
 
         if (!courseId || !acedmicYearId) {
@@ -351,29 +368,12 @@ export async function createClass(data, createdBy) {
             throw new Error('section is required and must be a non-empty array');
         }
 
-        let semesterId = payloadSemesterId != null ? Number(payloadSemesterId) : null;
-
-        if (!semesterId && term != null) {
-            semesterId = await mainRepository.findSemesterIdByCourseIdAndTerm(
-                Number(courseId),
-                Number(term),
-                Number(acedmicYearId),
-            );
-        }
-
-        if (!semesterId) {
-            throw new Error(
-                `No semesterId found for course ${courseId} with term/class ${term}`,
-            );
-        }
-
         for (const sectionValue of section) {
             const result = await mainRepository.createClassSections({
                 courseId: Number(courseId),
                 specializationId,
                 acedmicYearId: Number(acedmicYearId),
                 sessionId: Number(sessionId),
-                semesterId,
                 classId,
                 term: Number(term),
                 section: sectionValue,
@@ -425,10 +425,10 @@ export async function getClassRecord(courseId, classSectionsId) {
             ? {
                 classSectionsId: section.classSectionsId,
                 courseId: section.courseId,
-                semesterId: section.semesterId ?? null,
                 acedmicYearId: section.acedmicYearId ?? null,
                 sectionName: section.section ?? null,
                 className: section.class ?? null,
+                term: section.classGroup?.term ?? section.class ?? null,
             }
             : null,
         student: result.student.map((s) => ({

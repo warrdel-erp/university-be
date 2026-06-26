@@ -505,7 +505,7 @@ export async function findStudentsForTerm(courseId, acedmicYearId, term, session
         [sequelize.col("sectionHistory->classSection->courseSection.course_name"), "courseName"],
         [
           sequelize.literal(
-            "COALESCE(`sectionHistory->classSection->semesterDetail`.`name`, `sectionHistory->classSection->classGroup`.`class_name`, CONCAT('Term ', `sectionHistory->classSection->classGroup`.`term`))",
+            "COALESCE(`sectionHistory->classSection->classGroup`.`class_name`, CONCAT('Term ', `sectionHistory->classSection->classGroup`.`term`))",
           ),
           "termName",
         ],
@@ -535,12 +535,6 @@ export async function findStudentsForTerm(courseId, acedmicYearId, term, session
                   model: model.courseModel,
                   as: "courseSection",
                   required: true,
-                  attributes: [],
-                },
-                {
-                  model: model.semesterModel,
-                  as: "semesterDetail",
-                  required: false,
                   attributes: [],
                 },
                 {

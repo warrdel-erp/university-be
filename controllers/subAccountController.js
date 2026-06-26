@@ -7,7 +7,8 @@ export async function addSubAccount(req, res) {
         const SubAccountDetails = await SubAccountCreation.addSubAccount(req.body, createdBy, updatedBy);
         res.status(201).json({ message: 'Data added successfully', SubAccountDetails });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const status = /not found|pass accountId/i.test(error.message) ? 400 : 500;
+        res.status(status).json({ error: error.message });
     }
 }
 

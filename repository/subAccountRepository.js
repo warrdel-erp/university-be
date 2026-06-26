@@ -10,6 +10,29 @@ export async function getAccountById(accountId) {
     });
 }
 
+/** Default parent account when FE does not send accountId (seed: Academics, else first account). */
+export async function resolveDefaultAccountId() {
+    const academics = await model.accountModel.findOne({
+        where: { accountName: 'Academics' },
+        attributes: ['accountId'],
+        order: [['accountId', 'ASC']],
+        raw: true,
+    });
+    if (academics?.accountId) {
+        return academics.accountId;
+    }
+
+    const first = await model.accountModel.findOne({
+        attributes: ['accountId'],
+        order: [['accountId', 'ASC']],
+        raw: true,
+    });
+    if (!first?.accountId) {
+        throw new Error('No account found. Create an account or pass accountId.');
+    }
+    return first.accountId;
+}
+
 export async function addSubAccount(SubAccountData) {
     try {
         return await scoped(model.subAccountModel).create(SubAccountData);

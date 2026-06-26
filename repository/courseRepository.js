@@ -376,7 +376,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
           attributes: ['term'],
         },
       ],
-      attributes: ['classSectionsId', 'section', 'semesterId'],
+      attributes: ['classSectionsId', 'section'],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);

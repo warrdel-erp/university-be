@@ -955,7 +955,8 @@ export async function getStudentTimeTableRepository(classSectionsId, subjectIds)
 
     return await scoped(model.timeTableRoutineModel).findAll({
       where: {
-        is_publish: true
+        is_publish: true,
+        ...(classSectionsId && { classSectionsId }),
       },
       include: [
         {
@@ -971,8 +972,7 @@ export async function getStudentTimeTableRepository(classSectionsId, subjectIds)
           as: "timeTablecreate",
           required: true,
           where: {
-            // class_sections_id: classSectionsId,
-            subject_id: subjectIds
+            subject_id: subjectIds,
           },
           include: [
             {
@@ -1280,7 +1280,7 @@ const teacherClassSectionInclude = (courseId, sessionId) => ({
     sessionId,
     ...buildScope(model.classSectionModel),
   },
-  attributes: ['classSectionsId', 'section', 'class', 'semesterId', 'sessionId', 'courseId'],
+  attributes: ['classSectionsId', 'section', 'class', 'sessionId', 'courseId'],
   include: [
     {
       model: model.courseModel,
@@ -1387,7 +1387,7 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
     }),
     scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'class', 'semesterId', 'courseId', 'sessionId'],
+      attributes: ['classSectionsId', 'section', 'class', 'courseId', 'sessionId'],
       include: [
         {
           model: model.classModel,
