@@ -7,7 +7,7 @@ import * as model from "../models/index.js";
  * - defaultInstituteId, instituteId
  * - defaultRole
  * - defaultAcademicYearId, academicYearId
- * - universityId (from institute row)
+ * - universityId (from institute row via active instituteId)
  * - userId
  * - bypass
  */
