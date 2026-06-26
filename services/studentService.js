@@ -18,6 +18,7 @@ import {
 } from "../repository/courseRepository.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
+import * as sessionRepository from "../repository/sessionRepository.js";
 import * as feePlanProfileRepository from "../repository/feePlanProfileRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
 import { parseCustomDate } from "../utility/dateFormat.js";
@@ -309,6 +310,7 @@ export async function addStudent(
       info.scholarNumber = await generateScholarNumber(
         info.courseId,
         info.instituteId,
+        sessionId ?? info.sessionId,
       );
     }
     info.email = info.email.toLowerCase();
@@ -543,24 +545,32 @@ export async function addStudentWithFeePlanProfile({ info, files, createdBy }) {
   );
 }
 
-async function generateScholarNumber(courseId, instituteId) {
+async function generateScholarNumber(courseId, instituteId, sessionId) {
   const getCourseCodeDetail = await getCourseCode(courseId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
-  const courseCode = getCourseCodeDetail.get("course_code");
-  const institueCode = getInstitueCodeDetail.get("institute_code");
+  const courseCode = getCourseCodeDetail?.get("courseCode");
+  const institueCode = getInstitueCodeDetail?.get("instituteCode");
+
+  if (!courseCode || !institueCode) {
+    throw new Error(
+      `Cannot generate scholar number: missing course or institute code (courseId=${courseId}, instituteId=${instituteId})`,
+    );
+  }
+
   const getPreviousScholarNumber =
     await studentRepository.getPreviousScholarNumber(institueCode);
   const previousScholarNumber = getPreviousScholarNumber
-    ? getPreviousScholarNumber.get("scholar_number")
+    ? getPreviousScholarNumber.get("scholarNumber")
     : null;
   let scholarNumber;
   if (previousScholarNumber) {
     const scholarNumberParts = previousScholarNumber.split("/");
     const scholarNumberPrefix = scholarNumberParts.slice(0, 3).join("/");
-    const scholarNumberSuffix = parseInt(scholarNumberParts[3]) + 1;
+    const scholarNumberSuffix = parseInt(scholarNumberParts[3], 10) + 1;
     scholarNumber = `${scholarNumberPrefix}/${scholarNumberSuffix.toString().padStart(6, "0")}`;
   } else {
-    const yearLastTwoDigits = moment().format("YY");
+    const sessionYear = await sessionRepository.getSessionYearSuffix(sessionId);
+    const yearLastTwoDigits = sessionYear ?? moment().format("YY");
     scholarNumber = `${institueCode}/${courseCode}/${yearLastTwoDigits}/100001`;
   }
   return scholarNumber;
@@ -724,6 +734,7 @@ export async function importStudentData(excelData, data) {
       const scholarNumberData = await generateScholarNumber(
         convertedData.courseId,
         convertedData.instituteId,
+        convertedData.sessionId,
       );
       // convertedData.scholarNumber = scholarNumber;
       const number = convertedData.scholarNumber
@@ -963,6 +974,7 @@ export async function addAdmissionNoForBulkImport(data, matchedPairs) {
       const scholarNumber = await generateScholarNumber(
         bulk.courseId,
         bulk.instituteId,
+        bulk.sessionId,
       );
       createdBy = bulk.createdBy;
       const studentData = { ...bulk, scholarNumber };

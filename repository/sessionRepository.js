@@ -465,3 +465,22 @@ export async function updateSessionWithCourseMappings(sessionId, sessionData, up
         throw error;
     }
 }
+
+export async function getSessionYearSuffix(sessionId) {
+    if (sessionId == null) return null;
+
+    const session = await scoped(model.sessionModel).findOne({
+        where: { sessionId: Number(sessionId) },
+        attributes: ['startingDate', 'sessionName'],
+    });
+    if (!session) return null;
+
+    const { startingDate, sessionName } = session.get({ plain: true });
+    if (startingDate) {
+        const year = String(startingDate).slice(0, 4);
+        if (/^\d{4}$/.test(year)) return year.slice(-2);
+    }
+
+    const match = String(sessionName ?? '').match(/\b(20)?(\d{2})\b/);
+    return match ? match[2] : null;
+}
