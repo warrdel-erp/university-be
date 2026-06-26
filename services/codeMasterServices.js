@@ -6,8 +6,16 @@ export async function getAllEmployeeType() {
 
 export async function addEmployeeCode(data, createdBy) {
     await codeMasterRepository.getCodeMasterById(data.employeeCodeMasterId);
-    data.createdBy = createdBy;
-    return codeMasterRepository.addEmployeeCode(data);
+    const {
+        universityId: _universityId,
+        instituteId: _instituteId,
+        createdBy: _createdBy,
+        ...payload
+    } = data;
+    return codeMasterRepository.addEmployeeCode({
+        ...payload,
+        createdBy,
+    });
 }
 
 export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {

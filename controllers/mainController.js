@@ -277,15 +277,16 @@ export const subjectExcel = async (req, res) => {
 
 export const getClassRecord = async (req, res) => {
     try {
-        const semesterId = req.query.semesterId;
-        const acedmicYearId = req.query.acedmicYearId;
-        const courseId = req.query.courseId;
-        const classSectionId = req.query.classSectionId;
-        const result = await mainServices.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+        const { courseId, classSectionsId, classSectionId } = req.query;
+        const result = await mainServices.getClassRecord(
+            courseId,
+            classSectionsId ?? classSectionId,
+        );
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class record Details:", error);
-        return res.status(500).send("Internal Server Error");
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 

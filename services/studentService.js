@@ -1486,6 +1486,163 @@ function mapPromotionClassSectionRow(row) {
   };
 }
 
+function mapPromotionTermFromSection(section, promotionStatus = 'current', promotionHistoryId = null) {
+  if (!section) {
+    return null;
+  }
+  const plain = section.get ? section.get({ plain: true }) : section;
+  return {
+    promotionHistoryId,
+    promotionTerm: plain.classGroup?.term ?? null,
+    semesterId:
+      plain.semesterId ??
+      plain.semesterDetail?.semesterId ??
+      plain.classGroup?.semesterId ??
+      null,
+    semesterName: plain.semesterDetail?.name ?? null,
+    semesterTermType: plain.semesterDetail?.termType ?? null,
+    acedmicYearId:
+      plain.acedmicYearId ?? plain.acedmicYearSection?.acedmicYearId ?? null,
+    acedmicYearTitle: plain.acedmicYearSection?.yearTitle ?? null,
+    classSectionId: plain.classSectionsId ?? null,
+    classSectionName: plain.section ?? plain.sectionDetail?.sectionName ?? null,
+    className: plain.class ?? plain.classGroup?.className ?? null,
+    sessionId: plain.sessionId ?? null,
+    promotionStatus,
+  };
+}
+
+function buildPromotionTermsForStudent(student) {
+  const plain = student.get ? student.get({ plain: true }) : student;
+  const history = plain.sectionHistory ?? [];
+  const currentSection = plain.studentSections ?? null;
+
+  const termMap = new Map();
+
+  for (const entry of history) {
+    const mapped = mapPromotionTermFromSection(
+      entry.classSection,
+      entry.status,
+      entry.id,
+    );
+    if (!mapped?.classSectionId) {
+      continue;
+    }
+    const key = `${mapped.classSectionId}:${mapped.promotionStatus}`;
+    termMap.set(key, mapped);
+  }
+
+  if (currentSection) {
+    const currentMapped = mapPromotionTermFromSection(currentSection, 'current');
+    if (currentMapped?.classSectionId) {
+      const currentKey = `${currentMapped.classSectionId}:current`;
+      if (!termMap.has(currentKey)) {
+        termMap.set(currentKey, currentMapped);
+      }
+    }
+  }
+
+  if (termMap.size === 0 && currentSection) {
+    const fallback = mapPromotionTermFromSection(currentSection, 'current');
+    if (fallback) {
+      termMap.set(`${fallback.classSectionId ?? 'current'}:current`, fallback);
+    }
+  }
+
+  return [...termMap.values()].sort((a, b) => {
+    const termA = a.promotionTerm ?? Number.MAX_SAFE_INTEGER;
+    const termB = b.promotionTerm ?? Number.MAX_SAFE_INTEGER;
+    if (termA !== termB) {
+      return termA - termB;
+    }
+    return String(a.promotionStatus).localeCompare(String(b.promotionStatus));
+  });
+}
+
+function resolveAdmissionYear(terms) {
+  if (!terms.length) {
+    return null;
+  }
+  const admissionTerm =
+    terms.find((entry) => entry.promotionTerm === 1) ??
+    terms.find((entry) => entry.promotionStatus === 'current') ??
+    terms[0];
+
+  if (!admissionTerm?.acedmicYearId) {
+    return null;
+  }
+
+  return {
+    admissionAcedmicYearId: admissionTerm.acedmicYearId,
+    admissionAcedmicYearTitle: admissionTerm.acedmicYearTitle ?? null,
+  };
+}
+
+function mapPromotionStudentListRow(student) {
+  const plain = student.get ? student.get({ plain: true }) : student;
+  const promotionTermHistory = buildPromotionTermsForStudent(student);
+  const currentTermEntry =
+    promotionTermHistory.find((entry) => entry.promotionStatus === 'current') ??
+    (plain.studentSections
+      ? mapPromotionTermFromSection(plain.studentSections, 'current')
+      : null);
+  const admissionYear = resolveAdmissionYear(promotionTermHistory);
+
+  return {
+    studentId: plain.studentId,
+    studentName: buildStudentName(plain),
+    scholarNumber: plain.scholarNumber,
+    enrollNumber: plain.enrollNumber ?? null,
+    admissionDate: plain.admisssionDate ?? null,
+    programCourseId: plain.courseId,
+    programCourseName: plain.course?.courseName ?? null,
+    specializationId: plain.specializationId ?? null,
+    specializationName: plain.specialization?.specializationName ?? null,
+    admissionAcedmicYearId: admissionYear?.admissionAcedmicYearId ?? null,
+    admissionAcedmicYearTitle: admissionYear?.admissionAcedmicYearTitle ?? null,
+    currentPromotionTerm: currentTermEntry?.promotionTerm ?? null,
+    currentSemesterId: plain.semesterId ?? currentTermEntry?.semesterId ?? null,
+    currentSemesterName:
+      plain.studentSemester?.name ?? currentTermEntry?.semesterName ?? null,
+    currentClassSectionId:
+      plain.classSectionsId ?? currentTermEntry?.classSectionId ?? null,
+    currentClassSectionName:
+      currentTermEntry?.classSectionName ?? plain.studentSections?.section ?? null,
+    currentSessionId: plain.sessionId ?? currentTermEntry?.sessionId ?? null,
+    currentAcedmicYearId: currentTermEntry?.acedmicYearId ?? null,
+    currentAcedmicYearTitle: currentTermEntry?.acedmicYearTitle ?? null,
+    promotionTermHistory,
+  };
+}
+
+function buildStudentName({ firstName, middleName, lastName }) {
+  return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+}
+
+export async function getPromotionStudentList(payload) {
+  const page = Number(payload.page) || 1;
+  const limit = Number(payload.limit) || 20;
+
+  const { rows, totalCount, totalPages } =
+    await studentRepository.getPromotionStudentList({
+      page,
+      limit,
+      search: payload.search,
+      courseId: payload.courseId,
+      term: payload.term != null ? Number(payload.term) : undefined,
+    });
+
+  return {
+    promotionStudents: rows.map(mapPromotionStudentListRow),
+    pagination: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages,
+    },
+  };
+}
+
 export async function getAvailablePromotionClassSections({
   courseId,
   term,

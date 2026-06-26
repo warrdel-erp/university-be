@@ -26,7 +26,6 @@ const employeeCodeMasterTypeModel = sequelize.define(
     code :{
         type: DataTypes.STRING,
         allowNull: false,
-        unique:true,
     },
     description:{
         type: DataTypes.STRING,
@@ -89,7 +88,14 @@ const employeeCodeMasterTypeModel = sequelize.define(
 {
     tableName: 'employee_code_master_type',
     timestamps: true,
-    paranoid:true
+    paranoid: true,
+    indexes: [
+        {
+            unique: true,
+            fields: ['employee_code_master_id', 'university_id', 'institute_id', 'code'],
+            name: 'unique_code_master_type_per_tenant_category',
+        },
+    ],
 },
 );
 

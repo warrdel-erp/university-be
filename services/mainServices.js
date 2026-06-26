@@ -412,10 +412,25 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
     }
 }
 
-export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
-    const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+export async function getClassRecord(courseId, classSectionsId) {
+    const result = await studentRepository.getClassRecord(courseId, classSectionsId);
+    const section = result.classSection
+        ? (result.classSection.get
+            ? result.classSection.get({ plain: true })
+            : result.classSection)
+        : null;
 
     const response = {
+        classSection: section
+            ? {
+                classSectionsId: section.classSectionsId,
+                courseId: section.courseId,
+                semesterId: section.semesterId ?? null,
+                acedmicYearId: section.acedmicYearId ?? null,
+                sectionName: section.section ?? null,
+                className: section.class ?? null,
+            }
+            : null,
         student: result.student.map((s) => ({
             studentId: s.studentId,
             firstName: s.firstName,
@@ -423,6 +438,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
             scholarNumber: s.scholarNumber,
             email: s.email,
             phoneNumber: s.phoneNumber,
+            semesterId: s.semesterId ?? null,
             semesterName: s.studentSemester?.name || null,
             className: s.studentSections?.class || null,
             sectionName: s.studentSections?.section || null,

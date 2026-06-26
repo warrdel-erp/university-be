@@ -21,11 +21,12 @@ export async function getCourseData(courseId) {
     });
 }
 
-export async function getClassSectionOptions(courseId, term) {
+export async function getClassSectionOptions(courseId, term, sessionId) {
     return await scoped(model.classSectionModel).findAll({
         attributes: [['section', 'label'], ['class_sections_id', 'value']],
         where: {
             ...(courseId && { courseId }),
+            ...(sessionId && { sessionId }),
         },
         include: [{
             model: model.classModel,

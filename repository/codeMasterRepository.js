@@ -1,25 +1,71 @@
 import * as model from "../models/index.js";
+import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt"];
 const excludeTypeMeta = [...excludeMeta, "employeeCodeMasterId", "employee_code_master_id"];
 
+const scopedCodeValuesInclude = {
+    model: model.employeeCodeMasterType,
+    as: "codes",
+    attributes: { exclude: excludeTypeMeta },
+    where: buildScope(model.employeeCodeMasterType),
+    required: false,
+};
+
+function dedupeCategoriesByType(rows) {
+    const byType = new Map();
+    for (const row of rows) {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        const key = String(plain.codeMasterType ?? "").toLowerCase();
+        if (!key || byType.has(key)) {
+            continue;
+        }
+        byType.set(key, row);
+    }
+    return [...byType.values()];
+}
+
+async function assertCodeValueUnique({ employeeCodeMasterId, code, excludeTypeId }) {
+    const existing = await scoped(model.employeeCodeMasterType).findOne({
+        where: {
+            employeeCodeMasterId,
+            code,
+            ...(excludeTypeId && {
+                employeeCodeMasterTypeId: { [Op.ne]: excludeTypeId },
+            }),
+        },
+        attributes: ["employeeCodeMasterTypeId"],
+    });
+    if (existing) {
+        const error = new Error(
+            "Code value already exists for this category in the active institute",
+        );
+        error.statusCode = 400;
+        throw error;
+    }
+}
+
 export async function getCodeMasterById(employeeCodeMasterId) {
-    const master = await scoped(model.employeeCodeMaster).findOne({
+    const master = await model.employeeCodeMaster.findOne({
         where: { employeeCodeMasterId },
-        attributes: ["employeeCodeMasterId"],
+        attributes: ["employeeCodeMasterId", "codeMasterType"],
     });
     if (!master) {
-        throw new Error("Code master category not found");
+        const error = new Error("Code master category not found");
+        error.statusCode = 404;
+        throw error;
     }
     return master;
 }
 
 export async function getAllEmployeeType() {
     try {
-        return scoped(model.employeeCodeMaster).findAll({
+        const rows = await model.employeeCodeMaster.findAll({
             attributes: { exclude: excludeMeta },
+            order: [["codeMasterType", "ASC"], ["employeeCodeMasterId", "ASC"]],
         });
+        return dedupeCategoriesByType(rows);
     } catch (error) {
         console.error("Error in getting all employee type:", error);
         throw error;
@@ -28,6 +74,10 @@ export async function getAllEmployeeType() {
 
 export async function addEmployeeCode(data) {
     try {
+        await assertCodeValueUnique({
+            employeeCodeMasterId: data.employeeCodeMasterId,
+            code: data.code,
+        });
         return scoped(model.employeeCodeMasterType).create(data);
     } catch (error) {
         console.error("Error in add employee code:", error);
@@ -37,24 +87,25 @@ export async function addEmployeeCode(data) {
 
 export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
     try {
-        return scoped(model.employeeCodeMaster).findAll({
+        const categoryWhere = {
+            ...(employeeCodeMasterId &&
+                Number(employeeCodeMasterId) !== 0 && { employeeCodeMasterId }),
+            ...(key && { codeMasterType: key }),
+        };
+
+        const rows = await model.employeeCodeMaster.findAll({
             attributes: { exclude: excludeMeta },
-            where: {
-                ...(employeeCodeMasterId && Number(employeeCodeMasterId) !== 0 && { employeeCodeMasterId }),
-                ...(key && { codeMasterType: key }),
-            },
-            include: [
-                {
-                    model: model.employeeCodeMasterType,
-                    as: "codes",
-                    attributes: { exclude: excludeTypeMeta },
-                    where: buildScope(model.employeeCodeMasterType),
-                    required: false,
-                },
-            ],
+            where: categoryWhere,
+            order: [["codeMasterType", "ASC"], ["employeeCodeMasterId", "ASC"]],
+            include: [scopedCodeValuesInclude],
         });
+
+        return dedupeCategoriesByType(rows);
     } catch (error) {
-        console.error(`Error in getting employee code and types for Id ${employeeCodeMasterId} or key ${key}:`, error);
+        console.error(
+            `Error in getting employee code and types for Id ${employeeCodeMasterId} or key ${key}:`,
+            error,
+        );
         throw error;
     }
 }
@@ -62,11 +113,19 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
 export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
     try {
         const existing = await scoped(model.employeeCodeMasterType).findOne({
-            attributes: ["employeeCodeMasterTypeId"],
+            attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code"],
             where: { employeeCodeMasterTypeId },
         });
         if (!existing) {
             return false;
+        }
+
+        if (info.code != null && info.code !== existing.code) {
+            await assertCodeValueUnique({
+                employeeCodeMasterId: existing.employeeCodeMasterId,
+                code: info.code,
+                excludeTypeId: employeeCodeMasterTypeId,
+            });
         }
 
         await scoped(model.employeeCodeMasterType).update(info, {
@@ -102,8 +161,9 @@ export async function deleteCodeMasterType(employeeCodeMasterTypeId) {
 
 export async function getEmployeeCodesTypesForStudentImport() {
     try {
-        return scoped(model.employeeCodeMaster).findAll({
+        const rows = await model.employeeCodeMaster.findAll({
             attributes: ["employeeCodeMasterId", "codeMasterType"],
+            order: [["codeMasterType", "ASC"], ["employeeCodeMasterId", "ASC"]],
             include: [
                 {
                     model: model.employeeCodeMasterType,
@@ -114,6 +174,7 @@ export async function getEmployeeCodesTypesForStudentImport() {
                 },
             ],
         });
+        return dedupeCategoriesByType(rows);
     } catch (error) {
         console.error("Error in getting employee code and types in bul import :", error);
         throw error;
