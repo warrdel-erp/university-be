@@ -7,25 +7,59 @@ import { ATTENDANCE_STATUS } from "../constant.js";
 
 export { ATTENDANCE_STATUS };
 
+function normalizeTimeTableMappingIds(timeTableMappingId) {
+  const mappingIds = Array.isArray(timeTableMappingId)
+    ? timeTableMappingId
+    : [timeTableMappingId];
+
+  if (!mappingIds.length) {
+    throw new Error('timeTableMappingId is required');
+  }
+
+  return mappingIds;
+}
+
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
-  try {
-    const isExists = await attendanceService.checkAttendanceExists(attendanceData.timeTableMappingId, attendanceData.date);
+  const mappingIds = normalizeTimeTableMappingIds(attendanceData.timeTableMappingId);
+
+  const pendingMappingIds = [];
+  const skippedMappingIds = [];
+
+  for (const mappingId of mappingIds) {
+    const isExists = await attendanceService.checkAttendanceExists(mappingId, attendanceData.date);
     if (isExists) {
-      throw new Error(`Attendance already marked for this date and period`);
+      skippedMappingIds.push(mappingId);
+    } else {
+      pendingMappingIds.push(mappingId);
     }
+  }
 
-    const attendanceRecords = attendanceData.attendance.map(attendance => ({
-      ...attendance,
-      classSectionsId: attendanceData.classSectionsId,
-      timeTableMappingId: attendanceData.timeTableMappingId,
-      date: attendanceData.date,
-      createdBy,
-      updatedBy,
-    }));
+  if (pendingMappingIds.length === 0) {
+    throw new Error(
+      mappingIds.length === 1
+        ? 'Attendance already marked for this date and period'
+        : 'Attendance already marked for all periods on this date'
+    );
+  }
 
-    const addedAttendance = await attendanceService.addAttendance(attendanceRecords);
-    return addedAttendance;
+  const t = await sequelize.transaction();
+  try {
+    const attendanceRecords = pendingMappingIds.flatMap((mappingId) =>
+      attendanceData.attendance.map((attendance) => ({
+        ...attendance,
+        classSectionsId: attendanceData.classSectionsId,
+        timeTableMappingId: mappingId,
+        date: attendanceData.date,
+        createdBy,
+        updatedBy,
+      }))
+    );
+
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
+    await t.commit();
+    return { addedAttendance, markedPeriods: pendingMappingIds, skippedPeriods: skippedMappingIds };
   } catch (error) {
+    await t.rollback();
     console.error('Error adding Attendance:', error);
     throw error;
   }

@@ -3996,7 +3996,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45",
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4007,10 +4007,23 @@
               "query": [
                 {
                   "key": "employeeId",
-                  "value": "45"
+                  "value": "45",
+                  "description": "Required — teacher employeeId"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "true",
+                  "description": "true = merge consecutive periods (same date, routine, subject). false = one row per period."
+                },
+                {
+                  "key": "date",
+                  "value": "2026-06-24",
+                  "description": "Optional — cutoff date (YYYY-MM-DD). Defaults to today. Only dates strictly before this are returned.",
+                  "disabled": true
                 }
               ]
-            }
+            },
+            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=true`)\nConsecutive periods merge into one object with `classScheduleItems[]` and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
           },
           "response": []
         },
@@ -5070,9 +5083,327 @@
     },
     {
       "name": "attendance",
+      "description": "Class attendance under `/attendance`.\n\n**Auth:** Bearer `{{token}}` — tenant `universityId` / `instituteId` from auth context.\n\n**Marking:** `POST /` accepts `timeTableMappingId` as a **number** (one period) or **number[]** (grouped consecutive periods). Same `attendance` list is saved for each mapping ID.\n\n**Check marked status:** use **GET /employee/pastSchedule?groupPeriods=true** (`attendanceStatus` on group) or **GET /previous-classes/:employeeId** (flat per-period list).\n\n**attendanceStatus values:** Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday.",
       "item": [
         {
-          "name": "student attendance bulk",
+          "name": "mark attendance (POST)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionsId\": 316,\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\",\n      \"notes\": \"Uninformed\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance"
+              ]
+            },
+            "description": "**POST /attendance**\n\nMark attendance for one or more class periods on one date.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `classSectionsId` | Class section PK |\n| `timeTableMappingId` | **number** (one period) **or number[]** (grouped periods) |\n| `date` | `YYYY-MM-DD` |\n| `attendance` | Array of per-student rows |\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `section` | Ignored by API (display only) |\n\n### Each `attendance[]` item\n| Field | Required | Notes |\n|-------|----------|--------|\n| `studentId` | yes | |\n| `attendanceStatus` | yes | Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday |\n| `notes` | no | |\n| `description` | no | |\n\n### Behavior\n- Duplicate check per `timeTableMappingId` + `date` — already-marked periods are **skipped**; only remaining periods are inserted. Fails only if **all** periods are already marked (or single period already marked)\n- Injects `createdBy` / `updatedBy` from token; tenant columns from scoped create\n\n### 201\n`{ \"message\": \"Attendance Add Successfully\" }` — when some periods were skipped, also returns `markedPeriods` and `skippedPeriods` arrays"
+          },
+          "response": []
+        },
+        {
+          "name": "mark attendance grouped periods (POST)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionsId\": 12,\n  \"section\": \"A\",\n  \"timeTableMappingId\": [45, 46, 47],\n  \"date\": \"2026-06-25\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance"
+              ]
+            },
+            "description": "**POST /attendance** — grouped periods\n\nSame student list is written for each `timeTableMappingId` in the array. Use mapping IDs from `classScheduleItems` when `GET /employee/pastSchedule?groupPeriods=true`."
+          },
+          "response": []
+        },
+        {
+          "name": "update attendance (PATCH)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"attendanceId\": 1,\n    \"attendanceStatus\": \"Present\",\n    \"notes\": \"Updated\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance"
+              ]
+            },
+            "description": "**PATCH /attendance**\n\nUpdate existing attendance rows. Body is an **array**; each item must include `attendanceId`."
+          },
+          "response": []
+        },
+        {
+          "name": "get all attendance (grouped)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance"
+              ]
+            },
+            "description": "**GET /attendance**\n\nAll attendance in tenant scope, grouped by subject + employee + class section + date."
+          },
+          "response": []
+        },
+        {
+          "name": "get attendance by date",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/byDate?date=2026-06-20&classSectionsId=316&employeeId=35",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "byDate"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-06-20",
+                  "description": "Required — YYYY-MM-DD"
+                },
+                {
+                  "key": "classSectionsId",
+                  "value": "316",
+                  "description": "Required"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "35",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**GET /attendance/byDate**\n\nAttendance records for a specific date, class section, and teacher. Use for today's classes (pastSchedule only returns dates before cutoff)."
+          },
+          "response": []
+        },
+        {
+          "name": "previous classes (marked / pending)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/previous-classes/35",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "previous-classes",
+                "35"
+              ]
+            },
+            "description": "**GET /attendance/previous-classes/:employeeId**\n\nFlat list of past class dates per period with mark status (through yesterday).\n\nEach row includes:\n- `status`: `MARKED` | `PENDING`\n- `attendance`: present count string e.g. `\"5 / 30\"`\n- `timeTableMappingId`, `date`, `period`, subject, class section\n\nDoes **not** group consecutive periods — use **GET /employee/pastSchedule?groupPeriods=true** for group-level `attendanceStatus`."
+          },
+          "response": []
+        },
+        {
+          "name": "employee class dates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "classDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "195"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "52"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            },
+            "description": "**GET /attendance/classDates**\n\nDates on which the teacher had class for a class-section + subject (from timetable routine)."
+          },
+          "response": []
+        },
+        {
+          "name": "student attendance batch",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classSectionId\": 195,\n  \"filters\": [\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 64\n    },\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 65\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/attendance/getStudentAttendance/batch",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "getStudentAttendance",
+                "batch"
+              ]
+            },
+            "description": "**POST /attendance/getStudentAttendance/batch**\n\nFetch student attendance for multiple date + `timeTableMappingId` pairs (e.g. grouped periods on same day).\n\n### Body\n| Field | Notes |\n|-------|--------|\n| `classSectionId` | number |\n| `filters` | `{ date: YYYY-MM-DD, timeTableMappingId: number }[]` |"
+          },
+          "response": []
+        },
+        {
+          "name": "student attendance bulk (deprecated)",
           "request": {
             "auth": {
               "type": "bearer",
@@ -5110,12 +5441,13 @@
                   "value": "41"
                 }
               ]
-            }
+            },
+            "description": "**GET /attendance/studentAttendance/bulk** — **@deprecated**. Prefer batch POST or report APIs."
           },
           "response": []
         },
         {
-          "name": "student attendance batch (simple)",
+          "name": "excel import",
           "request": {
             "auth": {
               "type": "bearer",
@@ -5130,25 +5462,26 @@
             "method": "POST",
             "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n    \"classSectionId\": 195,\n    \"filters\": [\n        {\n            \"date\": \"2025-07-08\",\n            \"timeTableMappingId\": 64,\n            \"periodName\": \"Period2\"\n        },\n        {\n            \"date\": \"2025-07-08\",\n            \"timeTableMappingId\": 65,\n            \"periodName\": \"Period3\"\n        }\n    ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "attendance",
+                  "type": "file",
+                  "src": []
                 }
-              }
+              ]
             },
             "url": {
-              "raw": "{{baseurl}}/attendance/getStudentAttendance/batch",
+              "raw": "{{baseurl}}/attendance/excelImport",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "attendance",
-                "getStudentAttendance",
-                "batch"
+                "excelImport"
               ]
-            }
+            },
+            "description": "**POST /attendance/excelImport**\n\nBulk import from Excel. Multipart form field name: **`attendance`** (file)."
           },
           "response": []
         }
