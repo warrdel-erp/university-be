@@ -295,6 +295,19 @@ export const getPromotionStudentList = async (req, res) => {
     }
 };
 
+export const getStudentPromotionHistory = async (req, res) => {
+    try {
+        const result = await studentService.getPromotionHistory(req.query);
+        const message = req.query.studentId
+            ? "Student promotion history fetched successfully"
+            : "Promotion student list fetched successfully";
+        return SuccessResponse(res, 200, message, result.data, result.pagination);
+    } catch (error) {
+        console.error("Error in getStudentPromotionHistory:", error);
+        return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+    }
+};
+
 export const getFeePlanInitiate = async (req, res) => {
     try {
         const { page, limit } = req.query;

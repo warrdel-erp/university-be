@@ -172,10 +172,9 @@ export async function getEmployeeByemployeeId(employeeId) {
   }
 }
 
-export async function getAllCourses({ acedmicYearId, campusId } = {}) {
+export async function getAllCourses({ campusId } = {}) {
   try {
     const instituteScope = buildScope(model.instituteModel);
-    const sessionScope = buildScope(model.sessionModel);
 
     return await scoped(model.courseModel).findAll({
       include: [
@@ -208,11 +207,8 @@ export async function getAllCourses({ acedmicYearId, campusId } = {}) {
               model: model.sessionModel,
               as: 'session',
               attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
-              where: {
-                ...sessionScope,
-                ...(acedmicYearId && { acedmicYearId }),
-              },
-              required: Boolean(acedmicYearId),
+              where: buildScope(model.sessionModel),
+              required: true,
             },
           ],
         },
@@ -224,49 +220,10 @@ export async function getAllCourses({ acedmicYearId, campusId } = {}) {
   }
 }
 
-export async function getCourseWithSessionsData(
-  courseId,
-  acedmicYearId,
-  instituteIdFromUser
-) {
+export async function getCourseWithSessionsData(courseId) {
   try {
-    const courseInstituteRow = await scoped(model.courseModel).findOne({
-      where: { courseId },
-      attributes: ['instituteId'],
-      include: [{ model: model.instituteModel, as: 'instituted', attributes: ['campusId'] }],
-    });
-    if (!courseInstituteRow) return null;
-
-    const { instituteId: courseInstituteId, instituted } = courseInstituteRow.get({ plain: true });
-    const instituteCampusId = instituted?.campusId;
-    let allowedInstituteIds = [courseInstituteId];
-
-    if (instituteIdFromUser != null) {
-      if (instituteCampusId != null) {
-        const institutesOnSameCampus = await scoped(model.instituteModel).findAll({
-          where: { campusId: instituteCampusId },
-          attributes: ['instituteId'],
-        });
-        if (
-          institutesOnSameCampus.some(
-            (institute) => institute.instituteId === instituteIdFromUser
-          )
-        ) {
-          allowedInstituteIds = [instituteIdFromUser];
-        }
-      } else if (instituteIdFromUser === courseInstituteId) {
-        allowedInstituteIds = [instituteIdFromUser];
-      }
-    }
-
-    const instituteScopeWhere =
-      allowedInstituteIds.length === 1
-        ? { instituteId: allowedInstituteIds[0] }
-        : { instituteId: { [Op.in]: allowedInstituteIds } };
-
-    const mappingScope = buildScope(model.sessionCouseMappingModel);
-    const sessionScope = buildScope(model.sessionModel);
     const classScope = buildScope(model.classModel);
+    const classSectionScope = buildScope(model.classSectionModel);
 
     const course = await scoped(model.courseModel).findOne({
       where: { courseId },
@@ -275,7 +232,6 @@ export async function getCourseWithSessionsData(
           model: model.sessionCouseMappingModel,
           as: 'sessionCourseMappings',
           attributes: ['sessionCourseMappingId', 'courseId', 'sessionId'],
-          where: mappingScope,
           required: false,
           include: [
             {
@@ -289,25 +245,22 @@ export async function getCourseWithSessionsData(
                 'classTillDate',
                 'acedmicYearId',
               ],
-              where: {
-                ...sessionScope,
-                ...(acedmicYearId ? { acedmicYearId } : {}),
-              },
-              required: Boolean(acedmicYearId),
+              where: buildScope(model.sessionModel),
+              required: true,
               include: [
                 {
                   model: model.classSectionModel,
                   as: 'classSession',
                   attributes: ['classSectionsId', 'section'],
                   required: false,
-                  where: { courseId, ...instituteScopeWhere },
+                  where: { courseId, ...classSectionScope },
                 },
                 {
                   model: model.classModel,
                   as: 'classes',
                   attributes: ['classId', 'term'],
                   required: false,
-                  where: { courseId, ...classScope, ...instituteScopeWhere },
+                  where: { courseId, ...classScope },
                 },
               ],
             },

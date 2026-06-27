@@ -6,6 +6,37 @@ function excludeTimestamps() {
   return ["createdAt", "updatedAt"];
 }
 
+function feePlanProfileInclude() {
+  return {
+    model: model.feePlanProfileModel,
+    as: "feePlanProfile",
+    required: false,
+    attributes: ["feePlanProfileId", "name", "planType", "category", "courseSessionId"],
+    include: [
+      {
+        model: model.sessionCouseMappingModel,
+        as: "courseSessionMapping",
+        required: false,
+        attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
+        include: [
+          {
+            model: model.courseModel,
+            as: "courses",
+            required: false,
+            attributes: ["courseId", "courseName"],
+          },
+          {
+            model: model.sessionModel,
+            as: "session",
+            required: false,
+            attributes: ["sessionId", "sessionName"],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function feeInvoiceItemsInclude() {
   return {
     model: model.studentFeeInvoiceItemsModel,
@@ -38,6 +69,24 @@ function feePlanItemInclude() {
   };
 }
 
+function feePlanItemDetailInclude() {
+  return {
+    model: model.feePlanItemModel,
+    as: "feePlanItem",
+    required: false,
+    attributes: { exclude: excludeTimestamps() },
+    include: [
+      feePlanProfileInclude(),
+      {
+        model: model.feePlanSubItemsModel,
+        as: "feePlanSubItems",
+        required: false,
+        attributes: { exclude: excludeTimestamps() },
+      },
+    ],
+  };
+}
+
 function studentInclude() {
   return {
     model: model.studentModel,
@@ -52,7 +101,56 @@ function studentInclude() {
       "mobileNumber",
       "enrollNumber",
       "feePlanProfileId",
+      "courseId",
+      "sessionId",
     ],
+  };
+}
+
+function studentDetailInclude() {
+  return {
+    model: model.studentModel,
+    as: "studentFeeInvoiceStudent",
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "email",
+      "mobileNumber",
+      "enrollNumber",
+      "feePlanProfileId",
+      "courseId",
+      "sessionId",
+    ],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        required: false,
+        attributes: ["courseId", "courseName"],
+      },
+      {
+        model: model.sessionModel,
+        as: "studentSession",
+        required: false,
+        attributes: ["sessionId", "sessionName"],
+      },
+      {
+        ...feePlanProfileInclude(),
+        as: "studentFeePlanProfile",
+      },
+    ],
+  };
+}
+
+function instituteInclude() {
+  return {
+    model: model.instituteModel,
+    as: "instituteStudentFeeInvoice",
+    required: false,
+    attributes: ["instituteId", "instituteName", "instituteCode"],
   };
 }
 
@@ -103,7 +201,12 @@ export async function bulkCreateStudentFeeInvoiceItems(rows, options = {}) {
 export async function findStudentFeeInvoiceById(studentFeeInvoiceId, options = {}) {
   return scoped(model.studentFeeInvoiceModel).findOne({
     where: { studentFeeInvoiceId },
-    include: [studentInclude(), feePlanItemInclude(), feeInvoiceItemsInclude()],
+    include: [
+      instituteInclude(),
+      studentDetailInclude(),
+      feePlanItemDetailInclude(),
+      feeInvoiceItemsInclude(),
+    ],
     transaction: options.transaction,
   });
 }
