@@ -53,6 +53,7 @@ import section from "./router/sectionRoute.js";
 import holiday from "./router/holidayRoute.js";
 import electiveSubject from "./router/electiveSubjectRoute.js";
 import building from "./router/buildingRoute.js";
+import governanceBody from "./router/governanceBodyRoute.js";
 import floor from "./router/floorRoute.js";
 import head from "./router/headRoute.js";
 import subAccount from "./router/subAccountRoute.js"; // this is department
@@ -140,6 +141,7 @@ app.use("/libraryCreation", libraryCreation);
 app.use("/libraryStructure", libraryStructure);
 app.use("/head", head);
 app.use("/building", building);
+app.use("/governanceBody", governanceBody);
 app.use("/floor", floor);
 app.use("/subAccount", subAccount); // this is department
 app.use("/department", department); // this is sub_account

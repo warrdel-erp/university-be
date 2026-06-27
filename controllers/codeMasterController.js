@@ -29,7 +29,8 @@ export const getEmployeeCodesTypes = async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error('Error in getting employee code and types:', error);
-        res.status(500).send('Internal Server Error');
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).send(error.message || 'Internal Server Error');
     }
 };
 

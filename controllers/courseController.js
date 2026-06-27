@@ -109,3 +109,32 @@ export const getTermOptionsByCourse = async (req, res) => {
     ErrorResponse(res, error.message, statusCode);
   }
 };
+
+export const deleteCourse = async (req, res) => {
+  try {
+    const courseId = Number(req.params.courseId);
+
+    if (!Number.isInteger(courseId) || courseId <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'courseId is required',
+      });
+    }
+
+    const result = await courseService.deleteCourse(courseId);
+
+    return res.status(200).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error in Delete Course Controller:', error);
+    const statusCode = error.statusCode
+      || (/Cannot delete|not found|mapped/i.test(error.message) ? 400 : 500);
+
+    return res.status(statusCode).json({
+      status: 'error',
+      message: error.message || 'Internal Server Error',
+    });
+  }
+};

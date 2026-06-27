@@ -1345,7 +1345,313 @@
     },
     {
       "name": "course",
+      "description": "Course read APIs under `/course` and **course management** under `/main/course`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/course` | Create one or more courses |\n| PATCH | `/main/course` | Update `courseName`, `courseCode`, `departmentId` only |\n| PATCH | `/main/course/status` | Activate or deactivate — same endpoint, set `isActive` |\n| DELETE | `/course/:courseId` | Delete course if not session-mapped; cascades setup data |\n| GET | `/course` | List courses |\n\n**Delete rules:** blocked only when `courseId` exists in `session_course_mapping` (any session). Removes specializations, subjects, semesters, and other setup linked to the course.\n\n**Inactive course rules:** cannot add new subjects or map to new sessions.",
+      "variable": [
+        {
+          "key": "course_level_id",
+          "value": "1",
+          "type": "string",
+          "description": "employee_code_master_type id for course level"
+        },
+        {
+          "key": "department_id",
+          "value": "1",
+          "type": "string",
+          "description": "department.departmentId — optional on create/update"
+        }
+      ],
       "item": [
+        {
+          "name": "create course (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const created = Array.isArray(json) ? json[0] : json;",
+                  "const courseId = created?.courseId ?? created?.dataValues?.courseId;",
+                  "if (courseId) {",
+                  "  pm.collectionVariables.set('course_id', String(courseId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_levelId\": {{course_level_id}},\n  \"affiliatedUniversityId\": {{affiliated_university_id}},\n  \"departmentId\": {{department_id}},\n  \"term\": \"semester\",\n  \"courses\": [\n    {\n      \"courseName\": \"B.Tech CSE\",\n      \"courseCode\": \"BTCSE-{{$timestamp}}\",\n      \"courseDuration\": 4,\n      \"capacity\": \"60\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**POST /main/course** — create one or more courses.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `course_levelId` | yes | Course level master type id |\n| `courses[]` | yes | At least one course |\n| `courses[].courseName` | yes | |\n| `courses[].courseCode` | yes | |\n| `departmentId` | no | Root default for all courses in batch |\n| `courses[].departmentId` | no | Overrides root; can be set later via PATCH |\n| `affiliatedUniversityId` | no | Defaults to institute's affiliated university |\n| `term` | no | `semester` (default), `trimester`, `quarterly`, `yearly` |\n| `courses[].courseDuration` | no | Years — used to compute `totalTerms` |\n| `courses[].capacity` | no | |\n\nSets `{{course_id}}` from first created course."
+          },
+          "response": []
+        },
+        {
+          "name": "update course (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"courseName\": \"B.Tech Computer Science\",\n  \"courseCode\": \"BTCS-UPD-{{$timestamp}}\",\n  \"departmentId\": {{department_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**PATCH /main/course** — update course details.\n\nOnly these fields can be changed: `courseName`, `courseCode`, `departmentId`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `courseName` | no | At least one updatable field required |\n| `courseCode` | no | |\n| `departmentId` | no | Send `null` to clear department link |"
+          },
+          "response": []
+        },
+        {
+          "name": "activate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is active', () => pm.expect(json.isActive).to.eql(true));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — activate a course.\n\nSame endpoint for activate and deactivate; set `isActive` to `true` or `false`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `isActive` | yes | `true` = active, `false` = inactive |\n\n**When inactive:** new subjects and new session mappings are blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "deactivate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is inactive', () => pm.expect(json.isActive).to.eql(false));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — deactivate a course.\n\nSame endpoint as activate; set `\"isActive\": false`.\n\nInactive courses cannot receive new subjects or be mapped to new sessions."
+          },
+          "response": []
+        },
+        {
+          "name": "delete course (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('delete success', () => pm.expect(json.status).to.eql('success'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/{{course_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "{{course_id}}"
+              ]
+            },
+            "description": "**DELETE /course/:courseId** — permanently delete a course.\n\n**Allowed only when:** course `courseId` has **no row** in `session_course_mapping` (checked across the full table).\n\n**Also removes** setup data created after course creation:\n- Specializations\n- Subjects (+ class-subject mappers, teacher mappings)\n- Semesters\n- Grade courses, POs, exam setup terms, syllabus, timetable structures, etc.\n\n**400** if session-mapped.\n**404** if course not found."
+          },
+          "response": []
+        },
         {
           "name": "get",
           "request": {
@@ -14173,6 +14479,565 @@
           ]
         }
       ]
+    },
+    {
+      "name": "governance",
+      "description": "Governance **Bodies** under `/governanceBody`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/governanceBody` | Create body |\n| GET | `/governanceBody` | List all (includes `parentBody`) |\n| GET | `/governanceBody/single` | Get one — `?governanceBodyId=` |\n| PATCH | `/governanceBody` | Update |\n| DELETE | `/governanceBody` | Hard delete — blocked if child bodies exist |\n\n**category:** Authority, Board, Committee, Council, Cell, Task Force, Working Group\n\n**status:** Active, Inactive, Dissolved",
+      "variable": [
+        {
+          "key": "governance_body_id",
+          "value": "1",
+          "type": "string",
+          "description": "governance_body.governanceBodyId — set from create response"
+        },
+        {
+          "key": "governance_parent_body_id",
+          "value": "",
+          "type": "string",
+          "description": "Optional parentBodyId for nested bodies"
+        }
+      ],
+      "item": [
+        {
+          "name": "governance body",
+          "item": [
+            {
+              "name": "create (POST)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "const body = json?.data;",
+                      "const id = body?.governanceBodyId ?? body?.dataValues?.governanceBodyId;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('governance_body_id', String(id));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Academic Council\",\n  \"code\": \"AC-{{$timestamp}}\",\n  \"category\": \"Council\",\n  \"description\": \"Academic governance body\",\n  \"parentBodyId\": null,\n  \"constitutedOn\": \"2024-01-15\",\n  \"effectiveFrom\": \"2024-01-15\",\n  \"effectiveTo\": null,\n  \"status\": \"Active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**POST /governanceBody** — create a governance body.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `name` | yes | |\n| `code` | yes | Unique per institute |\n| `category` | yes | Authority, Board, Committee, Council, Cell, Task Force, Working Group |\n| `description` | no | |\n| `parentBodyId` | no | Optional parent body in same institute |\n| `constitutedOn` | no | YYYY-MM-DD |\n| `effectiveFrom` / `effectiveTo` | no | YYYY-MM-DD |\n| `status` | no | Active (default), Inactive, Dissolved |\n\nSets `{{governance_body_id}}` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all (GET)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**GET /governanceBody** — list all governance bodies for the institute. Each item may include nested `parentBody`."
+              },
+              "response": []
+            },
+            {
+              "name": "get one (GET single)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody/single?governanceBodyId={{governance_body_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "governanceBodyId",
+                      "value": "{{governance_body_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /governanceBody/single?governanceBodyId=** — fetch one governance body with optional `parentBody` include."
+              },
+              "response": []
+            },
+            {
+              "name": "update (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"governanceBodyId\": {{governance_body_id}},\n  \"name\": \"Academic Council (Updated)\",\n  \"code\": \"AC-UPD-{{$timestamp}}\",\n  \"category\": \"Council\",\n  \"description\": \"Updated academic governance body\",\n  \"status\": \"Active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**PATCH /governanceBody** — update a governance body.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `governanceBodyId` | yes | |\n| Other fields | no | At least one updatable field required |\n\nUpdatable: `name`, `code`, `category`, `description`, `parentBodyId` (null to clear), `constitutedOn`, `effectiveFrom`, `effectiveTo`, `status`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete (DELETE)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody?governanceBodyId={{governance_body_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ],
+                  "query": [
+                    {
+                      "key": "governanceBodyId",
+                      "value": "{{governance_body_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /governanceBody?governanceBodyId=** — permanently delete a governance body.\n\n**400** if child bodies reference this as `parentBodyId`.\n\n**404** if not found."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "teacher substitute",
+      "description": "Teacher **Substitutes** under `/teacherSubstitute`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/teacherSubstitute` | Map substitute teacher to a teacher |\n| GET | `/teacherSubstitute` | List all — optional `?employeeId=` |\n| GET | `/teacherSubstitute/single` | Get one — `?teacherSubstituteId=` |\n| PATCH | `/teacherSubstitute` | Update substitute mapping |\n| DELETE | `/teacherSubstitute` | Delete mapping |\n\nTeacher and substitute must be different employees in the active institute scope.",
+      "variable": [
+        {
+          "key": "teacher_substitute_id",
+          "value": "1",
+          "type": "string",
+          "description": "teacher_substitute.teacherSubstituteId — set from create response"
+        },
+        {
+          "key": "teacher_employee_id",
+          "value": "49",
+          "type": "string",
+          "description": "employee.employeeId — teacher being substituted"
+        },
+        {
+          "key": "substitute_employee_id",
+          "value": "45",
+          "type": "string",
+          "description": "employee.employeeId — substitute teacher"
+        }
+      ],
+      "item": [
+        {
+          "name": "teacher substitute",
+          "item": [
+            {
+              "name": "create (POST)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "const body = json?.data;",
+                      "const id = body?.teacherSubstituteId ?? body?.dataValues?.teacherSubstituteId;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('teacher_substitute_id', String(id));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"employeeId\": {{teacher_employee_id}},\n  \"substituteEmployeeId\": {{substitute_employee_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/teacherSubstitute",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "teacherSubstitute"
+                  ]
+                },
+                "description": "**POST /teacherSubstitute** — create a teacher substitute mapping.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employee in active institute |\n| `substituteEmployeeId` | yes | Substitute employee in active institute |\n| `userId` | no | Defaults to substitute employee's userId; must match if sent |\n\n**400** if teacher and substitute are the same employee.\n\nSets `{{teacher_substitute_id}}` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all (GET)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/teacherSubstitute?employeeId={{teacher_employee_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "teacherSubstitute"
+                  ],
+                  "query": [
+                    {
+                      "key": "employeeId",
+                      "value": "{{teacher_employee_id}}",
+                      "description": "Optional — filter by teacher employeeId"
+                    }
+                  ]
+                },
+                "description": "**GET /teacherSubstitute** — list teacher substitute mappings for the institute.\n\nOptional query `employeeId` filters mappings for one teacher.\n\nEach item includes `employee` and `substituteEmployee` details."
+              },
+              "response": []
+            },
+            {
+              "name": "get one (GET single)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/teacherSubstitute/single?teacherSubstituteId={{teacher_substitute_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "teacherSubstitute",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "teacherSubstituteId",
+                      "value": "{{teacher_substitute_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /teacherSubstitute/single?teacherSubstituteId=** — fetch one teacher substitute mapping with `employee` and `substituteEmployee` includes."
+              },
+              "response": []
+            },
+            {
+              "name": "update (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"teacherSubstituteId\": {{teacher_substitute_id}},\n  \"substituteEmployeeId\": {{substitute_employee_id}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/teacherSubstitute",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "teacherSubstitute"
+                  ]
+                },
+                "description": "**PATCH /teacherSubstitute** — update a teacher substitute mapping.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `teacherSubstituteId` | yes | |\n| `substituteEmployeeId` | no | At least one of `substituteEmployeeId` or `userId` required |\n| `userId` | no | Must match substitute employee when updating userId |\n\nOnly `substituteEmployeeId` and `userId` are updatable."
+              },
+              "response": []
+            },
+            {
+              "name": "delete (DELETE)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/teacherSubstitute?teacherSubstituteId={{teacher_substitute_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "teacherSubstitute"
+                  ],
+                  "query": [
+                    {
+                      "key": "teacherSubstituteId",
+                      "value": "{{teacher_substitute_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /teacherSubstitute?teacherSubstituteId=** — delete a teacher substitute mapping.\n\n**404** if not found in active institute scope."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -14246,7 +15111,19 @@
       "key": "course_id",
       "value": "35",
       "type": "string",
-      "description": "course.courseId — terms / syllabus / promotion APIs"
+      "description": "course.courseId — set from POST /main/course or used by terms / syllabus / promotion APIs"
+    },
+    {
+      "key": "course_level_id",
+      "value": "1",
+      "type": "string",
+      "description": "employee_code_master_type id — POST /main/course course_levelId"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string",
+      "description": "department.departmentId — optional on POST/PATCH /main/course"
     },
     {
       "key": "student_id",
@@ -14288,6 +15165,18 @@
       "value": "12",
       "type": "string",
       "description": "institute.instituteId — for syllabus create and tenant-scoped APIs"
+    },
+    {
+      "key": "governance_body_id",
+      "value": "1",
+      "type": "string",
+      "description": "governance_body.governanceBodyId — set from governance create response"
+    },
+    {
+      "key": "teacher_substitute_id",
+      "value": "1",
+      "type": "string",
+      "description": "teacher_substitute.teacherSubstituteId — set from teacher substitute create response"
     },
     {
       "key": "session_id",

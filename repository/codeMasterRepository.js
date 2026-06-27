@@ -95,7 +95,7 @@ async function assertCodeValueUnique({
 
   if (existing) {
     const error = new Error(
-      "Code value already exists for this category in the active university",
+      "Code value already exists for this category in the active institute",
     );
 
     error.statusCode = 400;
@@ -207,7 +207,7 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key) {
     const codeTypes = await scoped(model.employeeCodeMasterType).findAll({
       attributes: { exclude: excludeTypeMeta },
 
-      where: { employeeCodeMasterId: categoryIds },
+      where: { employeeCodeMasterId: { [Op.in]: categoryIds } },
 
       order: [
         ["employeeCodeMasterId", "ASC"],

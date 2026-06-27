@@ -1,6 +1,7 @@
-import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
+import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import * as instituteRepository from '../repository/instituteRepository.js';
+import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
@@ -27,16 +28,23 @@ function resolveTermConfig(term) {
 
 function normalizeAddCoursePayload(data) {
     const rootTerm = data.term ?? 'semester';
+    const rootSubAccountId =
+        coercePositiveInt(data.subAccountId) ?? coercePositiveInt(data.departmentId);
     const courses = Array.isArray(data.courses) ? data.courses : [];
 
     return {
         course_levelId: coercePositiveInt(data.course_levelId),
         affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
         acedmicYearId: coercePositiveInt(data.acedmicYearId),
+        subAccountId: rootSubAccountId,
         term: rootTerm,
         courses: courses.map((course) => ({
             courseName: course.courseName,
             courseCode: course.courseCode,
+            subAccountId:
+                coercePositiveInt(course.subAccountId)
+                ?? coercePositiveInt(course.departmentId)
+                ?? rootSubAccountId,
             courseDuration: course.courseDuration != null && course.courseDuration !== ''
                 ? Number(course.courseDuration)
                 : null,
@@ -44,6 +52,17 @@ function normalizeAddCoursePayload(data) {
             term: course.term ?? rootTerm,
         })),
     };
+}
+
+async function resolveSubAccountId(subAccountId) {
+    if (subAccountId == null) {
+        return null;
+    }
+    const subAccount = await getSingleSubAccountDetails(subAccountId);
+    if (!subAccount) {
+        throw new Error('subAccountId not found for this institute');
+    }
+    return subAccountId;
 }
 
 export async function getAllCollegesAndCourses() {
@@ -183,6 +202,9 @@ export async function addCourse(data, createdBy) {
                     (course.courseDuration * 12) / termConfig.monthsPerTerm,
                 );
             }
+            if (course.subAccountId != null) {
+                payload.subAccountId = await resolveSubAccountId(course.subAccountId);
+            }
 
             const result = await mainRepository.addCourse(payload, transaction);
             results.push(result);
@@ -197,21 +219,59 @@ export async function addCourse(data, createdBy) {
     }
 }
 
-export const changeCourseStatus = async (courseId) => {
+export async function updateCourse(data) {
+    const {
+        courseId,
+        courseName,
+        courseCode,
+        departmentId,
+        subAccountId: subAccountIdInput,
+    } = data;
+
     const course = await getCourseByCourseId(courseId);
     if (!course) {
         throw new Error('Course not found');
     }
 
-    const newStatus = !course.dataValues.isActive;
+    const updateData = {};
+    if (courseName != null) {
+        updateData.courseName = courseName;
+    }
+    if (courseCode != null) {
+        updateData.courseCode = courseCode;
+    }
 
-    await changeCourseStatuss(courseId, { isActive: newStatus });
+    const programId =
+        subAccountIdInput !== undefined
+            ? subAccountIdInput
+            : departmentId;
+
+    if (programId !== undefined) {
+        updateData.subAccountId = programId == null ? null : await resolveSubAccountId(programId);
+    }
+
+    const updated = await updateCourseById(courseId, updateData);
+    if (!updated) {
+        throw new Error('Course not found');
+    }
+
+    return updated;
+}
+
+export async function changeCourseStatus(courseId, isActive) {
+    const course = await getCourseByCourseId(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    await changeCourseStatuss(courseId, { isActive });
 
     return {
-        message: `Course status updated successfully to`,
-        isActive: newStatus
+        courseId: Number(courseId),
+        isActive,
+        message: isActive ? 'Course activated successfully' : 'Course deactivated successfully',
     };
-};
+}
 
 export async function addSpecialization(data, createdBy) {
     const results = [];
@@ -235,10 +295,11 @@ export async function addSpecialization(data, createdBy) {
 }
 
 export async function addSubject(data, createdBy) {
+    const { courseId, subjects, specializationId, acedmicYearId } = data;
+    await assertCourseIsActive(courseId, 'have new subjects added');
+
     const results = [];
     try {
-        const { courseId, subjects, specializationId, acedmicYearId } = data;
-
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({
                 ...subject,
@@ -438,6 +499,8 @@ export async function createClass(data, createdBy) {
 
 export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy) {
     try {
+        await assertCourseIsActive(courseId, 'have new subjects added');
+
         const subjectCreationPromises = excelData.map(async (row) => {
             const subjectData = {
                 courseId,

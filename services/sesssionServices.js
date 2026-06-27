@@ -1,4 +1,5 @@
 import * as sessionCreationService from "../repository/sessionRepository.js";
+import { assertCourseIsActive } from "../repository/courseRepository.js";
 
 function mapUniqueConstraintError(error) {
   if (error?.name === "SequelizeUniqueConstraintError") {
@@ -142,6 +143,8 @@ export async function updateCouseSessionMapping(data, updatedBy) {
     if (!course) {
       throw new Error(`Course ID ${courseId} not found`);
     }
+
+    await assertCourseIsActive(courseId, 'be mapped to a new session');
 
     const targetSessionId = payload.sessionId ?? mapping.sessionId;
     const existingMapping = await sessionCreationService.getMappingByCourseAndSession(

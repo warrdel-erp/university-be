@@ -11,11 +11,35 @@ function omitAcademicYearScope(scopeWhere = {}) {
 export async function getCourseByCourseId(courseId) {
   try {
     return await scoped(model.courseModel).findOne({
-      attributes: ['universityId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
+      attributes: ['courseId', 'universityId', 'courseDuration', 'isActive', 'termType', 'totalTerms'],
       where: { courseId },
     });
   } catch (error) {
     console.error('Error in getting course details:', error);
+    throw error;
+  }
+}
+
+export async function updateCourseById(courseId, data) {
+  try {
+    const existing = await scoped(model.courseModel).findOne({
+      where: { courseId },
+      attributes: ['courseId'],
+    });
+    if (!existing) {
+      return null;
+    }
+
+    await scoped(model.courseModel).update(data, {
+      where: { courseId },
+    });
+
+    return scoped(model.courseModel).findOne({
+      where: { courseId },
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+    });
+  } catch (error) {
+    console.error(`Error updating course ${courseId}:`, error);
     throw error;
   }
 }
@@ -46,6 +70,24 @@ export async function changeCourseStatuss(courseId, status) {
     console.error(`Error change coursse status ${courseId}:`, error);
     throw error;
   }
+}
+
+export async function assertCourseIsActive(courseId, action = 'perform this action') {
+  const course = await scoped(model.courseModel).findOne({
+    where: { courseId },
+    attributes: ['courseId', 'isActive', 'courseName'],
+  });
+
+  if (!course) {
+    throw new Error('Course not found');
+  }
+
+  if (!course.isActive) {
+    const label = course.courseName ? `"${course.courseName}"` : `ID ${courseId}`;
+    throw new Error(`Course ${label} is inactive and cannot ${action}`);
+  }
+
+  return course;
 }
 
 export async function getCourseByAcedmicId(acedmicYearId) {
@@ -431,6 +473,42 @@ export async function getSemestersByCourseAndYear(courseId, acedmicYearId) {
     });
   } catch (error) {
     console.error('Error in Course Repository (getSemestersByCourseAndYear):', error);
+    throw error;
+  }
+}
+
+export async function deleteCourseById(courseId) {
+  try {
+    const numericCourseId = Number(courseId);
+
+    const course = await scoped(model.courseModel).findOne({
+      where: { courseId: numericCourseId },
+      attributes: ['courseId', 'courseName'],
+    });
+
+    if (!course) {
+      return null;
+    }
+
+    const sessionMappingCount = await model.sessionCouseMappingModel.count({
+      where: { courseId: numericCourseId },
+    });
+
+    if (sessionMappingCount > 0) {
+      throw new Error('Cannot delete course: it is mapped to one or more sessions');
+    }
+
+    await scoped(model.courseModel).destroy({
+      where: { courseId: numericCourseId },
+    });
+
+    return {
+      courseId: numericCourseId,
+      courseName: course.courseName ?? course.dataValues?.courseName,
+      message: 'Course deleted successfully',
+    };
+  } catch (error) {
+    console.error(`Error deleting course ${courseId}:`, error);
     throw error;
   }
 }
