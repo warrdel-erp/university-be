@@ -3,6 +3,13 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function listStudentFeePayments(req, res) {
   try {
+    if (req.query.studentFeeInvoiceId) {
+      const data = await studentFeePaymentService.getStudentFeePaymentsByInvoiceId(
+        req.query.studentFeeInvoiceId,
+      );
+      return SuccessResponse(res, 200, "Payment fetched successfully", data);
+    }
+
     const { data, pagination } = await studentFeePaymentService.listStudentFeePayments(req.query);
     return SuccessResponse(res, 200, "Payments fetched successfully", data, pagination);
   } catch (error) {

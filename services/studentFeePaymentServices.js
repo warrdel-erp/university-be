@@ -291,31 +291,54 @@ export async function recordStudentFeePaymentFromDetails(body, createdBy) {
   };
 }
 
+function formatPaymentWithPayee(payment, studentById) {
+  const plain = toPlain(payment);
+  const payee = resolvePayeeForPaymentList(plain.payeeType, plain.payeeId, studentById);
+  const paymentItems = (plain.paymentItems || []).map((item) => formatPaymentItem(item));
+
+  return {
+    ...formatStudentFeePaymentRecord(payment, payee),
+    paymentItems,
+  };
+}
+
+async function loadStudentByIdMapForPayments(payments) {
+  const studentIds = paymentRepo.collectStudentPayeeIdsFromPayments(payments);
+  const studentRows = await paymentRepo.findStudentsByIdsForPaymentList(studentIds);
+  const studentById = new Map();
+  for (const row of studentRows) {
+    const plain = toPlain(row);
+    studentById.set(plain.studentId, row);
+  }
+  return studentById;
+}
+
 export async function getStudentFeePaymentById(studentFeePaymentId) {
   const payment = await paymentRepo.findStudentFeePaymentById(studentFeePaymentId);
   if (!payment) {
     throw httpError("Student fee payment not found", 404);
   }
 
-  const plain = toPlain(payment);
-  const studentById = new Map();
+  const studentById = await loadStudentByIdMapForPayments([payment]);
+  return formatPaymentWithPayee(payment, studentById);
+}
 
-  if (plain.payeeType === "STUDENT") {
-    const studentRows = await paymentRepo.findStudentsByIdsForPaymentList([plain.payeeId]);
-    if (studentRows[0]) {
-      studentById.set(toPlain(studentRows[0]).studentId, studentRows[0]);
-    }
+export async function getStudentFeePaymentsByInvoiceId(studentFeeInvoiceId) {
+  const invoice = await paymentRepo.findStudentFeeInvoiceForPayment(studentFeeInvoiceId);
+  if (!invoice) {
+    throw httpError("Student fee invoice not found", 404);
   }
 
-  const payee = resolvePayeeForPaymentList(plain.payeeType, plain.payeeId, studentById);
-  const paymentItems = [];
-  for (const item of plain.paymentItems ?? []) {
-    paymentItems.push(formatPaymentItem(item));
+  const payments = await paymentRepo.findStudentFeePaymentsByInvoiceId(studentFeeInvoiceId);
+  if (!payments.length) {
+    throw httpError("No payment found for this invoice", 404);
   }
+
+  const studentById = await loadStudentByIdMapForPayments(payments);
 
   return {
-    ...formatStudentFeePaymentRecord(payment, payee),
-    paymentItems,
+    studentFeeInvoiceId: Number(studentFeeInvoiceId),
+    payments: payments.map((payment) => formatPaymentWithPayee(payment, studentById)),
   };
 }
 

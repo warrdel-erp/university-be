@@ -76,6 +76,7 @@ const paginationQueryFields = {
 };
 
 const listPaymentsQuerySchema = z.object({
+  studentFeeInvoiceId: positiveIntegerId.optional(),
   payeeId: positiveIntegerId.optional(),
   search: z
     .string()

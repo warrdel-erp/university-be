@@ -158,6 +158,49 @@ export async function findStudentFeePaymentById(studentFeePaymentId, options = {
   });
 }
 
+export async function findStudentFeePaymentsByInvoiceId(studentFeeInvoiceId, options = {}) {
+  const itemRows = await scoped(model.paymentItemModel).findAll({
+    attributes: ["paymentId"],
+    where: {
+      referenceId: studentFeeInvoiceId,
+      referenceType: "STUDENT_FEE_INVOICE",
+    },
+    include: [
+      {
+        model: model.studentFeePaymentModel,
+        as: "payment",
+        attributes: [],
+        required: true,
+        where: {
+          paymentType: "INCOMING",
+          ...buildScope(model.studentFeePaymentModel),
+        },
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const paymentIds = [
+    ...new Set(
+      itemRows.map((row) => {
+        const plain = row.get ? row.get({ plain: true }) : row;
+        return plain.paymentId;
+      }),
+    ),
+  ];
+
+  if (!paymentIds.length) {
+    return [];
+  }
+
+  return scoped(model.studentFeePaymentModel).findAll({
+    where: { studentFeePaymentId: { [Op.in]: paymentIds } },
+    include: [{ model: model.paymentItemModel, as: "paymentItems" }],
+    order: [["studentFeePaymentId", "DESC"]],
+    transaction: options.transaction,
+  });
+}
+
 function resolvePagination(pagination = {}) {
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || 20;
