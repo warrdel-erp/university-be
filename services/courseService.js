@@ -69,13 +69,9 @@ export const getCourseWithSubjects = async (acedmicYearId) => {
   }
 };
 
-export const getCourseWithSessions = async (courseId, acedmicYearId, instituteIdFromUser) => {
+export const getCourseWithSessions = async (courseId) => {
   try {
-    return await courseRepository.getCourseWithSessionsData(
-      courseId,
-      acedmicYearId,
-      instituteIdFromUser
-    );
+    return await courseRepository.getCourseWithSessionsData(courseId);
   } catch (error) {
     console.error('Error in Course Service (getCourseWithSessions):', error);
     throw error;

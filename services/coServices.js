@@ -23,7 +23,7 @@ export async function deleteCo(coId) {
     return await coCreationService.deleteCo(coId);
 }
 
-export async function addCoWeightage(coData, createdBy, updatedBy, universityId, instituteId) {
+export async function addCoWeightage(coData, createdBy, updatedBy) {
     const { acedmicYearId, coId, term, total, data } = coData;
 
     if (!Array.isArray(data)) {
@@ -39,8 +39,6 @@ export async function addCoWeightage(coData, createdBy, updatedBy, universityId,
         mark: item.mark,
         createdBy,
         updatedBy,
-        universityId,
-        instituteId,
     }));
 
     return await coCreationService.addCoWeightage(entries);

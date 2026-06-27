@@ -1,16 +1,11 @@
 import * as courseService from '../services/courseService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
 
 export const listCourses = async (req, res) => {
   try {
-    const acedmicYearId = req.query.acedmicYearId ?? getTenantStore().academicYearId;
     const { campusId } = req.query;
 
-    const result = await courseService.listCourses({
-      acedmicYearId,
-      campusId,
-    });
+    const result = await courseService.listCourses({ campusId });
 
     return res.status(200).json({
       status: 'success',
@@ -48,9 +43,7 @@ export const getCourseWithSubjects = async (req, res) => {
 
 export const getCourseSessions = async (req, res) => {
   try {
-    const acedmicYearId = req.query.acedmicYearId ?? getTenantStore().academicYearId;
     const courseId = Number(req.params.courseId);
-    const instituteId = getTenantStore().instituteId;
 
     if (!courseId) {
       return res.status(400).json({
@@ -59,18 +52,7 @@ export const getCourseSessions = async (req, res) => {
       });
     }
 
-    if (!acedmicYearId) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'acedmicYearId is required',
-      });
-    }
-
-    const result = await courseService.getCourseWithSessions(
-      courseId,
-      acedmicYearId,
-      instituteId
-    );
+    const result = await courseService.getCourseWithSessions(courseId);
 
     if (!result) {
       return res.status(404).json({
