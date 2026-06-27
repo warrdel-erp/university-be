@@ -1,7 +1,7 @@
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import * as instituteRepository from '../repository/instituteRepository.js';
-import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
+import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
@@ -28,19 +28,23 @@ function resolveTermConfig(term) {
 
 function normalizeAddCoursePayload(data) {
     const rootTerm = data.term ?? 'semester';
-    const rootDepartmentId = coercePositiveInt(data.departmentId);
+    const rootSubAccountId =
+        coercePositiveInt(data.subAccountId) ?? coercePositiveInt(data.departmentId);
     const courses = Array.isArray(data.courses) ? data.courses : [];
 
     return {
         course_levelId: coercePositiveInt(data.course_levelId),
         affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
         acedmicYearId: coercePositiveInt(data.acedmicYearId),
-        departmentId: rootDepartmentId,
+        subAccountId: rootSubAccountId,
         term: rootTerm,
         courses: courses.map((course) => ({
             courseName: course.courseName,
             courseCode: course.courseCode,
-            departmentId: coercePositiveInt(course.departmentId) ?? rootDepartmentId,
+            subAccountId:
+                coercePositiveInt(course.subAccountId)
+                ?? coercePositiveInt(course.departmentId)
+                ?? rootSubAccountId,
             courseDuration: course.courseDuration != null && course.courseDuration !== ''
                 ? Number(course.courseDuration)
                 : null,
@@ -50,14 +54,15 @@ function normalizeAddCoursePayload(data) {
     };
 }
 
-async function validateDepartmentId(departmentId) {
-    if (departmentId == null) {
-        return;
+async function resolveSubAccountId(subAccountId) {
+    if (subAccountId == null) {
+        return null;
     }
-    const department = await getSingleDepartmentDetails(departmentId);
-    if (!department) {
-        throw new Error('departmentId not found for this institute');
+    const subAccount = await getSingleSubAccountDetails(subAccountId);
+    if (!subAccount) {
+        throw new Error('subAccountId not found for this institute');
     }
+    return subAccountId;
 }
 
 export async function getAllCollegesAndCourses() {
@@ -197,9 +202,8 @@ export async function addCourse(data, createdBy) {
                     (course.courseDuration * 12) / termConfig.monthsPerTerm,
                 );
             }
-            if (course.departmentId != null) {
-                await validateDepartmentId(course.departmentId);
-                payload.departmentId = course.departmentId;
+            if (course.subAccountId != null) {
+                payload.subAccountId = await resolveSubAccountId(course.subAccountId);
             }
 
             const result = await mainRepository.addCourse(payload, transaction);
@@ -216,7 +220,13 @@ export async function addCourse(data, createdBy) {
 }
 
 export async function updateCourse(data) {
-    const { courseId, courseName, courseCode, departmentId } = data;
+    const {
+        courseId,
+        courseName,
+        courseCode,
+        departmentId,
+        subAccountId: subAccountIdInput,
+    } = data;
 
     const course = await getCourseByCourseId(courseId);
     if (!course) {
@@ -230,11 +240,14 @@ export async function updateCourse(data) {
     if (courseCode != null) {
         updateData.courseCode = courseCode;
     }
-    if (departmentId !== undefined) {
-        if (departmentId != null) {
-            await validateDepartmentId(departmentId);
-        }
-        updateData.departmentId = departmentId;
+
+    const programId =
+        subAccountIdInput !== undefined
+            ? subAccountIdInput
+            : departmentId;
+
+    if (programId !== undefined) {
+        updateData.subAccountId = programId == null ? null : await resolveSubAccountId(programId);
     }
 
     const updated = await updateCourseById(courseId, updateData);

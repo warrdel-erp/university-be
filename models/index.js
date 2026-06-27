@@ -243,8 +243,8 @@ affiliatedIniversityModel.hasMany(courseModel, { foreignKey: "affiliated_univers
 courseModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "instituted" });
 instituteModel.hasMany(courseModel, { foreignKey: "institute_id", as: "instituted" });
 
-courseModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "courseDepartment" });
-departmentModel.hasMany(courseModel, { foreignKey: "department_id", as: "departmentCourses" });
+courseModel.belongsTo(subAccountModel, { foreignKey: "sub_account_id", as: "courseProgram" });
+subAccountModel.hasMany(courseModel, { foreignKey: "sub_account_id", as: "programCourses" });
 
 employeeCodeMasterType.hasMany(courseModel, { foreignKey: "course_levelId", as: "coursesCodeMaster" });
 courseModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_levelId", as: "courseLevelCourses" });
