@@ -14479,6 +14479,279 @@
           ]
         }
       ]
+    },
+    {
+      "name": "governance",
+      "description": "Governance **Bodies** under `/governanceBody`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/governanceBody` | Create body |\n| GET | `/governanceBody` | List all (includes `parentBody`) |\n| GET | `/governanceBody/single` | Get one — `?governanceBodyId=` |\n| PATCH | `/governanceBody` | Update |\n| DELETE | `/governanceBody` | Hard delete — blocked if child bodies exist |\n\n**category:** Authority, Board, Committee, Council, Cell, Task Force, Working Group\n\n**status:** Active, Inactive, Dissolved",
+      "variable": [
+        {
+          "key": "governance_body_id",
+          "value": "1",
+          "type": "string",
+          "description": "governance_body.governanceBodyId — set from create response"
+        },
+        {
+          "key": "governance_parent_body_id",
+          "value": "",
+          "type": "string",
+          "description": "Optional parentBodyId for nested bodies"
+        }
+      ],
+      "item": [
+        {
+          "name": "governance body",
+          "item": [
+            {
+              "name": "create (POST)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 201', () => pm.response.to.have.status(201));",
+                      "const json = pm.response.json();",
+                      "const body = json?.data;",
+                      "const id = body?.governanceBodyId ?? body?.dataValues?.governanceBodyId;",
+                      "if (id) {",
+                      "  pm.collectionVariables.set('governance_body_id', String(id));",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Academic Council\",\n  \"code\": \"AC-{{$timestamp}}\",\n  \"category\": \"Council\",\n  \"description\": \"Academic governance body\",\n  \"parentBodyId\": null,\n  \"constitutedOn\": \"2024-01-15\",\n  \"effectiveFrom\": \"2024-01-15\",\n  \"effectiveTo\": null,\n  \"status\": \"Active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**POST /governanceBody** — create a governance body.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `name` | yes | |\n| `code` | yes | Unique per institute |\n| `category` | yes | Authority, Board, Committee, Council, Cell, Task Force, Working Group |\n| `description` | no | |\n| `parentBodyId` | no | Optional parent body in same institute |\n| `constitutedOn` | no | YYYY-MM-DD |\n| `effectiveFrom` / `effectiveTo` | no | YYYY-MM-DD |\n| `status` | no | Active (default), Inactive, Dissolved |\n\nSets `{{governance_body_id}}` from response."
+              },
+              "response": []
+            },
+            {
+              "name": "get all (GET)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**GET /governanceBody** — list all governance bodies for the institute. Each item may include nested `parentBody`."
+              },
+              "response": []
+            },
+            {
+              "name": "get one (GET single)",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody/single?governanceBodyId={{governance_body_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody",
+                    "single"
+                  ],
+                  "query": [
+                    {
+                      "key": "governanceBodyId",
+                      "value": "{{governance_body_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**GET /governanceBody/single?governanceBodyId=** — fetch one governance body with optional `parentBody` include."
+              },
+              "response": []
+            },
+            {
+              "name": "update (PATCH)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test('status 200', () => pm.response.to.have.status(200));"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"governanceBodyId\": {{governance_body_id}},\n  \"name\": \"Academic Council (Updated)\",\n  \"code\": \"AC-UPD-{{$timestamp}}\",\n  \"category\": \"Council\",\n  \"description\": \"Updated academic governance body\",\n  \"status\": \"Active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ]
+                },
+                "description": "**PATCH /governanceBody** — update a governance body.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `governanceBodyId` | yes | |\n| Other fields | no | At least one updatable field required |\n\nUpdatable: `name`, `code`, `category`, `description`, `parentBodyId` (null to clear), `constitutedOn`, `effectiveFrom`, `effectiveTo`, `status`"
+              },
+              "response": []
+            },
+            {
+              "name": "delete (DELETE)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "X-Institute-Id",
+                    "value": "{{institute_id}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseurl}}/governanceBody?governanceBodyId={{governance_body_id}}",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "governanceBody"
+                  ],
+                  "query": [
+                    {
+                      "key": "governanceBodyId",
+                      "value": "{{governance_body_id}}",
+                      "description": "Required"
+                    }
+                  ]
+                },
+                "description": "**DELETE /governanceBody?governanceBodyId=** — permanently delete a governance body.\n\n**400** if child bodies reference this as `parentBodyId`.\n\n**404** if not found."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -14606,6 +14879,12 @@
       "value": "12",
       "type": "string",
       "description": "institute.instituteId — for syllabus create and tenant-scoped APIs"
+    },
+    {
+      "key": "governance_body_id",
+      "value": "1",
+      "type": "string",
+      "description": "governance_body.governanceBodyId — set from governance create response"
     },
     {
       "key": "session_id",
