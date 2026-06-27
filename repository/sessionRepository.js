@@ -387,6 +387,22 @@ export async function syncCourseSessionMappings({
         return { inserted: 0 };
     }
 
+    const inactiveCourses = await scoped(model.courseModel).findAll({
+        where: {
+            courseId: { [Op.in]: courseIdsToInsert },
+            isActive: false,
+        },
+        attributes: ['courseId', 'courseName'],
+        transaction,
+    });
+
+    if (inactiveCourses.length) {
+        const label = inactiveCourses[0].courseName
+            ? `"${inactiveCourses[0].courseName}"`
+            : `ID ${inactiveCourses[0].courseId}`;
+        throw new Error(`Course ${label} is inactive and cannot be mapped to a new session`);
+    }
+
     await scoped(model.sessionCouseMappingModel).bulkCreate(
         courseIdsToInsert.map((courseId) => ({
             sessionId,

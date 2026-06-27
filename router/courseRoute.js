@@ -26,6 +26,10 @@ const classSectionsGroupedSchema = z.object({
     sessionId: z.string().regex(/^\d+$/, "Session Id must be a number").transform(val => parseInt(val)),
 });
 
+const courseIdParamSchema = z.object({
+    courseId: z.coerce.number().int().positive(),
+});
+
 // Routes
 router.get("/", userAuth, validate({ query: listCoursesSchema }), courseController.listCourses);
 
@@ -38,5 +42,7 @@ router.get("/semesterWithClassSections", userAuth, validate({ query: classSectio
 
 
 router.get("/:courseId/terms", userAuth, courseController.getTermOptionsByCourse);
+
+router.delete("/:courseId", userAuth, validate({ params: courseIdParamSchema }), courseController.deleteCourse);
 
 export default router;

@@ -159,3 +159,13 @@ export const getTermOptionsByCourse = async (courseId) => {
     throw error;
   }
 };
+
+export const deleteCourse = async (courseId) => {
+  const result = await courseRepository.deleteCourseById(courseId);
+  if (!result) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return result;
+};

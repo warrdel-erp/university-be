@@ -1345,7 +1345,313 @@
     },
     {
       "name": "course",
+      "description": "Course read APIs under `/course` and **course management** under `/main/course`.\n\n**Auth:** Bearer `{{token}}`. Institute scope from token / `X-Institute-Id`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/course` | Create one or more courses |\n| PATCH | `/main/course` | Update `courseName`, `courseCode`, `departmentId` only |\n| PATCH | `/main/course/status` | Activate or deactivate — same endpoint, set `isActive` |\n| DELETE | `/course/:courseId` | Delete course if not session-mapped; cascades setup data |\n| GET | `/course` | List courses |\n\n**Delete rules:** blocked only when `courseId` exists in `session_course_mapping` (any session). Removes specializations, subjects, semesters, and other setup linked to the course.\n\n**Inactive course rules:** cannot add new subjects or map to new sessions.",
+      "variable": [
+        {
+          "key": "course_level_id",
+          "value": "1",
+          "type": "string",
+          "description": "employee_code_master_type id for course level"
+        },
+        {
+          "key": "department_id",
+          "value": "1",
+          "type": "string",
+          "description": "department.departmentId — optional on create/update"
+        }
+      ],
       "item": [
+        {
+          "name": "create course (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const created = Array.isArray(json) ? json[0] : json;",
+                  "const courseId = created?.courseId ?? created?.dataValues?.courseId;",
+                  "if (courseId) {",
+                  "  pm.collectionVariables.set('course_id', String(courseId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_levelId\": {{course_level_id}},\n  \"affiliatedUniversityId\": {{affiliated_university_id}},\n  \"departmentId\": {{department_id}},\n  \"term\": \"semester\",\n  \"courses\": [\n    {\n      \"courseName\": \"B.Tech CSE\",\n      \"courseCode\": \"BTCSE-{{$timestamp}}\",\n      \"courseDuration\": 4,\n      \"capacity\": \"60\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**POST /main/course** — create one or more courses.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `course_levelId` | yes | Course level master type id |\n| `courses[]` | yes | At least one course |\n| `courses[].courseName` | yes | |\n| `courses[].courseCode` | yes | |\n| `departmentId` | no | Root default for all courses in batch |\n| `courses[].departmentId` | no | Overrides root; can be set later via PATCH |\n| `affiliatedUniversityId` | no | Defaults to institute's affiliated university |\n| `term` | no | `semester` (default), `trimester`, `quarterly`, `yearly` |\n| `courses[].courseDuration` | no | Years — used to compute `totalTerms` |\n| `courses[].capacity` | no | |\n\nSets `{{course_id}}` from first created course."
+          },
+          "response": []
+        },
+        {
+          "name": "update course (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"courseName\": \"B.Tech Computer Science\",\n  \"courseCode\": \"BTCS-UPD-{{$timestamp}}\",\n  \"departmentId\": {{department_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course"
+              ]
+            },
+            "description": "**PATCH /main/course** — update course details.\n\nOnly these fields can be changed: `courseName`, `courseCode`, `departmentId`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `courseName` | no | At least one updatable field required |\n| `courseCode` | no | |\n| `departmentId` | no | Send `null` to clear department link |"
+          },
+          "response": []
+        },
+        {
+          "name": "activate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is active', () => pm.expect(json.isActive).to.eql(true));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — activate a course.\n\nSame endpoint for activate and deactivate; set `isActive` to `true` or `false`.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `isActive` | yes | `true` = active, `false` = inactive |\n\n**When inactive:** new subjects and new session mappings are blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "deactivate course (PATCH status)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('course is inactive', () => pm.expect(json.isActive).to.eql(false));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/course/status",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "course",
+                "status"
+              ]
+            },
+            "description": "**PATCH /main/course/status** — deactivate a course.\n\nSame endpoint as activate; set `\"isActive\": false`.\n\nInactive courses cannot receive new subjects or be mapped to new sessions."
+          },
+          "response": []
+        },
+        {
+          "name": "delete course (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('delete success', () => pm.expect(json.status).to.eql('success'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/{{course_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "{{course_id}}"
+              ]
+            },
+            "description": "**DELETE /course/:courseId** — permanently delete a course.\n\n**Allowed only when:** course `courseId` has **no row** in `session_course_mapping` (checked across the full table).\n\n**Also removes** setup data created after course creation:\n- Specializations\n- Subjects (+ class-subject mappers, teacher mappings)\n- Semesters\n- Grade courses, POs, exam setup terms, syllabus, timetable structures, etc.\n\n**400** if session-mapped.\n**404** if course not found."
+          },
+          "response": []
+        },
         {
           "name": "get",
           "request": {
@@ -14246,7 +14552,19 @@
       "key": "course_id",
       "value": "35",
       "type": "string",
-      "description": "course.courseId — terms / syllabus / promotion APIs"
+      "description": "course.courseId — set from POST /main/course or used by terms / syllabus / promotion APIs"
+    },
+    {
+      "key": "course_level_id",
+      "value": "1",
+      "type": "string",
+      "description": "employee_code_master_type id — POST /main/course course_levelId"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string",
+      "description": "department.departmentId — optional on POST/PATCH /main/course"
     },
     {
       "key": "student_id",

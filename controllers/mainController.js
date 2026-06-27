@@ -71,17 +71,28 @@ export const addCourse = async (req, res) => {
     }
 };
 
-export const changeCourseStatus = async (req, res) => {
+export const updateCourse = async (req, res) => {
     try {
-        const { courseId } = req.query;
-        if (!(courseId)) {
-            return res.status(400).send('courseId is required')
-        }
-        const result = await mainServices.changeCourseStatus(courseId);
+        const result = await mainServices.updateCourse(req.body);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in  change status Course:", error);
-        return res.status(500).send("Internal Server Error");
+        console.error("Error in update Course:", error);
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|not found|scope/i.test(message) ? 400 : 500;
+        return res.status(statusCode).send(message);
+    }
+};
+
+export const changeCourseStatus = async (req, res) => {
+    try {
+        const { courseId, isActive } = req.body;
+        const result = await mainServices.changeCourseStatus(courseId, isActive);
+        return res.status(200).send(result);
+    } catch (error) {
+        console.error("Error in change Course status:", error);
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|not found|scope/i.test(message) ? 400 : 500;
+        return res.status(statusCode).send(message);
     }
 };
 
@@ -113,7 +124,9 @@ export const addSubject = async (req, res) => {
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add SUbject:", error);
-        return res.status(500).send("Internal Server Error");
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|not found|inactive|scope/i.test(message) ? 400 : 500;
+        return res.status(statusCode).send(message);
     }
 };
 
@@ -266,7 +279,9 @@ export const subjectExcel = async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in  Add Subject Excel:", error);
-        res.status(500).send("Internal Server Error");
+        const message = error?.message || 'Internal Server Error';
+        const statusCode = /required|not found|inactive|scope/i.test(message) ? 400 : 500;
+        res.status(statusCode).send(message);
     }
 };
 
