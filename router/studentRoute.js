@@ -13,6 +13,7 @@ import {
   promoteStudent,
   getPromotionAvailableClassSection,
   getPromotionStudentList,
+  getStudentPromotionHistory,
   getFeePlanInitiate,
   getEmptyFeeDetails,
   getStudentSubject,
@@ -372,6 +373,26 @@ router.get(
   userAuth,
   validate({ query: promotionStudentListQuerySchema }),
   getPromotionStudentList,
+);
+
+const promotionHistoryQuerySchema = z
+  .object({
+    studentId: positiveIntegerId.optional(),
+    programCourseId: positiveIntegerId.optional(),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+    studentSearch: z.string().trim().optional(),
+    promotionTerm: z.coerce.number().int().positive().optional(),
+  })
+  .refine((data) => data.studentId != null || data.programCourseId != null, {
+    message: "studentId or programCourseId is required",
+  });
+
+router.get(
+  "/promotion/history",
+  userAuth,
+  validate({ query: promotionHistoryQuerySchema }),
+  getStudentPromotionHistory,
 );
 
 router.post("/promoteStudent", userAuth, promoteStudent);

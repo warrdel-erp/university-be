@@ -1530,156 +1530,196 @@ async function mapPromotionClassSectionRow(row) {
   };
 }
 
-function mapPromotionTermFromSection(section, promotionStatus = 'current', promotionHistoryId = null) {
-  if (!section) {
-    return null;
-  }
-  const plain = section.get ? section.get({ plain: true }) : section;
-  return {
-    promotionHistoryId,
-    promotionTerm: plain.classGroup?.term ?? null,
-    semesterId: plain.classGroup?.semesterId ?? null,
-    semesterName: null,
-    semesterTermType: null,
-    acedmicYearId:
-      plain.acedmicYearId ?? plain.acedmicYearSection?.acedmicYearId ?? null,
-    acedmicYearTitle: plain.acedmicYearSection?.yearTitle ?? null,
-    classSectionId: plain.classSectionsId ?? null,
-    classSectionName: plain.section ?? plain.sectionDetail?.sectionName ?? null,
-    className: plain.class ?? plain.classGroup?.className ?? null,
-    sessionId: plain.sessionId ?? null,
-    promotionStatus,
-  };
-}
-
-function buildPromotionTermsForStudent(student) {
-  const plain = student.get ? student.get({ plain: true }) : student;
-  const history = plain.sectionHistory ?? [];
-  const currentSection = plain.studentSections ?? null;
-
-  const termMap = new Map();
-
-  for (const entry of history) {
-    const mapped = mapPromotionTermFromSection(
-      entry.classSection,
-      entry.status,
-      entry.id,
-    );
-    if (!mapped?.classSectionId) {
-      continue;
-    }
-    const key = `${mapped.classSectionId}:${mapped.promotionStatus}`;
-    termMap.set(key, mapped);
-  }
-
-  if (currentSection) {
-    const currentMapped = mapPromotionTermFromSection(currentSection, 'current');
-    if (currentMapped?.classSectionId) {
-      const currentKey = `${currentMapped.classSectionId}:current`;
-      if (!termMap.has(currentKey)) {
-        termMap.set(currentKey, currentMapped);
-      }
-    }
-  }
-
-  if (termMap.size === 0 && currentSection) {
-    const fallback = mapPromotionTermFromSection(currentSection, 'current');
-    if (fallback) {
-      termMap.set(`${fallback.classSectionId ?? 'current'}:current`, fallback);
-    }
-  }
-
-  return [...termMap.values()].sort((a, b) => {
-    const termA = a.promotionTerm ?? Number.MAX_SAFE_INTEGER;
-    const termB = b.promotionTerm ?? Number.MAX_SAFE_INTEGER;
-    if (termA !== termB) {
-      return termA - termB;
-    }
-    return String(a.promotionStatus).localeCompare(String(b.promotionStatus));
-  });
-}
-
-function resolveAdmissionYear(terms) {
-  if (!terms.length) {
-    return null;
-  }
-  const admissionTerm =
-    terms.find((entry) => entry.promotionTerm === 1) ??
-    terms.find((entry) => entry.promotionStatus === 'current') ??
-    terms[0];
-
-  if (!admissionTerm?.acedmicYearId) {
-    return null;
-  }
-
-  return {
-    admissionAcedmicYearId: admissionTerm.acedmicYearId,
-    admissionAcedmicYearTitle: admissionTerm.acedmicYearTitle ?? null,
-  };
-}
-
-function mapPromotionStudentListRow(student) {
-  const plain = student.get ? student.get({ plain: true }) : student;
-  const promotionTermHistory = buildPromotionTermsForStudent(student);
-  const currentTermEntry =
-    promotionTermHistory.find((entry) => entry.promotionStatus === 'current') ??
-    (plain.studentSections
-      ? mapPromotionTermFromSection(plain.studentSections, 'current')
-      : null);
-  const admissionYear = resolveAdmissionYear(promotionTermHistory);
-
-  return {
-    studentId: plain.studentId,
-    studentName: buildStudentName(plain),
-    scholarNumber: plain.scholarNumber,
-    enrollNumber: plain.enrollNumber ?? null,
-    admissionDate: plain.admisssionDate ?? null,
-    programCourseId: plain.courseId,
-    programCourseName: plain.course?.courseName ?? null,
-    specializationId: plain.specializationId ?? null,
-    specializationName: plain.specialization?.specializationName ?? null,
-    admissionAcedmicYearId: admissionYear?.admissionAcedmicYearId ?? null,
-    admissionAcedmicYearTitle: admissionYear?.admissionAcedmicYearTitle ?? null,
-    currentPromotionTerm: currentTermEntry?.promotionTerm ?? null,
-    currentSemesterId: plain.semesterId ?? currentTermEntry?.semesterId ?? null,
-    currentSemesterName:
-      plain.studentSemester?.name ?? currentTermEntry?.semesterName ?? null,
-    currentClassSectionId:
-      plain.classSectionsId ?? currentTermEntry?.classSectionId ?? null,
-    currentClassSectionName:
-      currentTermEntry?.classSectionName ?? plain.studentSections?.section ?? null,
-    currentSessionId: plain.sessionId ?? currentTermEntry?.sessionId ?? null,
-    currentAcedmicYearId: currentTermEntry?.acedmicYearId ?? null,
-    currentAcedmicYearTitle: currentTermEntry?.acedmicYearTitle ?? null,
-    promotionTermHistory,
-  };
-}
-
 function buildStudentName({ firstName, middleName, lastName }) {
   return [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
 }
 
-export async function getPromotionStudentList(payload) {
+function acedmicYearRef(acedmicYearId) {
+  return acedmicYearId != null ? { acedmicYearId, yearTitle: null } : null;
+}
+
+function mapPromotionClassSection(section) {
+  const plain = asPlain(section);
+  if (!plain) {
+    return null;
+  }
+
+  const term = plain.classGroup?.term ?? null;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.class ?? plain.classGroup?.className ?? null,
+    term,
+    sessionId: plain.sessionId,
+    acedmicYear: acedmicYearRef(plain.acedmicYearId),
+  };
+}
+
+function buildPromotionHistory(student) {
+  const plain = asPlain(student);
+  const entries = new Map();
+
+  for (const row of plain.sectionHistory ?? []) {
+    const classSection = mapPromotionClassSection(row.classSection);
+    if (!classSection?.classSectionsId) {
+      continue;
+    }
+    entries.set(`${classSection.classSectionsId}:${row.status}`, {
+      promotionHistoryId: row.id,
+      status: row.status,
+      classSection,
+      sessionId: classSection.sessionId,
+      acedmicYear: classSection.acedmicYear,
+    });
+  }
+
+  const currentSection = mapPromotionClassSection(plain.studentSections);
+  if (currentSection?.classSectionsId) {
+    const key = `${currentSection.classSectionsId}:current`;
+    if (!entries.has(key)) {
+      entries.set(key, {
+        promotionHistoryId: null,
+        status: 'current',
+        classSection: currentSection,
+        sessionId: currentSection.sessionId,
+        acedmicYear: currentSection.acedmicYear,
+      });
+    }
+  }
+
+  return [...entries.values()].sort((a, b) => {
+    const termA = a.classSection?.term ?? Number.MAX_SAFE_INTEGER;
+    const termB = b.classSection?.term ?? Number.MAX_SAFE_INTEGER;
+    if (termA !== termB) {
+      return termA - termB;
+    }
+    return String(a.status).localeCompare(String(b.status));
+  });
+}
+
+function mapPromotionHistoryStudent(student) {
+  const plain = asPlain(student);
+  const promotionHistory = buildPromotionHistory(student);
+  const admissionEntry = promotionHistory[0];
+
+  return {
+    studentId: plain.studentId,
+    name: buildStudentName(plain),
+    scholarNumber: plain.scholarNumber,
+    enrollNumber: plain.enrollNumber ?? null,
+    admissionDate: plain.admisssionDate ?? null,
+    course: plain.course
+      ? {
+          courseId: plain.course.courseId,
+          courseName: plain.course.courseName,
+          termType: plain.course.termType,
+        }
+      : null,
+    specialization: plain.specialization
+      ? {
+          specializationId: plain.specialization.specializationId,
+          specializationName: plain.specialization.specializationName,
+        }
+      : null,
+    semester: plain.studentSemester
+      ? {
+          semesterId: plain.studentSemester.semesterId,
+          name: plain.studentSemester.name,
+        }
+      : null,
+    admissionYear: admissionEntry?.acedmicYear ?? null,
+    studentSections: mapPromotionClassSection(plain.studentSections),
+    promotionHistory,
+  };
+}
+
+function collectPromotionYearIds(studentRow) {
+  const ids = [];
+  const push = (year) => {
+    if (year?.acedmicYearId != null) {
+      ids.push(year.acedmicYearId);
+    }
+  };
+
+  push(studentRow.admissionYear);
+  push(studentRow.studentSections?.acedmicYear);
+  for (const entry of studentRow.promotionHistory ?? []) {
+    push(entry.acedmicYear);
+  }
+  return ids;
+}
+
+function applyPromotionYearTitles(studentRow, titleMap) {
+  const fill = (year) => {
+    if (year?.acedmicYearId != null) {
+      year.yearTitle = titleMap.get(Number(year.acedmicYearId)) ?? null;
+    }
+  };
+
+  fill(studentRow.admissionYear);
+  fill(studentRow.studentSections?.acedmicYear);
+  for (const entry of studentRow.promotionHistory ?? []) {
+    fill(entry.acedmicYear);
+  }
+
+  return studentRow;
+}
+
+async function mapPromotionHistoryStudents(rows) {
+  const mapped = rows.map(mapPromotionHistoryStudent);
+  const yearIds = mapped.flatMap(collectPromotionYearIds);
+  const titleMap = await studentRepository.getAcademicYearTitlesByIds(yearIds);
+  return mapped.map((row) => applyPromotionYearTitles(row, titleMap));
+}
+
+export async function getPromotionHistory(payload = {}) {
+  const studentId =
+    payload.studentId != null ? Number(payload.studentId) : null;
+
+  if (studentId) {
+    const student = await studentRepository.getPromotionStudentByStudentId(studentId);
+    if (!student) {
+      const error = new Error('Student not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    const [mapped] = await mapPromotionHistoryStudents([student]);
+    return { data: mapped };
+  }
+
   const page = Number(payload.page) || 1;
   const limit = Number(payload.limit) || 20;
-
   const { rows, totalCount, totalPages } =
     await studentRepository.getPromotionStudentList({
       page,
       limit,
-      search: payload.search,
-      courseId: payload.courseId,
-      term: payload.term != null ? Number(payload.term) : undefined,
+      search: payload.search ?? payload.studentSearch,
+      courseId: payload.courseId ?? payload.programCourseId,
+      term:
+        payload.term != null
+          ? Number(payload.term)
+          : payload.promotionTerm != null
+            ? Number(payload.promotionTerm)
+            : undefined,
     });
 
+  const students = await mapPromotionHistoryStudents(rows);
   return {
-    promotionStudents: rows.map(mapPromotionStudentListRow),
-    pagination: {
-      page,
-      limit,
-      total: totalCount,
-      totalPages,
-    },
+    data: { students },
+    pagination: { page, limit, total: totalCount, totalPages },
+  };
+}
+
+export async function getPromotionStudentList(payload) {
+  const result = await getPromotionHistory({
+    ...payload,
+    courseId: payload.courseId,
+    search: payload.search,
+    term: payload.term,
+  });
+  return {
+    promotionStudents: result.data.students,
+    pagination: result.pagination,
   };
 }
 

@@ -337,23 +337,75 @@ const studentClassSectionInclude = {
     ],
 };
 
-const promotionClassSectionDetailInclude = [
-    {
-        model: model.classModel,
-        as: 'classGroup',
-        attributes: ['term', 'semesterId', 'className'],
-    },
-    {
-        model: model.acedmicYearModel,
-        as: 'acedmicYearSection',
+const promotionClassGroupInclude = {
+    model: model.classModel,
+    as: 'classGroup',
+    attributes: ['term', 'semesterId', 'className'],
+};
+
+function buildPromotionStudentIncludes({ term } = {}) {
+    return [
+        {
+            model: model.courseModel,
+            as: 'course',
+            attributes: ['courseId', 'courseName', 'termType'],
+        },
+        {
+            model: model.specializationModel,
+            as: 'specialization',
+            attributes: ['specializationId', 'specializationName'],
+            required: false,
+        },
+        {
+            model: model.semesterModel,
+            as: 'studentSemester',
+            attributes: ['semesterId', 'name'],
+        },
+        {
+            model: model.classSectionModel,
+            as: 'studentSections',
+            attributes: ['classSectionsId', 'section', 'class', 'acedmicYearId', 'sessionId'],
+            required: term != null,
+            include: [
+                {
+                    ...promotionClassGroupInclude,
+                    required: term != null,
+                    ...(term != null && { where: { term } }),
+                },
+            ],
+        },
+        {
+            model: model.studentClassSectionsHistoryModel,
+            as: 'sectionHistory',
+            required: false,
+            separate: true,
+            order: [['createdAt', 'ASC']],
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'classSection',
+                    attributes: ['classSectionsId', 'section', 'class', 'acedmicYearId', 'sessionId'],
+                    include: [promotionClassGroupInclude],
+                },
+            ],
+        },
+    ];
+}
+
+export async function getAcademicYearTitlesByIds(yearIds = []) {
+    const uniqueIds = [...new Set(yearIds.filter((id) => id != null))];
+    if (!uniqueIds.length) {
+        return new Map();
+    }
+
+    const rows = await scoped(model.acedmicYearModel).findAll({
+        where: { acedmicYearId: { [Op.in]: uniqueIds } },
         attributes: ['acedmicYearId', 'yearTitle'],
-    },
-    {
-        model: model.sectionModel,
-        as: 'sectionDetail',
-        attributes: ['sectionId', 'sectionName'],
-    },
-];
+        raw: true,
+    });
+
+    return new Map(rows.map((row) => [Number(row.acedmicYearId), row.yearTitle]));
+}
 
 export async function getPromotionStudentList({
     page = 1,
@@ -365,89 +417,11 @@ export async function getPromotionStudentList({
     try {
         const whereCondition = buildStudentListWhere(search, courseId);
 
-        const currentSectionInclude = {
-            model: model.classSectionModel,
-            as: 'studentSections',
-            attributes: [
-                'classSectionsId',
-                'section',
-                'class',
-                'acedmicYearId',
-                'sessionId',
-                'courseId',
-                'specializationId',
-            ],
-            required: term != null,
-            include: [
-                {
-                    model: model.classModel,
-                    as: 'classGroup',
-                    attributes: ['term', 'semesterId', 'className'],
-                    required: term != null,
-                    ...(term != null && { where: { term } }),
-                },
-                ...promotionClassSectionDetailInclude.slice(1),
-            ],
-        };
-
-        const baseInclude = [
-            {
-                model: model.courseModel,
-                as: 'course',
-                attributes: ['courseId', 'courseName'],
-            },
-            {
-                model: model.specializationModel,
-                as: 'specialization',
-                attributes: ['specializationId', 'specializationName'],
-                required: false,
-            },
-            {
-                model: model.semesterModel,
-                as: 'studentSemester',
-                attributes: ['semesterId', 'name', 'termType'],
-            },
-            studentSessionWithAcademicYearInclude(),
-            currentSectionInclude,
-            {
-                model: model.studentClassSectionsHistoryModel,
-                as: 'sectionHistory',
-                required: false,
-                separate: true,
-                order: [['createdAt', 'ASC']],
-                include: [
-                    {
-                        model: model.classSectionModel,
-                        as: 'classSection',
-                        attributes: [
-                            'classSectionsId',
-                            'section',
-                            'class',
-                            'acedmicYearId',
-                            'sessionId',
-                        ],
-                        include: promotionClassSectionDetailInclude,
-                    },
-                ],
-            },
-        ];
+        const baseInclude = buildPromotionStudentIncludes({ term });
 
         const offset = (page - 1) * limit;
         const queryOptions = {
-            attributes: [
-                'studentId',
-                'scholarNumber',
-                'enrollNumber',
-                'firstName',
-                'middleName',
-                'lastName',
-                'courseId',
-                'specializationId',
-                'semesterId',
-                'classSectionsId',
-                'sessionId',
-                'admisssionDate',
-            ],
+            attributes: promotionStudentAttributes,
             where: whereCondition,
             include: baseInclude,
             offset,
@@ -471,6 +445,34 @@ export async function getPromotionStudentList({
         };
     } catch (error) {
         console.error('Error in getPromotionStudentList:', error);
+        throw error;
+    }
+}
+
+const promotionStudentAttributes = [
+    'studentId',
+    'scholarNumber',
+    'enrollNumber',
+    'firstName',
+    'middleName',
+    'lastName',
+    'courseId',
+    'specializationId',
+    'semesterId',
+    'classSectionsId',
+    'sessionId',
+    'admisssionDate',
+];
+
+export async function getPromotionStudentByStudentId(studentId) {
+    try {
+        return scoped(model.studentModel).findOne({
+            attributes: promotionStudentAttributes,
+            where: { studentId },
+            include: buildPromotionStudentIncludes(),
+        });
+    } catch (error) {
+        console.error('Error in getPromotionStudentByStudentId:', error);
         throw error;
     }
 }

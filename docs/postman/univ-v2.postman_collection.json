@@ -4541,6 +4541,119 @@
           "response": []
         },
         {
+          "name": "promotion — all students history",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/history?programCourseId={{course_id}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "programCourseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "studentSearch",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "promotionTerm",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/history?programCourseId=**\n\nPaginated list of all students in a course with promotion history.\n\nEach row includes: `studentName`, `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]`, `promotedTo`, `promotionTermHistory[]` with `yearTitle` (e.g. 2026-2027)."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — student history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "pm.test('promotionTermHistory is array', () => Array.isArray(data.promotionTermHistory));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/history?studentId={{student_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{student_id}}"
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/history?studentId=**\n\nSingle student promotion profile.\n\nIncludes `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]` (passed term + section + yearTitle), `promotedTo` (current term + yearTitle), and full `promotionTermHistory`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentName\": \"John Doe\",\n    \"scholarNumber\": \"SCH-001\",\n    \"currentPromotionTerm\": 2,\n    \"currentClassSectionId\": 195,\n    \"currentClassSectionName\": \"A\",\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": null,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"current\",\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "promotion — promote student",
           "event": [
             {
