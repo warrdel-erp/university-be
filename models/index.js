@@ -86,6 +86,7 @@ import classModel from "./classModel.js";
 import holidayModel from "./holidayModel.js";
 import electiveSubjectModel from "./electiveSubjectModel.js";
 import buildingModel from "./buildingModel.js";
+import governanceBodyModel from "./governanceBodyModel.js";
 import floorModel from "./floorModel.js";
 import headModel from "./headModel.js";
 import accountModel from "./accountModel.js";
@@ -960,6 +961,9 @@ vehicleModel.hasMany(assignVehicleModel, { foreignKey: "vehicleId", as: "vehicle
 buildingModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campusbuilding" });
 campusModel.hasMany(buildingModel, { foreignKey: "campus_id", as: "campusbuilding" });
 
+governanceBodyModel.belongsTo(governanceBodyModel, { foreignKey: "parent_body_id", as: "parentBody" });
+governanceBodyModel.hasMany(governanceBodyModel, { foreignKey: "parent_body_id", as: "childBodies" });
+
 floorModel.belongsTo(buildingModel, { foreignKey: "building_id", as: "floorBuilding" });
 buildingModel.hasMany(floorModel, { foreignKey: "building_id", as: "floorBuilding" });
 
@@ -1753,6 +1757,7 @@ export {
   holidayModel,
   electiveSubjectModel,
   buildingModel,
+  governanceBodyModel,
   floorModel,
   headModel,
   accountModel,

@@ -195,6 +195,18 @@ export const itCategory = ["INCOME TAX"];
 
 export const buildingTypes = ["Academics", "Residential"];
 
+export const governanceBodyCategories = [
+  "Authority",
+  "Board",
+  "Committee",
+  "Council",
+  "Cell",
+  "Task Force",
+  "Working Group",
+];
+
+export const governanceBodyStatuses = ["Active", "Inactive", "Dissolved"];
+
 export const questionStatus = ["Pending", "Approved", "Rejected"];
 
 export const questionTypes = {
