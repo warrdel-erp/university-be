@@ -70,9 +70,21 @@ async function assertStudentFeePlanProfilePublished(feePlanProfileId, transactio
 }
 
 function invoiceItemsPlain(p) {
-  return (p.feeInvoiceItems ?? []).map((row) =>
-    mapInvoiceItemLine(typeof row.get === "function" ? row.get({ plain: true }) : row)
-  );
+  return (p.feeInvoiceItems || []).map((row) => {
+    const line = typeof row.get === "function" ? row.get({ plain: true }) : row;
+    const catalog = line.feeTypeCatalog || {};
+    return {
+      studentFeeInvoiceItemsId: line.studentFeeInvoiceItemsId,
+      feeTypeId: line.feeTypeId,
+      isMainItem: line.isMainItem,
+      name: catalog.name,
+      description: catalog.description,
+      ledgerType: catalog.ledgerType,
+      amount: toMoneyNumber(line.amount),
+      waiver: line.waiver != null ? toMoneyNumber(line.waiver) : line.waiver,
+      netAmount: netInvoiceItemAmount(line.amount, line.waiver),
+    };
+  });
 }
 
 function invoiceTotalFromItems(feeInvoiceItems) {
@@ -93,7 +105,6 @@ function splitInvoiceAmounts(p) {
 }
 
 function formatStudentDisplayName(student) {
-  if (!student) return "";
   return [student.firstName, student.middleName, student.lastName]
     .filter(Boolean)
     .join(" ")
@@ -102,81 +113,81 @@ function formatStudentDisplayName(student) {
 
 function formatStudentFeeInvoiceListStudent(student) {
   const s = toPlain(student);
-  if (!s?.studentId) return null;
   return {
     studentId: s.studentId,
-    studentName: formatStudentDisplayName(s) || null,
-    scholarNumber: s.scholarNumber ?? null,
+    studentName: formatStudentDisplayName(s),
+    scholarNumber: s.scholarNumber,
   };
 }
 
-function formatStudentFeeInvoiceStudent(student) {
-  const s = toPlain(student);
-  if (!s?.studentId) return null;
+function buildFeePlanCascade(feePlanItem) {
+  if (!feePlanItem) return null;
+
+  const { feePlanProfile, feePlanSubItems, ...item } = feePlanItem;
+  if (!feePlanProfile) {
+    return {
+      feePlanItem: {
+        ...item,
+        feePlanSubItems,
+      },
+    };
+  }
+
+  const { courseSessionMapping, ...profile } = feePlanProfile;
+
   return {
-    studentId: s.studentId,
-    firstName: s.firstName ?? null,
-    middleName: s.middleName ?? null,
-    lastName: s.lastName ?? null,
-    studentName: formatStudentDisplayName(s) || null,
-    scholarNumber: s.scholarNumber ?? null,
-    email: s.email ?? null,
-    mobileNumber: s.mobileNumber ?? null,
-    enrollNumber: s.enrollNumber ?? null,
-    feePlanProfileId: s.feePlanProfileId ?? null,
+    ...profile,
+    courseSessionMapping,
+    feePlanItem: {
+      ...item,
+      feePlanSubItems,
+    },
   };
 }
 
-function mapInvoiceItemLine(line) {
-  const catalog = line.feeTypeCatalog ?? {};
+function buildInvoiceCascade(invoice, split, payment) {
   return {
-    studentFeeInvoiceItemsId: line.studentFeeInvoiceItemsId,
-    feeTypeId: line.feeTypeId ?? catalog.feeTypeCatalogId ?? null,
-    isMainItem: Boolean(line.isMainItem),
-    name: catalog.name ?? null,
-    description: catalog.description ?? null,
-    ledgerType: catalog.ledgerType ?? null,
-    catalogAmount: catalog.amount != null ? toMoneyNumber(catalog.amount) : null,
-    amount: toMoneyNumber(line.amount),
-    waiver: line.waiver == null ? null : toMoneyNumber(line.waiver),
-    netAmount: netInvoiceItemAmount(line.amount, line.waiver),
+    studentFeeInvoiceId: invoice.studentFeeInvoiceId,
+    createDate: invoice.createDate,
+    dueDate: invoice.dueDate,
+    total: invoice.total,
+    status: invoice.status,
+    paymentStatus: payment.paymentStatus,
+    paidAmount: invoice.paidAmount,
+    studentId: invoice.studentId,
+    feePlanItemId: invoice.feePlanItemId,
+    instituteId: invoice.instituteId,
+    created_at: invoice.created_at,
+    updated_at: invoice.updated_at,
+    amounts: {
+      termFee: split.isAdhocInvoice ? null : split.baseAmount,
+      supplementalFees: split.supplementalFeesTotal,
+      invoiceTotal: split.total,
+      paid: payment.paidAmount,
+      balanceDue: payment.balanceDue,
+    },
+    feeInvoiceItems: split.feeInvoiceItems,
   };
 }
 
 export function formatStudentFeeInvoiceResponse(row) {
   const p = toPlain(row);
-  if (!p) return null;
+  const {
+    studentFeeInvoiceStudent,
+    instituteStudentFeeInvoice,
+    feePlanItem,
+    feeInvoiceItems: _feeInvoiceItems,
+    ...invoice
+  } = p;
 
   const split = splitInvoiceAmounts(p);
-  const storedTotal = toMoneyNumber(p.total);
-  const total = split.total;
+  const payment = paymentSummaryFromPlain(p, split.total);
 
   return {
-    studentFeeInvoiceId: p.studentFeeInvoiceId,
-    studentId: p.studentId,
-    student: formatStudentFeeInvoiceStudent(p.studentFeeInvoiceStudent),
-    feePlanItemId: p.feePlanItemId,
-    instituteId: p.instituteId,
-    amount: split.isAdhocInvoice ? 0 : split.baseAmount,
-    supplementalFeesTotal: split.supplementalFeesTotal,
-    total,
-    storedTotal,
-    totalVerified: decimalCompare(total, storedTotal) === 0,
-    createDate: p.createDate,
-    dueDate: p.dueDate ?? null,
-    status: p.status,
-    ...paymentSummaryFromPlain(p, total),
-    createdAt: p.createdAt ?? p.created_at ?? null,
-    updatedAt: p.updatedAt ?? p.updated_at ?? null,
-    feePlanItem: {
-      feePlanItemId: (p.feePlanItem ?? {}).feePlanItemId ?? p.feePlanItemId,
-      feePlanProfileId: (p.feePlanItem ?? {}).feePlanProfileId ?? null,
-      amount: split.baseAmount,
-      createDate: (p.feePlanItem ?? {}).createDate ?? null,
-      dueDate: (p.feePlanItem ?? {}).dueDate ?? null,
-    },
-    feeInvoiceItems: split.feeInvoiceItems,
-    supplementalFees: split.supplementalFees,
+    student: studentFeeInvoiceStudent,
+    institute: instituteStudentFeeInvoice,
+    feePlan: buildFeePlanCascade(feePlanItem),
+    invoice: buildInvoiceCascade(invoice, split, payment),
   };
 }
 
@@ -359,20 +370,22 @@ export async function listStudentFeeInvoicesByStudentId(studentId) {
 function formatFeesInvoiceTableRow(row) {
   const p = toPlain(row);
   const payment = paymentSummaryFromPlain(p);
+  const student = p.studentFeeInvoiceStudent || {};
+
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
     invoiceNo: p.studentFeeInvoiceId,
     studentId: p.studentId,
-    studentName: formatStudentDisplayName(p.studentFeeInvoiceStudent ?? {}) || null,
-    scholarNumber: p.studentFeeInvoiceStudent?.scholarNumber ?? null,
+    studentName: formatStudentDisplayName(student),
+    scholarNumber: student.scholarNumber,
     amount: toMoneyNumber(p.total),
     paid: payment.totalPaid,
     deposits: null,
     balanceDue: payment.balanceDue,
-    status: (p.paymentStatus ?? "unpaid").toUpperCase(),
-    paymentStatus: p.paymentStatus ?? "unpaid",
+    status: p.paymentStatus.toUpperCase(),
+    paymentStatus: p.paymentStatus,
     createDate: p.createDate,
-    dueDate: p.dueDate ?? null,
+    dueDate: p.dueDate,
   };
 }
 
