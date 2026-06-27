@@ -99,6 +99,6 @@ const employeeCodeMasterTypeModel = sequelize.define(
 },
 );
 
-employeeCodeMasterTypeModel.scopeConfig = { university: true, institute: false, academicYear: false };
+employeeCodeMasterTypeModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default employeeCodeMasterTypeModel;
