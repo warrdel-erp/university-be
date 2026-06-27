@@ -1568,8 +1568,6 @@ function buildPromotionHistory(student) {
       promotionHistoryId: row.id,
       status: row.status,
       classSection,
-      sessionId: classSection.sessionId,
-      acedmicYear: classSection.acedmicYear,
     });
   }
 
@@ -1581,8 +1579,6 @@ function buildPromotionHistory(student) {
         promotionHistoryId: null,
         status: 'current',
         classSection: currentSection,
-        sessionId: currentSection.sessionId,
-        acedmicYear: currentSection.acedmicYear,
       });
     }
   }
@@ -1627,7 +1623,7 @@ function mapPromotionHistoryStudent(student) {
           name: plain.studentSemester.name,
         }
       : null,
-    admissionYear: admissionEntry?.acedmicYear ?? null,
+    admissionYear: admissionEntry?.classSection?.acedmicYear ?? null,
     studentSections: mapPromotionClassSection(plain.studentSections),
     promotionHistory,
   };
@@ -1644,7 +1640,7 @@ function collectPromotionYearIds(studentRow) {
   push(studentRow.admissionYear);
   push(studentRow.studentSections?.acedmicYear);
   for (const entry of studentRow.promotionHistory ?? []) {
-    push(entry.acedmicYear);
+    push(entry.classSection?.acedmicYear);
   }
   return ids;
 }
@@ -1659,7 +1655,7 @@ function applyPromotionYearTitles(studentRow, titleMap) {
   fill(studentRow.admissionYear);
   fill(studentRow.studentSections?.acedmicYear);
   for (const entry of studentRow.promotionHistory ?? []) {
-    fill(entry.acedmicYear);
+    fill(entry.classSection?.acedmicYear);
   }
 
   return studentRow;
