@@ -33,6 +33,19 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
+    if (data.classSectionsId == null && data.classSectionId != null) {
+      data.classSectionsId = data.classSectionId;
+    }
+
+    if (!data.courseId && data.classSectionsId) {
+      const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
+        data.classSectionsId,
+      );
+      if (section?.courseId) {
+        data.courseId = section.courseId;
+      }
+    }
+
     // Check for routine overlap for the same class section
     if (data.classSectionsId && data.startingDate && data.endingDate) {
       const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository(
@@ -80,9 +93,9 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
   }
 }
 
-export async function gettimeTableCreateDetails(universityId) {
-  try {
-    const result = await timeTableCreateRepository.getTimeTableCreateDetails(universityId);
+export async function gettimeTableCreateDetails() {
+    try {
+    const result = await timeTableCreateRepository.getTimeTableCreateDetails();
     return result;
   } catch (error) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
@@ -90,9 +103,9 @@ export async function gettimeTableCreateDetails(universityId) {
   }
 }
 
-export async function getSingletimeTableCreateDetails(courseId, universityId) {
-  try {
-    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
+export async function getSingletimeTableCreateDetails(courseId) {
+    try {
+    const result = await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 
     return result;
   } catch (error) {
@@ -101,12 +114,11 @@ export async function getSingletimeTableCreateDetails(courseId, universityId) {
   }
 }
 
-export async function getTimeTableByCourseAndSection(courseId, classSectionsId, universityId, timeTableType) {
+export async function getTimeTableByCourseAndSection(courseId, classSectionsId, timeTableType) {
   try {
     const data = await timeTableCreateRepository.getTimeTableByCourseAndSection(
       courseId,
       classSectionsId,
-      universityId,
       timeTableType,
     );
 
@@ -381,16 +393,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
   const transaction = await sequelize.transaction();
 
   try {
-    if (!Array.isArray(mappingArray) || mappingArray.length === 0) {
-      throw new Error("Request body must be a non-empty array");
-    }
-
     const base = mappingArray[0];
-
-    if (!base.timeTableMappingId) {
-      throw new Error("Base row must contain timeTableMappingId");
-    }
-
     let baseRow = await timeTableCreateRepository.findMappingById(base.timeTableMappingId);
 
     if (!baseRow) {
@@ -546,8 +549,8 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
   }
 }
 
-export async function getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role) {
-  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(universityId, instituteId, timeTableRoutineId, role);
+export async function getTimeTableMappingDetail(timeTableRoutineId) {
+  const rawResult = await timeTableCreateRepository.getTimeTableMappingDetail(timeTableRoutineId);
 
   if (!Array.isArray(rawResult) || rawResult.length === 0) {
     return [];
@@ -665,18 +668,16 @@ export async function getTimeTableMappingDetail(universityId, instituteId, timeT
   return result;
 }
 
-export async function getSingletimeTableMappingDetail(courseId, universityId) {
-  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId, universityId);
+export async function getSingletimeTableMappingDetail(courseId) {
+  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
 }
 
 //---------------night
 
-export async function getTimeTableElective(courseId, universityId, instituteId, role) {
+export async function getTimeTableElective(courseId) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     Number(courseId),
-    universityId,
-    instituteId,
-    role,
+    null,
   );
 
   //  Separate normal and elective
@@ -705,7 +706,7 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
       }
       const sameTeacher = curr?.isSameTeacher;
       const subject = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectName ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName)
         : curr?.timeTableSubject?.subjectName;
 
       const teacherName = sameTeacher
@@ -713,7 +714,7 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
         : curr?.employeeDetails?.employeeName;
 
       const subjectCode = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectCode ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode)
         : curr?.timeTableSubject?.subjectCode;
 
       const employeeCode = sameTeacher
@@ -721,7 +722,7 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
         : curr?.employeeDetails?.employeeCode;
 
       const subjectId = sameTeacher
-        ? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectId ?? curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId)
         : curr?.timeTableSubject?.subjectId;
 
       const employeeId = sameTeacher
@@ -974,13 +975,10 @@ export async function getTimeTableElective(courseId, universityId, instituteId, 
 
 // latest change
 
-export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
+export async function getTimeTableCellData(courseId, classSectionsId) {
   const allData = await timeTableCreateRepository.getTimeTableCellData(
     courseId,
     classSectionsId,
-    universityId,
-    instituteId,
-    role,
   );
 
   // STEP 1: Filter by classSectionsId (NOW multiple timetables possible)
@@ -1037,7 +1035,9 @@ export async function getTimeTableCellData(courseId, classSectionsId, university
 
         if (isSameTeacher === true) {
           teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
-          subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
+          subjectData = timeTableTeacherSubject?.employeeSubject?.subjectId
+            ? timeTableTeacherSubject.employeeSubject
+            : (timeTableTeacherSubject?.employeeSubject?.subjects || null);
         } else {
           teacherData = employeeDetails || null;
           subjectData = timeTableSubject || null;
@@ -1168,71 +1168,144 @@ export async function publishTimeTableService(timeTableRoutineId) {
   }
 }
 
+function mergeSubjectLists(...lists) {
+  const subjectMap = new Map();
+
+  for (const list of lists) {
+    for (const subject of list) {
+      if (!subject?.subjectId) continue;
+      const subjectId = Number(subject.subjectId);
+      const existing = subjectMap.get(subjectId);
+      subjectMap.set(subjectId, {
+        subjectId,
+        subject: existing?.subject || subject.subject || subject.subjectName || null,
+        subjectCode: existing?.subjectCode || subject.subjectCode || null,
+      });
+    }
+  }
+
+  return [...subjectMap.values()].sort((a, b) => a.subjectId - b.subjectId);
+}
+
+function subjectsFromClassSectionStudents(sectionData) {
+  const subjectMap = new Map();
+
+  for (const student of sectionData?.students ?? []) {
+    for (const mapping of student.studentSubjectMapper ?? []) {
+      const sub = mapping.subjects;
+      if (!sub?.subjectId) continue;
+      const subjectId = Number(sub.subjectId);
+      if (!subjectMap.has(subjectId)) {
+        subjectMap.set(subjectId, {
+          subjectId,
+          subject: sub.subjectName,
+          subjectCode: sub.subjectCode,
+        });
+      }
+    }
+  }
+
+  return [...subjectMap.values()];
+}
+
+function resolveScheduleSubjectId(cell) {
+  if (cell?.subjectId) {
+    return Number(cell.subjectId);
+  }
+  if (cell?.timeTableSubject?.subjectId) {
+    return Number(cell.timeTableSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.employeeSubject.subjectId);
+  }
+  return null;
+}
+
+function resolveScheduleSubjectDetails(cell, subjectId) {
+  const sub = cell?.timeTableSubject || cell?.timeTableTeacherSubject?.employeeSubject;
+  if (sub?.subjectId === subjectId) {
+    return {
+      subjectId,
+      subject: sub.subjectName,
+      subjectCode: sub.subjectCode,
+    };
+  }
+  return { subjectId, subject: null, subjectCode: null };
+}
+
+function countSubjectsInRoutine(cells = []) {
+  const countMap = {};
+  const subjectsFromCells = [];
+  const countedSlots = new Set();
+
+  for (const cell of cells) {
+    if (cell?.timeTablecreation?.isBreak) {
+      continue;
+    }
+
+    const subjectId = resolveScheduleSubjectId(cell);
+    if (!subjectId) {
+      continue;
+    }
+
+    subjectsFromCells.push(resolveScheduleSubjectDetails(cell, subjectId));
+
+    const slotKey = `${cell.day}-${cell.period}-${subjectId}`;
+    if (!countedSlots.has(slotKey)) {
+      countMap[subjectId] = (countMap[subjectId] || 0) + 1;
+      countedSlots.add(slotKey);
+    }
+  }
+
+  return { countMap, subjectsFromCells };
+}
+
 export async function getSubjectWithCount(classSectionsId) {
   const [subjectsData, timeTableData] = await Promise.all([
     timeTableCreateRepository.ClassSubjectCount(classSectionsId),
     timeTableCreateRepository.timeTableData(classSectionsId),
   ]);
 
-  //  Master subject list (same as before)
-  const subjectsList =
-    subjectsData?.semesterDetail?.semestermapping?.map((s) => ({
-      subjectId: Number(s.subjectId),
-      subject: s.subjects?.subjectName,
-      subjectCode: s.subjects?.subjectCode,
-    })) || [];
-
-  const validSubjectIds = new Set(subjectsList.map((s) => s.subjectId));
-
-  //  Result per timetable
+  const studentSubjects = subjectsFromClassSectionStudents(subjectsData);
   const finalResult = [];
 
-  //  Loop each timetableCreate (A / B / C / D)
-  for (const tt of timeTableData) {
-    const countMap = {};
-    validSubjectIds.forEach((id) => (countMap[id] = 0));
+  for (const routine of timeTableData) {
+    const { countMap, subjectsFromCells } = countSubjectsInRoutine(routine?.timeTablecreate);
 
-    const countedSlots = new Set();
-    const mappings = tt?.timeTablecreate || [];
-
-    //  Count subjects INSIDE THIS timetable
-    mappings.forEach((t) => {
-      let foundSubjectId = null;
-
-      if (t.subjectId) {
-        foundSubjectId = Number(t.subjectId);
-      } else if (t.timeTableSubject?.subjectId) {
-        foundSubjectId = Number(t.timeTableSubject.subjectId);
-      } else if (t.timeTableTeacherSubject?.employeeSubject?.subjectId) {
-        foundSubjectId = Number(t.timeTableTeacherSubject.employeeSubject.subjectId);
-      } else if (t.timeTableElective?.subjectId) {
-        foundSubjectId = Number(t.timeTableElective.subjectId);
-      }
-
-      if (foundSubjectId && validSubjectIds.has(foundSubjectId)) {
-        const slotKey = `${t.day}-${t.period}-${foundSubjectId}`;
-
-        if (!countedSlots.has(slotKey)) {
-          countMap[foundSubjectId]++;
-          countedSlots.add(slotKey);
-        }
-      }
-    });
-
-    //  Attach subject counts to this timetable
     finalResult.push({
-      timeTableNameId: tt.timeTableCreateName?.timeTableNameId,
-      timeTableName: tt.timeTableCreateName?.name,
-      subjects: subjectsList.map((s) => ({
-        subjectId: s.subjectId,
-        subject: s.subject,
-        subjectCode: s.subjectCode,
-        count: countMap[s.subjectId] || 0,
-      })),
+      routine,
+      countMap,
+      subjectsFromCells,
     });
   }
 
-  return finalResult;
+  let subjectsList = mergeSubjectLists(
+    studentSubjects,
+    ...finalResult.map((entry) => entry.subjectsFromCells),
+  );
+
+  const unresolvedIds = subjectsList
+    .filter((subject) => !subject.subject && !subject.subjectCode)
+    .map((subject) => subject.subjectId);
+
+  if (unresolvedIds.length) {
+    const resolvedSubjects = await timeTableCreateRepository.getSubjectsByIds(unresolvedIds);
+    subjectsList = mergeSubjectLists(subjectsList, resolvedSubjects);
+  }
+
+  return finalResult.map(({ routine, countMap }) => ({
+    timeTableNameId: routine.timeTableCreateName?.timeTableNameId,
+    timeTableName: routine.timeTableCreateName?.name,
+    subjects: subjectsList.map((subject) => ({
+      subjectId: subject.subjectId,
+      subject: subject.subject,
+      subjectCode: subject.subjectCode,
+      count: countMap[subject.subjectId] || 0,
+    })),
+  }));
 }
 
 export async function getRoutineByClassSectionId(classSectionsId) {
@@ -1412,25 +1485,85 @@ export async function getRoutineByClassSectionId(classSectionsId) {
   }
 }
 
-export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYearId) {
+function mapRoutineClassSection(classSection) {
+  if (!classSection) return null;
+  const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.class,
+    semesterId: plain.classGroup?.semesterId ?? null,
+    term: plain.classGroup?.term ?? null,
+    course: plain.courseSection
+      ? {
+          courseId: plain.courseSection.courseId,
+          courseName: plain.courseSection.courseName,
+          courseCode: plain.courseSection.courseCode,
+        }
+      : null,
+  };
+}
+
+function mapClassSectionSummary(classSection) {
+  const plain = classSection.get ? classSection.get({ plain: true }) : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.class,
+    semesterId: plain.classGroup?.semesterId ?? null,
+    term: plain.classGroup?.term ?? null,
+  };
+}
+
+export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, sessionId) {
   try {
-    const normalRoutines = await timeTableCreateRepository.getRoutinesByTeacherIdRepository(employeeId, acedmicYearId);
+    const {
+      employee,
+      course,
+      session,
+      classSections,
+      routines: routineRows,
+    } = await timeTableCreateRepository.getTeacherRoutineBundle(employeeId, courseId, sessionId);
 
-    if (!normalRoutines || !normalRoutines.length) return { routines: [] };
+    const common = {
+      employee: employee
+        ? {
+            employeeId: employee.employeeId,
+            employeeName: employee.employeeName,
+            employeeCode: employee.employeeCode,
+            pickColor: employee.pickColor,
+          }
+        : null,
+      course: course
+        ? {
+            courseId: course.courseId,
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+          }
+        : null,
+      session: session
+        ? {
+            sessionId: session.sessionId,
+            sessionName: session.sessionName,
+            startingDate: session.startingDate,
+            endingDate: session.endingDate,
+            acedmicYearId: session.acedmicYearId,
+          }
+        : null,
+      classSections: classSections.map(mapClassSectionSummary),
+    };
 
-    const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
-    const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds, employeeId);
+    if (!routineRows.length) {
+      return { ...common, routines: [] };
+    }
 
     const daysList = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-    const formattedRoutines = normalRoutines.map(routine => {
+    const formattedRoutines = routineRows.map(({ routine, electiveScheduleItems }) => {
       const timeTableCreateName = routine.timeTableCreateName || {};
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
-      const classSection = routine.timeTableClassSection || {};
-
-      const matchingElectives = electiveRoutines.filter(er => er.timeTableNameId === routine.timeTableNameId);
-      const electiveScheduleItems = matchingElectives.flatMap(er => er.timeTablecreate || []);
+      const classSection = mapRoutineClassSection(routine.timeTableClassSection);
 
       let weekOffList = [];
       try {
@@ -1484,7 +1617,9 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYear
 
             if (item.timeTableTeacherSubject) {
               teacher = item.timeTableTeacherSubject.teacherEmployeeData;
-              subject = item.timeTableTeacherSubject.employeeSubject?.subjects;
+              subject = item.timeTableTeacherSubject.employeeSubject?.subjectId
+                ? item.timeTableTeacherSubject.employeeSubject
+                : item.timeTableTeacherSubject.employeeSubject?.subjects;
             }
 
             const subjectName = subject?.subjectName || "N/A";
@@ -1584,7 +1719,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, acedmicYear
       };
     });
 
-    return { routines: formattedRoutines };
+    return { ...common, routines: formattedRoutines };
   } catch (error) {
     console.error("Error in getRoutineByTeacherAndAcademicYear Service:", error);
     throw error;

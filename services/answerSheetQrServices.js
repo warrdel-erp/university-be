@@ -43,17 +43,13 @@ function buildExamContext(item, options = {}) {
   };
 }
 
-export async function generateBulkAnswerSheetQr(count, instituteId, universityId) {
+export async function generateBulkAnswerSheetQr(count) {
   const result = await sequelize.transaction(async (transaction) => {
     if (!Number.isInteger(count) || count <= 0) {
       throw createServiceError("Please provide a valid positive integer for count.", 400);
     }
 
-    const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(
-      instituteId,
-      universityId,
-      transaction
-    );
+    const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(transaction);
 
     if (unusedCount + count > MAX_UNUSED_QR_PER_INSTITUTE) {
       throw createServiceError(
@@ -66,8 +62,6 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
     const payload = Array.from({ length: count }, () => ({
       qr: uuidv4(),
       requestId,
-      instituteId,
-      universityId,
     }));
 
     const created = await answerSheetQrRepository.bulkCreateAnswerSheetQr(payload, transaction);
@@ -82,22 +76,12 @@ export async function generateBulkAnswerSheetQr(count, instituteId, universityId
   return result;
 }
 
-export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteId, universityId) {
+export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
   try {
     return await sequelize.transaction(async (transaction) => {
       const [student, examSchedule] = await Promise.all([
-        answerSheetQrRepository.getScopedStudent(
-          studentId,
-          instituteId,
-          universityId,
-          transaction
-        ),
-        answerSheetQrRepository.getScopedExamSchedule(
-          examScheduleId,
-          instituteId,
-          universityId,
-          transaction
-        ),
+        answerSheetQrRepository.getScopedStudent(studentId, transaction),
+        answerSheetQrRepository.getScopedExamSchedule(examScheduleId, transaction),
       ]);
 
       if (!student) throw createServiceError("Student not found in your institute.", 404);
@@ -107,8 +91,6 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
         studentId,
         examSchedule.examSetupTypeTermId,
         examSchedule.sessionId,
-        instituteId,
-        universityId,
         transaction
       );
       if (!hasHallTicket) {
@@ -122,8 +104,6 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
         qr,
         studentId,
         examScheduleId,
-        instituteId,
-        universityId,
         transaction
       );
 
@@ -157,14 +137,9 @@ export async function mapAnswerSheetQr(qr, studentId, examScheduleId, instituteI
   }
 }
 
-export async function getAnswerSheetQrDetailById(id, instituteId, universityId) {
+export async function getAnswerSheetQrDetailById(id) {
   const result = await sequelize.transaction(async (transaction) => {
-    const row = await answerSheetQrRepository.getAnswerSheetQrById(
-      id,
-      instituteId,
-      universityId,
-      transaction
-    );
+    const row = await answerSheetQrRepository.getAnswerSheetQrById(id, transaction);
 
     if (!row) {
       throw createServiceError("Answer sheet QR not found.", 404);
@@ -204,12 +179,10 @@ export async function getAnswerSheetQrDetailById(id, instituteId, universityId) 
   return result;
 }
 
-export async function getAnswerSheetQrGenerationRequests(instituteId, universityId, page = 1, limit = 10) {
+export async function getAnswerSheetQrGenerationRequests(page = 1, limit = 10) {
   const offset = (page - 1) * limit;
 
   const { groupedRows, totalRequests } = await answerSheetQrRepository.getAnswerSheetQrGenerationRequests(
-    instituteId,
-    universityId,
     limit,
     offset
   );
@@ -217,8 +190,6 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
   const data = await Promise.all(
     groupedRows.map(async (request) => {
       const usageRows = await answerSheetQrRepository.getAnswerSheetQrUsageByRequestId(
-        instituteId,
-        universityId,
         request.requestId
       );
 
@@ -255,16 +226,12 @@ export async function getAnswerSheetQrGenerationRequests(instituteId, university
 
 export async function getAnswerSheetQrsByRequestId(
   requestId,
-  instituteId,
-  universityId,
   page = 1,
   limit = 20
 ) {
   const offset = (page - 1) * limit;
 
   const { count, rows } = await answerSheetQrRepository.getAnswerSheetQrsByRequestId(
-    instituteId,
-    universityId,
     requestId,
     limit,
     offset
@@ -315,15 +282,11 @@ export async function getAnswerSheetQrsByRequestId(
 export async function assignAnswerSheetsToTeachers(
   assignedToUserId,
   answerSheetQrIds,
-  instituteId,
-  universityId
 ) {
   const transaction = await sequelize.transaction();
   try {
     const teacher = await answerSheetQrRepository.getScopedUser(
       assignedToUserId,
-      instituteId,
-      universityId,
       transaction
     );
     if (!teacher) {
@@ -332,8 +295,6 @@ export async function assignAnswerSheetsToTeachers(
 
     const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
       answerSheetQrIds,
-      instituteId,
-      universityId,
       transaction
     );
 
@@ -344,8 +305,6 @@ export async function assignAnswerSheetsToTeachers(
     await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
       answerSheetQrIds,
       assignedToUserId,
-      instituteId,
-      universityId,
       transaction
     );
 
@@ -364,16 +323,10 @@ export async function assignAnswerSheetsToTeachers(
 
 export async function getScriptsAssignedToTeacher(
   assignedToUserId,
-  instituteId,
-  universityId,
   page = 1,
   limit = 20
 ) {
-  const teacher = await answerSheetQrRepository.getScopedUser(
-    assignedToUserId,
-    instituteId,
-    universityId
-  );
+  const teacher = await answerSheetQrRepository.getScopedUser(assignedToUserId);
   if (!teacher) {
     throw createServiceError("Teacher user not found in your institute.", 404);
   }
@@ -381,8 +334,6 @@ export async function getScriptsAssignedToTeacher(
   const offset = (page - 1) * limit;
   const { count, rows } = await answerSheetQrRepository.getScriptsAssignedToTeacher(
     assignedToUserId,
-    instituteId,
-    universityId,
     limit,
     offset
   );
@@ -438,15 +389,11 @@ export async function getScriptsAssignedToTeacher(
 export async function assignObtainedMarksToAnswerSheet(
   answerSheetQrId,
   obtainedMarks,
-  instituteId,
-  universityId
 ) {
   const transaction = await sequelize.transaction();
   try {
     const answerSheet = await answerSheetQrRepository.getAnswerSheetQrById(
       answerSheetQrId,
-      instituteId,
-      universityId,
       transaction
     );
 
@@ -458,8 +405,6 @@ export async function assignObtainedMarksToAnswerSheet(
       answerSheetQrId,
       obtainedMarks,
       new Date(),
-      instituteId,
-      universityId,
       transaction
     );
 

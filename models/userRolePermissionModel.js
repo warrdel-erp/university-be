@@ -4,7 +4,7 @@ import role from './roleModel.js';
 import permission from './permissionModel.js';
 import user from './userModel.js';
 
-export default sequelize.define(
+const userRolePermissionModel = sequelize.define(
     'user_role_permission',
     {
         userRolePermissionId: {
@@ -64,3 +64,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+userRolePermissionModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default userRolePermissionModel;

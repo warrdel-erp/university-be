@@ -1,8 +1,8 @@
 import * as examScheduleRepository from '../repository/examScheduleRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 
-export async function getExamSchedules(universityId, acedmicYearId, instituteId, filters) {
-    const result = await examScheduleRepository.getExamSchedules(universityId, acedmicYearId, instituteId, filters);
+export async function getExamSchedules(filters) {
+    const result = await examScheduleRepository.getExamSchedules(filters);
 
     if (result && result.length > 0) {
         const sessions = [...new Set(result.map(r => r.sessionId))];

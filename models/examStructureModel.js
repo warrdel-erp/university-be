@@ -7,7 +7,7 @@ import university from "./universityModel.js";
 import course from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const examStructureModel = sequelize.define(
     'exam_structure', // exam_rule 
     {
         examStructureId: {
@@ -108,3 +108,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+examStructureModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examStructureModel;

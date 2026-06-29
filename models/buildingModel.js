@@ -2,9 +2,10 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import campus from "./campusModel.js";
+import institute from "./instituteModel.js";
 import { buildingTypes } from "../constant.js";
 
-export default sequelize.define(
+const buildingModel = sequelize.define(
     'building',
     {
         buildingId: {
@@ -20,6 +21,15 @@ export default sequelize.define(
             references: {
                 model: campus,
                 key: 'campus_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: institute,
+                key: 'institute_id'
             }
         },
         name: {
@@ -87,3 +97,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+buildingModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default buildingModel;

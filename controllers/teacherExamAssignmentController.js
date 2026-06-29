@@ -3,7 +3,6 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function assignTeacherToExam(req, res) {
     const { examScheduleId, employeeId, deadline } = req.body;
-    const acedmicYearId = req.user.defaultAcademicYearId;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
@@ -12,7 +11,6 @@ export async function assignTeacherToExam(req, res) {
             examScheduleId,
             employeeId,
             deadline,
-            acedmicYearId,
             createdBy,
             updatedBy
         });
@@ -25,13 +23,11 @@ export async function assignTeacherToExam(req, res) {
 
 export async function getAllExamAssignments(req, res) {
     const { examScheduleId, employeeId } = req.query;
-    const acedmicYearId = req.user.defaultAcademicYearId;
 
     try {
         const assignments = await teacherExamAssignmentServices.getAssignments({
             examScheduleId,
             employeeId,
-            acedmicYearId
         });
         return SuccessResponse(res, 200, "Assignments retrieved successfully", assignments);
     } catch (error) {

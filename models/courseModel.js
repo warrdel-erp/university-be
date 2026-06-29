@@ -5,8 +5,9 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import affiliatedUniversity from "./affiliatedUniversityModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
+import subAccountModel from "./subAccountModel.js";
 
-export default sequelize.define(
+const courseModel = sequelize.define(
     'course',
     {
         courseId: {
@@ -49,6 +50,15 @@ export default sequelize.define(
             references: {
                 model: instituteModel,
                 key: 'institute_id'
+            }
+        },
+        subAccountId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'sub_account_id',
+            references: {
+                model: subAccountModel,
+                key: 'sub_account_id'
             }
         },
         // acedmicYearId:{
@@ -136,3 +146,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+courseModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default courseModel;

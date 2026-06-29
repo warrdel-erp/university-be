@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import university from "./universityModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const campusModel = sequelize.define(
     'campus',
     {
         campusId: {
@@ -31,6 +31,16 @@ export default sequelize.define(
             allowNull: false,
             field: 'campus_code',
         },
+        campusType: {
+            type: DataTypes.ENUM('Main', 'Regional', 'Satellite'),
+            allowNull: true,
+            field: 'campus_type',
+        },
+        addressLine: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'address_line',
+        },
         latitude: {
             type: DataTypes.FLOAT,
             allowNull: true,
@@ -38,6 +48,21 @@ export default sequelize.define(
         longitude:{
             type: DataTypes.FLOAT,
             allowNull: true,
+        },
+        administratorName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_name',
+        },
+        administratorContactNumber: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_contact_number',
+        },
+        administratorEmail: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'administrator_email',
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -81,3 +106,9 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+
+
+campusModel.scopeConfig = { university: true, institute: false, academicYear: false };
+
+export default campusModel;

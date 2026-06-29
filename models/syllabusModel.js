@@ -6,7 +6,7 @@ import course from './courseModel.js';
 import users from './userModel.js';
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const syllabusModel = sequelize.define(
     'syllabus',
     {
         syllabusId: {
@@ -93,3 +93,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+syllabusModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default syllabusModel;

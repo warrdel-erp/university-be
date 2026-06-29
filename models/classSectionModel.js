@@ -7,10 +7,9 @@ import users from "./userModel.js";
 import section from "./sectionModel.js";
 import classModel from "./classModel.js";
 import instituteModel from "./instituteModel.js";
-import semesterModel from "./semesterModel.js";
 import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const classSectionModel = sequelize.define(
     'class_sections',
     {
         classSectionsId: {
@@ -73,15 +72,6 @@ export default sequelize.define(
                 key: 'class_id'
             }
         },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
-        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -141,3 +131,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+classSectionModel.scopeConfig = { university: false, institute: true, academicYear: true };
+
+export default classSectionModel;

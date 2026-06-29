@@ -8,7 +8,7 @@ import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const lessonModel = sequelize.define(
     'lesson',
     {
         lessonId: {
@@ -121,3 +121,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+lessonModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default lessonModel;

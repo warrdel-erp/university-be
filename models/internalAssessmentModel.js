@@ -6,7 +6,7 @@ import examSetupTypeModel from "./examSetupTypeModel.js";
 import semesterModel from "./semesterModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const internalAssessmentModel = sequelize.define(
     'internal_assessment',
     {
         examAssessmentId: {
@@ -35,7 +35,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'semester_id',
             references: {
                 model: semesterModel,
@@ -124,3 +124,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+internalAssessmentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default internalAssessmentModel;

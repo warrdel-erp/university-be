@@ -12,13 +12,13 @@ export async function addJobType(data) {
   }
 };
 
-export async function getAllJobTypes(universityId,instituteId,role) {
+export async function getAllJobTypes() {
   try {
-    return await jobSettingsRepository.getAllJobTypes(universityId,instituteId,role);
+    return jobSettingsRepository.getAllJobTypes();
   } catch (error) {
     throw new Error(error.message);
   }
-};
+}
 
 export async function getSingleJobType(jobSettingId) {
   try {

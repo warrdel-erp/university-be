@@ -4,7 +4,7 @@ import instituteModel from "./instituteModel.js";
 import sessionCouseMappingModel from "./sessionCouseMappingModel.js";
 
 /** ERD-style fee plan (type, name, course–session link, institute). Table `fee_plan_profile` — legacy `fee_plan` remains in feePlanModel.js. */
-export default sequelize.define(
+const feePlanProfileModel = sequelize.define(
   "fee_plan_profile",
   {
     feePlanProfileId: {
@@ -62,3 +62,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+feePlanProfileModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feePlanProfileModel;

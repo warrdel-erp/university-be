@@ -8,6 +8,10 @@ import {
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
+import {
+  requestContext,
+  buildRequestContextStore,
+} from "../utility/requestContext.js";
 
 // register
 export const register = async (req, res) => {
@@ -96,11 +100,8 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
 };
 
 export async function getAdminRegisterStudentAndEmployee(req, res) {
-  const universityId = req.user.universityId;
-  const instituteId = req.user.defaultInstituteId;
-  const role = req.user.role;
   try {
-    const user = await userService.getAdminRegisterStudentAndEmployee(universityId, instituteId, role);
+    const user = await userService.getAdminRegisterStudentAndEmployee();
     res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -332,10 +333,9 @@ export const getMyDetails = async (req, res) => {
 };
 export const getAllUsers = async (req, res) => {
   try {
-    const { universityId } = req.user;
-    const { instituteId, page = 1, limit = 10, search = "" } = req.query;
+    const { page = 1, limit = 10, search = "" } = req.query;
 
-    const result = await userService.getAllUsers(universityId, instituteId, parseInt(page), parseInt(limit), search);
+    const result = await userService.getAllUsers(parseInt(page), parseInt(limit), search);
 
     return res.status(200).json({
       success: true,
@@ -354,7 +354,7 @@ export const getAllUsers = async (req, res) => {
 export const saveUserDefaults = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { defaultRole } = req.body;
+    const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
       const hasRole = await userRoleRepository.checkUserRoleExists(userId, defaultRole);
@@ -367,6 +367,22 @@ export const saveUserDefaults = async (req, res) => {
     }
 
     const result = await userService.saveUserDefaults(userId, req.body);
+
+    const currentStore = requestContext.getStore();
+    requestContext.enterWith(
+      await buildRequestContextStore({
+        userId,
+        defaultInstituteId,
+        defaultRole,
+        defaultAcademicYearId,
+        bypass: currentStore?.bypass,
+      })
+    );
+
+    req.user.defaultInstituteId = defaultInstituteId;
+    req.user.defaultRole = defaultRole;
+    req.user.defaultAcademicYearId = defaultAcademicYearId;
+
     res.status(200).json({
       success: true,
       message: "User defaults saved successfully",

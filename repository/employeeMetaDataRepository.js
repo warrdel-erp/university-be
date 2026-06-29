@@ -1,20 +1,38 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
 
-export async function employeeMetaData(data,transaction) {    
+async function assertScopedEmployee(employeeId, transaction) {
+    return scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+        transaction,
+    });
+}
+
+export async function employeeMetaData(data, transaction) {
     try {
-        const result = await model.employeeMetaDataModel.bulkCreate(data,{transaction});
-        return result;
+        for (const entry of data) {
+            const employee = await assertScopedEmployee(entry.employeeId, transaction);
+            if (!employee) {
+                throw new Error(`Employee not found: ${entry.employeeId}`);
+            }
+        }
+        return await model.employeeMetaDataModel.bulkCreate(data, { transaction });
     } catch (error) {
         console.error("Error in adding meta data employee:", error);
         throw error;
     }
 };
 
-export async function deleteEmployeeMetaData (employeeId) {
+export async function deleteEmployeeMetaData(employeeId) {
     try {
-        const result = await model.emplopeeRoleModel.destroy({
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            throw new Error('Employee not found');
+        }
+        await model.employeeMetaDataModel.destroy({
             where: { employeeId },
-            individualHooks: true
+            individualHooks: true,
         });
         return { message: 'employee meta data deleted successfully' };
     } catch (error) {
@@ -24,79 +42,72 @@ export async function deleteEmployeeMetaData (employeeId) {
 };
 
 export async function updateEmployeeMetaData(entries, transaction) {
+    let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
+    try {
+        for (const entry of entries) {
+            if (!entry.employeeId || !entry.types || !entry.codes) {
+                console.warn(" Skipping invalid entry →", entry);
+                skipped++;
+                continue;
+            }
 
-  try {
+            const employee = await assertScopedEmployee(entry.employeeId, transaction);
+            if (!employee) {
+                console.warn(` Skipping out-of-scope employeeId=${entry.employeeId}`);
+                skipped++;
+                continue;
+            }
 
-    for (const entry of entries) {
+            try {
+                const [affectedCount] = await model.employeeMetaDataModel.update(
+                    {
+                        types: entry.types,
+                        created_by: entry.createdBy,
+                        updated_by: entry.updatedBy || null,
+                    },
+                    {
+                        where: {
+                            employee_id: entry.employeeId,
+                            codes: entry.codes,
+                        },
+                        transaction,
+                    },
+                );
 
-      //  Validate required fields
-      if (!entry.employeeId || !entry.types || !entry.codes) {
-        console.warn(" Skipping invalid entry →", entry);
-        skipped++;
-        continue;
-      }
-
-      try {
-        // First try update
-        const [affectedCount] = await model.employeeMetaDataModel.update(
-          {
-            types: entry.types,
-            created_by: entry.createdBy,
-            updated_by: entry.updatedBy || null,
-          },
-          {
-            where: {
-              employee_id: entry.employeeId,
-              codes: entry.codes,
-            },
-            transaction,
-          }
-        );
-
-        if (affectedCount > 0) {
-          updated++;
-          console.log(
-            ` Updated entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
-          );
-        } else {
-          // No existing row → insert new
-          await model.employeeMetaDataModel.create(
-            {
-              employeeId: entry.employeeId,
-              types: entry.types,
-              codes: entry.codes,
-              createdBy: entry.createdBy,
-              updatedBy: entry.updatedBy 
-            },
-            { transaction }
-          );
-          inserted++;
-          console.log(
-            ` Inserted new entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`
-          );
+                if (affectedCount > 0) {
+                    updated++;
+                } else {
+                    await model.employeeMetaDataModel.create(
+                        {
+                            employeeId: entry.employeeId,
+                            types: entry.types,
+                            codes: entry.codes,
+                            createdBy: entry.createdBy,
+                            updatedBy: entry.updatedBy,
+                        },
+                        { transaction },
+                    );
+                    inserted++;
+                }
+            } catch (innerError) {
+                console.error(
+                    `Error processing entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
+                    innerError,
+                );
+                throw innerError;
+            }
         }
-      } catch (innerError) {
-        console.error(
-          `Error processing entry → employeeId=${entry.employeeId}, types=${entry.types}, codes=${entry.codes}`,
-          innerError
+
+        console.log(
+            ` Summary: ${inserted} inserted, ${updated} updated, ${skipped} skipped`,
         );
-        throw innerError; 
-      }
+
+        return true;
+    } catch (error) {
+        console.error(" Error replacing employee meta data entries:", error);
+        throw error;
     }
-
-    //  Final summary
-    console.log(
-      ` Summary: ${inserted} inserted, ${updated} updated, ${skipped} skipped`
-    );
-    console.log(" All employee meta data entries processed successfully.");
-
-    return true;
-  } catch (error) {
-    console.error(" Error replacing employee meta data entries:", error);
-    throw error;
-  }
 }

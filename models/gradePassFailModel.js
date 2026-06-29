@@ -5,7 +5,7 @@ import gradeCourseModel from "./gradeCourseModel.js";
 import examSetupTypeModel from "./examSetupTypeModel.js";
 import gradeModel from "./gradeModel.js";
 
-export default sequelize.define(
+const gradePassFailModel = sequelize.define(
   "grade_pass_fail",
   {
     gradePassFailId: {
@@ -117,3 +117,7 @@ export default sequelize.define(
     paranoid: true,
   }
 );
+
+gradePassFailModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default gradePassFailModel;

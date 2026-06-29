@@ -16,9 +16,8 @@ export async function addRole(req, res) {
 }
 
 export async function getAllRole(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const role = await RoleCreation.getRoleDetails(universityId);
+        const role = await RoleCreation.getRoleDetails();
         res.status(200).json(role);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -26,10 +25,9 @@ export async function getAllRole(req, res) {
 }
 
 export async function getSingleRoleDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { roleId } = req.query;
-        const Role = await RoleCreation.getSingleRoleDetails(roleId,universityId);
+        const Role = await RoleCreation.getSingleRoleDetails(roleId);
         if (Role) {
             res.status(200).json(Role);
         } else {

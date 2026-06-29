@@ -1,33 +1,28 @@
-import * as creditRepository  from "../repository/creditRepository.js";
+import * as creditRepository from '../repository/creditRepository.js';
 
-export async function addCredit(credits,createdBy,updatedBy,universityId,instituteId) {
-  const creditData = credits.map(item => ({
+export async function addCredit(credits, createdBy, updatedBy) {
+  const creditData = credits.map((item) => ({
     ...item,
     createdBy,
     updatedBy,
-    universityId,
-    instituteId
   }));
 
-  const result = await creditRepository.addCredit(creditData);
-  return result;
+  return await creditRepository.addCredit(creditData);
 }
 
-
-export async function getCreditDetails(universityId,courseId,sessionId,role,instituteId) {
-    return await creditRepository.getCreditDetails(universityId,courseId,sessionId,role,instituteId);
+export async function getCreditDetails(courseId, sessionId) {
+  return await creditRepository.getCreditDetails(courseId, sessionId);
 }
 
-export async function getSingleCreditDetails(creditId,universityId) {
-    return await creditRepository.getSingleCreditDetails(creditId,universityId);
+export async function getSingleCreditDetails(creditId) {
+  return await creditRepository.getSingleCreditDetails(creditId);
 }
 
 export async function deleteCredit(creditId) {
-    return await creditRepository.deleteCredit(creditId);
+  return await creditRepository.deleteCredit(creditId);
 }
 
-export async function updateCredit(creditId, creditData, updatedBy) {    
-
-    creditData.updatedBy = updatedBy;
-    await creditRepository.updateCredit(creditId, creditData);
+export async function updateCredit(creditId, creditData, updatedBy) {
+  creditData.updatedBy = updatedBy;
+  await creditRepository.updateCredit(creditId, creditData);
 }

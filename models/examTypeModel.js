@@ -5,7 +5,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const examTypeModel = sequelize.define(
     'exam_type',
     {
         examTypeId: {
@@ -98,3 +98,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+examTypeModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examTypeModel;

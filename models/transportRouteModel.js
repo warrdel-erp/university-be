@@ -5,7 +5,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import university from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const transportRouteModel = sequelize.define(
     'transport_route',
     {
         transportRouteId: {
@@ -93,3 +93,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+transportRouteModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default transportRouteModel;

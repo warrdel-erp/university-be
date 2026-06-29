@@ -1,8 +1,16 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
+
+function resolveAcedmicYearId(explicit) {
+  if (explicit != null && explicit !== "") {
+    return Number(explicit);
+  }
+  return buildScope(model.examStructureModel).acedmicYearId;
+}
 
 export async function addExamStructure(examDetail) {
   try {
-    const result = await model.examStructureModel.create(examDetail);
+    const result = await scoped(model.examStructureModel).create(examDetail);
     return result;
   } catch (error) {
     console.error("Error adding exam Structure:", error);
@@ -10,28 +18,26 @@ export async function addExamStructure(examDetail) {
   }
 };
 
-export async function getExamStructure(universityId, acedmicYearId, role, instituteId) {
+export async function getExamStructure(acedmicYearId) {
   try {
-    const whereClause = {
-      ...(universityId && { universityId }),
-      ...(acedmicYearId && { acedmicYearId }),
-      ...(role === 'Head' && { institute_id: instituteId })
-    };
-    const result = await model.examStructureModel.findAll({
+    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const result = await scoped(model.examStructureModel).findAll({
       attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+        exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
       },
-      where: whereClause,
+      where: {
+        ...(yearId && { acedmicYearId: yearId }),
+      },
       include: [
         {
           model: model.courseModel,
           as: "courseExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
         {
           model: model.sessionModel,
           as: "sessionExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
       ],
     });
@@ -42,21 +48,22 @@ export async function getExamStructure(universityId, acedmicYearId, role, instit
   }
 };
 
-export async function getSingleExamStructure(courseId, sessionId, universityId) {
+export async function getSingleExamStructure(courseId, sessionId, acedmicYearId) {
   try {
-    const result = await model.examStructureModel.findOne({
+    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const result = await scoped(model.examStructureModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { courseId, sessionId, universityId },
+      where: { courseId, sessionId, acedmicYearId: yearId },
       include: [
         {
           model: model.courseModel,
           as: "courseExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
         {
           model: model.sessionModel,
           as: "sessionExam",
-          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy",]
+          exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
         },
       ],
     });
@@ -68,10 +75,16 @@ export async function getSingleExamStructure(courseId, sessionId, universityId) 
   }
 };
 
-
 export async function deleteExamStructure(examStructureId) {
   try {
-    const deleted = await model.examStructureModel.destroy({ where: { examStructureId } });
+    const existing = await scoped(model.examStructureModel).findOne({
+      where: { examStructureId },
+      attributes: ['examStructureId'],
+    });
+    if (!existing) {
+      return false;
+    }
+    const deleted = await scoped(model.examStructureModel).destroy({ where: { examStructureId } });
     return deleted > 0;
   } catch (error) {
     console.error("Error deleting exam Structure:", error);
@@ -81,7 +94,14 @@ export async function deleteExamStructure(examStructureId) {
 
 export async function updateExamStructure(examStructureId, examDetail) {
   try {
-    const result = await model.examStructureModel.update(examDetail, {
+    const existing = await scoped(model.examStructureModel).findOne({
+      where: { examStructureId },
+      attributes: ['examStructureId'],
+    });
+    if (!existing) {
+      return [0];
+    }
+    const result = await scoped(model.examStructureModel).update(examDetail, {
       where: { examStructureId },
     });
     return result;
@@ -93,7 +113,17 @@ export async function updateExamStructure(examStructureId, examDetail) {
 
 export async function addExamType(examDetail) {
   try {
-    const result = await model.examSetupTypeModel.create(examDetail);
+    const existingStructure = await scoped(model.examStructureModel).findOne({
+      where: { examStructureId: examDetail.examStructureId },
+      attributes: ["examStructureId"],
+    });
+    if (!existingStructure) {
+      const error = new Error("Exam structure not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const result = await scoped(model.examSetupTypeModel).create(examDetail);
     return result;
   } catch (error) {
     console.error("Error adding exam Structure setup type:", error);
@@ -103,7 +133,7 @@ export async function addExamType(examDetail) {
 
 export async function getDetailByExamType(examSetupTypeId) {
   try {
-    const result = await model.examSetupTypeModel.findOne({
+    const result = await scoped(model.examSetupTypeModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: { examSetupTypeId },
       include: [
@@ -111,6 +141,7 @@ export async function getDetailByExamType(examSetupTypeId) {
           model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+          required: true,
           include: [
             {
               model: model.courseModel,
@@ -139,27 +170,44 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, universityId, termNumber, instituteId) {
+export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
   try {
+    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const structureWhere = {
+      courseId,
+      sessionId,
+      acedmicYearId: yearId,
+    };
+
     const termInclude = {
       model: model.examSetupTypeTermModel,
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        acedmicYearId: yearId,
+        courseId,
+        ...(termNumber != null && { term: termNumber }),
+      },
+      required: termNumber != null,
+      include: [
+        {
+          model: model.examScheduleModel,
+          as: "examSchedules",
+          attributes: ["examScheduleId", "subjectId", "examDate", "examTime"],
+          where: { sessionId },
+          required: false,
+        },
+      ],
     };
 
-    if (termNumber != null) {
-      termInclude.where = { term: termNumber, courseId, instituteId };
-    }
-
-    return await model.examSetupTypeModel.findAll({
+    return await scoped(model.examSetupTypeModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { universityId, instituteId },
       include: [
         {
           model: model.examStructureModel,
           as: "examStructure",
           attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          where: { courseId, sessionId, universityId, instituteId },
+          where: structureWhere,
           required: true,
           include: [
             {
@@ -190,10 +238,16 @@ export async function getSingleExamType(courseId, sessionId, universityId, termN
   }
 };
 
-
 export async function deleteExamType(examSetupTypeId) {
   try {
-    const deleted = await model.examSetupTypeModel.destroy({ where: { examSetupTypeId } });
+    const existing = await scoped(model.examSetupTypeModel).findOne({
+      where: { examSetupTypeId },
+      attributes: ['examSetupTypeId'],
+    });
+    if (!existing) {
+      return false;
+    }
+    const deleted = await scoped(model.examSetupTypeModel).destroy({ where: { examSetupTypeId } });
     return deleted > 0;
   } catch (error) {
     console.error("Error deleting exam type:", error);
@@ -203,7 +257,14 @@ export async function deleteExamType(examSetupTypeId) {
 
 export async function updateExamType(examSetupTypeId, examDetail) {
   try {
-    const result = await model.examSetupTypeModel.update(examDetail, {
+    const existing = await scoped(model.examSetupTypeModel).findOne({
+      where: { examSetupTypeId },
+      attributes: ['examSetupTypeId'],
+    });
+    if (!existing) {
+      return [0];
+    }
+    const result = await scoped(model.examSetupTypeModel).update(examDetail, {
       where: { examSetupTypeId },
     });
     return result;

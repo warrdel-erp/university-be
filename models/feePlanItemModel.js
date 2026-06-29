@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import feePlanProfileModel from "./feePlanProfileModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const feePlanItemModel = sequelize.define(
   "fee_plan_item",
   {
     feePlanItemId: {
@@ -51,3 +51,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+feePlanItemModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feePlanItemModel;

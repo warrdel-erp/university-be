@@ -1,12 +1,12 @@
 import { Op, fn, col, where } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
 import moment from "moment";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
-        const result = await model.attendanceModel.bulkCreate(attendanceRecords, options);
-        return result;
+        return await scoped(model.attendanceModel).bulkCreate(attendanceRecords, options);
     } catch (error) {
         console.error("Error in adding attendance:", error);
         throw error;
@@ -15,11 +15,11 @@ export async function addAttendance(attendanceRecords, options = {}) {
 
 export async function checkAttendanceExists(timeTableMappingId, date) {
     try {
-        const count = await model.attendanceModel.count({
+        const count = await scoped(model.attendanceModel).count({
             where: {
                 timeTableMappingId,
-                date: { [Op.eq]: fn("DATE", date) }
-            }
+                date: { [Op.eq]: fn("DATE", date) },
+            },
         });
         return count > 0;
     } catch (error) {
@@ -28,16 +28,10 @@ export async function checkAttendanceExists(timeTableMappingId, date) {
     }
 };
 
-export async function getAttendanceDetails(universityId, acedmicYearId, role, instituteId) {
-    const whereClause = {
-        ...(universityId && { universityId }),
-        ...(acedmicYearId && { acedmicYearId }),
-        ...(role === 'Head' && { instituteId })
-    }
+export async function getAttendanceDetails() {
     try {
-        const attendanceDetails = await model.attendanceModel.findAll({
+        return await scoped(model.attendanceModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "class_sections_id", "student_id"] },
-            // where:whereClause,
             include: [
                 {
                     model: model.userModel,
@@ -52,7 +46,6 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
                 {
                     model: model.studentModel,
                     as: "studentAttendance",
-                    // where :whereClause,
                     attributes: ["firstName", "middleName", "lastName", "scholarNumber"],
                 },
                 {
@@ -63,17 +56,17 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
                         {
                             model: model.employeeModel,
                             as: 'employeeDetails',
-                            attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"]
+                            attributes: ["employeeId", "campusId", "instituteId", "employeeCode", "employeeName"],
                         },
                         {
                             model: model.electiveSubjectModel,
                             as: 'timeTableElective',
-                            attributes: ["electiveSubjectName", "electiveSubjectCode"]
+                            attributes: ["electiveSubjectName", "electiveSubjectCode"],
                         },
                         {
                             model: model.subjectModel,
                             as: 'timeTableSubject',
-                            attributes: ["subjectName", "subjectCode"]
+                            attributes: ["subjectName", "subjectCode"],
                         },
                         {
                             model: model.timeTableRoutineModel,
@@ -93,18 +86,16 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
                                         {
                                             model: model.subjectModel,
                                             as: 'subjects',
-                                            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt"] }
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                                            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt"] },
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
         });
-
-        return attendanceDetails;
     } catch (error) {
         console.error('Error fetching attendance details:', error);
         throw error;
@@ -113,10 +104,17 @@ export async function getAttendanceDetails(universityId, acedmicYearId, role, in
 
 export async function updateAttendance(attendanceId, record) {
     try {
-        const result = await model.attendanceModel.update(record, {
+        const existing = await scoped(model.attendanceModel).findOne({
+            where: { attendanceId },
+            attributes: ['attendanceId'],
+        });
+        if (!existing) {
+            return [0];
+        }
+
+        return await scoped(model.attendanceModel).update(record, {
             where: { attendanceId },
         });
-        return result;
     } catch (error) {
         console.error(`Error updating attendance ${attendanceId}:`, error);
         throw error;
@@ -125,19 +123,16 @@ export async function updateAttendance(attendanceId, record) {
 
 export async function addImportAttendance(attendanceRecords) {
     try {
-        const result = await model.attendanceModel.create(attendanceRecords);
-        return result;
+        return await scoped(model.attendanceModel).create(attendanceRecords);
     } catch (error) {
         console.error("Error in adding attendance bulk import:", error);
         throw error;
     }
 };
 
-
 export async function getAttendanceByDate(date, classSectionsId, employeeId) {
-
     try {
-        const attendanceDetails = await model.attendanceModel.findAll({
+        const attendanceDetails = await scoped(model.attendanceModel).findAll({
             attributes: {
                 exclude: [
                     "createdAt",
@@ -146,12 +141,12 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                     "createdBy",
                     "updatedBy",
                     "class_sections_id",
-                    "studentId"
-                ]
+                    "studentId",
+                ],
             },
             where: {
                 classSectionsId,
-                date: { [Op.eq]: fn("DATE", date) }
+                date: { [Op.eq]: fn("DATE", date) },
             },
             include: [
                 {
@@ -168,15 +163,15 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                             "class_id",
                             "acedmic_year_id",
                             "specialization_id",
-                            "session_id"
-                        ]
+                            "session_id",
+                        ],
                     },
                     include: [
                         {
                             model: model.courseModel,
-                            as: "courseSection"
-                        }
-                    ]
+                            as: "courseSection",
+                        },
+                    ],
                 },
                 {
                     model: model.studentModel,
@@ -186,60 +181,66 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                         "middleName",
                         "lastName",
                         "scholarNumber",
-                        "enrollNumber"
-                    ]
-                }
-            ]
+                        "enrollNumber",
+                    ],
+                },
+            ],
         });
 
-        const subjectDetail = await model.teacherSubjectMappingModel.findOne({
-            attributes: {
-                exclude: [
-                    "createdAt",
-                    "updatedAt",
-                    "deletedAt",
-                    "createdBy",
-                    "updatedBy"
-                ]
-            },
+        const employee = await scoped(model.employeeModel).findOne({
             where: { employeeId },
-            include: [
-                {
-                    model: model.classSubjectMapperModel,
-                    as: "employeeSubject",
-                    attributes: {
-                        exclude: [
-                            "createdAt",
-                            "updatedAt",
-                            "deletedAt",
-                            "createdBy",
-                            "updatedBy"
-                        ]
-                    },
-                    include: [
-                        {
-                            model: model.subjectModel,
-                            as: "subjects",
-                            attributes: {
-                                exclude: [
-                                    "createdAt",
-                                    "updatedAt",
-                                    "deletedAt",
-                                    "createdBy",
-                                    "updatedBy"
-                                ]
-                            },
-                        }
-                    ]
-                }
-            ]
+            attributes: ['employeeId'],
         });
+
+        const subjectDetail = employee
+            ? await model.teacherSubjectMappingModel.findOne({
+                attributes: {
+                    exclude: [
+                        "createdAt",
+                        "updatedAt",
+                        "deletedAt",
+                        "createdBy",
+                        "updatedBy",
+                    ],
+                },
+                where: { employeeId },
+                include: [
+                    {
+                        model: model.classSubjectMapperModel,
+                        as: "employeeSubject",
+                        attributes: {
+                            exclude: [
+                                "createdAt",
+                                "updatedAt",
+                                "deletedAt",
+                                "createdBy",
+                                "updatedBy",
+                            ],
+                        },
+                        include: [
+                            {
+                                model: model.subjectModel,
+                                as: "subjects",
+                                attributes: {
+                                    exclude: [
+                                        "createdAt",
+                                        "updatedAt",
+                                        "deletedAt",
+                                        "createdBy",
+                                        "updatedBy",
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            })
+            : null;
 
         return {
-            attendanceDetails: attendanceDetails,
-            subjectDetail: subjectDetail
+            attendanceDetails,
+            subjectDetail,
         };
-
     } catch (error) {
         console.error("Error fetching attendance:", error);
         throw error;
@@ -247,68 +248,40 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
 };
 
 export async function getTimetable(timeTableRoutineId) {
-    return await model.timeTableRoutineModel.findOne({
+    return await scoped(model.timeTableRoutineModel).findOne({
         where: {
             timeTableRoutineId,
-            deletedAt: null
+            deletedAt: null,
         },
         attributes: [
             "timeTableRoutineId",
             "startingDate",
-            "endingDate"
+            "endingDate",
         ],
         include: [
             {
                 model: model.timeTableStructurePeriodsModel,
                 as: "timeTablecreation",
                 attributes: ["weekOff"],
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     });
 }
 
-// export async function getAttendanceMap(mappingIds, from, to) {
-//   const rows = await model.attendanceModel.findAll({
-//     attributes: [
-//       "timeTableMappingId",
-//       "date",
-//       [
-//         sequelize.fn("COUNT",sequelize.col("student_id")),
-//         "presentCount"
-//       ]
-//     ],
-//     where: {
-//       timeTableMappingId: mappingIds,
-//       date: { [Op.between]: [from, to] },
-//       attentenceStatus: "PRESENT"
-//     },
-//     group: ["timeTableMappingId", "date"]
-//   });
-
-//   const map = {};
-//   for (const r of rows) {
-//     const dateKey = r.date.toISOString().slice(0, 10);
-//     const key = `${r.timeTableMappingId}_${dateKey}`;
-//     map[key] = Number(r.get("presentCount"));
-//   }
-
-//   return map;
-// }
-
 export async function getAttendanceMap(mappingIds, from, to) {
-    const rows = await model.attendanceModel.findAll({
+    const rows = await scoped(model.attendanceModel).findAll({
         attributes: [
             "timeTableMappingId",
             "date",
-            [sequelize.fn("COUNT", sequelize.col("student_id")), "presentCount"]
+            [sequelize.fn("COUNT", sequelize.col("student_id")), "presentCount"],
         ],
         where: {
             timeTableMappingId: mappingIds,
             date: { [Op.between]: [from, to] },
-            attentenceStatus: "Present"
+            attendanceStatus: "Present",
         },
-        group: ["timeTableMappingId", "date"]
+        group: ["timeTableMappingId", "date"],
     });
 
     const map = {};
@@ -321,38 +294,81 @@ export async function getAttendanceMap(mappingIds, from, to) {
     return map;
 }
 
-export async function getStudentCount(classSectionsId) {
-    return await model.studentModel.count({
+export async function getAttendanceMarkedMap(mappingIds, from, to) {
+    if (!mappingIds?.length) {
+        return {};
+    }
+
+    const dateCol = sequelize.col("date");
+
+    const rows = await scoped(model.attendanceModel).findAll({
+        attributes: [
+            "timeTableMappingId",
+            [fn("DATE", dateCol), "attendanceDate"],
+            [fn("COUNT", sequelize.col("student_id")), "markedCount"],
+        ],
         where: {
-            classSectionsId: classSectionsId,
-            deletedAt: null
-        }
+            timeTableMappingId: mappingIds,
+            [Op.and]: [
+                where(fn("DATE", dateCol), { [Op.gte]: from }),
+                where(fn("DATE", dateCol), { [Op.lte]: to }),
+            ],
+        },
+        group: ["timeTableMappingId", fn("DATE", dateCol)],
+        raw: true,
+    });
+
+    const map = {};
+    for (const r of rows) {
+        const dateKey = moment(r.attendanceDate).format("YYYY-MM-DD");
+        const key = `${r.timeTableMappingId}_${dateKey}`;
+        map[key] = Number(r.markedCount);
+    }
+
+    return map;
+}
+
+export async function getStudentCount(classSectionsId) {
+    return await scoped(model.studentModel).count({
+        where: {
+            classSectionsId,
+            deletedAt: null,
+        },
     });
 };
 
 export async function getTeacherMappings(employeeId) {
+    const employee = await scoped(model.employeeModel).findOne({
+        where: { employeeId },
+        attributes: ['employeeId'],
+    });
+    if (!employee) {
+        return [];
+    }
+
     return await model.classScheduleModel.findAll({
         where: {
             [Op.or]: [
                 { employeeId },
-                { "$timeTableTeacherSubject.employee_id$": employeeId }
-            ]
+                { "$timeTableTeacherSubject.employee_id$": employeeId },
+            ],
         },
         include: [
             {
                 model: model.teacherSubjectMappingModel,
                 as: "timeTableTeacherSubject",
-                required: false
+                required: false,
             },
             {
                 model: model.subjectModel,
                 as: "timeTableSubject",
-                required: false
+                required: false,
             },
             {
                 model: model.timeTableRoutineModel,
                 as: "timeTablecreate",
                 required: true,
+                where: buildScope(model.timeTableRoutineModel),
                 include: [
                     {
                         model: model.classSectionModel,
@@ -362,25 +378,33 @@ export async function getTeacherMappings(employeeId) {
                             {
                                 model: model.classModel,
                                 as: "classGroup",
-                                required: false
-                            }
-                        ]
-                    }
-                ]
+                                required: false,
+                            },
+                        ],
+                    },
+                ],
             },
             {
                 model: model.timeTableStructurePeriodsModel,
                 as: "timeTablecreation",
-                required: true
-            }
-        ]
+                required: true,
+            },
+        ],
     });
 };
 
 export async function getStudentAttendanceReport(classSectionsId, subjectId, employeeId) {
     try {
-        const studentsWithAttendance = await model.studentModel.findAll({
-            where: { classSectionsId: classSectionsId, deletedAt: null },
+        const employee = await scoped(model.employeeModel).findOne({
+            where: { employeeId },
+            attributes: ['employeeId'],
+        });
+        if (!employee) {
+            return [];
+        }
+
+        return await scoped(model.studentModel).findAll({
+            where: { classSectionsId, deletedAt: null },
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
                 {
@@ -394,8 +418,8 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
                             as: 'timeTableMapping',
                             required: true,
                             where: {
-                                employeeId: employeeId,
-                                subjectId: subjectId
+                                employeeId,
+                                subjectId,
                             },
                             attributes: ['timeTableMappingId'],
                             include: [
@@ -404,17 +428,15 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
                                     as: 'timeTablecreation',
                                     attributes: ['timeTableCreationId', 'periodName'],
                                     where: {
-                                        isBreak: false
-                                    }
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
+                                        isBreak: false,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
         });
-
-        return studentsWithAttendance;
     } catch (error) {
         console.error("Error in getStudentAttendanceReport:", error);
         throw error;
@@ -423,12 +445,19 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
 
 export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId, employeeId) {
     try {
-        const scheduleItems = await model.classScheduleModel.findAll({
-            where: {
+        const employee = await scoped(model.employeeModel).findOne({
+            where: { employeeId },
+            attributes: ['employeeId'],
+        });
+        if (!employee) {
+            return [];
+        }
 
-                subjectId: subjectId,
-                employeeId: employeeId,
-                deletedAt: null
+        return await model.classScheduleModel.findAll({
+            where: {
+                subjectId,
+                employeeId,
+                deletedAt: null,
             },
             include: [
                 {
@@ -436,17 +465,16 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
                     as: 'timeTablecreate',
                     attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
                     required: true,
-                    where: { classSectionsId }
+                    where: { classSectionsId, ...buildScope(model.timeTableRoutineModel) },
                 },
                 {
                     model: model.timeTableStructurePeriodsModel,
                     as: 'timeTablecreation',
                     attributes: ['timeTableCreationId', 'periodName', 'startTime', 'endTime'],
-                    required: true
-                }
-            ]
+                    required: true,
+                },
+            ],
         });
-        return scheduleItems;
     } catch (error) {
         console.error("Error in getEmployeeScheduleWithRoutine:", error);
         throw error;
@@ -455,7 +483,7 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
 
 export async function getStudentsBatchAttendance(classSectionsId, filters) {
     try {
-        const students = await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where: { classSectionsId, deletedAt: null },
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
@@ -467,46 +495,42 @@ export async function getStudentsBatchAttendance(classSectionsId, filters) {
                     where: {
                         [Op.or]: filters.map(f => ({
                             date: { [Op.eq]: fn("DATE", f.date) },
-                            timeTableMappingId: f.timeTableMappingId
-                        }))
-                    }
-                }
-            ]
+                            timeTableMappingId: f.timeTableMappingId,
+                        })),
+                    },
+                },
+            ],
         });
-        return students;
     } catch (error) {
         console.error("Error in getStudentsBatchAttendance:", error);
         throw error;
     }
 }
 
-export async function getStudentsByScholarNumbers(scholarNumbers, instituteId) {
+export async function getStudentsByScholarNumbers(scholarNumbers) {
     try {
-        const students = await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where: {
                 scholarNumber: { [Op.in]: scholarNumbers },
-                instituteId,
-                deletedAt: null
+                deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
         });
-        return students;
     } catch (error) {
         console.error("Error in getStudentsByScholarNumbers:", error);
         throw error;
     }
 }
-export async function getStudentsByIds(studentIds, instituteId) {
+
+export async function getStudentsByIds(studentIds) {
     try {
-        const students = await model.studentModel.findAll({
+        return await scoped(model.studentModel).findAll({
             where: {
                 studentId: { [Op.in]: studentIds },
-                instituteId,
-                deletedAt: null
+                deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId']
+            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
         });
-        return students;
     } catch (error) {
         console.error("Error in getStudentsByIds:", error);
         throw error;
@@ -516,24 +540,24 @@ export async function getStudentsByIds(studentIds, instituteId) {
 export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
     try {
         const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
-            model.classSectionModel.findOne({
+            scoped(model.classSectionModel).findOne({
                 where: { classSectionsId, deletedAt: null },
-                attributes: ['class', 'section']
+                attributes: ['class', 'section'],
             }),
-            model.subjectModel.findOne({
+            scoped(model.subjectModel).findOne({
                 where: { subjectId, deletedAt: null },
-                attributes: ['subjectName', 'subjectCode']
+                attributes: ['subjectName', 'subjectCode'],
             }),
-            model.employeeModel.findOne({
+            scoped(model.employeeModel).findOne({
                 where: { employeeId, deletedAt: null },
-                attributes: ['employeeName', 'employeeCode']
-            })
+                attributes: ['employeeName', 'employeeCode'],
+            }),
         ]);
 
         return {
             sectionDetails,
             subjectDetails,
-            employeeDetails
+            employeeDetails,
         };
     } catch (error) {
         console.error("Error in getDetailsByIds:", error);

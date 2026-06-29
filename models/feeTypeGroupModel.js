@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import feeType from "./feeTypeModel.js";
 import studentInvoiceMapperModel from "./studentInvoiceMapperModel.js";
 
-export default sequelize.define(
+const feeTypeGroupModel = sequelize.define(
     'fee_type_group',
     {
         feeTypeGroupId: {
@@ -86,3 +86,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+feeTypeGroupModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default feeTypeGroupModel;

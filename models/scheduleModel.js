@@ -5,7 +5,7 @@ import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
 import universityModel from "./universityModel.js";
 
-export default sequelize.define(
+const scheduleModel = sequelize.define(
     "schedule",
     {
         scheduleId: {
@@ -134,3 +134,7 @@ export default sequelize.define(
         paranoid: true,
     }
 );
+
+scheduleModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default scheduleModel;

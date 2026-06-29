@@ -1,19 +1,81 @@
-import { changeCourseStatuss, getCourseByCourseId } from '../repository/courseRepository.js';
+import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
+import * as instituteRepository from '../repository/instituteRepository.js';
+import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
 
-export async function getAllCollegesAndCourses(universityId, campusId, instituteId, acedmicYearId, role, headInstituteId) {
+function coercePositiveInt(value) {
+    if (value == null || value === '') return null;
+    const n = Number(value);
+    return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function resolveTermConfig(term) {
+    switch (String(term ?? 'semester').toLowerCase()) {
+        case 'semester':
+            return { monthsPerTerm: 6, termLabel: 'Sem' };
+        case 'trimester':
+            return { monthsPerTerm: 4, termLabel: 'Tri' };
+        case 'quarterly':
+            return { monthsPerTerm: 3, termLabel: 'Quar' };
+        case 'yearly':
+            return { monthsPerTerm: 12, termLabel: 'Year' };
+        default:
+            return null;
+    }
+}
+
+function normalizeAddCoursePayload(data) {
+    const rootTerm = data.term ?? 'semester';
+    const rootSubAccountId =
+        coercePositiveInt(data.subAccountId) ?? coercePositiveInt(data.departmentId);
+    const courses = Array.isArray(data.courses) ? data.courses : [];
+
+    return {
+        course_levelId: coercePositiveInt(data.course_levelId),
+        affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
+        acedmicYearId: coercePositiveInt(data.acedmicYearId),
+        subAccountId: rootSubAccountId,
+        term: rootTerm,
+        courses: courses.map((course) => ({
+            courseName: course.courseName,
+            courseCode: course.courseCode,
+            subAccountId:
+                coercePositiveInt(course.subAccountId)
+                ?? coercePositiveInt(course.departmentId)
+                ?? rootSubAccountId,
+            courseDuration: course.courseDuration != null && course.courseDuration !== ''
+                ? Number(course.courseDuration)
+                : null,
+            capacity: course.capacity != null ? String(course.capacity) : undefined,
+            term: course.term ?? rootTerm,
+        })),
+    };
+}
+
+async function resolveSubAccountId(subAccountId) {
+    if (subAccountId == null) {
+        return null;
+    }
+    const subAccount = await getSingleSubAccountDetails(subAccountId);
+    if (!subAccount) {
+        throw new Error('subAccountId not found for this institute');
+    }
+    return subAccountId;
+}
+
+export async function getAllCollegesAndCourses() {
     try {
         const [allUniversity, allCampus, allInstitute, allAffiliatedIniversity, allCourse, allSpecialization, allSubject] =
             await Promise.all([
-                mainRepository.getAllUniversity(universityId),
-                mainRepository.getAllCampus(universityId, campusId),
-                mainRepository.getAllInstitute(universityId, instituteId, headInstituteId, role, campusId),
-                mainRepository.getAllAffiliatedUniversity(universityId, instituteId, headInstituteId, role),
-                mainRepository.getAllCourse(universityId, headInstituteId, role, instituteId, campusId),
-                mainRepository.getAllSpecialization(universityId, acedmicYearId, headInstituteId, role),
-                mainRepository.getAllSubject(universityId, acedmicYearId, headInstituteId, role, instituteId)
+                mainRepository.getAllUniversity(),
+                mainRepository.getAllCampus(),
+                mainRepository.getAllInstitute(),
+                mainRepository.getAllAffiliatedUniversity(),
+                mainRepository.getAllCourse(),
+                mainRepository.getAllSpecialization(),
+                mainRepository.getAllSubject(),
             ]);
 
         return {
@@ -23,21 +85,20 @@ export async function getAllCollegesAndCourses(universityId, campusId, institute
             allAffiliatedIniversity,
             allCourse,
             allSpecialization,
-            allSubject
+            allSubject,
         };
     } catch (error) {
         console.error('Error fetching all Course details:', error);
         throw error;
     }
-};
+}
 
 export async function addCampus(data, createdBy) {
-    const { universityId, campuses } = data;
+    const { campuses } = data;
     try {
         const createdCampuses = [];
         for (const campus of campuses) {
-            const campusData = { ...campus, universityId, createdBy };
-            const createdCampus = await mainRepository.addCampus(campusData);
+            const createdCampus = await mainRepository.addCampus({ ...campus, createdBy });
             createdCampuses.push(createdCampus);
         }
         return createdCampuses;
@@ -45,17 +106,17 @@ export async function addCampus(data, createdBy) {
         console.error('Add Campus Error in Service:', error);
         throw error;
     }
-};
+}
 
 export async function addInstitute(data, createdBy) {
     const results = [];
     try {
-        const { campusId, universityId, institutes } = data;
+        const { campusId, institutes } = data;
         for (const institute of institutes) {
             const result = await mainRepository.addInstitute({
                 ...institute,
                 campusId,
-                universityId, createdBy
+                createdBy
             });
             results.push(result);
         }
@@ -66,17 +127,16 @@ export async function addInstitute(data, createdBy) {
     }
 }
 
-
 export async function addAffiliatedUniversity(data, createdBy) {
     const results = [];
     try {
-        const { instituteId, universityId, affiliatedUniversities } = data;
+        const { instituteId, affiliatedUniversities } = data;
 
         for (const affiliatedUniversity of affiliatedUniversities) {
             const result = await mainRepository.addAffiliatedUniversity({
                 ...affiliatedUniversity,
                 instituteId,
-                universityId, createdBy
+                createdBy
             });
             results.push(result);
         }
@@ -85,121 +145,145 @@ export async function addAffiliatedUniversity(data, createdBy) {
         console.error('Error adding affiliated universities:', error);
         return { message: 'Error adding affiliated universities', error };
     }
-};
+}
 
-export async function addCourse(data, createdBy, instituteId, universityId) {
+export async function addCourse(data, createdBy) {
+    const normalized = normalizeAddCoursePayload(data);
+
+    if (!normalized.course_levelId) {
+        throw new Error('course_levelId is required');
+    }
+    if (!normalized.courses.length) {
+        throw new Error('courses array is required');
+    }
+
+    let affiliatedUniversityId = normalized.affiliatedUniversityId;
+    if (affiliatedUniversityId) {
+        const affiliated = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
+        if (!affiliated) {
+            throw new Error('affiliatedUniversityId not found for this institute');
+        }
+    } else {
+        affiliatedUniversityId = await instituteRepository.findDefaultAffiliatedUniversityId();
+    }
+    if (!affiliatedUniversityId) {
+        throw new Error('No affiliated university found for this institute. Create one first or pass affiliatedUniversityId.');
+    }
+
     const results = [];
-
     const transaction = await sequelize.transaction();
 
     try {
-        const { course_levelId, courses, affiliatedUniversityId, acedmicYearId, term } = data;
-
-        for (const course of courses) {
-
-            // add terms
-            const { courseDuration } = course;
-
-            if (term && courseDuration) {
-                let monthsPerTerm = 6;
-                let termLabel = '';
-                switch (term.toLowerCase()) {
-                    case 'semester':
-                        monthsPerTerm = 6;
-                        termLabel = 'Sem';
-                        break;
-                    case 'trimester':
-                        monthsPerTerm = 4;
-                        termLabel = 'Tri';
-                        break;
-                    case 'quarterly':
-                        monthsPerTerm = 3;
-                        termLabel = 'Quar';
-                        break;
-                    case 'yearly':
-                        monthsPerTerm = 12;
-                        termLabel = 'Year';
-                        break;
-                    default:
-                        console.warn(`Unknown term type: ${term}`);
-                        continue;
-                }
-                const totalTerms = Math.floor(courseDuration * 12 / monthsPerTerm);
-
-
-                // Add course
-                const result = await mainRepository.addCourse({
-                    ...course,
-                    course_levelId,
-                    universityId,
-                    affiliatedUniversityId,
-                    createdBy,
-                    acedmicYearId,
-                    instituteId,
-                    totalTerms,
-                    termType: termLabel
-                }, transaction);
-
-
-                results.push(result)
-                // for (let i = 1; i <= totalTerms; i++) {
-
-                //     await mainRepository.addSemester({
-                //         universityId,
-                //         courseId,
-                //         acedmicYearId,
-                //         instituteId,
-                //         termType: termLabel,
-                //         name: `${termLabel} ${i}`,
-                //         semesterDuration: monthsPerTerm,
-                //         courseDuration: courseDuration,
-                //         totalTerms,
-                //         createdBy,
-                //     }, transaction);
-                // }
-            } else {
-                throw new Error("Term and Course Duration is required")
+        for (const course of normalized.courses) {
+            if (!course.courseName || !course.courseCode) {
+                throw new Error('courseName and courseCode are required for each course');
             }
+
+            const termConfig = resolveTermConfig(course.term);
+            if (!termConfig) {
+                throw new Error(`Unknown term type: ${course.term}`);
+            }
+
+            const payload = {
+                courseName: course.courseName,
+                courseCode: course.courseCode,
+                course_levelId: normalized.course_levelId,
+                affiliatedUniversityId,
+                createdBy,
+                termType: termConfig.termLabel,
+            };
+
+            if (course.capacity != null) {
+                payload.capacity = course.capacity;
+            }
+            if (course.courseDuration != null) {
+                payload.courseDuration = course.courseDuration;
+                payload.totalTerms = Math.floor(
+                    (course.courseDuration * 12) / termConfig.monthsPerTerm,
+                );
+            }
+            if (course.subAccountId != null) {
+                payload.subAccountId = await resolveSubAccountId(course.subAccountId);
+            }
+
+            const result = await mainRepository.addCourse(payload, transaction);
+            results.push(result);
         }
 
         await transaction.commit();
-
         return results;
-
     } catch (error) {
         await transaction.rollback();
         console.error('Error adding courses:', error);
-        throw { message: 'Error adding courses', error };
+        throw error;
     }
-};
+}
 
-export const changeCourseStatus = async (courseId) => {
+export async function updateCourse(data) {
+    const {
+        courseId,
+        courseName,
+        courseCode,
+        departmentId,
+        subAccountId: subAccountIdInput,
+    } = data;
+
     const course = await getCourseByCourseId(courseId);
     if (!course) {
         throw new Error('Course not found');
     }
 
-    const newStatus = !course.dataValues.isActive;
+    const updateData = {};
+    if (courseName != null) {
+        updateData.courseName = courseName;
+    }
+    if (courseCode != null) {
+        updateData.courseCode = courseCode;
+    }
 
+    const programId =
+        subAccountIdInput !== undefined
+            ? subAccountIdInput
+            : departmentId;
 
-    await changeCourseStatuss(courseId, { isActive: newStatus });
+    if (programId !== undefined) {
+        updateData.subAccountId = programId == null ? null : await resolveSubAccountId(programId);
+    }
+
+    const updated = await updateCourseById(courseId, updateData);
+    if (!updated) {
+        throw new Error('Course not found');
+    }
+
+    return updated;
+}
+
+export async function changeCourseStatus(courseId, isActive) {
+    const course = await getCourseByCourseId(courseId);
+    if (!course) {
+        throw new Error('Course not found');
+    }
+
+    await changeCourseStatuss(courseId, { isActive });
 
     return {
-        message: `Course status updated successfully to`,
-        isActive: newStatus
+        courseId: Number(courseId),
+        isActive,
+        message: isActive ? 'Course activated successfully' : 'Course deactivated successfully',
     };
-};
+}
 
-export async function addSpecialization(data, createdBy, instituteId) {
+export async function addSpecialization(data, createdBy) {
     const results = [];
     try {
-        const { course_Id, universityId, specializations, acedmicYearId } = data;
+        const { course_Id, specializations, acedmicYearId } = data;
 
         for (const specialization of specializations) {
             const result = await mainRepository.addSpecialization({
                 ...specialization,
                 course_Id,
-                universityId, createdBy, acedmicYearId, instituteId
+                createdBy,
+                acedmicYearId,
             });
             results.push(result);
         }
@@ -208,19 +292,21 @@ export async function addSpecialization(data, createdBy, instituteId) {
         console.error('Error adding specializations:', error);
         return { message: 'Error adding specializations', error };
     }
-};
+}
 
-export async function addSubject(data, createdBy, instituteId, universityId) {
+export async function addSubject(data, createdBy) {
+    const { courseId, subjects, specializationId, acedmicYearId } = data;
+    await assertCourseIsActive(courseId, 'have new subjects added');
+
     const results = [];
     try {
-        const { courseId, subjects, specializationId, acedmicYearId } = data;
-
         for (const subject of subjects) {
             const result = await mainRepository.addSubject({
                 ...subject,
                 courseId,
                 specializationId,
-                universityId, createdBy, acedmicYearId, instituteId
+                createdBy,
+                acedmicYearId,
             });
             results.push(result);
         }
@@ -229,82 +315,112 @@ export async function addSubject(data, createdBy, instituteId, universityId) {
         console.error('Error adding subjects:', error);
         return { message: 'Error adding subjects', error };
     }
-};
+}
 
-export async function updateSubject(data, updateBy, instituteId) {
+export async function updateSubject(data, updateBy) {
     data.updateBy = updateBy;
-    data.instituteId = instituteId;
     const subjectId = data?.subjectId
     return await mainRepository.updateSubject(subjectId, data);
-};
+}
 
-export async function addClass(data, createdBy, universityId, instituteId) {
-    const results = [];
+export async function addClass(data, createdBy) {
     try {
         if (!data) throw new Error('Data is required');
         if (!createdBy) throw new Error('CreatedBy is required');
-        if (!universityId) throw new Error('UniversityId is required');
-        if (!instituteId) throw new Error('InstituteId is required');
 
         const { courseId, acedmicYearId, className, sections, term, sessionId } = data;
 
         if (!courseId) throw new Error('CourseId is required');
         if (!acedmicYearId) throw new Error('AcedmicYearId is required');
         if (!className) throw new Error('ClassName is required');
-        if (!sections || !Array.isArray(sections) || sections.length === 0) throw new Error('Sections are required and must be a non-empty array');
-        if (!term) throw new Error('Term is required');
+        if (!sections?.length) throw new Error('Sections are required and must be a non-empty array');
+        if (term == null || term === '') throw new Error('Term is required');
         if (!sessionId) throw new Error('SessionId is required');
 
-        const classObject = { courseId, className, universityId, updatedBy: createdBy, createdBy, instituteId, term, sessionId }
-
-        const classData = await mainRepository.seprateAddClass(classObject)
-        const classId = classData.dataValues.classId
-
-        for (const section of sections) {
-            const result = await mainRepository.createClassSections({
-                ...section,
-                courseId,
-                universityId,
+        const transaction = await sequelize.transaction();
+        try {
+            const classSemesterId = await mainRepository.findOrCreateSemesterIdForClass({
+                courseId: Number(courseId),
+                term: Number(term),
+                acedmicYearId: Number(acedmicYearId),
                 createdBy,
-                acedmicYearId,
-                classId, instituteId, term, sessionId
+                transaction,
             });
-            results.push(result);
+
+            const classRow = await mainRepository.seprateAddClass({
+                courseId: Number(courseId),
+                className,
+                term: Number(term),
+                sessionId: Number(sessionId),
+                semesterId: classSemesterId,
+                createdBy,
+                updatedBy: createdBy,
+            }, { transaction });
+
+            const classId = classRow.classId ?? classRow.dataValues?.classId;
+            if (!classId) {
+                throw new Error('Class could not be created');
+            }
+
+            const sectionPayload = {
+                courseId: Number(courseId),
+                acedmicYearId: Number(acedmicYearId),
+                sessionId: Number(sessionId),
+                classId,
+                class: String(term),
+                createdBy,
+            };
+
+            const sectionResults = [];
+            for (const section of sections) {
+                if (!section.sectionId) {
+                    throw new Error('sectionId is required for each section');
+                }
+                const row = await mainRepository.createClassSections({
+                    ...sectionPayload,
+                    sectionId: Number(section.sectionId),
+                    section: section.section,
+                }, { transaction });
+                sectionResults.push(row);
+            }
+
+            await transaction.commit();
+            return {
+                semesterId: classSemesterId,
+                classId,
+                class: classRow,
+                sections: sectionResults,
+            };
+        } catch (error) {
+            await transaction.rollback();
+            throw error;
         }
-        return results;
     } catch (error) {
         console.error('Error adding class:', error);
-        return { message: error.message || 'Error adding class', error };
+        throw error;
     }
-};
+}
 
-export async function getClassDetails(classSectionId, universityId, acedmicYearId, instituteId, role) {
-    return await mainRepository.getClassDetails(classSectionId, universityId, acedmicYearId, instituteId, role)
-};
+export async function getClassDetails(classSectionId, acedmicYearId) {
+    return await mainRepository.getClassDetails(classSectionId, acedmicYearId)
+}
 
-export async function getClassSpecific(universityId, headInstituteId, role, campusId, instituteId, acedmicYearId, courseId, sessionId) {
-    return await mainRepository.getClassSpecific(universityId, headInstituteId, role, campusId, instituteId, acedmicYearId, courseId, sessionId);
-};
+export async function getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId) {
+    return await mainRepository.getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId);
+}
 
-export async function addClassSubjectMapper(data, createdBy, instituteId) {
+export async function addClassSubjectMapper(data, createdBy) {
     try {
         const { subjectIds } = data;
 
-        // const classSection = await mainRepository.getSectionByClassId(classId);
-        // const classSectionIds = classSection.map(section => section.classSectionsId);
-
         const entries = [];
 
-        // for (const sectionId of classSectionIds) {
         for (const subjectId of subjectIds) {
             entries.push({
-                // classSectionId: sectionId,
                 subjectId,
                 createdBy,
-                instituteId
             });
         }
-        // }
 
         const result = await mainRepository.addClassSubjectMapper(entries);
         return result;
@@ -312,14 +428,13 @@ export async function addClassSubjectMapper(data, createdBy, instituteId) {
         console.error('Error adding class subject mappings:', error);
         return { message: 'Error adding class subject mappings', error };
     }
-};
+}
 
+export async function getClassSubjectMapper(semesterId, acedmicYearId) {
+    return await mainRepository.getClassSubjectMapper(semesterId, acedmicYearId)
+}
 
-export async function getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role) {
-    return await mainRepository.getClassSubjectMapper(semesterId, universityId, acedmicYearId, instituteId, role)
-};
-
-export async function addSemester(data, createdBy, universityId, instituteId) {
+export async function addSemester(data, createdBy) {
     const { semesterDuration, courseId, acedmicYearId } = data
     const course = await getCourseByCourseId(courseId)
     const courseDuration = course.dataValues.courseDuration
@@ -328,47 +443,64 @@ export async function addSemester(data, createdBy, universityId, instituteId) {
         totalSemester: courseDuration / semesterDuration,
         createdBy,
         courseDuration: courseDuration,
-        universityId,
         acedmicYearId,
-        instituteId,
     };
     return await mainRepository.addSemester(semesterData)
-};
+}
 
-export async function getSemester(courseId, specializationId, universityId, acedmicYearId, instituteId, role) {
-    return await mainRepository.getSemester(courseId, specializationId, universityId, acedmicYearId, instituteId, role)
-};
+export async function getSemester(courseId, specializationId, acedmicYearId) {
+    return await mainRepository.getSemester(courseId, specializationId, acedmicYearId)
+}
 
 export async function getSemesterById(semesterId) {
     return await mainRepository.getSemesterById(semesterId)
-};
+}
 
-export async function createClass(data, createdBy, universityId, instituteId) {
+export async function createClass(data, createdBy) {
     const results = [];
     try {
-        const { courseId, acedmicYearId, specializationId, section } = data;
+        const {
+            courseId,
+            acedmicYearId,
+            specializationId,
+            section,
+            term,
+            sessionId,
+            classId,
+        } = data;
+
+        if (!courseId || !acedmicYearId) {
+            throw new Error('courseId and acedmicYearId are required');
+        }
+        if (!section || !Array.isArray(section) || section.length === 0) {
+            throw new Error('section is required and must be a non-empty array');
+        }
 
         for (const sectionValue of section) {
             const result = await mainRepository.createClassSections({
-                courseId,
+                courseId: Number(courseId),
                 specializationId,
-                acedmicYearId,
-                universityId,
+                acedmicYearId: Number(acedmicYearId),
+                sessionId: Number(sessionId),
+                classId,
+                term: Number(term),
+                section: sectionValue,
+                class: term != null ? String(term) : undefined,
                 createdBy,
-                instituteId,
-                section: sectionValue
             });
             results.push(result);
         }
         return results;
     } catch (error) {
         console.error('Error adding class directly:', error);
-        return { message: 'Error adding class directly', error };
+        throw error;
     }
-};
+}
 
-export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy, universityId, instituteId) {
+export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy) {
     try {
+        await assertCourseIsActive(courseId, 'have new subjects added');
+
         const subjectCreationPromises = excelData.map(async (row) => {
             const subjectData = {
                 courseId,
@@ -378,8 +510,6 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
                 subjectCode: row.subjectCode,
                 subjectType: row.subjectType,
                 createdBy,
-                universityId,
-                instituteId,
             };
 
             return await mainRepository.addSubject(subjectData);
@@ -390,12 +520,27 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
         console.error("Error in creating subject bulk upload:", error);
         throw new Error("Failed to create subject bulk upload");
     }
-};
+}
 
-export async function getClassRecord(courseId, semesterId, classSectionId, acedmicYearId) {
-    const result = await studentRepository.getClassRecord(courseId, semesterId, classSectionId, acedmicYearId);
+export async function getClassRecord(courseId, classSectionsId) {
+    const result = await studentRepository.getClassRecord(courseId, classSectionsId);
+    const section = result.classSection
+        ? (result.classSection.get
+            ? result.classSection.get({ plain: true })
+            : result.classSection)
+        : null;
 
     const response = {
+        classSection: section
+            ? {
+                classSectionsId: section.classSectionsId,
+                courseId: section.courseId,
+                acedmicYearId: section.acedmicYearId ?? null,
+                sectionName: section.section ?? null,
+                className: section.class ?? null,
+                term: section.classGroup?.term ?? section.class ?? null,
+            }
+            : null,
         student: result.student.map((s) => ({
             studentId: s.studentId,
             firstName: s.firstName,
@@ -403,6 +548,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
             scholarNumber: s.scholarNumber,
             email: s.email,
             phoneNumber: s.phoneNumber,
+            semesterId: s.semesterId ?? null,
             semesterName: s.studentSemester?.name || null,
             className: s.studentSections?.class || null,
             sectionName: s.studentSections?.section || null,
@@ -423,7 +569,7 @@ export async function getClassRecord(courseId, semesterId, classSectionId, acedm
     };
 
     return response;
-};
+}
 
 export async function getMonthlyIncomeService() {
     try {
@@ -454,8 +600,8 @@ export async function getMonthlyIncomeService() {
         console.error("Error in getMonthlyIncomeService:", error);
         throw error;
     }
-};
+}
 
-export async function getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId) {
-    return await mainRepository.getClassSectionsByFilter(sessionId, courseId, universityId, acedmicYearId);
-};
+export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearId) {
+    return await mainRepository.getClassSectionsByFilter(sessionId, courseId, acedmicYearId);
+}

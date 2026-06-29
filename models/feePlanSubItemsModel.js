@@ -4,7 +4,7 @@ import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const feePlanSubItemsModel = sequelize.define(
   "fee_plan_sub_items",
   {
     feePlanSubitemId: {
@@ -61,3 +61,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+feePlanSubItemsModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feePlanSubItemsModel;

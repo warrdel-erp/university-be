@@ -1,32 +1,50 @@
-import * as SubAccountCreationService  from "../repository/subAccountRepository.js";
+import * as SubAccountCreationService from '../repository/subAccountRepository.js';
 
-export async function addSubAccount(SubAccountData, createdBy, updatedBy,universityId) {
+export async function addSubAccount(SubAccountData, createdBy, updatedBy) {
+    const accountId = SubAccountData.accountId != null
+        ? Number(SubAccountData.accountId)
+        : await SubAccountCreationService.resolveDefaultAccountId();
 
-        SubAccountData.createdBy = createdBy;
-        SubAccountData.updatedBy = updatedBy;
-        SubAccountData.universityId = universityId;
-        const SubAccount = await SubAccountCreationService.addSubAccount(SubAccountData);
-        return SubAccount;
-};
+    const account = await SubAccountCreationService.getAccountById(accountId);
+    if (!account) {
+        throw new Error('Account not found');
+    }
 
-export async function getSubAccountDetails(universityId) {
-    const data = await SubAccountCreationService.getSubAccountDetails(universityId);
-        return data;
+    SubAccountData.accountId = accountId;
+    SubAccountData.createdBy = createdBy;
+    SubAccountData.updatedBy = updatedBy;
+    return await SubAccountCreationService.addSubAccount(SubAccountData);
 }
 
-export async function getSingleSubAccountDetails(subAccountId,universityId) {
-    return await SubAccountCreationService.getSingleSubAccountDetails(subAccountId,universityId);
+export async function getSubAccountDetails() {
+    return await SubAccountCreationService.getSubAccountDetails();
+}
+
+export async function getSingleSubAccountDetails(subAccountId) {
+    return await SubAccountCreationService.getSingleSubAccountDetails(subAccountId);
 }
 
 export async function deleteSubAccount(subAccountId) {
     return await SubAccountCreationService.deleteSubAccount(subAccountId);
 }
 
-export async function updateSubAccount(subAccountId, SubAccountData, updatedBy) {    
+export async function updateSubAccount(subAccountId, SubAccountData, updatedBy) {
+    if (SubAccountData.accountId) {
+        const account = await SubAccountCreationService.getAccountById(SubAccountData.accountId);
+        if (!account) {
+            throw new Error('Account not found');
+        }
+    }
 
-    SubAccountData.updatedBy = updatedBy;
-    await SubAccountCreationService.updateSubAccount(subAccountId, SubAccountData);
-};
+    const {
+        instituteId: _instituteId,
+        universityId: _universityId,
+        subAccountId: _subAccountId,
+        ...updateData
+    } = SubAccountData;
+    updateData.updatedBy = updatedBy;
+    return await SubAccountCreationService.updateSubAccount(subAccountId, updateData);
+}
 
 export async function getAllAccount() {
     return await SubAccountCreationService.getAllAccount();

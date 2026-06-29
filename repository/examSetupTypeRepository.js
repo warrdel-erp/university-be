@@ -1,30 +1,34 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
 export async function getExamSetupTypes(filters) {
     try {
-        const { courseId, term, universityId } = filters;
+        const { courseId, term } = filters;
 
-        const result = await model.examSetupTypeModel.findAll({
+        const result = await scoped(model.examSetupTypeModel).findAll({
             attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"]
+                exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
             },
             include: [
                 {
                     model: model.examSetupTypeTermModel,
                     as: "examSetupTypeTerms",
                     where: {
+                        ...buildScope(model.examSetupTypeTermModel),
                         ...(courseId && { courseId }),
                         ...(term && { term }),
-                        ...(universityId && { universityId })
                     },
-                    attributes: []
+                    attributes: [],
+                    required: !!(courseId || term),
                 },
                 {
                     model: model.examStructureModel,
                     as: "examStructure",
-                    attributes: ["examStructureId", "totalMarks"]
-                }
-            ]
+                    attributes: ["examStructureId", "totalMarks"],
+                    where: buildScope(model.examStructureModel),
+                    required: false,
+                },
+            ],
         });
         return result;
     } catch (error) {

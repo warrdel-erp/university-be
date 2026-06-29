@@ -5,7 +5,7 @@ import feeTypeCategoryModel from "./feeTypeCategoryModel.js";
 import { feeTypeLedgerTypes } from "../constant.js";
 
 /** ERD fee type (name, description, amount, category, institute). Physical table is not `fee_type` because that name is used by feeGroup-linked {@link ./feeTypeModel.js}. */
-export default sequelize.define(
+const feeTypeCatalogModel = sequelize.define(
   "fee_type_catalog",
   {
     feeTypeCatalogId: {
@@ -60,3 +60,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+feeTypeCatalogModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feeTypeCatalogModel;

@@ -1,29 +1,24 @@
-import * as RoomTypeCreationService  from "../repository/roomTypeRepository.js";
+import * as RoomTypeCreationService from "../repository/roomTypeRepository.js";
 
-export async function addRoomType(RoomTypeData, createdBy, updatedBy,universityId,instituteId) {
-
-        RoomTypeData.createdBy = createdBy;
-        RoomTypeData.updatedBy = updatedBy;
-        RoomTypeData.universityId =universityId;
-        RoomTypeData.instituteId = instituteId 
-        const RoomType = await RoomTypeCreationService.addRoomType(RoomTypeData);
-        return RoomType;
+export async function addRoomType(roomTypeData, createdBy, updatedBy) {
+    roomTypeData.createdBy = createdBy;
+    roomTypeData.updatedBy = updatedBy;
+    return await RoomTypeCreationService.addRoomType(roomTypeData);
 };
 
-export async function getRoomTypeDetails(universityId,acedmicYearId,role,instituteId) {
-    return await RoomTypeCreationService.getRoomTypeDetails(universityId,acedmicYearId,role,instituteId);
+export async function getRoomTypeDetails() {
+    return await RoomTypeCreationService.getRoomTypeDetails();
 }
 
-export async function getSingleRoomTypeDetails(roomTypeId,universityId) {
-    return await RoomTypeCreationService.getSingleRoomTypeDetails(roomTypeId,universityId);
+export async function getSingleRoomTypeDetails(roomTypeId) {
+    return await RoomTypeCreationService.getSingleRoomTypeDetails(roomTypeId);
 }
 
 export async function deleteRoomType(roomTypeId) {
     return await RoomTypeCreationService.deleteRoomType(roomTypeId);
 }
 
-export async function updateRoomType(roomTypeId, RoomTypeData, updatedBy) {    
-
-    RoomTypeData.updatedBy = updatedBy;
-    await RoomTypeCreationService.updateRoomType(roomTypeId, RoomTypeData);
+export async function updateRoomType(roomTypeId, roomTypeData, updatedBy) {
+    roomTypeData.updatedBy = updatedBy;
+    return await RoomTypeCreationService.updateRoomType(roomTypeId, roomTypeData);
 }

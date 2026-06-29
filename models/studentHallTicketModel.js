@@ -6,7 +6,7 @@ import studentModel from "./studentModel.js";
 import instituteModel from "./instituteModel.js";
 import universityModel from "./universityModel.js";
 
-export default sequelize.define(
+const studentHallTicketModel = sequelize.define(
     "student_hall_ticket",
     {
         id: {
@@ -99,3 +99,7 @@ export default sequelize.define(
         ]
     }
 );
+
+studentHallTicketModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default studentHallTicketModel;

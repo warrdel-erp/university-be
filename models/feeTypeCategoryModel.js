@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const feeTypeCategoryModel = sequelize.define(
   "fee_type_category",
   {
     feeTypeCategoryId: {
@@ -39,3 +39,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+feeTypeCategoryModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feeTypeCategoryModel;

@@ -6,7 +6,18 @@ import { validate } from "../utility/validation.js";
 
 const router = Router();
 
-// Define schema for institute creation
+const academicYearSchema = z.object({
+  yearTitle: z
+    .string({ required_error: "yearTitle is required" })
+    .min(1, "yearTitle cannot be empty"),
+  startingDate: z
+    .string({ required_error: "startingDate is required" })
+    .min(1, "startingDate cannot be empty"),
+  endingDate: z
+    .string({ required_error: "endingDate is required" })
+    .min(1, "endingDate cannot be empty"),
+});
+
 const instituteSchema = z.object({
   campusId: z.number({
     required_error: "Campus Id is required",
@@ -21,9 +32,22 @@ const instituteSchema = z.object({
       required_error: "Institute code is required",
     })
     .min(1, "Institute code cannot be empty"),
+  academicYear: academicYearSchema,
+  affiliatedUniversity: z
+    .array(
+      z.object({
+        affiliatedUniversityName: z
+          .string({ required_error: "Affiliated university name is required" })
+          .min(1, "Affiliated university name cannot be empty"),
+        affiliatedUniversityCode: z
+          .string({ required_error: "Affiliated university code is required" })
+          .min(1, "Affiliated university code cannot be empty"),
+      })
+    )
+    .optional()
+    .default([]),
 });
 
-// Define schema for listing institutes
 const listInstituteSchema = z.object({
   campusId: z
     .string()
@@ -32,9 +56,43 @@ const listInstituteSchema = z.object({
     .transform((val) => (val ? parseInt(val) : undefined)),
 });
 
-// Routes
+const updateInstituteSchema = z
+  .object({
+    instituteId: z.number({ required_error: "Institute Id is required" }),
+    campusId: z.number().optional(),
+    instituteName: z.string().min(1).optional(),
+    instituteCode: z.string().min(1).optional(),
+  })
+  .refine(
+    (body) =>
+      body.campusId !== undefined ||
+      body.instituteName !== undefined ||
+      body.instituteCode !== undefined,
+    { message: "At least one field to update is required" }
+  );
+
+const updateAffiliatedUniversitySchema = z
+  .object({
+    affiliatedUniversityId: z.number({ required_error: "Affiliated university Id is required" }),
+    affiliatedUniversityName: z.string().min(1).optional(),
+    affiliatedUniversityCode: z.string().min(1).optional(),
+  })
+  .refine(
+    (body) =>
+      body.affiliatedUniversityName !== undefined ||
+      body.affiliatedUniversityCode !== undefined,
+    { message: "At least one field to update is required" }
+  );
+
 router.post("/", userAuth, validate({ body: instituteSchema }), instituteController.createInstitute);
 
+router.patch("/", userAuth, validate({ body: updateInstituteSchema }), instituteController.updateInstitute);
+router.patch(
+  "/affiliatedUniversity",
+  userAuth,
+  validate({ body: updateAffiliatedUniversitySchema }),
+  instituteController.updateAffiliatedUniversity
+);
 router.get("/", userAuth, validate({ query: listInstituteSchema }), instituteController.listInstitutes);
 
 export default router;

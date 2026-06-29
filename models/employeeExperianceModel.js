@@ -4,7 +4,7 @@ import employee from "./employeeModel.js";
 import users from "./userModel.js"
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 
-export default sequelize.define(
+const employeeExperianceModel = sequelize.define(
     'employee_experiance',
     {
         employeeExperianceId: {
@@ -110,3 +110,7 @@ export default sequelize.define(
         paranoid: false
     }
 );
+
+employeeExperianceModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default employeeExperianceModel;

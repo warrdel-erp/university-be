@@ -1,6 +1,6 @@
 import * as examAttendanceRepository from "../repository/examAttendanceRepository.js";
 
-export async function addExamAttendance(data, createdBy,updatedBy,instituteId) {
+export async function addExamAttendance(data, createdBy, updatedBy) {
     const { examSetupId, studentId, attendanceStatus } = data;
     try {
         const newAttendance = {
@@ -9,7 +9,6 @@ export async function addExamAttendance(data, createdBy,updatedBy,instituteId) {
             attendanceStatus,
             createdBy,
             updatedBy,
-            instituteId,
         };
         return await examAttendanceRepository.createExamAttendance(newAttendance);
     } catch (error) {
@@ -17,20 +16,17 @@ export async function addExamAttendance(data, createdBy,updatedBy,instituteId) {
     }
 };
 
-export async function getAllExamAttendance(universityId,acedmicYearId,role,instituteId) {
+export async function getAllExamAttendance(acedmicYearId) {
     try {
-        return await examAttendanceRepository.getAllExamAttendance(universityId,acedmicYearId,role,instituteId);
+        return await examAttendanceRepository.getAllExamAttendance(acedmicYearId);
     } catch (error) {
         throw new Error(`Error fetching exam attendance records: ${error.message}`);
     }
 };
 
-export async function getSingleExamAttendance(examAttendanceId, universityId) {
+export async function getSingleExamAttendance(examAttendanceId) {
     try {
-        return await examAttendanceRepository.getSingleExamAttendance(
-            examAttendanceId,
-            universityId
-        );
+        return await examAttendanceRepository.getSingleExamAttendance(examAttendanceId);
     } catch (error) {
         throw new Error(`Error fetching single exam attendance record: ${error.message}`);
     }

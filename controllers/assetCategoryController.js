@@ -3,7 +3,7 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addAssetCategory(req, res) {
   try {
-    const row = await assetCategoryService.addAssetCategory(req.body, req.user.defaultInstituteId);
+    const row = await assetCategoryService.addAssetCategory(req.body);
     return SuccessResponse(res, 201, "Asset category added successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -12,7 +12,7 @@ export async function addAssetCategory(req, res) {
 
 export async function getAllAssetCategory(req, res) {
   try {
-    const rows = await assetCategoryService.listAssetCategories(req.user.defaultInstituteId);
+    const rows = await assetCategoryService.listAssetCategories();
     return SuccessResponse(res, 200, "Asset categories fetched successfully", rows);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -22,10 +22,7 @@ export async function getAllAssetCategory(req, res) {
 export async function getSingleAssetCategoryDetails(req, res) {
   try {
     const { assetCategoryId } = req.query;
-    const row = await assetCategoryService.getSingleAssetCategory(
-      assetCategoryId,
-      req.user.defaultInstituteId
-    );
+    const row = await assetCategoryService.getSingleAssetCategory(assetCategoryId);
     if (!row) {
       return ErrorResponse(res, 404, "Asset category not found");
     }
@@ -38,11 +35,7 @@ export async function getSingleAssetCategoryDetails(req, res) {
 export async function updateAssetCategory(req, res) {
   try {
     const { assetCategoryId } = req.body;
-    const row = await assetCategoryService.updateAssetCategory(
-      assetCategoryId,
-      req.body,
-      req.user.defaultInstituteId
-    );
+    const row = await assetCategoryService.updateAssetCategory(assetCategoryId, req.body);
     return SuccessResponse(res, 200, "Asset category updated successfully", row);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
@@ -52,7 +45,7 @@ export async function updateAssetCategory(req, res) {
 export async function deleteAssetCategory(req, res) {
   try {
     const { assetCategoryId } = req.query;
-    await assetCategoryService.deleteAssetCategory(assetCategoryId, req.user.defaultInstituteId);
+    await assetCategoryService.deleteAssetCategory(assetCategoryId);
     return SuccessResponse(
       res,
       200,

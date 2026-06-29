@@ -3,25 +3,18 @@ import * as sessionCreation from "../services/sesssionServices.js";
 export async function addSession(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
 
     try {
-        const session = await sessionCreation.addSession(req.body, createdBy, updatedBy, universityId, instituteId);
+        const session = await sessionCreation.addSession(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function getAllSession(req, res) {
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const universityId = req.user.universityId;
-    const acedmicYearId = req.query.acedmicYearId
-
     try {
-        const session = await sessionCreation.getSessionDetails(universityId, instituteId, role, acedmicYearId);
+        const session = await sessionCreation.getSessionDetails();
         res.status(200).json(session);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -29,7 +22,6 @@ export async function getAllSession(req, res) {
 }
 
 export async function getSingleSessionDetails(req, res) {
-    // const universityId = req.user.universityId;
     try {
         const { sessionId } = req.query;
         const session = await sessionCreation.getSingleSessionDetails(sessionId);
@@ -63,9 +55,7 @@ export async function deleteSession(req, res) {
         if (!sessionId) {
             return res.status(400).json({ message: "SessionId is required" });
         }
-       const instituteId = req.user.defaultInstituteId;
-       const universityId = req.user.universityId;
-        const deleted = await sessionCreation.deleteSession(sessionId, instituteId, universityId);
+        const deleted = await sessionCreation.deleteSession(sessionId);
         if (deleted) {
             res.status(200).json({ message: `Delete successful for session ID ${sessionId}` });
         } else {
@@ -74,40 +64,36 @@ export async function deleteSession(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function couseSessionMapping(req, res) {
     const { sessionId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(sessionId)) {
             return res.status(400).send('sessionId is required')
         }
-        const session = await sessionCreation.couseSessionMapping(req.body, createdBy, updatedBy, universityId, instituteId);
+        const session = await sessionCreation.couseSessionMapping(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function updateCouseSessionMapping(req, res) {
     const { sessionCourseMappingId } = req.body
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(sessionCourseMappingId)) {
             return res.status(400).send('sessionCourseMappingId is required')
         }
-        const session = await sessionCreation.updateCouseSessionMapping(req.body, updatedBy, universityId, instituteId);
+        const session = await sessionCreation.updateCouseSessionMapping(req.body, updatedBy);
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}
 
 export async function deleteCouseSessionMapping(req, res) {
     const { sessionCourseMappingId } = req.query;
@@ -117,4 +103,4 @@ export async function deleteCouseSessionMapping(req, res) {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-};
+}

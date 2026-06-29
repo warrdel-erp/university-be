@@ -7,7 +7,7 @@ import libraryRowModel from "./libraryRowModel.js";
 import studentModel from "./studentModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const libraryBookInventoryModel = sequelize.define(
   "library_book_inventory",
   {
     inventoryId: {
@@ -139,3 +139,7 @@ export default sequelize.define(
     paranoid: true,
   },
 );
+
+libraryBookInventoryModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryBookInventoryModel;

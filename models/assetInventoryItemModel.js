@@ -5,7 +5,7 @@ import assetModel from "./assetModel.js";
 import classRoomModel from "./classRoomModel.js";
 import { assetInventoryStatuses } from "../constant.js";
 
-export default sequelize.define(
+const assetInventoryItemModel = sequelize.define(
   "asset_inventory_item",
   {
     assetInventoryItemId: {
@@ -65,3 +65,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetInventoryItemModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetInventoryItemModel;

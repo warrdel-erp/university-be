@@ -7,7 +7,7 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const semesterModel = sequelize.define(
     'semester',
     {
         semesterId: {
@@ -127,3 +127,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+semesterModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default semesterModel;

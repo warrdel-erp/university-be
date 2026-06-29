@@ -1,53 +1,78 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
+
+export async function getAccountById(accountId) {
+    return await scoped(model.accountModel).findOne({
+        where: { accountId },
+        attributes: { exclude: excludeMeta },
+    });
+}
+
+/** Default parent account when FE does not send accountId (seed: Academics, else first account). */
+export async function resolveDefaultAccountId() {
+    const academics = await model.accountModel.findOne({
+        where: { accountName: 'Academics' },
+        attributes: ['accountId'],
+        order: [['accountId', 'ASC']],
+        raw: true,
+    });
+    if (academics?.accountId) {
+        return academics.accountId;
+    }
+
+    const first = await model.accountModel.findOne({
+        attributes: ['accountId'],
+        order: [['accountId', 'ASC']],
+        raw: true,
+    });
+    if (!first?.accountId) {
+        throw new Error('No account found. Create an account or pass accountId.');
+    }
+    return first.accountId;
+}
 
 export async function addSubAccount(SubAccountData) {
     try {
-        const result = await model.subAccountModel.create(SubAccountData);
-        return result;
+        return await scoped(model.subAccountModel).create(SubAccountData);
     } catch (error) {
-        console.error("Error in add SubAccount :", error);
+        console.error('Error in add SubAccount :', error);
         throw error;
     }
-};
+}
 
-export async function getSubAccountDetails(universityId) {
+export async function getSubAccountDetails() {
     try {
-        const SubAccount = await model.subAccountModel.findAll({
-            // attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            // where: { universityId :universityId },
-            // include:
-            //     [
-            //         {
-            //             model: model.accountModel,
-            //             as: "accountDetail",
-            //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            //         },
-            // ]
+        return await scoped(model.subAccountModel).findAll({
+            attributes: { exclude: excludeMeta },
+            include: [
+                {
+                    model: model.accountModel,
+                    as: 'accountDetail',
+                    attributes: { exclude: excludeMeta },
+                },
+            ],
         });
-        return SubAccount;
     } catch (error) {
         console.error('Error fetching SubAccount details:', error);
         throw error;
     }
 }
 
-
 export async function getSingleSubAccountDetails(subAccountId) {
     try {
-        const SubAccount = await model.subAccountModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.subAccountModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { subAccountId },
-            include:
-                [
-                    {
-                        model: model.accountModel,
-                        as: "accountDetail",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
+            include: [
+                {
+                    model: model.accountModel,
+                    as: 'accountDetail',
+                    attributes: { exclude: excludeMeta },
+                },
+            ],
         });
-
-        return SubAccount;
     } catch (error) {
         console.error('Error fetching SubAccount details:', error);
         throw error;
@@ -55,30 +80,61 @@ export async function getSingleSubAccountDetails(subAccountId) {
 }
 
 export async function deleteSubAccount(subAccountId) {
-    const deleted = await model.subAccountModel.destroy({ where: { subAccountId: subAccountId } });
+    const existing = await scoped(model.subAccountModel).findOne({
+        where: { subAccountId },
+        attributes: ['subAccountId'],
+    });
+    if (!existing) {
+        return false;
+    }
+
+    const deleted = await scoped(model.subAccountModel).destroy({ where: { subAccountId } });
     return deleted > 0;
 }
 
 export async function updateSubAccount(subAccountId, SubAccountData) {
     try {
-        const result = await model.subAccountModel.update(SubAccountData, {
-            where: { subAccountId }
+        const existing = await scoped(model.subAccountModel).findOne({
+            where: { subAccountId },
+            attributes: ['subAccountId'],
         });
-        return result;
+        if (!existing) {
+            return false;
+        }
+
+        await scoped(model.subAccountModel).update(SubAccountData, {
+            where: { subAccountId },
+        });
+        return true;
     } catch (error) {
         console.error(`Error updating SubAccount creation ${subAccountId}:`, error);
         throw error;
     }
 }
 
+/** Accounts linked to sub_accounts in the active university + institute. */
 export async function getAllAccount() {
     try {
-        const account = await model.accountModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            
+        const subAccounts = await scoped(model.subAccountModel).findAll({
+            attributes: ['accountId'],
+            include: [
+                {
+                    model: model.accountModel,
+                    as: 'accountDetail',
+                    attributes: { exclude: excludeMeta },
+                    required: true,
+                },
+            ],
         });
 
-        return account;
+        const accountsById = new Map();
+        for (const row of subAccounts) {
+            const account = row.accountDetail;
+            if (account && !accountsById.has(account.accountId)) {
+                accountsById.set(account.accountId, account);
+            }
+        }
+        return [...accountsById.values()];
     } catch (error) {
         console.error('Error fetching account details:', error);
         throw error;

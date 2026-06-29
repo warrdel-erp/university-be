@@ -10,7 +10,7 @@ import classRoomModel from "./classRoomModel.js";
 import electiveSubjectModel from "./electiveSubjectModel.js";
 import subjectModel from "./subjectModel.js";
 
-export default sequelize.define(
+const classScheduleModel = sequelize.define(
     'class_schedule_item',
     {
         timeTableMappingId: {
@@ -172,3 +172,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+classScheduleModel.scopeConfig = { university:  true, institute: true, academicYear: true };
+
+export default classScheduleModel;

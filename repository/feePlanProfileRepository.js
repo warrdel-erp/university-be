@@ -1,79 +1,132 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export const PLAN_TYPES = new Set(["annual", "semester", "trimester"]);
+function buildScopeWithoutAcademicYear(model) {
+  return buildScope({
+    rawAttributes: model.rawAttributes,
+    name: model.name,
+    scopeConfig: { ...(model.scopeConfig || {}), academicYear: false },
+  });
+}
 
-const profileIncludes = [
-  {
-    model: model.sessionCouseMappingModel,
-    as: "courseSessionMapping",
-    attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
-  },
-];
-
-const profileIncludesForDetail = [
-  {
-    model: model.sessionCouseMappingModel,
-    as: "courseSessionMapping",
-    attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
-    include: [
-      {
-        model: model.courseModel,
-        as: "courses",
-        attributes: ["courseId", "courseName"],
-      },
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
-      },
-    ],
-  },
-];
-
-const feePlanItemsWithSubItemsInclude = {
-  model: model.feePlanItemModel,
-  as: "feePlanItems",
-  required: false,
-  include: [
+function profileIncludes() {
+  return [
     {
-      model: model.feePlanSubItemsModel,
-      as: "feePlanSubItems",
-      required: false,
+      model: model.sessionCouseMappingModel,
+      as: "courseSessionMapping",
+      attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
+      where: buildScope(model.sessionCouseMappingModel),
+      required: true,
+    },
+  ];
+}
+
+function profileIncludesForDetail() {
+  return [
+    {
+      model: model.sessionCouseMappingModel,
+      as: "courseSessionMapping",
+      attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
+      where: buildScope(model.sessionCouseMappingModel),
+      required: true,
       include: [
         {
-          model: model.feeTypeCatalogModel,
-          as: "feeTypeCatalog",
+          model: model.courseModel,
+          as: "courses",
+          attributes: ["courseId", "courseName"],
+          where: buildScope(model.courseModel),
           required: false,
-          include: [
-            {
-              model: model.feeTypeCategoryModel,
-              as: "feeTypeCategory",
-              required: false,
-            },
-          ],
+        },
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName"],
+          where: buildScopeWithoutAcademicYear(model.sessionModel),
+          required: false,
         },
       ],
     },
-  ],
-};
-
-export async function createFeePlanProfile(data, options = {}) {
-  return model.feePlanProfileModel.create(data, { transaction: options.transaction });
+  ];
 }
 
-export async function updateFeePlanProfileById(feePlanProfileId, instituteId, fields, options = {}) {
+function feePlanItemsWithSubItemsInclude() {
+  return {
+    model: model.feePlanItemModel,
+    as: "feePlanItems",
+    required: false,
+    where: buildScope(model.feePlanItemModel),
+    include: [
+      {
+        model: model.feePlanSubItemsModel,
+        as: "feePlanSubItems",
+        required: false,
+        where: buildScope(model.feePlanSubItemsModel),
+        include: [
+          {
+            model: model.feeTypeCatalogModel,
+            as: "feeTypeCatalog",
+            required: false,
+            where: buildScope(model.feeTypeCatalogModel),
+            include: [
+              {
+                model: model.feeTypeCategoryModel,
+                as: "feeTypeCategory",
+                required: false,
+                where: buildScope(model.feeTypeCategoryModel),
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function buildProfileBusinessWhere(options = {}) {
+  const { courseSessionId, feePlanProfileIds, excludeFeePlanProfileIds } = options;
+  const where = {};
+
+  if (courseSessionId != null) {
+    where.courseSessionId = courseSessionId;
+  }
+  if (feePlanProfileIds != null) {
+    if (feePlanProfileIds.length === 0) {
+      return null;
+    }
+    where.feePlanProfileId = { [Op.in]: feePlanProfileIds };
+  } else if (excludeFeePlanProfileIds?.length) {
+    where.feePlanProfileId = { [Op.notIn]: excludeFeePlanProfileIds };
+  }
+
+  return where;
+}
+
+export async function createFeePlanProfile(data, options = {}) {
+  return scoped(model.feePlanProfileModel).create(data, { transaction: options.transaction });
+}
+
+export async function updateFeePlanProfileById(feePlanProfileId, fields, options = {}) {
   const { transaction } = options;
-  return model.feePlanProfileModel.update(fields, {
-    where: { feePlanProfileId, instituteId },
+  const existing = await scoped(model.feePlanProfileModel).findOne({
+    attributes: ["feePlanProfileId"],
+    where: { feePlanProfileId },
+    transaction,
+  });
+  if (!existing) {
+    return [0];
+  }
+
+  return scoped(model.feePlanProfileModel).update(fields, {
+    where: { feePlanProfileId },
     transaction,
   });
 }
 
-export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId, options = {}) {
+export async function findFeePlanItemsByProfileId(feePlanProfileId, options = {}) {
   const { transaction } = options;
-  return model.feePlanItemModel.findAll({
-    where: { feePlanProfileId, instituteId },
+  return scoped(model.feePlanItemModel).findAll({
+    where: { feePlanProfileId },
     attributes: ["feePlanItemId", "feePlanProfileId", "createDate", "dueDate"],
     order: [
       ["createDate", "ASC"],
@@ -83,37 +136,34 @@ export async function findFeePlanItemsByProfileId(feePlanProfileId, instituteId,
   });
 }
 
-export async function updateFeePlanItemById(feePlanItemId, instituteId, fields, options = {}) {
+export async function updateFeePlanItemById(feePlanItemId, fields, options = {}) {
   const { transaction } = options;
-  return model.feePlanItemModel.update(fields, {
-    where: { feePlanItemId, instituteId },
+  return scoped(model.feePlanItemModel).update(fields, {
+    where: { feePlanItemId },
     transaction,
   });
 }
 
-export async function findFeePlanSubItemById(feePlanSubitemId, instituteId, options = {}) {
+export async function findFeePlanSubItemById(feePlanSubitemId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.findOne({
-    where: { feePlanSubitemId, instituteId },
+  return scoped(model.feePlanSubItemsModel).findOne({
+    where: { feePlanSubitemId },
     transaction,
   });
 }
 
-export async function findFeePlanSubItemForProfile(
-  feePlanSubitemId,
-  feePlanProfileId,
-  instituteId,
-  options = {}
-) {
+export async function findFeePlanSubItemForProfile(feePlanSubitemId, feePlanProfileId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.findOne({
-    where: { feePlanSubitemId, instituteId },
+  const itemScope = buildScope(model.feePlanItemModel);
+
+  return scoped(model.feePlanSubItemsModel).findOne({
+    where: { feePlanSubitemId },
     include: [
       {
         model: model.feePlanItemModel,
         as: "feePlanItem",
         required: true,
-        where: { feePlanProfileId, instituteId },
+        where: { ...{ feePlanProfileId }, ...itemScope },
         attributes: ["feePlanItemId", "feePlanProfileId"],
       },
     ],
@@ -121,54 +171,53 @@ export async function findFeePlanSubItemForProfile(
   });
 }
 
-export async function findFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
+export async function findFeePlanSubItemsByFeePlanItemId(feePlanItemId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.findAll({
-    where: { feePlanItemId, instituteId },
+  return scoped(model.feePlanSubItemsModel).findAll({
+    where: { feePlanItemId },
     attributes: ["feePlanSubitemId"],
     transaction,
   });
 }
 
-export async function updateFeePlanSubItemById(feePlanSubitemId, instituteId, fields, options = {}) {
+export async function updateFeePlanSubItemById(feePlanSubitemId, fields, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.update(fields, {
-    where: { feePlanSubitemId, instituteId },
+  return scoped(model.feePlanSubItemsModel).update(fields, {
+    where: { feePlanSubitemId },
     transaction,
   });
 }
 
-export async function deleteFeePlanSubItemById(feePlanSubitemId, instituteId, options = {}) {
+export async function deleteFeePlanSubItemById(feePlanSubitemId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.destroy({
-    where: { feePlanSubitemId, instituteId },
+  return scoped(model.feePlanSubItemsModel).destroy({
+    where: { feePlanSubitemId },
     transaction,
   });
 }
 
-export async function deleteFeePlanSubItemsByFeePlanItemId(feePlanItemId, instituteId, options = {}) {
+export async function deleteFeePlanSubItemsByFeePlanItemId(feePlanItemId, options = {}) {
   const { transaction } = options;
-  return model.feePlanSubItemsModel.destroy({
-    where: { feePlanItemId, instituteId },
+  return scoped(model.feePlanSubItemsModel).destroy({
+    where: { feePlanItemId },
     transaction,
   });
 }
 
-export async function deleteFeePlanItemById(feePlanItemId, instituteId, options = {}) {
+export async function deleteFeePlanItemById(feePlanItemId, options = {}) {
   const { transaction } = options;
-  return model.feePlanItemModel.destroy({
-    where: { feePlanItemId, instituteId },
+  return scoped(model.feePlanItemModel).destroy({
+    where: { feePlanItemId },
     transaction,
   });
 }
 
 /** Distinct fee_plan_profile_id values assigned on students for this institute. */
-export async function findDistinctAssignedFeePlanProfileIds(instituteId, options = {}) {
+export async function findDistinctAssignedFeePlanProfileIds(options = {}) {
   const { transaction } = options;
-  const rows = await model.studentModel.findAll({
+  const rows = await scoped(model.studentModel).findAll({
     attributes: ["feePlanProfileId"],
     where: {
-      instituteId,
       feePlanProfileId: { [Op.ne]: null },
     },
     group: ["feePlanProfileId"],
@@ -179,21 +228,16 @@ export async function findDistinctAssignedFeePlanProfileIds(instituteId, options
   return rows.map((row) => Number(row.feePlanProfileId)).filter((id) => id > 0);
 }
 
-export async function findFeePlanProfilesByInstitute(instituteId, options = {}) {
-  const { courseSessionId, feePlanProfileIds, excludeFeePlanProfileIds, transaction } = options;
-  const where = { instituteId };
-  if (courseSessionId != null) {
-    where.courseSessionId = courseSessionId;
+export async function findFeePlanProfilesByInstitute(options = {}) {
+  const { transaction } = options;
+  const businessWhere = buildProfileBusinessWhere(options);
+  if (businessWhere === null) {
+    return [];
   }
-  if (feePlanProfileIds != null) {
-    if (feePlanProfileIds.length === 0) return [];
-    where.feePlanProfileId = { [Op.in]: feePlanProfileIds };
-  } else if (excludeFeePlanProfileIds?.length) {
-    where.feePlanProfileId = { [Op.notIn]: excludeFeePlanProfileIds };
-  }
-  return model.feePlanProfileModel.findAll({
-    where,
-    include: [...profileIncludes, feePlanItemsWithSubItemsInclude],
+
+  return scoped(model.feePlanProfileModel).findAll({
+    where: businessWhere,
+    include: [...profileIncludes(), feePlanItemsWithSubItemsInclude()],
     order: [
       ["feePlanProfileId", "ASC"],
       [{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"],
@@ -202,22 +246,22 @@ export async function findFeePlanProfilesByInstitute(instituteId, options = {}) 
   });
 }
 
-export async function findFeePlanProfileById(feePlanProfileId, instituteId, options = {}) {
+export async function findFeePlanProfileById(feePlanProfileId, options = {}) {
   const { transaction, forDetail } = options;
-  const profileInclude = forDetail ? profileIncludesForDetail : profileIncludes;
+  const profileInclude = forDetail ? profileIncludesForDetail() : profileIncludes();
 
-  return model.feePlanProfileModel.findOne({
-    where: { feePlanProfileId, instituteId },
-    include: [...profileInclude, feePlanItemsWithSubItemsInclude],
+  return scoped(model.feePlanProfileModel).findOne({
+    where: { feePlanProfileId },
+    include: [...profileInclude, feePlanItemsWithSubItemsInclude()],
     order: [[{ model: model.feePlanItemModel, as: "feePlanItems" }, "feePlanItemId", "ASC"]],
     transaction,
   });
 }
 
-export async function findFeePlanProfileByIdForInstitute(feePlanProfileId, instituteId, options = {}) {
+export async function findFeePlanProfileByIdForInstitute(feePlanProfileId, options = {}) {
   const { transaction } = options;
-  return model.feePlanProfileModel.findOne({
-    where: { feePlanProfileId, instituteId },
+  return scoped(model.feePlanProfileModel).findOne({
+    where: { feePlanProfileId },
     attributes: [
       "feePlanProfileId",
       "instituteId",
@@ -231,59 +275,47 @@ export async function findFeePlanProfileByIdForInstitute(feePlanProfileId, insti
   });
 }
 
-export async function findSessionCourseMappingForInstitute(
-  sessionCourseMappingId,
-  instituteId,
-  options = {}
-) {
-  return model.sessionCouseMappingModel.findOne({
+export async function findSessionCourseMappingForInstitute(sessionCourseMappingId, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findOne({
     attributes: ["sessionCourseMappingId", "instituteId", "courseId", "sessionId"],
-    where: { sessionCourseMappingId, instituteId },
+    where: { sessionCourseMappingId },
     transaction: options.transaction,
   });
 }
 
-export async function findSessionCourseMappingWithSession(
-  sessionCourseMappingId,
-  instituteId,
-  options = {}
-) {
-  return model.sessionCouseMappingModel.findOne({
+export async function findSessionCourseMappingWithSession(sessionCourseMappingId, options = {}) {
+  return scoped(model.sessionCouseMappingModel).findOne({
     attributes: ["sessionCourseMappingId", "instituteId"],
-    where: { sessionCourseMappingId, instituteId },
+    where: { sessionCourseMappingId },
     include: [
       {
         model: model.sessionModel,
         as: "session",
         required: true,
         attributes: ["sessionId", "acedmicYearId"],
+        where: buildScopeWithoutAcademicYear(model.sessionModel),
       },
     ],
     transaction: options.transaction,
   });
 }
 
-export async function countFeePlanProfilesByInstitute(instituteId, options = {}) {
+export async function countFeePlanProfilesByInstitute(options = {}) {
   const { transaction } = options;
-  return model.feePlanProfileModel.count({
-    where: { instituteId },
-    transaction,
-  });
+  return scoped(model.feePlanProfileModel).count({ transaction });
 }
 
-/** Distinct fee plan profiles linked via students.fee_plan_profile_id. */
-export async function countActiveFeePlanProfilesByInstitute(instituteId, options = {}) {
-  const ids = await findDistinctAssignedFeePlanProfileIds(instituteId, options);
+export async function countActiveFeePlanProfilesByInstitute(options = {}) {
+  const ids = await findDistinctAssignedFeePlanProfileIds(options);
   return ids.length;
 }
 
 /** fee_plan_profile_id → number of students assigned. */
-export async function countStudentsGroupedByFeePlanProfile(instituteId, options = {}) {
+export async function countStudentsGroupedByFeePlanProfile(options = {}) {
   const { transaction } = options;
-  const rows = await model.studentModel.findAll({
+  const rows = await scoped(model.studentModel).findAll({
     attributes: ["feePlanProfileId", [fn("COUNT", col("student_id")), "studentCount"]],
     where: {
-      instituteId,
       feePlanProfileId: { [Op.ne]: null },
     },
     group: ["feePlanProfileId"],
@@ -300,22 +332,23 @@ export async function countStudentsGroupedByFeePlanProfile(instituteId, options 
 }
 
 /** fee_plan_profile_id → term invoice count (student_fee_invoice via fee_plan_item). */
-export async function countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId, options = {}) {
+export async function countStudentFeeInvoicesGroupedByFeePlanProfile(options = {}) {
   const { transaction } = options;
-  const rows = await model.studentFeeInvoiceModel.findAll({
+  const itemScope = buildScope(model.feePlanItemModel);
+
+  const rows = await scoped(model.studentFeeInvoiceModel).findAll({
     attributes: [
       [col("feePlanItem.fee_plan_profile_id"), "feePlanProfileId"],
       [fn("COUNT", col("student_fee_invoice.student_fee_invoice_id")), "invoiceCount"],
     ],
     where: {
-      instituteId,
       feePlanItemId: { [Op.ne]: null },
     },
     include: [
       {
         model: model.feePlanItemModel,
         as: "feePlanItem",
-        where: { instituteId },
+        where: itemScope,
         required: true,
         attributes: [],
       },
@@ -334,12 +367,11 @@ export async function countStudentFeeInvoicesGroupedByFeePlanProfile(instituteId
 }
 
 /** fee_plan_item_id → term invoice count for that installment. */
-export async function countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, options = {}) {
+export async function countStudentFeeInvoicesGroupedByFeePlanItem(options = {}) {
   const { transaction } = options;
-  const rows = await model.studentFeeInvoiceModel.findAll({
+  const rows = await scoped(model.studentFeeInvoiceModel).findAll({
     attributes: ["feePlanItemId", [fn("COUNT", col("student_fee_invoice_id")), "invoiceCount"]],
     where: {
-      instituteId,
       feePlanItemId: { [Op.ne]: null },
     },
     group: ["fee_plan_item_id"],
@@ -355,11 +387,11 @@ export async function countStudentFeeInvoicesGroupedByFeePlanItem(instituteId, o
 }
 
 export async function createFeePlanItem(data, options = {}) {
-  return model.feePlanItemModel.create(data, { transaction: options.transaction });
+  return scoped(model.feePlanItemModel).create(data, { transaction: options.transaction });
 }
 
 export async function createFeePlanSubItem(data, options = {}) {
-  return model.feePlanSubItemsModel.create(data, { transaction: options.transaction });
+  return scoped(model.feePlanSubItemsModel).create(data, { transaction: options.transaction });
 }
 
 /**
@@ -369,12 +401,7 @@ export async function createFeePlanSubItem(data, options = {}) {
  *   subItems: Array<{ feeTypeId: number, amount: number, isMainSubItem: boolean }>
  * }>} installments
  */
-export async function createInstallmentsForProfile(
-  feePlanProfileId,
-  instituteId,
-  installments,
-  options = {}
-) {
+export async function createInstallmentsForProfile(feePlanProfileId, installments, options = {}) {
   const { transaction } = options;
 
   for (const installment of installments) {
@@ -383,7 +410,6 @@ export async function createInstallmentsForProfile(
         createDate: installment.startDate,
         dueDate: installment.dueDate,
         feePlanProfileId,
-        instituteId,
       },
       { transaction }
     );
@@ -394,7 +420,6 @@ export async function createInstallmentsForProfile(
           amount: line.amount,
           feeTypeId: line.feeTypeId,
           feePlanItemId: feePlanItem.feePlanItemId,
-          instituteId,
           isMainSubItem: line.isMainSubItem,
         },
         { transaction }

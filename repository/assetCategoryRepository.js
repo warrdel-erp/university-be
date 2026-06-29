@@ -1,54 +1,54 @@
 import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 
 const excludeTs = ["createdAt", "updatedAt"];
 
 export async function createAssetCategory(data, options = {}) {
-  return model.assetCategoryModel.create(data, { transaction: options.transaction });
+  return scoped(model.assetCategoryModel).create(data, { transaction: options.transaction });
 }
 
-export async function findAssetCategoryByNameForInstitute(name, instituteId, options = {}) {
-  return model.assetCategoryModel.findOne({
+export async function findAssetCategoryByNameForInstitute(name, options = {}) {
+  return scoped(model.assetCategoryModel).findOne({
     attributes: ["assetCategoryId", "name", "codePrefix"],
-    where: { name, instituteId },
+    where: { name },
     transaction: options.transaction,
   });
 }
 
-export async function findAssetCategoriesByInstitute(instituteId, options = {}) {
-  return model.assetCategoryModel.findAll({
+export async function findAssetCategoriesByInstitute(options = {}) {
+  return scoped(model.assetCategoryModel).findAll({
     attributes: { exclude: excludeTs },
-    where: { instituteId },
     order: [["assetCategoryId", "ASC"]],
     transaction: options.transaction,
   });
 }
 
-export async function findAssetCategoryById(assetCategoryId, instituteId, options = {}) {
-  return model.assetCategoryModel.findOne({
+export async function findAssetCategoryById(assetCategoryId, options = {}) {
+  return scoped(model.assetCategoryModel).findOne({
     attributes: { exclude: excludeTs },
-    where: { assetCategoryId, instituteId },
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
 }
 
-export async function countAssetsForCategory(assetCategoryId, instituteId, options = {}) {
-  return model.assetModel.count({
-    where: { assetCategoryId, instituteId },
+export async function countAssetsForCategory(assetCategoryId, options = {}) {
+  return scoped(model.assetModel).count({
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
 }
 
-export async function updateAssetCategory(assetCategoryId, instituteId, payload, options = {}) {
-  const [affected] = await model.assetCategoryModel.update(payload, {
-    where: { assetCategoryId, instituteId },
+export async function updateAssetCategory(assetCategoryId, payload, options = {}) {
+  const [affected] = await scoped(model.assetCategoryModel).update(payload, {
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
   return affected;
 }
 
-export async function deleteAssetCategory(assetCategoryId, instituteId, options = {}) {
-  const deleted = await model.assetCategoryModel.destroy({
-    where: { assetCategoryId, instituteId },
+export async function deleteAssetCategory(assetCategoryId, options = {}) {
+  const deleted = await scoped(model.assetCategoryModel).destroy({
+    where: { assetCategoryId },
     transaction: options.transaction,
   });
   return deleted > 0;

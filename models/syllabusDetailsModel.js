@@ -5,7 +5,7 @@ import users from './userModel.js';
 import subject from './subjectModel.js';
 import examSetupType from "./examSetupTypeModel.js";
 
-export default sequelize.define(
+const syllabusDetailsModel = sequelize.define(
     'syllabus_details',
     {
         syllabusDetailsId: {
@@ -100,3 +100,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+syllabusDetailsModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default syllabusDetailsModel;

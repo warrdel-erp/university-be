@@ -13,6 +13,7 @@ const termsQuerySchema = z.object({
 
 const termsExamTypeQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: "courseId is required" }),
+    sessionId: z.coerce.number({ required_error: "sessionId is required" })
 });
 
 const termsListSchema = z.object({

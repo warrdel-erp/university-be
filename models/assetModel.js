@@ -4,7 +4,7 @@ import instituteModel from "./instituteModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
 import { assetStatuses, assetConditions } from "../constant.js";
 
-export default sequelize.define(
+const assetModel = sequelize.define(
   "asset",
   {
     assetId: {
@@ -62,3 +62,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetModel;

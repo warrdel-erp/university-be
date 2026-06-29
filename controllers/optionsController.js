@@ -1,10 +1,10 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { getTenantStore } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
-        const instituteId = req.user.defaultInstituteId;
-        const result = await optionsServices.getAffiliatedUniversityOptions(instituteId);
+        const result = await optionsServices.getAffiliatedUniversityOptions();
         return SuccessResponse(res, 200, "Affiliated university options fetched successfully", result);
     } catch (error) {
         console.error("Error in getAffiliatedUniversityOptions:", error);
@@ -14,9 +14,7 @@ export const getAffiliatedUniversityOptions = async (req, res) => {
 
 export const getCourseOptions = async (req, res) => {
     try {
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const result = await optionsServices.getCourseOptions(universityId, instituteId);
+        const result = await optionsServices.getCourseOptions();
         return SuccessResponse(res, 200, "Course options fetched successfully", result);
     } catch (error) {
         console.error("Error in getCourseOptions:", error);
@@ -27,9 +25,6 @@ export const getCourseOptions = async (req, res) => {
 export const getTermOptions = async (req, res) => {
     try {
         const { courseId } = req.query;
-        if (!courseId) {
-            return ErrorResponse(res, 400, "Course ID is required");
-        }
         const result = await optionsServices.getTermOptions(courseId);
         return SuccessResponse(res, 200, "Term options fetched successfully", result);
     } catch (error) {
@@ -40,11 +35,8 @@ export const getTermOptions = async (req, res) => {
 
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term } = req.query;
-        if (!courseId || !term) {
-            return ErrorResponse(res, 400, "Course ID and term (number) are required");
-        }
-        const result = await optionsServices.getClassSectionOptions(courseId, term);
+        const { courseId, term, sessionId } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);
@@ -55,9 +47,7 @@ export const getClassSectionOptions = async (req, res) => {
 export const getSpecializationOptions = async (req, res) => {
     try {
         const { courseId } = req.query;
-        const instituteId = req.user.defaultInstituteId;
-        const universityId = req.user.universityId;
-        const result = await optionsServices.getSpecializationOptions(courseId, instituteId, universityId);
+        const result = await optionsServices.getSpecializationOptions(courseId);
         return SuccessResponse(res, 200, "Specialization options fetched successfully", result);
     } catch (error) {
         console.error("Error in getSpecializationOptions:", error);
@@ -67,23 +57,26 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term } = req.query;
-        const universityId = req.user.universityId;
-        const acedmicYearId = req.user.defaultAcademicYearId;
-
-        const result = await optionsServices.getSubjectOptions(courseId, term, universityId, acedmicYearId);
+        const { courseId, term, sessionId } = req.query;
+        const acedmicYearId = getTenantStore().academicYearId;
+        const result = await optionsServices.getSubjectOptions(
+            courseId,
+            term,
+            acedmicYearId,
+            sessionId,
+        );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
         console.error("Error in getSubjectOptions:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+        const status = error.message?.includes("not found") || error.message?.includes("not mapped") ? 400 : 500;
+        return ErrorResponse(res, status, error.message || "Internal Server Error");
     }
 };
 
 export const getTeacherOptions = async (req, res) => {
     try {
         const { campusId } = req.query;
-        const instituteId = req.user.defaultInstituteId;
-        const result = await optionsServices.getTeacherOptions(instituteId, campusId);
+        const result = await optionsServices.getTeacherOptions(campusId);
         return SuccessResponse(res, 200, "Teacher options fetched successfully", result);
     } catch (error) {
         console.error("Error in getTeacherOptions:", error);
@@ -93,13 +86,7 @@ export const getTeacherOptions = async (req, res) => {
 
 export const getFeePlanOptions = async (req, res) => {
     try {
-        const filters = {
-            ...req.query,
-            instituteId: req.user.defaultInstituteId,
-            acedmicYearId: req.user.defaultAcademicYearId
-        };
-
-        const result = await optionsServices.getFeePlanOptions(filters);
+        const result = await optionsServices.getFeePlanOptions(req.query);
         return SuccessResponse(res, 200, "Fee plan options fetched successfully", result);
     } catch (error) {
         console.error("Error in getFeePlanOptions:", error);
@@ -109,19 +96,10 @@ export const getFeePlanOptions = async (req, res) => {
 
 export const getTopicOptions = async (req, res) => {
     try {
-        const filters = {
-            ...req.query,
-            instituteId: req.user.defaultInstituteId,
-            universityId: req.user.universityId
-        };
-
-        const result = await optionsServices.getTopicOptions(filters);
+        const result = await optionsServices.getTopicOptions(req.query);
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);
     } catch (error) {
         console.error("Error in getTopicOptions:", error);
         return ErrorResponse(res, 500, "Internal Server Error", error.message);
     }
 };
-
-
-

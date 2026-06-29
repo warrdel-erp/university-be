@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const feeGroupModel = sequelize.define(
     'fee_group',
     {
         feeGroupId: {
@@ -81,3 +81,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+feeGroupModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default feeGroupModel;

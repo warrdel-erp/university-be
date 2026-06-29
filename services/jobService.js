@@ -114,9 +114,9 @@ export async function updateJob(jobId, data) {
 };
 
 // GET ALL JOBS
-export async function getAllJobs(universityId, instituteId, role) {
+export async function getAllJobs() {
   try {
-    return await jobRepository.getAllJobs(universityId, instituteId, role);
+    return jobRepository.getAllJobs();
   } catch (error) {
     console.error("Error in getAllJobs:", error.message);
     throw new Error("Unable to fetch jobs");
@@ -144,9 +144,9 @@ export async function deleteJob(id) {
 }
 
 // CALENDAR (daily / weekly / monthly)
-export async function getCalendarView({ view, date, universityId, instituteId, role }) {
+export async function getCalendarView({ view, date }) {
   try {
-    return await jobRepository.getCalendarJobs(view, date, universityId, instituteId, role);
+    return jobRepository.getCalendarJobs(view, date);
   } catch (error) {
     console.error("Error in getCalendarView:", error.message);
     throw new Error("Unable to fetch calendar jobs");

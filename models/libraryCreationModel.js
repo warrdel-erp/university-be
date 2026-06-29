@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const libraryCreationModel = sequelize.define(
     'library_creation',
     {
         libraryCreationId: {
@@ -71,3 +71,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+libraryCreationModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default libraryCreationModel;

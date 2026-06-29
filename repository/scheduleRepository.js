@@ -1,280 +1,201 @@
 import * as model from '../models/index.js'
+import { Op } from 'sequelize';
+import { buildScope, scoped } from '../utility/scoped.js';
+
+export async function getScheduleInScope(scheduleId) {
+    return await scoped(model.scheduleModel).findOne({
+        where: { scheduleId },
+        attributes: ['scheduleId'],
+    });
+}
 
 export async function addSchedule(scheduleData) {
     try {
-        const result = await model.scheduleModel.create(scheduleData);
-        return result;
+        return await scoped(model.scheduleModel).create(scheduleData);
     } catch (error) {
-        console.error("Error in add Schedule :", error);
+        console.error('Error in add Schedule :', error);
         throw error;
     }
-};
+}
 
-export async function getScheduleDetails(universityId, acedmicYearId, instituteId, role) {
+export async function getScheduleDetails() {
     try {
-        const Schedule = await model.scheduleModel.findAll({
-            where: {
-                ...(acedmicYearId && { acedmicYearId }),
-                ...(role === 'Head' && { instituteId }),
-                ...(universityId && { universityId }),
-            },
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-            },
+        return await scoped(model.scheduleModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
-        return Schedule;
     } catch (error) {
         console.error('Error fetching Schedule with details:', error);
         throw error;
     }
-};
+}
 
-export async function getSingleScheduleDetails(scheduleId, universityId) {
+export async function getSingleScheduleDetails(scheduleId) {
     try {
-        const Schedule = await model.scheduleModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { scheduleId, universityId },
+        return await scoped(model.scheduleModel).findOne({
+            where: { scheduleId },
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
         });
-
-        return Schedule;
     } catch (error) {
         console.error('Error fetching Schedule details:', error);
         throw error;
     }
-};
+}
 
 export async function deleteSchedule(scheduleId) {
-    const deleted = await model.scheduleModel.destroy({ where: { scheduleId: scheduleId } });
+    const deleted = await scoped(model.scheduleModel).destroy({
+        where: { scheduleId },
+    });
     return deleted > 0;
-};
+}
 
 export async function updateSchedule(scheduleId, scheduleData) {
     try {
-        const result = await model.scheduleModel.update(scheduleData, {
-            where: { scheduleId }
+        return await scoped(model.scheduleModel).update(scheduleData, {
+            where: { scheduleId },
         });
-        return result;
     } catch (error) {
-        console.error(`Error updating Schedule creation ${scheduleId}:`, error);
+        console.error(`Error updating Schedule ${scheduleId}:`, error);
         throw error;
     }
-};
+}
 
 export async function assignTeacher(data) {
     try {
-        const result = await model.scheduleAssignModel.create(data);
-        return result;
+        return await model.scheduleAssignModel.create(data);
     } catch (error) {
-        console.error("Error in add assign Teacher :", error);
+        console.error('Error in add assign Teacher :', error);
         throw error;
     }
-};
+}
 
-/**
- * Checks if a specific teacher is already assigned to a specific exam schedule.
- * @param {number} scheduleId - The ID of the exam schedule.
- * @param {number} employeeId - The ID of the teacher/employee.
- * @returns {Promise<Object|null>} - The assignment record if found, otherwise null.
- */
 export async function getAssignmentByScheduleAndEmployee(scheduleId, employeeId) {
     try {
-        const assignment = await model.scheduleAssignModel.findOne({
-            where: { scheduleId, employeeId }
+        return await model.scheduleAssignModel.findOne({
+            where: { scheduleId, employeeId },
         });
-        return assignment;
     } catch (error) {
-        console.error("Error fetching assignment by scheduleId and employeeId:", error);
+        console.error('Error fetching assignment by scheduleId and employeeId:', error);
         throw error;
     }
-};
+}
 
 export async function getAssignTeacher() {
     try {
-        const scheduleAssignments = await model.scheduleAssignModel.findAll({
-            // where: {
-            //             ...(acedmicYearId && { acedmicYearId }),
-            //             ...(role === 'Head' && { instituteId }),
-            //             ...(universityId && { universityId }),
-            //         },
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-            },
+        const scheduleWhere = buildScope(model.scheduleModel);
+        const employeeWhere = buildScope(model.employeeModel);
+
+        return await model.scheduleAssignModel.findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
             include: [
                 {
                     model: model.scheduleModel,
-                    as: "schedule",
-                    attributes: {
-                        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-                    },
+                    as: 'schedule',
+                    required: true,
+                    where: scheduleWhere,
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                 },
                 {
                     model: model.employeeModel,
-                    as: "employeeSchedule",
+                    as: 'employeeSchedule',
+                    required: false,
+                    where: employeeWhere,
                     attributes: [
-                        "employeeId",
-                        "employeeName",
-                        "employeeCode",
-                        "department",
-                        "employmentType"
-                    ]
-                }
-            ]
+                        'employeeId',
+                        'employeeName',
+                        'employeeCode',
+                        'department',
+                        'employmentType',
+                    ],
+                },
+            ],
         });
-
-        return scheduleAssignments;
     } catch (error) {
-        console.error("Error fetching assigned teachers:", error);
+        console.error('Error fetching assigned teachers:', error);
         throw error;
     }
-};
+}
 
 export async function attendence(data) {
     try {
-        const result = await model.teacherAttendeceModel.create(data);
-        return result;
+        return await model.teacherAttendeceModel.create(data);
     } catch (error) {
-        console.error("Error in add teacher attendence:", error);
+        console.error('Error in add teacher attendence:', error);
         throw error;
     }
-};
+}
 
 export async function updateAttendence(teacherAttendenceId, data) {
     try {
-        const result = await model.teacherAttendeceModel.update(data, {
-            where: { teacherAttendenceId }
+        return await model.teacherAttendeceModel.update(data, {
+            where: { teacherAttendenceId },
         });
-        return result;
     } catch (error) {
-        console.error(`Error updating Schedule creation ${teacherAttendenceId}:`, error);
+        console.error(`Error updating teacher attendence ${teacherAttendenceId}:`, error);
         throw error;
     }
-};
+}
 
-// export async function getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate) {
-//     try {
-//         const Schedule = await model.teacherAttendeceModel.findAll({
-//             attributes: {
-//                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-//             },
-//             include: [
-//                 {
-//                     model: model.scheduleAssignModel,
-//                     as: 'scheduleAssign',
-//                     attributes: {
-//                         exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-//                     },
-//                     include: [
-//                         {
-//                             model: model.scheduleModel,
-//                             as: "schedule",
-//                             attributes: {
-//                                 exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-//                             },
-//                             where: {
-//                 ...(role === 'Head' && { instituteId }),
-//                 ...(universityId && { universityId }),
-//             },
-//                         },
-//                         {
-//                             model: model.employeeModel,
-//                             as: "employeeSchedule",
-//                             attributes: [
-//                                 "employeeId",
-//                                 "employeeName",
-//                                 "employeeCode",
-//                                 "department",
-//                                 "employmentType"
-//                             ]
-//                         }
-//                     ]
-//                 }
+export async function getAllAttendence(page, limit, fromDate, toDate) {
+    try {
+        const whereClause = {};
+        const scheduleWhere = buildScope(model.scheduleModel);
 
-//             ]
-//         });
-//         return Schedule;
-//     } catch (error) {
-//         console.error('Error fetching Schedule with details:', error);
-//         throw error;
-//     }
-// };
-
-import { Op } from "sequelize";
-
-export async function getAllAttendence(universityId, instituteId, role, page, limit, fromDate, toDate) {
-  try {
-    const whereClause = {};
-
-    // ✅ filter by date range if provided
-    if (fromDate && toDate) {
-      whereClause.date = {
-        [Op.between]: [fromDate, toDate]
-      };
-    } else if (fromDate) {
-      whereClause.date = {
-        [Op.gte]: fromDate
-      };
-    } else if (toDate) {
-      whereClause.date = {
-        [Op.lte]: toDate
-      };
-    }
-
-    // ✅ pagination
-    const pageNumber = parseInt(page) || 1;
-    const pageSize = parseInt(limit) || 10;
-    const offset = (pageNumber - 1) * pageSize;
-
-    const attendances = await model.teacherAttendeceModel.findAndCountAll({
-      where: whereClause,
-      attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-      },
-      include: [
-        {
-          model: model.scheduleAssignModel,
-          as: "scheduleAssign",
-          attributes: {
-            exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-          },
-          include: [
-            {
-              model: model.scheduleModel,
-              as: "schedule",
-              attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-              },
-              where: {
-                ...(role === "Head" && { instituteId }),
-                ...(universityId && { universityId })
-              }
-            },
-            {
-              model: model.employeeModel,
-              as: "employeeSchedule",
-              attributes: [
-                "employeeId",
-                "employeeName",
-                "employeeCode",
-                "department",
-                "employmentType"
-              ]
-            }
-          ]
+        if (fromDate && toDate) {
+            whereClause.date = { [Op.between]: [fromDate, toDate] };
+        } else if (fromDate) {
+            whereClause.date = { [Op.gte]: fromDate };
+        } else if (toDate) {
+            whereClause.date = { [Op.lte]: toDate };
         }
-      ],
-      limit: pageSize,
-      offset: offset,
-      order: [["date", "DESC"]]
-    });
 
-    return {
-      totalRecords: attendances.count,
-      totalPages: Math.ceil(attendances.count / pageSize),
-      currentPage: pageNumber,
-      data: attendances.rows
-    };
-  } catch (error) {
-    console.error("Error fetching attendance with details:", error);
-    throw error;
-  }
-};
+        const pageNumber = parseInt(page, 10) || 1;
+        const pageSize = parseInt(limit, 10) || 10;
+        const offset = (pageNumber - 1) * pageSize;
+
+        const attendances = await model.teacherAttendeceModel.findAndCountAll({
+            where: whereClause,
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            include: [
+                {
+                    model: model.scheduleAssignModel,
+                    as: 'scheduleAssign',
+                    required: true,
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    include: [
+                        {
+                            model: model.scheduleModel,
+                            as: 'schedule',
+                            required: true,
+                            where: scheduleWhere,
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                        },
+                        {
+                            model: model.employeeModel,
+                            as: 'employeeSchedule',
+                            attributes: [
+                                'employeeId',
+                                'employeeName',
+                                'employeeCode',
+                                'department',
+                                'employmentType',
+                            ],
+                        },
+                    ],
+                },
+            ],
+            limit: pageSize,
+            offset,
+            order: [['date', 'DESC']],
+        });
+
+        return {
+            totalRecords: attendances.count,
+            totalPages: Math.ceil(attendances.count / pageSize),
+            currentPage: pageNumber,
+            data: attendances.rows,
+        };
+    } catch (error) {
+        console.error('Error fetching attendance with details:', error);
+        throw error;
+    }
+}

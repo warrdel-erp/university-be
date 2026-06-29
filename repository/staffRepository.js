@@ -1,72 +1,55 @@
 import * as model from '../models/index.js'
+import { scoped } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
+
+const staffInclude = [
+    {
+        model: model.departmentModel,
+        as: "staffDepartment",
+        attributes: { exclude: excludeMeta },
+    },
+    {
+        model: model.employeeModel,
+        as: "staffEmployee",
+        attributes: ["employeeName", "employeeCode", "pickColor"],
+    }
+];
 
 export async function addStaff(staffData) {
     try {
-        // Only allow writable fields; ignore any UI-provided IDs/system fields.
         const payload = {
             departmentId: staffData?.departmentId,
             employeeId: staffData?.employeeId,
-            universityId: staffData?.universityId,
             createdBy: staffData?.createdBy,
             updatedBy: staffData?.updatedBy
         };
-        const result = await model.staffModel.create(payload);
-        return result;
+        return await scoped(model.staffModel).create(payload);
     } catch (error) {
         console.error("Error in add Staff :", error);
         throw error;
     }
-};
+}
 
-export async function getStaffDetails(universityId) {
+export async function getStaffDetails() {
     try {
-        const Staff = await model.staffModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
-            include:
-                [
-                    {
-                        model: model.departmentModel,
-                        as: "staffDepartment",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-                    {
-                        model: model.employeeModel,
-                        as: "staffEmployee",
-                        attributes:  ["employeeName","employeeCode","pickColor"] ,
-                    }
-                ]
+        return await scoped(model.staffModel).findAll({
+            attributes: { exclude: excludeMeta },
+            include: staffInclude,
         });
-
-        return Staff;
     } catch (error) {
         console.error('Error fetching Staff details:', error);
         throw error;
     }
 }
 
-
 export async function getSingleStaffDetails(staffId) {
     try {
-        const Staff = await model.staffModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.staffModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { staffId },
-            include:
-            [
-                {
-                    model: model.departmentModel,
-                    as: "staffDepartment",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                },
-                {
-                    model: model.employeeModel,
-                    as: "staffEmployee",
-                    attributes:  ["employeeName","employeeCode","pickColor"] ,
-                }
-            ]
+            include: staffInclude,
         });
-
-        return Staff;
     } catch (error) {
         console.error('Error fetching Staff details:', error);
         throw error;
@@ -74,7 +57,7 @@ export async function getSingleStaffDetails(staffId) {
 }
 
 export async function deleteStaff(staffId) {
-    const deleted = await model.staffModel.destroy({ where: { staffId: staffId } });
+    const deleted = await scoped(model.staffModel).destroy({ where: { staffId } });
     return deleted > 0;
 }
 
@@ -85,10 +68,9 @@ export async function updateStaff(staffId, staffData) {
             employeeId: staffData?.employeeId,
             updatedBy: staffData?.updatedBy
         };
-        const result = await model.staffModel.update(payload, {
+        return await scoped(model.staffModel).update(payload, {
             where: { staffId }
         });
-        return result;
     } catch (error) {
         console.error(`Error updating Staff creation ${staffId}:`, error);
         throw error;

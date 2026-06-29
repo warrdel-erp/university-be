@@ -1,52 +1,52 @@
 import {
-    createTransportRoute,
-    findAllTransportRoutes,
-    findTransportRouteById,
-    updateTransportRouteById,
-    deleteTransportRouteById
+  createTransportRoute,
+  findAllTransportRoutes,
+  findTransportRouteById,
+  updateTransportRouteById,
+  deleteTransportRouteById,
 } from "../repository/transportRouteRepository.js";
 
-export const addTransportRouteService = async (data) => {
-    try {
-        return await createTransportRoute(data);
-    } catch (error) {
-        console.error("Error in addTransportRouteService:", error);
-        throw error;
-    }
-};
+export async function addTransportRouteService(data) {
+  try {
+    return createTransportRoute(data);
+  } catch (error) {
+    console.error("Error in addTransportRouteService:", error);
+    throw error;
+  }
+}
 
-export const getAllTransportRouteService = async (universityId, acedmicYearId, instituteId) => {
-    try {
-        return await findAllTransportRoutes(universityId, acedmicYearId, instituteId);
-    } catch (error) {
-        console.error("Error in getAllTransportRouteService:", error);
-        throw error;
-    }
-};
+export async function getAllTransportRouteService() {
+  try {
+    return findAllTransportRoutes();
+  } catch (error) {
+    console.error("Error in getAllTransportRouteService:", error);
+    throw error;
+  }
+}
 
-export const getSingleTransportRouteService = async (id, universityId, instituteId) => {
-    try {
-        return await findTransportRouteById(id, universityId, instituteId);
-    } catch (error) {
-        console.error(`Error in getSingleTransportRouteService for ID ${id}:`, error);
-        throw error;
-    }
-};
+export async function getSingleTransportRouteService(id) {
+  try {
+    return findTransportRouteById(id);
+  } catch (error) {
+    console.error(`Error in getSingleTransportRouteService for ID ${id}:`, error);
+    throw error;
+  }
+}
 
-export const updateTransportRouteService = async (id, data) => {
-    try {
-        return await updateTransportRouteById(id, data);
-    } catch (error) {
-        console.error(`Error in updateTransportRouteService for ID ${id}:`, error);
-        throw error;
-    }
-};
+export async function updateTransportRouteService(id, data) {
+  try {
+    return updateTransportRouteById(id, data);
+  } catch (error) {
+    console.error(`Error in updateTransportRouteService for ID ${id}:`, error);
+    throw error;
+  }
+}
 
-export const deleteTransportRouteService = async (id) => {
-    try {
-        return await deleteTransportRouteById(id);
-    } catch (error) {
-        console.error(`Error in deleteTransportRouteService for ID ${id}:`, error);
-        throw error;
-    }
-};
+export async function deleteTransportRouteService(id) {
+  try {
+    return deleteTransportRouteById(id);
+  } catch (error) {
+    console.error(`Error in deleteTransportRouteService for ID ${id}:`, error);
+    throw error;
+  }
+}

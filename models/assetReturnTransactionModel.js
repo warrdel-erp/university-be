@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 
-export default sequelize.define(
+const assetReturnTransactionModel = sequelize.define(
   "asset_return_transaction",
   {
     assetReturnTransactionId: {
@@ -26,3 +26,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetReturnTransactionModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetReturnTransactionModel;

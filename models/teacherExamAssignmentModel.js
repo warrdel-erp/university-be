@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const teacherExamAssignmentModel = sequelize.define(
     'teacher_exam_assignment',
     {
         teacherExamAssignmentId: {
@@ -89,3 +89,7 @@ export default sequelize.define(
         ]
     }
 );
+
+teacherExamAssignmentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default teacherExamAssignmentModel;

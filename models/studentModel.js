@@ -9,14 +9,13 @@ import specialization from "./specializationModel.js";
 import { documentStatus, studentAdmissionStatus, studentStatus } from '../constant.js';
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 import sessionModel from "./sessionModel.js";
 import semesterModel from "./semesterModel.js";
 import classSectionModel from "./classSectionModel.js";
 import feePlanModel from "./feePlanModel.js";
 import feePlanProfileModel from "./feePlanProfileModel.js";
 
-export default sequelize.define(
+const studentModel = sequelize.define(
     'students',
     {
         studentId: {
@@ -63,20 +62,11 @@ export default sequelize.define(
         },
         affiliatedUniversityId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'affiliated_university_id',
             references: {
                 model: affiliatedUniversity,
                 key: 'affiliated_university_id'
-            }
-        },
-        acedmicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
             }
         },
         courseLevelId: {
@@ -117,7 +107,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'semester_id',
             references: {
                 model: semesterModel,
@@ -413,3 +403,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default studentModel;

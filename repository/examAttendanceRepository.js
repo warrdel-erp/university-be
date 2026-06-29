@@ -1,53 +1,77 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function createExamAttendance(data) {
-    return await model.examAttendanceModel.create(data);
+async function assertScopedExamSetup(examSetupId, transaction) {
+    return model.examSetupModel.findOne({
+        where: { examSetupId },
+        attributes: ['examSetupId'],
+        transaction,
+        include: [{
+            model: model.examTypeModel,
+            as: 'examType',
+            required: true,
+            where: buildScope(model.examTypeModel),
+            attributes: ['examTypeId'],
+        }],
+    });
 }
 
-export async function getAllExamAttendance(universityId,acedmicYearId,role,instituteId) {
-    return await model.examAttendanceModel.findAll({
+export async function createExamAttendance(data) {
+    if (data.examSetupId) {
+        const setup = await assertScopedExamSetup(data.examSetupId);
+        if (!setup) {
+            throw new Error('Exam setup not found');
+        }
+    }
+    return await scoped(model.examAttendanceModel).create(data);
+}
+
+export async function getAllExamAttendance(acedmicYearId) {
+    const studentWhere = {
+        ...buildScope(model.studentModel),
+        ...(acedmicYearId && { acedmicYearId }),
+    };
+
+    return await scoped(model.examAttendanceModel).findAll({
         attributes: {
             exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"],
         },
-        where: {
-            ...(role === 'Head' && instituteId && { instituteId })
-        },
         include: [
             {
                 model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
-                where: {
-                        ...(acedmicYearId && { acedmicYearId })
-                    },
+                where: studentWhere,
+                required: false,
             },
             {
                 model: model.examSetupModel,
                 as: "examSetup",
                 attributes: ["exam_setup_id", "exam_type_id", "subject_id"],
+                required: false,
             },
             {
                 model: model.userModel,
                 as: 'examAttendanceUser',
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
-            }
-        ]
+            },
+        ],
     });
 };
 
-export async function getSingleExamAttendance(examAttendanceId, universityId) {
-    return await model.examAttendanceModel.findOne({
+export async function getSingleExamAttendance(examAttendanceId) {
+    const record = await scoped(model.examAttendanceModel).findOne({
         attributes: {
-            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy",]
+            exclude: ["createdAt", "updatedAt", "updatedBy", "createdBy"],
         },
+        where: { examAttendanceId },
         include: [
             {
                 model: model.studentModel,
                 as: "students",
                 attributes: ["student_id", "first_name", "last_name", "scholar_number"],
+                where: buildScope(model.studentModel),
+                required: false,
             },
             {
                 model: model.examSetupModel,
@@ -58,25 +82,28 @@ export async function getSingleExamAttendance(examAttendanceId, universityId) {
                 model: model.userModel,
                 as: 'examAttendanceUser',
                 attributes: ["universityId", "userId"],
-                where: {
-                    universityId: universityId
-                }
-            }
+            },
         ],
-        where: { examAttendanceId },
     });
+    return record;
 };
 
 export async function updateExamAttendances(attendances) {
     const updatedRecords = [];
     for (const record of attendances) {
         const { examAttendanceId, ...data } = record;
-        const [updatedRows] = await model.examAttendanceModel.update(data, {
+        const existing = await scoped(model.examAttendanceModel).findOne({
             where: { examAttendanceId },
-            
+            attributes: ['examAttendanceId'],
+        });
+        if (!existing) {
+            continue;
+        }
+        const [updatedRows] = await scoped(model.examAttendanceModel).update(data, {
+            where: { examAttendanceId },
         });
         if (updatedRows > 0) {
-            const updatedRecord = await model.examAttendanceModel.findByPk(examAttendanceId);
+            const updatedRecord = await scoped(model.examAttendanceModel).findByPk(examAttendanceId);
             updatedRecords.push(updatedRecord);
         }
     }
@@ -84,7 +111,14 @@ export async function updateExamAttendances(attendances) {
 };
 
 export async function deleteExamAttendance(examAttendanceId) {
-    const deletedRows = await model.examAttendanceModel.destroy({
+    const existing = await scoped(model.examAttendanceModel).findOne({
+        where: { examAttendanceId },
+        attributes: ['examAttendanceId'],
+    });
+    if (!existing) {
+        return false;
+    }
+    const deletedRows = await scoped(model.examAttendanceModel).destroy({
         where: { examAttendanceId },
     });
     return deletedRows > 0;

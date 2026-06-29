@@ -163,6 +163,10 @@ export const STUDENT_CANCELLATION_STATUSES = [
   "Left Student",
   "Long Absent",
   "Non Attendant",
+  "active",
+  "deactive",
+  "transferred",
+  "graduated",
 ];
 
 export const studentStatus = STUDENT_STATUS_VALUES;
@@ -191,6 +195,18 @@ export const itCategory = ["INCOME TAX"];
 
 export const buildingTypes = ["Academics", "Residential"];
 
+export const governanceBodyCategories = [
+  "Authority",
+  "Board",
+  "Committee",
+  "Council",
+  "Cell",
+  "Task Force",
+  "Working Group",
+];
+
+export const governanceBodyStatuses = ["Active", "Inactive", "Dissolved"];
+
 export const questionStatus = ["Pending", "Approved", "Rejected"];
 
 export const questionTypes = {
@@ -207,9 +223,65 @@ export const assetConditions = ["GOOD", "FAIR", "EXCELLENT", "BAD"];
 
 export const assetInventoryStatuses = ["NOT_ASSIGNED", "ASSIGNED"];
 
+export const amcContractTypes = [
+  "COMPREHENSIVE_AMC",
+  "NON_COMPREHENSIVE_AMC",
+  "WARRANTY_AMC",
+  "PREVENTIVE_MAINTENANCE",
+  "ON_DEMAND_SERVICE",
+];
+
+export const amcSlaResponseHours = [2, 6, 12, 24, 48,72];
+
+export const amcSlaResolutionHours = [6, 12, 24, 48, 72];
+
+export const amcContractStatuses = ["ACTIVE", "NEAR_EXPIRY", "EXPIRED"];
+
+export const amcContractApprovalStatuses = ["DRAFT", "PUBLISHED", "APPROVED"];
+
+export const amcPaymentTerms = ["ANNUAL_UPFRONT", "QUARTERLY", "MONTHLY"];
+
+export const amcServiceVisitFrequencies = ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+export const serviceTicketIssueTypes = ["HARDWARE", "SOFTWARE"];
+
+export const serviceTicketPriorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+export const serviceTicketStatuses = [
+  "OPEN",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "ESCALATED",
+  "RESOLVED",
+  "CLOSED",
+];
 export const FEE_PLAN_PUBLISH_STATUS = {
   DRAFT: "draft",
   PUBLISHED: "published",
 };
 
 export const LOW_STOCK_THRESHOLD = 2;
+
+export const ATTENDANCE_STATUS = [
+  "Present",
+  "Absent",
+  "Medical Leave",
+  "Duty Leave",
+  "Sports Leave",
+  "NCC Leave",
+  "Approved Leave",
+  "Holiday",
+];
+
+/** Statuses that count as present for attendance percentage / counts */
+export const ATTENDANCE_PRESENT_STATUSES = [
+  "Present",
+  "Medical Leave",
+  "Duty Leave",
+  "Sports Leave",
+  "NCC Leave",
+  "Approved Leave",
+];
+
+/** Excluded from present/absent calculations */
+export const ATTENDANCE_IGNORED_STATUSES = ["Holiday"];

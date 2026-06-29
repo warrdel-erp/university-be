@@ -6,7 +6,7 @@ import acedmicYear from "./acedmicYearModel.js";
 import instituteModel from "./instituteModel.js";
 import courseModel from "./courseModel.js";
 
-export default sequelize.define(
+const sessionModel = sequelize.define(
     'session',
     {
         sessionId: {
@@ -113,3 +113,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+sessionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default sessionModel;

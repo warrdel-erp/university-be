@@ -1,125 +1,171 @@
 import * as courseRepository from '../repository/courseRepository.js';
 
-/**
- * List courses scoped to the user's university, institute, and academic year.
- * @param {{ universityId: number, instituteId: number, acedmicYearId: number, campusId?: number }} scope
- * @returns {Promise<Array>}
- */
-export const listCourses = async (scope) => {
-    return courseRepository.getAllCourses(scope);
+function normalizeTermName(name) {
+  return String(name ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function termNamesMatch(left, right) {
+  return normalizeTermName(left).toLowerCase() === normalizeTermName(right).toLowerCase();
+}
+
+function extractTermNumber(name) {
+  const match = String(name ?? '').match(/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function resolveSemesterIdForTerm({
+  term,
+  termName,
+  courseId,
+  acedmicYearId = null,
+  semesters = [],
+}) {
+  const normalizedTermName = normalizeTermName(termName);
+
+  const courseSemesters = semesters.filter(
+    (semester) => Number(semester.courseId) === Number(courseId),
+  );
+
+  const pickFromMatches = (matches) => {
+    if (!matches.length) return null;
+    if (acedmicYearId) {
+      const inYear = matches.find(
+        (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+      );
+      if (inYear) return inYear.semesterId;
+    }
+    return matches[0].semesterId;
+  };
+
+  const byExactName = courseSemesters.filter((semester) =>
+    termNamesMatch(semester.name, normalizedTermName),
+  );
+  const exactMatch = pickFromMatches(byExactName);
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const byTermNumber = courseSemesters.filter(
+    (semester) => extractTermNumber(semester.name) === Number(term),
+  );
+  const termNumberMatch = pickFromMatches(byTermNumber);
+  if (termNumberMatch) {
+    return termNumberMatch;
+  }
+
+  const byTermIndex = courseSemesters[Number(term) - 1];
+  return byTermIndex?.semesterId ?? null;
+}
+export const listCourses = async (options = {}) => {
+  return courseRepository.getAllCourses(options);
 };
 
-/**
- * Get course list with associated subjects
- * @param {number} universityId 
- * @param {number} instituteId 
- * @param {number} acedmicYearId 
- * @returns {Promise<Array>}
- */
-export const getCourseWithSubjects = async (universityId, instituteId, acedmicYearId) => {
-    try {
-        return await courseRepository.getCourseListWithSubjects(universityId, instituteId, acedmicYearId);
-    } catch (error) {
-        console.error('Error in Course Service (getCourseWithSubjects):', error);
-        throw error;
-    }
+export const getCourseWithSubjects = async (acedmicYearId) => {
+  try {
+    return await courseRepository.getCourseListWithSubjects(acedmicYearId);
+  } catch (error) {
+    console.error('Error in Course Service (getCourseWithSubjects):', error);
+    throw error;
+  }
 };
 
-/**
- * Get course with its sessions
- * @param {number} courseId
- * @param {number} universityId
- * @param {number} [acedmicYearId] Academic year id (matches DB / Sequelize spelling).
- * @param {number} [instituteIdFromUser] User default institute id for scoping class sections.
- * @returns {Promise<Object>}
- */
-export const getCourseWithSessions = async (
-    courseId,
-    universityId,
-    acedmicYearId,
-    instituteIdFromUser
-) => {
-    try {
-        return await courseRepository.getCourseWithSessionsData(
-            courseId,
-            universityId,
-            acedmicYearId,
-            instituteIdFromUser
-        );
-    } catch (error) {
-        console.error('Error in Course Service (getCourseWithSessions):', error);
-        throw error;
-    }
+export const getCourseWithSessions = async (courseId) => {
+  try {
+    return await courseRepository.getCourseWithSessionsData(courseId);
+  } catch (error) {
+    console.error('Error in Course Service (getCourseWithSessions):', error);
+    throw error;
+  }
 };
-/**
- * Get class sections grouped by term
- * @param {number} courseId 
- * @param {number} sessionId 
- * @returns {Promise<Array>}
- */
+
 export const getClassSectionsGroupedByTerm = async (courseId, sessionId) => {
-    try {
-        const course = await courseRepository.getCourseByCourseId(courseId);
-        if (!course) {
-            const error = new Error('Course not found');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const { termType, totalTerms } = course;
-        const classSections = await courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId);
-
-        const grouped = [];
-
-        for (let i = 1; i <= (totalTerms || 0); i++) {
-            const semesterName = `${termType} ${i}`;
-            const sections = classSections
-                .filter(cs => cs.classGroup && cs.classGroup.term === i)
-                .map(cs => ({ name: cs.section, id: cs.classSectionsId }))
-                .filter(Boolean); // Remove null/undefined sections
-
-            grouped.push({
-                termName: semesterName,
-                term: i,
-                classSections: sections
-            });
-        }
-
-        return grouped;
-    } catch (error) {
-        console.error('Error in Course Service (getClassSectionsGroupedByTerm):', error);
-        throw error;
+  try {
+    const course = await courseRepository.getCourseByCourseId(courseId);
+    if (!course) {
+      const error = new Error('Course not found');
+      error.statusCode = 404;
+      throw error;
     }
+
+    const { termType, totalTerms } = course;
+    const [classSections, semesters, sessionAcedmicYearId] = await Promise.all([
+      courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+      courseRepository.getSemestersByCourseId(courseId),
+      courseRepository.getSessionAcademicYearId(sessionId),
+    ]);
+
+    const grouped = [];
+
+    for (let i = 1; i <= (totalTerms || 0); i++) {
+      const termName = `${termType} ${i}`;
+      const resolvedSemesterId = resolveSemesterIdForTerm({
+        term: i,
+        termName,
+        courseId,
+        acedmicYearId: sessionAcedmicYearId,
+        semesters,
+      });
+
+      const sections = classSections
+        .filter((cs) => cs.classGroup && cs.classGroup.term === i)
+        .map((cs) => {
+          const plain = cs.get ? cs.get({ plain: true }) : cs;
+          return {
+            name: plain.section,
+            id: plain.classSectionsId,
+            semesterId: plain.semesterId ?? resolvedSemesterId,
+          };
+        })
+        .filter((section) => section.name != null && section.id != null);
+
+      grouped.push({
+        termName,
+        term: i,
+        semesterId: resolvedSemesterId,
+        classSections: sections,
+      });
+    }
+
+    return grouped;
+  } catch (error) {
+    console.error('Error in Course Service (getClassSectionsGroupedByTerm):', error);
+    throw error;
+  }
 };
 
-/**
- * Get term options for a course
- * @param {number} courseId 
- * @returns {Promise<Array>}
- */
 export const getTermOptionsByCourse = async (courseId) => {
-    try {
-        const course = await courseRepository.getCourseByCourseId(courseId);
-        if (!course) {
-            const error = new Error('Course not found');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const termType = course.termType || 'Term';
-        const totalTerms = course.totalTerms || 0;
-
-        const terms = [];
-        for (let i = 1; i <= totalTerms; i++) {
-            terms.push({
-                termName: `${termType} ${i}`,
-                term: i
-            });
-        }
-
-        return terms;
-    } catch (error) {
-        console.error('Error in Course Service (getTermOptionsByCourse):', error);
-        throw error;
+  try {
+    const course = await courseRepository.getCourseByCourseId(courseId);
+    if (!course) {
+      const error = new Error('Course not found');
+      error.statusCode = 404;
+      throw error;
     }
+
+    const termType = course.termType || 'Term';
+    const totalTerms = course.totalTerms || 0;
+
+    const terms = [];
+    for (let i = 1; i <= totalTerms; i++) {
+      terms.push({
+        termName: `${termType} ${i}`,
+        term: i,
+      });
+    }
+
+    return terms;
+  } catch (error) {
+    console.error('Error in Course Service (getTermOptionsByCourse):', error);
+    throw error;
+  }
+};
+
+export const deleteCourse = async (courseId) => {
+  const result = await courseRepository.deleteCourseById(courseId);
+  if (!result) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return result;
 };

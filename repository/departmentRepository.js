@@ -1,54 +1,50 @@
-import * as model from '../models/index.js'
+import * as model from '../models/index.js';
+import { scoped, buildScope } from '../utility/scoped.js';
+
+const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 export async function addDepartment(departmentData) {
     try {
-        const result = await model.departmentModel.create(departmentData);
-        return result;
+        return await scoped(model.departmentModel).create(departmentData);
     } catch (error) {
-        console.error("Error in add Department :", error);
+        console.error('Error in add Department :', error);
         throw error;
     }
-};
+}
 
-export async function getDepartmentDetails(universityId) {
+export async function getDepartmentDetails() {
     try {
-        const Department = await model.departmentModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            where: { universityId },
-            include:
-                [
-                    {
-                        model: model.subAccountModel,
-                        as: "subAccountDetail",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
+        return await scoped(model.departmentModel).findAll({
+            attributes: { exclude: excludeMeta },
+            include: [
+                {
+                    model: model.subAccountModel,
+                    as: 'subAccountDetail',
+                    where: { ...buildScope(model.subAccountModel) },
+                    attributes: { exclude: excludeMeta },
+                },
+            ],
         });
-
-        return Department;
     } catch (error) {
         console.error('Error fetching Department details:', error);
         throw error;
     }
 }
 
-
 export async function getSingleDepartmentDetails(departmentId) {
     try {
-        const Department = await model.departmentModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.departmentModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { departmentId },
-            include:
-                [
-                    {
-                        model: model.subAccountModel,
-                        as: "subAccountDetail",
-                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-                    },
-            ]
+            include: [
+                {
+                    model: model.subAccountModel,
+                    as: 'subAccountDetail',
+                    where: { ...buildScope(model.subAccountModel) },
+                    attributes: { exclude: excludeMeta },
+                },
+            ],
         });
-
-        return Department;
     } catch (error) {
         console.error('Error fetching Department details:', error);
         throw error;
@@ -56,50 +52,60 @@ export async function getSingleDepartmentDetails(departmentId) {
 }
 
 export async function deleteDepartment(departmentId) {
-    const deleted = await model.departmentModel.destroy({ where: { departmentId: departmentId } });
+    const existing = await scoped(model.departmentModel).findOne({
+        where: { departmentId },
+        attributes: ['departmentId'],
+    });
+    if (!existing) {
+        return false;
+    }
+
+    const deleted = await scoped(model.departmentModel).destroy({ where: { departmentId } });
     return deleted > 0;
 }
 
-export async function updateDepartment(departmentId, DepartmentData) {
+export async function updateDepartment(departmentId, departmentData) {
     try {
-        const result = await model.departmentModel.update(DepartmentData, {
-            where: { departmentId }
+        const existing = await scoped(model.departmentModel).findOne({
+            where: { departmentId },
+            attributes: ['departmentId'],
         });
-        return result;
+        if (!existing) {
+            return false;
+        }
+
+        await scoped(model.departmentModel).update(departmentData, {
+            where: { departmentId },
+        });
+        return true;
     } catch (error) {
         console.error(`Error updating Department creation ${departmentId}:`, error);
         throw error;
     }
 }
 
-export async function getlatestEntry(subAccountId) {    
+export async function getlatestEntry(subAccountId) {
     try {
-        const department = await model.departmentModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+        return await scoped(model.departmentModel).findOne({
+            attributes: { exclude: excludeMeta },
             where: { subAccountId },
-            order: [['department_order', 'DESC']],  
+            order: [['department_order', 'DESC']],
             limit: 1,
         });
-
-        return department;
     } catch (error) {
         console.error('Error fetching latest entry details:', error);
         throw error;
     }
 }
 
-export async function employeeDetail(departmentName) {    
+export async function employeeDetail(departmentName) {
     try {
-        const employees = await model.employeeModel.findAll({
-            where: { department:departmentName },
-            attributes: { 
-                exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] 
-            },
+        return await scoped(model.employeeModel).findAll({
+            where: { department: departmentName },
+            attributes: { exclude: excludeMeta },
         });
-
-        return employees;
     } catch (error) {
         console.error('Error fetching employee details:', error);
         throw error;
     }
-};
+}

@@ -1,52 +1,82 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addRequest(data) {
-  return await model.leaveRequestModel.create(data);
+export async function addRequest(data, options = {}) {
+  const employee = await scoped(model.employeeModel).findOne({
+    attributes: ["employeeId"],
+    where: { employeeId: data.employeeId },
+    transaction: options.transaction,
+  });
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
+
+  const policy = await scoped(model.leavePolicyModel).findOne({
+    attributes: ["policyId"],
+    where: { policyId: data.policyId },
+    transaction: options.transaction,
+  });
+  if (!policy) {
+    throw new Error("Leave policy not found");
+  }
+
+  return scoped(model.leaveRequestModel).create(data, { transaction: options.transaction });
 }
 
-export async function getRequests(universityId, instituteId, role, employeeId) {
-  return await model.leaveRequestModel.findAll({
+export async function getRequests(filters = {}) {
+  const businessWhere = filters.employeeId ? { employeeId: filters.employeeId } : {};
+
+  return scoped(model.leaveRequestModel).findAll({
     attributes: { exclude: ["deletedAt"] },
-            where:  { employeeId } , 
+    where: businessWhere,
     include: [
       {
         model: model.leavePolicyModel,
         as: "leaveRequestsPolicy",
-        where: {
-          ...(universityId && { universityId }),
-          ...(role === 'Head' && { instituteId }),
-        },
-        attributes: ["policyId", "policyName", "totalLeavesPerYear"]
+        where: buildScope(model.leavePolicyModel),
+        required: true,
+        attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
         model: model.employeeModel,
         as: "employeeRequest",
-      }
-    ]
+        where: buildScope(model.employeeModel),
+        required: true,
+      },
+    ],
   });
 }
 
-export async function getRequestById(requestId, universityId) {
-  return await model.leaveRequestModel.findOne({
+export async function getRequestById(requestId) {
+  return scoped(model.leaveRequestModel).findOne({
     where: { requestId },
     attributes: { exclude: ["deletedAt"] },
     include: [
       {
         model: model.leavePolicyModel,
         as: "leaveRequestsPolicy",
-        where: {
-          ...(universityId && { universityId }),
-        },
-        attributes: ["policyId", "policyName", "totalLeavesPerYear"]
+        where: buildScope(model.leavePolicyModel),
+        required: true,
+        attributes: ["policyId", "policyName", "totalLeavesPerYear"],
       },
       {
         model: model.employeeModel,
         as: "employeeRequest",
-      }
-    ]
+        where: buildScope(model.employeeModel),
+        required: true,
+      },
+    ],
   });
 }
 
-export async function updateRequest(requestId, data) {
-  return await model.leaveRequestModel.update(data, { where: { requestId } });
-};
+export async function updateRequest(requestId, data, options = {}) {
+  const existing = await getRequestById(requestId);
+  if (!existing) {
+    return [0];
+  }
+
+  return scoped(model.leaveRequestModel).update(data, {
+    where: { requestId },
+    transaction: options.transaction,
+  });
+}

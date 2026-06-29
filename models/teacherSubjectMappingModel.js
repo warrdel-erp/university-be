@@ -1,10 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import employee from "./employeeModel.js";
-import classSubjectMapper from "./classSubjectMapperModel.js";
+import subject from "./subjectModel.js";
 import users from "./userModel.js";
 
-export default sequelize.define(
+const teacherSubjectMappingModel = sequelize.define(
     'teacher_subject_mapping',
     {
         teacherSubjectMappingId: {
@@ -22,13 +22,13 @@ export default sequelize.define(
                 key: 'employee_id'
             }
         },
-        classSubjectMapperId: {
+        subjectId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'class_subject_mapper_id',
+            field: 'subject_id',
             references: {
-                model: classSubjectMapper,
-                key: 'class_subject_mapper_id'
+                model: subject,
+                key: 'subject_id'
             }
         },
         createdAt: {
@@ -52,15 +52,6 @@ export default sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -73,3 +64,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+teacherSubjectMappingModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default teacherSubjectMappingModel;

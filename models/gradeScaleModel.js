@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 import users from "./userModel.js";
 import gradeModel from "./gradeModel.js";
 
-export default sequelize.define(
+const gradeScaleModel = sequelize.define(
   "grade_scale",
   {
     gradeScaleId: {
@@ -93,3 +93,7 @@ export default sequelize.define(
     paranoid: true,
   }
 );
+
+gradeScaleModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default gradeScaleModel;

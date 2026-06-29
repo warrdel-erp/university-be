@@ -19,7 +19,34 @@ const batchAttendanceSchema = z.object({
     }))
 });
 
-router.post('/', userAuth, addAttendance);
+const attendanceStatusEnum = z.enum([
+    "Present",
+    "Absent",
+    "Medical Leave",
+    "Duty Leave",
+    "Sports Leave",
+    "NCC Leave",
+    "Approved Leave",
+    "Holiday",
+]);
+
+const addAttendanceSchema = z.object({
+    classSectionsId: z.coerce.number().int().positive(),
+    timeTableMappingId: z.union([
+        z.coerce.number().int().positive(),
+        z.array(z.coerce.number().int().positive()).min(1),
+    ]),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
+    attendance: z.array(z.object({
+        studentId: z.coerce.number().int().positive(),
+        attendanceStatus: attendanceStatusEnum,
+        notes: z.string().optional(),
+        description: z.string().optional(),
+    })).min(1),
+    section: z.string().optional(),
+});
+
+router.post('/', userAuth, validate({ body: addAttendanceSchema }), addAttendance);
 
 router.get('/', userAuth, getAttendanceDetails);
 

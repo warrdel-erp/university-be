@@ -1,57 +1,64 @@
-import * as model from '../models/index.js'
-import { Op } from 'sequelize';
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 
-export async function addPermission(PermissionData) {    
-    try {
-        const result = await model.permissionModel.create(PermissionData);
-        return result;
-    } catch (error) {
-        console.error("Error in add Permission :", error);
-        throw error;
-    }
-};
-
-export async function getPermissionDetails(universityId) {
-    try {
-        const Permission = await model.permissionModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-        });
-
-        return Permission;
-    } catch (error) {
-        console.error('Error fetching Permission details:', error);
-        throw error;
-    }
+export async function addPermission(PermissionData) {
+  try {
+    return scoped(model.permissionModel).create(PermissionData);
+  } catch (error) {
+    console.error("Error in add Permission :", error);
+    throw error;
+  }
 }
 
+export async function getPermissionDetails() {
+  try {
+    return scoped(model.permissionModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+    });
+  } catch (error) {
+    console.error("Error fetching Permission details:", error);
+    throw error;
+  }
+}
 
 export async function getSinglePermissionDetails(permissionId) {
-    try {
-        const Permission = await model.permissionModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            where: { permissionId },
-        });
-
-        return Permission;
-    } catch (error) {
-        console.error('Error fetching Permission details:', error);
-        throw error;
-    }
+  try {
+    return scoped(model.permissionModel).findOne({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: { permissionId },
+    });
+  } catch (error) {
+    console.error("Error fetching Permission details:", error);
+    throw error;
+  }
 }
 
 export async function deletePermission(permissionId) {
-    const deleted = await model.permissionModel.destroy({ where: { permissionId: permissionId } });
-    return deleted > 0;
+  const existing = await scoped(model.permissionModel).findOne({
+    attributes: ["permissionId"],
+    where: { permissionId },
+  });
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await scoped(model.permissionModel).destroy({ where: { permissionId } });
+  return deleted > 0;
 }
 
-export async function updatePermission(permissionId, PermissionData) {    
-    try {
-        const result = await model.permissionModel.update(PermissionData, {
-            where: { permissionId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating Permission creation ${PermissionId}:`, error);
-        throw error; 
+export async function updatePermission(permissionId, PermissionData) {
+  try {
+    const existing = await scoped(model.permissionModel).findOne({
+      attributes: ["permissionId"],
+      where: { permissionId },
+    });
+    if (!existing) {
+      return [0];
     }
+
+    return scoped(model.permissionModel).update(PermissionData, { where: { permissionId } });
+  } catch (error) {
+    console.error(`Error updating Permission creation ${permissionId}:`, error);
+    throw error;
+  }
 }

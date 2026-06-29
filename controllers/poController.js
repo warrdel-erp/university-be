@@ -4,13 +4,11 @@ export async function addPo(req, res) {
     const { courseId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
     try {
         if (!(courseId)) {
             return res.status(400).send('courseId is required')
         }
-        const Po = await poCreation.addPo(req.body, createdBy, updatedBy, universityId, instituteId);
+        const Po = await poCreation.addPo(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", Po });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -18,12 +16,8 @@ export async function addPo(req, res) {
 }
 
 export async function getAllPo(req, res) {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const { acedmicYearId } = req.query
     try {
-        const Po = await poCreation.getPoDetails(universityId, instituteId, role, acedmicYearId);
+        const Po = await poCreation.getPoDetails();
         res.status(200).json(Po);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -31,10 +25,9 @@ export async function getAllPo(req, res) {
 }
 
 export async function getSinglePoDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { poId } = req.query;
-        const po = await poCreation.getSinglePoDetails(poId, universityId);
+        const po = await poCreation.getSinglePoDetails(poId);
         if (po) {
             res.status(200).json(po);
         } else {

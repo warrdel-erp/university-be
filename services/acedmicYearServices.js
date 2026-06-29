@@ -1,233 +1,314 @@
-import * as acedmicYearCreationService  from "../repository/acedmicYearRepository.js";
-import { addBulkCourse, getCourseByAcedmicId } from "../repository/courseRepository.js";
-import { addBulkElectiveSubject, getSingleElectiveSubjectByAcedmicId } from "../repository/electiveSubjectRepository.js";
-import { getAllSubject, subjectBulkCreate } from "../repository/mainRepository.js";
-import { addBulkSession, getSessionDetailsByAcedmic } from "../repository/sessionRepository.js";
+import * as acedmicYearCreationService from '../repository/acedmicYearRepository.js';
+import * as instituteRepository from '../repository/instituteRepository.js';
+import * as mainRepository from '../repository/mainRepository.js';
+import * as electiveSubjectRepository from '../repository/electiveSubjectRepository.js';
+import * as sessionRepository from '../repository/sessionRepository.js';
+import * as model from '../models/index.js';
+import sequelize from '../database/sequelizeConfig.js';
+import { requestContext } from '../utility/requestContext.js';
+import moment from 'moment';
+import { parseCustomDate } from '../utility/dateFormat.js';
 
-export async function addacedmicYear(acedmicYearData, createdBy, updatedBy,universityId) {
+const ACADEMIC_YEAR_DATE_FORMAT = 'YYYY-MM-DD';
 
-        acedmicYearData.createdBy = createdBy;
-        acedmicYearData.updatedBy = updatedBy;
-        acedmicYearData.universityId = universityId;
-        const acedmicYear = await acedmicYearCreationService.addacedmicYear(acedmicYearData);
-        return acedmicYear;
-};
+function badRequest(message) {
+    const error = new Error(message);
+    error.statusCode = 400;
+    return error;
+}
 
-export async function getacedmicYearDetails(universityId) {
-    return await acedmicYearCreationService.getacedmicYearDetails(universityId);
-};
+function formatAcademicYearDate(value) {
+    const parsed = parseCustomDate(value);
+    if (!parsed) {
+        return null;
+    }
+    const date = moment(parsed, 'YYYY-MM-DD', true).startOf('day');
+    if (!date.isValid()) {
+        return null;
+    }
+    return date.format(ACADEMIC_YEAR_DATE_FORMAT);
+}
 
-export async function getSingleacedmicYearDetails(acedmicYearId,universityId) {
-    return await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId,universityId);
-};
+function requireFormattedDate(value, fieldName) {
+    const formatted = formatAcademicYearDate(value);
+    if (!formatted) {
+        throw badRequest(`Invalid ${fieldName}`);
+    }
+    return formatted;
+}
+
+/** startingDate only → endingDate is start + 1 year − 1 day; yearTitle is e.g. 2026-2027 */
+function resolveAcademicYearFields({ startingDate, endingDate, yearTitle } = {}) {
+    if (startingDate === undefined || startingDate === null || String(startingDate).trim() === '') {
+        throw badRequest('startingDate is required');
+    }
+
+    const parsedStart = parseCustomDate(startingDate);
+    if (!parsedStart) {
+        throw badRequest('Invalid startingDate');
+    }
+
+    const start = moment(parsedStart, 'YYYY-MM-DD', true).startOf('day');
+    if (!start.isValid()) {
+        throw badRequest('Invalid startingDate');
+    }
+
+    const autoEnd = start.clone().add(1, 'year').subtract(1, 'day');
+    const trimmedTitle = typeof yearTitle === 'string' ? yearTitle.trim() : '';
+
+    const resolvedEndingDate = endingDate != null && String(endingDate).trim() !== ''
+        ? requireFormattedDate(endingDate, 'endingDate')
+        : autoEnd.format(ACADEMIC_YEAR_DATE_FORMAT);
+
+    return {
+        startingDate: start.format(ACADEMIC_YEAR_DATE_FORMAT),
+        endingDate: resolvedEndingDate,
+        yearTitle: trimmedTitle || `${start.year()}-${start.year() + 1}`,
+    };
+}
+
+const yearListAttributes = { exclude: ['updatedAt', 'deletedAt'] };
+const copyExclude = ['createdAt', 'updatedAt', 'deletedAt'];
+const copyExcludeMeta = [...copyExclude, 'createdBy', 'updatedBy'];
+
+async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
+    const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
+    const { universityId, instituteId } = requestContext.getStore() ?? {};
+
+    if (!universityId || !instituteId) {
+        throw badRequest('Active university and institute are required');
+    }
+
+    const activatePayload = {
+        yearTitle,
+        startingDate,
+        endingDate,
+        updatedBy,
+        isActive: true,
+    };
+
+    const forInstitute = await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
+    if (forInstitute) {
+        const acedmicYearId = forInstitute.acedmicYearId ?? forInstitute.dataValues?.acedmicYearId;
+        const updated = await acedmicYearCreationService.updateacedmicYear(acedmicYearId, activatePayload, options);
+        if (!updated) {
+            throw badRequest('Failed to update academic year');
+        }
+        const record = await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId, options);
+        if (!record) {
+            throw badRequest('Academic year not found after update');
+        }
+        return record;
+    }
+
+    const withoutInstitute = await acedmicYearCreationService.findByYearTitleAndUniversityWithoutInstitute(
+        yearTitle,
+        universityId,
+    );
+    if (withoutInstitute) {
+        const acedmicYearId = withoutInstitute.acedmicYearId ?? withoutInstitute.dataValues?.acedmicYearId;
+        const claimed = await acedmicYearCreationService.claimUniversityAcedmicYear(
+            acedmicYearId,
+            universityId,
+            { ...activatePayload, instituteId },
+            options,
+        );
+        if (claimed) {
+            return claimed;
+        }
+    }
+
+    return acedmicYearCreationService.addacedmicYear({
+        yearTitle,
+        ...activatePayload,
+    }, options);
+}
+
+/** Always create a new year for active university + institute (scoped create). */
+async function createAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
+    const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
+    const { universityId, instituteId } = requestContext.getStore() ?? {};
+
+    if (!universityId || !instituteId) {
+        throw badRequest('Active university and institute are required');
+    }
+
+    return acedmicYearCreationService.addacedmicYear({
+        yearTitle,
+        startingDate,
+        endingDate,
+        updatedBy,
+        isActive: true,
+    }, options);
+}
+
+async function getAcedmicYearById(acedmicYearId, options = {}) {
+    return model.acedmicYearModel.findOne({
+        attributes: yearListAttributes,
+        where: { acedmicYearId: Number(acedmicYearId) },
+        ...options,
+    });
+}
+
+async function findRowsByAcedmicYearId(sequelizeModel, sourceAcedmicYearId, attributes, options = {}) {
+    return sequelizeModel.findAll({
+        ...options,
+        attributes,
+        where: { acedmicYearId: Number(sourceAcedmicYearId) },
+    });
+}
+
+function cloneRowForYear(row, pkField, acedmicYearId, updatedBy, withAudit = false) {
+    const { [pkField]: _pk, createdAt, updatedAt, deletedAt, ...rest } = row.get({ plain: true });
+    return withAudit
+        ? { ...rest, acedmicYearId, createdBy: updatedBy, updatedBy }
+        : { ...rest, acedmicYearId };
+}
+
+async function copyYearData(copyAcedmicYearId, copyData, acedmicYearId, updatedBy, options) {
+    for (const dataType of copyData) {
+        switch (dataType) {
+            case 'subject': {
+                const subjects = await findRowsByAcedmicYearId(
+                    model.subjectModel,
+                    copyAcedmicYearId,
+                    { exclude: copyExclude },
+                    options,
+                );
+                if (subjects.length) {
+                    await mainRepository.subjectBulkCreate(
+                        subjects.map((row) => cloneRowForYear(row, 'subjectId', acedmicYearId)),
+                        options,
+                    );
+                }
+                break;
+            }
+            case 'electiveSubject': {
+                const electives = await findRowsByAcedmicYearId(
+                    model.electiveSubjectModel,
+                    copyAcedmicYearId,
+                    { exclude: copyExcludeMeta },
+                    options,
+                );
+                if (electives.length) {
+                    await electiveSubjectRepository.addBulkElectiveSubject(
+                        electives.map((row) => cloneRowForYear(row, 'electiveSubjectId', acedmicYearId, updatedBy, true)),
+                        options,
+                    );
+                }
+                break;
+            }
+            case 'session': {
+                const sessions = await findRowsByAcedmicYearId(
+                    model.sessionModel,
+                    copyAcedmicYearId,
+                    { exclude: copyExcludeMeta },
+                    options,
+                );
+                if (sessions.length) {
+                    await sessionRepository.addBulkSession(
+                        sessions.map((row) => cloneRowForYear(row, 'sessionId', acedmicYearId, updatedBy, true)),
+                        options,
+                    );
+                }
+                break;
+            }
+            default:
+                console.warn(`Unknown data type: ${dataType}`);
+        }
+    }
+}
+
+/** Create or update by yearTitle — always activates for the active institute. */
+export async function addacedmicYear(acedmicYearData, updatedBy) {
+    return upsertAndActivateAcedmicYear(acedmicYearData, updatedBy);
+}
+
+export async function getacedmicYearDetails() {
+    return await acedmicYearCreationService.getacedmicYearDetails();
+}
 
 export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     return await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
-};
+}
 
-// export async function updateacedmicYear(acedmicYearData, updatedBy) {
-//   const { startingDate, endingDate } = acedmicYearData;
-
-//   const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-//   for (const record of allAcedmicyear) {
-//     const { acedmicYearId, yearTitle } = record.dataValues;
-
-//     if (!yearTitle || !yearTitle.includes('-')) {
-//       console.warn(`>>>>>>>Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
-//       continue;
-//     }
-
-//     const [startYear, endYear] = yearTitle.split('-');
-
-//     const fullStartingDate = `${startYear}-${startingDate}`;
-//     const fullEndingDate = `${endYear}-${endingDate}`;
-
-//     const updatePayload = {
-//       startingDate: fullStartingDate,
-//       endingDate: fullEndingDate,
-//       updatedBy
-//     };
-
-//     console.log(`>>>>>>>>>>>>>Updating ID ${acedmicYearId} =>`, updatePayload);
-
-//      await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
-//   }
-// };
-
-export async function updateacedmicYear(acedmicYearData, updatedBy) {
-  const { startingDate, endingDate } = acedmicYearData;
-
-  const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-  const currentYear = new Date().getFullYear();
-
-  for (const record of allAcedmicyear) {
-    const { acedmicYearId, yearTitle } = record.dataValues;
-
-    if (!yearTitle || !yearTitle.includes('-')) {
-      console.warn(`>>>>>>>Skipping record with ID ${acedmicYearId} due to invalid yearTitle: ${yearTitle}`);
-      continue;
+export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedBy) {
+    const resolvedId = acedmicYearId ?? requestContext.getStore()?.academicYearId;
+    if (!resolvedId) {
+        const error = new Error('Active academic year is required');
+        error.statusCode = 400;
+        throw error;
     }
 
-    const [startYear, endYear] = yearTitle.split('-');
+    const {
+        instituteId: _instituteId,
+        universityId: _universityId,
+        acedmicYearId: _id,
+        isActive: _isActive,
+        ...updateData
+    } = acedmicYearData;
 
-    const fullStartingDate = `${startYear}-${startingDate}`;
-    const fullEndingDate = `${endYear}-${endingDate}`;
-
-    // Determine if this academic year is the current one
-    const isActive = Number(startYear) === currentYear;
-
-    const updatePayload = {
-      startingDate: fullStartingDate,
-      endingDate: fullEndingDate,
-      isActive,
-      updatedBy
-    };
-
-    await acedmicYearCreationService.updateacedmicYear(acedmicYearId, updatePayload);
-  }
-};
-
-export async function activateAcedmicYear(acedmicYearId, updatedBy) {    
-  try {
-    const allAcedmicyear = await acedmicYearCreationService.getacedmicYearDetails();
-
-    const currentIndex = allAcedmicyear.findIndex(
-      (record) => record.dataValues.acedmicYearId  === Number(acedmicYearId)
-    );
-    
-
-    if (currentIndex === -1) {
-      throw new Error(`Academic year with ID ${acedmicYearId} not found.`);
+    if (updateData.startingDate != null && String(updateData.startingDate).trim() !== '') {
+        Object.assign(updateData, resolveAcademicYearFields(updateData));
+    } else if (updateData.endingDate != null && String(updateData.endingDate).trim() !== '') {
+        updateData.endingDate = requireFormattedDate(updateData.endingDate, 'endingDate');
     }
 
-    const updatePayload = {
-      isActive: true,
-      updatedBy
-    };
-
-    await acedmicYearCreationService.updateacedmicYear(
-      acedmicYearId,
-      updatePayload
-    );
-    const nextRecord = allAcedmicyear[currentIndex + 1];
-    if (nextRecord) {
-      const nextAcedmicYearId = nextRecord.dataValues.acedmicYearId;
-
-      await acedmicYearCreationService.updateacedmicYear(
-        nextAcedmicYearId,
-        updatePayload
-      );
-
-      console.log(`Activated current (ID ${acedmicYearId}) and next (ID ${nextAcedmicYearId}) academic years.`);
-    } else {
-      console.log(`Activated current (ID ${acedmicYearId}) academic year. No next year found.`);
-    }
-
-  } catch (error) {
-    console.error('Error in activateAcedmicYear:', error);
-    throw error;
-  }
-};
+    updateData.updatedBy = updatedBy;
+    return await acedmicYearCreationService.updateacedmicYear(resolvedId, updateData);
+}
 
 export async function deleteacedmicYear(acedmicYearId) {
     return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
-};
+}
 
-export async function getAllActiveAcedmicYear(universityId) {
-    return await acedmicYearCreationService.getAllActiveAcedmicYear(universityId);
-};
-
-export async function newActivateAndCopyData(data, universityId, instituteId, createdBy, updatedBy) {
-  const { acedmicYearId, copyAcedmicYearId, copyData } = data;
-  const updatePayload = {
-      isActive: true,
-      updatedBy
-  };
-  try {
-    if (!copyAcedmicYearId) {
-      await acedmicYearCreationService.updateacedmicYear(
-        acedmicYearId,
-        updatePayload
-      );
-      console.log(`Activated academic year ID: ${acedmicYearId}`);
-
-    } else if (copyAcedmicYearId && Array.isArray(copyData) && copyData.length > 0) {
-      for (const dataType of copyData) {
-        switch (dataType) {
-          case 'subject':
-            const subjects = await getAllSubject('',copyAcedmicYearId,'','')             
-            const newSubjects = subjects.map(subject => ({
-              ...subject.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updated_by: updatedBy,
-              // createdBy:createdBy,
-              subjectId: undefined  // Remove the id so a new one is generated
-            }));            
-
-            await subjectBulkCreate(newSubjects);
-            console.log(`Copied subjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
-
-          case 'electiveSubject':
-            const electives = await getSingleElectiveSubjectByAcedmicId(copyAcedmicYearId);
-
-            const newElectives = electives.map(item => ({
-              ...item.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updatedBy: updatedBy,
-              electiveSubjectId: undefined
-            }));
-            
-            await addBulkElectiveSubject(newElectives);
-            console.log(`Copied electiveSubjects from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
-
-          case 'session':
-            const sessions = await getSessionDetailsByAcedmic(copyAcedmicYearId)
-
-            const newSessions = sessions.map(item => ({
-              ...item.get({ plain: true }),
-              acedmicYearId: acedmicYearId,
-              createdBy: createdBy,
-              updatedBy: updatedBy,
-              sessionId: undefined
-            }));
-
-            await addBulkSession (newSessions);
-            console.log(`Copied session from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-            break;
-
-          // case 'course':
-          //   const courses = await getCourseByAcedmicId(copyAcedmicYearId);
-          //   console.log(`>>>>>>>courses`,courses.length);
-            
-          //   const newCourse = courses.map(item => ({
-          //     ...item.get({ plain: true }),
-          //     acedmicYearId: acedmicYearId,
-          //     createdBy: createdBy,
-          //     updatedBy: updatedBy,
-          //     courseId: undefined
-          //   }));
-          //               console.log(`>>>>>>>newCourse`,newCourse.length);
-
-          //   await addBulkCourse (newCourse);
-          //   console.log(`Copied course from AY ${copyAcedmicYearId} to ${acedmicYearId}`);
-          //   break;
-
-          default:
-            console.warn(`Unknown data type: ${dataType}`);
-        }
-      }
-
-      await acedmicYearCreationService.updateacedmicYear(
-        acedmicYearId,
-        updatePayload
-      );
+export async function getActiveAcedmicYearByInstitute() {
+    const { universityId, instituteId } = requestContext.getStore() ?? {};
+    if (!instituteId) {
+        throw new Error('Active institute is required');
     }
-  } catch (error) {
-    console.error('Error in copy data and academic year:', error);
-    throw error;
-  }
-};
+    if (!universityId) {
+        throw new Error('Active university is required');
+    }
+    return acedmicYearCreationService.getActiveAcedmicYearByInstitute(instituteId, universityId);
+}
+
+/** Active academic years for institute selected at login (instituteId from route param). */
+export async function getActiveAcedmicYearListByInstituteId(instituteId) {
+    const institute = await instituteRepository.getInstituteById(instituteId);
+    if (!institute) {
+        const error = new Error('Institute not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return acedmicYearCreationService.getActiveAcedmicYearByInstitute(
+        instituteId,
+        institute.universityId ?? institute.dataValues?.universityId,
+    );
+}
+
+export async function newActivateAndCopyData(data, updatedBy) {
+    const { copyAcedmicYearId, copyData, ...activateData } = data;
+
+    return sequelize.transaction(async (transaction) => {
+        const options = { transaction };
+
+        const created = await createAndActivateAcedmicYear(activateData, updatedBy, options);
+        const acedmicYearId = created.acedmicYearId ?? created.dataValues?.acedmicYearId;
+
+        if (copyAcedmicYearId == null || !Array.isArray(copyData) || copyData.length === 0) {
+            return created;
+        }
+
+        const sourceYear = await getAcedmicYearById(copyAcedmicYearId, options);
+        if (!sourceYear) {
+            const error = new Error(`Source academic year ${copyAcedmicYearId} not found`);
+            error.statusCode = 404;
+            throw error;
+        }
+
+        await copyYearData(copyAcedmicYearId, copyData, acedmicYearId, updatedBy, options);
+        return created;
+    });
+}

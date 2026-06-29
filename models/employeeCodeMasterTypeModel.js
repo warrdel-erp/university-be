@@ -2,8 +2,10 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import employeeCodeMaster from "./employeeCodeMasterModel.js";
 import users from "./userModel.js";
+import university from "./universityModel.js";
+import institute from "./instituteModel.js";
 
-export default sequelize.define(
+const employeeCodeMasterTypeModel = sequelize.define(
   'employee_code_master_type',
   {
     employeeCodeMasterTypeId: {
@@ -24,11 +26,28 @@ export default sequelize.define(
     code :{
         type: DataTypes.STRING,
         allowNull: false,
-        unique:true,
     },
     description:{
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    universityId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'university_id',
+        references: {
+            model: university,
+            key: 'university_id',
+        },
+    },
+    instituteId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        field: 'institute_id',
+        references: {
+            model: institute,
+            key: 'institute_id',
+        },
     },
     createdAt: {
         type: DataTypes.DATE,
@@ -69,6 +88,17 @@ export default sequelize.define(
 {
     tableName: 'employee_code_master_type',
     timestamps: true,
-    paranoid:true
+    paranoid: true,
+    indexes: [
+        {
+            unique: true,
+            fields: ['employee_code_master_id', 'university_id', 'institute_id', 'code'],
+            name: 'unique_code_master_type_per_tenant_category',
+        },
+    ],
 },
 );
+
+employeeCodeMasterTypeModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default employeeCodeMasterTypeModel;

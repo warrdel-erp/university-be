@@ -1,7 +1,7 @@
-import sequelize from "../database/sequelizeConfig.js"
+import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const employeeCodeMasterModel = sequelize.define(
   'employee_code_master',
   {
     employeeCodeMasterId: {
@@ -36,6 +36,11 @@ export default sequelize.define(
 {
     tableName: 'employee_code_master',
     timestamps: true,
-    paranoid:true
+    paranoid: true,
 },
 );
+
+/** Software-wide dropdown categories; not tenant-scoped. */
+employeeCodeMasterModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default employeeCodeMasterModel;

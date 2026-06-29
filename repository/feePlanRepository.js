@@ -1,182 +1,193 @@
-import * as model from '../models/index.js'
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
+
+function feePlanExcludedAttributes() {
+  return ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
+}
+
+function feePlanDetailIncludes() {
+  const excludeAttrs = feePlanExcludedAttributes();
+
+  return [
+    {
+      model: model.sessionModel,
+      as: "sessionFee",
+      attributes: { exclude: [...excludeAttrs, "acedmic_year_id"] },
+    },
+    {
+      model: model.courseModel,
+      as: "courseFee",
+      attributes: {
+        exclude: [...excludeAttrs, "affiliated_university_id", "institute_id", "acedmic_year_id"],
+      },
+    },
+    {
+      model: model.acedmicYearModel,
+      as: "acedmicYearFee",
+      attributes: { exclude: [...excludeAttrs, "affiliated_university_id", "institute_id"] },
+    },
+    {
+      model: model.feeNewInvoiceModel,
+      as: "invoices",
+      attributes: { exclude: excludeAttrs },
+      include: [
+        {
+          model: model.feePlanSemesterModel,
+          as: "semesters",
+          attributes: { exclude: excludeAttrs },
+        },
+        {
+          model: model.feePlanTypeModel,
+          as: "additionalFees",
+          attributes: { exclude: excludeAttrs },
+        },
+      ],
+    },
+  ];
+}
+
+function feePlanInvoiceIncludes() {
+  const excludeAttrs = feePlanExcludedAttributes();
+
+  return [
+    {
+      model: model.feeNewInvoiceModel,
+      as: "invoices",
+      attributes: { exclude: excludeAttrs },
+      include: [
+        {
+          model: model.feePlanSemesterModel,
+          as: "semesters",
+          attributes: { exclude: excludeAttrs },
+        },
+        {
+          model: model.feePlanTypeModel,
+          as: "additionalFees",
+          attributes: { exclude: excludeAttrs },
+        },
+      ],
+    },
+  ];
+}
 
 export async function addFeePlan(data, transaction) {
   try {
-    const result = await model.feePlanModel.create(data, { transaction });
-    return result;
+    return scoped(model.feePlanModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee Plan :", error);
     throw error;
   }
-};
+}
 
 export async function addFeeNewInvoice(data, transaction) {
   try {
-    const result = await model.feeNewInvoiceModel.create(data, { transaction });
-    return result;
+    return scoped(model.feeNewInvoiceModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee New Invoice :", error);
     throw error;
   }
-};
+}
 
 export async function addFeePlanSemester(data, transaction) {
   try {
-    const result = await model.feePlanSemesterModel.create(data, { transaction });
-    return result;
+    return scoped(model.feePlanSemesterModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee Plan Semester :", error);
     throw error;
   }
-};
+}
 
 export async function addFeePlanType(data, transaction) {
   try {
-    const result = await model.feePlanTypeModel.create(data, { transaction });
-    return result;
+    return scoped(model.feePlanTypeModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add Fee Plan Type :", error);
     throw error;
   }
-};
+}
 
-export async function getFeePlanDetails(universityId,instituteId,role,acedmicYearId) {
-    try {
-        const whereClause = {
-            ...(universityId && { universityId }),
-            ...(acedmicYearId && { acedmicYearId }),
-            ...(role === 'Head' && { institute_id: instituteId })
-        };
-        const FeePlan = await model.feePlanModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:whereClause,
-            include:[
-                {
-                  model:model.sessionModel,
-                  as:'sessionFee',
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","acedmic_year_id"] },
-                },
-                {
-                  model:model.courseModel,
-                  as:'courseFee',
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id","acedmic_year_id"] },
-                },
-                {
-                  model:model.acedmicYearModel,
-                  as:'acedmicYearFee',
-                  attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy","affiliated_university_id","institute_id"] },
-                },
-                {
-                    model: model.feeNewInvoiceModel,
-                    as: "invoices",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include:[
-                        {
-                            model:model.feePlanSemesterModel,
-                            as:'semesters',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        },
-                        {
-                            model:model.feePlanTypeModel,
-                            as:'additionalFees',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        }
-                    ]
-                },
-                
-            ]
-        });
+export async function getFeePlanDetails(filters = {}) {
+  try {
+    const businessWhere = filters.acedmicYearId ? { acedmicYearId: filters.acedmicYearId } : {};
 
-        return FeePlan;
-    } catch (error) {
-        console.error('Error fetching FeePlan details:', error);
-        throw error;
-    }
+    return scoped(model.feePlanModel).findAll({
+      attributes: { exclude: feePlanExcludedAttributes() },
+      where: businessWhere,
+      include: feePlanDetailIncludes(),
+    });
+  } catch (error) {
+    console.error("Error fetching FeePlan details:", error);
+    throw error;
+  }
 }
 
 export async function getSingleFeePlanDetails(feePlanId) {
-     try {
-        const FeePlan = await model.feePlanModel.findOne({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:{
-                feePlanId
-            },
-            include:[
-                {
-                    model: model.feeNewInvoiceModel,
-                    as: "invoices",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                    include:[
-                        {
-                            model:model.feePlanSemesterModel,
-                            as:'semesters',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        },
-                        {
-                            model:model.feePlanTypeModel,
-                            as:'additionalFees',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-                        }
-                    ]
-                },
-                
-            ]
-        });
-
-        return FeePlan;
-    } catch (error) {
-        console.error('Error fetching Fee Plan details single:', error);
-        throw error;
-    }
-};
-
-export async function getfeePlanByCourseAndAcedmic(courseId,acedmicYearId) {
-     try {
-        const FeePlan = await model.feePlanModel.findAll({
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt","createdBy","updatedBy"] },
-            where:{
-                courseId,acedmicYearId
-            },
-        });
-
-        return FeePlan;
-    } catch (error) {
-        console.error('Error fetching Fee Plan details by course and acedmic year:', error);
-        throw error;
-    }
-}
-
-export async function updateFeePlan(poId, data) {
-    try {
-        const result = await model.poModel.update(data, {
-            where: { poId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating FeePlan creation ${poId}:`, error);
-        throw error; 
-    }
-}
-
-export async function deleteFeePlan(poId) {
-    const deleted = await model.poModel.destroy({ where: { poId: poId } });
-    return deleted > 0;
-};
-
-export async function findByPlanId(feePlanId) {
   try {
-    const FeePlan = await model.feeNewInvoiceModel.findAll({
-      attributes: {
-        exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"]
-      },
-      where: {
-        feePlanId
-      }
+    return scoped(model.feePlanModel).findOne({
+      attributes: { exclude: feePlanExcludedAttributes() },
+      where: { feePlanId },
+      include: feePlanInvoiceIncludes(),
     });
+  } catch (error) {
+    console.error("Error fetching Fee Plan details single:", error);
+    throw error;
+  }
+}
 
-    return FeePlan;
+export async function getfeePlanByCourseAndAcedmic(courseId, acedmicYearId) {
+  try {
+    return scoped(model.feePlanModel).findAll({
+      attributes: { exclude: feePlanExcludedAttributes() },
+      where: { courseId, acedmicYearId },
+    });
+  } catch (error) {
+    console.error("Error fetching Fee Plan details by course and acedmic year:", error);
+    throw error;
+  }
+}
+
+export async function updateFeePlan(feePlanId, data) {
+  try {
+    const existing = await scoped(model.feePlanModel).findOne({
+      attributes: ["feePlanId"],
+      where: { feePlanId },
+    });
+    if (!existing) {
+      return [0];
+    }
+
+    return scoped(model.feePlanModel).update(data, {
+      where: { feePlanId },
+    });
+  } catch (error) {
+    console.error(`Error updating FeePlan ${feePlanId}:`, error);
+    throw error;
+  }
+}
+
+export async function deleteFeePlan(feePlanId) {
+  const deleted = await scoped(model.feePlanModel).destroy({ where: { feePlanId } });
+  return deleted > 0;
+}
+
+export async function findByPlanId(feePlanId, options = {}) {
+  try {
+    const plan = await scoped(model.feePlanModel).findOne({
+      attributes: ["feePlanId"],
+      where: { feePlanId },
+      transaction: options.transaction,
+    });
+    if (!plan) {
+      return [];
+    }
+
+    return scoped(model.feeNewInvoiceModel).findAll({
+      attributes: { exclude: feePlanExcludedAttributes() },
+      where: { feePlanId },
+      transaction: options.transaction,
+    });
   } catch (error) {
     console.error("Error in findByPlanId:", error);
     throw error;
   }
-};
+}

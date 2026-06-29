@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const assetIssueTransactionModel = sequelize.define(
   "asset_issue_transaction",
   {
     assetIssueTransactionId: {
@@ -51,3 +51,7 @@ export default sequelize.define(
     paranoid: false,
   }
 );
+
+assetIssueTransactionModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+export default assetIssueTransactionModel;

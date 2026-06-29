@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const accountModel = sequelize.define(
     'account',
     {
         accountId: {
@@ -39,3 +39,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+accountModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default accountModel;

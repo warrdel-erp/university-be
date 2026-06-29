@@ -4,16 +4,15 @@ import sequelize from '../database/sequelizeConfig.js';
 export async function addTimeTable(data, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
     try {
-        const name = data.name;
-
-        // Fields that now live on time_table_structure (not repeated per period)
         const structureItem = {
-            name,
+            name: data.name,
             maximumPeriod: data.maximumPeriod,
             courseId: data.courseId,
+            sessionId: data.sessionId,
             periodLength: data.periodLength,
             periodGap: data.periodGap,
             startingTime: data.startingTime,
+            weekOff: data.weekOff,
             createdBy,
             updatedBy,
         };
@@ -48,7 +47,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
 
                 timeSlots.push({
                     timeTableNameId,
-                    weekOff: data.weekOff,
                     type: data.type,
                     createdBy: data.createdBy,
                     updatedBy: data.updatedBy,
@@ -65,7 +63,6 @@ export async function addTimeTable(data, createdBy, updatedBy) {
                 const periodName = `Period${i + 1}`;
                 timeSlots.push({
                     timeTableNameId,
-                    weekOff: data.weekOff,
                     type: data.type,
                     createdBy: data.createdBy,
                     updatedBy: data.updatedBy,
@@ -87,19 +84,19 @@ export async function addTimeTable(data, createdBy, updatedBy) {
         await transaction.rollback();
         throw error;
     }
-};
+}
 
-export async function getAllTimeTableName(universityId, courseId) {
-    return await timeTableRepository.getAllTimeTableName(universityId, courseId);
-};
+export async function getAllTimeTableName(courseId, sessionId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+}
 
-export async function getTimeTableDetails() {
-    return await timeTableRepository.getTimeTableDetails();
-};
+export async function getTimeTableDetails(courseId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId });
+}
 
-export async function getSingleTimeTableDetails(courseId, universityId) {
-    return await timeTableRepository.getSingleTimeTableDetails(courseId, universityId);
-};
+export async function getSingleTimeTableDetails(courseId, sessionId) {
+    return await timeTableRepository.getTimeTableStructures({ courseId, sessionId });
+}
 
 export async function updateTimeTable(info) {
     try {
@@ -114,8 +111,8 @@ export async function updateTimeTable(info) {
         console.error('Error updating time table:', error);
         throw new Error('Failed to update time table');
     }
-};
+}
 
 export async function deleteTimeTable(timeTableCreationId) {
     return await timeTableRepository.deleteTimeTable(timeTableCreationId);
-};
+}

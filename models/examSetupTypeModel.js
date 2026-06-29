@@ -5,7 +5,7 @@ import examStructureModel from "./examStructureModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 
-export default sequelize.define(
+const examSetupTypeModel = sequelize.define(
     'exam_setup_type', // exam Type 1.1
     {
         examSetupTypeId: {
@@ -115,3 +115,7 @@ export default sequelize.define(
         }
     }
 );
+
+examSetupTypeModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examSetupTypeModel;

@@ -20,7 +20,7 @@ function calculateTotalMarks(questionPaper) {
     }, 0);
 }
 
-export async function addQuestionPaper(questionPaperData, createdBy, updatedBy, universityId) {
+export async function addQuestionPaper(questionPaperData, createdBy, updatedBy) {
     const { examScheduleId } = questionPaperData;
 
     // 1. Check if examSchedule exists
@@ -56,10 +56,10 @@ export async function deleteQuestionPaper(id) {
     return await questionPaperRepository.deleteQuestionPaper(id);
 }
 
-export async function generateQuestionPaper(name, blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy, universityId) {
+export async function generateQuestionPaper(name, blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy) {
     try {
         // 1. Fetch blueprint
-        const blueprintRecord = await questionPaperBlueprintRepository.getBlueprintById(blueprintId, universityId);
+        const blueprintRecord = await questionPaperBlueprintRepository.getBlueprintById(blueprintId);
         if (!blueprintRecord) {
             throw new Error(`Blueprint with id ${blueprintId} not found`);
         }
@@ -82,7 +82,6 @@ export async function generateQuestionPaper(name, blueprintId, examScheduleId, n
 
                 // Randomly fetch approved questions from bank
                 const questions = await questionBankRepository.getRandomQuestions(
-                    universityId,
                     blueprintRecord.subjectId,
                     typeOfQuestions,
                     marksPerQuestion,
@@ -143,7 +142,6 @@ export async function approveQuestionPaper(id, updatedBy) {
     if (!subject) {
         throw new Error(`Subject with id ${subjectId} not found`);
     }
-    const universityId = subject.universityId;
 
     // 2. Iterate through sections and questions to add/update in bank
     const sections = questionPaperRecord.questionPaper;
@@ -165,7 +163,6 @@ export async function approveQuestionPaper(id, updatedBy) {
                             Answer: question.Answer,
                             content: question.content,
                             subjectId,
-                            universityId,
                             status: questionStatus[1],
                             createdBy: updatedBy,
                             updatedBy

@@ -103,10 +103,9 @@ function extractMemberBasicDetails(issuePlain) {
   return buildMemberDetailsFromEmployee(issuePlain.memberId, issuePlain.teacherMember);
 }
 
-async function getIssueItemStats(assetIssueTransactionId, instituteId, transaction) {
+async function getIssueItemStats(assetIssueTransactionId, transaction) {
   const statsByIssueId = await repo.countIssueItemStatsByTransactionIds(
     [assetIssueTransactionId],
-    instituteId,
     { transaction }
   );
 
@@ -244,16 +243,16 @@ function formatAssetIssuePaymentRecord(paymentItemRow, meta, payeeDetails = null
   };
 }
 
-async function validateMember(memberType, memberId, instituteId, transaction) {
+async function validateMember(memberType, memberId, transaction) {
   if (memberType === "STUDENT") {
-    const student = await repo.findStudentById(memberId, instituteId, { transaction });
+    const student = await repo.findStudentById(memberId, { transaction });
     if (!student) {
       throw httpError("memberId student not found in your institute", 404);
     }
     return;
   }
 
-  const teacher = await repo.findTeacherById(memberId, instituteId, { transaction });
+  const teacher = await repo.findTeacherById(memberId, { transaction });
   if (!teacher) {
     throw httpError("memberId employee not found in your institute", 404);
   }
@@ -294,26 +293,16 @@ function throwInventoryValidationError(validationError) {
   );
 }
 
-async function validateIssueInventoryItems(items, instituteId, transaction) {
+async function validateIssueInventoryItems(items, transaction) {
   const inventoryItemIds = repo.extractInventoryItemIds(items);
-  const validationError = await repo.findIssueInventoryItemValidationError(
-    inventoryItemIds,
-    instituteId,
-    { transaction }
-  );
+  const validationError = await repo.findIssueInventoryItemValidationError(inventoryItemIds, {
+    transaction,
+  });
   throwInventoryValidationError(validationError);
 }
 
 async function createSecurityPaymentForAssetIssue(
-  {
-    assetIssueTransactionId,
-    memberId,
-    memberType,
-    securityAmount,
-    paymentMethod,
-    instituteId,
-    createdBy,
-  },
+  { assetIssueTransactionId, memberId, memberType, securityAmount, paymentMethod, createdBy },
   transaction
 ) {
   const amount = toMoneyNumber(securityAmount);
@@ -337,7 +326,6 @@ async function createSecurityPaymentForAssetIssue(
       transactionId,
       receivedBy: null,
       remark: `Asset issue security deposit (transaction #${assetIssueTransactionId})`,
-      instituteId,
       createdBy,
     },
     { transaction }
@@ -359,22 +347,19 @@ async function createSecurityPaymentForAssetIssue(
   };
 }
 
-export async function createAssetIssue(body, instituteId, createdBy) {
+export async function createAssetIssue(body, createdBy) {
   const row = await sequelize.transaction(async (transaction) => {
     assertDueDateOnOrAfterIssueDate(body.issueDate, body.dueDate);
-    await validateMember(body.memberType, body.memberId, instituteId, transaction);
-    await validateIssueInventoryItems(body.items, instituteId, transaction);
+    await validateMember(body.memberType, body.memberId, transaction);
+    await validateIssueInventoryItems(body.items, transaction);
 
     const inventoryItemIds = repo.extractInventoryItemIds(body.items);
-    const issueAssetIds = await repo.findDistinctAssetIdsByInventoryItemIds(
-      inventoryItemIds,
-      instituteId,
-      { transaction }
-    );
+    const issueAssetIds = await repo.findDistinctAssetIdsByInventoryItemIds(inventoryItemIds, {
+      transaction,
+    });
 
     const issue = await repo.createAssetIssue(
       {
-        instituteId,
         memberId: body.memberId,
         memberType: body.memberType,
         issueDate: body.issueDate,
@@ -387,7 +372,7 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       repo.buildAssetIssueInventoryItemRows(issue.assetIssueTransactionId, body.items),
       { transaction }
     );
-    await syncAssetStatusesFromInventory(issueAssetIds, instituteId, { transaction });
+    await syncAssetStatusesFromInventory(issueAssetIds, { transaction });
 
     if (body.securityAmount !== undefined) {
       await createSecurityPaymentForAssetIssue(
@@ -397,14 +382,13 @@ export async function createAssetIssue(body, instituteId, createdBy) {
           memberType: body.memberType,
           securityAmount: body.securityAmount,
           paymentMethod: body.paymentMethod,
-          instituteId,
           createdBy,
         },
         transaction
       );
     }
 
-    const issueRow = await repo.findAssetIssueById(issue.assetIssueTransactionId, instituteId, {
+    const issueRow = await repo.findAssetIssueById(issue.assetIssueTransactionId, {
       transaction,
       includeMember: true,
       includeSecurityPayment: true,
@@ -415,14 +399,14 @@ export async function createAssetIssue(body, instituteId, createdBy) {
       issuePlain,
       extractMemberBasicDetails(issuePlain),
       extractSecurityPaymentRow(issuePlain),
-      await getIssueItemStats(issue.assetIssueTransactionId, instituteId, transaction)
+      await getIssueItemStats(issue.assetIssueTransactionId, transaction)
     );
   });
 
   return row;
 }
 
-export async function listAssetIssues(instituteId, query) {
+export async function listAssetIssues(query) {
   const {
     rows,
     total,
@@ -431,7 +415,6 @@ export async function listAssetIssues(instituteId, query) {
     itemStatsByIssueId,
     securityAmountByIssueId,
   } = await repo.findAssetIssuesPaginated(
-    instituteId,
     { search: query.search },
     { page: query.page, limit: query.limit }
   );
@@ -459,13 +442,13 @@ export async function listAssetIssues(instituteId, query) {
   };
 }
 
-export async function getAssetIssuePaymentsById(assetIssueTransactionId, instituteId) {
+export async function getAssetIssuePaymentsById(assetIssueTransactionId) {
   const [issue, paymentRows] = await Promise.all([
-    repo.findAssetIssueById(assetIssueTransactionId, instituteId, {
+    repo.findAssetIssueById(assetIssueTransactionId, {
       includeItems: false,
       includeMember: true,
     }),
-    repo.findAssetIssuePaymentsWithPayeesByIssueId(assetIssueTransactionId, instituteId),
+    repo.findAssetIssuePaymentsWithPayeesByIssueId(assetIssueTransactionId),
   ]);
 
   if (!issue) {
@@ -511,8 +494,8 @@ export async function getAssetIssuePaymentsById(assetIssueTransactionId, institu
   };
 }
 
-export async function getSingleAssetIssue(assetIssueTransactionId, instituteId) {
-  const issue = await repo.findAssetIssueById(assetIssueTransactionId, instituteId, {
+export async function getSingleAssetIssue(assetIssueTransactionId) {
+  const issue = await repo.findAssetIssueById(assetIssueTransactionId, {
     includeMember: true,
     includeSecurityPayment: true,
   });
@@ -522,7 +505,7 @@ export async function getSingleAssetIssue(assetIssueTransactionId, instituteId) 
   }
 
   const issuePlain = toPlain(issue);
-  const itemStats = await getIssueItemStats(assetIssueTransactionId, instituteId);
+  const itemStats = await getIssueItemStats(assetIssueTransactionId);
 
   return formatAssetIssueRecord(
     issuePlain,
@@ -532,9 +515,9 @@ export async function getSingleAssetIssue(assetIssueTransactionId, instituteId) 
   );
 }
 
-export async function updateAssetIssue(assetIssueTransactionId, body, instituteId) {
+export async function updateAssetIssue(assetIssueTransactionId, body) {
   const data = await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findAssetIssueById(assetIssueTransactionId, instituteId, { transaction });
+    const existing = await repo.findAssetIssueById(assetIssueTransactionId, { transaction });
     if (!existing) {
       throw httpError("Asset issue not found", 404);
     }
@@ -545,7 +528,7 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
     const finalMemberId = issuePayload.memberId ?? existingPlain.memberId;
 
     if (issuePayload.memberType !== undefined || issuePayload.memberId !== undefined) {
-      await validateMember(finalMemberType, finalMemberId, instituteId, transaction);
+      await validateMember(finalMemberType, finalMemberId, transaction);
     }
 
     const finalIssueDate = issuePayload.issueDate ?? existingPlain.issueDate;
@@ -555,18 +538,15 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
     }
 
     if (Object.keys(issuePayload).length > 0) {
-      const affected = await repo.updateAssetIssue(
-        assetIssueTransactionId,
-        instituteId,
-        issuePayload,
-        { transaction }
-      );
+      const affected = await repo.updateAssetIssue(assetIssueTransactionId, issuePayload, {
+        transaction,
+      });
       if (!affected) {
         throw httpError("Asset issue update failed", 500);
       }
     }
 
-    const updated = await repo.findAssetIssueById(assetIssueTransactionId, instituteId, {
+    const updated = await repo.findAssetIssueById(assetIssueTransactionId, {
       transaction,
       includeMember: true,
       includeSecurityPayment: true,
@@ -577,7 +557,7 @@ export async function updateAssetIssue(assetIssueTransactionId, body, instituteI
       updatedPlain,
       extractMemberBasicDetails(updatedPlain),
       extractSecurityPaymentRow(updatedPlain),
-      await getIssueItemStats(assetIssueTransactionId, instituteId, transaction)
+      await getIssueItemStats(assetIssueTransactionId, transaction)
     );
   });
 

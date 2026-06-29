@@ -1,9 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
+import acedmicYear from "./acedmicYearModel.js";
+import instituteModel from "./instituteModel.js";
 
-
-export default sequelize.define(
+const holidayModel = sequelize.define(
     'holiday',
     {
         holidayId: {
@@ -12,21 +13,39 @@ export default sequelize.define(
             autoIncrement: true,
             field: 'holiday_id'
         },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
+        },
         date: {
             type: DataTypes.DATE,
-            allowNull:false
+            allowNull: false
         },
         event: {
             type: DataTypes.STRING,
-            allowNull:true
+            allowNull: true
         },
         name: {
             type: DataTypes.STRING,
-            allowNull:true
+            allowNull: true
         },
         remark: {
             type: DataTypes.STRING,
-            allowNull:true
+            allowNull: true
         },
         createdBy: {
             type: DataTypes.INTEGER,
@@ -70,3 +89,9 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+
+
+holidayModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default holidayModel;

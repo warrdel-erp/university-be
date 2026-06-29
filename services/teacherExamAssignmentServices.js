@@ -17,7 +17,6 @@ export async function getAssignments(filters) {
     const whereClause = {
         ...(filters.examScheduleId && { examScheduleId: filters.examScheduleId }),
         ...(filters.employeeId && { employeeId: filters.employeeId }),
-        ...(filters.acedmicYearId && { acedmicYearId: filters.acedmicYearId })
     };
     return await teacherExamAssignmentRepository.getAssignments(whereClause);
 }

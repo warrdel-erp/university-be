@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
 import semesterModel from "./semesterModel.js";
 
-export default sequelize.define(
+const examScheduleModel = sequelize.define(
     'exam_schedule',
     {
         examScheduleId: {
@@ -24,7 +24,7 @@ export default sequelize.define(
         },
         semesterId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'semester_id',
             references: {
                 model: semesterModel,
@@ -127,3 +127,7 @@ export default sequelize.define(
         paranoid: true,
     }
 );
+
+examScheduleModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examScheduleModel;

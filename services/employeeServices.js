@@ -22,6 +22,7 @@ import * as userRoleService from '../services/userRoleService.js';
 import { getCampusCode, getInstituteCode } from '../repository/collegeRepository.js';
 import * as libraryRepository from '../repository/libraryCreationRepository.js';
 import * as timeTableCreateRepository from '../repository/timeTablecreateRepository.js';
+import * as attendanceRepository from '../repository/attendanceRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
@@ -31,8 +32,8 @@ import moment from 'moment';
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
   const getInstitueCodeDetail = await getInstituteCode(instituteId);
-  const campusCode = getCampusCodeDetail.get('campus_code');
-  const institueCode = getInstitueCodeDetail.get('institute_code');
+  const campusCode = getCampusCodeDetail.get('campusCode');
+  const institueCode = getInstitueCodeDetail.get('instituteCode');
   const getPreviousEnrollNumber = await employeeRepository.getPreviousEnrollNumber(institueCode);
   const previousEnrollNumber = getPreviousEnrollNumber ? getPreviousEnrollNumber.get('employee_Code') : null;
   let enrollNumber;
@@ -422,8 +423,8 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(universityId, campusId, instituteId, headInstituteId, role) {
-  const result = await employeeRepository.getAllEmployee(universityId, campusId, instituteId, headInstituteId, role);
+export async function getAllEmployee(campusId, instituteId) {
+  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -443,7 +444,6 @@ export async function getAllEmployee(universityId, campusId, instituteId, headIn
       pickColor: item?.pickColor || "",
       campusId: item?.campusId,
       instituteId: item?.instituteId,
-      acedmicYearId: item?.acedmicYearId,
       roleId: item?.roleId || mappedRoleData?.role || "",
       roleData: mappedRoleData,
       role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
@@ -456,8 +456,8 @@ export async function getAllEmployee(universityId, campusId, instituteId, headIn
   }));
 };
 
-export async function getSingleEmployeeDetails(employeeId, universityId) {
-  const result = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+export async function getSingleEmployeeDetails(employeeId) {
+  const result = await employeeRepository.getSingleEmployeeDetails(employeeId);
   return Promise.all((result || []).map(async (row) => {
     const item = toPlain(row) || {};
     const authUser = item?.user || item?.userEmployee || {};
@@ -590,7 +590,6 @@ function validateEmployeeRow(employee) {
     "campusId",
     "instituteId",
     "roleId",
-    "acedmicYearId",
     "createdBy",
     "department",
     "employmentType",
@@ -635,7 +634,6 @@ export async function importEmployeeData(excelData, commonData) {
         campusId: convertedData.campusId,
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
-        acedmicYearId: convertedData.acedmicYearId,
         createdBy: convertedData.createdBy,
       };
 
@@ -734,7 +732,7 @@ export async function updateEmployee(employeeId, data, files, updatedBy, created
 
     // Sync officialEmailId with user table email
     if (data.officalEmailId) {
-      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId, universityId);
+      const employeeDetails = await employeeRepository.getSingleEmployeeDetails(employeeId);
       const userId = employeeDetails?.[0]?.userId;
       if (userId) {
         await registerRepository.updateUser(userId, { email: data.officalEmailId }, transaction);
@@ -1061,14 +1059,9 @@ export async function getBooksIssuedToEmployee(employeeId) {
   };
 };
 
-export async function getTeacherTimeTable(employeeId, universityId, instituteId, role) {
+export async function getTeacherTimeTable(employeeId) {
 
-  const allData = await timeTableCreateRepository.getTeacherTimeTable(
-    employeeId,
-    universityId,
-    instituteId,
-    role
-  );
+  const allData = await timeTableCreateRepository.getTeacherTimeTable(employeeId);
 
   const allMappings = [];
 
@@ -1197,8 +1190,8 @@ export async function getTeacherTimeTable(employeeId, universityId, instituteId,
 
 };
 
-export async function getTeacherSubject(employeeId, universityId, instituteId, role) {
-  return await employeeRepository.getTeacherSubject(employeeId, universityId, instituteId, role)
+export async function getTeacherSubject(employeeId, filters = {}) {
+  return await employeeRepository.getTeacherSubject(employeeId, filters);
 };
 
 export async function getSubjectEvalution(employeeId) {
@@ -1222,12 +1215,85 @@ export async function getTodayClassSchedule(employeeId, currentDate, dayString, 
   return resultWithDate;
 }
 
-export async function getTeacherCourses(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherCourses(employeeId, acedmicYearId);
+export async function getTeacherCourses(employeeId) {
+  return await employeeRepository.getTeacherCourses(employeeId);
 }
 
-export async function getTeacherSubjectsFromSchedule(employeeId, acedmicYearId) {
-  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+export async function getTeacherSubjectsFromSchedule(employeeId) {
+  return await employeeRepository.getTeacherSubjectsFromSchedule(employeeId);
+}
+
+function getTeacherDetails(rawSchedules) {
+  const employee = rawSchedules.find((schedule) => schedule.employeeDetails)?.employeeDetails;
+
+  if (!employee) {
+    return null;
+  }
+
+  return {
+    employeeId: employee.employeeId,
+    employeeName: employee.employeeName,
+    employeeCode: employee.employeeCode,
+    pickColor: employee.pickColor,
+  };
+}
+
+function stripTeacherFieldsFromSchedule(schedule) {
+  if (!schedule) {
+    return schedule;
+  }
+
+  const cleaned = { ...schedule };
+  delete cleaned.employeeDetails;
+  delete cleaned.teacher;
+
+  if (cleaned.timeTableTeacherSubject) {
+    cleaned.timeTableTeacherSubject = { ...cleaned.timeTableTeacherSubject };
+    delete cleaned.timeTableTeacherSubject.teacherEmployeeData;
+  }
+
+  if (Array.isArray(cleaned.classScheduleItems)) {
+    cleaned.classScheduleItems = cleaned.classScheduleItems.map(stripTeacherFieldsFromSchedule);
+  }
+
+  return cleaned;
+}
+
+function getAttendanceStatusKey(schedule) {
+  return `${schedule.timeTableMappingId}_${schedule.date}`;
+}
+
+async function enrichSchedulesWithAttendance(schedules) {
+  if (!schedules.length) {
+    return schedules;
+  }
+
+  const mappingIds = [...new Set(schedules.map((s) => s.timeTableMappingId).filter(Boolean))];
+  const dates = schedules.map((s) => s.date).filter(Boolean);
+  const from = dates.reduce((min, d) => (d < min ? d : min), dates[0]);
+  const to = dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+
+  const markedMap = await attendanceRepository.getAttendanceMarkedMap(mappingIds, from, to);
+
+  return schedules.map((schedule) => {
+    const markedCount = markedMap[getAttendanceStatusKey(schedule)] || 0;
+    return {
+      ...schedule,
+      attendanceStatus: markedCount > 0 ? 'MARKED' : 'PENDING',
+    };
+  });
+}
+
+function applyGroupAttendanceStatus(groups) {
+  for (const group of groups) {
+    const items = group.classScheduleItems || [];
+    const allMarked = items.length > 0 && items.every((item) => item.attendanceStatus === 'MARKED');
+    const anyMarked = items.some((item) => item.attendanceStatus === 'MARKED');
+
+    group.attendanceStatus = allMarked ? 'MARKED' : (anyMarked ? 'PARTIAL' : 'PENDING');
+  }
+
+  return groups;
 }
 
 export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
@@ -1277,13 +1343,18 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   // Sort by date descending
   pastClasses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const teacher = getTeacherDetails(rawSchedules);
+  const schedules = await enrichSchedulesWithAttendance(
+    pastClasses.map(stripTeacherFieldsFromSchedule)
+  );
+
   if (groupPeriods) {
-    const grouped = groupConsecutivePeriods(pastClasses);
+    const grouped = applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
     grouped.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return grouped;
+    return { teacher, schedules: grouped };
   }
 
-  return pastClasses;
+  return { teacher, schedules };
 }
 
 export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {

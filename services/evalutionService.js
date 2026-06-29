@@ -1,25 +1,21 @@
 import * as evaluationRepository  from "../repository/evalutionRepository.js";
 
-export async function addEvaluation(evaluations,createdBy,updatedBy,universityId,instituteId) {
+export async function addEvaluation(evaluations, createdBy, updatedBy) {
   const evaluationData = evaluations.map(item => ({
     ...item,
     createdBy,
     updatedBy,
-    universityId,
-    instituteId
   }));
 
-  const result = await evaluationRepository.addEvaluation(evaluationData);
-  return result;
+  return await evaluationRepository.addEvaluation(evaluationData);
 }
 
-
-export async function getEvaluationDetails(universityId,examSetupTypeId,role,instituteId) {
-    return await evaluationRepository.getEvaluationDetails(universityId,examSetupTypeId,role,instituteId);
+export async function getEvaluationDetails(examSetupTypeId) {
+    return await evaluationRepository.getEvaluationDetails(examSetupTypeId);
 }
 
-export async function getSingleEvaluationDetails(evaluationId,universityId) {
-    return await evaluationRepository.getSingleEvaluationDetails(evaluationId,universityId);
+export async function getSingleEvaluationDetails(evaluationId) {
+    return await evaluationRepository.getSingleEvaluationDetails(evaluationId);
 }
 
 export async function deleteEvaluation(evaluationId) {

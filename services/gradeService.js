@@ -16,8 +16,6 @@ export async function addGradeScheme(data) {
     /*  CREATE GRADE */
     const grade = await gradeRepo.addGrade(
       {
-        universityId: data.universityId,
-        instituteId: data.instituteId,
         schemeName: data.schemeName,
         regulationCode: data.regulationCode,
         gradingType: data.gradingType,
@@ -109,9 +107,9 @@ export async function addGradeScheme(data) {
    READ
 ========================= */
 
-export async function getAllGradeSchemes(universityId, instituteId, role) {
+export async function getAllGradeSchemes() {
   try {
-    return await gradeRepo.getAllGrades(universityId, instituteId, role);
+    return await gradeRepo.getAllGrades();
   } catch (error) {
     throw new Error(error.message);
   }

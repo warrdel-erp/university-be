@@ -1,48 +1,48 @@
 import { Op, fn, col, where as sequelizeWhere } from "sequelize";
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-const studentMemberAttributes = [
-  "studentId",
-  "firstName",
-  "middleName",
-  "lastName",
-  "scholarNumber",
-  "email",
-  "phoneNumber",
-];
+function studentMemberAttributes() {
+  return [
+    "studentId",
+    "firstName",
+    "middleName",
+    "lastName",
+    "scholarNumber",
+    "email",
+    "phoneNumber",
+  ];
+}
 
-const teacherMemberAttributes = ["employeeId", "employeeName", "employeeCode", "department"];
+function teacherMemberAttributes() {
+  return ["employeeId", "employeeName", "employeeCode", "department"];
+}
 
-const inventoryListAttributes = [
-  "inventoryId",
-  "accessionNumber",
-  "status",
-];
+function inventoryListAttributes() {
+  return ["inventoryId", "accessionNumber", "status"];
+}
 
-function buildBookDetailsInclude(instituteId) {
-  const bookInclude = {
+function scopedLibraryInclude(required = true) {
+  return {
+    model: model.libraryCreationModel,
+    as: "library",
+    attributes: ["libraryCreationId", "instituteId"],
+    where: buildScope(model.libraryCreationModel),
+    required,
+  };
+}
+
+function buildBookDetailsInclude(required = true) {
+  return {
     model: model.libraryBookModel,
     as: "bookDetails",
     attributes: ["libraryBookId", "title", "subtitle", "authors", "isbn"],
+    required,
+    include: [scopedLibraryInclude()],
   };
-
-  if (instituteId) {
-    bookInclude.required = true;
-    bookInclude.include = [
-      {
-        model: model.libraryCreationModel,
-        as: "library",
-        attributes: ["libraryCreationId", "instituteId"],
-        where: { instituteId },
-        required: true,
-      },
-    ];
-  }
-
-  return bookInclude;
 }
 
-function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
+function buildInventoryItemInclude({ forList = false } = {}) {
   return {
     model: model.libraryBookIssueInventoryItemModel,
     as: "inventoryItems",
@@ -52,14 +52,14 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
       "libraryReturnBookTransactionId",
     ],
     ...(forList ? {} : { separate: true, order: [["libraryBookIssueInventoryItemId", "DESC"]] }),
-    required: Boolean(instituteId),
+    required: true,
     include: [
       {
         model: model.libraryBookInventoryModel,
         as: "inventory",
-        attributes: inventoryListAttributes,
-        required: Boolean(instituteId),
-        include: [buildBookDetailsInclude(instituteId)],
+        attributes: inventoryListAttributes(),
+        required: true,
+        include: [buildBookDetailsInclude()],
       },
       {
         model: model.libraryReturnBookTransactionModel,
@@ -71,12 +71,12 @@ function buildInventoryItemInclude(instituteId, { forList = false } = {}) {
   };
 }
 
-function buildTransactionInclude(instituteId, { forList = false } = {}) {
+function buildTransactionInclude({ forList = false } = {}) {
   return [
     {
       model: model.studentModel,
       as: "studentMember",
-      attributes: studentMemberAttributes,
+      attributes: studentMemberAttributes(),
       include: [
         {
           model: model.courseModel,
@@ -89,11 +89,28 @@ function buildTransactionInclude(instituteId, { forList = false } = {}) {
     {
       model: model.employeeModel,
       as: "teacherMember",
-      attributes: teacherMemberAttributes,
+      attributes: teacherMemberAttributes(),
       required: false,
     },
-    buildInventoryItemInclude(instituteId, { forList }),
+    buildInventoryItemInclude({ forList }),
   ];
+}
+
+async function assertScopedInventory(inventoryId, transaction) {
+  return scoped(model.libraryBookInventoryModel).findOne({
+    where: { inventoryId },
+    attributes: inventoryListAttributes(),
+    include: [buildBookDetailsInclude()],
+    transaction,
+  });
+}
+
+async function assertScopedIssueTransaction(libraryIssueBookTransactionId, transaction) {
+  return scoped(model.libraryIssueBookTransactionModel).findOne({
+    where: { libraryIssueBookTransactionId },
+    include: [buildInventoryItemInclude()],
+    transaction,
+  });
 }
 
 function toPlainTransaction(row) {
@@ -111,7 +128,7 @@ function toPlainTransaction(row) {
 async function getReturnCountsByTransactionIds(transactionIds, transaction) {
   if (!transactionIds.length) return new Map();
 
-  const pendingRows = await model.libraryBookIssueInventoryItemModel.findAll({
+  const pendingRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
       libraryReturnBookTransactionId: null,
@@ -124,7 +141,7 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
     transaction,
   });
 
-  const returnedRows = await model.libraryBookIssueInventoryItemModel.findAll({
+  const returnedRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: {
       libraryIssueBookTransactionId: { [Op.in]: transactionIds },
       libraryReturnBookTransactionId: { [Op.ne]: null },
@@ -160,28 +177,28 @@ async function getReturnCountsByTransactionIds(transactionIds, transaction) {
 }
 
 export async function findStudentMemberById(studentId, transaction) {
-  return model.studentModel.findByPk(studentId, {
-    attributes: studentMemberAttributes,
+  return scoped(model.studentModel).findByPk(studentId, {
+    attributes: studentMemberAttributes(),
     transaction,
   });
 }
 
 export async function findTeacherMemberById(employeeId, transaction) {
-  return model.employeeModel.findByPk(employeeId, {
-    attributes: teacherMemberAttributes,
+  return scoped(model.employeeModel).findByPk(employeeId, {
+    attributes: teacherMemberAttributes(),
     transaction,
   });
 }
 
 export async function countStudentMemberById(studentId, transaction) {
-  return model.studentModel.count({
+  return scoped(model.studentModel).count({
     where: { studentId },
     transaction,
   });
 }
 
 export async function countTeacherMemberById(employeeId, transaction) {
-  return model.employeeModel.count({
+  return scoped(model.employeeModel).count({
     where: { employeeId },
     transaction,
   });
@@ -189,17 +206,19 @@ export async function countTeacherMemberById(employeeId, transaction) {
 
 export async function findInventoriesByIds(inventoryIds, transaction) {
   if (!inventoryIds.length) return [];
-  return model.libraryBookInventoryModel.findAll({
+  return scoped(model.libraryBookInventoryModel).findAll({
     where: { inventoryId: { [Op.in]: inventoryIds } },
-    attributes: inventoryListAttributes,
+    attributes: inventoryListAttributes(),
+    include: [buildBookDetailsInclude()],
     transaction,
   });
 }
 
 export async function countExistingInventoriesByIds(inventoryIds, transaction) {
   if (!inventoryIds.length) return 0;
-  return model.libraryBookInventoryModel.count({
+  return scoped(model.libraryBookInventoryModel).count({
     where: { inventoryId: { [Op.in]: inventoryIds } },
+    include: [buildBookDetailsInclude()],
     transaction,
   });
 }
@@ -208,7 +227,15 @@ export async function findActiveIssueItemsByTransactionId(
   libraryIssueBookTransactionId,
   transaction,
 ) {
-  return model.libraryBookIssueInventoryItemModel.findAll({
+  const issueTransaction = await assertScopedIssueTransaction(
+    libraryIssueBookTransactionId,
+    transaction,
+  );
+  if (!issueTransaction) {
+    return [];
+  }
+
+  return scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     transaction,
   });
@@ -219,6 +246,14 @@ export async function findActiveIssueItemsForReturn(
   { libraryBookIssueInventoryItemIds, inventoryIds },
   transaction,
 ) {
+  const issueTransaction = await assertScopedIssueTransaction(
+    libraryIssueBookTransactionId,
+    transaction,
+  );
+  if (!issueTransaction) {
+    return [];
+  }
+
   const where = {
     libraryIssueBookTransactionId,
     libraryReturnBookTransactionId: null,
@@ -232,7 +267,7 @@ export async function findActiveIssueItemsForReturn(
     return [];
   }
 
-  return model.libraryBookIssueInventoryItemModel.findAll({ where, transaction });
+  return scoped(model.libraryBookIssueInventoryItemModel).findAll({ where, transaction });
 }
 
 export async function returnAllActiveIssueItemsForTransaction(
@@ -240,7 +275,15 @@ export async function returnAllActiveIssueItemsForTransaction(
   returnDate,
   transaction,
 ) {
-  const activeItems = await model.libraryBookIssueInventoryItemModel.findAll({
+  const issueTransaction = await assertScopedIssueTransaction(
+    libraryIssueBookTransactionId,
+    transaction,
+  );
+  if (!issueTransaction) {
+    return { matchedCount: 0 };
+  }
+
+  const activeItems = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
     transaction,
@@ -250,16 +293,9 @@ export async function returnAllActiveIssueItemsForTransaction(
 
   const itemIds = activeItems.map((item) => item.libraryBookIssueInventoryItemId);
   const inventoryIds = activeItems.map((item) => item.inventoryId);
-  const returnBookTransaction = await createLibraryReturnBookTransaction(
-    { returnDate },
-    transaction,
-  );
+  const returnBookTransaction = await createLibraryReturnBookTransaction({ returnDate }, transaction);
 
-  await markIssueItemsReturned(
-    itemIds,
-    returnBookTransaction.libraryReturnBookTransactionId,
-    transaction,
-  );
+  await markIssueItemsReturned(itemIds, returnBookTransaction.libraryReturnBookTransactionId, transaction);
   await markInventoriesAvailable(inventoryIds, transaction);
 
   return { matchedCount: itemIds.length };
@@ -271,6 +307,14 @@ export async function returnIssueItemsForTransaction(
   transaction,
 ) {
   if (!returnItems.length) return { matchedCount: 0 };
+
+  const issueTransaction = await assertScopedIssueTransaction(
+    libraryIssueBookTransactionId,
+    transaction,
+  );
+  if (!issueTransaction) {
+    return { matchedCount: 0 };
+  }
 
   let matchedCount = 0;
   const returnTransactionIdByDate = new Map();
@@ -284,7 +328,7 @@ export async function returnIssueItemsForTransaction(
       where.inventoryId = returnItem.inventoryId;
     }
 
-    const issueItem = await model.libraryBookIssueInventoryItemModel.findOne({
+    const issueItem = await scoped(model.libraryBookIssueInventoryItemModel).findOne({
       where,
       attributes: ["libraryBookIssueInventoryItemId", "inventoryId"],
       transaction,
@@ -292,14 +336,14 @@ export async function returnIssueItemsForTransaction(
 
     if (!issueItem) continue;
 
+    const scopedInventory = await assertScopedInventory(issueItem.inventoryId, transaction);
+    if (!scopedInventory) continue;
+
     const returnDate = returnItem.returnDate;
     let libraryReturnBookTransactionId = returnTransactionIdByDate.get(returnDate);
 
     if (!libraryReturnBookTransactionId) {
-      const returnBookTransaction = await createLibraryReturnBookTransaction(
-        { returnDate },
-        transaction,
-      );
+      const returnBookTransaction = await createLibraryReturnBookTransaction({ returnDate }, transaction);
       libraryReturnBookTransactionId = returnBookTransaction.libraryReturnBookTransactionId;
       returnTransactionIdByDate.set(returnDate, libraryReturnBookTransactionId);
     }
@@ -318,9 +362,23 @@ export async function returnIssueItemsForTransaction(
 
 export async function markInventoriesIssued(inventoryIds, payload, transaction) {
   if (!inventoryIds.length) return 0;
-  const [affected] = await model.libraryBookInventoryModel.update(payload, {
+
+  const scopedRows = await scoped(model.libraryBookInventoryModel).findAll({
     where: {
       inventoryId: { [Op.in]: inventoryIds },
+      status: "available",
+    },
+    attributes: ["inventoryId"],
+    include: [buildBookDetailsInclude()],
+    transaction,
+  });
+
+  const scopedIds = scopedRows.map((row) => row.inventoryId);
+  if (!scopedIds.length) return 0;
+
+  const [affected] = await scoped(model.libraryBookInventoryModel).update(payload, {
+    where: {
+      inventoryId: { [Op.in]: scopedIds },
       status: "available",
     },
     transaction,
@@ -330,7 +388,18 @@ export async function markInventoriesIssued(inventoryIds, payload, transaction) 
 
 export async function markInventoriesAvailable(inventoryIds, transaction) {
   if (!inventoryIds.length) return;
-  return model.libraryBookInventoryModel.update(
+
+  const scopedIds = [];
+  for (const inventoryId of inventoryIds) {
+    const row = await assertScopedInventory(inventoryId, transaction);
+    if (row) {
+      scopedIds.push(inventoryId);
+    }
+  }
+
+  if (!scopedIds.length) return;
+
+  return scoped(model.libraryBookInventoryModel).update(
     {
       status: "available",
       issueDate: null,
@@ -339,7 +408,7 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
       employeeId: null,
     },
     {
-      where: { inventoryId: { [Op.in]: inventoryIds } },
+      where: { inventoryId: { [Op.in]: scopedIds } },
       transaction,
     },
   );
@@ -351,7 +420,7 @@ export async function markIssueItemsReturned(
   transaction,
 ) {
   if (!libraryBookIssueInventoryItemIds.length) return;
-  return model.libraryBookIssueInventoryItemModel.update(
+  return scoped(model.libraryBookIssueInventoryItemModel).update(
     { libraryReturnBookTransactionId },
     {
       where: {
@@ -368,7 +437,15 @@ export async function syncOutstandingInventoryDueDate(
   dueDate,
   transaction,
 ) {
-  const activeInventoryRows = await model.libraryBookIssueInventoryItemModel.findAll({
+  const issueTransaction = await assertScopedIssueTransaction(
+    libraryIssueBookTransactionId,
+    transaction,
+  );
+  if (!issueTransaction) {
+    return;
+  }
+
+  const activeInventoryRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { libraryIssueBookTransactionId, libraryReturnBookTransactionId: null },
     attributes: ["inventoryId"],
     raw: true,
@@ -377,17 +454,27 @@ export async function syncOutstandingInventoryDueDate(
   const inventoryIds = activeInventoryRows.map((row) => row.inventoryId);
   if (!inventoryIds.length) return;
 
-  return model.libraryBookInventoryModel.update(
+  const scopedIds = [];
+  for (const inventoryId of inventoryIds) {
+    const row = await assertScopedInventory(inventoryId, transaction);
+    if (row) {
+      scopedIds.push(inventoryId);
+    }
+  }
+
+  if (!scopedIds.length) return;
+
+  return scoped(model.libraryBookInventoryModel).update(
     { dueDate },
     {
-      where: { inventoryId: { [Op.in]: inventoryIds } },
+      where: { inventoryId: { [Op.in]: scopedIds } },
       transaction,
     },
   );
 }
 
 export async function createLibraryIssueBookTransaction(data, transaction) {
-  return model.libraryIssueBookTransactionModel.create(data, { transaction });
+  return scoped(model.libraryIssueBookTransactionModel).create(data, { transaction });
 }
 
 export async function createLibraryReturnBookTransaction(data, transaction) {
@@ -401,10 +488,18 @@ export async function createLibraryReturnBookTransaction(data, transaction) {
 
 export async function bulkCreateLibraryBookIssueInventoryItems(rows, transaction) {
   if (!rows.length) return [];
+
+  for (const inventoryId of [...new Set(rows.map((row) => row.inventoryId))]) {
+    const inventory = await assertScopedInventory(inventoryId, transaction);
+    if (!inventory) {
+      throw new Error("Inventory not found");
+    }
+  }
+
   return model.libraryBookIssueInventoryItemModel.bulkCreate(rows, { transaction });
 }
 
-export async function getLibraryIssueBookTransactions(query = {}, instituteId) {
+export async function getLibraryIssueBookTransactions(query = {}) {
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 20);
   const offset = (page - 1) * limit;
@@ -435,9 +530,9 @@ export async function getLibraryIssueBookTransactions(query = {}, instituteId) {
     ];
   }
 
-  const { rows, count } = await model.libraryIssueBookTransactionModel.findAndCountAll({
+  const { rows, count } = await scoped(model.libraryIssueBookTransactionModel).findAndCountAll({
     where,
-    include: buildTransactionInclude(instituteId, { forList: true }),
+    include: buildTransactionInclude({ forList: true }),
     order: [["libraryIssueBookTransactionId", "DESC"]],
     distinct: true,
     subQuery: false,
@@ -468,14 +563,10 @@ export async function getLibraryIssueBookTransactions(query = {}, instituteId) {
   };
 }
 
-export async function getLibraryIssueBookTransactionById(
-  libraryIssueBookTransactionId,
-  transaction,
-  instituteId,
-) {
-  const row = await model.libraryIssueBookTransactionModel.findOne({
+export async function getLibraryIssueBookTransactionById(libraryIssueBookTransactionId, transaction) {
+  const row = await scoped(model.libraryIssueBookTransactionModel).findOne({
     where: { libraryIssueBookTransactionId },
-    include: buildTransactionInclude(instituteId),
+    include: buildTransactionInclude(),
     transaction,
   });
   const plain = toPlainTransaction(row);
@@ -500,24 +591,29 @@ export async function updateLibraryIssueBookTransaction(
   data,
   transaction,
 ) {
-  return model.libraryIssueBookTransactionModel.update(data, {
+  const existing = await assertScopedIssueTransaction(libraryIssueBookTransactionId, transaction);
+  if (!existing) {
+    return [0];
+  }
+
+  return scoped(model.libraryIssueBookTransactionModel).update(data, {
     where: { libraryIssueBookTransactionId },
     transaction,
   });
 }
 
-export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId, instituteId) {
-  const inventoryRow = await model.libraryBookInventoryModel.findOne({
+export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventoryId) {
+  const inventoryRow = await scoped(model.libraryBookInventoryModel).findOne({
     where: { inventoryId },
     attributes: ["inventoryId", "accessionNumber", "status", "condition"],
-    include: [buildBookDetailsInclude(instituteId)],
+    include: [buildBookDetailsInclude()],
   });
 
   if (!inventoryRow) {
     return null;
   }
 
-  const issueRows = await model.libraryBookIssueInventoryItemModel.findAll({
+  const issueRows = await scoped(model.libraryBookIssueInventoryItemModel).findAll({
     where: { inventoryId },
     attributes: [
       "libraryBookIssueInventoryItemId",
@@ -598,8 +694,8 @@ export async function getLibraryMembersList(query = {}) {
   const members = [];
 
   if (!memberType || memberType === "STUDENT") {
-    const students = await model.studentModel.findAll({
-      attributes: studentMemberAttributes,
+    const students = await scoped(model.studentModel).findAll({
+      attributes: studentMemberAttributes(),
       include: [
         {
           model: model.courseModel,
@@ -623,14 +719,14 @@ export async function getLibraryMembersList(query = {}) {
   }
 
   if (!memberType || memberType === "TEACHER") {
-    const teachers = await model.employeeModel.findAll({
-      attributes: [...teacherMemberAttributes, "userId"],
+    const teachers = await scoped(model.employeeModel).findAll({
+      attributes: [...teacherMemberAttributes(), "userId"],
       order: [["employeeId", "DESC"]],
     });
 
     const userIds = teachers.map((teacher) => teacher.userId).filter(Boolean);
     const users = userIds.length
-      ? await model.userModel.findAll({
+      ? await scoped(model.userModel).findAll({
           attributes: ["userId", "email", "phone"],
           where: { userId: { [Op.in]: userIds } },
         })
@@ -668,12 +764,12 @@ export async function getLibraryMembersList(query = {}) {
   };
 }
 
-export async function getLibraryReturnBookTransactions(query = {}, instituteId) {
+export async function getLibraryReturnBookTransactions(query = {}) {
   const page = Number(query.page ?? 1);
   const limit = Number(query.limit ?? 20);
   const offset = (page - 1) * limit;
   const search = query.search?.trim().toLowerCase();
-  const rows = await model.libraryReturnBookTransactionModel.findAll({
+  const rows = await scoped(model.libraryReturnBookTransactionModel).findAll({
     attributes: ["libraryReturnBookTransactionId", "returnDate", "createdAt", "updatedAt"],
     include: [
       {
@@ -687,7 +783,7 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
             as: "inventory",
             attributes: ["inventoryId", "accessionNumber", "status", "condition"],
             required: true,
-            include: [buildBookDetailsInclude(instituteId)],
+            include: [buildBookDetailsInclude()],
           },
           {
             model: model.libraryIssueBookTransactionModel,
@@ -698,7 +794,7 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
               {
                 model: model.studentModel,
                 as: "studentMember",
-                attributes: studentMemberAttributes,
+                attributes: studentMemberAttributes(),
                 include: [
                   {
                     model: model.courseModel,
@@ -711,7 +807,7 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
               {
                 model: model.employeeModel,
                 as: "teacherMember",
-                attributes: teacherMemberAttributes,
+                attributes: teacherMemberAttributes(),
                 required: false,
               },
             ],
@@ -721,7 +817,11 @@ export async function getLibraryReturnBookTransactions(query = {}, instituteId) 
     ],
     order: [
       ["libraryReturnBookTransactionId", "DESC"],
-      [{ model: model.libraryBookIssueInventoryItemModel, as: "inventoryItems" }, "libraryBookIssueInventoryItemId", "DESC"],
+      [
+        { model: model.libraryBookIssueInventoryItemModel, as: "inventoryItems" },
+        "libraryBookIssueInventoryItemId",
+        "DESC",
+      ],
     ],
   });
 

@@ -141,4 +141,6 @@ const examSetupModel = sequelize.define(
 
 
 
+examSetupModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
 export default examSetupModel;

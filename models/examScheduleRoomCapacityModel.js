@@ -5,7 +5,7 @@ import classRoomModel from "./classRoomModel.js";
 
 import examScheduleModel from "./examScheduleModel.js";
 
-export default sequelize.define(
+const examScheduleRoomCapacityModel = sequelize.define(
     'exam_schedule_room_capacity',
     {
         examScheduleRoomCapacityId: {
@@ -82,3 +82,7 @@ export default sequelize.define(
         timestamps: true
     }
 );
+
+examScheduleRoomCapacityModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default examScheduleRoomCapacityModel;

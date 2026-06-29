@@ -1,79 +1,70 @@
-import * as faculityLoadServices from '../services/faculityService.js';
+import * as faculityLoadServices from "../services/faculityService.js";
 
 export const addFaculityLoad = async (req, res) => {
-    try {
-        const data = req.body;
-        const createdBy = req.user.userId;
-        const updatedBy = req.user.userId;
-        const { employeeId } = req.body;
-        if (!employeeId) {
-            return res.status(400).send('employeeId is required')
-        }
-        const result = await faculityLoadServices.addFaculityLoad(data, createdBy, updatedBy);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in adding faculity load:", error);
-        res.status(500).send("Internal Server Error");
+  try {
+    const data = req.body;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    const { employeeId } = req.body;
+    if (!employeeId) {
+      return res.status(400).send("employeeId is required");
     }
+    const result = await faculityLoadServices.addFaculityLoad(data, createdBy, updatedBy);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in adding faculity load:", error);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 export const getFaculityLoadDetails = async (req, res) => {
-    const universityId = req.user.universityId;
-    const instituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const { acedmicYearId } = req.query
-    try {
-        const result = await faculityLoadServices.getFaculityLoadDetails(universityId, acedmicYearId, instituteId, role);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting faculity load:", error);
-        res.status(500).send("Internal Server Error");
-    }
+  try {
+    const result = await faculityLoadServices.getFaculityLoadDetails();
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in getting faculity load:", error);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 export const getSingleFaculityLoadDetails = async (req, res) => {
-    const universityId = req.user.universityId;
-    let { employeeId } = req.query
-    try {
-        const result = await faculityLoadServices.getSingleFaculityLoadDetails(employeeId, universityId);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting faculity load:", error);
-        res.status(500).send("Internal Server Error");
-    }
+  const { employeeId } = req.query;
+  try {
+    const result = await faculityLoadServices.getSingleFaculityLoadDetails(employeeId);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in getting faculity load:", error);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
-// update time table 
 export const updateFaculityLoad = async (req, res) => {
-    const info = req.body;
-    const { faculityLoadId, employeeId } = req.body
-    const updatedBy = req.user.userId;
-    try {
-        if (!(faculityLoadId && employeeId)) {
-            return res.status(400).send("Both faculityLoadId and employeeId are required for each object.");
-        }
-
-        const result = await faculityLoadServices.updateFaculityLoad(faculityLoadId, req.body, updatedBy);
-        res.status(200).send(result);
-    } catch (error) {
-        console.error(`Error in updating faculity load`, error);
-        res.status(500).send("Internal Server Error");
+  const { faculityLoadId, employeeId } = req.body;
+  const updatedBy = req.user.userId;
+  try {
+    if (!(faculityLoadId && employeeId)) {
+      return res.status(400).send("Both faculityLoadId and employeeId are required for each object.");
     }
-};
 
-// delete time table
+    const result = await faculityLoadServices.updateFaculityLoad(faculityLoadId, req.body, updatedBy);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in updating faculity load", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
 
 export const deleteFaculityLoad = async (req, res) => {
-    const { faculityLoadId } = req.query;
-    try {
-        if (!faculityLoadId) {
-            res.status(400).send("faculity Load Id is required");
-        } else {
-            const result = await faculityLoadServices.deleteFaculityLoad(faculityLoadId);
-            res.status(200).send(result);
-        }
-    } catch (error) {
-        console.error(`Error in deleting faculity load Id ${faculityLoadId}:`, error);
-        res.status(500).send("Internal Server Error");
+  const { faculityLoadId } = req.query;
+  try {
+    if (!faculityLoadId) {
+      res.status(400).send("faculity Load Id is required");
+    } else {
+      const result = await faculityLoadServices.deleteFaculityLoad(faculityLoadId);
+      res.status(200).send(result);
     }
+  } catch (error) {
+    console.error(`Error in deleting faculity load Id ${faculityLoadId}:`, error);
+    res.status(500).send("Internal Server Error");
+  }
 };

@@ -4,7 +4,7 @@ import users from "./userModel.js";
 import libraryCreationModel from "./libraryCreationModel.js";
 import employeeModel from "./employeeModel.js";
 
-export default sequelize.define(
+const libraryAuthorityModel = sequelize.define(
     'library_authority',
     {
         libraryAuthorityId: {
@@ -90,3 +90,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+libraryAuthorityModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default libraryAuthorityModel;

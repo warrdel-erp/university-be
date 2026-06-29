@@ -1,88 +1,79 @@
-import { literal, Op } from 'sequelize';
-import * as model from '../models/index.js'
+import { literal, Op } from "sequelize";
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 
 export async function addNotice(data, transaction) {
   try {
-    const result = await model.noticeModel.create(data, { transaction });
-    return result;
+    return scoped(model.noticeModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add notice :", error);
     throw error;
   }
-};
+}
 
-export async function getAllStudentNotice(universityId,acedmicYearId,instituteId,role) {
-    try {
-        const whereClause = {
-            ...(universityId && { university_id: universityId }),
-            ...(acedmicYearId && { acedmicYearId: acedmicYearId }),
-            [Op.and]: [
-                literal(`JSON_CONTAINS(message_to, '"Student"')`)
-            ]
-        };
+export async function getAllStudentNotice() {
+  try {
+    return scoped(model.noticeModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        [Op.and]: [literal(`JSON_CONTAINS(message_to, '"Student"')`)],
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching student notices:", error);
+    throw error;
+  }
+}
 
-        const notice = await model.noticeModel.findAll({
-            attributes: {
-                exclude: ["createdAt", "updatedAt", "deletedAt"]
-            },
-            where: whereClause
-        });
+export async function getAllEmployeeNotice(createdBy, role) {
+  try {
+    const noticeCreated = await scoped(model.noticeModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        ...(createdBy && { createdBy }),
+      },
+    });
 
-        return notice;
-    } catch (error) {
-        console.error('Error fetching student notices:', error);
-        throw error;
-    }
-};
+    const noticeAll = await scoped(model.noticeModel).findAll({
+      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      where: {
+        [Op.and]: [literal(`JSON_CONTAINS(message_to, '["${role}"]')`)],
+      },
+    });
 
-export async function getAllEmployeeNotice(universityId, academicYearId, instituteId, role, createdBy) {
-    try {
-        // First query
-        const whereClauseCreated = {
-            ...(universityId && { university_id: universityId }),
-            ...(academicYearId && { acedmicYearId: academicYearId }),
-            ...(createdBy && { created_by: createdBy })
-        };
-
-        const noticeCreated = await model.noticeModel.findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            where: whereClauseCreated
-        });
-
-        // Second query
-        const whereClauseAll = {
-            ...(universityId && { university_id: universityId }),
-            ...(academicYearId && { acedmicYearId: academicYearId }),
-            [Op.and]: [
-                literal(`JSON_CONTAINS(message_to, '["${role}"]')`)
-            ]
-        };
-
-        const noticeAll = await model.noticeModel.findAll({
-            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            where: whereClauseAll
-        });
-
-        return { noticeCreated, noticeAll };
-    } catch (error) {
-        console.error('Error fetching employee notices:', error);
-        throw error;
-    }
-};
+    return { noticeCreated, noticeAll };
+  } catch (error) {
+    console.error("Error fetching employee notices:", error);
+    throw error;
+  }
+}
 
 export async function updateNotice(noticeId, data) {
-    try {
-        const result = await model.noticeModel.update(data, {
-            where: { noticeId }
-        });
-        return result; 
-    } catch (error) {
-        console.error(`Error updating Notice creation ${noticeId}:`, error);
-        throw error; 
+  try {
+    const existing = await scoped(model.noticeModel).findOne({
+      attributes: ["noticeId"],
+      where: { noticeId },
+    });
+    if (!existing) {
+      return [0];
     }
-};
+
+    return scoped(model.noticeModel).update(data, { where: { noticeId } });
+  } catch (error) {
+    console.error(`Error updating Notice creation ${noticeId}:`, error);
+    throw error;
+  }
+}
 
 export async function deleteNotice(noticeId) {
-    const deleted = await model.noticeModel.destroy({ where: { noticeId: noticeId } });
-    return deleted > 0;
-};
+  const existing = await scoped(model.noticeModel).findOne({
+    attributes: ["noticeId"],
+    where: { noticeId },
+  });
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await scoped(model.noticeModel).destroy({ where: { noticeId } });
+  return deleted > 0;
+}

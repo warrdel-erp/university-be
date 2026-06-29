@@ -71,17 +71,12 @@ export async function checkDiskSpace(requiredBytes) {
  * Enqueues a PDF split job.
  *
  * @param {string} s3Key
- * @param {number} instituteId
- * @param {number} universityId
  * @param {number} createdBy
  * @returns {Promise<{ jobId: string, jobDbId: string }>}
  */
-export async function enqueuePdfSplitJob(s3Key, instituteId, universityId, createdBy) {
-  // Create DB audit record first (PENDING)
+export async function enqueuePdfSplitJob(s3Key, createdBy) {
   const dbJob = await pdfSplitJobRepository.createJob({
     s3Key,
-    instituteId,
-    universityId,
     createdBy,
     status: "PENDING",
     progress: 0,
@@ -94,8 +89,8 @@ export async function enqueuePdfSplitJob(s3Key, instituteId, universityId, creat
     {
       s3Key,
       jobDbId: dbJob.id,
-      instituteId,
-      universityId,
+      instituteId: dbJob.instituteId,
+      universityId: dbJob.universityId,
       createdBy,
     },
     { jobId: uuidv4() }

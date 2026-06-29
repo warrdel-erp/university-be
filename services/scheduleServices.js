@@ -18,12 +18,12 @@ export async function addSchedule(scheduleData, createdBy, updatedBy) {
 
 };
 
-export async function getScheduleDetails(universityId, acedmicYearId, instituteId, role) {
-  return await scheduleCreationRepository.getScheduleDetails(universityId, acedmicYearId, instituteId, role);
+export async function getScheduleDetails() {
+  return await scheduleCreationRepository.getScheduleDetails();
 };
 
-export async function getSingleScheduleDetails(scheduleId, universityId) {
-  return await scheduleCreationRepository.getSingleScheduleDetails(scheduleId, universityId);
+export async function getSingleScheduleDetails(scheduleId) {
+  return await scheduleCreationRepository.getSingleScheduleDetails(scheduleId);
 };
 
 export async function deleteSchedule(scheduleId) {
@@ -44,7 +44,11 @@ export async function updateSchedule(scheduleId, ScheduleData, updatedBy) {
  * @throws {Error} - If the teacher is already assigned to the schedule.
  */
 export async function assignTeacher(scheduleId, employeeId, createdBy, updatedBy) {
-  // Check for duplicate assignment to prevent the same teacher from being assigned twice to the same exam
+  const schedule = await scheduleCreationRepository.getScheduleInScope(scheduleId);
+  if (!schedule) {
+    throw new Error("Schedule not found for this university and institute");
+  }
+
   const existingAssignment = await scheduleCreationRepository.getAssignmentByScheduleAndEmployee(scheduleId, employeeId);
   if (existingAssignment) {
     throw new Error("This teacher is already assigned to this exam schedule");
@@ -84,6 +88,6 @@ export async function updateAttendence(teacherAttendenceId, data, updatedBy) {
   await scheduleCreationRepository.updateAttendence(teacherAttendenceId, data);
 };
 
-export async function getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate) {
-  return await scheduleCreationRepository.getAllAttendence(universityId, instituteId, role,page,limit,fromDate,toDate);
+export async function getAllAttendence(page, limit, fromDate, toDate) {
+  return await scheduleCreationRepository.getAllAttendence(page, limit, fromDate, toDate);
 };

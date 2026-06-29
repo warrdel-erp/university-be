@@ -1,13 +1,9 @@
 import * as model from "../models/index.js";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-/**
- * Add a new question paper blueprint
- * @param {Object} blueprintData - The data for the blueprint
- * @returns {Promise<Object>} - The created blueprint
- */
 export async function addBlueprint(blueprintData) {
     try {
-        const result = await model.questionPaperBlueprintModel.create(blueprintData);
+        const result = await scoped(model.questionPaperBlueprintModel).create(blueprintData);
         return result;
     } catch (error) {
         console.error("Error adding question paper blueprint:", error);
@@ -15,36 +11,31 @@ export async function addBlueprint(blueprintData) {
     }
 }
 
-/**
- * Get blueprints with filters
- * @param {number} universityId - The university ID
- * @param {Object} filters - Filters like subjectId
- * @returns {Promise<Array>} - List of blueprints
- */
-export async function getBlueprints(universityId, filters = {}) {
+export async function getBlueprints(filters = {}) {
     try {
         const { subjectId } = filters;
 
         const whereClause = {
-            ...(universityId && { universityId }),
             ...(subjectId && { subjectId }),
         };
 
-        const rows = await model.questionPaperBlueprintModel.findAll({
+        const rows = await scoped(model.questionPaperBlueprintModel).findAll({
             where: whereClause,
             include: [
                 {
                     model: model.subjectModel,
                     as: "subject",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
+                    where: buildScope(model.subjectModel),
+                    required: false,
                 },
                 {
                     model: model.userModel,
                     as: "creator",
                     attributes: ["userId", "userName"],
-                }
+                },
             ],
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC']],
         });
 
         return rows;
@@ -54,16 +45,17 @@ export async function getBlueprints(universityId, filters = {}) {
     }
 }
 
-/**
- * Delete a blueprint
- * @param {number} id - The blueprint ID
- * @param {number} universityId - The university ID to ensure ownership
- * @returns {Promise<boolean>} - True if deleted
- */
-export async function deleteBlueprint(id, universityId) {
+export async function deleteBlueprint(id) {
     try {
-        const deleted = await model.questionPaperBlueprintModel.destroy({
-            where: { id, universityId }
+        const existing = await scoped(model.questionPaperBlueprintModel).findOne({
+            where: { id },
+            attributes: ['id'],
+        });
+        if (!existing) {
+            return false;
+        }
+        const deleted = await scoped(model.questionPaperBlueprintModel).destroy({
+            where: { id },
         });
         return deleted > 0;
     } catch (error) {
@@ -72,16 +64,10 @@ export async function deleteBlueprint(id, universityId) {
     }
 }
 
-/**
- * Get blueprint by id
- * @param {number} id - The blueprint ID
- * @param {number} universityId - The university ID
- * @returns {Promise<Object>} - The blueprint
- */
-export async function getBlueprintById(id, universityId) {
+export async function getBlueprintById(id) {
     try {
-        const result = await model.questionPaperBlueprintModel.findOne({
-            where: { id, universityId }
+        const result = await scoped(model.questionPaperBlueprintModel).findOne({
+            where: { id },
         });
         return result;
     } catch (error) {

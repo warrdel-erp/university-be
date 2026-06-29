@@ -12,9 +12,8 @@ export async function addClassRoom(req, res) {
 }
 
 export async function getAllClassRoom(req, res) {
-    const universityId = req.user.universityId;
     try {
-        const libraries = await ClassRoomCreation.getClassRoomDetails(universityId);
+        const libraries = await ClassRoomCreation.getClassRoomDetails();
         res.status(200).json(libraries);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -22,10 +21,9 @@ export async function getAllClassRoom(req, res) {
 }
 
 export async function getSingleClassRoomDetails(req, res) {
-    const universityId = req.user.universityId;
     try {
         const { classRoomSectionId } = req.query;
-        const ClassRoom = await ClassRoomCreation.getSingleClassRoomDetails(classRoomSectionId, universityId);
+        const ClassRoom = await ClassRoomCreation.getSingleClassRoomDetails(classRoomSectionId);
         if (ClassRoom) {
             res.status(200).json(ClassRoom);
         } else {

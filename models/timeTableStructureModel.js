@@ -2,8 +2,12 @@ import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import courseModel from "./courseModel.js";
+import university from "./universityModel.js";
+import instituteModel from "./instituteModel.js";
+import acedmicYear from "./acedmicYearModel.js";
+import sessionModel from "./sessionModel.js";
 
-export default sequelize.define(
+const timeTableStructureModel = sequelize.define(
     'time_table_structure',
     {
         timeTableNameId: {
@@ -20,6 +24,42 @@ export default sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'maximum_period'
+        },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
+        instituteId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'institute_id',
+            references: {
+                model: instituteModel,
+                key: 'institute_id'
+            }
+        },
+        acedmicYearId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'acedmic_year_id',
+            references: {
+                model: acedmicYear,
+                key: 'acedmic_year_id'
+            }
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'session_id',
+            references: {
+                model: sessionModel,
+                key: 'session_id'
+            }
         },
         courseId: {
             type: DataTypes.INTEGER,
@@ -92,3 +132,7 @@ export default sequelize.define(
         paranoid: true
     },
 );
+
+timeTableStructureModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default timeTableStructureModel;

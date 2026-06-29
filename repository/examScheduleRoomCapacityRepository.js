@@ -1,8 +1,33 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
+import { buildScope, scoped } from "../utility/scoped.js";
 
-const activeRoomHierarchyInclude = (universityId) => ({
+async function assertScopedExamSchedule(examScheduleId, options = {}) {
+  const { transaction, attributes = ['examScheduleId'] } = options;
+  return scoped(model.examScheduleModel).findOne({
+    where: { examScheduleId },
+    attributes,
+    transaction,
+  });
+}
+
+async function assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction) {
+  return model.examScheduleRoomCapacityModel.findOne({
+    where: { examScheduleRoomCapacityId },
+    attributes: ['examScheduleRoomCapacityId', 'examScheduleId'],
+    transaction,
+    include: [{
+      model: model.examScheduleModel,
+      as: 'examSchedule',
+      required: true,
+      where: buildScope(model.examScheduleModel),
+      attributes: ['examScheduleId'],
+    }],
+  });
+}
+
+const activeRoomHierarchyInclude = () => ({
   model: model.floorModel,
   as: "roomFloor",
   attributes: [],
@@ -22,7 +47,7 @@ const activeRoomHierarchyInclude = (universityId) => ({
           attributes: [],
           required: true,
           paranoid: true,
-          ...(universityId && { where: { universityId } }),
+          where: buildScope(model.campusModel),
         },
       ],
     },
@@ -30,14 +55,28 @@ const activeRoomHierarchyInclude = (universityId) => ({
 });
 
 export async function addExamRoomCapacity(data, transaction) {
+  const schedule = await assertScopedExamSchedule(data.examScheduleId, { transaction });
+  if (!schedule) {
+    throw new Error('Exam schedule not found');
+  }
   return await model.examScheduleRoomCapacityModel.create(data, { transaction });
 }
 
 export async function bulkAddExamRoomCapacity(data, transaction) {
+  if (data?.length) {
+    const schedule = await assertScopedExamSchedule(data[0].examScheduleId, { transaction });
+    if (!schedule) {
+      throw new Error('Exam schedule not found');
+    }
+  }
   return await model.examScheduleRoomCapacityModel.bulkCreate(data, { transaction });
 }
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, transaction) {
+  const capacity = await assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction);
+  if (!capacity) {
+    throw new Error('Exam schedule room capacity not found');
+  }
   await model.examScheduleRoomCapacityModel.update(data, {
     where: { examScheduleRoomCapacityId },
     transaction,
@@ -46,6 +85,10 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, t
 }
 
 export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, transaction) {
+  const capacity = await assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction);
+  if (!capacity) {
+    return 0;
+  }
   return await model.examScheduleRoomCapacityModel.destroy({
     where: { examScheduleRoomCapacityId },
     transaction,
@@ -53,20 +96,14 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, transac
 }
 
 export async function getExamRoomCapacityById(examScheduleRoomCapacityId) {
-  return await model.examScheduleRoomCapacityModel.findByPk(examScheduleRoomCapacityId, {
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: "examSchedule",
-        attributes: ["examScheduleId"],
-      },
-    ],
-    raw: true,
-    nest: true,
-  });
+  return await assertScopedRoomCapacity(examScheduleRoomCapacityId);
 }
 
 export async function getRoomsByExamScheduleId(examScheduleId) {
+  const schedule = await assertScopedExamSchedule(examScheduleId);
+  if (!schedule) {
+    return [];
+  }
   const rows = await model.examScheduleRoomCapacityModel.findAll({
     where: { examScheduleId },
     attributes: [
@@ -110,7 +147,7 @@ export async function getRoomsByExamScheduleId(examScheduleId) {
 }
 
 export async function getExamScheduleSlot(examScheduleId) {
-  return await model.examScheduleModel.findByPk(examScheduleId, {
+  return await scoped(model.examScheduleModel).findByPk(examScheduleId, {
     attributes: ["examScheduleId", "examDate", "examTime", "duration"],
     paranoid: true,
     raw: true,
@@ -125,7 +162,10 @@ async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, s
         model: model.examScheduleModel,
         as: "examSchedule",
         attributes: [],
+        required: true,
+        paranoid: true,
         where: {
+          ...buildScope(model.examScheduleModel),
           examDate,
           examScheduleId: { [Op.ne]: excludeExamScheduleId },
           [Op.and]: [
@@ -140,8 +180,6 @@ async function findOverlappingExamBusyRoomIds(examDate, excludeExamScheduleId, s
             }),
           ],
         },
-        required: true,
-        paranoid: true,
       },
       {
         model: model.classRoomModel,
@@ -168,13 +206,13 @@ async function findAssignedRoomIdsForExam(examScheduleId) {
   return rows.map((row) => row.classRoomSectionId);
 }
 
-async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
+async function findAvailableRoomsForExamSlot(busyRoomIds) {
   const where = {};
   if (busyRoomIds.length) {
     where.classRoomSectionId = { [Op.notIn]: busyRoomIds };
   }
 
-  return model.classRoomModel.findAll({
+  return scoped(model.classRoomModel).findAll({
     where,
     attributes: [
       "classRoomSectionId",
@@ -188,13 +226,13 @@ async function findAvailableRoomsForExamSlot(universityId, busyRoomIds) {
       ],
     ],
     paranoid: true,
-    include: [activeRoomHierarchyInclude(universityId)],
+    include: [activeRoomHierarchyInclude()],
     order: [["roomNumber", "ASC"]],
     raw: true,
   });
 }
 
-export async function getAvailableRoomsPayload(examScheduleId, universityId, examSchedule, slot) {
+export async function getAvailableRoomsPayload(examScheduleId, examSchedule, slot) {
   const { examDate, day, startTime, endTime, startMinutes, endMinutes } = {
     examDate: examSchedule.examDate,
     ...slot,
@@ -207,7 +245,7 @@ export async function getAvailableRoomsPayload(examScheduleId, universityId, exa
   ]);
 
   const busyRoomIds = [...new Set([...classBusyRoomIds, ...assignedRoomIds, ...overlappingExamRoomIds])];
-  const availableRooms = await findAvailableRoomsForExamSlot(universityId, busyRoomIds);
+  const availableRooms = await findAvailableRoomsForExamSlot(busyRoomIds);
 
   return {
     examScheduleId: examSchedule.examScheduleId,
@@ -259,6 +297,7 @@ async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examD
         where: {
           startingDate: { [Op.lte]: examDate },
           endingDate: { [Op.gte]: examDate },
+          ...buildScope(model.timeTableRoutineModel),
         },
       },
     ],
@@ -268,7 +307,7 @@ async function findOccupiedRoomIdsByClassSchedule(day, startTime, endTime, examD
 }
 
 export async function getRoomsForAllocationLookup(classRoomSectionIds) {
-  const rooms = await model.classRoomModel.findAll({
+  const rooms = await scoped(model.classRoomModel).findAll({
     where: { classRoomSectionId: { [Op.in]: classRoomSectionIds } },
     attributes: ["classRoomSectionId", "roomNumber", "capacity", "examCapacity", "examCapacityColumns"],
     paranoid: true,

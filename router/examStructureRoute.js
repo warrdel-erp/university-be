@@ -17,24 +17,56 @@ import userAuth from "../middleware/authUser.js";
 
 const router = Router();
 
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
+const positiveIntegerId = z.coerce.number().int().positive();
+
+const optionalAcedmicYearId = z.preprocess(
+  emptyToUndefined,
+  positiveIntegerId.optional(),
+);
+
+const getAllExamStructureQuerySchema = z.object({
+  acedmicYearId: optionalAcedmicYearId,
+});
+
 const getSingleExamStructureQuerySchema = z.object({
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive(),
+  courseId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  acedmicYearId: optionalAcedmicYearId,
 });
 
 const getDetailByExamTypeQuerySchema = z.object({
-  examSetupTypeId: z.coerce.number().int().positive(),
+  examSetupTypeId: positiveIntegerId,
 });
 
 const getSingleExamTypeQuerySchema = z.object({
-  courseId: z.coerce.number().int().positive(),
-  sessionId: z.coerce.number().int().positive(),
-  termNumber: z.coerce.number().int().positive().optional(),
+  courseId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  acedmicYearId: optionalAcedmicYearId,
+  termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+});
+
+const addExamTypeSchema = z.object({
+  examStructureId: z.coerce
+    .number({ required_error: "examStructureId is required" })
+    .int()
+    .positive(),
+  examType: z.string().optional(),
+  examName: z.string().optional(),
+  maximumAssessment: z.coerce.number().int().optional(),
+  isPublish: z.boolean().optional(),
 });
 
 router.post("/examRule", userAuth, addExamStructure);
 
-router.get("/examRule", userAuth, getAllExamStructure);
+router.get(
+  "/examRule",
+  userAuth,
+  validate({ query: getAllExamStructureQuerySchema }),
+  getAllExamStructure,
+);
 
 router.get(
   "/examRule/single",
@@ -47,7 +79,7 @@ router.patch("/examRule", userAuth, updateExamStructure);
 
 router.delete("/examRule", userAuth, deleteExamStructure);
 
-router.post("/examType", userAuth, addExamType);
+router.post("/examType", userAuth, validate({ body: addExamTypeSchema }), addExamType);
 
 router.get("/examType", userAuth, validate({ query: getDetailByExamTypeQuerySchema }), getDetailByExamType);
 

@@ -1,7 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js"
 import { DataTypes } from 'sequelize';
 
-export default sequelize.define(
+const settingModel = sequelize.define(
   'settings',
   {
     settingId: {
@@ -44,3 +44,7 @@ export default sequelize.define(
     timestamps: true,
 },
 );
+
+settingModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default settingModel;

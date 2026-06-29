@@ -11,6 +11,9 @@ import {
   addElectiveSubject,
   getclassStudentMapping,
   promoteStudent,
+  getPromotionAvailableClassSection,
+  getPromotionStudentList,
+  getStudentPromotionHistory,
   getFeePlanInitiate,
   getEmptyFeeDetails,
   getStudentSubject,
@@ -76,6 +79,11 @@ const optionalDateField = z.preprocess(
 const optionalPositiveIntegerId = z.preprocess(
   emptyToUndefined,
   positiveIntegerId.optional(),
+);
+
+const nullableAffiliatedUniversityId = z.preprocess(
+  (val) => (val === '' || val === undefined || val === null ? null : val),
+  z.union([z.null(), positiveIntegerId]),
 );
 
 const admissionStatusField = z
@@ -176,12 +184,11 @@ const studentUpdateBodyFields = {
   universityId: optionalPositiveIntegerId,
   campusId: optionalPositiveIntegerId,
   instituteId: optionalPositiveIntegerId,
-  affiliatedUniversityId: optionalPositiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
   courseLevelId: optionalPositiveIntegerId,
   courseId: optionalPositiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).optional(),
   classSectionsId: optionalPositiveIntegerId,
-  acedmicYearId: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
   email: optionalEmail,
   firstName: optionalNonEmptyString,
@@ -196,12 +203,11 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
   universityId: positiveIntegerId,
   campusId: positiveIntegerId,
   instituteId: positiveIntegerId,
-  affiliatedUniversityId: positiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
   courseLevelId: positiveIntegerId,
   courseId: positiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
   classSectionsId: positiveIntegerId,
-  acedmicYearId: positiveIntegerId,
   sessionId: positiveIntegerId,
   email: z.string().trim().email(),
   firstName: z.string().trim().min(1),
@@ -301,6 +307,9 @@ const mapStudentBody = (req, res, next) => {
       }
     }
     if (body.currentClass === "") delete body.currentClass;
+    if (body.affiliatedUniversityId === "") {
+      body.affiliatedUniversityId = null;
+    }
     req.body = body;
     next();
   } catch (error) {
@@ -339,7 +348,71 @@ router.post("/studentMapping", userAuth, studentCourseMapping);
 router.post("/classStudentMapping", userAuth, classStudentMapping);
 router.get("/classStudentMapping", userAuth, getclassStudentMapping);
 router.post("/electiveSubject", userAuth, addElectiveSubject);
+
+const promotionStudentListQuerySchema = z.object({
+  page: z.coerce
+    .number()
+    .int("page must be an integer")
+    .min(1, "page must be at least 1")
+    .optional()
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int("limit must be an integer")
+    .min(1, "limit must be at least 1")
+    .max(100, "limit must be at most 100")
+    .optional()
+    .default(20),
+  programCourseId: positiveIntegerId,
+  studentSearch: z.string().trim().optional(),
+  promotionTerm: z.coerce.number().int().positive().optional(),
+});
+
+router.get(
+  "/promotion/list",
+  userAuth,
+  validate({ query: promotionStudentListQuerySchema }),
+  getPromotionStudentList,
+);
+
+const promotionHistoryQuerySchema = z
+  .object({
+    studentId: positiveIntegerId.optional(),
+    programCourseId: positiveIntegerId.optional(),
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+    studentSearch: z.string().trim().optional(),
+    promotionTerm: z.coerce.number().int().positive().optional(),
+  })
+  .refine((data) => data.studentId != null || data.programCourseId != null, {
+    message: "studentId or programCourseId is required",
+  });
+
+router.get(
+  "/promotion/history",
+  userAuth,
+  validate({ query: promotionHistoryQuerySchema }),
+  getStudentPromotionHistory,
+);
+
 router.post("/promoteStudent", userAuth, promoteStudent);
+
+const promotionAvailableClassSectionQuerySchema = z.object({
+  courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
+  term: z.coerce.number({ required_error: "term is required" }).int().positive(),
+  classSectionId: z.coerce
+    .number({ required_error: "classSectionId is required" })
+    .int()
+    .positive(),
+});
+
+router.get(
+  "/promotion/available-class-section",
+  userAuth,
+  validate({ query: promotionAvailableClassSectionQuerySchema }),
+  getPromotionAvailableClassSection,
+);
+
 router.get(
   "/feePlanProfiles/all",
   userAuth,

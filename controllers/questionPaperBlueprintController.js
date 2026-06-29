@@ -11,10 +11,9 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 export async function addBlueprint(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
-    const universityId = req.user.universityId;
 
     try {
-        const result = await questionPaperBlueprintServices.addBlueprint(req.body, createdBy, updatedBy, universityId);
+        const result = await questionPaperBlueprintServices.addBlueprint(req.body, createdBy, updatedBy);
         return SuccessResponse(res, 201, "Question paper blueprint added successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
@@ -29,11 +28,10 @@ export async function addBlueprint(req, res) {
  * @returns {Promise<Object>} - A SuccessResponse or ErrorResponse.
  */
 export async function getAllBlueprints(req, res) {
-    const universityId = req.user.universityId;
     const { subjectId } = req.query;
 
     try {
-        const result = await questionPaperBlueprintServices.getBlueprints(universityId, { subjectId });
+        const result = await questionPaperBlueprintServices.getBlueprints({ subjectId });
         return SuccessResponse(res, 200, "Question paper blueprints fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
@@ -49,14 +47,13 @@ export async function getAllBlueprints(req, res) {
  */
 export async function deleteBlueprint(req, res) {
     const { id } = req.params;
-    const universityId = req.user.universityId;
 
     if (!id) {
         return ErrorResponse(res, 400, "Blueprint ID is required");
     }
 
     try {
-        const deleted = await questionPaperBlueprintServices.deleteBlueprint(id, universityId);
+        const deleted = await questionPaperBlueprintServices.deleteBlueprint(id);
         if (deleted) {
             return SuccessResponse(res, 200, `Delete successful for blueprint ID ${id}`);
         } else {

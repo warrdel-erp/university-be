@@ -7,7 +7,7 @@ import classScheduleModel from "./classScheduleModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
 
-export default sequelize.define(
+const attendanceModel = sequelize.define(
     'attendance',
     {
         attendanceId: {
@@ -74,7 +74,16 @@ export default sequelize.define(
             allowNull: true,
         },
         attendanceStatus: {
-            type: DataTypes.ENUM("Present", "Late", "Absent", "Medical", "Duty Leave"),
+            type: DataTypes.ENUM(
+                "Present",
+                "Absent",
+                "Medical Leave",
+                "Duty Leave",
+                "Sports Leave",
+                "NCC Leave",
+                "Approved Leave",
+                "Holiday",
+            ),
             allowNull: false,
             field: 'attendance_status'
         },
@@ -120,3 +129,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+attendanceModel.scopeConfig = { university: true, institute: true, academicYear: true };
+
+export default attendanceModel;

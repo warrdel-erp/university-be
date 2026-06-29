@@ -3,7 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import feePlan from "./feePlanModel.js";
 
-export default sequelize.define(
+const feeNewInvoiceModel = sequelize.define(
     'fee_new_invoice',
     {
         feeNewInvoiceId: {
@@ -90,3 +90,7 @@ export default sequelize.define(
         paranoid: true
     }
 );
+
+feeNewInvoiceModel.scopeConfig = { university: false, institute: false, academicYear: false };
+
+export default feeNewInvoiceModel;

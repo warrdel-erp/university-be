@@ -2,9 +2,11 @@ import * as employee from '../services/employeeServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getTenantStore } from '../utility/requestContext.js';
+import { formatQueryDate } from '../utility/helper.js';
 
 export const addEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     try {
         const data = req.body
         const file = req.files;
@@ -22,18 +24,10 @@ export const addEmployee = async (req, res) => {
 };
 
 export const getAllEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
-    const headInstituteId = req.user.defaultInstituteId;
-    const role = req.user.role;
-    const { campusId, instituteId } = req.query;
+    const campusId = req.query.campusId ? Number(req.query.campusId) : undefined;
+    const instituteId = req.query.instituteId ? Number(req.query.instituteId) : undefined;
     try {
-        const result = await employee.getAllEmployee(
-            universityId,
-            campusId,
-            instituteId,
-            headInstituteId,
-            role
-        );
+        const result = await employee.getAllEmployee(campusId, instituteId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting all employee:", error);
@@ -42,13 +36,12 @@ export const getAllEmployee = async (req, res) => {
 };
 
 export const getSingleEmployeeDetails = async (req, res) => {
-    const employeeId = req.params.id
-    const universityId = req.user.universityId;
+    const employeeId = req.params.id;
     try {
         if (!employeeId) {
             return res.status(400).send('employeeId is required')
         }
-        const result = await employee.getSingleEmployeeDetails(employeeId, universityId);
+        const result = await employee.getSingleEmployeeDetails(employeeId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting single employee details:", error);
@@ -73,13 +66,13 @@ export const deleteEmployeeDetail = async (req, res) => {
 
 export const importEmployeeData = async (req, res) => {
     try {
-        const { campusId, instituteId, roleId, acedmicYearId } = req.body;
-        const universityId = req.user.universityId;
+        const { campusId, instituteId, roleId } = req.body;
+        const universityId = getTenantStore().universityId;
         const createdBy = req.user.userId;
         const data = { ...req.body, universityId, createdBy };
 
-        if (!(campusId && instituteId && roleId && acedmicYearId)) {
-            return res.status(400).json({ error: 'campusId, instituteId, roleId, and acedmicYearId are required' });
+        if (!(campusId && instituteId && roleId)) {
+            return res.status(400).json({ error: 'campusId, instituteId, and roleId are required' });
         }
 
         const excelFile = req.files?.employee;
@@ -107,7 +100,7 @@ export const importEmployeeData = async (req, res) => {
 };
 
 export const updateEmployee = async (req, res) => {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     const employeeId = req.params.id;
     try {
         const data = req.body;
@@ -162,16 +155,7 @@ export const getTeacherTimeTable = async (req, res) => {
             return res.status(400).send("employeeId is required");
         }
 
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const role = req.user.role;
-
-        const result = await employee.getTeacherTimeTable(
-            employeeId,
-            universityId,
-            instituteId,
-            role
-        );
+        const result = await employee.getTeacherTimeTable(employeeId);
 
         res.status(200).send(result);
 
@@ -183,22 +167,17 @@ export const getTeacherTimeTable = async (req, res) => {
 
 export const getTeacherSubject = async (req, res) => {
     try {
-        const { employeeId } = req.query;
+        const { employeeId, sessionId, acedmicYearId: queryYear } = req.query;
+        const acedmicYearId = queryYear ?? getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
         }
 
-        const universityId = req.user.universityId;
-        const instituteId = req.user.defaultInstituteId;
-        const role = req.user.role;
-
-        const result = await employee.getTeacherSubject(
-            employeeId,
-            universityId,
-            instituteId,
-            role
-        );
+        const result = await employee.getTeacherSubject(employeeId, {
+            sessionId: sessionId != null && sessionId !== '' ? Number(sessionId) : undefined,
+            acedmicYearId: acedmicYearId != null && acedmicYearId !== '' ? Number(acedmicYearId) : undefined,
+        });
 
         res.status(200).send(result);
 
@@ -209,7 +188,7 @@ export const getTeacherSubject = async (req, res) => {
 };
 
 export async function getSubjectEvalution(req, res) {
-    const universityId = req.user.universityId;
+    const universityId = getTenantStore().universityId;
     try {
         const { employeeId } = req.query;
         const evaluation = await employee.getSubjectEvalution(employeeId);
@@ -231,12 +210,11 @@ export const getTodayClassSchedule = async (req, res) => {
             return res.status(400).send("employeeId is required");
         }
 
-        const currentDate = new Date(date);
+        const currentDate = date ? new Date(date) : new Date();
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayString = days[currentDate.getDay()];
 
-        // formatted currentDate for simple YYYY-MM-DD
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getTodayClassSchedule(
             employeeId,
@@ -257,60 +235,50 @@ export const getTodayClassSchedule = async (req, res) => {
 export const getTeacherCourses = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return res.status(400).send('employeeId is required');
         }
 
-        if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
-
-        const result = await employee.getTeacherCourses(employeeId, acedmicYearId);
+        const result = await employee.getTeacherCourses(employeeId);
         res.status(200).send({ success: true, result });
     } catch (error) {
-        console.error("Error in getTeacherCourses controller:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        console.error('Error in getTeacherCourses controller:', error);
+        res.status(500).send({ message: 'Internal Server Error', success: false });
     }
 };
 
 export const getTeacherSubjectsFromSchedule = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return res.status(400).send('employeeId is required');
         }
 
-        if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
-        }
-
-        const result = await employee.getTeacherSubjectsFromSchedule(employeeId, acedmicYearId);
+        const result = await employee.getTeacherSubjectsFromSchedule(employeeId);
         res.status(200).send({ success: true, result });
     } catch (error) {
-        console.error("Error in getTeacherSubjectsFromSchedule controller:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        console.error('Error in getTeacherSubjectsFromSchedule controller:', error);
+        res.status(500).send({ message: 'Internal Server Error', success: false });
     }
 };
 
 export const getPastClassSchedules = async (req, res) => {
     try {
         const { employeeId, date, groupPeriods } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
-            return res.status(400).send("employeeId is required");
+            return SuccessResponse(res, 400, "employeeId is required");
         }
 
         if (!acedmicYearId) {
-            return res.status(400).send("academicYearId not found in user session");
+            return SuccessResponse(res, 400, "academicYearId not found in user session");
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getPastClassSchedules(
             employeeId,
@@ -319,17 +287,17 @@ export const getPastClassSchedules = async (req, res) => {
             groupPeriods === 'true'
         );
 
-        res.status(200).send({ success: true, result });
+        return SuccessResponse(res, 200, "Past class schedules fetched successfully", result);
     } catch (error) {
         console.error("Error in getPastClassSchedules:", error);
-        res.status(500).send({ message: "Internal Server Error", success: false });
+        return ErrorResponse(res, 500, "Internal Server Error");
     }
 };
 
 export const getUpcomingClassSchedules = async (req, res) => {
     try {
         const { employeeId, date, groupPeriods } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
@@ -340,7 +308,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const result = await employee.getUpcomingClassSchedules(
             employeeId,
@@ -359,7 +327,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
 export const getClassCounts = async (req, res) => {
     try {
         const { employeeId, date } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return ErrorResponse(res, 400, "employeeId is required");
@@ -370,7 +338,7 @@ export const getClassCounts = async (req, res) => {
         }
 
         const currentDate = date ? new Date(date) : new Date();
-        const formattedDate = currentDate.toISOString().split('T')[0];
+        const formattedDate = formatQueryDate(date);
 
         const { pastCount, upcomingCount, uniqueCombinationsCount, uniqueSubjectsCount } = await employee.getClassCounts(
             employeeId,
@@ -393,7 +361,7 @@ export const getClassCounts = async (req, res) => {
 export const getUniqueClassSectionSubjects = async (req, res) => {
     try {
         const { employeeId } = req.query;
-        const acedmicYearId = req.user.defaultAcademicYearId;
+        const acedmicYearId = getTenantStore().academicYearId;
 
         if (!employeeId) {
             return res.status(400).send("employeeId is required");
