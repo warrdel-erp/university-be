@@ -172,7 +172,8 @@ async function enforceSemesterIdNotNull(queryInterface, table, transaction) {
     await queryInterface.sequelize.query(
       `
       UPDATE \`class_student_mapper\` csm
-      INNER JOIN \`class_sections\` cs ON cs.class_sections_id = csm.class_sections_id
+      INNER JOIN \`students\` s ON s.student_id = csm.student_id
+      INNER JOIN \`class_sections\` cs ON cs.class_sections_id = s.class_sections_id
       SET csm.semester_id = cs.semester_id
       WHERE csm.semester_id IS NULL AND cs.semester_id IS NOT NULL
       `,
