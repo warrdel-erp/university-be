@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import subjectModel from "./subjectModel.js";
-import semesterModel from "./semesterModel.js";
 
 const examScheduleModel = sequelize.define(
     'exam_schedule',
@@ -22,14 +21,10 @@ const examScheduleModel = sequelize.define(
                 key: 'subject_id'
             }
         },
-        semesterId: {
+        term: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
+            allowNull: true,
+            comment: 'Program term number',
         },
         examSetupTypeTermId: {
             type: DataTypes.INTEGER,

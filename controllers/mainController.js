@@ -198,58 +198,13 @@ export const addClassSubjectMapper = async (req, res) => {
 
 export const getClassSubjectMapper = async (req, res) => {
     try {
-        const semesterId = req.query.semesterId ? Number(req.query.semesterId) : undefined;
+        const term = req.query.term ? Number(req.query.term) : undefined;
         const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
-        const result = await mainServices.getClassSubjectMapper(semesterId, acedmicYearId);
+        const result = await mainServices.getClassSubjectMapper(term, acedmicYearId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting class Section Details:", error);
         return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const addSemester = async (req, res) => {
-    try {
-        const { courseId, acedmicYearId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body
-        if (!(getTenantStore().universityId && courseId && acedmicYearId && getTenantStore().instituteId)) {
-            return res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
-        }
-        const result = await mainServices.addSemester(data, createdBy);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in  Add semester:", error);
-        return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const getSemester = async (req, res) => {
-    try {
-        const courseId = req.query.courseId || 0;
-        const acedmicYearId = req.query.acedmicYearId
-        const specializationId = req.query.specializationId;
-        const result = await mainServices.getSemester(courseId, specializationId, acedmicYearId);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting semester:", error);
-        return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const createClass = async (req, res) => {
-    try {
-        const { acedmicYearId, courseId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body
-        if (!(acedmicYearId && courseId && getTenantStore().instituteId)) {
-            return res.status(400).send('acedmicYearId ,instituteId and courseId is required')
-        }
-        const result = await mainServices.createClass(data, createdBy);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in  Add directly class:", error);
-        res.status(500).send("Internal Server Error");
     }
 };
 

@@ -1,6 +1,7 @@
 import { Op, fn, col } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function findExamSetupTypeTermById(examSetupTypeTermId, transaction) {
     return scoped(model.examSetupTypeTermModel).findByPk(examSetupTypeTermId, {
@@ -62,27 +63,19 @@ export async function getEligibleStudents(sessionId, courseId, term, transaction
             sessionId,
         },
         include: [
-            {
-                model: model.classSectionModel,
-                as: "studentSections",
-                required: true,
-                attributes: [],
-                where: {
+            studentClassSectionTermWithSectionInclude({
+                term,
+                termRequired: true,
+                sectionRequired: true,
+                sectionWhere: {
                     ...buildScope(model.classSectionModel),
                     sessionId,
                     courseId,
                     acedmicYearId: { [Op.ne]: null },
                 },
-                include: [
-                    {
-                        model: model.classModel,
-                        as: "classGroup",
-                        required: true,
-                        attributes: [],
-                        where: { term },
-                    },
-                ],
-            },
+                sectionAttributes: [],
+                termAttributes: [],
+            }),
         ],
     });
 }
@@ -175,12 +168,9 @@ function getHallTicketIncludes() {
             where: buildScope(model.studentModel),
             required: false,
             include: [
-                {
-                    model: model.classSectionModel,
-                    as: "studentSections",
-                    attributes: ["classSectionsId", "class", "section", "sessionId"],
-                    required: false,
-                },
+                studentClassSectionTermWithSectionInclude({
+                    sectionAttributes: ["classSectionsId", "class", "section", "sessionId"],
+                }),
             ],
         },
         {

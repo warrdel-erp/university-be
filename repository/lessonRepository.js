@@ -1,6 +1,7 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, resolveProgramTerm } from "../utility/classSectionIncludes.js";
 
 export async function addLesson(data) {
   try {
@@ -521,12 +522,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         required: false,
         attributes: ['class', 'section', 'sessionId'],
         where: classSectionWhere,
-        include: [{
-          model: model.classModel,
-          as: 'classGroup',
-          required: false,
-          attributes: ['term', 'className'],
-        }],
+        include: [classSectionTermsInclude({ term, required: term != null })],
       }],
     };
     const toEmployeeSubject = (employeeSubject) => {
@@ -540,8 +536,8 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         if (hasSessionId && Number(section.sessionId) !== parsedSessionId) {
           return false;
         }
-        if (term != null && section.classGroup?.term != null) {
-          return Number(section.classGroup.term) === Number(term);
+        if (term != null && resolveProgramTerm(section) != null) {
+          return Number(resolveProgramTerm(section)) === Number(term);
         }
         return term != null && String(section.class) === String(term);
       });

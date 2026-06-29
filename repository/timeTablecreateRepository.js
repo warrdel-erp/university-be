@@ -2,6 +2,7 @@ import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { ATTENDANCE_PRESENT_STATUSES } from '../constant.js';
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from '../utility/classSectionIncludes.js';
 
 const presentStatusSqlList = ATTENDANCE_PRESENT_STATUSES.map((s) => `'${s}'`).join(', ');
 
@@ -1057,8 +1058,13 @@ export async function ClassSubjectCount(classSectionsId) {
     }
 
     const students = await scoped(model.studentModel).findAll({
-      where: { classSectionsId },
       attributes: ['studentId'],
+      include: [
+        studentClassSectionTermWithSectionInclude({
+          classSectionsId,
+          termRequired: true,
+        }),
+      ],
     });
     if (!students.length) {
       return { classSectionsId, students: [] };
@@ -1300,11 +1306,7 @@ const teacherClassSectionInclude = (courseId, sessionId) => ({
       where: buildScope(model.courseModel),
       required: false,
     },
-    {
-      model: model.classModel,
-      as: 'classGroup',
-      attributes: ['classId', 'className', 'term'],
-    },
+    classSectionTermsInclude(),
   ],
 });
 
@@ -1400,11 +1402,7 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
       where: { courseId, sessionId },
       attributes: ['classSectionsId', 'section', 'class', 'courseId', 'sessionId'],
       include: [
-        {
-          model: model.classModel,
-          as: 'classGroup',
-          attributes: ['classId', 'className', 'term'],
-        },
+    classSectionTermsInclude(),
       ],
       order: [['class', 'ASC'], ['section', 'ASC']],
     }),
@@ -1519,11 +1517,7 @@ export async function getClassSectionWithCourseRepository(classSectionsId) {
           as: 'courseSection',
           attributes: ['courseId', 'courseName', 'courseCode']
         },
-        {
-          model: model.classModel,
-          as: 'classGroup',
-          attributes: ['classId', 'className', 'term']
-        }
+        classSectionTermsInclude(),
 
       ]
     });

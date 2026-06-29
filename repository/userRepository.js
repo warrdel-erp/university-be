@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { requestContext } from "../utility/requestContext.js";
+import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function register(data) {
   return scoped(model.userModel).create(data);
@@ -68,13 +69,9 @@ export async function getAdminRegisterStudent() {
               as: "studentMapped",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "student_id", "class_sections_id"] },
             },
-            {
-              model: model.classSectionModel,
-              as: "studentSections",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy"] },
-              where: buildScope(model.classSectionModel),
-              required: false,
-            },
+            studentClassSectionTermWithSectionInclude({
+              sectionWhere: buildScope(model.classSectionModel),
+            }),
             {
               model: model.semesterModel,
               as: "studentSemester",

@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 import { scoped } from '../utility/scoped.js';
 
 function whereFromSession(session, model, where = {}) {
@@ -79,13 +80,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId, se
     return await model.classSectionModel.findAll({
       where: whereFromSession(session, model.classSectionModel, { courseId, sessionId }),
       attributes: ['classSectionsId', 'section'],
-      include: [
-        {
-          model: model.classModel,
-          as: 'classGroup',
-          attributes: ['classId', 'term'],
-        },
-      ],
+      include: [classSectionTermsInclude()],
       raw: true,
       nest: true,
     });

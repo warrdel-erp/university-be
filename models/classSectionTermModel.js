@@ -1,20 +1,27 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
+import classSectionModel from "./classSectionModel.js";
 import university from "./universityModel.js";
-import users from "./userModel.js";
-import course from "./courseModel.js";
 import instituteModel from "./instituteModel.js";
-import semesterModel from "./semesterModel.js";
-import sessionModel from "./sessionModel.js";
+import users from "./userModel.js";
 
-const classModel = sequelize.define(
-    'class',
+const classSectionTermModel = sequelize.define(
+    'class_section_term',
     {
-        classId: {
+        classSectionTermId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,
-            field: 'class_id'
+            field: 'class_section_term_id'
+        },
+        classSectionsId: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'class_sections_id',
+            references: {
+                model: classSectionModel,
+                key: 'class_sections_id'
+            }
         },
         universityId: {
             type: DataTypes.INTEGER,
@@ -23,24 +30,6 @@ const classModel = sequelize.define(
             references: {
                 model: university,
                 key: 'university_id'
-            }
-        },
-        courseId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'course_id',
-            references: {
-                model: course,
-                key: 'course_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
             }
         },
         instituteId: {
@@ -52,23 +41,10 @@ const classModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
-        },
         term: {
             type: DataTypes.INTEGER,
-            allowNull: true,
-        },
-        className: {
-            type: DataTypes.STRING,
             allowNull: false,
-            field: 'class_name'
+            comment: 'Program term number (1..totalTerms from course termType)',
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -91,15 +67,6 @@ const classModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        updatedBy: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'updated_by',
-            references: {
-                model: users,
-                key: 'user_id'
-            }
-        },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -107,12 +74,19 @@ const classModel = sequelize.define(
         },
     },
     {
-        tableName: 'class',
+        tableName: 'class_section_term',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['class_sections_id', 'term'],
+                name: 'class_section_term_sections_id_term_unique',
+            },
+        ],
     }
 );
 
-classModel.scopeConfig = { university: true, institute: true, academicYear: false };
+classSectionTermModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
-export default classModel;
+export default classSectionTermModel;

@@ -3,6 +3,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
@@ -374,13 +375,7 @@ export async function getTeacherMappings(employeeId) {
                         model: model.classSectionModel,
                         as: "timeTableClassSection",
                         required: false,
-                        include: [
-                            {
-                                model: model.classModel,
-                                as: "classGroup",
-                                required: false,
-                            },
-                        ],
+                        include: [classSectionTermsInclude()],
                     },
                 ],
             },
@@ -514,7 +509,8 @@ export async function getStudentsByScholarNumbers(scholarNumbers) {
                 scholarNumber: { [Op.in]: scholarNumbers },
                 deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
+            attributes: ['studentId', 'scholarNumber'],
+            include: [studentClassSectionTermWithSectionInclude({ termAttributes: ['classSectionsId'] })],
         });
     } catch (error) {
         console.error("Error in getStudentsByScholarNumbers:", error);
@@ -529,7 +525,8 @@ export async function getStudentsByIds(studentIds) {
                 studentId: { [Op.in]: studentIds },
                 deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
+            attributes: ['studentId', 'scholarNumber'],
+            include: [studentClassSectionTermWithSectionInclude({ termAttributes: ['classSectionsId'] })],
         });
     } catch (error) {
         console.error("Error in getStudentsByIds:", error);

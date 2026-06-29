@@ -15,6 +15,7 @@ import subjectMapperModel from "./subjectMapperModel.js";
 import employeeCodeMaster from "./employeeCodeMasterModel.js";
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import classSectionModel from "./classSectionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import classSubjectMapperModel from "./classSubjectMapperModel.js";
 import classStudentMapperModel from "./classSectionStudentMapperModel.js";
 import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
@@ -82,7 +83,6 @@ import vehicleModel from "./vehicleModel.js";
 import assignVehicleModel from "./assignVehicleModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import sectionModel from "./sectionModel.js";
-import classModel from "./classModel.js";
 import holidayModel from "./holidayModel.js";
 import electiveSubjectModel from "./electiveSubjectModel.js";
 import buildingModel from "./buildingModel.js";
@@ -183,12 +183,8 @@ affiliatedIniversityModel.hasMany(studentModel, { foreignKey: "affiliated_univer
 studentModel.belongsTo(courseModel, { foreignKey: "course_id", as: "course" });
 courseModel.hasMany(studentModel, { foreignKey: "course_id", as: "course" });
 
-studentModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "studentSections" });
-classSectionModel.hasMany(studentModel, { foreignKey: "class_sections_id", as: "studentSections" });
-classSectionModel.hasMany(studentModel, { foreignKey: "class_sections_id", as: "students" });
-
-studentModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "studentSemester" });
-semesterModel.hasMany(studentModel, { foreignKey: "semester_id", as: "studentSemester" });
+studentModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "studentClassSectionTerm" });
+classSectionTermModel.hasMany(studentModel, { foreignKey: "class_section_term_id", as: "studentClassSectionTerm" });
 
 studentModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "studentSession" });
 sessionModel.hasMany(studentModel, { foreignKey: "session_id", as: "studentSession" });
@@ -198,9 +194,6 @@ specializationModel.hasMany(studentModel, { foreignKey: "specialization_id", as:
 
 studentModel.belongsTo(employeeCodeMasterType, { foreignKey: "course_level_id", as: "courseLevel" });
 employeeCodeMasterType.hasMany(studentModel, { foreignKey: "course_level_id", as: "courseLevel" });
-
-studentModel.belongsTo(feePlanModel, { foreignKey: "fee_plan_id", as: "studentFeePlan" });
-feePlanModel.hasMany(studentModel, { foreignKey: "fee_plan_id", as: "studentFeePlan" });
 
 studentModel.belongsTo(feePlanProfileModel, {
   foreignKey: "fee_plan_profile_id",
@@ -228,8 +221,13 @@ employeeCodeMasterType.hasMany(studentMetaData, { foreignKey: "types", as: "typs
 classSectionModel.belongsTo(courseModel, { foreignKey: "course_id", as: "courseSection" });
 courseModel.hasMany(classSectionModel, { foreignKey: "course_id", as: "courseSection" });
 
-classSectionModel.belongsTo(classModel, { foreignKey: "class_id", as: "classGroup" });
-classModel.hasMany(classSectionModel, { foreignKey: "class_id", as: "classGroup" });
+classSectionTermModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "classSection" });
+classSectionModel.hasMany(classSectionTermModel, { foreignKey: "class_sections_id", as: "classSectionTerms" });
+
+classSectionTermModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+classSectionTermModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+
+classSectionTermModel.belongsTo(userModel, { foreignKey: "createdBy", as: "createdByUser" });
 
 classSectionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
 acedmicYearModel.hasMany(classSectionModel, { foreignKey: "acedmic_year_id", as: "acedmicYearSection" });
@@ -276,10 +274,6 @@ specializationModel.hasMany(semesterModel, { foreignKey: "specialization_id", as
 classSectionModel.belongsTo(specializationModel, { foreignKey: "specialization_id", as: "specializationSectionAdd" });
 specializationModel.hasMany(classSectionModel, { foreignKey: "specialization_id", as: "specializationSectionAdd" });
 
-// class subject mapper join to class section
-classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "semestermapping" });
-semesterModel.hasMany(classSubjectMapperModel, { foreignKey: "semester_id", as: "semestermapping" });
-
 // class section join to subject
 classSubjectMapperModel.belongsTo(subjectModel, { foreignKey: "subject_id", as: "subjects" });
 subjectModel.hasMany(classSubjectMapperModel, { foreignKey: "subject_id", as: "subjects" });
@@ -289,11 +283,10 @@ classStudentMapperModel.belongsTo(studentModel, { foreignKey: "student_id", as: 
 studentModel.hasMany(classStudentMapperModel, { foreignKey: "student_id", as: "studentMapped" });
 
 // class student mapper join to class section
-classStudentMapperModel.belongsTo(semesterModel, { foreignKey: "semester_id", as: "studentSection" });
-semesterModel.hasMany(classStudentMapperModel, { foreignKey: "semester_id", as: "studentSection" });
+classStudentMapperModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "studentTermPlacement" });
+classSectionTermModel.hasMany(classStudentMapperModel, { foreignKey: "class_section_term_id", as: "studentTermPlacement" });
 
-classStudentMapperModel.belongsTo(classSectionModel, { foreignKey: "semester_id", as: "studentSectionDetail" });
-classSectionModel.hasMany(classStudentMapperModel, { foreignKey: "semester_id", as: "studentSectionDetail" });
+classStudentMapperModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "studentSessionPlacement" });
 
 //student join to there 2 more table
 studentsEntranceDetail.belongsTo(studentModel, { foreignKey: "student_id", as: "entranceDetails" });
@@ -452,9 +445,6 @@ teacherSubjectMappingModel.belongsTo(subjectModel, {
   foreignKey: "subject_id",
   as: "employeeSubject",
 });
-
-semesterModel.hasMany(classSubjectMapperModel, { foreignKey: "semesterId", as: "employeeClassSection" });
-classSubjectMapperModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "employeeClassSection" });
 
 // teacher section mapping
 employeeModel.hasMany(teacherSectionMappingModel, { foreignKey: "employee_id", as: "employeeData" });
@@ -1057,9 +1047,6 @@ coModel.hasMany(coWeightageModel, { foreignKey: "co_id", as: "codetail" });
 classSectionModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "classSession" });
 sessionModel.hasMany(classSectionModel, { foreignKey: "session_id", as: "classSession" });
 
-classModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "session" });
-sessionModel.hasMany(classModel, { foreignKey: "session_id", as: "classes" });
-
 sessionModel.hasMany(sessionCouseMappingModel, { foreignKey: "sessionId", as: "courseMappings" });
 sessionCouseMappingModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "session" });
 
@@ -1269,9 +1256,6 @@ acedmicYearModel.hasMany(syllabusUnitModel, {
 syllabusUnitModel.belongsTo(sessionModel, { foreignKey: "sessionId", as: "sessionUnit" });
 sessionModel.hasMany(syllabusUnitModel, { foreignKey: "sessionId", as: "syllabusUnitsSession" });
 
-syllabusUnitModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "semesterUnit" });
-semesterModel.hasMany(syllabusUnitModel, { foreignKey: "semesterId", as: "syllabusUnitsSemester" });
-
 syllabusUnitModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subjectUnit" });
 subjectModel.hasMany(syllabusUnitModel, { foreignKey: "subjectId", as: "syllabusUnitsSubject" });
 
@@ -1325,9 +1309,6 @@ sessionModel.hasMany(examScheduleModel, { foreignKey: "sessionId", as: "examSche
 
 examSetupTypeModel.hasMany(syllabusDetailsModel, { foreignKey: "exam_setup_type_id", as: "syllabusDetailsExam" });
 syllabusDetailsModel.belongsTo(examSetupTypeModel, { foreignKey: "exam_setup_type_id", as: "examSetupTypeSyllabus" });
-
-examScheduleModel.belongsTo(semesterModel, { foreignKey: "semesterId", targetKey: "semesterId", as: "semesterexam" });
-semesterModel.hasMany(examScheduleModel, { foreignKey: "semesterId", sourceKey: "semesterId", as: "examSchedules" });
 
 campusModel.hasMany(libraryFloorModel, { foreignKey: "campus_id", as: "floorCampus" });
 libraryFloorModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "campusFloor" });
@@ -1469,9 +1450,6 @@ classSubjectMapperModel.belongsTo(syllabusDetailsModel, { foreignKey: "subjectId
 
 internalAssessmentModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "assessmentSubject" });
 subjectModel.hasMany(internalAssessmentModel, { foreignKey: "subjectId", as: "subjectAssessments" });
-
-internalAssessmentModel.belongsTo(semesterModel, { foreignKey: "semesterId", as: "assessmentSemester" });
-semesterModel.hasMany(internalAssessmentModel, { foreignKey: "semesterId", as: "semesterAssessments" });
 
 internalAssessmentModel.belongsTo(examSetupTypeModel, { foreignKey: "examSetupTypeId", as: "assessmentExamType" });
 examSetupTypeModel.hasMany(internalAssessmentModel, { foreignKey: "examSetupTypeId", as: "examTypeAssessments" });
@@ -1686,6 +1664,7 @@ export {
   employeeCodeMaster,
   employeeCodeMasterType,
   classSectionModel,
+  classSectionTermModel,
   classSubjectMapperModel,
   classStudentMapperModel,
   subjectMapperModel,
@@ -1767,7 +1746,6 @@ export {
   departmentStructureModel,
   syllabusDetailsModel,
   syllabusModel,
-  classModel,
   sessionModel,
   sessionCouseMappingModel,
   poModel,

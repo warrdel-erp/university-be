@@ -4,6 +4,7 @@ import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
+import { resolveProgramYear, resolveStudentClassSectionsId, yearLabel } from "../utility/classSectionIncludes.js";
 
 export { ATTENDANCE_STATUS };
 
@@ -397,7 +398,9 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
 //           day: dayName,
 //           period: map.period,
 //           subject: map.timeTableSubject?.subjectName || map.timeTableTeacherSubject?.subject?.subjectName || null,       
-//           class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+//           class: yearLabel(resolveProgramYear(map.timeTablecreate?.timeTableClassSection))
+            // || map.timeTablecreate?.timeTableClassSection?.class
+            // || null,
 //           section: map.timeTablecreate?.timeTableClassSection?.section || null,
 //           classSectionsId: sectionId,
 //           attendance: `${presentCount} / ${totalStudents}`,
@@ -501,7 +504,9 @@ export async function getPreviousClasses(employeeId, req) {
           subject: map.timeTableSubject?.subjectName ||
             map.timeTableTeacherSubject?.subject?.subjectName ||
             "N/A",
-          class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
+          class: yearLabel(resolveProgramYear(map.timeTablecreate?.timeTableClassSection))
+            || map.timeTablecreate?.timeTableClassSection?.class
+            || null,
           section: map.timeTablecreate?.timeTableClassSection?.section || null,
           classSectionsId: sectionId,
           attendance: `${presentCount ?? 0} / ${totalStudents}`,
@@ -684,7 +689,9 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
 
     const attendanceEntry = {
       studentId: entry.studentId,
-      classSectionsId: student.classSectionsId,
+      classSectionsId: resolveStudentClassSectionsId(
+        typeof student.get === "function" ? student.get({ plain: true }) : student,
+      ),
       timeTableMappingId: entry.timeTableMappingId,
       date: entry.date,
       attendanceStatus: entry.attendanceStatus,

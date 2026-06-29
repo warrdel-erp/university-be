@@ -2,6 +2,7 @@ import * as model from '../models/index.js';
 import { Op } from 'sequelize';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await scoped(model.affiliatedIniversityModel).findAll({
@@ -28,15 +29,7 @@ export async function getClassSectionOptions(courseId, term, sessionId) {
             ...(courseId && { courseId }),
             ...(sessionId && { sessionId }),
         },
-        include: [{
-            model: model.classModel,
-            as: 'classGroup',
-            where: {
-                ...(term && { term }),
-                ...buildScope(model.classModel),
-            },
-            attributes: [],
-        }],
+        include: [classSectionTermsInclude({ term, required: term != null })],
     });
 }
 

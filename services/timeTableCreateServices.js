@@ -9,6 +9,7 @@ import {
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
 import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
+import { resolveProgramTerm } from "../utility/classSectionIncludes.js";
 
 // export async function addtimeTableCreate(data, createdBy, updatedBy) {
 //     const transaction = await sequelize.transaction();
@@ -1496,8 +1497,8 @@ function mapRoutineClassSection(classSection) {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
     class: plain.class,
-    semesterId: plain.classGroup?.semesterId ?? null,
-    term: plain.classGroup?.term ?? null,
+    semesterId: null,
+    term: resolveProgramTerm(plain),
     course: plain.courseSection
       ? {
           courseId: plain.courseSection.courseId,
@@ -1514,8 +1515,8 @@ function mapClassSectionSummary(classSection) {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
     class: plain.class,
-    semesterId: plain.classGroup?.semesterId ?? null,
-    term: plain.classGroup?.term ?? null,
+    semesterId: null,
+    term: resolveProgramTerm(plain),
   };
 }
 

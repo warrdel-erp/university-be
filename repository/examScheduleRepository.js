@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 async function assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction) {
     return model.examScheduleRoomCapacityModel.findOne({
@@ -20,12 +21,12 @@ async function assertScopedRoomCapacity(examScheduleRoomCapacityId, transaction)
 
 export async function getExamSchedules(filters = {}) {
     try {
-        const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = filters;
+        const { subjectId, examSetupTypeTermId, courseId, term, sessionId } = filters;
 
         const result = await scoped(model.examScheduleModel).findAll({
             where: {
                 ...(subjectId && { subjectId }),
-                ...(semesterId && { semesterId }),
+                ...(term && { term: Number(term) }),
                 ...(examSetupTypeTermId && { examSetupTypeTermId }),
                 ...(sessionId && { sessionId }),
             },
@@ -57,11 +58,6 @@ export async function getExamSchedules(filters = {}) {
                     model: model.subjectModel,
                     as: "subjectSchedule",
                     attributes: ["subjectId", "subjectName", "subjectCode"],
-                },
-                {
-                    model: model.semesterModel,
-                    as: "semesterexam",
-                    attributes: ["semesterId", "name"],
                 },
                 {
                     model: model.acedmicYearModel,
@@ -142,11 +138,6 @@ export async function getExamScheduleById(examScheduleId) {
                     attributes: ["subjectId", "subjectName", "subjectCode"],
                 },
                 {
-                    model: model.semesterModel,
-                    as: "semesterexam",
-                    attributes: ["semesterId", "name"],
-                },
-                {
                     model: model.acedmicYearModel,
                     as: "acedmicYearSchedule",
                     attributes: ["acedmicYearId", "yearTitle"],
@@ -189,33 +180,34 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
 
         const counts = await scoped(model.studentModel).findAll({
             attributes: [
-                [sequelize.col('studentSections.session_id'), 'sessionId'],
-                [sequelize.col('studentSections->classGroup.term'), 'term'],
-                [sequelize.col('studentSections.course_id'), 'courseId'],
-                [sequelize.col('studentSections.acedmic_year_id'), 'acedmicYearId'],
+                [sequelize.col('studentClassSectionTerm->classSection.session_id'), 'sessionId'],
+                [sequelize.col('studentClassSectionTerm.term'), 'term'],
+                [sequelize.col('studentClassSectionTerm->classSection.course_id'), 'courseId'],
+                [sequelize.col('studentClassSectionTerm->classSection.acedmic_year_id'), 'acedmicYearId'],
                 [sequelize.fn('COUNT', sequelize.col('students.student_id')), 'studentCount'],
             ],
             include: [
                 {
-                    model: model.classSectionModel,
-                    as: 'studentSections',
+                    model: model.classSectionTermModel,
+                    as: 'studentClassSectionTerm',
                     attributes: [],
                     required: true,
-                    where: sectionWhere,
-                    include: [
-                        {
-                            model: model.classModel,
-                            as: 'classGroup',
-                            attributes: [],
-                            required: true,
-                            where: {
-                                term: { [Op.in]: terms },
-                            },
-                        },
-                    ],
+                    where: { term: { [Op.in]: terms } },
+                    include: [{
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: [],
+                        required: true,
+                        where: sectionWhere,
+                    }],
                 },
             ],
-            group: ['studentSections.session_id', 'studentSections->classGroup.term', 'studentSections.course_id', 'studentSections.acedmic_year_id'],
+            group: [
+                'studentClassSectionTerm->classSection.session_id',
+                'studentClassSectionTerm.term',
+                'studentClassSectionTerm->classSection.course_id',
+                'studentClassSectionTerm->classSection.acedmic_year_id',
+            ],
             raw: true,
         });
         return counts;
@@ -226,25 +218,17 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
 }
 
 function classTermInclude(term, acedmicYearId) {
-    return {
-        model: model.classSectionModel,
-        as: "studentSections",
-        required: true,
-        attributes: [],
-        where: {
+    return studentClassSectionTermWithSectionInclude({
+        term,
+        termRequired: true,
+        sectionRequired: true,
+        sectionAttributes: [],
+        termAttributes: [],
+        sectionWhere: {
             ...(acedmicYearId != null && { acedmicYearId }),
             ...buildScope(model.classSectionModel),
         },
-        include: [
-            {
-                model: model.classModel,
-                as: "classGroup",
-                required: true,
-                attributes: [],
-                where: { term },
-            },
-        ],
-    };
+    });
 }
 
 async function resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, acedmicYearId) {

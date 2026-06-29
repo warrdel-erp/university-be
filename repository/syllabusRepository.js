@@ -1,5 +1,6 @@
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
   const { acedmicYearId, ...rest } = scopeWhere;
@@ -32,14 +33,17 @@ const unitIncludes = [
     attributes: ['sessionName'],
   },
   {
-    model: model.semesterModel,
-    as: 'semesterUnit',
-    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-  },
-  {
     model: model.subjectModel,
     as: 'subjectUnit',
     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+    include: [
+      {
+        model: model.courseModel,
+        as: 'courseInfo',
+        attributes: ['termType'],
+        required: false,
+      },
+    ],
   },
 ];
 
@@ -262,18 +266,13 @@ export async function validateSubjectForSyllabusUnit({ subjectId, acedmicYearId,
 
 export async function getSemestersForCourse(courseId) {
   try {
-    return scoped(model.semesterModel).findAll({
-      where: {
-        courseId: Number(courseId),
-        ...omitAcademicYearScope(buildScope(model.semesterModel)),
-      },
-      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId'],
-      order: [
-        ['acedmicYearId', 'ASC'],
-        ['semesterId', 'ASC'],
-      ],
+    const course = await scoped(model.courseModel).findOne({
+      where: { courseId: Number(courseId) },
+      attributes: ['courseId', 'termType', 'totalTerms', 'courseDuration'],
       raw: true,
     });
+    if (!course) return [];
+    return buildCourseTermOptions(course);
   } catch (error) {
     console.error('Error fetching semesters for syllabus unit:', error);
     throw error;

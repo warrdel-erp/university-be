@@ -1,10 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import subject from "./subjectModel.js";
-// import classSection from "./classSectionModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
-import semester from "./semesterModel.js";
 
 const classSubjectMapperModel = sequelize.define(
     'class_subject_mapper',
@@ -22,15 +20,6 @@ const classSubjectMapperModel = sequelize.define(
             references: {
                 model: subject,
                 key: 'subject_id'
-            }
-        },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semester,
-                key: 'semester_id'
             }
         },
         instituteId: {
@@ -63,15 +52,6 @@ const classSubjectMapperModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

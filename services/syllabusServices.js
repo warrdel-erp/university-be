@@ -141,7 +141,7 @@ async function resolveSemesterIdForSubject({ subjectId, acedmicYearId }) {
 }
 
 export async function addSyllabusUnit(data, createdBy, updatedBy) {
-  const { acedmicYearId, semesterId, subjectId, slab, sessionId } = data;
+  const { acedmicYearId, term: inputTerm, subjectId, slab, sessionId } = data;
 
   await SyllabusCreationRepository.validateSubjectForSyllabusUnit({
     subjectId,
@@ -151,16 +151,15 @@ export async function addSyllabusUnit(data, createdBy, updatedBy) {
 
   await SyllabusCreationRepository.backfillSubjectCampusId(subjectId);
 
-  let resolvedSemesterId = semesterId ?? null;
-  if (!resolvedSemesterId) {
-    resolvedSemesterId = await resolveSemesterIdForSubject({ subjectId, acedmicYearId });
-  }
+  const subject = await SyllabusCreationRepository.getSubjectForUnitResolution(subjectId);
+  const subjectPlain = subject?.get ? subject.get({ plain: true }) : subject;
+  const resolvedTerm = inputTerm ?? subjectPlain?.term ?? null;
 
   const syllabusUnits = slab.map((unit) => ({
     sessionId,
     acedmicYearId,
     subjectId,
-    ...(resolvedSemesterId != null && { semesterId: resolvedSemesterId }),
+    ...(resolvedTerm != null && { term: Number(resolvedTerm) }),
     unitNumber: unit.unitNumber,
     name: unit.name,
     description: unit.description,
@@ -183,8 +182,10 @@ function mapSyllabusUnit(unit) {
     acedmicYearTitle: unit.acedmicYearUnit?.yearTitle || null,
     acedmicYearStart: unit.acedmicYearUnit?.startingDate || null,
     acedmicYearEnd: unit.acedmicYearUnit?.endingDate || null,
-    semesterId: unit.semesterId,
-    semesterName: unit.semesterUnit?.name || null,
+    term: unit.term ?? unit.subjectUnit?.term ?? null,
+    termName: unit.subjectUnit?.courseInfo?.termType && unit.term != null
+      ? `${unit.subjectUnit.courseInfo.termType} ${unit.term}`
+      : null,
     sessionId: unit.sessionId,
     sessionName: unit.sessionUnit?.sessionName || null,
     subjectId: unit.subjectId,

@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { requestContext } from '../utility/requestContext.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 
 const employeeListAttributes = {
     exclude: [
@@ -147,13 +148,7 @@ export async function getTeacherSectionMapping({
                         attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'classTillDate'],
                         required: false,
                     },
-                    {
-                        model: model.classModel,
-                        as: 'classGroup',
-                        attributes: ['term'],
-                        where: buildScope(model.classModel),
-                        required: false,
-                    },
+                    classSectionTermsInclude(),
                 ],
             },
         ];
@@ -172,8 +167,8 @@ export async function getTeacherSectionMapping({
         const result = await scoped(model.teacherSectionMappingModel).findAll(queryOptions);
         const mappedResult = result.map((row) => {
             const plain = row.get({ plain: true });
-            if (plain.employeeSection?.classGroup) {
-                plain.employeeSection.classGroup.termType =
+            if (plain.employeeSection) {
+                plain.employeeSection.termType =
                     plain.employeeSection.employeeCourse?.termType ?? null;
             }
             return plain;

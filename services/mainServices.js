@@ -4,6 +4,7 @@ import * as instituteRepository from '../repository/instituteRepository.js';
 import { getSingleSubAccountDetails } from '../repository/subAccountRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as studentRepository from '../repository/studentRepository.js';
+import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
 
 function coercePositiveInt(value) {
     if (value == null || value === '') return null;
@@ -322,69 +323,86 @@ export async function addClass(data, createdBy) {
         if (!data) throw new Error('Data is required');
         if (!createdBy) throw new Error('CreatedBy is required');
 
-        const { courseId, acedmicYearId, className, sections, term, sessionId } = data;
+        const { courseId, acedmicYearId, sections, sessionId } = data;
 
         if (!courseId) throw new Error('CourseId is required');
         if (!acedmicYearId) throw new Error('AcedmicYearId is required');
-        if (!className) throw new Error('ClassName is required');
         if (!sections?.length) throw new Error('Sections are required and must be a non-empty array');
-        if (term == null || term === '') throw new Error('Term is required');
         if (!sessionId) throw new Error('SessionId is required');
+
+        const course = await getCourseByCourseId(Number(courseId));
+        if (!course) throw new Error('Course not found');
+
+        const totalTerms = Number(course.totalTerms) || 0;
+        if (totalTerms <= 0) {
+            throw new Error('Course totalTerms must be configured before creating class sections');
+        }
 
         const transaction = await sequelize.transaction();
         try {
-            const classSemesterId = await mainRepository.findOrCreateSemesterIdForClass({
-                courseId: Number(courseId),
-                term: Number(term),
-                acedmicYearId: Number(acedmicYearId),
-                createdBy,
-                transaction,
-            });
-
-            const classRow = await mainRepository.seprateAddClass({
-                courseId: Number(courseId),
-                className,
-                term: Number(term),
-                sessionId: Number(sessionId),
-                semesterId: classSemesterId,
-                createdBy,
-                updatedBy: createdBy,
-            }, { transaction });
-
-            const classId = classRow.classId ?? classRow.dataValues?.classId;
-            if (!classId) {
-                throw new Error('Class could not be created');
-            }
-
-            const sectionPayload = {
-                courseId: Number(courseId),
-                acedmicYearId: Number(acedmicYearId),
-                sessionId: Number(sessionId),
-                classId,
-                class: String(term),
-                createdBy,
-            };
-
             const sectionResults = [];
+
             for (const section of sections) {
-                if (!section.sectionId) {
-                    throw new Error('sectionId is required for each section');
+                const { sectionId, section: sectionName, year, term } = section;
+
+                if (!sectionId) throw new Error('sectionId is required for each section');
+                if (year == null || year === '') throw new Error('year is required for each section');
+                if (term == null || term === '') throw new Error('term is required for each section');
+
+                const yearNum = Number(year);
+                const termNum = Number(term);
+
+                if (termNum < 1 || termNum > totalTerms) {
+                    throw new Error(
+                        `term must be between 1 and ${totalTerms} for course ${courseId}`,
+                    );
                 }
-                const row = await mainRepository.createClassSections({
-                    ...sectionPayload,
-                    sectionId: Number(section.sectionId),
-                    section: section.section,
+
+                const classSectionRow = await mainRepository.createClassSections({
+                    courseId: Number(courseId),
+                    acedmicYearId: Number(acedmicYearId),
+                    sessionId: Number(sessionId),
+                    year: yearNum,
+                    sectionId: Number(sectionId),
+                    section: sectionName,
+                    class: String(yearNum),
+                    instituteId: course.instituteId,
+                    createdBy,
                 }, { transaction });
-                sectionResults.push(row);
+
+                const classSectionsId =
+                    classSectionRow.classSectionsId ??
+                    classSectionRow.dataValues?.classSectionsId;
+
+                const classSectionTermRow = await mainRepository.findOrCreateClassSectionTerm(
+                    {
+                        classSectionsId,
+                        term: termNum,
+                        createdBy,
+                        universityId: course.universityId,
+                        instituteId: course.instituteId,
+                    },
+                    { transaction },
+                );
+
+                const termPlain = classSectionTermRow.get
+                    ? classSectionTermRow.get({ plain: true })
+                    : classSectionTermRow;
+
+                const sectionPlain = classSectionRow.get
+                    ? classSectionRow.get({ plain: true })
+                    : classSectionRow;
+
+                sectionResults.push({
+                    ...sectionPlain,
+                    classSectionTermId: termPlain.classSectionTermId,
+                    term: termPlain.term,
+                    year: yearNum,
+                });
             }
 
             await transaction.commit();
-            return {
-                semesterId: classSemesterId,
-                classId,
-                class: classRow,
-                sections: sectionResults,
-            };
+            return { sections: sectionResults };
         } catch (error) {
             await transaction.rollback();
             throw error;
@@ -424,71 +442,8 @@ export async function addClassSubjectMapper(data, createdBy) {
     }
 }
 
-export async function getClassSubjectMapper(semesterId, acedmicYearId) {
-    return await mainRepository.getClassSubjectMapper(semesterId, acedmicYearId)
-}
-
-export async function addSemester(data, createdBy) {
-    const { semesterDuration, courseId, acedmicYearId } = data
-    const course = await getCourseByCourseId(courseId)
-    const courseDuration = course.dataValues.courseDuration
-    const semesterData = {
-        ...data,
-        totalSemester: courseDuration / semesterDuration,
-        createdBy,
-        courseDuration: courseDuration,
-        acedmicYearId,
-    };
-    return await mainRepository.addSemester(semesterData)
-}
-
-export async function getSemester(courseId, specializationId, acedmicYearId) {
-    return await mainRepository.getSemester(courseId, specializationId, acedmicYearId)
-}
-
-export async function getSemesterById(semesterId) {
-    return await mainRepository.getSemesterById(semesterId)
-}
-
-export async function createClass(data, createdBy) {
-    const results = [];
-    try {
-        const {
-            courseId,
-            acedmicYearId,
-            specializationId,
-            section,
-            term,
-            sessionId,
-            classId,
-        } = data;
-
-        if (!courseId || !acedmicYearId) {
-            throw new Error('courseId and acedmicYearId are required');
-        }
-        if (!section || !Array.isArray(section) || section.length === 0) {
-            throw new Error('section is required and must be a non-empty array');
-        }
-
-        for (const sectionValue of section) {
-            const result = await mainRepository.createClassSections({
-                courseId: Number(courseId),
-                specializationId,
-                acedmicYearId: Number(acedmicYearId),
-                sessionId: Number(sessionId),
-                classId,
-                term: Number(term),
-                section: sectionValue,
-                class: term != null ? String(term) : undefined,
-                createdBy,
-            });
-            results.push(result);
-        }
-        return results;
-    } catch (error) {
-        console.error('Error adding class directly:', error);
-        throw error;
-    }
+export async function getClassSubjectMapper(term, acedmicYearId) {
+    return await mainRepository.getClassSubjectMapper(term, acedmicYearId)
 }
 
 export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy) {
@@ -534,21 +489,24 @@ export async function getClassRecord(courseId, classSectionsId) {
                 acedmicYearId: section.acedmicYearId ?? null,
                 sectionName: section.section ?? null,
                 className: section.class ?? null,
-                term: section.classGroup?.term ?? section.class ?? null,
+                term: resolveProgramTerm(section) ?? section.class ?? null,
             }
             : null,
-        student: result.student.map((s) => ({
-            studentId: s.studentId,
-            firstName: s.firstName,
-            lastName: s.lastName,
-            scholarNumber: s.scholarNumber,
-            email: s.email,
-            phoneNumber: s.phoneNumber,
-            semesterId: s.semesterId ?? null,
-            semesterName: s.studentSemester?.name || null,
-            className: s.studentSections?.class || null,
-            sectionName: s.studentSections?.section || null,
-        })),
+        student: result.student.map((s) => {
+            const plain = s.get ? s.get({ plain: true }) : s;
+            return {
+                studentId: plain.studentId,
+                firstName: plain.firstName,
+                lastName: plain.lastName,
+                scholarNumber: plain.scholarNumber,
+                email: plain.email,
+                phoneNumber: plain.phoneNumber,
+                classSectionTermId: plain.classSectionTermId ?? null,
+                term: plain.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(plain)) ?? null,
+                className: resolveStudentSection(plain)?.class || null,
+                sectionName: resolveStudentSection(plain)?.section || null,
+            };
+        }),
 
         teacher: result.teacher.map((t) => ({
             employeeId: t.employeeData?.employeeId,

@@ -122,7 +122,7 @@ const semesterModel = sequelize.define(
         },
     },
     {
-        tableName: 'semester',
+        tableName: 'semester_deprecated',
         timestamps: true,
         paranoid: true
     }

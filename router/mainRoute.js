@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
-import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, addSemester, getSemester, createClass, subjectExcel, updateCourse, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
+import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
 
 const positiveIntegerId = z.coerce
@@ -85,7 +85,8 @@ const classRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
     classSectionsId: z.coerce.number().int().positive().optional(),
     classSectionId: z.coerce.number().int().positive().optional(),
-    semesterId: z.coerce.number().int().positive().optional(),
+    classSectionTermId: z.coerce.number().int().positive().optional(),
+    term: z.coerce.number().int().positive().optional(),
     acedmicYearId: z.coerce.number().int().positive().optional(),
 }).refine(
     (query) => query.classSectionsId != null || query.classSectionId != null,
@@ -121,12 +122,6 @@ router.get('/classSpecific', userAuth, getClassSpecific);
 router.post('/classSubjectMapper', userAuth, addClassSubjectMapper);
 
 router.get('/classSubjectMapper', userAuth, getClassSubjectMapper);
-
-router.post('/semester', userAuth, addSemester);
-
-router.get('/semester', userAuth, getSemester);
-
-router.post('/createClass', userAuth, createClass);
 
 router.post('/subjectExcel', userAuth, subjectExcel);
 

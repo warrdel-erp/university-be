@@ -1,6 +1,7 @@
 import * as termsRepository from '../repository/termsRepository.js';
 import * as sessionRepository from '../repository/sessionRepository.js';
 import * as courseRepository from '../repository/courseRepository.js';
+import { resolveProgramTerm } from '../utility/classSectionIncludes.js';
 export async function getTermsData(courseId, sessionId) {
     try {
         const mapping = await sessionRepository.getMappingByCourseAndSession(courseId, sessionId);
@@ -63,10 +64,10 @@ export async function getTermsData(courseId, sessionId) {
         });
 
         classSections.forEach((cs) => {
-            if (!cs.classGroup?.term) return;
-            const termNum = Number(cs.classGroup.term);
-            ensureTerm(termNum);
-            delete cs.classGroup;
+            const termNum = resolveProgramTerm(cs);
+            if (termNum == null) return;
+            ensureTerm(Number(termNum));
+            delete cs.classSectionTerms;
             termsMap[termNum].classSections.push(cs);
         });
 

@@ -2,6 +2,7 @@ import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { requestContext } from "../utility/requestContext.js";
+import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 function feeInvoiceExcludedAttributes() {
   return [
@@ -418,18 +419,7 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               as: "studentSemester",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
-            {
-              model: model.classSectionModel,
-              as: "studentSections",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              include: [
-                {
-                  model: model.classModel,
-                  as: "classGroup",
-                  attributes: ["term", "semesterId", "className", "classId"],
-                },
-              ],
-            },
+            studentClassSectionTermWithSectionInclude(),
             {
               model: model.sessionModel,
               as: "studentSession",
