@@ -35,12 +35,8 @@ export async function buildRequestContextStore({
     }
 
     let universityId;
-    if (instituteId) {
-        const institute = await model.instituteModel.findOne({
-            attributes: ["universityId"],
-            where: { instituteId },
-        });
-        universityId = institute?.universityId;
+    if (universityId != null && universityId !== "") {
+        universityId = parseInt(universityId, 10);
     }
 
     return {
