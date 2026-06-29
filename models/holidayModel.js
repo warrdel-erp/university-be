@@ -92,6 +92,6 @@ const holidayModel = sequelize.define(
 
 
 
-holidayModel.scopeConfig = { university: true, institute: true, academicYear: true };
+holidayModel.scopeConfig = { university: false, institute: true, academicYear: true };
 
 export default holidayModel;

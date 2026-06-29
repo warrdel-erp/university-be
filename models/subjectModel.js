@@ -85,6 +85,27 @@ const subjectModel = sequelize.define(
             allowNull: false,
             field: 'subject_type'
         },
+        shortName: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'short_name'
+        },
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            field: 'description'
+        },
+        subjectCategory: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'subject_category'
+        },
+        isActive: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true,
+            field: 'is_active'
+        },
         term: {
             type: DataTypes.INTEGER,
             allowNull: true,

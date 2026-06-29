@@ -295,32 +295,26 @@ export async function addSpecialization(data, createdBy) {
 }
 
 export async function addSubject(data, createdBy) {
-    const { courseId, subjects, specializationId, acedmicYearId } = data;
+    const { courseId, specializationId, ...subject } = data;
     await assertCourseIsActive(courseId, 'have new subjects added');
 
-    const results = [];
-    try {
-        for (const subject of subjects) {
-            const result = await mainRepository.addSubject({
-                ...subject,
-                courseId,
-                specializationId,
-                createdBy,
-                acedmicYearId,
-            });
-            results.push(result);
-        }
-        return results;
-    } catch (error) {
-        console.error('Error adding subjects:', error);
-        return { message: 'Error adding subjects', error };
-    }
+    return mainRepository.addSubject({
+        ...subject,
+        courseId,
+        specializationId,
+        createdBy,
+        isActive: subject.isActive ?? true,
+    });
 }
 
-export async function updateSubject(data, updateBy) {
-    data.updateBy = updateBy;
-    const subjectId = data?.subjectId
-    return await mainRepository.updateSubject(subjectId, data);
+export async function updateSubject(data) {
+    const { subjectId, ...payload } = data;
+
+    if (payload.courseId != null) {
+        await assertCourseIsActive(payload.courseId, 'receive subject updates');
+    }
+
+    return mainRepository.updateSubject(subjectId, payload);
 }
 
 export async function addClass(data, createdBy) {
@@ -501,19 +495,21 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
     try {
         await assertCourseIsActive(courseId, 'have new subjects added');
 
-        const subjectCreationPromises = excelData.map(async (row) => {
-            const subjectData = {
+        const subjectCreationPromises = excelData.map((row) =>
+            mainRepository.addSubject({
                 courseId,
                 acedmicYearId,
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
                 subjectType: row.subjectType,
+                subjectCategory: row.subjectCategory,
+                shortName: row.shortName,
+                description: row.description,
+                isActive: row.isActive ?? true,
                 createdBy,
-            };
-
-            return await mainRepository.addSubject(subjectData);
-        });
+            }),
+        );
 
         return await Promise.all(subjectCreationPromises);
     } catch (error) {

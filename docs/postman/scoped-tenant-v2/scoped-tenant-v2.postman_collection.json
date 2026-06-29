@@ -1,0 +1,756 @@
+{
+  "info": {
+    "_postman_id": "a8f3c2e1-4b5d-6e7f-8a9b-0c1d2e3f4a5b",
+    "name": "univ-v2 — scoped-tenant-v2",
+    "description": "Subset of univ-v2: holiday and notice APIs using utility/scoped.js tenant context.\n\nImport alongside univ-v2 or use variables: baseurl, token, institute_id, acedmicYear_id.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "holiday",
+      "description": "Institute holidays under /holiday.\n\n**Auth:** Bearer {{token}} — any role.\n\n**GET /** returns all holidays for current institute + academic year (flat array). No role filter.\n\n**Tenant scope (utility/scoped.js):** Active login context from PUT /user/saveUserDefaults + optional x-institute-id header. Query/body acedmicYearId, instituteId, universityId are optional (FE compat) and ignored in business logic.\n\n**Validation:** Zod on all routes.",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Republic Day\",\n  \"date\": \"2026-01-26\",\n  \"event\": \"National holiday\",\n  \"remark\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/holiday",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ]
+            },
+            "description": "**POST /holiday**\n\nOptional: name, date, event, remark. Tenant IDs injected on create via scoped()."
+          },
+          "response": []
+        },
+        {
+          "name": "list (all)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday?acedmicYearId={{acedmicYear_id}}&instituteId={{institute_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Optional — ignored; uses login academic year"
+                },
+                {
+                  "key": "instituteId",
+                  "value": "{{institute_id}}",
+                  "description": "Optional — ignored; uses login institute"
+                },
+                {
+                  "key": "name",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "event",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /holiday**\n\nReturns all holidays for active institute + academic year. Any role.\n\n**200:** flat JSON array ordered by date DESC.\n\nOptional filters: name, event, date (still scoped)."
+          },
+          "response": []
+        },
+        {
+          "name": "single",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday/single?holidayId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "holidayId",
+                  "value": "1",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**GET /holiday/single?holidayId=** — scoped by institute + academic year."
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayId\": 1,\n  \"name\": \"Updated holiday name\",\n  \"remark\": \"Optional\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/holiday",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ]
+            },
+            "description": "**PATCH /holiday** — required holidayId; optional name, date, event, remark."
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/holiday?holidayId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "holiday"
+              ],
+              "query": [
+                {
+                  "key": "holidayId",
+                  "value": "1",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**DELETE /holiday?holidayId=** — soft-delete, scoped tenant."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "notice",
+      "description": "Notices under /notice.\n\n**Auth:** Bearer {{token}}.\n\n**Tenant scope (utility/scoped.js):** Active login context from PUT /user/saveUserDefaults + optional x-institute-id header. Query/body acedmicYearId, instituteId, universityId are optional (FE compat) and ignored in business logic.\n\n**GET /studentNotice** (Plan B): institute + university from login; no academic year filter. Role-based message_to filter.\n\n**GET /employee**: full scoped (institute + university + academic year).",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Exam schedule\",\n  \"notice\": \"Mid-term exams begin next week.\",\n  \"noticeDate\": \"2026-06-27\",\n  \"publishDate\": \"2026-06-27\",\n  \"messageTo\": [\n    \"ADMIN\",\n    \"TEACHER\",\n    \"STUDENT\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/notice",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "notice"
+              ]
+            },
+            "description": "**POST /notice**\n\nRequired: title, messageTo (string or array). Optional: notice, noticeDate, publishDate. Tenant fields stripped from body and injected via scoped()."
+          },
+          "response": []
+        },
+        {
+          "name": "studentNotice (teacher / student)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/notice/studentNotice?acedmicYearId={{acedmicYear_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "notice",
+                "studentNotice"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Optional — ignored"
+                },
+                {
+                  "key": "instituteId",
+                  "value": "{{institute_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "universityId",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /notice/studentNotice**\n\n**Scope:** institute + university (all academic years).\n\n| defaultRole | message_to match |\n|-------------|------------------|\n| TEACHER | ADMIN, TEACHER, or STUDENT |\n| Other | STUDENT or Student |\n\n**200:** flat notice array, noticeId DESC."
+          },
+          "response": []
+        },
+        {
+          "name": "employee notices",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/notice/employee?acedmicYearId={{acedmicYear_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "notice",
+                "employee"
+              ],
+              "query": [
+                {
+                  "key": "acedmicYearId",
+                  "value": "{{acedmicYear_id}}",
+                  "description": "Optional — ignored"
+                }
+              ]
+            },
+            "description": "**GET /notice/employee**\n\n**200:** { noticeCreated, noticeAll }\n\n- noticeCreated — notices created by logged-in user (scoped institute + university + academic year)\n- noticeAll — notices where message_to contains caller defaultRole (e.g. TEACHER)"
+          },
+          "response": []
+        },
+        {
+          "name": "update",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"noticeId\": 1,\n  \"title\": \"Updated title\",\n  \"messageTo\": [\n    \"TEACHER\",\n    \"STUDENT\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/notice",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "notice"
+              ]
+            },
+            "description": "**PATCH /notice** — required noticeId; optional fields. Tenant IDs stripped on update."
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/notice?noticeId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "notice"
+              ],
+              "query": [
+                {
+                  "key": "noticeId",
+                  "value": "1",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**DELETE /notice?noticeId=** — soft-delete, scoped tenant."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlIjoiQURNSU4iLCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJyb2xlIjoiQWRtaW4iLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA2LTAyVDA0OjM0OjE5LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODA1NTE4OTksImV4cCI6MTc4MzE0Mzg5OX0.NIh27QoQP0w6G4ECF4rVoTw1NC6pn8lA78KVIyP4UmA",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCategory_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCatalog_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feeTypeCatalog_id_2",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "feePlanProfile_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feePlanItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentFeeInvoice_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "studentFeePayment_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "courseSession_id",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "acedmicYear_id",
+      "value": "59",
+      "type": "string",
+      "description": "acedmic_year.acedmicYearId — set from POST /acedmicYear or GET /active"
+    },
+    {
+      "key": "affiliated_university_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "specialization_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "course_id",
+      "value": "35",
+      "type": "string",
+      "description": "course.courseId — set from POST /main/course or used by terms / syllabus / promotion APIs"
+    },
+    {
+      "key": "course_level_id",
+      "value": "1",
+      "type": "string",
+      "description": "employee_code_master_type id — POST /main/course course_levelId"
+    },
+    {
+      "key": "department_id",
+      "value": "1",
+      "type": "string",
+      "description": "department.departmentId — optional on POST/PATCH /main/course"
+    },
+    {
+      "key": "student_id",
+      "value": "1513",
+      "type": "string"
+    },
+    {
+      "key": "student_semester_id",
+      "value": "1",
+      "type": "string",
+      "description": "Current semesterId before promotion (from GET /student)"
+    },
+    {
+      "key": "promotion_target_classSectionsId",
+      "value": "195",
+      "type": "string",
+      "description": "Target classSectionsId for POST /student/promoteStudent"
+    },
+    {
+      "key": "promotion_target_session_id",
+      "value": "6",
+      "type": "string",
+      "description": "Target sessionId (2026 session for cross-year promotion)"
+    },
+    {
+      "key": "promotion_current_term",
+      "value": "1",
+      "type": "string",
+      "description": "Current class term number (from class.term) for promotion dropdown"
+    },
+    {
+      "key": "classSections_id",
+      "value": "195",
+      "type": "string",
+      "description": "Student's current classSectionsId"
+    },
+    {
+      "key": "institute_id",
+      "value": "12",
+      "type": "string",
+      "description": "institute.instituteId — for syllabus create and tenant-scoped APIs"
+    },
+    {
+      "key": "governance_body_id",
+      "value": "1",
+      "type": "string",
+      "description": "governance_body.governanceBodyId — set from governance create response"
+    },
+    {
+      "key": "teacher_substitute_id",
+      "value": "1",
+      "type": "string",
+      "description": "teacher_substitute.teacherSubstituteId — set from teacher substitute create response"
+    },
+    {
+      "key": "session_id",
+      "value": "6",
+      "type": "string",
+      "description": "session.sessionId — course/session scoped syllabus APIs"
+    },
+    {
+      "key": "subject_id",
+      "value": "47",
+      "type": "string",
+      "description": "subject.subjectId — syllabus units and create payload"
+    },
+    {
+      "key": "syllabus_id",
+      "value": "1",
+      "type": "string",
+      "description": "syllabus.syllabusId — set from add/get single syllabus"
+    },
+    {
+      "key": "syllabus_unit_id",
+      "value": "1",
+      "type": "string",
+      "description": "syllabus_unit.syllabusUnitId — set from add/get unit"
+    },
+    {
+      "key": "feePlanInitiate_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "feePlanInitiate_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "class_room_section_id_2",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "assetCategory_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "asset_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "asset_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assetIssueTransaction_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssueInventoryItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetInventoryItem_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturnTransaction_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "assetIssue_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assetSecurityPayment_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturn_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "assetReturn_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcVendor_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "amcContract_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_page",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_limit",
+      "value": "20",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_search",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_status",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "serviceTicket_priority",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

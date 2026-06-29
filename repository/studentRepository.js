@@ -2057,10 +2057,11 @@ export async function getStudentDetailsRepository(studentId) {
     }
 }
 
-export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, academicYearId, date) {
+export async function getStudentsByClassSection(classSectionsId, timeTableMappingId, _academicYearId, date) {
 
     try {
-        if (getRequestAcademicYearId() == null && academicYearId == null) {
+        const academicYearId = getRequestAcademicYearId();
+        if (academicYearId == null) {
             return [];
         }
 
@@ -2078,7 +2079,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
             },
             include: [
                 studentSessionWithAcademicYearInclude({
-                    ...(academicYearId != null && { acedmicYearId: academicYearId }),
+                    acedmicYearId: academicYearId,
                     attributes: [],
                 }),
                 {
@@ -2086,7 +2087,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
                     as: "studentSections",
                     attributes: ["classSectionsId", "section"],
                     where: {
-                        acedmicYearId: academicYearId ?? getRequestAcademicYearId(),
+                        acedmicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),
                     },
                     required: true,

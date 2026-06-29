@@ -119,3 +119,29 @@ export function formatQueryDate(dateInput) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+/** Weekday name from YYYY-MM-DD without UTC date-string parsing shift. */
+export function dayNameFromQueryDate(dateInput) {
+  const formatted = formatQueryDate(dateInput);
+  const [year, month, day] = formatted.split("-").map(Number);
+  return DAY_NAMES[new Date(year, month - 1, day).getDay()];
+}
+
+/** Local midnight Date from YYYY-MM-DD or Date — avoids UTC shift from date-only strings. */
+export function parseLocalDateOnly(dateInput) {
+  const formatted = formatQueryDate(dateInput);
+  const [year, month, day] = formatted.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}

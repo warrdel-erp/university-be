@@ -405,11 +405,11 @@ export async function getStudentsByClassSection(req, res) {
 
     try {
 
-        const { timeTableMappingId, academicYearId, date } = req.query;
+        const { timeTableMappingId, date } = req.query;
 
         const students = await studentService.getStudentsByClassSection(
             timeTableMappingId,
-            academicYearId,
+            undefined,
             date
         );
 
