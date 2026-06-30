@@ -365,7 +365,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
       include: [classSectionTermsInclude()],
-      attributes: ['classSectionsId', 'section'],
+      attributes: ['classSectionsId', 'section', 'year', 'sectionId'],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);

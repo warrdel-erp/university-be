@@ -132,17 +132,24 @@ export const getEmptyEnrollNumber = async (req, res) => {
 };
 
 export const studentCourseMapping = async (req, res) => {
-    const { subjectId, studentId, courseId, term } = req.body;
+    const { subjectId, studentId, courseId, classSectionTermId } = req.body;
     const data = req.body;
     try {
-        if (!(subjectId && studentId && courseId && term != null)) {
-            return res.status(400).send("subjectId, studentId, courseId, term is required");
+        if (!(subjectId && studentId && courseId)) {
+            return res.status(400).send("subjectId, studentId, courseId is required");
+        }
+
+        if (classSectionTermId != null) {
+            data.classSectionTermId = Number(classSectionTermId);
         }
 
         const result = await studentService.studentCourseMapping(data);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in student course mapping:", error);
+        if (error.message === 'classSectionTermId could not be resolved') {
+            return res.status(400).send(error.message);
+        }
         return res.status(500).send("Internal Server Error");
     }
 };

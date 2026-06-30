@@ -96,6 +96,16 @@ const classSectionRecordQuerySchema = z.object({
     { message: 'classSectionsId is required' },
 );
 
+const addClassSectionsSchema = z.object({
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    sections: z.array(z.object({
+        sectionId: positiveIntegerId,
+        section: z.string().min(1, 'section is required'),
+        year: z.coerce.number().int().positive('year must be a positive integer'),
+    })).min(1, 'sections array is required'),
+}).strict();
+
 const router = Router();
 
 router.get('/all', userAuth, getAllCollegesAndCourses);
@@ -117,7 +127,7 @@ router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubje
 router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
 
 // Section master (class table removed)
-router.post('/classSections', userAuth, addClassSections);
+router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
 router.get('/classSections', userAuth, getClassSections);
 router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
 router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);

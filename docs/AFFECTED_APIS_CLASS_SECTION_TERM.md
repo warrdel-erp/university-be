@@ -176,16 +176,16 @@ GET /options/classSections?courseId=42&term=1&sessionId=22
   "courseId": 42,
   "sessionId": 22,
   "sections": [
-    { "sectionId": 16, "section": "A1", "year": 1, "term": 1 },
-    { "sectionId": 16, "section": "A1", "year": 1, "term": 2 },
-    { "sectionId": 17, "section": "A2", "year": 1, "term": 1 }
+    { "sectionId": 16, "section": "A1", "year": 1 },
+    { "sectionId": 17, "section": "A2", "year": 1 }
   ]
 }
 ```
 
-- Each item creates/finds one `class_sections` row (by `year` + `sectionId`) and one `class_section_term` row (by `term`).
-- Top-level `term`, `className`, `classId` removed from request.
-- Response includes `classSectionTermId`, `year`, `term` per section.
+- Each item creates/finds one `class_sections` row (by `year` + `sectionId`) and all `class_section_term` rows for that program year.
+- `year` is 1…`courseDuration` (e.g. 1, 2, 3). **`term` is not sent** — terms are derived from course `termType` + `totalTerms`.
+- Top-level `term`, `className`, `classId`, `academicYearId` removed from request.
+- Response includes `terms[]` per section (`classSectionTermId`, `term`) plus `year`.
 
 ### `GET /main/classSectionRecord` — query params
 
@@ -243,7 +243,7 @@ GET /options/classSections?courseId=42&term=1&sessionId=22
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `POST` | `/student/studentMapping` | **Breaking** | Requires `term` (program term); `semesterId` removed |
+| `POST` | `/student/studentMapping` | **Breaking** | Optional `classSectionTermId`; falls back to student's placement; `semesterId`/`term` removed |
 | `POST` | `/student/sectionStudentMapping` | **Breaking** | Use `classSectionTermId` instead of `semesterId` |
 | `GET` | `/student/sectionStudentMapping` | **Breaking** | Query by `classSectionTermId` or `term` |
 | `POST` | `/student` (create) | **Breaking** | Sets `classSectionTermId` only — **`classSectionsId` not stored on student** |
@@ -310,8 +310,10 @@ GET /options/classSections?courseId=42&term=1&sessionId=22
 
 **After**
 ```json
-{ "subjectId": 12, "studentId": 1, "courseId": 42, "term": 1 }
+{ "subjectId": 12, "studentId": 1, "courseId": 42, "classSectionTermId": 1001 }
 ```
+
+> `classSectionTermId` is optional when the student already has `classSectionTermId` on their record.
 
 ### Student response — section data shape
 
@@ -539,7 +541,7 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 | `semesterId` (mapper) | `classSectionTermId` |
 | `semesterId` (exam / assessment / syllabus) | `term` (program term 1…N) |
 | `semester` object (internal assessment) | `term` + `termName` |
-| `semesterId` (subject_mapper) | `term` |
+| `semesterId` (subject_mapper) | `classSectionTermId` |
 | `studentSemester.name` | `termName` from course (`"Semester 1"`) |
 | `studentSections` (direct FK include) | `studentClassSectionTerm.classSection` |
 | `semesterName` | `termName` |
@@ -556,7 +558,8 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 | `students` | `class_section_term_id` active; **`class_sections_id` removed**; **`fee_plan_id` removed**; `semester_id` removed |
 | `class_student_mapper` | `class_section_term_id` active; `semester_id` removed |
 | `class_subject_mapper` | `semester_id` removed |
-| `exam_schedule`, `internal_assessment`, `syllabus_unit`, `subject_mapper` | `term` active; `semester_id` removed |
+| `exam_schedule`, `internal_assessment`, `syllabus_unit` | `term` active; `semester_id` removed |
+| `subject_mapper` | `class_section_term_id` active; `semester_id` removed |
 | `student_class_sections_history` | Still uses `class_sections_id` (follow-up: add `class_section_term_id`) |
 | `class_schedule_item` | `combined_group_id` nullable — links duplicate slots across sections in combined timetable |
 | `class` | Renamed → `class_deprecated` |
@@ -570,7 +573,7 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 2. **Load terms:** `GET /options/courseTerms?courseId=`
 3. **Load sections for term:** `GET /options/classSections?courseId=&term=&sessionId=`
 4. **Store selection:** save **`classSectionTermId`** as the student placement key
-5. **Create sections:** `POST /main/classSections` with `{ year, term, sectionId }` per row (no `academicYearId` in body)
+5. **Create sections:** `POST /main/classSections` with `{ sectionId, section, year }` per row (no `academicYearId` or `term` in body)
 6. **Enroll student:** pass `classSectionTermId` to create/mapping APIs
 7. **Assign fee:** pass `feePlanProfileId` (not `feePlanId`)
 8. **Timetable / attendance / exams:** pass `classSectionTermId` or `classSectionsId` + `term` — do not repeat tenant IDs in query

@@ -1,31 +1,16 @@
 'use strict';
 
 const { Op } = require('sequelize');
+const { removeColumnSafe } = require('./helpers/sqlModeHelpers.cjs');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      const classSectionsTable = await queryInterface.describeTable('class_sections');
-      if (classSectionsTable.class) {
-        await queryInterface.removeColumn('class_sections', 'class', { transaction });
-      }
+      await removeColumnSafe(queryInterface, 'class_sections', 'class', transaction);
 
-      const cstTable = await queryInterface.describeTable('class_section_term');
-
-      try {
-        await queryInterface.removeIndex(
-          'class_section_term',
-          'class_section_term_sections_id_term_unique',
-          { transaction },
-        );
-      } catch (error) {
-        const message = String(error?.message ?? '');
-        if (!message.includes("Can't DROP") && !message.includes('check that it exists')) {
-          throw error;
-        }
-      }
+      const cstTable = await queryInterface.describeTable('class_section_term', { transaction });
 
       if (cstTable.deleted_at) {
         await queryInterface.bulkDelete(
@@ -33,7 +18,7 @@ module.exports = {
           { deleted_at: { [Op.ne]: null } },
           { transaction },
         );
-        await queryInterface.removeColumn('class_section_term', 'deleted_at', { transaction });
+        await removeColumnSafe(queryInterface, 'class_section_term', 'deleted_at', transaction);
       }
 
       await transaction.commit();
@@ -46,7 +31,7 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      const classSectionsTable = await queryInterface.describeTable('class_sections');
+      const classSectionsTable = await queryInterface.describeTable('class_sections', { transaction });
       if (!classSectionsTable.class) {
         await queryInterface.addColumn(
           'class_sections',
@@ -59,7 +44,7 @@ module.exports = {
         );
       }
 
-      const cstTable = await queryInterface.describeTable('class_section_term');
+      const cstTable = await queryInterface.describeTable('class_section_term', { transaction });
       if (!cstTable.deleted_at) {
         await queryInterface.addColumn(
           'class_section_term',

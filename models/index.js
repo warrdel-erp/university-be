@@ -289,6 +289,9 @@ studentModel.hasMany(classStudentMapperModel, { foreignKey: "student_id", as: "s
 classStudentMapperModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "studentTermPlacement" });
 classSectionTermModel.hasMany(classStudentMapperModel, { foreignKey: "class_section_term_id", as: "studentTermPlacement" });
 
+subjectMapperModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "subjectMapperTerm" });
+classSectionTermModel.hasMany(subjectMapperModel, { foreignKey: "class_section_term_id", as: "subjectMappers" });
+
 classStudentMapperModel.belongsTo(sessionModel, { foreignKey: "session_id", as: "studentSessionPlacement" });
 
 //student join to there 2 more table

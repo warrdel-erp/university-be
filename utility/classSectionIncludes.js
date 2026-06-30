@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { termsForYear } from './courseTerms.js';
 
 /**
  * Standard include for class_section_term rows on a class section.
@@ -143,39 +144,51 @@ export function formatClassSectionTermPlacement(sectionPlain, termRow) {
     return row;
 }
 
-/** Group class sections by program term using all class_section_term rows. */
-export function groupClassSectionsByTerm(sectionPlains) {
+/** Group class sections by program term using class_section_term rows and program year. */
+export function groupClassSectionsByTerm(sectionPlains, course = null) {
     const byTerm = {};
 
     for (const cs of sectionPlains) {
-        const terms = cs.classSectionTerms ?? [];
+        const termRows = cs.classSectionTerms ?? [];
+        const termRowByNum = {};
 
-        if (terms.length > 0) {
-            for (const termRow of terms) {
-                const termNum = Number(termRow.term);
-                if (!termNum) continue;
-                if (!byTerm[termNum]) {
-                    byTerm[termNum] = [];
-                }
-                byTerm[termNum].push(formatClassSectionTermPlacement(cs, termRow));
+        for (const termRow of termRows) {
+            const termNum = Number(termRow.term);
+            if (termNum) {
+                termRowByNum[termNum] = termRow;
             }
-            continue;
         }
 
-        const fallbackTerm = resolveProgramTerm(cs);
-        if (fallbackTerm == null) continue;
+        let termNumbers = Object.keys(termRowByNum).map(Number);
 
-        const termNum = Number(fallbackTerm);
-        if (!byTerm[termNum]) {
-            byTerm[termNum] = [];
+        if (course && cs.year != null) {
+            const yearTerms = termsForYear(Number(cs.year), course);
+            if (yearTerms.length) {
+                termNumbers = yearTerms;
+            }
         }
 
-        const placement = formatClassSectionTermPlacement(cs, {
-            classSectionTermId: resolveClassSectionTermId(cs, termNum),
-            term: termNum,
-            classSectionsId: cs.classSectionsId,
-        });
-        byTerm[termNum].push(placement);
+        if (!termNumbers.length) {
+            const fallbackTerm = resolveProgramTerm(cs);
+            if (fallbackTerm == null) {
+                continue;
+            }
+            termNumbers = [Number(fallbackTerm)];
+        }
+
+        for (const termNum of termNumbers) {
+            const termRow = termRowByNum[termNum] ?? {
+                classSectionTermId: resolveClassSectionTermId(cs, termNum),
+                term: termNum,
+                classSectionsId: cs.classSectionsId,
+            };
+
+            if (!byTerm[termNum]) {
+                byTerm[termNum] = [];
+            }
+
+            byTerm[termNum].push(formatClassSectionTermPlacement(cs, termRow));
+        }
     }
 
     return byTerm;

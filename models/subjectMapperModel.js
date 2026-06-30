@@ -4,6 +4,7 @@ import subject from "./subjectModel.js";
 import student from "./studentModel.js";
 import course from "./courseModel.js";
 import specialization from "./specializationModel.js";
+import classSectionTerm from "./classSectionTermModel.js";
 import users from "./userModel.js"
 
 const subjectMapperModel = sequelize.define(
@@ -51,10 +52,14 @@ const subjectMapperModel = sequelize.define(
                 key: 'specialization_id'
             }
         },
-        term: {
+        classSectionTermId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            comment: 'Program term number',
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTerm,
+                key: 'class_section_term_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,

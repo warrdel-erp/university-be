@@ -990,16 +990,29 @@ export async function findStudentAddressByStudentId(StudentId) {
 
 export async function studentCourseMapping(data) {
     try {
+        let classSectionTermId =
+            data.classSectionTermId != null ? Number(data.classSectionTermId) : null;
+
+        if (!classSectionTermId) {
+            const student = await scoped(model.studentModel).findOne({
+                where: { studentId: data.studentId },
+                attributes: ['classSectionTermId'],
+            });
+            classSectionTermId = student?.classSectionTermId ?? null;
+        }
+
+        if (!classSectionTermId) {
+            throw new Error('classSectionTermId could not be resolved');
+        }
+
         const payload = {
             subjectId: data.subjectId,
             studentId: data.studentId,
             courseId: data.courseId,
             specializationId: data.specializationId ?? null,
+            classSectionTermId,
             createdBy: data.createdBy,
         };
-        if (data.term != null) {
-            payload.term = Number(data.term);
-        }
         const result = await model.subjectMapperModel.create(payload);
         return result;
     } catch (error) {

@@ -1,8 +1,6 @@
 import * as courseRepository from "../repository/courseRepository.js";
-
-import { resolveProgramTerm } from "../utility/classSectionIncludes.js";
-
-import { buildTermName } from "../utility/courseTerms.js";
+import { groupClassSectionsByTerm } from "../utility/classSectionIncludes.js";
+import { buildTermName, resolveTotalTerms } from "../utility/courseTerms.js";
 
 export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
@@ -13,7 +11,6 @@ export const getCourseWithSubjects = async (academicYearId) => {
     return await courseRepository.getCourseListWithSubjects(academicYearId);
   } catch (error) {
     console.error("Error in Course Service (getCourseWithSubjects):", error);
-
     throw error;
   }
 };
@@ -23,7 +20,6 @@ export const getCourseWithSessions = async (courseId) => {
     return await courseRepository.getCourseWithSessionsData(courseId);
   } catch (error) {
     console.error("Error in Course Service (getCourseWithSessions):", error);
-
     throw error;
   }
 };
@@ -34,15 +30,13 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
 
     if (!course) {
       const error = new Error("Course not found");
-
       error.statusCode = 404;
-
       throw error;
     }
 
     const coursePlain = course.get ? course.get({ plain: true }) : course;
-
-    const { termType, totalTerms } = coursePlain;
+    const { termType } = coursePlain;
+    const totalTerms = resolveTotalTerms(coursePlain);
 
     const classSections =
       await courseRepository.getClassSectionsByCourseAndSession(
@@ -50,44 +44,32 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
         sessionId,
       );
 
+    const sectionPlains = [];
+    for (const cs of classSections) {
+      sectionPlains.push(cs.get ? cs.get({ plain: true }) : cs);
+    }
+
+    const byTerm = groupClassSectionsByTerm(sectionPlains, coursePlain);
     const grouped = [];
 
-    for (let i = 1; i <= (totalTerms || 0); i++) {
-      const termName = buildTermName(termType, i);
+    for (let i = 1; i <= totalTerms; i++) {
+      const placements = byTerm[i] ?? [];
+      const sections = [];
 
-      const sections = classSections
-
-        .filter((cs) => {
-          const plain = cs.get ? cs.get({ plain: true }) : cs;
-
-          const sectionTerm = resolveProgramTerm(plain);
-
-          return sectionTerm != null && Number(sectionTerm) === i;
-        })
-
-        .map((cs) => {
-          const plain = cs.get ? cs.get({ plain: true }) : cs;
-
-          const termRow = (plain.classSectionTerms ?? []).find(
-            (row) => Number(row.term) === i,
-          );
-
-          return {
-            name: plain.section,
-
-            id: plain.classSectionsId,
-
-            classSectionTermId: termRow?.classSectionTermId ?? null,
-          };
-        })
-
-        .filter((section) => section.name != null && section.id != null);
+      for (const placement of placements) {
+        if (placement.section == null || placement.classSectionsId == null) {
+          continue;
+        }
+        sections.push({
+          name: placement.section,
+          id: placement.classSectionsId,
+          classSectionTermId: placement.classSectionTermId ?? null,
+        });
+      }
 
       grouped.push({
-        termName,
-
+        termName: buildTermName(termType, i),
         term: i,
-
         classSections: sections,
       });
     }
@@ -98,7 +80,6 @@ export const getTermsWithClassSections = async (courseId, sessionId) => {
       "Error in Course Service (getTermsWithClassSections):",
       error,
     );
-
     throw error;
   }
 };
@@ -109,14 +90,11 @@ export const getTermOptionsByCourse = async (courseId) => {
 
     if (!course) {
       const error = new Error("Course not found");
-
       error.statusCode = 404;
-
       throw error;
     }
 
     const termType = course.termType || "Term";
-
     const totalTerms = course.totalTerms || 0;
 
     const terms = [];
@@ -124,7 +102,6 @@ export const getTermOptionsByCourse = async (courseId) => {
     for (let i = 1; i <= totalTerms; i++) {
       terms.push({
         termName: `${termType} ${i}`,
-
         term: i,
       });
     }
@@ -132,7 +109,6 @@ export const getTermOptionsByCourse = async (courseId) => {
     return terms;
   } catch (error) {
     console.error("Error in Course Service (getTermOptionsByCourse):", error);
-
     throw error;
   }
 };
@@ -142,9 +118,7 @@ export const deleteCourse = async (courseId) => {
 
   if (!result) {
     const error = new Error("Course not found");
-
     error.statusCode = 404;
-
     throw error;
   }
 

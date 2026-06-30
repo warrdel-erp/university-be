@@ -60,7 +60,7 @@ export async function getTermsData(courseId, sessionId) {
             termsRepository.getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session),
         ]);
 
-        const classSectionsByTerm = groupClassSectionsByTerm(classSections);
+        const classSectionsByTerm = groupClassSectionsByTerm(classSections, coursePlain);
 
         const subjectsByTerm = {};
         for (const subject of subjects) {

@@ -266,7 +266,6 @@ export async function createClassSections(data, options = {}) {
             courseId: data.courseId,
             sessionId: data.sessionId,
             sectionId: data.sectionId,
-            academicYearId: data.academicYearId,
             year: Number(data.year),
         };
 
