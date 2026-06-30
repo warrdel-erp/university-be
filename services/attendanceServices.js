@@ -4,7 +4,7 @@ import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
-import { resolveProgramYear, resolveStudentClassSectionsId, yearLabel } from "../utility/classSectionIncludes.js";
+import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
 
 export { ATTENDANCE_STATUS };
 
@@ -493,6 +493,8 @@ export async function getPreviousSessions(employeeId, req) {
       if (map.day === dayName && !weekOff.includes(dayName.toLowerCase())) {
         const key = `${map.timeTableMappingId}_${dateStr}`;
         const presentCount = attendanceMap[key]; // Do not use ?? 0 yet to check for undefined
+        const timeTableClassSection = map.timeTablecreate?.timeTableClassSection;
+        const programYear = resolveProgramYear(timeTableClassSection);
 
         flatData.push({
           date: dateStr,
@@ -502,10 +504,10 @@ export async function getPreviousSessions(employeeId, req) {
           subject: map.timeTableSubject?.subjectName ||
             map.timeTableTeacherSubject?.subject?.subjectName ||
             "N/A",
-          class: yearLabel(resolveProgramYear(map.timeTablecreate?.timeTableClassSection))
-            || map.timeTablecreate?.timeTableClassSection?.class
+          class: (programYear != null ? `Year ${programYear}` : null)
+            || timeTableClassSection?.class
             || null,
-          section: map.timeTablecreate?.timeTableClassSection?.section || null,
+          section: timeTableClassSection?.section || null,
           classSectionsId: sectionId,
           attendance: `${presentCount ?? 0} / ${totalStudents}`,
           status: presentCount !== undefined ? "MARKED" : "PENDING",

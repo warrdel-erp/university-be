@@ -37,7 +37,6 @@ import {
   resolveClassSectionTermId as resolveClassSectionTermIdFromSection,
   resolveStudentSection,
   resolveStudentClassSectionsId,
-  yearLabel,
 } from "../utility/classSectionIncludes.js";
 
 function normalizeAffiliatedUniversityId(value) {
@@ -1440,10 +1439,11 @@ function mapPromotionClassSection(section) {
   }
 
   const term = resolveProgramTerm(plain);
+  const programYear = resolveProgramYear(plain);
   return {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
-    class: plain.class ?? yearLabel(resolveProgramYear(plain)) ?? null,
+    class: plain.class ?? (programYear != null ? `Year ${programYear}` : null) ?? null,
     term,
     sessionId: plain.sessionId,
     acedmicYear: acedmicYearRef(plain.academicYearId),

@@ -80,10 +80,6 @@ export function resolveStudentClassSectionsId(plain) {
     return section?.classSectionsId ?? plain.studentClassSectionTerm?.classSectionsId ?? null;
 }
 
-export function studentSectionsWithTermsInclude({ term } = {}) {
-    return studentClassSectionTermWithSectionInclude({ term });
-}
-
 export function classSectionWithTermsInclude({ term, required = false, attributes } = {}) {
     const include = {
         model: model.classSectionModel,
@@ -135,10 +131,6 @@ export function resolveClassSectionTermId(sectionPlain, term = null) {
     }
 
     return terms[0]?.classSectionTermId ?? null;
-}
-
-export function yearLabel(year) {
-    return year != null ? `Year ${year}` : null;
 }
 
 /** Lean placement row for term-grouped list APIs (parent carries courseId/sessionId). */
