@@ -51,7 +51,7 @@ course → class_sections (year + section + session) → class_section_term (ter
 | 1 | Add `class_section_term_id` to `student_class_sections_history` | **Done** | Written on admission/promotion |
 | 2 | Add `class_section_term_id` to `time_table_routine` | **Done** | Create/get/overlap APIs updated |
 | 3 | Add `class_section_term_id` to `attendance` | Medium | Phase 2 — keep `class_sections_id`, add term for reports |
-| 4 | Update Postman collection for new request/response shapes | High | Include tenant defaults flow; drop `academicYearId` from scoped-route examples |
+| 4 | Update Postman collection for new request/response shapes | High | Use [CLASS_SECTION_TERM_POSTMAN_ORDER.md](./postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md) + `CST —` folders in univ-v2 |
 | 5 | Drop `class_deprecated` and `semester_deprecated` tables when no code references them | Low | After full verification |
 | 6 | Clean legacy fee paths that still reference old semester shapes | Medium | Fee v2 uses `feePlanProfileId` on student |
 | 7 | Fix employee dashboard student count (`userServices`) | Medium | Section → students must join via `class_section_term` |
@@ -133,7 +133,7 @@ Complete these in order where possible.
 
 ## QA — Test Checklist
 
-Run in this order after FE updates:
+Run in this order after FE updates. **Postman:** import [postman/class-section-term-smoke.postman_collection.json](./postman/class-section-term-smoke.postman_collection.json) or use `CST — 00`…`11` folders in [postman/univ-v2.postman_collection.json](./postman/univ-v2.postman_collection.json). Full order: [postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md](./postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md).
 
 | # | Test | Endpoint / action |
 |---|------|-------------------|
@@ -186,6 +186,8 @@ npm run migrate
 | `models/classSectionTermModel.js` | Term entity model |
 | `docs/AFFECTED_APIS_CLASS_SECTION_TERM.md` | Full API contract changes (incl. tenant context) |
 | `docs/API_ROUTE_REPLACEMENTS.md` | Old → new route URLs |
+| `docs/postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md` | Postman folder order + smoke path |
+| `docs/postman/class-section-term-smoke.postman_collection.json` | Importable smoke collection |
 | `docs/CLASS_SECTION_TERM_FK_AUDIT.md` | Per-table `classSectionsId` vs `classSectionTermId` audit |
 
 ---

@@ -3,9 +3,1441 @@
     "_postman_id": "6a1db60d-b138-4607-9072-e7b4b975bdd6",
     "name": "univ-v2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "18684798"
+    "_exporter_id": "18684798",
+    "description": "University BE v2 collection.\n\n**Class Section Term smoke order:** Run folders `CST — 00` … `CST — 11` at the top (or import class-section-term-smoke.postman_collection.json).\n\nGuide: docs/postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md\n\nTenant: PUT /user/saveUserDefaults before scoped routes. Do not send academicYearId on most list/create APIs."
   },
   "item": [
+    {
+      "name": "CST — 00 - Auth & Tenant",
+      "description": "Run once per session. See docs/postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md",
+      "item": [
+        {
+          "name": "0.1 POST login",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user/login",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ]
+            },
+            "description": "Set email/password for your env. Saves {{token}}."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.token) pm.collectionVariables.set('token', j.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.2 PUT saveUserDefaults",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"defaultInstituteId\": \"{{instituteId}}\",\n  \"defaultAcademicYearId\": \"{{academicYearId}}\",\n  \"defaultRole\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/user/saveUserDefaults",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "user",
+                "saveUserDefaults"
+              ]
+            },
+            "description": "Active tenant for scoped routes. No academicYearId on later calls."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 01 - Master (Course / Session / Section)",
+      "item": [
+        {
+          "name": "1.1 GET courses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 GET course sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/{{courseId}}/sessions",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "{{courseId}}",
+                "sessions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 GET course withSubjects",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/withSubjects?instituteId={{instituteId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "withSubjects"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "{{instituteId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 GET sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/session/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 POST session",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionName\": \"CST Test Session\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classTillDate\": \"2026-06-30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/session/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 POST courseSessionMapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"courseId\": \"{{courseId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/session/courseSessionMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "session",
+                "courseSessionMapping"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 GET sections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/section/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "section"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 POST section",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sectionName\": \"A1\",\n  \"sectionCode\": \"A1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/section/",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "section"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 02 - Options",
+      "item": [
+        {
+          "name": "2.1 GET courseTerms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/courseTerms?courseId={{courseId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "courseTerms"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 GET classSections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/options/classSections?courseId={{courseId}}&term=1&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "options",
+                "classSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "const pick = (o, ...keys) => keys.find((k) => o?.[k] != null) && o[keys.find((k) => o?.[k] != null)];",
+                  "const arr = Array.isArray(j) ? j : j.data || j.result || [];",
+                  "if (arr[0]?.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(arr[0].classSectionTermId));",
+                  "if (arr[0]?.classSectionsId) pm.collectionVariables.set('classSectionsId', String(arr[0].classSectionsId));",
+                  "if (arr[0]?.courseId) pm.collectionVariables.set('courseId', String(arr[0].courseId));",
+                  "if (arr[0]?.sessionId) pm.collectionVariables.set('sessionId', String(arr[0].sessionId));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "CST — 03 - Class Section Master",
+      "item": [
+        {
+          "name": "3.1 POST classSections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"sessionId\": \"{{sessionId}}\",\n  \"sections\": [\n    {\n      \"sectionId\": \"{{sectionId}}\",\n      \"section\": \"A1\",\n      \"year\": 1,\n      \"term\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSections"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j = pm.response.json();",
+                  "const pick = (o, ...keys) => keys.find((k) => o?.[k] != null) && o[keys.find((k) => o?.[k] != null)];",
+                  "const arr = Array.isArray(j) ? j : j.data || j.result || [];",
+                  "if (arr[0]?.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(arr[0].classSectionTermId));",
+                  "if (arr[0]?.classSectionsId) pm.collectionVariables.set('classSectionsId', String(arr[0].classSectionsId));",
+                  "if (arr[0]?.courseId) pm.collectionVariables.set('courseId', String(arr[0].courseId));",
+                  "if (arr[0]?.sessionId) pm.collectionVariables.set('sessionId', String(arr[0].sessionId));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 GET classSections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSections"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 GET classSectionSpecific",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/main/classSectionSpecific?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSectionSpecific"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 GET termsWithClassSections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "termsWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 GET classSections filter",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/classSections/?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "classSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 GET classSectionRecord",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{courseId}}&classSectionsId={{classSectionsId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSectionRecord"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "classSectionsId",
+                  "value": "{{classSectionsId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 04 - Subject Mapping",
+      "item": [
+        {
+          "name": "4.3 GET sectionSubjectMapper",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/main/sectionSubjectMapper?term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "sectionSubjectMapper"
+              ],
+              "query": [
+                {
+                  "key": "term",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 GET terms list withSubject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/list/withSubject?instituteId={{instituteId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "list",
+                "withSubject"
+              ],
+              "query": [
+                {
+                  "key": "instituteId",
+                  "value": "{{instituteId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 05 - Student",
+      "item": [
+        {
+          "name": "5.2 GET sectionStudentMapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/sectionStudentMapping?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "sectionStudentMapping"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 POST sectionStudentMapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"classSectionTermId\": \"{{classSectionTermId}}\",\n  \"sessionId\": \"{{sessionId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/sectionStudentMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "sectionStudentMapping"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 06 - Promotion",
+      "item": [
+        {
+          "name": "6.2 GET available-section",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/available-section?courseId={{courseId}}&term=1&classSectionId={{classSectionsId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "available-section"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 POST promoteStudent",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"classSectionTermId\": \"{{classSectionTermId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promoteStudent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promoteStudent"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 07 - Timetable",
+      "item": [
+        {
+          "name": "7.2 GET getRoutine",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutine"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.6 GET studentTimetable",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/studentTimetable?studentId={{studentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "studentTimetable"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{studentId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 08 - Teacher Mapping",
+      "item": [
+        {
+          "name": "8.1 GET teacherSection",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSection",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSection"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 GET teacherSubject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/teacher/teacherSubject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "teacher",
+                "teacherSubject"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 09 - Attendance",
+      "item": [
+        {
+          "name": "9.1 GET employee sectionDates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/sectionDates?classSectionId={{classSectionsId}}&subjectId=1&employeeId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "sectionDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "1"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 GET attendance sectionDates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/sectionDates?classSectionId={{classSectionsId}}&subjectId=1&employeeId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "sectionDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "1"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 GET previous-sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/attendance/previous-sessions/1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "attendance",
+                "previous-sessions",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 10 - Syllabus & CO",
+      "item": [
+        {
+          "name": "10.1 GET semesterSubject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/syllabus/semesterSubject?term=1&semesterId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "syllabus",
+                "semesterSubject"
+              ],
+              "query": [
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "semesterId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 GET co",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/co",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "co"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CST — 11 - Exam",
+      "item": [
+        {
+          "name": "11.1 GET course terms",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/course/{{courseId}}/terms",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "{{courseId}}",
+                "terms"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.2 GET examType single",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examStructure/examType/single?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examStructure",
+                "examType",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.3 GET withExamTypesPerCourse",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "terms",
+                "withExamTypesPerCourse"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.4 GET examScheduleMapping student",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/examScheduleMapping/student?studentId={{studentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "examScheduleMapping",
+                "student"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{studentId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
     {
       "name": "campus",
       "item": [
@@ -4201,7 +5633,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/employee/sectionDates?classSectionId=195&subjectId=52&employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
@@ -4265,7 +5697,7 @@
     },
     {
       "name": "Students",
-      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`, current `term`\n2. **GET /student/promotion/available-class-section** — `courseId`, `term`, `classSectionId` → target sections for next term/year\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).",
+      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`, current `term`\n2. **GET /student/promotion/available-section** — `courseId`, `term`, `classSectionId` → target sections for next term/year\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).",
       "item": [
         {
           "name": "class section students",
@@ -4468,13 +5900,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
+              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "course",
-                "semesterWithClassSections"
+                "termsWithClassSections"
               ],
               "query": [
                 {
@@ -4489,7 +5921,7 @@
                 }
               ]
             },
-            "description": "**GET /course/semesterWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-class-section** for term + academic-year aware promotion targets."
+            "description": "**GET /course/termsWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-section** for term + academic-year aware promotion targets."
           },
           "response": []
         },
@@ -4528,14 +5960,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/student/promotion/available-class-section?courseId={{course_id}}&term={{promotion_current_term}}&classSectionId={{classSections_id}}",
+              "raw": "{{baseurl}}/student/promotion/available-section?courseId={{course_id}}&term={{promotion_current_term}}&classSectionId={{classSections_id}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "student",
                 "promotion",
-                "available-class-section"
+                "available-section"
               ],
               "query": [
                 {
@@ -4554,7 +5986,7 @@
                 }
               ]
             },
-            "description": "**GET /student/promotion/available-class-section**\n\n**Query:** `courseId`, `term` (current), `classSectionId` (current section).\n\nComputes next term from course `termType` + `totalTerms` / `courseDuration`:\n- Semester → year rolls after every 2 terms\n- Quarterly → year rolls after every 4 terms\n\n**Response `data`:** `promotedTerm`, `acedmicYearId`, `crossYear`, `classSections[]` (`classSectionsId`, `name`, `sessionId`).\n\nEmpty `classSections` when final term reached."
+            "description": "**GET /student/promotion/available-section**\n\n**Query:** `courseId`, `term` (current), `classSectionId` (current section).\n\nComputes next term from course `termType` + `totalTerms` / `courseDuration`:\n- Semester → year rolls after every 2 terms\n- Quarterly → year rolls after every 4 terms\n\n**Response `data`:** `promotedTerm`, `acedmicYearId`, `crossYear`, `classSections[]` (`classSectionsId`, `name`, `sessionId`).\n\nEmpty `classSections` when final term reached."
           },
           "response": []
         },
@@ -5206,7 +6638,7 @@
                 }
               ]
             },
-            "description": "**GET /classSections** — flat list of class sections for course + session (+ optional acedmicYearId). Alternative to semesterWithClassSections for promotion UI."
+            "description": "**GET /classSections** — flat list of class sections for course + session (+ optional acedmicYearId). Alternative to termsWithClassSections for promotion UI."
           },
           "response": []
         }
@@ -5432,7 +6864,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/attendance/previous-classes/35",
+              "raw": "{{baseurl}}/attendance/previous-sessions/35",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5442,7 +6874,7 @@
                 "35"
               ]
             },
-            "description": "**GET /attendance/previous-classes/:employeeId**\n\nFlat list of past class dates per period with mark status (through yesterday).\n\nEach row includes:\n- `status`: `MARKED` | `PENDING`\n- `attendance`: present count string e.g. `\"5 / 30\"`\n- `timeTableMappingId`, `date`, `period`, subject, class section\n\nDoes **not** group consecutive periods — use **GET /employee/pastSchedule?groupPeriods=true** for group-level `attendanceStatus`."
+            "description": "**GET /attendance/previous-sessions/:employeeId**\n\nFlat list of past class dates per period with mark status (through yesterday).\n\nEach row includes:\n- `status`: `MARKED` | `PENDING`\n- `attendance`: present count string e.g. `\"5 / 30\"`\n- `timeTableMappingId`, `date`, `period`, subject, class section\n\nDoes **not** group consecutive periods — use **GET /employee/pastSchedule?groupPeriods=true** for group-level `attendanceStatus`."
           },
           "response": []
         },
@@ -5462,7 +6894,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/attendance/classDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/attendance/sectionDates?classSectionId=195&subjectId=52&employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
@@ -5485,7 +6917,7 @@
                 }
               ]
             },
-            "description": "**GET /attendance/classDates**\n\nDates on which the teacher had class for a class-section + subject (from timetable routine)."
+            "description": "**GET /attendance/sectionDates**\n\nDates on which the teacher had class for a class-section + subject (from timetable routine)."
           },
           "response": []
         },
@@ -15352,13 +16784,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/course/semesterWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
+              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "course",
-                "semesterWithClassSections"
+                "termsWithClassSections"
               ],
               "query": [
                 {
@@ -15371,7 +16803,7 @@
                 }
               ]
             },
-            "description": "**GET /course/semesterWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
+            "description": "**GET /course/termsWithClassSections** — class sections grouped by term (Sem 1, Sem 2, …). Used for **student promotion** dropdown and timetable setup.\n\nAlso under **Students → promotion — class sections dropdown**."
           },
           "response": []
         }
@@ -15699,6 +17131,38 @@
       "key": "serviceTicket_priority",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "instituteId",
+      "value": "1"
+    },
+    {
+      "key": "academicYearId",
+      "value": "76"
+    },
+    {
+      "key": "courseId",
+      "value": "42"
+    },
+    {
+      "key": "sessionId",
+      "value": "22"
+    },
+    {
+      "key": "sectionId",
+      "value": "16"
+    },
+    {
+      "key": "classSectionTermId",
+      "value": ""
+    },
+    {
+      "key": "classSectionsId",
+      "value": ""
+    },
+    {
+      "key": "studentId",
+      "value": "1"
     }
   ]
 }

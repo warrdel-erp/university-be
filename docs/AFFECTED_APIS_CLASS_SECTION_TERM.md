@@ -499,19 +499,23 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 
 ## Smoke Test Order
 
-1. `GET /options/courseTerms?courseId=`
-2. `POST /main/classSections` (new body shape)
-3. `GET /classSections/?sessionId=&courseId=`
-4. `GET /options/classSections?courseId=&term=1&sessionId=`
-5. `GET /course/termsWithClassSections?courseId=&sessionId=`
-6. `POST /student` with `classSectionTermId`
-7. `POST /student/sectionStudentMapping` with `classSectionTermId`
-8. Verify DB: student has `class_section_term_id`, no `class_sections_id`
-9. `GET /student/promotion/list?programCourseId=&promotionTerm=`
-10. `POST /student/promoteStudent` with `classSectionsId` or `classSectionTermId`
-11. `GET /timeTableCreate/getRoutine?classSectionsId=&term=`
-12. `GET /main/sectionSubjectMapper?term=`
-13. `GET /student/studentTimetable?studentId=`
+**Postman:** [postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md](./postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md) (full 11 sections) or minimal 13-call path in that doc.
+
+If you only have 30 minutes, run exactly this order:
+
+1. `PUT /user/saveUserDefaults`
+2. `GET /options/courseTerms?courseId=`
+3. `POST /main/classSections` (new body shape)
+4. `GET /classSections/?sessionId=&courseId=`
+5. `GET /options/classSections?courseId=&term=1&sessionId=`
+6. `GET /course/termsWithClassSections?courseId=&sessionId=`
+7. `POST /student` with `classSectionTermId`
+8. `POST /student/sectionStudentMapping` with `classSectionTermId`
+9. Verify DB: student has `class_section_term_id`, no `class_sections_id`
+10. `GET /student/promotion/list?programCourseId=&promotionTerm=`
+11. `POST /student/promoteStudent` with `classSectionTermId`
+12. `GET /timeTableCreate/getRoutine?classSectionTermId=` or `classSectionsId=&term=`
+13. `GET /main/sectionSubjectMapper?term=`
 
 ---
 
