@@ -142,7 +142,6 @@ export async function findConflictingExamForStudentCohort({
   academicYearId,
   courseId,
   term,
-  semesterId,
   excludeExamScheduleId,
 }) {
   const examStartMinutesSql = "(TIME_TO_SEC(`exam_schedule`.`exam_time`) / 60)";
@@ -154,7 +153,7 @@ export async function findConflictingExamForStudentCohort({
       examDate,
       sessionId,
       academicYearId,
-      ...(semesterId != null && { semesterId }),
+      ...(term != null && { term }),
       ...(excludeExamScheduleId && {
         examScheduleId: { [Op.ne]: excludeExamScheduleId },
       }),
@@ -337,7 +336,7 @@ export async function findSubjectsWithSchedules(courseId, academicYearId, term, 
         attributes: [
           "examScheduleId",
           "subjectId",
-          "semesterId",
+          "term",
           "examSetupTypeTermId",
           "academicYearId",
           "sessionId",
