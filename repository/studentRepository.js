@@ -353,7 +353,7 @@ function buildPromotionStudentIncludes({ term } = {}) {
             term,
             sectionRequired: term != null,
             termRequired: term != null,
-            sectionAttributes: ['classSectionsId', 'section', 'class', 'year', 'academicYearId', 'sessionId'],
+            sectionAttributes: ['classSectionsId', 'section', 'year', 'academicYearId', 'sessionId'],
         }),
         {
             model: model.studentClassSectionsHistoryModel,
@@ -365,7 +365,7 @@ function buildPromotionStudentIncludes({ term } = {}) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    attributes: ['classSectionsId', 'section', 'class', 'year', 'academicYearId', 'sessionId'],
+                    attributes: ['classSectionsId', 'section', 'year', 'academicYearId', 'sessionId'],
                     include: [classSectionTermsInclude()],
                 },
                 {
@@ -990,7 +990,17 @@ export async function findStudentAddressByStudentId(StudentId) {
 
 export async function studentCourseMapping(data) {
     try {
-        const result = await model.subjectMapperModel.create(data);
+        const payload = {
+            subjectId: data.subjectId,
+            studentId: data.studentId,
+            courseId: data.courseId,
+            specializationId: data.specializationId ?? null,
+            createdBy: data.createdBy,
+        };
+        if (data.term != null) {
+            payload.term = Number(data.term);
+        }
+        const result = await model.subjectMapperModel.create(payload);
         return result;
     } catch (error) {
         console.error("Error in student mapping course:", error);
@@ -1535,7 +1545,7 @@ export async function findStudentsWithFeePlanForInitiate(options = {}) {
                     attributes: ["courseId", "courseName"],
                 },
                 studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ["classSectionsId", "class", "section"],
+                    sectionAttributes: ["classSectionsId", "year", "section"],
                 }),
                 {
                     model: model.feePlanProfileModel,
@@ -1672,7 +1682,7 @@ export async function findStudentsByFeePlanProfileId(
                 },
                 sessionInclude,
                 studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ["classSectionsId", "class", "section"],
+                    sectionAttributes: ["classSectionsId", "year", "section"],
                 }),
                 {
                     model: model.feePlanProfileModel,
@@ -1878,7 +1888,7 @@ export async function getClassSectionRecord(courseId, classSectionsId) {
                 'courseId',
                 'academicYearId',
                 'section',
-                'class',
+                'year',
             ],
             include: [classSectionTermsInclude()],
         });

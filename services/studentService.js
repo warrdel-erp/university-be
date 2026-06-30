@@ -15,7 +15,7 @@ import {
   getClassByName,
   getCourseByCourseId,
 } from "../repository/courseRepository.js";
-import { resolveClassSectionTermId as resolveClassSectionTermIdFromRepo } from "../repository/classSectionTermRepository.js";
+import { resolveClassSectionTermId as resolveClassSectionTermIdFromRepo, findClassSectionTermById } from "../repository/classSectionTermRepository.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
@@ -1443,7 +1443,7 @@ function mapPromotionClassSection(section) {
   return {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
-    class: plain.class ?? (programYear != null ? `Year ${programYear}` : null) ?? null,
+    class: programYear != null ? `Year ${programYear}` : null,
     term,
     sessionId: plain.sessionId,
     acedmicYear: acedmicYearRef(plain.academicYearId),
@@ -1632,14 +1632,33 @@ export async function getPromotionStudentList(payload) {
 export async function getAvailablePromotionSections({
   courseId,
   term,
-  classSectionId,
+  classSectionTermId,
 }) {
-  if (!courseId || !term || !classSectionId) {
-    throw new Error("courseId, term and classSectionId are required");
+  if (!courseId || term == null || classSectionTermId == null) {
+    throw new Error("courseId, term and classSectionTermId are required");
+  }
+
+  const placementTerm = Number(term);
+  const termRow = await findClassSectionTermById(Number(classSectionTermId));
+  if (!termRow) {
+    throw new Error("classSectionTermId not found");
+  }
+
+  const termPlain = termRow.get ? termRow.get({ plain: true }) : termRow;
+  const resolvedClassSectionsId = termPlain.classSectionsId
+    ?? termPlain.classSection?.classSectionsId
+    ?? null;
+
+  if (!resolvedClassSectionsId) {
+    throw new Error("classSectionTermId could not be resolved to a class section");
+  }
+
+  if (termPlain.term != null && Number(termPlain.term) !== placementTerm) {
+    throw new Error("term does not match classSectionTermId");
   }
 
   const currentSection = await studentRepository.getTargetClassSectionForPromotion(
-    Number(classSectionId),
+    resolvedClassSectionsId,
   );
   if (!currentSection) {
     throw new Error("Class section not found");
@@ -1648,11 +1667,6 @@ export async function getAvailablePromotionSections({
   const section = asPlain(currentSection);
   if (section.courseId !== Number(courseId)) {
     throw new Error("Class section does not belong to the given course");
-  }
-
-  const sectionTerm = resolveProgramTerm(section);
-  if (sectionTerm != null && Number(term) !== Number(sectionTerm)) {
-    throw new Error("term does not match the selected class section");
   }
 
   const course = await getCourseByCourseId(Number(courseId));
@@ -1668,7 +1682,7 @@ export async function getAvailablePromotionSections({
     totalTerms,
   } = await getNextPromotionContext({
     course,
-    currentTerm: Number(term),
+    currentTerm: placementTerm,
     sourceacademicYearId: section.academicYearId,
   });
 
@@ -1952,9 +1966,9 @@ function formatFeePlanInitiateStudentRow(student, feePlanItems, invoiceMap) {
     studentName: formatStudentDisplayName(s),
     scholarNumber: s.scholarNumber,
     className:
-      [section.class, section.section].filter(Boolean).join("") ||
+      [section.year, section.section].filter(Boolean).join("") ||
       section.section ||
-      section.class ||
+      (section.year != null ? String(section.year) : null) ||
       null,
     program: course.courseName ?? null,
     session: session.sessionName ?? null,
@@ -2528,7 +2542,7 @@ function formatStudentTimetable(allData) {
           courseName: course.courseName,
           courseCode: course.courseCode,
           courseId: item.courseId,
-          class: classSection.class,
+          class: classSection.year != null ? String(classSection.year) : "",
           section: classSection.section,
           classSectionsId: item.classSectionsId,
         },

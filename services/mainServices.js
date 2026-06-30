@@ -377,7 +377,6 @@ export async function addClassSections(data, createdBy) {
                     year: yearNum,
                     sectionId: Number(sectionId),
                     section: sectionName,
-                    class: String(yearNum),
                     instituteId: course.instituteId,
                     createdBy,
                 }, { transaction });
@@ -500,8 +499,8 @@ export async function getClassSectionRecord(courseId, classSectionsId) {
                 courseId: section.courseId,
                 academicYearId: section.academicYearId ?? null,
                 sectionName: section.section ?? null,
-                className: section.class ?? null,
-                term: resolveProgramTerm(section) ?? section.class ?? null,
+                className: section.year != null ? String(section.year) : null,
+                term: resolveProgramTerm(section) ?? null,
             }
             : null,
         student: result.student.map((s) => {
@@ -515,7 +514,9 @@ export async function getClassSectionRecord(courseId, classSectionsId) {
                 phoneNumber: plain.phoneNumber,
                 classSectionTermId: plain.classSectionTermId ?? null,
                 term: plain.studentClassSectionTerm?.term ?? resolveProgramTerm(resolveStudentSection(plain)) ?? null,
-                className: resolveStudentSection(plain)?.class || null,
+                className: resolveStudentSection(plain)?.year != null
+                    ? String(resolveStudentSection(plain).year)
+                    : null,
                 sectionName: resolveStudentSection(plain)?.section || null,
             };
         }),

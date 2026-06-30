@@ -3,11 +3,10 @@ import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 
 export const getExamSchedules = async (req, res) => {
     try {
-        const { subjectId, semesterId, examSetupTypeTermId, courseId, term, sessionId } = req.query;
+        const { subjectId, examSetupTypeTermId, courseId, term, sessionId } = req.query;
 
         const filters = {
             ...(subjectId && { subjectId: parseInt(subjectId, 10) }),
-            ...(semesterId && { semesterId: parseInt(semesterId, 10) }),
             ...(examSetupTypeTermId && { examSetupTypeTermId: parseInt(examSetupTypeTermId, 10) }),
             ...(courseId && { courseId: parseInt(courseId, 10) }),
             ...(term && { term: parseInt(term, 10) }),

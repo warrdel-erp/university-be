@@ -67,23 +67,11 @@ const classSectionTermModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
-        },
     },
     {
         tableName: 'class_section_term',
         timestamps: true,
-        paranoid: true,
-        indexes: [
-            {
-                unique: true,
-                fields: ['class_sections_id', 'term'],
-                name: 'class_section_term_sections_id_term_unique',
-            },
-        ],
+        paranoid: false,
     }
 );
 

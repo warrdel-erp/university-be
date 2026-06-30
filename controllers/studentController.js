@@ -132,16 +132,13 @@ export const getEmptyEnrollNumber = async (req, res) => {
 };
 
 export const studentCourseMapping = async (req, res) => {
-    let { subjectId, studentId, courseId, semesterId } = req.body;
-    const data = req.body
+    const { subjectId, studentId, courseId, term } = req.body;
+    const data = req.body;
     try {
-        // required fields
-        if (!(subjectId && studentId && courseId && semesterId)) {
-            return res.status(400).send(" subjectId, studentId, courseId, semesterId is required");
+        if (!(subjectId && studentId && courseId && term != null)) {
+            return res.status(400).send("subjectId, studentId, courseId, term is required");
         }
 
-        // Add the student course mapping
-        const info = req.body;
         const result = await studentService.studentCourseMapping(data);
         return res.status(200).send(result);
     } catch (error) {
@@ -170,7 +167,7 @@ export const sectionStudentMapping = async (req, res) => {
 };
 
 export const getSectionStudentMapping = async (req, res) => {
-    const classSectionTermId = req.query.classSectionTermId ?? req.query.semesterId ?? 0;
+    const classSectionTermId = req.query.classSectionTermId ?? 0;
     const term = req.query.term != null ? Number(req.query.term) : undefined;
 
     try {
@@ -238,12 +235,12 @@ export const promoteStudent = async (req, res) => {
 
 export const getPromotionAvailableSection = async (req, res) => {
     try {
-        const { courseId, term, classSectionId } = req.query;
+        const { courseId, term, classSectionTermId } = req.query;
 
         const data = await studentService.getAvailablePromotionSections({
             courseId,
             term,
-            classSectionId,
+            classSectionTermId,
         });
 
         if (data.finalTerm) {

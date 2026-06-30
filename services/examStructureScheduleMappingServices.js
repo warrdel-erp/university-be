@@ -26,9 +26,6 @@ async function resolveTermForExamDetail(examDetail) {
   if (examDetail.term != null) {
     return Number(examDetail.term);
   }
-  if (examDetail.semesterId != null) {
-    return Number(examDetail.semesterId);
-  }
   if (!examDetail.examSetupTypeTermId) {
     return null;
   }
@@ -281,12 +278,13 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
   await resolveAcademicYearId(examDetail);
-  if (examDetail.semesterId == null && examDetail.examSetupTypeTermId) {
-    const resolvedSemesterId = await resolveSemesterIdForExamDetail(examDetail);
-    if (resolvedSemesterId) {
-      examDetail.semesterId = resolvedSemesterId;
-    }
+  const resolvedTerm = await resolveTermForExamDetail(examDetail);
+  if (resolvedTerm != null) {
+    examDetail.term = resolvedTerm;
   }
+  delete examDetail.semesterId;
+
+  await assertNoStudentExamTimeConflict(examDetail, examScheduleId);
   await examStructureScheduleRepository.updateExamSchedule(examScheduleId, examDetail);
 }
 

@@ -98,11 +98,55 @@ function normalizeClassSectionTermIds(data, anchorRoutine) {
     return [...new Set(rawIds)];
   }
 
+  if (data.classSectionTermId != null && data.classSectionTermId !== '') {
+    return [Number(data.classSectionTermId)];
+  }
+
   if (anchorRoutine?.classSectionTermId) {
     return [Number(anchorRoutine.classSectionTermId)];
   }
 
   return [];
+}
+
+async function resolveClassSectionTermIdsForMapping(data, anchorRoutine, options = {}) {
+  const direct = normalizeClassSectionTermIds(data, anchorRoutine);
+  if (direct.length) {
+    return direct;
+  }
+
+  const sectionId = data.classSectionsId ?? data.classSectionId ?? anchorRoutine?.classSectionsId;
+  if (sectionId == null) {
+    return [];
+  }
+
+  let term = data.term != null && data.term !== '' ? Number(data.term) : null;
+  if (term == null && data.subjectId != null) {
+    term = await timeTableCreateRepository.getSubjectProgramTerm(data.subjectId, options);
+  }
+
+  if (term == null) {
+    return [];
+  }
+
+  const classSectionTermId = await resolveClassSectionTermIdFromRepo(
+    { classSectionsId: Number(sectionId), term },
+    options,
+  );
+  if (!classSectionTermId) {
+    return [];
+  }
+
+  if (!anchorRoutine.classSectionTermId && anchorRoutine.timeTableRoutineId) {
+    await timeTableCreateRepository.updateRoutineClassSectionTermId(
+      anchorRoutine.timeTableRoutineId,
+      classSectionTermId,
+      options,
+    );
+    anchorRoutine.classSectionTermId = classSectionTermId;
+  }
+
+  return [classSectionTermId];
 }
 
 async function resolveCombinedRoutineTargets(anchorRoutine, classSectionTermIds, transaction) {
@@ -351,9 +395,15 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
 
     const { startingDate, endingDate } = anchorRoutine;
     const slots = normalizeMappingSlots(data);
-    const classSectionTermIds = normalizeClassSectionTermIds(data, anchorRoutine);
+    const classSectionTermIds = await resolveClassSectionTermIdsForMapping(
+      data,
+      anchorRoutine,
+      { transaction },
+    );
     if (!classSectionTermIds.length) {
-      throw new Error('classSectionTermIds could not be resolved from routine');
+      throw new Error(
+        'classSectionTermIds could not be resolved from routine. Send classSectionTermId(s), or ensure the routine has classSectionTermId / classSectionsId and the subject or payload includes program term.',
+      );
     }
 
     const isCombined = classSectionTermIds.length > 1;
@@ -406,7 +456,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         );
         if (conflict) {
           const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || '';
-          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.class || '';
+          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.year || '';
           throw new Error(
             `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`,
           );
@@ -425,7 +475,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         );
         if (roomConflict) {
           const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || '';
-          const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.class || '';
+          const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.year || '';
           throw new Error(
             `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`,
           );
@@ -671,7 +721,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
       if (roomConflict) {
         const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || "";
-        const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.class || "";
+        const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.year || "";
         throw new Error(
           `Room Conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
         );
@@ -693,7 +743,7 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
 
         if (conflict) {
           const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || "";
-          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.class || "";
+          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.year || "";
           throw new Error(
             `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
           );
@@ -1010,7 +1060,7 @@ export async function getTimeTableElective(courseId) {
       courseCode: course.courseCode || "",
       courseId: item.courseId || "",
       section: classSection.section || "",
-      class: classSection.class || "",
+      class: classSection.year != null ? String(classSection.year) : "",
       timeTableType: item.timeTableType,
       classSectionsId: item.classSectionsId || null,
       startingDate: item.startingDate || null,
@@ -1334,7 +1384,7 @@ export async function getTimeTableCellData(courseId, classSectionsId) {
           courseCode: course.courseCode || "",
           courseId: sourceItem?.courseId || baseMetadata.courseId || "",
           section: finalType !== "elective" ? classSection.section || "" : "",
-          class: finalType !== "elective" ? classSection.class || "" : "",
+          class: finalType !== "elective" ? (classSection.year != null ? String(classSection.year) : "") : "",
           timeTableType: finalType,
           classSectionsId:
             finalType !== "elective" ? sourceItem?.classSectionsId || baseMetadata.classSectionsId || null : null,
@@ -1746,7 +1796,7 @@ function mapRoutineClassSection(classSection) {
   return {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
-    class: plain.class,
+    class: plain.year != null ? String(plain.year) : null,
     semesterId: null,
     term: resolveProgramTerm(plain),
     course: plain.courseSection
@@ -1764,7 +1814,7 @@ function mapClassSectionSummary(classSection) {
   return {
     classSectionsId: plain.classSectionsId,
     section: plain.section,
-    class: plain.class,
+    class: plain.year != null ? String(plain.year) : null,
     semesterId: null,
     term: resolveProgramTerm(plain),
   };

@@ -143,7 +143,8 @@ const jsonObjectField = z.preprocess(
 
 const studentSharedOptionalFields = {
   specializationId: optionalPositiveIntegerId,
-  semesterId: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  classSectionTermId: optionalPositiveIntegerId,
   scholarNumber: optionalNonEmptyString,
   enrollNumber: optionalNonEmptyString,
   middleName: optionalString,
@@ -406,8 +407,8 @@ router.post("/promoteStudent", userAuth, promoteStudent);
 const promotionAvailableClassSectionQuerySchema = z.object({
   courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
   term: z.coerce.number({ required_error: "term is required" }).int().positive(),
-  classSectionId: z.coerce
-    .number({ required_error: "classSectionId is required" })
+  classSectionTermId: z.coerce
+    .number({ required_error: "classSectionTermId is required" })
     .int()
     .positive(),
 });

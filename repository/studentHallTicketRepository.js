@@ -169,7 +169,7 @@ function getHallTicketIncludes() {
             required: false,
             include: [
                 studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ["classSectionsId", "class", "section", "sessionId"],
+                    sectionAttributes: ["classSectionsId", "year", "section", "sessionId"],
                 }),
             ],
         },

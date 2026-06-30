@@ -82,7 +82,7 @@ export async function getTimeTableCreateDetails() {
         {
           model: model.classSectionModel,
           as: 'timeTableClassSection',
-          attributes: ["section", "class", "section_id", "class_sections_id"],
+          attributes: ["section", "year", "section_id", "class_sections_id"],
           include: [
             {
               model: model.sessionModel,
@@ -231,7 +231,7 @@ export async function getSingleTimeTableCreateDetails(courseId) {
         {
           model: model.classSectionModel,
           as: 'timeTableClassSection',
-          attributes: ["section", "class", "section_id", "class_sections_id"],
+          attributes: ["section", "year", "section_id", "class_sections_id"],
         },
         {
           model: model.acedmicYearModel,
@@ -420,7 +420,7 @@ export async function checkTeacherConflictRepository(
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              attributes: ["section", "class"]
+              attributes: ["section", "year"]
             }
           ]
         }
@@ -458,6 +458,31 @@ export async function getRoutineByIdRepository(timeTableRoutineId, options = {})
     console.error("Error in getRoutineByIdRepository:", error);
     throw error;
   }
+};
+
+export async function getSubjectProgramTerm(subjectId, options = {}) {
+  if (subjectId == null) {
+    return null;
+  }
+
+  const row = await scoped(model.subjectModel).findOne({
+    where: { subjectId: Number(subjectId) },
+    attributes: ['term'],
+    transaction: options.transaction,
+    raw: true,
+  });
+
+  return row?.term != null ? Number(row.term) : null;
+}
+
+export async function updateRoutineClassSectionTermId(timeTableRoutineId, classSectionTermId, options = {}) {
+  return scoped(model.timeTableRoutineModel).update(
+    { classSectionTermId: Number(classSectionTermId) },
+    {
+      where: { timeTableRoutineId: Number(timeTableRoutineId) },
+      transaction: options.transaction,
+    },
+  );
 };
 
 export async function findRoutineForCombinedSessionRepository(
@@ -585,7 +610,7 @@ export async function checkRoomConflictRepository(
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              attributes: ["section", "class"]
+              attributes: ["section", "year"]
             }
           ]
         }
@@ -794,7 +819,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
             {
               model: model.classSectionModel,
               as: 'timeTableClassSection',
-              attributes: ["section", "class", "section_id", "class_sections_id"],
+              attributes: ["section", "year", "section_id", "class_sections_id"],
               where: buildScope(model.classSectionModel),
               required: false,
             },
@@ -1459,7 +1484,7 @@ const teacherClassSectionInclude = (courseId, sessionId) => ({
     sessionId,
     ...buildScope(model.classSectionModel),
   },
-  attributes: ['classSectionsId', 'section', 'class', 'sessionId', 'courseId'],
+  attributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
   include: [
     {
       model: model.courseModel,
@@ -1562,11 +1587,11 @@ async function fetchTeacherRoutineContext(employeeId, courseId, sessionId) {
     }),
     scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      attributes: ['classSectionsId', 'section', 'class', 'courseId', 'sessionId'],
+      attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
       include: [
     classSectionTermsInclude(),
       ],
-      order: [['class', 'ASC'], ['section', 'ASC']],
+      order: [['year', 'ASC'], ['section', 'ASC']],
     }),
   ]);
 }
@@ -1729,7 +1754,7 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
               where: {
                 ...(sessionId && { sessionId }),
               },
-              attributes: ['class', 'section', 'classSectionsId'],
+              attributes: ['year', 'section', 'classSectionsId'],
             },
           ],
         },
@@ -1818,7 +1843,7 @@ export async function getPastClassSchedulesForEmployee(
               model: model.classSectionModel,
               as: "timeTableClassSection",
               attributes: [
-                'class',
+                'year',
                 'section',
                 'classSectionsId'
               ]
@@ -1919,7 +1944,7 @@ export async function getUpcomingClassSchedulesForEmployee(
               model: model.classSectionModel,
               as: "timeTableClassSection",
               attributes: [
-                'class',
+                'year',
                 'section',
                 'classSectionsId'
               ]
@@ -1991,7 +2016,7 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acade
             {
               model: model.classSectionModel,
               as: "timeTableClassSection",
-              attributes: ['class', 'section', 'classSectionsId']
+              attributes: ['year', 'section', 'classSectionsId']
             }
           ]
         },

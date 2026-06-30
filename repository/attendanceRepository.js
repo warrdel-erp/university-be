@@ -539,7 +539,7 @@ export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
         const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
             scoped(model.classSectionModel).findOne({
                 where: { classSectionsId, deletedAt: null },
-                attributes: ['class', 'section'],
+                attributes: ['year', 'section'],
             }),
             scoped(model.subjectModel).findOne({
                 where: { subjectId, deletedAt: null },

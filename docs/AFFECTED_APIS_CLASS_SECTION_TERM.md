@@ -43,6 +43,7 @@ Old paths are **deleted** from the router. Use only the new URLs. Full table: [A
 | `GET` | `/main/classSectionSpecific` | `/main/classSpecific` |
 | `POST` | `/main/sectionSubjectMapper` | `/main/classSubjectMapper` |
 | `GET` | `/main/sectionSubjectMapper` | `/main/classSubjectMapper` |
+
 | `GET` | `/main/classSectionRecord` | `/main/classRecord` |
 | `POST` | `/student/sectionStudentMapping` | `/student/classStudentMapping` |
 | `GET` | `/student/sectionStudentMapping` | `/student/classStudentMapping` |
@@ -242,7 +243,7 @@ GET /options/classSections?courseId=42&term=1&sessionId=22
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `POST` | `/student/studentMapping` | Updated | Prefer `classSectionTermId`; `classSectionsId` + `term` accepted for resolution |
+| `POST` | `/student/studentMapping` | **Breaking** | Requires `term` (program term); `semesterId` removed |
 | `POST` | `/student/sectionStudentMapping` | **Breaking** | Use `classSectionTermId` instead of `semesterId` |
 | `GET` | `/student/sectionStudentMapping` | **Breaking** | Query by `classSectionTermId` or `term` |
 | `POST` | `/student` (create) | **Breaking** | Sets `classSectionTermId` only — **`classSectionsId` not stored on student** |
@@ -298,7 +299,19 @@ GET /options/classSections?courseId=42&term=1&sessionId=22
 **Before:** `?semesterId=5&academicYearId=76`  
 **After:** `?classSectionTermId=1001` or `?term=2` (no `academicYearId` query param)
 
-> Legacy alias: `semesterId` query param may still be accepted as alias for `classSectionTermId` during transition.
+> `semesterId` query param is **removed** — use `classSectionTermId` or `term`.
+
+### `POST /student/studentMapping`
+
+**Before**
+```json
+{ "subjectId": 12, "studentId": 1, "courseId": 42, "semesterId": 5 }
+```
+
+**After**
+```json
+{ "subjectId": 12, "studentId": 1, "courseId": 42, "term": 1 }
+```
 
 ### Student response — section data shape
 
@@ -331,10 +344,17 @@ Some APIs flatten this to `term`, `year`, `sectionName` in the response — chec
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
 | `GET` | `/student/promotion/list` | Updated | `promotionTerm` = target program term; students resolved via `classSectionTermId` |
-| `GET` | `/student/promotion/available-section` | Updated | Returns options with `classSectionTermId`, `sameSection` flag |
+| `GET` | `/student/promotion/available-section` | **Breaking** | Requires `courseId`, `term`, `classSectionTermId` |
 | `POST` | `/student/promoteStudent` | Updated | Accepts `classSectionsId` (target section) or `classSectionTermId`; updates `classSectionTermId` on student |
 | `GET` | `/student/promotion/history` | Updated | History chain shows `term`, `year`, `classSectionTermId` |
 | `GET` | `/student/classSectionStudents` | Updated | Prefer `classSectionTermId` query |
+
+### `GET /student/promotion/available-section`
+
+**Before:** `?courseId=45&term=1&classSectionId=101`  
+**After:** `?courseId=45&term=1&classSectionTermId=128`
+
+Response `classSections[]` items include `classSectionTermId`, `term`, `classSectionsId`, `name`, `sessionId`.
 
 ### `POST /student/promoteStudent`
 
@@ -428,11 +448,49 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
+| `GET` | `/examSchedule/` | **Breaking** | Query filter `semesterId` removed — use `term` |
 | `GET` | `/examScheduleMapping/student` | Updated | Uses student's `classSectionTermId` / program `term` |
-| Exam schedule create/update | Various | Updated | `term` column replaces `semester_id` on `exam_schedule` |
-| Internal assessment APIs | `/internalAssessment` | Updated | Filter/store by program `term` |
-| `GET` | `/syllabus/semesterSubject` | Updated | Query `term` preferred over `semesterId` |
+| Exam schedule create/update | Various | Updated | Body/query uses `term`; `semester_id` column removed from `exam_schedule` |
+| `POST` | `/internalAssessment/` | **Breaking** | Body requires `term` instead of `semesterId` |
+| `GET` | `/internalAssessment/single` | Updated | Response uses `term` + `termName` (no `semester` object) |
+| `GET` | `/internalAssessment/evaluation` | Updated | Students resolved via `classSectionTermId` join on program `term` |
+| `GET` | `/syllabus/semesterSubject` | **Breaking** | Requires `courseId` + `term` — `semesterId` removed |
 | Hall ticket generation | Various | Updated | Eligible students matched via `classSectionTermId` join |
+
+### `GET /examSchedule/` filters
+
+**Before:** `?semesterId=5&subjectId=12`  
+**After:** `?term=1&subjectId=12` (also supports `examSetupTypeTermId`, `courseId`, `sessionId`)
+
+### `POST /internalAssessment/`
+
+**Before**
+```json
+{
+  "subjectId": 12,
+  "semesterId": 5,
+  "examSetupTypeId": 3,
+  "type": "Assignment",
+  "totalMarks": 20,
+  "publishDate": "2026-01-01",
+  "dueDate": "2026-01-15",
+  "description": "Unit 1"
+}
+```
+
+**After**
+```json
+{
+  "subjectId": 12,
+  "term": 1,
+  "examSetupTypeId": 3,
+  "type": "Assignment",
+  "totalMarks": 20,
+  "publishDate": "2026-01-01",
+  "dueDate": "2026-01-15",
+  "description": "Unit 1"
+}
+```
 
 **Exam schedule filter:** use program `term` (integer 1…N), not `semesterId`.
 
@@ -442,11 +500,30 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `GET` | `/syllabus/semesterSubject` | Updated | `term` query param; syllabus units store `term` |
+| `GET` | `/syllabus/semesterSubject` | **Breaking** | Query `courseId` + `term` required; `semesterId` removed |
+| `POST` | `/syllabus/addUnit` | Updated | Optional body `term` (replaces `semesterId`) |
 | `POST` | `/syllabus/` | Updated | `academicYearId` / `instituteId` from context — send `courseId`, `sessionId`, `subjects` only |
 | Syllabus unit CRUD | Various | Updated | `syllabus_unit.term` replaces `semester_id`; no `academicYearId` in unit create/update body |
 
----
+### `GET /syllabus/semesterSubject`
+
+**Before:** `?semesterId=5`  
+**After:** `?courseId=42&term=1`
+
+**Response (after)** — top-level term metadata instead of `semesterId` / `name`:
+```json
+{
+  "courseId": 42,
+  "term": 1,
+  "termName": "Semester 1",
+  "termType": "Semester",
+  "courseDurationYears": 4,
+  "totalTerms": 8,
+  "subjects": []
+}
+```
+
+> Route path `/semesterSubject` is unchanged for backward-compatible URLs; payload is term-based.
 
 ## Response Field Mapping (FE migration)
 
@@ -460,6 +537,9 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 | `classSectionsId` (student column) | **Removed** — use `studentClassSectionTerm.classSectionsId` or nested `classSection.classSectionsId` |
 | `feePlanId` (student) | **Removed** — use `feePlanProfileId` |
 | `semesterId` (mapper) | `classSectionTermId` |
+| `semesterId` (exam / assessment / syllabus) | `term` (program term 1…N) |
+| `semester` object (internal assessment) | `term` + `termName` |
+| `semesterId` (subject_mapper) | `term` |
 | `studentSemester.name` | `termName` from course (`"Semester 1"`) |
 | `studentSections` (direct FK include) | `studentClassSectionTerm.classSection` |
 | `semesterName` | `termName` |
@@ -476,7 +556,7 @@ Overlap check is scoped to **`classSectionTermId`** when present (not whole sect
 | `students` | `class_section_term_id` active; **`class_sections_id` removed**; **`fee_plan_id` removed**; `semester_id` removed |
 | `class_student_mapper` | `class_section_term_id` active; `semester_id` removed |
 | `class_subject_mapper` | `semester_id` removed |
-| `exam_schedule`, `internal_assessment`, `syllabus_unit` | `term` active; `semester_id` removed |
+| `exam_schedule`, `internal_assessment`, `syllabus_unit`, `subject_mapper` | `term` active; `semester_id` removed |
 | `student_class_sections_history` | Still uses `class_sections_id` (follow-up: add `class_section_term_id`) |
 | `class_schedule_item` | `combined_group_id` nullable — links duplicate slots across sections in combined timetable |
 | `class` | Renamed → `class_deprecated` |

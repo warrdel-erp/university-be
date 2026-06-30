@@ -161,13 +161,13 @@ export async function deleteSyllabusUnit(req, res) {
   }
 }
 
-export async function semesterAllSubject(req, res) {
+export async function termAllSubject(req, res) {
   try {
-    const { semesterId } = req.query;
-    if (!semesterId) {
-      return res.status(400).send('semesterId is required');
+    const { courseId, term } = req.query;
+    if (!courseId || term == null) {
+      return res.status(400).send('courseId and term are required');
     }
-    const Syllabus = await syllabusCreation.semesterAllSubject(semesterId);
+    const Syllabus = await syllabusCreation.termAllSubject(courseId, term);
     if (Syllabus) {
       res.status(200).json(Syllabus);
     } else {

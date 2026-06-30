@@ -274,7 +274,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
     if (!classAtt) return;
 
     const courseName = classAtt.courseSection?.courseName || '';
-    const className = classAtt.class || '';
+    const className = classAtt.year != null ? String(classAtt.year) : '';
     const sectionName = classAtt.section || '';
     const dateStr = att.date?.toISOString().split('T')[0] || '';
 
@@ -394,7 +394,7 @@ export async function getPreviousSessions(employeeId, req) {
             map.timeTableTeacherSubject?.subject?.subjectName ||
             "N/A",
           class: (programYear != null ? `Year ${programYear}` : null)
-            || timeTableClassSection?.class
+            || (timeTableClassSection?.year != null ? String(timeTableClassSection.year) : null)
             || null,
           section: timeTableClassSection?.section || null,
           classSectionsId: sectionId,

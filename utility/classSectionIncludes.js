@@ -104,14 +104,9 @@ export function resolveProgramTerm(sectionPlain, preferredTerm = null) {
     return terms[0]?.term ?? null;
 }
 
-/** Program year from class_sections.year (fallback: legacy class string). */
+/** Program year from class_sections.year. */
 export function resolveProgramYear(sectionPlain) {
     if (sectionPlain?.year != null) return Number(sectionPlain.year);
-
-    if (sectionPlain?.class != null && sectionPlain.class !== '') {
-        const n = Number(sectionPlain.class);
-        return Number.isFinite(n) ? n : null;
-    }
 
     return null;
 }

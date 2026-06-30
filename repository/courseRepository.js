@@ -143,12 +143,13 @@ export async function getCourseByName(courseName) {
 
 export async function getClassByName(className, Section) {
   try {
+    const parsedYear = Number(className);
+    const where = Number.isInteger(parsedYear) && parsedYear > 0
+      ? { year: parsedYear }
+      : {};
+
     const results = await scoped(model.classSectionModel).findAll({
-      where: {
-        class: {
-          [Op.like]: `%${className}%`,
-        },
-      },
+      where,
     });
 
     if (results.length === 0) {

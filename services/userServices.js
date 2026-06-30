@@ -83,7 +83,7 @@ const formatEmployeeDetailsDeep = (employee) => {
     return {
       sectionId: section?.classSectionsId,
       sectionName: section?.section,
-      className: section?.class,
+      className: section?.year != null ? String(section.year) : null,
       semesterId: section?.semesterId,
       courseId: section?.courseId,
       studentCount: section?.studentSections?.length || 0,

@@ -109,6 +109,8 @@ const addTimeTableMappingSchema = z
         teacherType: z.string().optional(),
         isAttendence: z.boolean().optional(),
         isOverridingSyblingElectives: z.boolean().optional(),
+        classSectionTermId: optionalPositiveId,
+        term: optionalPositiveId,
         classSectionTermIds: z.array(positiveIntegerId).min(1).optional(),
         slots: z.array(mappingSlotSchema).min(1).optional(),
         combinedGroupId: z.string().uuid().optional(),

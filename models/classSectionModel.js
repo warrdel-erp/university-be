@@ -75,10 +75,6 @@ const classSectionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        class: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
         year: {
             type: DataTypes.INTEGER,
             allowNull: true,

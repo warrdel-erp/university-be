@@ -273,7 +273,7 @@ export async function getMapping(academicYearId) {
                 {
                   model: model.classSectionModel,
                   as: "timeTableClassSection",
-                  attributes: ["section", "class", "section_id", "class_sections_id"],
+                  attributes: ["section", "year", "section_id", "class_sections_id"],
                 },
               ],
             },
@@ -520,7 +520,7 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         model: model.classSectionModel,
         as: 'courseSection',
         required: false,
-        attributes: ['class', 'section', 'sessionId'],
+        attributes: ['year', 'section', 'sessionId'],
         where: classSectionWhere,
         include: [classSectionTermsInclude({ term, required: term != null })],
       }],
@@ -539,11 +539,11 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         if (term != null && resolveProgramTerm(section) != null) {
           return Number(resolveProgramTerm(section)) === Number(term);
         }
-        return term != null && String(section.class) === String(term);
+        return term != null && section.year != null && String(section.year) === String(term);
       });
 
-      const termName = matchedSection?.class && courseInfo?.termType
-        ? `${courseInfo.termType} ${matchedSection.class}`
+      const termName = matchedSection?.year != null && courseInfo?.termType
+        ? `${courseInfo.termType} ${matchedSection.year}`
         : subjects?.[0]?.semestermapping?.name ?? null;
 
       return { ...subjectData, term, termName };
