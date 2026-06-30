@@ -1,5 +1,5 @@
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import { getSingleTimeTableById } from "../repository/timeTableRepository.js";
+import { getSingleTimeTableById, getTimeTableStructureById } from "../repository/timeTableRepository.js";
 import { getTeacherDetailsByTeacherSubjectId } from "../repository/teacherSubjectMappingRepository.js";
 import {
   getSingleFaculityLoadDetails,
@@ -16,7 +16,7 @@ import {
 } from "../repository/classSectionTermRepository.js";
 import { randomUUID } from "crypto";
 
-async function resolveRoutinePlacement(data, options = {}) {
+export async function resolveRoutinePlacement(data, options = {}) {
   const payload = { ...data };
 
   if (payload.classSectionTermId != null && payload.classSectionTermId !== '') {
@@ -26,7 +26,12 @@ async function resolveRoutinePlacement(data, options = {}) {
       throw new Error('classSectionTermId not found');
     }
     const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
-    payload.classSectionsId = payload.classSectionsId ?? plain.classSectionsId ?? plain.classSection?.classSectionsId;
+    payload.classSectionsId =
+      payload.classSectionsId
+      ?? plain.classSectionsId
+      ?? plain.classSection?.classSectionsId
+      ?? null;
+    payload.term = payload.term ?? plain.term ?? null;
     return payload;
   }
 
@@ -211,13 +216,53 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
-    if (data.classSectionsId == null && data.classSectionId != null) {
-      data.classSectionsId = data.classSectionId;
+    const timeTableType = data.timeTableType ?? 'normal';
+
+    if (!data.timeTableNameId) {
+      throw new Error('timeTableNameId is required — create timetable structure first');
+    }
+
+    const structure = await getTimeTableStructureById(data.timeTableNameId, { transaction });
+    if (!structure) {
+      throw new Error('timeTableNameId not found');
+    }
+
+    if (timeTableType === 'normal' && (data.classSectionTermId == null || data.classSectionTermId === '')) {
+      throw new Error('classSectionTermId is required');
     }
 
     const placement = await resolveRoutinePlacement(data, { transaction });
 
-    if (!placement.courseId && placement.classSectionsId) {
+    if (timeTableType === 'normal' && !placement.classSectionTermId) {
+      throw new Error('classSectionTermId is required');
+    }
+
+    if (!placement.courseId) {
+      placement.courseId = structure.courseId;
+    }
+
+    if (placement.classSectionTermId) {
+      const termRow = await findClassSectionTermById(placement.classSectionTermId, { transaction });
+      if (!termRow) {
+        throw new Error('classSectionTermId not found');
+      }
+      const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+      const section = plain.classSection;
+      if (section) {
+        if (structure.courseId && Number(section.courseId) !== Number(structure.courseId)) {
+          throw new Error('classSectionTermId does not match timetable structure course');
+        }
+        if (structure.sessionId && Number(section.sessionId) !== Number(structure.sessionId)) {
+          throw new Error('classSectionTermId does not match timetable structure session');
+        }
+        if (!placement.classSectionsId) {
+          placement.classSectionsId = section.classSectionsId;
+        }
+        if (!placement.courseId) {
+          placement.courseId = section.courseId;
+        }
+      }
+    } else if (!placement.courseId && placement.classSectionsId) {
       const section = await timeTableCreateRepository.getClassSectionWithCourseRepository(
         placement.classSectionsId,
       );
@@ -225,6 +270,9 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
         placement.courseId = section.courseId;
       }
     }
+
+    delete placement.term;
+    delete placement.classSectionId;
 
     if (
       (placement.classSectionTermId || placement.classSectionsId)
@@ -277,9 +325,12 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
   }
 }
 
-export async function gettimeTableCreateDetails() {
+export async function gettimeTableCreateDetails(query = {}) {
     try {
-    const result = await timeTableCreateRepository.getTimeTableCreateDetails();
+    const result = await timeTableCreateRepository.getTimeTableCreateDetails({
+      courseId: query.courseId,
+      sessionId: query.sessionId,
+    });
     return result;
   } catch (error) {
     console.error("Error in gettimeTableCreateDetails:", error.message);
@@ -1589,29 +1640,21 @@ export async function getSubjectWithCount(classSectionsId) {
   }));
 }
 
-export async function getRoutineByClassSectionId({ classSectionTermId, classSectionsId, term }) {
+export async function getRoutineByClassSectionId(query) {
   try {
-    const scope = routineScopeWhere({ classSectionTermId, classSectionsId });
-    if (!Object.keys(scope).length && classSectionsId != null && term != null) {
-      const resolved = await resolveClassSectionTermIdFromRepo({
-        classSectionsId,
-        term: Number(term),
-      });
-      if (resolved) {
-        scope.classSectionTermId = resolved;
-      } else {
-        scope.classSectionsId = Number(classSectionsId);
-      }
-    }
+    const placement = await resolveRoutinePlacement(query);
+    const scope = routineScopeWhere(placement);
 
     const [normalRoutines, classSection] = await Promise.all([
       timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope),
       (async () => {
-        if (classSectionsId) {
-          return timeTableCreateRepository.getClassSectionWithCourseRepository(classSectionsId);
+        if (placement.classSectionsId) {
+          return timeTableCreateRepository.getClassSectionWithCourseRepository(
+            placement.classSectionsId,
+          );
         }
-        if (scope.classSectionTermId || classSectionTermId) {
-          const termRow = await findClassSectionTermById(scope.classSectionTermId ?? classSectionTermId);
+        if (placement.classSectionTermId) {
+          const termRow = await findClassSectionTermById(placement.classSectionTermId);
           if (!termRow) return null;
           const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
           return plain.classSection ?? null;

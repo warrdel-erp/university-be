@@ -169,6 +169,18 @@ export async function addTimeTable(data, transaction) {
     }
 }
 
+export async function getTimeTableStructureById(timeTableNameId, options = {}) {
+    try {
+        return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
+            attributes: ['timeTableNameId', 'courseId', 'sessionId'],
+            transaction: options.transaction,
+        });
+    } catch (error) {
+        console.error('Error in getting time table structure by id:', error);
+        throw error;
+    }
+}
+
 export async function getTimeTableStructures({ courseId, sessionId } = {}) {
     try {
         const where = {

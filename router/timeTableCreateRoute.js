@@ -20,6 +20,17 @@ const optionalPositiveId = z.preprocess(
     positiveIntegerId.optional()
 );
 
+/** classSectionTermId alone is enough; otherwise classSectionsId needs term. */
+const sectionPlacementRefine = (data) => {
+    if (data.classSectionTermId != null) {
+        return true;
+    }
+    if (data.classSectionsId == null) {
+        return true;
+    }
+    return data.term != null;
+};
+
 const getRoutineSchema = z
   .object({
     classSectionTermId: optionalPositiveId,
@@ -52,27 +63,36 @@ const getSingleQuerySchema = z.object({
     courseId: optionalPositiveId,
 });
 
+const getTimeTableCreateListQuerySchema = z.object({
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
+});
+
 const getTimeTableByCourseAndSectionQuerySchema = z.object({
     courseId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
     classSectionsId: optionalPositiveId,
     term: optionalPositiveId,
     timeTableType: z.string().optional(),
+}).refine(sectionPlacementRefine, {
+    message: 'term is required when classSectionsId is sent without classSectionTermId',
+    path: ['term'],
 });
 
 const addTimeTableCreateSchema = z.object({
-    timeTableNameId: optionalPositiveId,
-    courseId: optionalPositiveId,
+    timeTableNameId: positiveIntegerId,
     classSectionTermId: optionalPositiveId,
-    classSectionsId: optionalPositiveId,
-    term: optionalPositiveId,
+    courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
     startingDate: z.string().optional(),
     endingDate: z.string().optional(),
     timeTableRoutineId: optionalPositiveId,
     previousDate: z.string().optional(),
-});
+}).refine(
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
+    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+);
 
 const changeTimeTableCreateSchema = z.object({
     timeTableRoutineId: positiveIntegerId,
@@ -85,6 +105,9 @@ const changeTimeTableCreateSchema = z.object({
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
+}).refine(sectionPlacementRefine, {
+    message: 'term is required when classSectionsId is sent without classSectionTermId',
+    path: ['term'],
 });
 
 const mappingSlotSchema = z.object({
@@ -180,7 +203,7 @@ router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRo
 router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
 router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
-router.get('/', userAuth, gettimeTableCreateDetails);
+router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), getTimeTableByCourseAndSection);
 router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);

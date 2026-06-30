@@ -52,58 +52,100 @@ export async function addTimeTableCreate(data, transaction) {
   }
 }
 
-export async function getTimeTableCreateDetails() {
+export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
   try {
-    const result = await scoped(model.timeTableRoutineModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+    const sectionScope = buildScope(model.classSectionModel);
+    const sectionWhere = { ...sectionScope };
+    if (courseId != null) {
+      sectionWhere.courseId = Number(courseId);
+    }
+    if (sessionId != null) {
+      sectionWhere.sessionId = Number(sessionId);
+    }
+
+    return scoped(model.classSectionTermModel).findAll({
+      attributes: ['classSectionTermId', 'term', 'classSectionsId'],
       include: [
         {
-          model: model.timeTableStructureModel,
-          as: "timeTableCreateName",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated"] },
-          include: [
-            {
-              model: model.timeTableStructurePeriodsModel,
-              as: "timeTableName",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updated"] }
-            }
-          ]
-        },
-        {
-          model: model.courseModel,
-          as: 'timeTableCourse',
-          attributes: ["courseName"],
-        },
-        {
-          model: model.campusModel,
-          as: 'timeTableCampus',
-          attributes: ["campusName"],
-        },
-        {
           model: model.classSectionModel,
-          as: 'timeTableClassSection',
-          attributes: ["section", "year", "section_id", "class_sections_id"],
+          as: 'classSection',
+          where: sectionWhere,
+          required: true,
+          attributes: [
+            'classSectionsId',
+            'section',
+            'year',
+            'sectionId',
+            'courseId',
+            'sessionId',
+            'academicYearId',
+          ],
           include: [
             {
               model: model.sessionModel,
               as: 'classSession',
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-            }
-          ]
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            },
+          ],
         },
         {
-          model: model.acedmicYearModel,
-          as: 'acedmicYearTimeTable',
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
+          model: model.timeTableRoutineModel,
+          as: 'timeTableRoutines',
+          required: false,
+          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+          include: [
+            {
+              model: model.timeTableStructureModel,
+              as: 'timeTableCreateName',
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated'] },
+              include: [
+                {
+                  model: model.timeTableStructurePeriodsModel,
+                  as: 'timeTableName',
+                  attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updated'] },
+                },
+              ],
+            },
+            {
+              model: model.courseModel,
+              as: 'timeTableCourse',
+              attributes: ['courseName'],
+            },
+            {
+              model: model.campusModel,
+              as: 'timeTableCampus',
+              attributes: ['campusName'],
+            },
+            {
+              model: model.classSectionModel,
+              as: 'timeTableClassSection',
+              attributes: ['section', 'year', 'section_id', 'class_sections_id'],
+              include: [
+                {
+                  model: model.sessionModel,
+                  as: 'classSession',
+                  attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                },
+              ],
+            },
+            {
+              model: model.acedmicYearModel,
+              as: 'acedmicYearTimeTable',
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+            },
+          ],
         },
-      ]
+      ],
+      order: [
+        ['term', 'ASC'],
+        [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
+      ],
     });
-    return result;
   } catch (error) {
-    console.error(`Error in getting time table create:`, error);
+    console.error('Error in getting time table create:', error);
     throw error;
-  };
-};
+  }
+}
 
 // export async function getSingleTimeTableCreateDetails(courseId,universityId) {    
 //     try {

@@ -9,7 +9,9 @@ export const addtimeTableCreate = async (req, res) => {
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in adding time table create :", error);
-        res.status(500).send("Internal Server Error");
+        const message = error.message || 'Internal Server Error';
+        const statusCode = /required|not found|does not match|could not be resolved|overlap/i.test(message) ? 400 : 500;
+        res.status(statusCode).send(message);
     }
 };
 
@@ -34,7 +36,11 @@ export const cloneTimeTableRoutine = async (req, res) => {
 
 export const gettimeTableCreateDetails = async (req, res) => {
     try {
-        const result = await timeTableCreateServices.gettimeTableCreateDetails();
+        const { courseId, sessionId } = req.query;
+        const result = await timeTableCreateServices.gettimeTableCreateDetails({
+            courseId,
+            sessionId,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table create:", error);
@@ -56,23 +62,22 @@ export const getSingletimeTableCreateDetails = async (req, res) => {
 export const getTimeTableByCourseAndSection = async (req, res) => {
     const { courseId, classSectionsId, classSectionTermId, term, timeTableType } = req.query;
     try {
-        let resolvedTermId = classSectionTermId;
-        if (!resolvedTermId && classSectionsId && term) {
-            resolvedTermId = await timeTableCreateServices.resolveClassSectionTermIdForQuery(
-                classSectionsId,
-                term,
-            );
-        }
+        const placement = await timeTableCreateServices.resolveRoutinePlacement({
+            classSectionTermId,
+            classSectionsId,
+            term,
+        });
         const result = await timeTableCreateServices.getTimeTableByCourseAndSection(
             courseId,
-            classSectionsId,
+            placement.classSectionsId,
             timeTableType,
-            resolvedTermId,
+            placement.classSectionTermId,
         );
         res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching timetable:", error);
-        res.status(500).send("Internal Server Error");
+        const statusCode = /not found|could not be resolved/.test(error.message) ? 400 : 500;
+        res.status(statusCode).send(error.message || "Internal Server Error");
     }
 };
 
