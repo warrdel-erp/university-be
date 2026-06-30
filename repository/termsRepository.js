@@ -75,15 +75,29 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(
   }
 }
 
-export async function getClassSectionsByCourseAndSession(courseId, sessionId, session) {
+export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
-    return await model.classSectionModel.findAll({
-      where: whereFromSession(session, model.classSectionModel, { courseId, sessionId }),
-      attributes: ['classSectionsId', 'section'],
+    const rows = await scoped(model.classSectionModel).findAll({
+      where: { courseId, sessionId },
+      attributes: [
+        'classSectionsId',
+        'section',
+        'sectionId',
+        'year',
+        'specializationId',
+      ],
       include: [classSectionTermsInclude()],
-      raw: true,
-      nest: true,
+      order: [
+        ['section', 'ASC'],
+        [{ model: model.classSectionTermModel, as: 'classSectionTerms' }, 'term', 'ASC'],
+      ],
     });
+
+    const plainRows = [];
+    for (const row of rows) {
+      plainRows.push(row.get({ plain: true }));
+    }
+    return plainRows;
   } catch (error) {
     console.error('Error fetching class sections:', error);
     throw error;
@@ -93,11 +107,13 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId, se
 export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session) {
   try {
     return await model.examSetupTypeTermModel.findAll({
+      attributes: ['examSetupTypeTermId', 'examSetupTypeId', 'term'],
       where: whereFromSession(session, model.examSetupTypeTermModel, { courseId }),
       include: [
         {
           model: model.examSetupTypeModel,
           as: 'examSetupType',
+          attributes: ['examType', 'examName'],
           required: true,
           include: [
             {
