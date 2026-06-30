@@ -21,8 +21,8 @@ export async function getAllacedmicYear(req, res) {
 
 export async function updateacedmicYear(req, res) {
     try {
-        const { acedmicYearId, ...updateData } = req.body;
-        const updated = await acedmicYearCreation.updateacedmicYear(acedmicYearId, updateData, req.user.userId);
+        const { academicYearId, ...updateData } = req.body;
+        const updated = await acedmicYearCreation.updateacedmicYear(academicYearId, updateData, req.user.userId);
         if (!updated) {
             return res.status(404).json({ message: 'acedmicYear not found' });
         }
@@ -34,10 +34,10 @@ export async function updateacedmicYear(req, res) {
 
 export async function deleteacedmicYear(req, res) {
     try {
-        const { acedmicYearId } = req.query;
-        const deleted = await acedmicYearCreation.deleteacedmicYear(acedmicYearId);
+        const { academicYearId } = req.query;
+        const deleted = await acedmicYearCreation.deleteacedmicYear(academicYearId);
         if (deleted) {
-            res.status(200).json({ message: `Delete successful for acedmicYear ID ${acedmicYearId}` });
+            res.status(200).json({ message: `Delete successful for acedmicYear ID ${academicYearId}` });
         } else {
             res.status(404).json({ message: 'acedmicYear not found' });
         }

@@ -116,11 +116,11 @@ export async function getSingleSessionDetails(sessionId) {
     }
 }
 
-export async function getSessionDetailsByAcedmic(acedmicYearId) {
+export async function getSessionDetailsByAcedmic(academicYearId) {
     try {
         return await model.sessionModel.findAll({
             attributes: { exclude: excludeMeta },
-            where: { acedmicYearId },
+            where: { academicYearId },
         });
     } catch (error) {
         console.error('Error fetching Session details By Acedmic Id:', error);
@@ -184,7 +184,7 @@ export async function assertCourseInScope(courseId) {
 export async function assertSessionInScope(sessionId) {
     return scoped(model.sessionModel).findOne({
         where: { sessionId },
-        attributes: ['sessionId', 'universityId', 'instituteId', 'acedmicYearId'],
+        attributes: ['sessionId', 'universityId', 'instituteId', 'academicYearId'],
     });
 }
 

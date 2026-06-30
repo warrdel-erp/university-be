@@ -29,6 +29,7 @@ import { addHead } from '../repository/headRepository.js';
 import { countWeekdayInRange, formatQueryDate, parseLocalDateOnly } from '../utility/helper.js';
 import { ROLES } from '../const/roles.js';
 import moment from 'moment';
+import { getTenantStore } from '../utility/requestContext.js';
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -159,7 +160,9 @@ function mapLongLeaveForEmployeeDetails(rows = []) {
   }));
 }
 
-export async function addEmployee(data, files, createdBy, universityId, roleId, instituteId) {
+export async function addEmployee(data, files, createdBy, roleId) {
+  const { universityId, instituteId: contextInstituteId } = getTenantStore();
+  const instituteId = data.instituteId ?? contextInstituteId;
 
   const transaction = await sequelize.transaction();
   try {
@@ -660,6 +663,7 @@ function validateEmployeeRow(employee) {
 
 export async function importEmployeeData(excelData, commonData) {
   const transaction = await sequelize.transaction();
+  const { universityId } = getTenantStore();
 
   try {
     for (const [index, employee] of excelData.entries()) {
@@ -723,7 +727,7 @@ export async function importEmployeeData(excelData, commonData) {
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
         employeeName: convertedData.employeeName,
-        universityId: convertedData.universityId,
+        universityId,
         employeeId
       }
       const employeePersonalDetail = {
@@ -745,7 +749,7 @@ export async function importEmployeeData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
-export async function updateEmployee(employeeId, data, files, updatedBy, createdBy, universityId, roleId, instituteId) {
+export async function updateEmployee(employeeId, data, files, updatedBy, createdBy) {
 
   const transaction = await sequelize.transaction();
   try {
@@ -1388,8 +1392,8 @@ function applyGroupAttendanceStatus(groups) {
   return groups;
 }
 
-export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+export async function getPastClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
+  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
 
   const daysOfWeek = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
@@ -1449,8 +1453,8 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   return { teacher, schedules };
 }
 
-export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+export async function getUpcomingClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
+  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
 
   const daysOfWeek = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
@@ -1635,8 +1639,8 @@ function getEmployeeDetails(schedules) {
     : null;
 }
 
-export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
-  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+export async function getUniqueClassSectionSubjects(employeeId, academicYearId) {
+  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
 
   return {
     employeeDetails: getEmployeeDetails(schedules),
@@ -1644,9 +1648,9 @@ export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
   };
 }
 
-export async function getClassCounts(employeeId, acedmicYearId, currentDateString) {
-  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, acedmicYearId);
-  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+export async function getSectionCounts(employeeId, academicYearId, currentDateString) {
+  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, academicYearId);
+  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
 
   const referenceDate = new Date(currentDateString);
   referenceDate.setHours(0, 0, 0, 0);

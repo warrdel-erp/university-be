@@ -1,12 +1,12 @@
 import * as FeeGroupCreation from "../services/feeGroupServices.js";
 
 export async function addFeeGroup(req, res) {
-  const { name, acedmicYearId } = req.body;
+  const { name, academicYearId } = req.body;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    if (!(name && acedmicYearId)) {
-      return res.status(400).send("Fee Group Name and acedmicYearId is required");
+    if (!(name && academicYearId)) {
+      return res.status(400).send("Fee Group Name and academicYearId is required");
     }
     const feeGroup = await FeeGroupCreation.addFeeGroup(req.body, createdBy, updatedBy);
     res.status(201).json({ message: "Data added successfully", feeGroup });
@@ -16,10 +16,10 @@ export async function addFeeGroup(req, res) {
 }
 
 export async function getAllFeeGroup(req, res) {
-  const { acedmicYearId } = req.query;
+  const { academicYearId } = req.query;
   try {
     const feeGroup = await FeeGroupCreation.getFeeGroupDetails(
-      acedmicYearId ? { acedmicYearId } : {}
+      academicYearId ? { academicYearId } : {}
     );
     res.status(200).json(feeGroup);
   } catch (error) {

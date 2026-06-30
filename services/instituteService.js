@@ -1,11 +1,11 @@
 import * as instituteRepository from "../repository/instituteRepository.js";
 import * as campusRepository from "../repository/campusRepository.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 export const createInstitute = async (data) => {
   try {
     const { campusId, affiliatedUniversity = [], academicYear, ...instituteData } = data;
-    const universityId = requestContext.getStore()?.universityId;
+    const universityId = getTenantStore().universityId;
 
     const campus = await campusRepository.getCampusById(campusId);
     if (!campus || Number(campus.universityId) !== Number(universityId)) {
@@ -28,7 +28,7 @@ export const createInstitute = async (data) => {
 
 export const updateInstitute = async (instituteId, body) => {
   try {
-    const universityId = requestContext.getStore()?.universityId;
+    const universityId = getTenantStore().universityId;
     const { campusId, instituteName, instituteCode } = body;
     const data = {};
 
@@ -105,7 +105,7 @@ function mapInstituteRow(row) {
 
   if (academicYear) {
     mapped.academicYear = {
-      acedmicYearId: academicYear.acedmicYearId,
+      academicYearId: academicYear.academicYearId,
       universityId: academicYear.universityId,
       instituteId: academicYear.instituteId,
       yearTitle: academicYear.yearTitle,

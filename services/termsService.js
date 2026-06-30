@@ -98,7 +98,7 @@ export async function getTermsData(courseId, sessionId) {
                 sessionId: sessionPlain.sessionId,
                 universityId: sessionPlain.universityId,
                 instituteId: sessionPlain.instituteId,
-                acedmicYearId: sessionPlain.acedmicYearId,
+                academicYearId: sessionPlain.academicYearId,
             },
             course: {
                 universityId: coursePlain.universityId,
@@ -114,7 +114,7 @@ export async function getTermsData(courseId, sessionId) {
     }
 }
 
-export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => {
+export const getTermsWithSubjectService = async (instituteId, academicYearId) => {
     try {
         const courses = await courseRepository.getAllCourseByInstituteId(instituteId);
 
@@ -132,7 +132,7 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                 await termsRepository.getSubjectsByCourseAndAcademicYearAndInstitute(
                     courseId,
                     instituteId,
-                    acedmicYearId
+                    academicYearId
                 );
 
             const termsMap = {};
@@ -161,7 +161,7 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                     finalResult.push({
                         termName: term.termName,
                         term: term.term,
-                        acedmicYearId,
+                        academicYearId,
                         course: {
                             courseId: course.courseId,
                             courseName: course.courseName,

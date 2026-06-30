@@ -10,7 +10,7 @@ export async function addFeePlan(data, createdBy, updatedBy) {
         name: data.name,
         PlanType: data.PlanType,
         courseId: data.courseId,
-        acedmicYearId: data.acedmicYearId,
+        academicYearId: data.academicYearId,
         sessionId: data.sessionId,
         createdBy,
         updatedBy,

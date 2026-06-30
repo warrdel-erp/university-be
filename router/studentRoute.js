@@ -7,11 +7,11 @@ import {
   deleteStudentDetail,
   getEmptyEnrollNumber,
   studentCourseMapping,
-  classStudentMapping,
+  sectionStudentMapping,
   addElectiveSubject,
-  getclassStudentMapping,
+  getSectionStudentMapping,
   promoteStudent,
-  getPromotionAvailableClassSection,
+  getPromotionAvailableSection,
   getPromotionStudentList,
   getStudentPromotionHistory,
   getFeePlanInitiate,
@@ -64,8 +64,6 @@ const optionalPositiveId = z.preprocess(
 const classSectionStudentsQuerySchema = z.object({
   timeTableMappingId: positiveIntegerId,
   date: dateField,
-  academicYearId: optionalPositiveId,
-  acedmicYearId: optionalPositiveId,
   groupPeriods: z.union([z.boolean(), z.string()]).optional(),
 }).passthrough();
 
@@ -243,12 +241,7 @@ const getAllAnswerSheetsQuerySchema = z.object({
     .positive("examScheduleId must be greater than 0"),
 });
 
-const acedmicYearIdQuerySchema = z.object({
-  acedmicYearId: positiveIntegerId,
-});
-
 const emptyFeeDetailsQuerySchema = z.object({
-  acedmicYearId: positiveIntegerId,
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
 });
@@ -358,8 +351,8 @@ router.delete("/:studentId", userAuth, deleteStudentDetail);
 
 router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
 router.post("/studentMapping", userAuth, studentCourseMapping);
-router.post("/classStudentMapping", userAuth, classStudentMapping);
-router.get("/classStudentMapping", userAuth, getclassStudentMapping);
+router.post("/sectionStudentMapping", userAuth, sectionStudentMapping);
+router.get("/sectionStudentMapping", userAuth, getSectionStudentMapping);
 router.post("/electiveSubject", userAuth, addElectiveSubject);
 
 const promotionStudentListQuerySchema = z.object({
@@ -420,10 +413,10 @@ const promotionAvailableClassSectionQuerySchema = z.object({
 });
 
 router.get(
-  "/promotion/available-class-section",
+  "/promotion/available-section",
   userAuth,
   validate({ query: promotionAvailableClassSectionQuerySchema }),
-  getPromotionAvailableClassSection,
+  getPromotionAvailableSection,
 );
 
 router.get(

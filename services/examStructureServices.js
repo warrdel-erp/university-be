@@ -8,12 +8,12 @@ export async function addExamStructure(examDetail, createdBy, updatedBy) {
     return await examStructureRepository.addExamStructure(examDetail);
 };
 
-export async function getExamStructure(acedmicYearId) {
-    return await examStructureRepository.getExamStructure(acedmicYearId);
+export async function getExamStructure(academicYearId) {
+    return await examStructureRepository.getExamStructure(academicYearId);
 };
 
-export async function getSingleExamStructure(courseId, sessionId, acedmicYearId) {
-    return await examStructureRepository.getSingleExamStructure(courseId, sessionId, acedmicYearId);
+export async function getSingleExamStructure(courseId, sessionId, academicYearId) {
+    return await examStructureRepository.getSingleExamStructure(courseId, sessionId, academicYearId);
 };
 
 export async function deleteExamStructure(examStructureId) {
@@ -63,7 +63,7 @@ function collectTermIds(rows) {
 }
 
 /** One count per unique session + course + term + academic year (not per exam type row). */
-async function buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, termNumber) {
+async function buildStudentCountMap(rows, sessionId, courseId, academicYearId, termNumber) {
     const countMap = new Map();
     if (!sessionId || !courseId) {
         return countMap;
@@ -73,7 +73,7 @@ async function buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, te
     for (const row of rows) {
         const plain = toPlain(row);
         const term = resolveTerm(termNumber, plain.examSetupTypeTerms ?? []);
-        const yearId = acedmicYearId ?? plain.examStructure?.acedmicYearId;
+        const yearId = academicYearId ?? plain.examStructure?.academicYearId;
         if (term == null || yearId == null) {
             continue;
         }
@@ -92,23 +92,23 @@ async function buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, te
     return countMap;
 }
 
-function resolveStudentCount(plain, sessionId, courseId, acedmicYearId, termNumber, countMap) {
+function resolveStudentCount(plain, sessionId, courseId, academicYearId, termNumber, countMap) {
     if (!sessionId || !courseId) {
         return 0;
     }
     const term = resolveTerm(termNumber, plain.examSetupTypeTerms ?? []);
-    const yearId = acedmicYearId ?? plain.examStructure?.acedmicYearId;
+    const yearId = academicYearId ?? plain.examStructure?.academicYearId;
     if (term == null || yearId == null) {
         return 0;
     }
     return countMap.get(`${term}:${yearId}`) ?? 0;
 }
 
-export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, academicYearId, termNumber) {
     const rows = await examStructureRepository.getSingleExamType(
         courseId,
         sessionId,
-        acedmicYearId,
+        academicYearId,
         termNumber,
     );
 
@@ -118,7 +118,7 @@ export async function getSingleExamType(courseId, sessionId, acedmicYearId, term
 
     const termIds = collectTermIds(rows);
     const [studentCountMap, hallTicketCountByTermId] = await Promise.all([
-        buildStudentCountMap(rows, sessionId, courseId, acedmicYearId, termNumber),
+        buildStudentCountMap(rows, sessionId, courseId, academicYearId, termNumber),
         sessionId && termIds.length
             ? studentHallTicketRepository.countHallTicketsByTermIds(termIds, sessionId)
             : Promise.resolve(new Map()),
@@ -136,7 +136,7 @@ export async function getSingleExamType(courseId, sessionId, acedmicYearId, term
                 plain,
                 sessionId,
                 courseId,
-                acedmicYearId,
+                academicYearId,
                 termNumber,
                 studentCountMap,
             ),

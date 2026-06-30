@@ -8,7 +8,7 @@ function mapSpecializationRow(row) {
     specializationCode: plain.specializationCode,
     courseId: plain.course_Id,
     instituteId: plain.instituteId,
-    acedmicYearId: plain.acedmicYearId,
+    academicYearId: plain.academicYearId,
   };
 }
 

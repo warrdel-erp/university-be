@@ -1,7 +1,7 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 function feeInvoiceExcludedAttributes() {
@@ -94,7 +94,7 @@ function feeInvoiceDetailsInclude() {
 }
 
 function feeInvoiceListIncludes(filters = {}) {
-  const mapperWhere = filters.acedmicYearId ? { acedmicYearId: filters.acedmicYearId } : {};
+  const mapperWhere = filters.academicYearId ? { academicYearId: filters.academicYearId } : {};
 
   return [
     userFeeInvoiceInclude(),
@@ -256,7 +256,7 @@ export async function deleteFeeInvoice(feeInvoiceId) {
 }
 
 export async function findInstituteCodeForScope(options = {}) {
-  const store = requestContext.getStore();
+  const store = getTenantStore();
   if (!store?.instituteId) {
     throw new Error("Institute scope required");
   }

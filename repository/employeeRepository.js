@@ -490,12 +490,12 @@ export async function getTeacherSubject(employeeId, filters = {}) {
             return [];
         }
 
-        const acedmicYearId = filters.acedmicYearId != null ? Number(filters.acedmicYearId) : undefined;
+        const academicYearId = filters.academicYearId != null ? Number(filters.academicYearId) : undefined;
         const sessionId = filters.sessionId != null ? Number(filters.sessionId) : undefined;
-        const subjectIds = await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId });
+        const subjectIds = await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId });
 
         const subjectWhere = {
-            ...(acedmicYearId != null && { acedmicYearId }),
+            ...(academicYearId != null && { academicYearId }),
             ...buildScope(model.subjectModel),
         };
 

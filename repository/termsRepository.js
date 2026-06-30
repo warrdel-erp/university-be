@@ -7,7 +7,7 @@ function whereFromSession(session, model, where = {}) {
   const tenant = {
     universityId: s.universityId,
     instituteId: s.instituteId,
-    acedmicYearId: s.acedmicYearId,
+    academicYearId: s.academicYearId,
   };
   const attrs = model.rawAttributes || {};
   const merged = { ...where, ...tenant };
@@ -34,10 +34,10 @@ export async function getSubjectsByCourseAndSession(courseId, session) {
   }
 }
 
-export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId) {
+export async function getSubjectsByCourseAndAcademicYear(courseId, academicYearId) {
   try {
     return await scoped(model.subjectModel).findAll({
-      where: { courseId, acedmicYearId },
+      where: { courseId, academicYearId },
       attributes: ['subjectId', 'subjectName', 'term'],
       raw: true,
       nest: true,
@@ -51,7 +51,7 @@ export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId
 export async function getSubjectsByCourseAndAcademicYearAndInstitute(
   courseId,
   instituteId,
-  acedmicYearId
+  academicYearId
 ) {
   try {
 
@@ -59,7 +59,7 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(
       where: {
         courseId,
         instituteId,
-        acedmicYearId,
+        academicYearId,
       },
       attributes: ['subjectId', 'subjectName', 'term', 'subjectCode'],
       order: [
@@ -120,10 +120,10 @@ export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionI
   }
 }
 
-export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId) {
+export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, academicYearId) {
   try {
     return await scoped(model.examSetupTypeTermModel).findAll({
-      where: { courseId, acedmicYearId },
+      where: { courseId, academicYearId },
       include: [
         {
           model: model.examSetupTypeModel,

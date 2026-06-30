@@ -1,6 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
@@ -58,11 +58,11 @@ export const getSpecializationOptions = async (req, res) => {
 export async function getSubjectOptions(req, res) {
     try {
         const { courseId, term, sessionId } = req.query;
-        const acedmicYearId = getTenantStore().academicYearId;
+        const academicYearId = getAcademicYearId();
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            acedmicYearId,
+            academicYearId,
             sessionId,
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);

@@ -42,11 +42,11 @@ export async function getSpecializationOptions(courseId) {
     });
 }
 
-export async function getSubjectOptions(courseId, term, acedmicYearId) {
+export async function getSubjectOptions(courseId, term, academicYearId) {
     const subjectWhere = {
         ...(courseId && { courseId: Number(courseId) }),
         ...(term && { term: Number(term) }),
-        ...(acedmicYearId && { acedmicYearId: Number(acedmicYearId) }),
+        ...(academicYearId && { academicYearId: Number(academicYearId) }),
     };
 
     const mappedRows = await scoped(model.classSubjectMapperModel).findAll({

@@ -37,6 +37,11 @@ export async function getHistoryByStudentId(studentId) {
                 model: model.classSectionModel,
                 as: "classSection",
             },
+            {
+                model: model.classSectionTermModel,
+                as: "classSectionTerm",
+                attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            },
         ],
         order: [["createdAt", "DESC"]],
     });

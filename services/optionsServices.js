@@ -33,18 +33,18 @@ export async function getSpecializationOptions(courseId) {
     return await optionsRepository.getSpecializationOptions(courseId);
 }
 
-export async function getSubjectOptions(courseId, term, acedmicYearId, sessionId) {
-    let resolvedAcademicYearId = acedmicYearId;
+export async function getSubjectOptions(courseId, term, academicYearId, sessionId) {
+    let resolvedAcademicYearId = academicYearId;
 
     if (sessionId) {
         const session = await scoped(model.sessionModel).findOne({
             where: { sessionId },
-            attributes: ["acedmicYearId"],
+            attributes: ["academicYearId"],
         });
         if (!session) {
             throw new Error("Session not found");
         }
-        resolvedAcademicYearId = session.acedmicYearId;
+        resolvedAcademicYearId = session.academicYearId;
 
         if (courseId) {
             const mapping = await optionsRepository.findSessionCourseMappingByCourseAndSession(

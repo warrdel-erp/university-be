@@ -1,12 +1,12 @@
 import * as model from '../models/index.js';
 import sequelize from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 import { getCampusIdByInstituteId } from "./buildingRepository.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
 function omitAcademicYearScope(scopeWhere = {}) {
-    const { acedmicYearId, ...rest } = scopeWhere;
+    const { academicYearId, ...rest } = scopeWhere;
     return rest;
 }
 
@@ -20,7 +20,7 @@ function instituteUniversityScope(model) {
 
 export async function getAllUniversity() {
     try {
-        const { universityId } = requestContext.getStore() ?? {};
+        const { universityId } = getTenantStore();
         return scoped(model.universityModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: { ...(universityId && { universityId }) },
@@ -33,7 +33,7 @@ export async function getAllUniversity() {
 
 export async function getAllCampus() {
     try {
-        const { instituteId } = requestContext.getStore() ?? {};
+        const { instituteId } = getTenantStore();
         const campusId = await getCampusIdByInstituteId(instituteId);
         return scoped(model.campusModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
@@ -47,7 +47,7 @@ export async function getAllCampus() {
 
 export async function getAllInstitute() {
     try {
-        const { instituteId } = requestContext.getStore() ?? {};
+        const { instituteId } = getTenantStore();
         return scoped(model.instituteModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             where: { ...(instituteId && { instituteId }) },
@@ -79,7 +79,7 @@ export async function getAllAffiliatedUniversity() {
 
 export async function getAllCourse() {
     try {
-        const { instituteId } = requestContext.getStore() ?? {};
+        const { instituteId } = getTenantStore();
         const campusId = instituteId ? await getCampusIdByInstituteId(instituteId) : undefined;
 
         return scoped(model.courseModel).findAll({
@@ -151,13 +151,13 @@ export async function getAllSpecialization() {
     }
 }
 
-export async function getAllSubject(acedmicYearId, instituteId) {
+export async function getAllSubject(academicYearId, instituteId) {
     try {
         return scoped(model.subjectModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: {
                 ...(instituteId && { instituteId }),
-                ...(acedmicYearId && { acedmicYearId }),
+                ...(academicYearId && { academicYearId }),
             },
         });
     } catch (error) {
@@ -247,7 +247,7 @@ export async function subjectBulkCreate(data, options = {}) {
     }
 }
 
-export async function addClass(data) {
+export async function addClassSections(data) {
     try {
         return scoped(model.classSectionModel).bulkCreate(data);
     } catch (error) {
@@ -266,7 +266,7 @@ export async function createClassSections(data, options = {}) {
             courseId: data.courseId,
             sessionId: data.sessionId,
             sectionId: data.sectionId,
-            acedmicYearId: data.acedmicYearId,
+            academicYearId: data.academicYearId,
             year: Number(data.year),
         };
 
@@ -320,7 +320,7 @@ export async function findOrCreateClassSectionTerm(
     }
 }
 
-export async function getClassDetails(classSectionsId, acedmicYearId) {
+export async function getClassSectionDetails(classSectionsId, academicYearId) {
     try {
         const queryOptions = {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -351,7 +351,7 @@ export async function getClassDetails(classSectionsId, acedmicYearId) {
                 ...(classSectionsId && Number(classSectionsId) !== 0 && {
                     classSectionsId: Number(classSectionsId),
                 }),
-                ...(acedmicYearId && { acedmicYearId: Number(acedmicYearId) }),
+                ...(academicYearId && { academicYearId: Number(academicYearId) }),
             }
         };
 
@@ -362,7 +362,7 @@ export async function getClassDetails(classSectionsId, acedmicYearId) {
     }
 }
 
-export async function getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId) {
+export async function getClassSectionSpecific(campusId, instituteId, academicYearId, courseId, sessionId) {
     try {
         return scoped(model.campusModel).findOne({
             attributes: ["campusId", "campusName"],
@@ -398,7 +398,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                     where: {
                                         ...buildScope(model.classSectionModel),
                                         ...(sessionId && { sessionId }),
-                                        ...(acedmicYearId && { acedmicYearId }),
+                                        ...(academicYearId && { academicYearId }),
                                     },
                                 },
                                 {
@@ -408,7 +408,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
                                     attributes: ["subjectId", "subjectName", "subjectCode", "subjectType",],
                                     where: {
                                         ...buildScope(model.subjectModel),
-                                        ...(acedmicYearId && { acedmicYearId }),
+                                        ...(academicYearId && { academicYearId }),
                                     },
                                 },
                                 ...(courseId
@@ -468,7 +468,7 @@ export async function getClassSpecific(campusId, instituteId, acedmicYearId, cou
     }
 }
 
-export async function addClassSubjectMapper(data) {
+export async function addSectionSubjectMapper(data) {
     try {
         return scoped(model.classSubjectMapperModel).bulkCreate(data);
     } catch (error) {
@@ -477,7 +477,7 @@ export async function addClassSubjectMapper(data) {
     }
 }
 
-export async function getClassSubjectMapper(term, acedmicYearId) {
+export async function getSectionSubjectMapper(term, academicYearId) {
     try {
         return scoped(model.classSubjectMapperModel).findAll({
             attributes: ['classSubjectMapperId', 'subjectId'],
@@ -495,7 +495,7 @@ export async function getClassSubjectMapper(term, acedmicYearId) {
                     attributes: ["subjectName", "subjectId", "subjectType", "subjectCode", "term", "courseId"],
                     where: {
                         ...buildScope(model.subjectModel),
-                        ...(acedmicYearId && { acedmicYearId }),
+                        ...(academicYearId && { academicYearId }),
                         ...(term && { term: Number(term) }),
                     },
                     required: true,
@@ -591,10 +591,10 @@ export async function getMonthlyIncomeRepository() {
     }
 }
 
-export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearId) {
+export async function getClassSectionsByFilter(sessionId, courseId, academicYearId) {
     try {
         const session = await scoped(model.sessionModel).findOne({
-            attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
+            attributes: ['sessionId', 'sessionName', 'academicYearId'],
             where: {
                 sessionId,
                 ...omitAcademicYearScope(buildScope(model.sessionModel)),
@@ -616,7 +616,7 @@ export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearI
                 where: {
                     sessionId,
                     courseId,
-                    ...(acedmicYearId && { acedmicYearId }),
+                    ...(academicYearId && { academicYearId }),
                 },
                 include: [
                     classSectionTermsInclude(),

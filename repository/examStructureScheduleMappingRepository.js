@@ -80,11 +80,11 @@ export async function getExamStructureSchedule(examSetupTypeId) {
   });
 }
 
-export async function findSubjectAcedmicYearId(subjectId) {
+export async function findSubjectacademicYearId(subjectId) {
   const subject = await scoped(model.subjectModel).findByPk(subjectId, {
-    attributes: ["acedmicYearId"],
+    attributes: ["academicYearId"],
   });
-  return subject?.acedmicYearId ?? null;
+  return subject?.academicYearId ?? null;
 }
 
 export async function updateExamSchedule(examScheduleId, data) {
@@ -139,7 +139,7 @@ export async function findConflictingExamForStudentCohort({
   startMinutes,
   endMinutes,
   sessionId,
-  acedmicYearId,
+  academicYearId,
   courseId,
   term,
   semesterId,
@@ -153,7 +153,7 @@ export async function findConflictingExamForStudentCohort({
     where: {
       examDate,
       sessionId,
-      acedmicYearId,
+      academicYearId,
       ...(semesterId != null && { semesterId }),
       ...(excludeExamScheduleId && {
         examScheduleId: { [Op.ne]: excludeExamScheduleId },
@@ -317,12 +317,12 @@ export async function getExamSetupTypeTermById(examSetupTypeTermId) {
   }
 }
 
-export async function findSubjectsWithSchedules(courseId, acedmicYearId, term, examSetupTypeTermId, sessionId) {
+export async function findSubjectsWithSchedules(courseId, academicYearId, term, examSetupTypeTermId, sessionId) {
   return scoped(model.subjectModel).findAll({
     where: {
       ...buildScope(model.subjectModel),
       ...(courseId && { courseId }),
-      ...(acedmicYearId && { acedmicYearId }),
+      ...(academicYearId && { academicYearId }),
       ...(term && { term }),
     },
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -339,7 +339,7 @@ export async function findSubjectsWithSchedules(courseId, acedmicYearId, term, e
           "subjectId",
           "semesterId",
           "examSetupTypeTermId",
-          "acedmicYearId",
+          "academicYearId",
           "sessionId",
           "examDate",
           "examTime",
@@ -399,12 +399,12 @@ export async function findRoomsByExamScheduleIds(examScheduleIds) {
   });
 }
 
-async function getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId) {
+async function getClassSectionIdsForTerm(courseId, academicYearId, term, sessionId) {
   const classSections = await scoped(model.classSectionModel).findAll({
     attributes: ["classSectionsId"],
     where: {
       courseId,
-      acedmicYearId,
+      academicYearId,
       ...(sessionId && { sessionId }),
     },
     include: [classSectionTermsInclude({ term, required: true })],
@@ -431,14 +431,14 @@ async function getCurrentStudentIdsForClassSections(classSectionIds) {
   return [...new Set(historyRows.map((row) => row.studentId))];
 }
 
-async function resolveCurrentStudentIdsForTerm(courseId, acedmicYearId, term, sessionId) {
-  const classSectionIds = await getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId);
+async function resolveCurrentStudentIdsForTerm(courseId, academicYearId, term, sessionId) {
+  const classSectionIds = await getClassSectionIdsForTerm(courseId, academicYearId, term, sessionId);
   return getCurrentStudentIdsForClassSections(classSectionIds);
 }
 
-export async function countStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
+export async function countStudentsForTerm(courseId, academicYearId, term, sessionId) {
   try {
-    const studentIds = await resolveCurrentStudentIdsForTerm(courseId, acedmicYearId, term, sessionId);
+    const studentIds = await resolveCurrentStudentIdsForTerm(courseId, academicYearId, term, sessionId);
     if (!studentIds.length) {
       return 0;
     }
@@ -452,9 +452,9 @@ export async function countStudentsForTerm(courseId, acedmicYearId, term, sessio
   }
 }
 
-export async function findStudentsForTerm(courseId, acedmicYearId, term, sessionId) {
+export async function findStudentsForTerm(courseId, academicYearId, term, sessionId) {
   try {
-    const classSectionIds = await getClassSectionIdsForTerm(courseId, acedmicYearId, term, sessionId);
+    const classSectionIds = await getClassSectionIdsForTerm(courseId, academicYearId, term, sessionId);
     const studentIds = await getCurrentStudentIdsForClassSections(classSectionIds);
     if (!studentIds.length) {
       return [];
@@ -462,7 +462,7 @@ export async function findStudentsForTerm(courseId, acedmicYearId, term, session
 
     const classSectionWhere = {
       courseId,
-      acedmicYearId,
+      academicYearId,
       ...buildScope(model.classSectionModel),
       ...(sessionId && { sessionId }),
     };

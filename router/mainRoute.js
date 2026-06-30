@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
-import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
+import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
 
 const positiveIntegerId = z.coerce
@@ -22,7 +22,6 @@ const addCourseItemSchema = z.object({
 const addCourseSchema = z.object({
     course_levelId: z.coerce.number().int().positive('course_levelId is required'),
     departmentId: positiveIntegerId.optional(),
-    acedmicYearId: z.coerce.number().int().positive().optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
     courses: z.array(addCourseItemSchema).min(1, 'courses array is required'),
@@ -81,13 +80,12 @@ const updateSubjectSchema = z.object({
     { message: 'At least one field to update is required' },
 );
 
-const classRecordQuerySchema = z.object({
+const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
     classSectionsId: z.coerce.number().int().positive().optional(),
     classSectionId: z.coerce.number().int().positive().optional(),
     classSectionTermId: z.coerce.number().int().positive().optional(),
     term: z.coerce.number().int().positive().optional(),
-    acedmicYearId: z.coerce.number().int().positive().optional(),
 }).refine(
     (query) => query.classSectionsId != null || query.classSectionId != null,
     { message: 'classSectionsId is required' },
@@ -113,24 +111,20 @@ router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubje
 
 router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
 
-router.post('/class', userAuth, addClass);
-
-router.get('/class', userAuth, getClass);
-
-router.get('/classSpecific', userAuth, getClassSpecific);
-
-router.post('/classSubjectMapper', userAuth, addClassSubjectMapper);
-
-router.get('/classSubjectMapper', userAuth, getClassSubjectMapper);
+// Section master (class table removed)
+router.post('/classSections', userAuth, addClassSections);
+router.get('/classSections', userAuth, getClassSections);
+router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
+router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
+router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
+router.get(
+    '/classSectionRecord',
+    userAuth,
+    validate({ query: classSectionRecordQuerySchema }),
+    getClassSectionRecord,
+);
 
 router.post('/subjectExcel', userAuth, subjectExcel);
-
-router.get(
-    '/classRecord',
-    userAuth,
-    validate({ query: classRecordQuerySchema }),
-    getClassRecord,
-);
 
 router.get("/monthly-income", getMonthlyIncome);
 

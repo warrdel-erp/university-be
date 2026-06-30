@@ -12,12 +12,12 @@ export async function addLesson(data) {
   }
 }
 
-export async function getLessonDetails(acedmicYearId) {
+export async function getLessonDetails(academicYearId) {
   try {
     const lesson = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: {
-        ...(acedmicYearId && { acedmicYearId }),
+        ...(academicYearId && { academicYearId }),
       },
       include: [
         {
@@ -194,10 +194,10 @@ export async function addLessionMapping(data, transaction) {
   }
 }
 
-export async function getMapping(acedmicYearId) {
+export async function getMapping(academicYearId) {
   try {
     const lessonWhereClause = {
-      ...(acedmicYearId && { acedmicYearId }),
+      ...(academicYearId && { academicYearId }),
       ...buildScope(model.lessonModel),
     };
     const lesson = await scoped(model.lessonMappingModel).findAll({
@@ -421,11 +421,11 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
   }
 }
 
-// export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
+// export async function getEmployeeSubjectAndLesson(academicYearId,employeeId,courseId,sessionId) {
 //   try {
 //     const whereClause = {
 //       ...(employeeId && { employeeId }),
-//       ...(acedmicYearId && { acedmicYearId }),
+//       ...(academicYearId && { academicYearId }),
 //     };
 //     const lesson = await model.teacherSubjectMappingModel.findAll({
 //       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },

@@ -20,9 +20,6 @@ const termsListSchema = z.object({
     instituteId: z.coerce.number({
         required_error: "instituteId is required"
     }),
-    acedmicYearId: z.coerce.number({
-        required_error: "academicYearId is required"
-    })
 });
 
 router.get('/withSubjectAndSection', userAuth, validate({ query: termsQuerySchema }), getTermsData);

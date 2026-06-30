@@ -1,7 +1,7 @@
 import * as model from '../models/index.js';
 import { Op, Sequelize } from 'sequelize';
 import { buildScope, scoped } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 import {
     classSectionTermsInclude,
     resolveProgramTerm,
@@ -13,17 +13,17 @@ import { resolveClassSectionTermId as resolveClassSectionTermIdFromRepo } from '
 import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
-    const { acedmicYearId, ...rest } = scopeWhere;
+    const { academicYearId, ...rest } = scopeWhere;
     return rest;
 }
 
-/** Promotion reads use explicit acedmicYearId; scoped() would override it with request context. */
+/** Promotion reads use explicit academicYearId; scoped() would override it with request context. */
 function promotionClassSectionWhere(filters = {}) {
-    const { acedmicYearId, ...rest } = filters;
+    const { academicYearId, ...rest } = filters;
     return {
         ...omitAcademicYearScope(buildScope(model.classSectionModel)),
         ...rest,
-        ...(acedmicYearId != null && { acedmicYearId }),
+        ...(academicYearId != null && { academicYearId }),
     };
 }
 
@@ -66,20 +66,20 @@ function buildStudentListWhere(search, courseId) {
 const sessionAcedmicYearAttrs = { exclude: ["createdAt", "updatedAt", "deletedAt"] };
 
 function getRequestAcademicYearId() {
-    return requestContext.getStore()?.academicYearId;
+    return getAcademicYearId();
 }
 
 function studentSessionWithAcademicYearInclude(options = {}) {
     const { attributes } = options;
-    const acedmicYearId = options.acedmicYearId ?? getRequestAcademicYearId();
+    const academicYearId = options.academicYearId ?? getRequestAcademicYearId();
     return {
         model: model.sessionModel,
         as: "studentSession",
         attributes: attributes ?? sessionAcedmicYearAttrs,
-        ...(acedmicYearId != null && {
+        ...(academicYearId != null && {
             required: true,
             where: {
-                acedmicYearId,
+                academicYearId,
                 ...buildScope(model.sessionModel),
             },
         }),
@@ -120,15 +120,15 @@ function studentWithFeePlanInitiateWhere() {
 
 /** Scoped read: student must belong to the logged-in academic year (via session). */
 export async function assertStudentInRequestAcademicYear(studentId, options = {}) {
-    const acedmicYearId = getRequestAcademicYearId();
-    if (acedmicYearId == null) {
+    const academicYearId = getRequestAcademicYearId();
+    if (academicYearId == null) {
         return null;
     }
 
     return scoped(model.studentModel).findOne({
         where: { studentId },
         attributes: options.attributes ?? ['studentId'],
-        include: [studentSessionWithAcademicYearInclude({ acedmicYearId, attributes: [] })],
+        include: [studentSessionWithAcademicYearInclude({ academicYearId, attributes: [] })],
         transaction: options.transaction,
     });
 }
@@ -353,7 +353,7 @@ function buildPromotionStudentIncludes({ term } = {}) {
             term,
             sectionRequired: term != null,
             termRequired: term != null,
-            sectionAttributes: ['classSectionsId', 'section', 'class', 'year', 'acedmicYearId', 'sessionId'],
+            sectionAttributes: ['classSectionsId', 'section', 'class', 'year', 'academicYearId', 'sessionId'],
         }),
         {
             model: model.studentClassSectionsHistoryModel,
@@ -365,8 +365,13 @@ function buildPromotionStudentIncludes({ term } = {}) {
                 {
                     model: model.classSectionModel,
                     as: 'classSection',
-                    attributes: ['classSectionsId', 'section', 'class', 'year', 'acedmicYearId', 'sessionId'],
+                    attributes: ['classSectionsId', 'section', 'class', 'year', 'academicYearId', 'sessionId'],
                     include: [classSectionTermsInclude()],
+                },
+                {
+                    model: model.classSectionTermModel,
+                    as: 'classSectionTerm',
+                    attributes: ['classSectionTermId', 'term', 'classSectionsId'],
                 },
             ],
         },
@@ -380,12 +385,12 @@ export async function getAcademicYearTitlesByIds(yearIds = []) {
     }
 
     const rows = await scoped(model.acedmicYearModel).findAll({
-        where: { acedmicYearId: { [Op.in]: uniqueIds } },
-        attributes: ['acedmicYearId', 'yearTitle'],
+        where: { academicYearId: { [Op.in]: uniqueIds } },
+        attributes: ['academicYearId', 'yearTitle'],
         raw: true,
     });
 
-    return new Map(rows.map((row) => [Number(row.acedmicYearId), row.yearTitle]));
+    return new Map(rows.map((row) => [Number(row.academicYearId), row.yearTitle]));
 }
 
 export async function getPromotionStudentList({
@@ -841,9 +846,9 @@ export async function checkEnroll(enrollNumber) {
     return findStudentByEnrollNumber(enrollNumber);
 }
 
-export async function getEmptyEnrollNumber(acedmicYearId) {
+export async function getEmptyEnrollNumber(academicYearId) {
     try {
-        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+        if (getRequestAcademicYearId() == null && academicYearId == null) {
             return [];
         }
 
@@ -855,7 +860,7 @@ export async function getEmptyEnrollNumber(acedmicYearId) {
             },
             include: [
                 studentSessionWithAcademicYearInclude({
-                    ...(acedmicYearId != null && { acedmicYearId }),
+                    ...(academicYearId != null && { academicYearId }),
                     attributes: [],
                 }),
                 {
@@ -1001,7 +1006,7 @@ export async function buildClassStudentMapperCreatePayload(
         classSectionTermId,
         term,
         sessionId,
-        acedmicYearId,
+        academicYearId,
     },
     transaction,
 ) {
@@ -1019,7 +1024,7 @@ export async function buildClassStudentMapperCreatePayload(
     const sectionId = classSectionsId ?? null;
     let resolvedClassSectionTermId = classSectionTermId ?? student.classSectionTermId ?? null;
     let resolvedSessionId = sessionId ?? student.sessionId ?? null;
-    let resolvedAcedmicYearId = acedmicYearId ?? null;
+    let resolvedacademicYearId = academicYearId ?? null;
 
     if (!sectionId && resolvedClassSectionTermId) {
         const termRow = await model.classSectionTermModel.findByPk(resolvedClassSectionTermId, {
@@ -1031,7 +1036,7 @@ export async function buildClassStudentMapperCreatePayload(
             const plain = section?.get({ plain: true });
             if (plain) {
                 resolvedSessionId = resolvedSessionId ?? plain.sessionId ?? null;
-                resolvedAcedmicYearId = resolvedAcedmicYearId ?? plain.acedmicYearId ?? null;
+                resolvedacademicYearId = resolvedacademicYearId ?? plain.academicYearId ?? null;
             }
         }
     } else if (sectionId) {
@@ -1039,7 +1044,7 @@ export async function buildClassStudentMapperCreatePayload(
         const plain = section?.get({ plain: true });
         if (plain) {
             resolvedSessionId = resolvedSessionId ?? plain.sessionId ?? null;
-            resolvedAcedmicYearId = resolvedAcedmicYearId ?? plain.acedmicYearId ?? null;
+            resolvedacademicYearId = resolvedacademicYearId ?? plain.academicYearId ?? null;
             if (!resolvedClassSectionTermId) {
                 const sectionTerm = term != null ? Number(term) : resolveProgramTerm(plain);
                 if (sectionTerm != null) {
@@ -1054,12 +1059,12 @@ export async function buildClassStudentMapperCreatePayload(
         }
     }
 
-    if (!resolvedAcedmicYearId && resolvedSessionId) {
+    if (!resolvedacademicYearId && resolvedSessionId) {
         const session = await model.sessionModel.findByPk(resolvedSessionId, {
-            attributes: ['acedmicYearId'],
+            attributes: ['academicYearId'],
             transaction,
         });
-        resolvedAcedmicYearId = session?.acedmicYearId ?? null;
+        resolvedacademicYearId = session?.academicYearId ?? null;
     }
 
     if (!resolvedClassSectionTermId) {
@@ -1067,8 +1072,8 @@ export async function buildClassStudentMapperCreatePayload(
         error.statusCode = 400;
         throw error;
     }
-    if (!resolvedSessionId || !resolvedAcedmicYearId) {
-        const error = new Error('sessionId and acedmicYearId are required for class_student_mapper');
+    if (!resolvedSessionId || !resolvedacademicYearId) {
+        const error = new Error('sessionId and academicYearId are required for class_student_mapper');
         error.statusCode = 400;
         throw error;
     }
@@ -1077,12 +1082,12 @@ export async function buildClassStudentMapperCreatePayload(
         studentId,
         classSectionTermId: resolvedClassSectionTermId,
         sessionId: resolvedSessionId,
-        acedmicYearId: resolvedAcedmicYearId,
+        academicYearId: resolvedacademicYearId,
         createdBy,
     };
 }
 
-export async function classStudentMapping(data, transaction) {
+export async function sectionStudentMapping(data, transaction) {
     try {
         if (!data?.classSectionTermId) {
             const error = new Error('classSectionTermId is required for class_student_mapper');
@@ -1101,7 +1106,7 @@ export async function classStudentMapping(data, transaction) {
     }
 };
 
-export async function classStudentMappingExcel(data, transaction) {
+export async function sectionStudentMappingExcel(data, transaction) {
     try {
         for (const row of data) {
             const student = await assertScopedStudent(row.studentId, { transaction });
@@ -1122,9 +1127,9 @@ export async function classStudentMappingExcel(data, transaction) {
     }
 };
 
-export async function getclassStudentMapping(classSectionTermId, acedmicYearId, term) {
+export async function getSectionStudentMapping(classSectionTermId, academicYearId, term) {
     try {
-        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+        if (getRequestAcademicYearId() == null && academicYearId == null) {
             return [];
         }
 
@@ -1132,7 +1137,7 @@ export async function getclassStudentMapping(classSectionTermId, acedmicYearId, 
 
         const whereConditions = {
             ...buildScope(model.classStudentMapperModel),
-            ...(acedmicYearId != null && { acedmicYearId }),
+            ...(academicYearId != null && { academicYearId }),
         };
         if (classSectionTermId !== 0 && classSectionTermId != null) {
             whereConditions.classSectionTermId = classSectionTermId;
@@ -1166,7 +1171,7 @@ export async function getclassStudentMapping(classSectionTermId, acedmicYearId, 
                     where: studentScope,
                     include: [
                         studentSessionWithAcademicYearInclude({
-                            ...(acedmicYearId != null && { acedmicYearId }),
+                            ...(academicYearId != null && { academicYearId }),
                             attributes: [],
                         }),
                         {
@@ -1180,7 +1185,7 @@ export async function getclassStudentMapping(classSectionTermId, acedmicYearId, 
                             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "instituteId", "campusId", "instituteCode"] },
                         },
                         studentSessionWithAcademicYearInclude(
-                            acedmicYearId ? { acedmicYearId, attributes: sessionAcedmicYearAttrs } : {},
+                            academicYearId ? { academicYearId, attributes: sessionAcedmicYearAttrs } : {},
                         ),
                         {
                             model: model.affiliatedIniversityModel,
@@ -1251,7 +1256,7 @@ export async function promoteStudent(studentId, data, transaction) {
         }
 
         const {
-            acedmicYearId,
+            academicYearId,
             classSectionTermId,
             sessionId,
             classStudentMapperId,
@@ -1263,7 +1268,7 @@ export async function promoteStudent(studentId, data, transaction) {
             ...rest,
         };
         const mapperUpdate = {
-            ...(acedmicYearId != null && { acedmicYearId }),
+            ...(academicYearId != null && { academicYearId }),
             ...(sessionId != null && { sessionId }),
         };
         if (classSectionTermId == null) {
@@ -1296,7 +1301,7 @@ export async function promoteStudent(studentId, data, transaction) {
     }
 };
 
-export async function getClassStudentMapperByStudentId(studentId) {
+export async function getSectionStudentMapperByStudentId(studentId) {
     try {
         const student = await assertScopedStudent(studentId);
         if (!student) {
@@ -1305,7 +1310,7 @@ export async function getClassStudentMapperByStudentId(studentId) {
 
         return model.classStudentMapperModel.findOne({
             where: { studentId },
-            attributes: ["classStudentMapperId", "acedmicYearId", "classSectionTermId", "sessionId"],
+            attributes: ["classStudentMapperId", "academicYearId", "classSectionTermId", "sessionId"],
             order: [["classStudentMapperId", "DESC"]],
         });
     } catch (error) {
@@ -1324,25 +1329,25 @@ export async function getStudentForPromate(studentId) {
                 {
                     model: model.sessionModel,
                     as: "studentSession",
-                    attributes: ["sessionId", "acedmicYearId"],
+                    attributes: ["sessionId", "academicYearId"],
                     include: [
                         {
                             model: model.acedmicYearModel,
                             as: "sessionAcedmic",
-                            attributes: ["acedmicYearId", "yearTitle"],
+                            attributes: ["academicYearId", "yearTitle"],
                         },
                     ],
                 },
                 {
                     model: model.classStudentMapperModel,
                     as: "studentMapped",
-                    attributes: ["acedmicYearId", "classSectionTermId", "sessionId"],
+                    attributes: ["academicYearId", "classSectionTermId", "sessionId"],
                     separate: true,
                     limit: 1,
                     order: [["classStudentMapperId", "DESC"]],
                 },
                 studentClassSectionTermWithSectionInclude({
-                    sectionAttributes: ['classSectionsId', 'acedmicYearId', 'sessionId'],
+                    sectionAttributes: ['classSectionsId', 'academicYearId', 'sessionId'],
                 }),
             ],
         });
@@ -1385,17 +1390,17 @@ export async function getTargetClassSectionForPromotion(classSectionsId) {
             "courseId",
             "instituteId",
             "sessionId",
-            "acedmicYearId",
+            "academicYearId",
             "specializationId",
         ],
         include: [classSectionTermsInclude()],
     });
 }
 
-export async function getNextAcedmicYearAfter(currentAcedmicYearId) {
+export async function getNextAcedmicYearAfter(currentacademicYearId) {
     const current = await model.acedmicYearModel.findOne({
-        where: { acedmicYearId: currentAcedmicYearId },
-        attributes: ['acedmicYearId', 'universityId', 'startingDate', 'yearTitle'],
+        where: { academicYearId: currentacademicYearId },
+        attributes: ['academicYearId', 'universityId', 'startingDate', 'yearTitle'],
     });
 
     if (!current) {
@@ -1407,10 +1412,10 @@ export async function getNextAcedmicYearAfter(currentAcedmicYearId) {
     const nextById = await model.acedmicYearModel.findOne({
         where: {
             universityId: current.universityId,
-            acedmicYearId: { [Op.gt]: current.acedmicYearId },
+            academicYearId: { [Op.gt]: current.academicYearId },
         },
-        attributes: ['acedmicYearId', 'yearTitle', 'startingDate', 'endingDate'],
-        order: [['acedmicYearId', 'ASC']],
+        attributes: ['academicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        order: [['academicYearId', 'ASC']],
     });
 
     if (nextById) {
@@ -1423,21 +1428,21 @@ export async function getNextAcedmicYearAfter(currentAcedmicYearId) {
             universityId: current.universityId,
             startingDate: { [Op.gt]: current.startingDate },
         },
-        attributes: ['acedmicYearId', 'yearTitle', 'startingDate', 'endingDate'],
+        attributes: ['academicYearId', 'yearTitle', 'startingDate', 'endingDate'],
         order: [['startingDate', 'ASC']],
     });
 }
 
 export async function getPromotionClassSections({
     courseId,
-    acedmicYearId,
+    academicYearId,
     term,
     specializationId,
     instituteId,
 }) {
     const where = promotionClassSectionWhere({
         courseId,
-        acedmicYearId,
+        academicYearId,
         ...(instituteId != null && { instituteId }),
     });
 
@@ -1451,7 +1456,7 @@ export async function getPromotionClassSections({
             'classSectionsId',
             'section',
             'sessionId',
-            'acedmicYearId',
+            'academicYearId',
             'specializationId',
             'year',
         ],
@@ -1630,15 +1635,15 @@ export async function findStudentsByFeePlanProfileId(
     options = {}
 ) {
     try {
-        const { acedmicYearId, transaction } = options;
+        const { academicYearId, transaction } = options;
         const where = {
             feePlanProfileId,
         };
 
         const sessionInclude =
-            acedmicYearId != null
+            academicYearId != null
                 ? studentSessionWithAcademicYearInclude({
-                    acedmicYearId,
+                    academicYearId,
                     attributes: ["sessionId", "sessionName"],
                 })
                 : {
@@ -1800,8 +1805,8 @@ export async function findInvoicesByStudentIdsForProfile(
 
 export async function getEmptyFeeDetails(filters = {}) {
     try {
-        const { courseId, sessionId, acedmicYearId } = filters;
-        if (getRequestAcademicYearId() == null && acedmicYearId == null) {
+        const { courseId, sessionId, academicYearId } = filters;
+        if (getRequestAcademicYearId() == null && academicYearId == null) {
             return [];
         }
 
@@ -1819,7 +1824,7 @@ export async function getEmptyFeeDetails(filters = {}) {
             },
             studentClassSectionTermWithSectionInclude(),
             studentSessionWithAcademicYearInclude({
-                ...(acedmicYearId != null && { acedmicYearId }),
+                ...(academicYearId != null && { academicYearId }),
                 attributes: [],
             }),
         ];
@@ -1861,7 +1866,7 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassRecord(courseId, classSectionsId) {
+export async function getClassSectionRecord(courseId, classSectionsId) {
     try {
         const classSection = await scoped(model.classSectionModel).findOne({
             where: {
@@ -1871,7 +1876,7 @@ export async function getClassRecord(courseId, classSectionsId) {
             attributes: [
                 'classSectionsId',
                 'courseId',
-                'acedmicYearId',
+                'academicYearId',
                 'section',
                 'class',
             ],
@@ -2004,7 +2009,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
             ],
             include: [
                 studentSessionWithAcademicYearInclude({
-                    acedmicYearId: academicYearId,
+                    academicYearId: academicYearId,
                     attributes: [],
                 }),
                 studentClassSectionTermWithSectionInclude({
@@ -2012,7 +2017,7 @@ export async function getStudentsByClassSection(classSectionsId, timeTableMappin
                     termRequired: true,
                     sectionRequired: true,
                     sectionWhere: {
-                        acedmicYearId: academicYearId,
+                        academicYearId: academicYearId,
                         ...buildScope(model.classSectionModel),
                     },
                     sectionAttributes: ["classSectionsId", "section"],
@@ -2067,15 +2072,15 @@ export async function getScopedExamScheduleForEvaluation(examScheduleId) {
 }
 
 export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term, examScheduleId) {
-    const acedmicYearId = getRequestAcademicYearId();
-    if (acedmicYearId == null) {
+    const academicYearId = getRequestAcademicYearId();
+    if (academicYearId == null) {
         return [];
     }
 
     const sectionWhere = {
         sessionId,
         courseId,
-        acedmicYearId,
+        academicYearId,
         ...buildScope(model.classSectionModel),
     };
     const answerSheetWhere = {

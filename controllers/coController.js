@@ -1,12 +1,12 @@
 import * as coCreation from '../services/coServices.js';
 
 export async function addCo(req, res) {
-    const { acedmicYearId, syllabusDetailsId, subjectId } = req.body;
+    const { academicYearId, syllabusDetailsId, subjectId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!acedmicYearId || !syllabusDetailsId || !subjectId) {
-            return res.status(400).send('acedmicYearId,syllabusDetailsId and subjectId is required');
+        if (!academicYearId || !syllabusDetailsId || !subjectId) {
+            return res.status(400).send('academicYearId,syllabusDetailsId and subjectId is required');
         }
         const Po = await coCreation.addCo(req.body, createdBy, updatedBy);
         res.status(201).json({ message: 'Data added successfully', Po });
@@ -70,12 +70,12 @@ export async function deleteCo(req, res) {
 }
 
 export async function addCoWeightage(req, res) {
-    const { coId, term, acedmicYearId } = req.body;
+    const { coId, term, academicYearId } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!acedmicYearId || !coId || !term) {
-            return res.status(400).send('acedmicYearId,coId and term is required');
+        if (!academicYearId || !coId || !term) {
+            return res.status(400).send('academicYearId,coId and term is required');
         }
         const Po = await coCreation.addCoWeightage(req.body, createdBy, updatedBy);
         res.status(201).json({ message: 'Data added successfully', Po });

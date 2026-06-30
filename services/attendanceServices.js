@@ -188,8 +188,6 @@ function validateAttendanceRow(attendance) {
     "studentId",
     "classSectionsId",
     "timeTableMappingId",
-    "instituteId",
-    "universityId",
     "createdBy",
     "updatedBy",
     "attendanceStatus",
@@ -426,7 +424,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
 //   };
 // };
 
-export async function getPreviousClasses(employeeId, req) {
+export async function getPreviousSessions(employeeId, req) {
   const mappings = await attendanceService.getTeacherMappings(employeeId);
 
   if (!Array.isArray(mappings) || !mappings.length) {
@@ -538,7 +536,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
 
 };
 
-export async function getEmployeeClassDates(classSectionId, subjectId, employeeId) {
+export async function getEmployeeSectionDates(classSectionId, subjectId, employeeId) {
   const [scheduleItems, details] = await Promise.all([
     attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId),
     attendanceService.getDetailsByIds(classSectionId, subjectId, employeeId)

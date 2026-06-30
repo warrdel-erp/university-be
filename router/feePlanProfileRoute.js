@@ -75,7 +75,6 @@ const createBody = z.object({
   planType: z.enum(["annual", "semester", "trimester"]),
   category: z.enum(["scholarship", "non-scholarship"]),
   courseSessionId: id,
-  academicYearId: id.optional(),
   publishStatus: publishStatusEnum.optional().default("draft"),
   feePlanItems: z.array(feePlanItemBody).min(1).optional(),
 });
@@ -87,7 +86,6 @@ const updateBody = z
     planType: z.enum(["annual", "semester", "trimester"]).optional(),
     category: z.enum(["scholarship", "non-scholarship"]).optional(),
     courseSessionId: id.optional(),
-    academicYearId: id.optional(),
     publishStatus: publishStatusEnum.optional(),
     feePlanItems: z.array(feePlanItemForUpdate).min(1).optional(),
   })
@@ -97,7 +95,6 @@ const updateBody = z
       body.planType !== undefined ||
       body.category !== undefined ||
       body.courseSessionId !== undefined ||
-      body.academicYearId !== undefined ||
       body.publishStatus !== undefined ||
       body.feePlanItems !== undefined;
 

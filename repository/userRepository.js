@@ -1,7 +1,7 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function register(data) {
@@ -298,7 +298,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
 export async function getAllUsers(page, limit, search) {
   try {
-    const store = requestContext.getStore();
+    const store = getTenantStore();
     const offset = (page - 1) * limit;
     const whereCondition = {
       ...(store?.instituteId && { defaultInstituteId: store.instituteId }),

@@ -13,7 +13,7 @@ const feeGroupModel = sequelize.define(
             autoIncrement: true,
             field: 'fee_group_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

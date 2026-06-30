@@ -35,7 +35,7 @@ const examScheduleModel = sequelize.define(
                 key: 'exam_setup_type_term_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

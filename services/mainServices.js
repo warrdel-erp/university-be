@@ -36,7 +36,7 @@ function normalizeAddCoursePayload(data) {
     return {
         course_levelId: coercePositiveInt(data.course_levelId),
         affiliatedUniversityId: coercePositiveInt(data.affiliatedUniversityId),
-        acedmicYearId: coercePositiveInt(data.acedmicYearId),
+        academicYearId: coercePositiveInt(data.academicYearId),
         subAccountId: rootSubAccountId,
         term: rootTerm,
         courses: courses.map((course) => ({
@@ -277,14 +277,14 @@ export async function changeCourseStatus(courseId, isActive) {
 export async function addSpecialization(data, createdBy) {
     const results = [];
     try {
-        const { course_Id, specializations, acedmicYearId } = data;
+        const { course_Id, specializations, academicYearId } = data;
 
         for (const specialization of specializations) {
             const result = await mainRepository.addSpecialization({
                 ...specialization,
                 course_Id,
                 createdBy,
-                acedmicYearId,
+                academicYearId,
             });
             results.push(result);
         }
@@ -318,15 +318,15 @@ export async function updateSubject(data) {
     return mainRepository.updateSubject(subjectId, payload);
 }
 
-export async function addClass(data, createdBy) {
+export async function addClassSections(data, createdBy) {
     try {
         if (!data) throw new Error('Data is required');
         if (!createdBy) throw new Error('CreatedBy is required');
 
-        const { courseId, acedmicYearId, sections, sessionId } = data;
+        const { courseId, academicYearId, sections, sessionId } = data;
 
         if (!courseId) throw new Error('CourseId is required');
-        if (!acedmicYearId) throw new Error('AcedmicYearId is required');
+        if (!academicYearId) throw new Error('academicYearId is required');
         if (!sections?.length) throw new Error('Sections are required and must be a non-empty array');
         if (!sessionId) throw new Error('SessionId is required');
 
@@ -360,7 +360,7 @@ export async function addClass(data, createdBy) {
 
                 const classSectionRow = await mainRepository.createClassSections({
                     courseId: Number(courseId),
-                    acedmicYearId: Number(acedmicYearId),
+                    academicYearId: Number(academicYearId),
                     sessionId: Number(sessionId),
                     year: yearNum,
                     sectionId: Number(sectionId),
@@ -413,15 +413,15 @@ export async function addClass(data, createdBy) {
     }
 }
 
-export async function getClassDetails(classSectionId, acedmicYearId) {
-    return await mainRepository.getClassDetails(classSectionId, acedmicYearId)
+export async function getClassSectionDetails(classSectionId, academicYearId) {
+    return await mainRepository.getClassSectionDetails(classSectionId, academicYearId)
 }
 
-export async function getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId) {
-    return await mainRepository.getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId);
+export async function getClassSectionSpecific(campusId, instituteId, academicYearId, courseId, sessionId) {
+    return await mainRepository.getClassSectionSpecific(campusId, instituteId, academicYearId, courseId, sessionId);
 }
 
-export async function addClassSubjectMapper(data, createdBy) {
+export async function addSectionSubjectMapper(data, createdBy) {
     try {
         const { subjectIds } = data;
 
@@ -434,7 +434,7 @@ export async function addClassSubjectMapper(data, createdBy) {
             });
         }
 
-        const result = await mainRepository.addClassSubjectMapper(entries);
+        const result = await mainRepository.addSectionSubjectMapper(entries);
         return result;
     } catch (error) {
         console.error('Error adding class subject mappings:', error);
@@ -442,18 +442,18 @@ export async function addClassSubjectMapper(data, createdBy) {
     }
 }
 
-export async function getClassSubjectMapper(term, acedmicYearId) {
-    return await mainRepository.getClassSubjectMapper(term, acedmicYearId)
+export async function getSectionSubjectMapper(term, academicYearId) {
+    return await mainRepository.getSectionSubjectMapper(term, academicYearId)
 }
 
-export async function subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy) {
+export async function subjectExcel(excelData, courseId, academicYearId, specializationId, createdBy) {
     try {
         await assertCourseIsActive(courseId, 'have new subjects added');
 
         const subjectCreationPromises = excelData.map((row) =>
             mainRepository.addSubject({
                 courseId,
-                acedmicYearId,
+                academicYearId,
                 specializationId,
                 subjectName: row.subjectName,
                 subjectCode: row.subjectCode,
@@ -473,8 +473,8 @@ export async function subjectExcel(excelData, courseId, acedmicYearId, specializ
     }
 }
 
-export async function getClassRecord(courseId, classSectionsId) {
-    const result = await studentRepository.getClassRecord(courseId, classSectionsId);
+export async function getClassSectionRecord(courseId, classSectionsId) {
+    const result = await studentRepository.getClassSectionRecord(courseId, classSectionsId);
     const section = result.classSection
         ? (result.classSection.get
             ? result.classSection.get({ plain: true })
@@ -486,7 +486,7 @@ export async function getClassRecord(courseId, classSectionsId) {
             ? {
                 classSectionsId: section.classSectionsId,
                 courseId: section.courseId,
-                acedmicYearId: section.acedmicYearId ?? null,
+                academicYearId: section.academicYearId ?? null,
                 sectionName: section.section ?? null,
                 className: section.class ?? null,
                 term: resolveProgramTerm(section) ?? section.class ?? null,
@@ -556,6 +556,6 @@ export async function getMonthlyIncomeService() {
     }
 }
 
-export async function getClassSectionsByFilter(sessionId, courseId, acedmicYearId) {
-    return await mainRepository.getClassSectionsByFilter(sessionId, courseId, acedmicYearId);
+export async function getClassSectionsByFilter(sessionId, courseId, academicYearId) {
+    return await mainRepository.getClassSectionsByFilter(sessionId, courseId, academicYearId);
 }

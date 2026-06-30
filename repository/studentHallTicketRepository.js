@@ -71,7 +71,7 @@ export async function getEligibleStudents(sessionId, courseId, term, transaction
                     ...buildScope(model.classSectionModel),
                     sessionId,
                     courseId,
-                    acedmicYearId: { [Op.ne]: null },
+                    academicYearId: { [Op.ne]: null },
                 },
                 sectionAttributes: [],
                 termAttributes: [],
@@ -199,7 +199,7 @@ function getHallTicketIncludes() {
                 {
                     model: model.acedmicYearModel,
                     as: "acedmicYear",
-                    attributes: ["acedmicYearId", "yearTitle"],
+                    attributes: ["academicYearId", "yearTitle"],
                 },
             ],
         },

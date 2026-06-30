@@ -643,7 +643,7 @@ export async function initialSetup(info) {
     // 7. Update User Defaults
     await user.update({
       defaultInstituteId: institute.instituteId,
-      defaultAcademicYearId: academicYear.acedmicYearId
+      defaultAcademicYearId: academicYear.academicYearId
     }, { transaction });
 
     // 8. Assign new roles and permissions

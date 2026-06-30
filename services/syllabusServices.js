@@ -8,8 +8,6 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
 
     const syllabus = await SyllabusCreationRepository.addSyllabus(
       {
-        instituteId: syllabusData.instituteId,
-        acedmicYearId: syllabusData.acedmicYearId,
         courseId: syllabusData.courseId,
         sessionId: syllabusData.sessionId,
         createdBy,
@@ -48,8 +46,8 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
   }
 }
 
-export async function getSyllabusDetails(acedmicYearId) {
-  return await SyllabusCreationRepository.getSyllabusDetails(acedmicYearId);
+export async function getSyllabusDetails(academicYearId) {
+  return await SyllabusCreationRepository.getSyllabusDetails(academicYearId);
 }
 
 export async function getSingleSyllabusDetails(SyllabusId) {
@@ -82,16 +80,16 @@ function extractTermNumber(name) {
   return match ? Number(match[1]) : null;
 }
 
-function resolveSemesterIdForTerm({ term, termName, courseId, acedmicYearId, semesters }) {
+function resolveSemesterIdForTerm({ term, termName, courseId, academicYearId, semesters }) {
   const courseSemesters = semesters.filter(
     (semester) => Number(semester.courseId) === Number(courseId),
   );
 
   const pickFromMatches = (matches) => {
     if (!matches.length) return null;
-    if (acedmicYearId) {
+    if (academicYearId) {
       const inYear = matches.find(
-        (semester) => Number(semester.acedmicYearId) === Number(acedmicYearId),
+        (semester) => Number(semester.academicYearId) === Number(academicYearId),
       );
       if (inYear) return inYear.semesterId;
     }
@@ -113,7 +111,7 @@ function resolveSemesterIdForTerm({ term, termName, courseId, acedmicYearId, sem
   return courseSemesters[Number(term) - 1]?.semesterId ?? null;
 }
 
-async function resolveSemesterIdForSubject({ subjectId, acedmicYearId }) {
+async function resolveSemesterIdForSubject({ subjectId, academicYearId }) {
   const subject = await SyllabusCreationRepository.getSubjectForUnitResolution(subjectId);
   if (!subject) {
     throw new Error('Subject not found');
@@ -135,17 +133,17 @@ async function resolveSemesterIdForSubject({ subjectId, acedmicYearId }) {
     term,
     termName,
     courseId,
-    acedmicYearId,
+    academicYearId,
     semesters,
   });
 }
 
 export async function addSyllabusUnit(data, createdBy, updatedBy) {
-  const { acedmicYearId, term: inputTerm, subjectId, slab, sessionId } = data;
+  const { academicYearId, term: inputTerm, subjectId, slab, sessionId } = data;
 
   await SyllabusCreationRepository.validateSubjectForSyllabusUnit({
     subjectId,
-    acedmicYearId,
+    academicYearId,
     sessionId,
   });
 
@@ -157,7 +155,7 @@ export async function addSyllabusUnit(data, createdBy, updatedBy) {
 
   const syllabusUnits = slab.map((unit) => ({
     sessionId,
-    acedmicYearId,
+    academicYearId,
     subjectId,
     ...(resolvedTerm != null && { term: Number(resolvedTerm) }),
     unitNumber: unit.unitNumber,
@@ -178,7 +176,7 @@ function mapSyllabusUnit(unit) {
     instituteId: unit.instituteId,
     instituteName: unit.instituteUnit?.instituteName || null,
     instituteCode: unit.instituteUnit?.instituteCode || null,
-    acedmicYearId: unit.acedmicYearId,
+    academicYearId: unit.academicYearId,
     acedmicYearTitle: unit.acedmicYearUnit?.yearTitle || null,
     acedmicYearStart: unit.acedmicYearUnit?.startingDate || null,
     acedmicYearEnd: unit.acedmicYearUnit?.endingDate || null,
@@ -204,7 +202,7 @@ export async function syllabusUnitGet(subjectId) {
   return syllabusUnits.map(mapSyllabusUnit);
 }
 
-export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data, updatedBy) {
+export async function updateSyllabusUnit(syllabusUnitId, academicYearId, data, updatedBy) {
   const payload = {
     ...(data.unitNumber != null && { unitNumber: data.unitNumber }),
     ...(data.name != null && { name: data.name }),
@@ -215,7 +213,7 @@ export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data, up
 
   const updated = await SyllabusCreationRepository.updateSyllabusUnit(
     syllabusUnitId,
-    acedmicYearId,
+    academicYearId,
     payload
   );
 
@@ -225,7 +223,7 @@ export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data, up
 
   return {
     syllabusUnitId: updated.syllabusUnitId,
-    acedmicYearId: updated.acedmicYearId,
+    academicYearId: updated.academicYearId,
     subjectId: updated.subjectId,
     sessionId: updated.sessionId,
     semesterId: updated.semesterId,

@@ -62,7 +62,7 @@ export async function getExamSchedules(filters = {}) {
                 {
                     model: model.acedmicYearModel,
                     as: "acedmicYearSchedule",
-                    attributes: ["acedmicYearId", "yearTitle"],
+                    attributes: ["academicYearId", "yearTitle"],
                 },
                 {
                     model: model.examSetupTypeTermModel,
@@ -140,7 +140,7 @@ export async function getExamScheduleById(examScheduleId) {
                 {
                     model: model.acedmicYearModel,
                     as: "acedmicYearSchedule",
-                    attributes: ["acedmicYearId", "yearTitle"],
+                    attributes: ["academicYearId", "yearTitle"],
                 },
                 {
                     model: model.examSetupTypeTermModel,
@@ -175,7 +175,7 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
             ...buildScope(model.classSectionModel),
             sessionId: { [Op.in]: sessions },
             courseId: { [Op.in]: courses },
-            acedmicYearId: { [Op.in]: acedmicYears },
+            academicYearId: { [Op.in]: acedmicYears },
         };
 
         const counts = await scoped(model.studentModel).findAll({
@@ -183,7 +183,7 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
                 [sequelize.col('studentClassSectionTerm->classSection.session_id'), 'sessionId'],
                 [sequelize.col('studentClassSectionTerm.term'), 'term'],
                 [sequelize.col('studentClassSectionTerm->classSection.course_id'), 'courseId'],
-                [sequelize.col('studentClassSectionTerm->classSection.acedmic_year_id'), 'acedmicYearId'],
+                [sequelize.col('studentClassSectionTerm->classSection.acedmic_year_id'), 'academicYearId'],
                 [sequelize.fn('COUNT', sequelize.col('students.student_id')), 'studentCount'],
             ],
             include: [
@@ -217,7 +217,7 @@ export async function getStudentCountsByGroups(sessions, courses, terms, acedmic
     }
 }
 
-function classTermInclude(term, acedmicYearId) {
+function classTermInclude(term, academicYearId) {
     return studentClassSectionTermWithSectionInclude({
         term,
         termRequired: true,
@@ -225,18 +225,18 @@ function classTermInclude(term, acedmicYearId) {
         sectionAttributes: [],
         termAttributes: [],
         sectionWhere: {
-            ...(acedmicYearId != null && { acedmicYearId }),
+            ...(academicYearId != null && { academicYearId }),
             ...buildScope(model.classSectionModel),
         },
     });
 }
 
-async function resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, acedmicYearId) {
+async function resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, academicYearId) {
     const rows = await model.classStudentMapperModel.findAll({
         attributes: ["studentId"],
         where: {
             sessionId,
-            acedmicYearId,
+            academicYearId,
             isPassed: false,
             ...buildScope(model.classStudentMapperModel),
         },
@@ -259,11 +259,11 @@ async function resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, 
     return [...new Set(rows.map((row) => row.studentId))];
 }
 
-async function resolveStudentIdsByStudentTable(sessionId, courseId, term, acedmicYearId) {
+async function resolveStudentIdsByStudentTable(sessionId, courseId, term, academicYearId) {
     const rows = await scoped(model.studentModel).findAll({
         attributes: ["studentId"],
         where: { sessionId, courseId },
-        include: [classTermInclude(term, acedmicYearId)],
+        include: [classTermInclude(term, academicYearId)],
         raw: true,
     });
 
@@ -271,17 +271,17 @@ async function resolveStudentIdsByStudentTable(sessionId, courseId, term, acedmi
 }
 
 /** Enrolled students: class_student_mapper (primary) or students table, filtered by term via class section. */
-async function resolveStudentIdsForExamGroup(sessionId, courseId, term, acedmicYearId) {
-    const mapperIds = await resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, acedmicYearId);
+async function resolveStudentIdsForExamGroup(sessionId, courseId, term, academicYearId) {
+    const mapperIds = await resolveStudentIdsByClassStudentMapper(sessionId, courseId, term, academicYearId);
     if (mapperIds.length) {
         return mapperIds;
     }
-    return resolveStudentIdsByStudentTable(sessionId, courseId, term, acedmicYearId);
+    return resolveStudentIdsByStudentTable(sessionId, courseId, term, academicYearId);
 }
 
-export async function getStudentCountByGroup(sessionId, courseId, term, acedmicYearId) {
+export async function getStudentCountByGroup(sessionId, courseId, term, academicYearId) {
     try {
-        const studentIds = await resolveStudentIdsForExamGroup(sessionId, courseId, term, acedmicYearId);
+        const studentIds = await resolveStudentIdsForExamGroup(sessionId, courseId, term, academicYearId);
         if (!studentIds.length) {
             return 0;
         }
@@ -295,9 +295,9 @@ export async function getStudentCountByGroup(sessionId, courseId, term, acedmicY
     }
 }
 
-export async function getStudentsForSchedule(sessionId, courseId, term, acedmicYearId) {
+export async function getStudentsForSchedule(sessionId, courseId, term, academicYearId) {
     try {
-        const studentIds = await resolveStudentIdsForExamGroup(sessionId, courseId, term, acedmicYearId);
+        const studentIds = await resolveStudentIdsForExamGroup(sessionId, courseId, term, academicYearId);
         if (!studentIds.length) {
             return [];
         }

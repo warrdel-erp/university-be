@@ -6,8 +6,8 @@ export async function addExamSetup(examDetail, createdBy, updatedBy) {
     return await examSetupRepository.addExamSetup(examDetail);
 }
 
-export async function getExamSetup(acedmicYearId) {
-    return await examSetupRepository.getExamSetup(acedmicYearId);
+export async function getExamSetup(academicYearId) {
+    return await examSetupRepository.getExamSetup(academicYearId);
 }
 
 export async function getSingleExamSetup(examSetupId) {

@@ -272,7 +272,7 @@ export async function getUserRolePermissionByUserId(userId) {
                         //             model: model.classSectionModel,
                         //             as: 'studentSections',
                         //             distinct: true,
-                        //             // attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
+                        //             // attributes: [ "classSectionsId", 'courseId', 'specializationId','academicYearId', 'section'],
                         //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         //             include: [
                         //                 {

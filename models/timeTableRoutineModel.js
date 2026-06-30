@@ -5,6 +5,7 @@ import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import classSectionModel from "./classSectionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 
@@ -35,7 +36,7 @@ const timeTableRoutineModel = sequelize.define(
                 key: 'course_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
@@ -51,6 +52,15 @@ const timeTableRoutineModel = sequelize.define(
             references: {
                 model: classSectionModel,
                 key: 'class_sections_id'
+            }
+        },
+        classSectionTermId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTermModel,
+                key: 'class_section_term_id'
             }
         },
         isPublish: {

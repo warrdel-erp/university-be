@@ -27,7 +27,6 @@ const syllabusUnitSlabSchema = z.object({
 
 const addSyllabusUnitSchema = z.object({
   subjectId: z.coerce.number({ required_error: 'subjectId is required' }).int().positive(),
-  acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
   sessionId: z.coerce.number({ required_error: 'sessionId is required' }).int().positive(),
   semesterId: z.coerce.number().int().positive().optional().nullable(),
   slab: z.array(syllabusUnitSlabSchema).min(1, 'At least one unit is required'),
@@ -43,7 +42,6 @@ const updateSyllabusUnitSchema = z
       .number({ required_error: 'syllabusUnitId is required' })
       .int()
       .positive(),
-    acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
     unitNumber: z.coerce.number().int().positive().optional(),
     name: z.string().min(1).optional(),
     description: z.string().optional().nullable(),

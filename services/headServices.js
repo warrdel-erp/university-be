@@ -4,10 +4,10 @@ import * as registerRepository from "../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import sequelize from "../database/sequelizeConfig.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 function getActiveInstituteId() {
-  const instituteId = requestContext.getStore()?.instituteId;
+  const instituteId = getTenantStore().instituteId;
   if (!instituteId) {
     throw new Error("Active institute is required. Save your default institute via PUT /user/saveUserDefaults.");
   }

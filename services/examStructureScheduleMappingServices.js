@@ -13,11 +13,11 @@ const studentListFields = [
   "termName",
 ];
 
-async function resolveAcedmicYearId(examDetail) {
-  if (!examDetail.acedmicYearId && examDetail.subjectId) {
-    const acedmicYearId = await examStructureScheduleRepository.findSubjectAcedmicYearId(examDetail.subjectId);
-    if (acedmicYearId) {
-      examDetail.acedmicYearId = acedmicYearId;
+async function resolveAcademicYearId(examDetail) {
+  if (!examDetail.academicYearId && examDetail.subjectId) {
+    const academicYearId = await examStructureScheduleRepository.findSubjectacademicYearId(examDetail.subjectId);
+    if (academicYearId) {
+      examDetail.academicYearId = academicYearId;
     }
   }
 }
@@ -206,7 +206,7 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
     throw new Error("Exam setup type term not found");
   }
 
-  const acedmicYearId = examDetail.acedmicYearId ?? termDetail.acedmicYearId;
+  const academicYearId = examDetail.academicYearId ?? termDetail.academicYearId;
   const { startMinutes, endMinutes } = getExamSlotMinutes(examDetail.examTime, examDetail.duration);
 
   const conflict = await examStructureScheduleRepository.findConflictingExamForStudentCohort({
@@ -214,7 +214,7 @@ async function assertNoStudentExamTimeConflict(examDetail, excludeExamScheduleId
     startMinutes,
     endMinutes,
     sessionId: examDetail.sessionId,
-    acedmicYearId,
+    academicYearId,
     courseId: termDetail.courseId,
     term: termDetail.term,
     excludeExamScheduleId,
@@ -230,7 +230,7 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
   examDetail.createdBy = createdBy;
   examDetail.updatedBy = updatedBy;
 
-  await resolveAcedmicYearId(examDetail);
+  await resolveAcademicYearId(examDetail);
   const resolvedTerm = await resolveTermForExamDetail(examDetail);
   if (resolvedTerm == null) {
     throw new Error('term could not be resolved for exam schedule');
@@ -280,7 +280,7 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
 
 export async function updateExamSchedule(examScheduleId, examDetail, updatedBy) {
   examDetail.updatedBy = updatedBy;
-  await resolveAcedmicYearId(examDetail);
+  await resolveAcademicYearId(examDetail);
   if (examDetail.semesterId == null && examDetail.examSetupTypeTermId) {
     const resolvedSemesterId = await resolveSemesterIdForExamDetail(examDetail);
     if (resolvedSemesterId) {
@@ -329,7 +329,7 @@ export async function getExamScheduleById(examScheduleId) {
   return examStructureScheduleRepository.getExamScheduleById(examScheduleId);
 }
 
-export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYearId, sessionId) {
+export async function getSubjectsWithExamSchedule(examSetupTypeTermId, academicYearId, sessionId) {
   const termDetail = await examStructureScheduleRepository.getExamSetupTypeTermById(examSetupTypeTermId);
   if (!termDetail) {
     throw new Error("Exam setup type term not found");
@@ -338,12 +338,12 @@ export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYe
   const courseId = termDetail.courseId;
   const term = termDetail.term;
   const parsedExamSetupTypeTermId = parseInt(examSetupTypeTermId);
-  const parsedAcedmicYearId = acedmicYearId ? parseInt(acedmicYearId) : null;
+  const parsedacademicYearId = academicYearId ? parseInt(academicYearId) : null;
   const parsedSessionId = sessionId ? parseInt(sessionId) : null;
 
   const subjectRows = await examStructureScheduleRepository.findSubjectsWithSchedules(
     courseId,
-    parsedAcedmicYearId,
+    parsedacademicYearId,
     term,
     parsedExamSetupTypeTermId,
     parsedSessionId,
@@ -354,7 +354,7 @@ export async function getSubjectsWithExamSchedule(examSetupTypeTermId, acedmicYe
 
   const [roomRows, studentRows] = await Promise.all([
     examStructureScheduleRepository.findRoomsByExamScheduleIds(examScheduleIds),
-    examStructureScheduleRepository.findStudentsForTerm(courseId, parsedAcedmicYearId, term, parsedSessionId),
+    examStructureScheduleRepository.findStudentsForTerm(courseId, parsedacademicYearId, term, parsedSessionId),
   ]);
 
   const studentList = formatStudentList(studentRows);

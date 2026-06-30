@@ -108,7 +108,7 @@ export async function addFeePlanType(data, transaction) {
 
 export async function getFeePlanDetails(filters = {}) {
   try {
-    const businessWhere = filters.acedmicYearId ? { acedmicYearId: filters.acedmicYearId } : {};
+    const businessWhere = filters.academicYearId ? { academicYearId: filters.academicYearId } : {};
 
     return scoped(model.feePlanModel).findAll({
       attributes: { exclude: feePlanExcludedAttributes() },
@@ -134,11 +134,11 @@ export async function getSingleFeePlanDetails(feePlanId) {
   }
 }
 
-export async function getfeePlanByCourseAndAcedmic(courseId, acedmicYearId) {
+export async function getfeePlanByCourseAndAcedmic(courseId, academicYearId) {
   try {
     return scoped(model.feePlanModel).findAll({
       attributes: { exclude: feePlanExcludedAttributes() },
-      where: { courseId, acedmicYearId },
+      where: { courseId, academicYearId },
     });
   } catch (error) {
     console.error("Error fetching Fee Plan details by course and acedmic year:", error);

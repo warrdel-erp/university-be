@@ -1,12 +1,12 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
-import { requestContext } from '../utility/requestContext.js';
+import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
-  const { acedmicYearId, ...rest } = scopeWhere;
+  const { academicYearId, ...rest } = scopeWhere;
   return rest;
 }
 
@@ -92,11 +92,11 @@ export async function assertCourseIsActive(courseId, action = 'perform this acti
   return course;
 }
 
-export async function getCourseByAcedmicId(acedmicYearId) {
+export async function getCourseByAcedmicId(academicYearId) {
   try {
     return await scoped(model.courseModel).findAll({
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-      where: { acedmicYearId },
+      where: { academicYearId },
     });
   } catch (error) {
     console.error('Error in getting course details By Acedmic Year:', error);
@@ -106,7 +106,7 @@ export async function getCourseByAcedmicId(acedmicYearId) {
 
 export async function getAllCourseByInstituteId(instituteId) {
   try {
-    const store = requestContext.getStore();
+    const store = getTenantStore();
     if (!store?.universityId) {
       throw new Error('University scope required');
     }
@@ -250,7 +250,7 @@ export async function getAllCourses({ campusId } = {}) {
             {
               model: model.sessionModel,
               as: 'session',
-              attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
+              attributes: ['sessionId', 'sessionName', 'academicYearId'],
               where: buildScope(model.sessionModel),
               required: true,
             },
@@ -286,7 +286,7 @@ export async function getCourseWithSessionsData(courseId) {
                 'startingDate',
                 'endingDate',
                 'classTillDate',
-                'acedmicYearId',
+                'academicYearId',
               ],
               where: buildScope(model.sessionModel),
               required: true,
@@ -372,7 +372,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   }
 }
 
-export async function getCourseListWithSubjects(acedmicYearId) {
+export async function getCourseListWithSubjects(academicYearId) {
   try {
     const subjectScope = buildScope(model.subjectModel);
 
@@ -384,7 +384,7 @@ export async function getCourseListWithSubjects(acedmicYearId) {
           attributes: ['subjectId', 'subjectCode'],
           where: {
             ...subjectScope,
-            ...(acedmicYearId && { acedmicYearId }),
+            ...(academicYearId && { academicYearId }),
           },
           required: false,
         },
@@ -412,10 +412,10 @@ export async function getSessionAcademicYearId(sessionId) {
   try {
     const session = await scoped(model.sessionModel).findOne({
       where: { sessionId },
-      attributes: ['acedmicYearId'],
+      attributes: ['academicYearId'],
       raw: true,
     });
-    return session?.acedmicYearId ?? null;
+    return session?.academicYearId ?? null;
   } catch (error) {
     console.error('Error in Course Repository (getSessionAcademicYearId):', error);
     throw error;
@@ -438,11 +438,11 @@ export async function getSemestersByCourseId(courseId) {
 }
 
 /** Explicit academic year — scoped() would override with request context year. */
-export async function getSemestersByCourseAndYear(courseId, acedmicYearId) {
+export async function getSemestersByCourseAndYear(courseId, academicYearId) {
   try {
     const options = await getSemestersByCourseId(courseId);
-    const yearId = Number(acedmicYearId);
-    return options.map((opt) => ({ ...opt, acedmicYearId: yearId }));
+    const yearId = Number(academicYearId);
+    return options.map((opt) => ({ ...opt, academicYearId: yearId }));
   } catch (error) {
     console.error('Error in Course Repository (getSemestersByCourseAndYear):', error);
     throw error;

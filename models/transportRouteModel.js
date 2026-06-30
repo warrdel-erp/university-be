@@ -14,7 +14,7 @@ const transportRouteModel = sequelize.define(
             autoIncrement: true,
             field: 'transport_route_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

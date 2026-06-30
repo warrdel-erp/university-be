@@ -6,8 +6,8 @@ export async function addExamType(examDetail, createdBy, updatedBy) {
     return await examTypeRepository.addExamType(examDetail);
 };
 
-export async function getExamType(acedmicYearId) {
-    return await examTypeRepository.getExamType(acedmicYearId);
+export async function getExamType(academicYearId) {
+    return await examTypeRepository.getExamType(academicYearId);
 }
 
 export async function getSingleExamType(examTypeId) {

@@ -23,8 +23,6 @@ const optionalPositiveId = z.preprocess(
 );
 
 const optionalTenantFields = {
-  acedmicYearId: optionalPositiveId,
-  academicYearId: optionalPositiveId,
   instituteId: optionalPositiveId,
   universityId: optionalPositiveId,
   campusId: optionalPositiveId,

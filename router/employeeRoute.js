@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { z } from "zod";
 const router = Router();
-import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeClassDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
+import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeSectionDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
-import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getClassCounts } from '../controllers/employeeController.js';
+import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getSectionCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
 const studentAttendanceReportSchema = z.object({
@@ -22,8 +22,6 @@ const scheduleQuerySchema = z.object({
     date: z.string().optional(),
     sessionId: optionalPositiveId,
     groupPeriods: z.enum(['true', 'false']).optional(),
-    acedmicYearId: optionalPositiveId,
-    academicYearId: optionalPositiveId,
     instituteId: optionalPositiveId,
     universityId: optionalPositiveId,
 }).passthrough();
@@ -32,9 +30,9 @@ router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubject
 
 router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 
-router.get('/classDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeClassDates);
+router.get('/sectionDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeSectionDates);
 
-router.get('/classCounts', userAuth, getClassCounts);
+router.get('/sectionCounts', userAuth, getSectionCounts);
 
 router.get('/pastSchedule', userAuth, getPastClassSchedules);
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);

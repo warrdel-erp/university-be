@@ -67,7 +67,7 @@ async function validateCourseSession(courseSessionId, academicYearId, transactio
   const withSession = await repo.findSessionCourseMappingWithSession(courseSessionId, {
     transaction,
   });
-  if (withSession.session.acedmicYearId !== academicYearId) {
+  if (withSession.session.academicYearId !== academicYearId) {
     throw new Error("academicYearId does not match the session for this courseSessionId");
   }
 }

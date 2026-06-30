@@ -28,7 +28,7 @@ const acedmicYearBodySchema = z.object({
 });
 
 const updateAcedmicYearSchema = z.object({
-    acedmicYearId: positiveIntegerId.optional(),
+    academicYearId: positiveIntegerId.optional(),
     yearTitle: z.coerce.string().min(1).optional(),
     startingDate: z.coerce.string().min(1).optional(),
     endingDate: z.coerce.string().min(1).optional(),
@@ -37,8 +37,8 @@ const updateAcedmicYearSchema = z.object({
     { message: 'At least one of yearTitle, startingDate, endingDate is required' },
 );
 
-const acedmicYearIdQuerySchema = z.object({
-    acedmicYearId: positiveIntegerId,
+const academicYearIdQuerySchema = z.object({
+    academicYearId: positiveIntegerId,
 });
 
 const instituteIdParamsSchema = z.object({
@@ -46,16 +46,16 @@ const instituteIdParamsSchema = z.object({
 });
 
 const activateAndCopySchema = acedmicYearBodySchema.extend({
-    copyAcedmicYearId: positiveIntegerId.optional(),
+    copyAcademicYearId: positiveIntegerId.optional(),
     copyData: z.array(z.enum(['subject', 'electiveSubject', 'session'])).min(1).optional(),
 }).superRefine((data, ctx) => {
-    const hasCopyId = data.copyAcedmicYearId != null;
+    const hasCopyId = data.copyAcademicYearId != null;
     const hasCopyData = Array.isArray(data.copyData) && data.copyData.length > 0;
     if (hasCopyId !== hasCopyData) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: 'copyAcedmicYearId and copyData must be provided together',
-            path: hasCopyId ? ['copyData'] : ['copyAcedmicYearId'],
+            message: 'copyAcademicYearId and copyData must be provided together',
+            path: hasCopyId ? ['copyData'] : ['copyAcademicYearId'],
         });
     }
 });
@@ -66,10 +66,10 @@ router.post('/', userAuth, validate({ body: acedmicYearBodySchema }), addacedmic
 /** All academic years for active university + institute (active and inactive). */
 router.get('/', userAuth, getAllacedmicYear);
 
-/** Update academic year — defaults to active year from X-Academic-Year-Id when acedmicYearId omitted. */
+/** Update academic year — defaults to active year from X-Academic-Year-Id when academicYearId omitted. */
 router.patch('/', userAuth, validate({ body: updateAcedmicYearSchema }), updateacedmicYear);
 
-router.delete('/', userAuth, validate({ query: acedmicYearIdQuerySchema }), deleteacedmicYear);
+router.delete('/', userAuth, validate({ query: academicYearIdQuerySchema }), deleteacedmicYear);
 
 /** Active academic years for active institute (from auth context) — returns array. */
 router.get('/active', userAuth, getActiveAcedmicYearByInstitute);

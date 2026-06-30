@@ -54,12 +54,20 @@ export const getSingletimeTableCreateDetails = async (req, res) => {
 };
 
 export const getTimeTableByCourseAndSection = async (req, res) => {
-    const { courseId, classSectionsId, timeTableType } = req.query;
+    const { courseId, classSectionsId, classSectionTermId, term, timeTableType } = req.query;
     try {
+        let resolvedTermId = classSectionTermId;
+        if (!resolvedTermId && classSectionsId && term) {
+            resolvedTermId = await timeTableCreateServices.resolveClassSectionTermIdForQuery(
+                classSectionsId,
+                term,
+            );
+        }
         const result = await timeTableCreateServices.getTimeTableByCourseAndSection(
             courseId,
             classSectionsId,
-            timeTableType
+            timeTableType,
+            resolvedTermId,
         );
         res.status(200).json(result);
     } catch (error) {
@@ -149,9 +157,11 @@ export const updateSimpleTeacherMappingController = async (req, res) => {
 };
 
 export const deletetimeTableMapping = async (req, res) => {
-    const { timeTableMappingId } = req.query;
+    const { timeTableMappingId, deleteCombinedGroup } = req.query;
     try {
-        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId);
+        const result = await timeTableCreateServices.deletetimeTableMapping(timeTableMappingId, {
+            deleteCombinedGroup: deleteCombinedGroup === true || deleteCombinedGroup === 'true',
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in deleting time table mapping Id ${timeTableMappingId}:`, error);
@@ -202,13 +212,17 @@ export const ClassSubjectCount = async (req, res) => {
 };
 
 export const getRoutineByClassSectionId = async (req, res) => {
-    const { classSectionsId } = req.query;
+    const { classSectionTermId, classSectionsId, term } = req.query;
     try {
-        const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionsId);
+        const result = await timeTableCreateServices.getRoutineByClassSectionId({
+            classSectionTermId,
+            classSectionsId,
+            term,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting routine by class section id:", error);
-        res.status(500).send({ message: "Internal Server Error", error });
+        res.status(500).send({ message: "Internal Server Error", error: error.message });
     }
 };
 

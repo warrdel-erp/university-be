@@ -1,7 +1,7 @@
 import * as studentService from '../services/studentService.js'
 import * as fileHandler from '../utility/fileHandler.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 export const addStudentWithFeePlanProfile = async (req, res) => {
     try {
         const result = await studentService.addStudentWithFeePlanProfile({
@@ -55,9 +55,8 @@ export const getSingleStudentDetail = async (req, res) => {
 export const importStudentData = async (req, res) => {
     try {
         const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
-        const universityId = getTenantStore().universityId;
         const createdBy = req.user.userId;
-        const data = { ...req.body, universityId, createdBy };
+        const data = { ...req.body, createdBy };
 
         if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
             return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
@@ -98,7 +97,6 @@ export const updateStudentDetails = async (req, res) => {
             studentId,
             info,
             file,
-            getTenantStore().instituteId,
             req.user.userId,
         );
         return SuccessResponse(res, 200, "Student updated successfully", result);
@@ -124,9 +122,8 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
-    const { acedmicYearId } = req.query;
     try {
-        const result = await studentService.getEmptyEnrollNumber(acedmicYearId);
+        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId());
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -153,7 +150,7 @@ export const studentCourseMapping = async (req, res) => {
     }
 };
 
-export const classStudentMapping = async (req, res) => {
+export const sectionStudentMapping = async (req, res) => {
     let { studentId, classSectionId } = req.body;
     const data = req.body
     const createdBy = req.user.userId;
@@ -164,24 +161,23 @@ export const classStudentMapping = async (req, res) => {
         }
 
         const info = req.body;
-        const result = await studentService.classStudentMapping(data, createdBy);
+        const result = await studentService.sectionStudentMapping(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in class Student Mapping:", error);
+        console.error("Error in section student mapping:", error);
         return res.status(error.statusCode || 500).json({ error: error.message || "Internal Server Error" });
     }
 };
 
-export const getclassStudentMapping = async (req, res) => {
+export const getSectionStudentMapping = async (req, res) => {
     const classSectionTermId = req.query.classSectionTermId ?? req.query.semesterId ?? 0;
     const term = req.query.term != null ? Number(req.query.term) : undefined;
-    const acedmicYearId = req.query.acedmicYearId;
 
     try {
-        const result = await studentService.getclassStudentMapping(classSectionTermId, acedmicYearId, term);
+        const result = await studentService.getSectionStudentMapping(classSectionTermId, undefined, term);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class Student Mapping:", error);
+        console.error("Error in getting section student mapping:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
@@ -240,11 +236,11 @@ export const promoteStudent = async (req, res) => {
     }
 };
 
-export const getPromotionAvailableClassSection = async (req, res) => {
+export const getPromotionAvailableSection = async (req, res) => {
     try {
         const { courseId, term, classSectionId } = req.query;
 
-        const data = await studentService.getAvailablePromotionClassSections({
+        const data = await studentService.getAvailablePromotionSections({
             courseId,
             term,
             classSectionId,
@@ -253,7 +249,7 @@ export const getPromotionAvailableClassSection = async (req, res) => {
         if (data.finalTerm) {
             return SuccessResponse(res, 200, "Final term reached", {
                 promotedTerm: data.promotedTerm,
-                acedmicYearId: data.acedmicYearId,
+                academicYearId: data.academicYearId,
                 crossYear: data.crossYear,
                 classSections: data.classSections,
             });
@@ -261,7 +257,7 @@ export const getPromotionAvailableClassSection = async (req, res) => {
 
         return SuccessResponse(res, 200, "Promotion class sections fetched successfully", {
             promotedTerm: data.promotedTerm,
-            acedmicYearId: data.acedmicYearId,
+            academicYearId: data.academicYearId,
             crossYear: data.crossYear,
             termsPerYear: data.termsPerYear,
             totalTerms: data.totalTerms,
@@ -326,9 +322,13 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { acedmicYearId, courseId, sessionId } = req.query;
+    const { courseId, sessionId } = req.query;
     try {
-        const result = await studentService.getEmptyFeeDetails({ acedmicYearId, courseId, sessionId });
+        const result = await studentService.getEmptyFeeDetails({
+            academicYearId: getAcademicYearId(),
+            courseId,
+            sessionId,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);

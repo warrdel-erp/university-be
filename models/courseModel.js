@@ -61,7 +61,7 @@ const courseModel = sequelize.define(
                 key: 'sub_account_id'
             }
         },
-        // acedmicYearId:{
+        // academicYearId:{
         //     type: DataTypes.INTEGER,
         //     allowNull: false,
         //     field: 'acedmic_year_id',

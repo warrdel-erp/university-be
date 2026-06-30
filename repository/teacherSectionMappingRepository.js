@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
+import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
 import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 
 const employeeListAttributes = {
@@ -79,16 +79,16 @@ export async function teacherSectionMapping(data) {
 export async function getTeacherSectionMapping({
     employeeId,
     sessionId,
-    acedmicYearId = requestContext.getStore()?.academicYearId,
+    academicYearId = getAcademicYearId(),
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const universityId = requestContext.getStore()?.universityId;
+        const universityId = getTenantStore().universityId;
 
         const classSectionWhere = {
-            ...(acedmicYearId != null && { acedmicYearId }),
+            ...(academicYearId != null && { academicYearId }),
             ...(sessionId && { sessionId }),
             ...buildScope(model.classSectionModel),
         };
