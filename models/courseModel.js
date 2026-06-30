@@ -36,7 +36,7 @@ const courseModel = sequelize.define(
         },
         affiliatedUniversityId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'affiliated_university_id',
             references: {
                 model: affiliatedUniversity,

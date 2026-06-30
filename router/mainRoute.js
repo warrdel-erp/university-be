@@ -32,9 +32,14 @@ const updateCourseSchema = z.object({
     courseName: z.string().min(1, 'courseName cannot be empty').optional(),
     courseCode: z.string().min(1, 'courseCode cannot be empty').optional(),
     departmentId: positiveIntegerId.nullable().optional(),
+    affiliatedUniversityId: positiveIntegerId.nullable().optional(),
 }).refine(
-    (body) => body.courseName != null || body.courseCode != null || body.departmentId !== undefined,
-    { message: 'At least one of courseName, courseCode, or departmentId is required' },
+    (body) =>
+        body.courseName != null
+        || body.courseCode != null
+        || body.departmentId !== undefined
+        || body.affiliatedUniversityId !== undefined,
+    { message: 'At least one of courseName, courseCode, departmentId, or affiliatedUniversityId is required' },
 );
 
 const changeCourseStatusSchema = z.object({

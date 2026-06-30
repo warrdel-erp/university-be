@@ -158,7 +158,7 @@ export async function addCourse(data, createdBy) {
         throw new Error('courses array is required');
     }
 
-    let affiliatedUniversityId = normalized.affiliatedUniversityId;
+    let affiliatedUniversityId = normalized.affiliatedUniversityId ?? null;
     if (affiliatedUniversityId) {
         const affiliated = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
         if (!affiliated) {
@@ -166,9 +166,6 @@ export async function addCourse(data, createdBy) {
         }
     } else {
         affiliatedUniversityId = await instituteRepository.findDefaultAffiliatedUniversityId();
-    }
-    if (!affiliatedUniversityId) {
-        throw new Error('No affiliated university found for this institute. Create one first or pass affiliatedUniversityId.');
     }
 
     const results = [];
@@ -227,6 +224,7 @@ export async function updateCourse(data) {
         courseCode,
         departmentId,
         subAccountId: subAccountIdInput,
+        affiliatedUniversityId: affiliatedUniversityIdInput,
     } = data;
 
     const course = await getCourseByCourseId(courseId);
@@ -249,6 +247,20 @@ export async function updateCourse(data) {
 
     if (programId !== undefined) {
         updateData.subAccountId = programId == null ? null : await resolveSubAccountId(programId);
+    }
+
+    if (affiliatedUniversityIdInput !== undefined) {
+        if (affiliatedUniversityIdInput == null) {
+            updateData.affiliatedUniversityId = null;
+        } else {
+            const affiliated = await instituteRepository.getAffiliatedUniversityById(
+                affiliatedUniversityIdInput,
+            );
+            if (!affiliated) {
+                throw new Error('affiliatedUniversityId not found for this institute');
+            }
+            updateData.affiliatedUniversityId = affiliatedUniversityIdInput;
+        }
     }
 
     const updated = await updateCourseById(courseId, updateData);
