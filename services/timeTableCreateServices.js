@@ -1600,17 +1600,27 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
     const placement = await resolveRoutinePlacement({ classSectionTermId });
     const scope = routineScopeWhere(placement.classSectionTermId);
 
-    const [normalRoutines, classSection] = await Promise.all([
-      timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope),
-      (async () => {
-        const termRow = await findClassSectionTermById(placement.classSectionTermId);
-        if (!termRow) return null;
-        const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
-        return plain.classSection ?? null;
-      })(),
-    ]);
+    const termRow = await findClassSectionTermById(placement.classSectionTermId);
+    let classSection = null;
+    let section = null;
+    if (termRow) {
+      const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+      classSection = plain.classSection ?? null;
+      section = classSection?.section ?? null;
+    }
 
-    if (!normalRoutines || !normalRoutines.length) return { routines: [], classSection };
+    const placementMeta = {
+      classSectionTermId: placement.classSectionTermId,
+      section,
+      term: placement.term != null ? Number(placement.term) : null,
+    };
+
+    const normalRoutines =
+      await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(scope);
+
+    if (!normalRoutines || !normalRoutines.length) {
+      return { ...placementMeta, routines: [], classSection };
+    }
 
     const timeTableNameIds = normalRoutines.map(r => r.timeTableNameId);
     const electiveRoutines = await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(timeTableNameIds);
@@ -1773,7 +1783,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       };
     });
 
-    return { routines: formattedRoutines, classSection };
+    return { ...placementMeta, routines: formattedRoutines, classSection };
   } catch (error) {
     console.error("Error in getRoutineByClassSectionId Service:", error);
     throw error;

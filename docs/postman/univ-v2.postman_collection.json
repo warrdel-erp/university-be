@@ -3220,7 +3220,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`."
+                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`.\n\n**Response keys:** `classSectionTermId`, `section`, `term`, `routines`, `classSection`."
               },
               "response": []
             },
@@ -3240,7 +3240,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId={{timetable_employeeId}}&acedmicYearId={{timetable_acedmicYearId}}",
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutineByTeacher?employeeId={{timetable_employeeId}}&courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -3252,17 +3252,21 @@
                     {
                       "key": "employeeId",
                       "value": "{{timetable_employeeId}}",
-                      "description": "Required"
+                      "description": "Required — positive integer"
                     },
                     {
-                      "key": "acedmicYearId",
-                      "value": "{{timetable_acedmicYearId}}",
-                      "description": "Optional — ignored; scoped via auth context",
-                      "disabled": true
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Required — positive integer"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Required — positive integer"
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher weekly timetable from published schedule cells.\n\n**Required:** `employeeId`.\n\n**Scoped:** `timeTableRoutineModel` + `subjectModel` academic year from auth context. `acedmicYearId` query is optional and ignored."
+                "description": "**GET /timeTableCreate/getRoutineByTeacher**\n\nTeacher weekly timetable from published schedule cells.\n\n**Required query:** `employeeId`, `courseId`, `sessionId`.\n\n**Scoped:** `academicYearId` from auth context (`defaultAcademicYearId`); do not send in query."
               },
               "response": []
             }
