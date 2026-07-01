@@ -14584,6 +14584,307 @@
       ]
     },
     {
+      "name": "main",
+      "description": "Class section term setup under `/main/*` (`mainRoute.js`).\n\n**Auth:** Bearer `{{token}}`. Institute + academic year from login. Optional `X-Institute-Id` header.\n\n**Placement key:** `classSectionTermId` from `class_section_term` — not `classSectionsId`.\n\n| Method | Path | Notes |\n|--------|------|-------|\n| POST | `/main/classSections` | Create sections; response includes `terms[].classSectionTermId` |\n| GET | `/main/classSections` | List class sections |\n| GET | `/main/classSectionSpecific` | Sections for course + session |\n| POST | `/main/sectionSubjectMapper` | Map subjects to institute scope |\n| GET | `/main/sectionSubjectMapper` | List mapper rows (optional `term`) |\n| GET | `/main/classSectionRecord` | Students + teachers for `classSectionTermId` |\n\n**Flow:** POST classSections → save `{{classSectionTermId}}` → GET classSectionRecord.",
+      "item": [
+        {
+          "name": "POST classSections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const sections = json?.sections ?? [];",
+                  "const firstTerm = sections[0]?.terms?.[0];",
+                  "if (firstTerm?.classSectionTermId) {",
+                  "  pm.collectionVariables.set('classSectionTermId', String(firstTerm.classSectionTermId));",
+                  "}",
+                  "if (sections[0]?.classSectionsId) {",
+                  "  pm.collectionVariables.set('classSectionsId', String(sections[0].classSectionsId));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{course_id}},\n  \"sessionId\": {{sessionId}},\n  \"sections\": [\n    {\n      \"sectionId\": {{sectionId}},\n      \"section\": \"A1\",\n      \"year\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSections"
+              ]
+            },
+            "description": "**POST /main/classSections** — create class sections for a course session.\n\n| Field | Required | Notes |\n|-------|----------|--------|\n| `courseId` | yes | |\n| `sessionId` | yes | |\n| `sections[]` | yes | At least one |\n| `sections[].sectionId` | yes | Section master PK |\n| `sections[].section` | yes | Display name e.g. `A1` |\n| `sections[].year` | yes | Program year (1..courseDuration) |\n\nBackend creates `class_section_term` rows per program term. Response `sections[].terms[]` includes **`classSectionTermId`** — saved to `{{classSectionTermId}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "GET classSections",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/main/classSections",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSections"
+              ],
+              "query": [
+                {
+                  "key": "classSectionId",
+                  "value": "{{classSectionsId}}",
+                  "description": "Optional — filter by classSectionsId",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /main/classSections** — list class sections (scoped). Optional query `classSectionId` / `classSectionsId`."
+          },
+          "response": []
+        },
+        {
+          "name": "GET classSectionSpecific",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/main/classSectionSpecific?courseId={{course_id}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSectionSpecific"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}",
+                  "description": "Required for filtered list"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "description": "Required for filtered list"
+                },
+                {
+                  "key": "campusId",
+                  "value": "",
+                  "description": "Optional",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /main/classSectionSpecific** — class sections for a course + session. Rows include nested `classSectionTerms` with **`classSectionTermId`**."
+          },
+          "response": []
+        },
+        {
+          "name": "POST sectionSubjectMapper",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectIds\": [{{subject_id}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/sectionSubjectMapper",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "sectionSubjectMapper"
+              ]
+            },
+            "description": "**POST /main/sectionSubjectMapper** — map subjects to institute scope.\n\n| Field | Required |\n|-------|----------|\n| `subjectIds` | yes | Array of subject PKs |"
+          },
+          "response": []
+        },
+        {
+          "name": "GET sectionSubjectMapper",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/main/sectionSubjectMapper?term=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "sectionSubjectMapper"
+              ],
+              "query": [
+                {
+                  "key": "term",
+                  "value": "1",
+                  "description": "Optional — program term filter"
+                }
+              ]
+            },
+            "description": "**GET /main/sectionSubjectMapper** — list section–subject mappings. Optional query `term`."
+          },
+          "response": []
+        },
+        {
+          "name": "GET classSectionRecord",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Institute-Id",
+                "value": "{{institute_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{course_id}}&classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "classSectionRecord"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}",
+                  "description": "Required — positive integer"
+                },
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Required — class_section_term PK"
+                }
+              ]
+            },
+            "description": "**GET /main/classSectionRecord**\n\nStudents enrolled in the term plus teachers mapped to the section.\n\n**Required query:** `courseId`, **`classSectionTermId`**.\n\nGet `classSectionTermId` from POST classSections, GET classSectionSpecific, or GET /course/termsWithClassSections."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "employee",
       "description": "Employee / teacher APIs. **GET /employee/uniqueClassSectionSubjects** returns `classSectionTermId`, `year`, `term`, `section` per combination.",
       "item": [
