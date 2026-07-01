@@ -1033,8 +1033,8 @@ courseModel.hasMany(syllabusModel, { foreignKey: "course_id", as: "syllabusCours
 faculityLoadModel.belongsTo(employeeModel, { foreignKey: "employee_id", as: "employeeFaculity" });
 employeeModel.hasMany(faculityLoadModel, { foreignKey: "employee_id", as: "employeeFaculity" });
 
-sessionModel.belongsTo(acedmicYearModel, { foreignKey: "acedmic_year_id", as: "sessionAcedmic" });
-acedmicYearModel.hasMany(sessionModel, { foreignKey: "acedmic_year_id", as: "sessionAcedmic" });
+sessionModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "sessionAcedmic" });
+acedmicYearModel.hasMany(sessionModel, { foreignKey: "academicYearId", as: "sessionAcedmic" });
 
 poModel.belongsTo(courseModel, { foreignKey: "course_id", as: "courseDetail" });
 courseModel.hasMany(poModel, { foreignKey: "course_id", as: "courseDetail" });
