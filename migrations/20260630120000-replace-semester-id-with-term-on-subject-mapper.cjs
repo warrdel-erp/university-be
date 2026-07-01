@@ -1,29 +1,37 @@
 'use strict';
 
-const { addColumnSafe, removeColumnSafe, normalizeParanoidDeletedAt } = require('./helpers/sqlModeHelpers.cjs');
-
 /** subject_mapper: link student-subject rows via class_section_term_id */
 module.exports = {
   async up(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
+    const { sequelize } = queryInterface;
+
     try {
-      await normalizeParanoidDeletedAt(queryInterface, 'subject_mapper', transaction);
+      const subjectMapperTable = await queryInterface.describeTable('subject_mapper', { transaction });
 
-      await addColumnSafe(
-        queryInterface,
-        'subject_mapper',
-        'class_section_term_id',
-        {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: { model: 'class_section_term', key: 'class_section_term_id' },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
-        },
-        transaction,
-      );
+      if (subjectMapperTable.deleted_at) {
+        await sequelize.query(
+          'ALTER TABLE `subject_mapper` MODIFY COLUMN `deleted_at` TIMESTAMP NULL DEFAULT NULL',
+          { transaction },
+        );
+      }
 
-      await queryInterface.sequelize.query(
+      if (!subjectMapperTable.class_section_term_id) {
+        await queryInterface.addColumn(
+          'subject_mapper',
+          'class_section_term_id',
+          {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            references: { model: 'class_section_term', key: 'class_section_term_id' },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+          },
+          { transaction },
+        );
+      }
+
+      await sequelize.query(
         `
         UPDATE subject_mapper sm
         INNER JOIN students s ON s.student_id = sm.student_id
@@ -34,7 +42,7 @@ module.exports = {
         { transaction },
       );
 
-      await queryInterface.sequelize.query(
+      await sequelize.query(
         `
         UPDATE subject_mapper sm
         INNER JOIN students s ON s.student_id = sm.student_id
@@ -55,11 +63,30 @@ module.exports = {
       const table = await queryInterface.describeTable('subject_mapper', { transaction });
 
       if (table.term) {
-        await removeColumnSafe(queryInterface, 'subject_mapper', 'term', transaction);
+        await queryInterface.removeColumn('subject_mapper', 'term', { transaction });
       }
 
       if (table.semester_id) {
-        await removeColumnSafe(queryInterface, 'subject_mapper', 'semester_id', transaction);
+        const [constraints] = await sequelize.query(
+          `
+          SELECT CONSTRAINT_NAME AS constraintName
+          FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'subject_mapper'
+            AND COLUMN_NAME = 'semester_id'
+            AND REFERENCED_TABLE_NAME IS NOT NULL
+          `,
+          { transaction },
+        );
+
+        for (const row of constraints) {
+          await sequelize.query(
+            `ALTER TABLE \`subject_mapper\` DROP FOREIGN KEY \`${row.constraintName}\``,
+            { transaction },
+          );
+        }
+
+        await queryInterface.removeColumn('subject_mapper', 'semester_id', { transaction });
       }
 
       await transaction.commit();
@@ -72,18 +99,23 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      await addColumnSafe(
-        queryInterface,
-        'subject_mapper',
-        'semester_id',
-        {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-        },
-        transaction,
-      );
+      const table = await queryInterface.describeTable('subject_mapper', { transaction });
 
-      await removeColumnSafe(queryInterface, 'subject_mapper', 'class_section_term_id', transaction);
+      if (!table.semester_id) {
+        await queryInterface.addColumn(
+          'subject_mapper',
+          'semester_id',
+          {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+          },
+          { transaction },
+        );
+      }
+
+      if (table.class_section_term_id) {
+        await queryInterface.removeColumn('subject_mapper', 'class_section_term_id', { transaction });
+      }
 
       await transaction.commit();
     } catch (error) {

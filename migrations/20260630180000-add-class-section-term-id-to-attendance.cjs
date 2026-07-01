@@ -1,25 +1,26 @@
 'use strict';
 
-const { addColumnSafe } = require('./helpers/sqlModeHelpers.cjs');
-
 /** attendance: term-scoped reports via class_section_term_id */
 module.exports = {
   async up(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      await addColumnSafe(
-        queryInterface,
-        'attendance',
-        'class_section_term_id',
-        {
-          type: Sequelize.INTEGER,
-          allowNull: true,
-          references: { model: 'class_section_term', key: 'class_section_term_id' },
-          onUpdate: 'CASCADE',
-          onDelete: 'SET NULL',
-        },
-        transaction,
-      );
+      const table = await queryInterface.describeTable('attendance', { transaction });
+
+      if (!table.class_section_term_id) {
+        await queryInterface.addColumn(
+          'attendance',
+          'class_section_term_id',
+          {
+            type: Sequelize.INTEGER,
+            allowNull: true,
+            references: { model: 'class_section_term', key: 'class_section_term_id' },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL',
+          },
+          { transaction },
+        );
+      }
 
       await queryInterface.sequelize.query(
         `

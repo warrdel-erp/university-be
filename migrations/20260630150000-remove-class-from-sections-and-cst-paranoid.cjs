@@ -1,14 +1,16 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { removeColumnSafe } = require('./helpers/sqlModeHelpers.cjs');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      await removeColumnSafe(queryInterface, 'class_sections', 'class', transaction);
+      const classSectionsTable = await queryInterface.describeTable('class_sections', { transaction });
+      if (classSectionsTable.class) {
+        await queryInterface.removeColumn('class_sections', 'class', { transaction });
+      }
 
       const cstTable = await queryInterface.describeTable('class_section_term', { transaction });
 
@@ -18,7 +20,7 @@ module.exports = {
           { deleted_at: { [Op.ne]: null } },
           { transaction },
         );
-        await removeColumnSafe(queryInterface, 'class_section_term', 'deleted_at', transaction);
+        await queryInterface.removeColumn('class_section_term', 'deleted_at', { transaction });
       }
 
       await transaction.commit();
