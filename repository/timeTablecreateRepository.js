@@ -1996,6 +1996,14 @@ export async function getUpcomingClassSchedulesForEmployee(
 
 export async function getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId) {
   try {
+    const employee = await model.employeeModel.findOne({
+      where: { employeeId: Number(employeeId) },
+      attributes: ['employeeId', 'instituteId'],
+    });
+    if (!employee) {
+      return [];
+    }
+
     const schedules = await model.classScheduleModel.findAll({
       where: {
         employeeId: Number(employeeId),
@@ -2006,8 +2014,8 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acade
           as: "timeTablecreate",
           required: true,
           where: {
-            ...(academicYearId && { academicYearId }),
-            ...buildScope(model.timeTableRoutineModel),
+            instituteId: Number(employee.instituteId),
+            academicYearId: Number(academicYearId),
           },
           include: [
             {
