@@ -60,18 +60,12 @@ export const getSingletimeTableCreateDetails = async (req, res) => {
 };
 
 export const getTimeTableByCourseAndSection = async (req, res) => {
-    const { courseId, classSectionsId, classSectionTermId, term, timeTableType } = req.query;
+    const { courseId, classSectionTermId, timeTableType } = req.query;
     try {
-        const placement = await timeTableCreateServices.resolveRoutinePlacement({
-            classSectionTermId,
-            classSectionsId,
-            term,
-        });
         const result = await timeTableCreateServices.getTimeTableByCourseAndSection(
             courseId,
-            placement.classSectionsId,
+            classSectionTermId,
             timeTableType,
-            placement.classSectionTermId,
         );
         res.status(200).json(result);
     } catch (error) {
@@ -175,9 +169,9 @@ export const deletetimeTableMapping = async (req, res) => {
 };
 
 export const getTimeTableCellData = async (req, res) => {
-    const { courseId, classSectionsId } = req.query;
+    const { courseId, classSectionTermId } = req.query;
     try {
-        const result = await timeTableCreateServices.getTimeTableCellData(courseId, classSectionsId);
+        const result = await timeTableCreateServices.getTimeTableCellData(courseId, classSectionTermId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting time table cell data:", error);
@@ -208,8 +202,8 @@ export const publishTimeTable = async (req, res) => {
 
 export const ClassSubjectCount = async (req, res) => {
     try {
-        const { classSectionsId } = req.query;
-        const response = await timeTableCreateServices.getSubjectWithCount(classSectionsId);
+        const { classSectionTermId } = req.query;
+        const response = await timeTableCreateServices.getSubjectWithCount(classSectionTermId);
         res.status(200).send(response);
     } catch (error) {
         res.status(500).send(error.message);
@@ -217,13 +211,9 @@ export const ClassSubjectCount = async (req, res) => {
 };
 
 export const getRoutineByClassSectionId = async (req, res) => {
-    const { classSectionTermId, classSectionsId, term } = req.query;
+    const { classSectionTermId } = req.query;
     try {
-        const result = await timeTableCreateServices.getRoutineByClassSectionId({
-            classSectionTermId,
-            classSectionsId,
-            term,
-        });
+        const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
         res.status(200).send(result);
     } catch (error) {
         console.error("Error in getting routine by class section id:", error);

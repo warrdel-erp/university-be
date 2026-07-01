@@ -383,17 +383,18 @@ Promotion advances to the next **program term** — may stay on the same physica
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `POST` | `/timeTableCreate/` | **Breaking** | Prefer `classSectionTermId`; or `classSectionsId` + `term` — both stored on routine |
-| `PATCH` | `/timeTableCreate/create` | Updated | Same term resolution + overlap per `classSectionTermId` |
-| `GET` | `/timeTableCreate/getRoutine` | **Breaking** | Query `classSectionTermId` (preferred) or `classSectionsId` (+ optional `term`) |
-| `GET` | `/timeTableCreate/create` | Updated | Filter by `classSectionTermId` or `classSectionsId` + `term` |
+| `POST` | `/timeTableCreate/` | **Breaking** | `classSectionTermId` required for `normal` routines; `classSectionsId` resolved internally |
+| `PATCH` | `/timeTableCreate/create` | Updated | Optional `classSectionTermId` for placement change; overlap per term |
+| `GET` | `/timeTableCreate/getRoutine` | **Breaking** | **Required** query `classSectionTermId` |
+| `GET` | `/timeTableCreate/create` | **Breaking** | **Required** query `courseId`, `classSectionTermId` |
+| `GET` | `/timeTableCreate/cellData` | **Breaking** | **Required** query `courseId`, `classSectionTermId` |
+| `GET` | `/timeTableCreate/subjectCount` | **Breaking** | **Required** query `classSectionTermId` (was `classSectionsId`) |
 | `GET` | `/timeTableCreate/getRoutineByTeacher` | Updated | Sections include `term`, `year` from `classSectionTerms` |
-| `POST` | `/timeTableCreate/mapping` | Updated | Optional `classSectionTermIds[]`, `combinedGroupId` for multi-section combined slots |
+| `POST` | `/timeTableCreate/mapping` | Updated | Optional `classSectionTermId` / `classSectionTermIds[]`, `combinedGroupId` for combined slots |
 | `GET` | `/student/studentTimetable` | Updated | Loads routine by student's `classSectionTermId` |
 
 ### `POST /timeTableCreate/` — placement
 
-**Preferred**
 ```json
 {
   "classSectionTermId": 1001,
@@ -404,23 +405,14 @@ Promotion advances to the next **program term** — may stay on the same physica
 }
 ```
 
-**Alternative**
-```json
-{
-  "classSectionsId": 101,
-  "term": 1,
-  "timeTableNameId": 5,
-  "startingDate": "2026-01-01",
-  "endingDate": "2026-06-30"
-}
-```
+**Not accepted on request:** `classSectionsId`, `term` — resolved from `class_section_term`.
 
-Overlap check is scoped to **`classSectionTermId`** when present (not whole section).
+Overlap check is scoped to **`classSectionTermId`**.
 
 ### `GET /timeTableCreate/getRoutine`
 
-**Before:** `?classSectionsId=101`  
-**After:** `?classSectionTermId=1001` or `?classSectionsId=101&term=1`
+**Before:** `?classSectionsId=101` or `?classSectionsId=101&term=1`  
+**After:** `?classSectionTermId=1001`
 
 ---
 
@@ -597,7 +589,7 @@ If you only have 30 minutes, run exactly this order:
 9. Verify DB: student has `class_section_term_id`, no `class_sections_id`
 10. `GET /student/promotion/list?programCourseId=&promotionTerm=`
 11. `POST /student/promoteStudent` with `classSectionTermId`
-12. `GET /timeTableCreate/getRoutine?classSectionTermId=` or `classSectionsId=&term=`
+12. `GET /timeTableCreate/getRoutine?classSectionTermId=`
 13. `GET /main/sectionSubjectMapper?term=`
 
 ---

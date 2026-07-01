@@ -198,14 +198,12 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
 
 export async function getTimeTableByCourseAndSection(
   courseId,
-  classSectionsId,
-  timeTableType,
   classSectionTermId,
+  timeTableType,
 ) {
   const whereClause = {
     ...(courseId && { courseId }),
     ...(classSectionTermId != null && { classSectionTermId: Number(classSectionTermId) }),
-    ...(!classSectionTermId && classSectionsId && { classSectionsId }),
     ...(timeTableType && { timeTableType }),
   };
   return await scoped(model.timeTableRoutineModel).findAll({
@@ -689,25 +687,18 @@ export async function getFullRoutineDetailsRepository(timeTableRoutineId) {
 
 export async function checkRoutineOverlapRepository({
   classSectionTermId,
-  classSectionsId,
   startingDate,
   endingDate,
   excludeRoutineId,
 }) {
   try {
-    const scopeWhere = classSectionTermId != null
-      ? { classSectionTermId: Number(classSectionTermId) }
-      : classSectionsId != null
-        ? { classSectionsId: Number(classSectionsId) }
-        : null;
-
-    if (!scopeWhere) {
+    if (classSectionTermId == null) {
       return null;
     }
 
     return await scoped(model.timeTableRoutineModel).findOne({
       where: {
-        ...scopeWhere,
+        classSectionTermId: Number(classSectionTermId),
         ...(excludeRoutineId && { timeTableRoutineId: { [Op.ne]: excludeRoutineId } }),
         [Op.and]: [
           { startingDate: { [Op.lte]: endingDate } },
@@ -901,10 +892,11 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
   };
 };
 
-export async function getTimeTableCellData(courseId, classSectionsId) {
+export async function getTimeTableCellData(courseId, classSectionTermId) {
   try {
     const whereClause = {
       ...(courseId && { courseId }),
+      ...(classSectionTermId != null && { classSectionTermId: Number(classSectionTermId) }),
     };
 
     const result = await scoped(model.timeTableRoutineModel).findAll({
@@ -1266,27 +1258,30 @@ export async function publishTimeTableRepository(timeTableRoutineId) {
   }
 };
 
-export async function ClassSubjectCount(classSectionsId) {
+export async function ClassSubjectCount(classSectionTermId) {
   try {
-    const section = await scoped(model.classSectionModel).findOne({
-      where: { classSectionsId },
-      attributes: ['classSectionsId'],
+    const termRow = await scoped(model.classSectionTermModel).findOne({
+      where: { classSectionTermId: Number(classSectionTermId) },
+      attributes: ['classSectionTermId', 'classSectionsId', 'term'],
     });
-    if (!section) {
+    if (!termRow) {
       return null;
     }
+
+    const plainTerm = termRow.get ? termRow.get({ plain: true }) : termRow;
+    const classSectionsId = plainTerm.classSectionsId;
 
     const students = await scoped(model.studentModel).findAll({
       attributes: ['studentId'],
       include: [
         studentClassSectionTermWithSectionInclude({
-          classSectionsId,
+          classSectionTermId,
           termRequired: true,
         }),
       ],
     });
     if (!students.length) {
-      return { classSectionsId, students: [] };
+      return { classSectionTermId: Number(classSectionTermId), classSectionsId, students: [] };
     }
 
     const studentIds = students.map((s) => s.studentId);
@@ -1306,6 +1301,7 @@ export async function ClassSubjectCount(classSectionsId) {
     const subjectById = new Map(subjects.map((s) => [s.subjectId, s]));
 
     return {
+      classSectionTermId: Number(classSectionTermId),
       classSectionsId,
       students: students.map((student) => ({
         studentId: student.studentId,
@@ -1323,11 +1319,11 @@ export async function ClassSubjectCount(classSectionsId) {
   }
 };
 
-export async function timeTableData(classSectionsId) {
+export async function timeTableData(classSectionTermId) {
   try {
     return await scoped(model.timeTableRoutineModel).findAll({
       where: {
-        classSectionsId,
+        classSectionTermId: Number(classSectionTermId),
         timeTableType: 'normal',
       },
       include: [
@@ -1408,9 +1404,6 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
     const where = {
       timeTableType: 'normal',
       ...(scope.classSectionTermId != null && { classSectionTermId: Number(scope.classSectionTermId) }),
-      ...(scope.classSectionTermId == null && scope.classSectionsId != null && {
-        classSectionsId: Number(scope.classSectionsId),
-      }),
     };
 
     return await scoped(model.timeTableRoutineModel).findAll({

@@ -28,6 +28,7 @@ export function classSectionTermsInclude({ term, required = false } = {}) {
 export function studentClassSectionTermWithSectionInclude({
     term,
     classSectionsId,
+    classSectionTermId,
     sectionWhere,
     sectionRequired = false,
     termRequired = false,
@@ -35,6 +36,9 @@ export function studentClassSectionTermWithSectionInclude({
     sectionAttributes,
 } = {}) {
     const termWhere = {};
+    if (classSectionTermId != null) {
+        termWhere.classSectionTermId = Number(classSectionTermId);
+    }
     if (term != null) {
         termWhere.term = Number(term);
     }

@@ -3611,7 +3611,7 @@
           "key": "timetable_classSectionsId",
           "value": "197",
           "type": "string",
-          "description": "Class section PK (legacy — prefer classSectionTermId for routines)"
+          "description": "Deprecated — use classSectionTermId for /timeTableCreate APIs"
         },
         {
           "key": "timetable_classSectionTermId",
@@ -4150,13 +4150,7 @@
                     {
                       "key": "classSectionTermId",
                       "value": "{{classSectionTermId}}",
-                      "description": "Preferred — resolves classSectionsId from term"
-                    },
-                    {
-                      "key": "classSectionsId",
-                      "value": "{{timetable_classSectionsId}}",
-                      "description": "Legacy — use with term query if classSectionTermId omitted",
-                      "disabled": true
+                      "description": "Required — program term placement PK"
                     },
                     {
                       "key": "timeTableType",
@@ -4165,7 +4159,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/term with flattened `periods` array for the UI builder.\n\n**Required query:** `courseId`.\n\n**Preferred:** `classSectionTermId` — `classSectionsId` + `term` not needed when term id is sent."
+                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/term with flattened `periods` array for the UI builder.\n\n**Required query:** `courseId`, `classSectionTermId`.\n\n**Optional:** `timeTableType` (`normal` | `elective`)."
               },
               "response": []
             },
@@ -4492,7 +4486,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/cellData?courseId={{timetable_courseId}}&classSectionsId={{timetable_classSectionsId}}",
+                  "raw": "{{baseurl}}/timeTableCreate/cellData?courseId={{timetable_courseId}}&classSectionTermId={{classSectionTermId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -4507,13 +4501,13 @@
                       "description": "Required"
                     },
                     {
-                      "key": "classSectionsId",
-                      "value": "{{timetable_classSectionsId}}",
-                      "description": "Optional"
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
+                      "description": "Required"
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/cellData**\n\nGrid cell data for timetable builder UI. **Required:** `courseId`."
+                "description": "**GET /timeTableCreate/cellData**\n\nGrid cell data for timetable builder UI. **Required:** `courseId`, `classSectionTermId`."
               },
               "response": []
             },
@@ -4569,7 +4563,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/subjectCount?classSectionsId={{timetable_classSectionsId}}",
+                  "raw": "{{baseurl}}/timeTableCreate/subjectCount?classSectionTermId={{classSectionTermId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -4579,13 +4573,13 @@
                   ],
                   "query": [
                     {
-                      "key": "classSectionsId",
-                      "value": "{{timetable_classSectionsId}}",
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
                       "description": "Required"
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/subjectCount?classSectionsId=**\n\nPer-subject period counts vs syllabus for a section."
+                "description": "**GET /timeTableCreate/subjectCount?classSectionTermId=**\n\nPer-subject period counts vs syllabus for a class section term."
               },
               "response": []
             },
@@ -4653,17 +4647,11 @@
                     {
                       "key": "classSectionTermId",
                       "value": "{{classSectionTermId}}",
-                      "description": "Preferred — positive integer"
-                    },
-                    {
-                      "key": "classSectionsId",
-                      "value": "{{timetable_classSectionsId}}",
-                      "description": "Legacy fallback",
-                      "disabled": true
+                      "description": "Required — positive integer"
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Preferred query:** `classSectionTermId`. Alternative: `classSectionsId` + `term`."
+                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Required query:** `classSectionTermId`."
               },
               "response": []
             },
