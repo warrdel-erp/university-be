@@ -623,6 +623,9 @@ userModel.hasMany(attendanceModel, { foreignKey: "createdBy", as: "userAttendenc
 attendanceModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "classAttendance" });
 classSectionModel.hasMany(attendanceModel, { foreignKey: "class_sections_id", as: "classAttendance" });
 
+attendanceModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "classSectionTerm" });
+classSectionTermModel.hasMany(attendanceModel, { foreignKey: "class_section_term_id", as: "attendances" });
+
 attendanceModel.belongsTo(studentModel, { foreignKey: "student_id", as: "studentAttendance" });
 studentModel.hasMany(attendanceModel, { foreignKey: "student_id", as: "studentAttendance" });
 

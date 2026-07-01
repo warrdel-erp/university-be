@@ -232,10 +232,10 @@ export const subjectExcel = async (req, res) => {
 
 export const getClassSectionRecord = async (req, res) => {
     try {
-        const { courseId, classSectionsId, classSectionId } = req.query;
+        const { courseId, classSectionTermId } = req.query;
         const result = await mainServices.getClassSectionRecord(
             courseId,
-            classSectionsId ?? classSectionId,
+            classSectionTermId,
         );
         return res.status(200).send(result);
     } catch (error) {

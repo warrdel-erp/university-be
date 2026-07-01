@@ -5,6 +5,10 @@ import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
+import {
+  assertMappingsBelongToTerm,
+  resolveAttendancePlacement,
+} from "../utility/attendancePlacement.js";
 
 export { ATTENDANCE_STATUS };
 
@@ -22,6 +26,8 @@ function normalizeTimeTableMappingIds(timeTableMappingId) {
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   const mappingIds = normalizeTimeTableMappingIds(attendanceData.timeTableMappingId);
+  const placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
+  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
 
   const pendingMappingIds = [];
   const skippedMappingIds = [];
@@ -48,7 +54,8 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
     const attendanceRecords = pendingMappingIds.flatMap((mappingId) =>
       attendanceData.attendance.map((attendance) => ({
         ...attendance,
-        classSectionsId: attendanceData.classSectionsId,
+        classSectionsId: placement.classSectionsId,
+        classSectionTermId: placement.classSectionTermId,
         timeTableMappingId: mappingId,
         date: attendanceData.date,
         createdBy,
@@ -262,8 +269,8 @@ export async function importAttendanceData(excelData, commonData) {
 };
 
 
-export async function getAttendanceByDate(date, classSectionsId, employeeId) {
-  const data = await attendanceService.getAttendanceByDate(date, classSectionsId, employeeId);
+export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
+  const data = await attendanceService.getAttendanceByDate(date, classSectionTermId, employeeId);
 
   const { attendanceDetails = [], subjectDetail = {} } = data;
 
@@ -427,10 +434,11 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
 
 };
 
-export async function getEmployeeSectionDates(classSectionId, subjectId, employeeId) {
+export async function getEmployeeSectionDates(classSectionTermId, subjectId, employeeId) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
   const [scheduleItems, details] = await Promise.all([
-    attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId),
-    attendanceService.getDetailsByIds(classSectionId, subjectId, employeeId)
+    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, employeeId),
+    attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, employeeId),
   ]);
 
   const dateMap = {};
@@ -475,10 +483,17 @@ export async function getEmployeeSectionDates(classSectionId, subjectId, employe
   };
 }
 
-export async function getStudentsBatchAttendance(classSectionsId, filters) {
-  const students = await attendanceService.getStudentsBatchAttendance(classSectionsId, filters);
+export async function getStudentsBatchAttendance(classSectionTermId, filters) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
+  const mappingIds = filters.map((f) => f.timeTableMappingId);
+  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
 
-  return students
+  const students = await attendanceService.getStudentsBatchAttendance(
+    placement.classSectionTermId,
+    filters,
+  );
+
+  return students;
 }
 
 /* ----------------  Extract Student ID from Name ---------------- */

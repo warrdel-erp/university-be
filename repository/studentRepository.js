@@ -1889,37 +1889,48 @@ export async function getStudentSubject(studentId) {
     }
 };
 
-export async function getClassSectionRecord(courseId, classSectionsId) {
+export async function getClassSectionRecord(courseId, classSectionTermId) {
     try {
-        const classSection = await scoped(model.classSectionModel).findOne({
-            where: {
-                classSectionsId: classSectionsId,
-                courseId,
-            },
-            attributes: [
-                'classSectionsId',
-                'courseId',
-                'academicYearId',
-                'section',
-                'year',
+        const termRow = await scoped(model.classSectionTermModel).findOne({
+            where: { classSectionTermId: Number(classSectionTermId) },
+            attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+            include: [
+                {
+                    model: model.classSectionModel,
+                    as: 'classSection',
+                    where: { courseId },
+                    required: true,
+                    attributes: [
+                        'classSectionsId',
+                        'courseId',
+                        'academicYearId',
+                        'section',
+                        'year',
+                    ],
+                    include: [classSectionTermsInclude()],
+                },
             ],
-            include: [classSectionTermsInclude()],
         });
 
-        if (!classSection) {
-            const error = new Error('Class section not found for this course');
+        if (!termRow) {
+            const error = new Error('Class section term not found for this course');
             error.statusCode = 404;
             throw error;
         }
 
+        const plainTerm = termRow.get ? termRow.get({ plain: true }) : termRow;
+        const classSection = termRow.classSection;
+        const classSectionsId = plainTerm.classSectionsId;
+
         const student = await scoped(model.studentModel).findAll({
             where: {
                 courseId,
+                classSectionTermId: Number(classSectionTermId),
             },
             attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "email", "mobileNumber", "phoneNumber", "courseId", "classSectionTermId"],
             include: [
                 studentClassSectionTermWithSectionInclude({
-                    classSectionsId,
+                    classSectionTermId,
                     termRequired: true,
                 }),
             ],
@@ -1956,7 +1967,7 @@ export async function getClassSectionRecord(courseId, classSectionsId) {
             ],
         });
 
-        return { classSection, student, teacher };
+        return { classSection, student, teacher, termRow: plainTerm };
     } catch (error) {
         console.error('Error in getting class record details:', error);
         throw error;

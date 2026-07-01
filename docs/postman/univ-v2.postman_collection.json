@@ -702,7 +702,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{courseId}}&classSectionsId={{classSectionsId}}",
+              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{courseId}}&classSectionTermId={{classSectionTermId}}",
               "host": [
                 "{{baseurl}}"
               ],
@@ -716,8 +716,8 @@
                   "value": "{{courseId}}"
                 },
                 {
-                  "key": "classSectionsId",
-                  "value": "{{classSectionsId}}"
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
                 }
               ]
             }
@@ -1124,7 +1124,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/sectionDates?classSectionId={{classSectionsId}}&subjectId=1&employeeId=1",
+              "raw": "{{baseurl}}/employee/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=1&employeeId=1",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1134,8 +1134,8 @@
               ],
               "query": [
                 {
-                  "key": "classSectionId",
-                  "value": "{{classSectionsId}}"
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
                 },
                 {
                   "key": "subjectId",
@@ -1166,7 +1166,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/attendance/sectionDates?classSectionId={{classSectionsId}}&subjectId=1&employeeId=1",
+              "raw": "{{baseurl}}/attendance/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=1&employeeId=1",
               "host": [
                 "{{baseurl}}"
               ],
@@ -1176,8 +1176,8 @@
               ],
               "query": [
                 {
-                  "key": "classSectionId",
-                  "value": "{{classSectionsId}}"
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
                 },
                 {
                   "key": "subjectId",
@@ -5673,18 +5673,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/employee/sectionDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/employee/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=52&employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "employee",
-                "classDates"
+                "sectionDates"
               ],
               "query": [
                 {
-                  "key": "classSectionId",
-                  "value": "195"
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
                 },
                 {
                   "key": "subjectId",
@@ -6710,7 +6710,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"classSectionsId\": 316,\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\",\n      \"notes\": \"Uninformed\"\n    }\n  ]\n}",
+              "raw": "{\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"timeTableMappingId\": 64,\n  \"date\": \"2026-06-20\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\",\n      \"notes\": \"Uninformed\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6726,7 +6726,7 @@
                 "attendance"
               ]
             },
-            "description": "**POST /attendance**\n\nMark attendance for one or more class periods on one date.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `classSectionsId` | Class section PK |\n| `timeTableMappingId` | **number** (one period) **or number[]** (grouped periods) |\n| `date` | `YYYY-MM-DD` |\n| `attendance` | Array of per-student rows |\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `section` | Ignored by API (display only) |\n\n### Each `attendance[]` item\n| Field | Required | Notes |\n|-------|----------|--------|\n| `studentId` | yes | |\n| `attendanceStatus` | yes | Present, Absent, Medical Leave, Duty Leave, Sports Leave, NCC Leave, Approved Leave, Holiday |\n| `notes` | no | |\n| `description` | no | |\n\n### Behavior\n- Duplicate check per `timeTableMappingId` + `date` — already-marked periods are **skipped**; only remaining periods are inserted. Fails only if **all** periods are already marked (or single period already marked)\n- Injects `createdBy` / `updatedBy` from token; tenant columns from scoped create\n\n### 201\n`{ \"message\": \"Attendance Add Successfully\" }` — when some periods were skipped, also returns `markedPeriods` and `skippedPeriods` arrays"
+            "description": "**POST /attendance**\n\nMark attendance for one or more class periods on one date.\n\n### Required body\n| Field | Notes |\n|-------|--------|\n| `classSectionTermId` | Program term placement PK |\n| `timeTableMappingId` | **number** (one period) **or number[]** (grouped periods) — must belong to routine for this term |\n| `date` | `YYYY-MM-DD` |\n| `attendance` | Array of per-student rows |\n\n### Optional\n| Field | Notes |\n|-------|--------|\n| `section` | Ignored by API (display only) |\n\nStores both `class_section_term_id` and denormalized `class_sections_id` on each row."
           },
           "response": []
         },
@@ -6752,7 +6752,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"classSectionsId\": 12,\n  \"section\": \"A\",\n  \"timeTableMappingId\": [45, 46, 47],\n  \"date\": \"2026-06-25\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\"\n    }\n  ]\n}",
+              "raw": "{\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"section\": \"A\",\n  \"timeTableMappingId\": [45, 46, 47],\n  \"date\": \"2026-06-25\",\n  \"attendance\": [\n    {\n      \"studentId\": 101,\n      \"attendanceStatus\": \"Present\"\n    },\n    {\n      \"studentId\": 102,\n      \"attendanceStatus\": \"Absent\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6858,7 +6858,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/attendance/byDate?date=2026-06-20&classSectionsId=316&employeeId=35",
+              "raw": "{{baseurl}}/attendance/byDate?date=2026-06-20&classSectionTermId={{classSectionTermId}}&employeeId=35",
               "host": [
                 "{{baseurl}}"
               ],
@@ -6873,8 +6873,8 @@
                   "description": "Required — YYYY-MM-DD"
                 },
                 {
-                  "key": "classSectionsId",
-                  "value": "316",
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
                   "description": "Required"
                 },
                 {
@@ -6934,18 +6934,18 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/attendance/sectionDates?classSectionId=195&subjectId=52&employeeId=41",
+              "raw": "{{baseurl}}/attendance/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=52&employeeId=41",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "attendance",
-                "classDates"
+                "sectionDates"
               ],
               "query": [
                 {
-                  "key": "classSectionId",
-                  "value": "195"
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
                 },
                 {
                   "key": "subjectId",
@@ -6983,7 +6983,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"classSectionId\": 195,\n  \"filters\": [\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 64\n    },\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 65\n    }\n  ]\n}",
+              "raw": "{\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"filters\": [\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 64\n    },\n    {\n      \"date\": \"2026-06-20\",\n      \"timeTableMappingId\": 65\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -7001,7 +7001,7 @@
                 "batch"
               ]
             },
-            "description": "**POST /attendance/getStudentAttendance/batch**\n\nFetch student attendance for multiple date + `timeTableMappingId` pairs (e.g. grouped periods on same day).\n\n### Body\n| Field | Notes |\n|-------|--------|\n| `classSectionId` | number |\n| `filters` | `{ date: YYYY-MM-DD, timeTableMappingId: number }[]` |"
+            "description": "**POST /attendance/getStudentAttendance/batch**\n\nFetch student attendance for multiple date + `timeTableMappingId` pairs.\n\n### Body\n| Field | Notes |\n|-------|--------|\n| `classSectionTermId` | Required — students filtered by term placement |\n| `filters` | `{ date: YYYY-MM-DD, timeTableMappingId: number }[]` — mapping IDs validated against routine term |"
           },
           "response": []
         },

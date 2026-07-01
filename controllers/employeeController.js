@@ -387,10 +387,10 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
 
 export async function getEmployeeSectionDates(req, res) {
     try {
-        const { classSectionId, subjectId, employeeId } = req.query;
+        const { classSectionTermId, subjectId, employeeId } = req.query;
 
         const data = await AttendanceCreation.getEmployeeSectionDates(
-            classSectionId,
+            classSectionTermId,
             subjectId,
             employeeId
         );

@@ -87,14 +87,8 @@ const updateSubjectSchema = z.object({
 
 const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionsId: z.coerce.number().int().positive().optional(),
-    classSectionId: z.coerce.number().int().positive().optional(),
-    classSectionTermId: z.coerce.number().int().positive().optional(),
-    term: z.coerce.number().int().positive().optional(),
-}).refine(
-    (query) => query.classSectionsId != null || query.classSectionId != null,
-    { message: 'classSectionsId is required' },
-);
+    classSectionTermId: z.coerce.number({ required_error: 'classSectionTermId is required' }).int().positive(),
+});
 
 const addClassSectionsSchema = z.object({
     courseId: positiveIntegerId,

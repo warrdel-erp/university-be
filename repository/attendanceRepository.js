@@ -131,7 +131,7 @@ export async function addImportAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceByDate(date, classSectionsId, employeeId) {
+export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
     try {
         const attendanceDetails = await scoped(model.attendanceModel).findAll({
             attributes: {
@@ -146,7 +146,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                 ],
             },
             where: {
-                classSectionsId,
+                classSectionTermId: Number(classSectionTermId),
                 date: { [Op.eq]: fn("DATE", date) },
             },
             include: [
@@ -438,7 +438,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
     }
 };
 
-export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId, employeeId) {
+export async function getEmployeeScheduleWithRoutine(classSectionTermId, subjectId, employeeId) {
     try {
         const employee = await scoped(model.employeeModel).findOne({
             where: { employeeId },
@@ -458,9 +458,12 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
                 {
                     model: model.timeTableRoutineModel,
                     as: 'timeTablecreate',
-                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate', 'classSectionTermId'],
                     required: true,
-                    where: { classSectionsId, ...buildScope(model.timeTableRoutineModel) },
+                    where: {
+                        classSectionTermId: Number(classSectionTermId),
+                        ...buildScope(model.timeTableRoutineModel),
+                    },
                 },
                 {
                     model: model.timeTableStructurePeriodsModel,
@@ -476,10 +479,13 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
     }
 }
 
-export async function getStudentsBatchAttendance(classSectionsId, filters) {
+export async function getStudentsBatchAttendance(classSectionTermId, filters) {
     try {
         return await scoped(model.studentModel).findAll({
-            where: { classSectionsId, deletedAt: null },
+            where: {
+                classSectionTermId: Number(classSectionTermId),
+                deletedAt: null,
+            },
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
                 {
@@ -534,12 +540,20 @@ export async function getStudentsByIds(studentIds) {
     }
 }
 
-export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
+export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId) {
     try {
-        const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
-            scoped(model.classSectionModel).findOne({
-                where: { classSectionsId, deletedAt: null },
-                attributes: ['year', 'section'],
+        const [termDetails, subjectDetails, employeeDetails] = await Promise.all([
+            scoped(model.classSectionTermModel).findOne({
+                where: { classSectionTermId: Number(classSectionTermId) },
+                attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                include: [
+                    {
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: ['year', 'section'],
+                        required: false,
+                    },
+                ],
             }),
             scoped(model.subjectModel).findOne({
                 where: { subjectId, deletedAt: null },
@@ -552,12 +566,13 @@ export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
         ]);
 
         return {
-            sectionDetails,
+            termDetails,
+            sectionDetails: termDetails?.classSection ?? null,
             subjectDetails,
             employeeDetails,
         };
     } catch (error) {
-        console.error("Error in getDetailsByIds:", error);
+        console.error("Error in getDetailsByTerm:", error);
         throw error;
     }
 }

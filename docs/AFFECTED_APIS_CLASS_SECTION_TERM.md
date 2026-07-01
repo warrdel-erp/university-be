@@ -420,11 +420,17 @@ Overlap check is scoped to **`classSectionTermId`**.
 
 | Method | Path | Status | Notes |
 |--------|------|--------|-------|
-| `POST` | `/attendance/` | Updated | `classSectionsId` on attendance row resolved from student's term placement |
-| `POST` | `/attendance/getStudentAttendance/batch` | Updated | Scope by `classSectionTermId` when provided |
-| `GET` | `/attendance/studentAttendance/bulk` | Updated | Same |
-| `GET` | `/employee/sectionDates` | Updated | Section labels use `year` not `classGroup` |
-| `GET` | `/attendance/sectionDates` | Updated | Same as employee sectionDates |
+| `POST` | `/attendance/` | **Breaking** | **Required** `classSectionTermId` (replaces `classSectionsId`); validates `timeTableMappingId` belongs to routine for that term |
+| `GET` | `/attendance/byDate` | **Breaking** | **Required** `classSectionTermId` (replaces `classSectionsId`) |
+| `POST` | `/attendance/getStudentAttendance/batch` | **Breaking** | **Required** `classSectionTermId` in body; validates mapping IDs against routine term |
+| `GET` | `/attendance/sectionDates` | **Breaking** | **Required** `classSectionTermId` (replaces `classSectionId`) |
+| `GET` | `/attendance/studentAttendance/bulk` | Unchanged | Still uses legacy `classSectionId` — pending migration |
+| `GET` | `/employee/sectionDates` | **Breaking** | **Required** `classSectionTermId` |
+| `GET` | `/main/classSectionRecord` | **Breaking** | **Required** `courseId`, `classSectionTermId` |
+
+**DB:** `attendance.class_section_term_id` added (migration `20260630180000`); backfilled from timetable routine → student placement.
+
+**Timetable link:** `timeTableMappingId` → `class_schedule_item` → `time_table_routine.class_section_term_id` must match request `classSectionTermId`.
 
 ---
 
@@ -606,7 +612,7 @@ See [CLASS_SECTION_TERM_FK_AUDIT.md](./CLASS_SECTION_TERM_FK_AUDIT.md) for full 
 
 | Table | Why `class_sections_id` remains | `class_section_term_id` planned? |
 |-------|--------------------------------|----------------------------------|
-| `attendance` | Denormalized section at mark time | Phase 2 |
+| `attendance` | Denormalized section at mark time | **Done** — `class_section_term_id` added; `class_sections_id` kept |
 | `library_book` | Optional catalog metadata | No |
 | `student_class_sections_history` | Physical section in history | **Done** |
 | `teacher_section_mapping` | Teacher ↔ section for session | No (term via subjects) |
@@ -620,7 +626,7 @@ These are **not bugs** — they correctly FK to `class_sections`. Term-specific 
 
 | Item | Owner | Notes |
 |------|-------|-------|
-| Add `class_section_term_id` to `attendance` | Backend | Phase 2 — term-scoped reports |
+| Add `class_section_term_id` to `attendance` | Backend | **Done** — migration `20260630180000` |
 | Update Postman collection | Backend / QA | New shapes + tenant context (no `academicYearId` on scoped routes) |
 | Employee dashboard student list per section | Backend | `classSection.hasMany(student)` association removed |
 | Drop `class_deprecated`, `semester_deprecated` | Backend | After full verification |

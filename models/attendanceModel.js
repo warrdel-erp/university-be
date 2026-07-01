@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from "./userModel.js";
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import classScheduleModel from "./classScheduleModel.js";
 import institute from "./instituteModel.js";
 import university from "./universityModel.js";
@@ -59,6 +60,15 @@ const attendanceModel = sequelize.define(
             references: {
                 model: classSection,
                 key: 'class_sections_id'
+            }
+        },
+        classSectionTermId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTermModel,
+                key: 'class_section_term_id'
             }
         },
         date: {

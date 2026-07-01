@@ -107,14 +107,10 @@ export const importBulkAttendance = async (req, res) => {
 };
 
 export async function getAttendanceByDate(req, res) {
-  const { date, classSectionsId, employeeId } = req.query;
-
-  if (!date || !classSectionsId || !employeeId) {
-    return res.status(400).json({ error: "required date,employeeId and classSectionsId" });
-  }
+  const { date, classSectionTermId, employeeId } = req.query;
 
   try {
-    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionsId, employeeId);
+    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionTermId, employeeId);
 
     if (!attendance || attendance.length === 0) {
       return res.status(200).json({ message: "No data available" });
@@ -164,10 +160,10 @@ export async function getStudentAttendanceReport(req, res) {
 
 export async function getStudentsBatchAttendance(req, res) {
   try {
-    const { classSectionId, filters } = req.body;
+    const { classSectionTermId, filters } = req.body;
 
     const data = await AttendanceCreation.getStudentsBatchAttendance(
-      classSectionId,
+      classSectionTermId,
       filters
     );
 
@@ -180,10 +176,10 @@ export async function getStudentsBatchAttendance(req, res) {
 
 export async function getEmployeeSectionDates(req, res) {
   try {
-    const { classSectionId, subjectId, employeeId } = req.query;
+    const { classSectionTermId, subjectId, employeeId } = req.query;
 
     const data = await AttendanceCreation.getEmployeeSectionDates(
-      classSectionId,
+      classSectionTermId,
       subjectId,
       employeeId
     );

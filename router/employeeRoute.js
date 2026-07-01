@@ -6,8 +6,13 @@ import userAuth from "../middleware/authUser.js"
 import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getSectionCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
-const studentAttendanceReportSchema = z.object({
-    classSectionId: z.string().regex(/^\d+$/, "classSectionId must be a number").transform(val => parseInt(val)),
+const positiveIntegerId = z.coerce
+    .number()
+    .int('id must be an integer')
+    .positive('id must be greater than 0');
+
+const sectionDatesQuerySchema = z.object({
+    classSectionTermId: positiveIntegerId,
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
     employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
 });
@@ -30,7 +35,7 @@ router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubject
 
 router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 
-router.get('/sectionDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeSectionDates);
+router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
 
 router.get('/sectionCounts', userAuth, getSectionCounts);
 
