@@ -31,7 +31,16 @@ const scheduleQuerySchema = z.object({
     universityId: optionalPositiveId,
 }).passthrough();
 
-router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubjects);
+const uniqueClassSectionSubjectsQuerySchema = z.object({
+    employeeId: positiveIntegerId,
+});
+
+router.get(
+    '/uniqueClassSectionSubjects',
+    userAuth,
+    validate({ query: uniqueClassSectionSubjectsQuerySchema }),
+    getUniqueClassSectionSubjects,
+);
 
 router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
 

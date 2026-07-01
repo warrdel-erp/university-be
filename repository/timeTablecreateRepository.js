@@ -2,7 +2,7 @@ import { Op, Sequelize } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { ATTENDANCE_PRESENT_STATUSES } from '../constant.js';
-import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from '../utility/classSectionIncludes.js';
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude, timeTableRoutineClassSectionInclude, stripRoutinePersistPayload } from '../utility/classSectionIncludes.js';
 
 const presentStatusSqlList = ATTENDANCE_PRESENT_STATUSES.map((s) => `'${s}'`).join(', ');
 
@@ -44,7 +44,10 @@ async function assertScopedSchedule(timeTableMappingId, options = {}) {
 
 export async function addTimeTableCreate(data, transaction) {
   try {
-    const result = await scoped(model.timeTableRoutineModel).create(data, { transaction });
+    const result = await scoped(model.timeTableRoutineModel).create(
+      stripRoutinePersistPayload(data),
+      { transaction },
+    );
     return result;
   } catch (error) {
     console.error("Error in create create time table:", error);
@@ -116,18 +119,16 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
               as: 'timeTableCampus',
               attributes: ['campusName'],
             },
-            {
-              model: model.classSectionModel,
-              as: 'timeTableClassSection',
-              attributes: ['section', 'year', 'section_id', 'class_sections_id'],
-              include: [
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ['section', 'year', 'sectionId', 'classSectionsId'],
+              sectionNestedIncludes: [
                 {
                   model: model.sessionModel,
                   as: 'classSession',
                   attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                 },
               ],
-            },
+            }),
             {
               model: model.acedmicYearModel,
               as: 'acedmicYearTimeTable',
@@ -224,10 +225,7 @@ export async function getTimeTableByCourseAndSection(
         as: "timeTableCourse",
         attributes: ["courseName"]
       },
-      {
-        model: model.classSectionModel,
-        as: "timeTableClassSection"
-      }
+      timeTableRoutineClassSectionInclude(),
     ],
     order: [
       [
@@ -268,11 +266,9 @@ export async function getSingleTimeTableCreateDetails(courseId) {
           as: 'timeTableCampus',
           attributes: ["campusName"],
         },
-        {
-          model: model.classSectionModel,
-          as: 'timeTableClassSection',
-          attributes: ["section", "year", "section_id", "class_sections_id"],
-        },
+        timeTableRoutineClassSectionInclude({
+          sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+        }),
         {
           model: model.acedmicYearModel,
           as: 'acedmicYearTimeTable',
@@ -447,7 +443,7 @@ export async function checkTeacherConflictRepository(
         {
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
-          attributes: ["startingDate", "endingDate", "classSectionsId", "classSectionTermId"],
+          attributes: ["startingDate", "endingDate", "classSectionTermId"],
           required: true,
           where: {
             [Op.and]: [
@@ -457,11 +453,9 @@ export async function checkTeacherConflictRepository(
             ...buildScope(model.timeTableRoutineModel),
           },
           include: [
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: ["section", "year"]
-            }
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ["section", "year"],
+            }),
           ]
         }
       ]
@@ -637,7 +631,7 @@ export async function checkRoomConflictRepository(
         {
           model: model.timeTableRoutineModel,
           as: "timeTablecreate",
-          attributes: ["startingDate", "endingDate", "classSectionsId", "classSectionTermId"],
+          attributes: ["startingDate", "endingDate", "classSectionTermId"],
           required: true,
           where: {
             [Op.and]: [
@@ -647,11 +641,9 @@ export async function checkRoomConflictRepository(
             ...buildScope(model.timeTableRoutineModel),
           },
           include: [
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: ["section", "year"]
-            }
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ["section", "year"],
+            }),
           ]
         }
       ]
@@ -734,9 +726,12 @@ export async function changeTimeTableCreate(timeTableRoutineId, data) {
     if (!routine) {
       return [0];
     }
-    const result = await scoped(model.timeTableRoutineModel).update(data, {
-      where: { timeTableRoutineId }
-    });
+    const result = await scoped(model.timeTableRoutineModel).update(
+      stripRoutinePersistPayload(data),
+      {
+        where: { timeTableRoutineId }
+      },
+    );
     return result;
   } catch (error) {
     console.error(`Error updating time table create  ${timeTableRoutineId}:`, error);
@@ -849,13 +844,10 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
               as: 'timeTableCampus',
               attributes: ["campusName"],
             },
-            {
-              model: model.classSectionModel,
-              as: 'timeTableClassSection',
-              attributes: ["section", "year", "section_id", "class_sections_id"],
-              where: buildScope(model.classSectionModel),
-              required: false,
-            },
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+              sectionWhere: buildScope(model.classSectionModel),
+            }),
             {
               model: model.acedmicYearModel,
               as: 'acedmicYearTimeTable',
@@ -910,11 +902,9 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
           as: 'timeTableCourse',
           attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "affiliated_university_id", "institute_id", "acedmic_year_id"] }
         },
-        {
-          model: model.classSectionModel,
-          as: 'timeTableClassSection',
-          attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "course_id", "semester_id", "class_id", "acedmic_year_id", "specialization_id", "session_id"] }
-        },
+        timeTableRoutineClassSectionInclude({
+          sectionAttributes: { exclude: ["createdAt", "updatedAt", "createdBy", "deletedAt", "courseId", "semesterId", "classId", "academicYearId", "specializationId", "sessionId"] },
+        }),
         {
           model: model.classScheduleModel,
           as: 'timeTablecreate',
@@ -1085,10 +1075,7 @@ export async function getTeacherTimeTable(employeeId) {
           model: model.courseModel,
           as: "timeTableCourse"
         },
-        {
-          model: model.classSectionModel,
-          as: "timeTableClassSection"
-        },
+        timeTableRoutineClassSectionInclude(),
         {
           model: model.classScheduleModel,
           as: "timeTablecreate",
@@ -1171,12 +1158,11 @@ export async function getTeacherTimeTable(employeeId) {
 
 
 
-export async function getStudentTimeTableRepository(classSectionTermId, classSectionsId, subjectIds) {
+export async function getStudentTimeTableRepository(classSectionTermId, subjectIds) {
   try {
     const where = {
       is_publish: true,
-      ...(classSectionTermId != null && { classSectionTermId: Number(classSectionTermId) }),
-      ...(classSectionTermId == null && classSectionsId && { classSectionsId }),
+      classSectionTermId: Number(classSectionTermId),
     };
 
     return await scoped(model.timeTableRoutineModel).findAll({
@@ -1186,10 +1172,7 @@ export async function getStudentTimeTableRepository(classSectionTermId, classSec
           model: model.courseModel,
           as: "timeTableCourse"
         },
-        {
-          model: model.classSectionModel,
-          as: "timeTableClassSection"
-        },
+        timeTableRoutineClassSectionInclude(),
         {
           model: model.classScheduleModel,
           as: "timeTablecreate",
@@ -1408,7 +1391,7 @@ export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
 
     return await scoped(model.timeTableRoutineModel).findAll({
       where,
-      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionsId', 'classSectionTermId'],
+      attributes: ['timeTableRoutineId', 'timeTableNameId', 'startingDate', 'endingDate', 'isPublish', 'timeTableType', 'classSectionTermId'],
       include: [
         {
           model: model.timeTableStructureModel,
@@ -1510,27 +1493,27 @@ const teacherRoutineStructureInclude = {
   ],
 };
 
-const teacherClassSectionInclude = (courseId, sessionId) => ({
-  model: model.classSectionModel,
-  as: 'timeTableClassSection',
-  required: true,
-  where: {
-    courseId,
-    sessionId,
-    ...buildScope(model.classSectionModel),
-  },
-  attributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
-  include: [
-    {
-      model: model.courseModel,
-      as: 'courseSection',
-      attributes: ['courseId', 'courseName', 'courseCode'],
-      where: buildScope(model.courseModel),
-      required: false,
+const teacherClassSectionInclude = (courseId, sessionId) =>
+  timeTableRoutineClassSectionInclude({
+    termRequired: true,
+    sectionRequired: true,
+    sectionWhere: {
+      courseId,
+      sessionId,
+      ...buildScope(model.classSectionModel),
     },
-    classSectionTermsInclude(),
-  ],
-});
+    sectionAttributes: ['classSectionsId', 'section', 'year', 'sessionId', 'courseId'],
+    sectionNestedIncludes: [
+      {
+        model: model.courseModel,
+        as: 'courseSection',
+        attributes: ['courseId', 'courseName', 'courseCode'],
+        where: buildScope(model.courseModel),
+        required: false,
+      },
+      classSectionTermsInclude(),
+    ],
+  });
 
 const teacherNormalScheduleInclude = (employeeId) => ({
   model: model.classScheduleModel,
@@ -1782,15 +1765,13 @@ export async function getTodayClassScheduleForEmployee(employeeId, currentDate, 
               as: "timeTableCourse",
               attributes: ['courseId', 'courseName'],
             },
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              required: Boolean(sessionId),
-              where: {
+            timeTableRoutineClassSectionInclude({
+              sectionRequired: Boolean(sessionId),
+              sectionWhere: {
                 ...(sessionId && { sessionId }),
               },
-              attributes: ['year', 'section', 'classSectionsId'],
-            },
+              sectionAttributes: ['year', 'section', 'classSectionsId'],
+            }),
           ],
         },
         {
@@ -1874,15 +1855,9 @@ export async function getPastClassSchedulesForEmployee(
               as: "timeTableCourse",
               attributes: ['courseName']
             },
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: [
-                'year',
-                'section',
-                'classSectionsId'
-              ]
-            }
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ['year', 'section', 'classSectionsId'],
+            })
           ]
         },
         {
@@ -1975,15 +1950,9 @@ export async function getUpcomingClassSchedulesForEmployee(
               as: "timeTableCourse",
               attributes: ['courseName']
             },
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: [
-                'year',
-                'section',
-                'classSectionsId'
-              ]
-            }
+            timeTableRoutineClassSectionInclude({
+              sectionAttributes: ['year', 'section', 'classSectionsId'],
+            })
           ]
         },
         {
@@ -2048,11 +2017,10 @@ export async function getUniqueClassSectionSubjectsForEmployee(employeeId, acade
               as: "timeTableCourse",
               attributes: ['courseName', 'courseId']
             },
-            {
-              model: model.classSectionModel,
-              as: "timeTableClassSection",
-              attributes: ['year', 'section', 'classSectionsId']
-            }
+            timeTableRoutineClassSectionInclude({
+              termAttributes: ['classSectionTermId', 'term', 'classSectionsId'],
+              sectionAttributes: ['year', 'section', 'classSectionsId'],
+            })
           ]
         },
         {

@@ -79,6 +79,56 @@ export function resolveStudentSection(plain) {
     return plain.studentClassSectionTerm?.classSection ?? null;
 }
 
+/** Timetable routine → class_section_term → class_sections */
+export function timeTableRoutineClassSectionInclude({
+    sectionAttributes,
+    sectionWhere,
+    sectionRequired = false,
+    termRequired = false,
+    termAttributes,
+    sectionNestedIncludes,
+} = {}) {
+    const include = {
+        model: model.classSectionTermModel,
+        as: 'timeTableClassSectionTerm',
+        required: termRequired,
+    };
+    if (termAttributes) {
+        include.attributes = termAttributes;
+    }
+    const sectionInclude = {
+        model: model.classSectionModel,
+        as: 'classSection',
+        required: sectionRequired,
+    };
+    if (sectionAttributes) {
+        sectionInclude.attributes = sectionAttributes;
+    }
+    if (sectionWhere) {
+        sectionInclude.where = sectionWhere;
+    }
+    if (sectionNestedIncludes?.length) {
+        sectionInclude.include = sectionNestedIncludes;
+    }
+    include.include = [sectionInclude];
+    return include;
+}
+
+export function resolveTimeTableRoutineSection(routine) {
+    if (!routine) return null;
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    if (plain.timeTableClassSectionTerm?.classSection) {
+        return plain.timeTableClassSectionTerm.classSection;
+    }
+    return plain.timeTableClassSection ?? null;
+}
+
+export function stripRoutinePersistPayload(data) {
+    if (!data || typeof data !== 'object') return data;
+    const { classSectionsId, classSectionId, term, ...rest } = data;
+    return rest;
+}
+
 /** Resolve class_sections_id from student row. */
 export function resolveStudentClassSectionsId(plain) {
     const section = resolveStudentSection(plain);

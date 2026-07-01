@@ -1,0 +1,13 @@
+---
+alwaysApply: true
+---
+
+Write confident, production-ready code.
+
+- Avoid unnecessary defensive or tentative code.
+- Do not add redundant null/undefined checks when values are already validated by the caller, schema, or middleware.
+- Do not use unnecessary optional chaining (`?.`) or nullish coalescing (`??`) unless they handle a real edge case.
+- Assume function contracts are respected unless the requirement states otherwise.
+- Keep the code simple, deterministic, and readable.
+- Validate inputs only at the API/service boundary, not repeatedly throughout the call stack.
+- Every conditional, fallback, or guard clause must have a clear functional reason.

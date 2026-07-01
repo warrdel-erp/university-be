@@ -27,6 +27,7 @@ import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
 import { countWeekdayInRange, formatQueryDate, parseLocalDateOnly } from '../utility/helper.js';
+import { resolveTimeTableRoutineSection } from '../utility/classSectionIncludes.js';
 import { ROLES } from '../const/roles.js';
 import moment from 'moment';
 import { getTenantStore } from '../utility/requestContext.js';
@@ -1595,21 +1596,34 @@ function processScheduleCombinations(schedules) {
   const uniqueCombinationsMap = new Map();
 
   for (const schedule of schedules) {
-    if (!schedule.timeTablecreate || !schedule.timeTablecreate.timeTableClassSection) continue;
+    const routine = schedule.timeTablecreate;
+    if (!routine) continue;
 
-    const classSection = schedule.timeTablecreate.timeTableClassSection;
-    const course = schedule.timeTablecreate.timeTableCourse;
+    const classSection = resolveTimeTableRoutineSection(routine);
+    if (!classSection) continue;
+
+    const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+    const classSectionTermId =
+      routinePlain.classSectionTermId
+      ?? routinePlain.timeTableClassSectionTerm?.classSectionTermId
+      ?? null;
+    if (!classSectionTermId) continue;
+
+    const term = routinePlain.timeTableClassSectionTerm?.term ?? null;
+    const course = routine.timeTableCourse;
 
     const subject = extractSubjectDetails(schedule);
     if (!subject) continue;
 
-    const key = `${classSection.classSectionsId}_${subject.subjectId}`;
+    const key = `${classSectionTermId}_${subject.subjectId}`;
     if (!uniqueCombinationsMap.has(key)) {
       uniqueCombinationsMap.set(key, {
         courseId: course?.courseId,
         courseName: course?.courseName,
+        classSectionTermId,
         classSectionsId: classSection.classSectionsId,
-        class: classSection.year != null ? String(classSection.year) : "",
+        year: classSection.year != null ? Number(classSection.year) : null,
+        term: term != null ? Number(term) : null,
         section: classSection.section,
         subjectId: subject.subjectId,
         subjectName: subject.subjectName,
@@ -1618,8 +1632,8 @@ function processScheduleCombinations(schedules) {
     }
 
     const entry = uniqueCombinationsMap.get(key);
-    const startDateStr = schedule.timeTablecreate.startingDate;
-    const endDateStr = schedule.timeTablecreate.endingDate;
+    const startDateStr = routine.startingDate;
+    const endDateStr = routine.endingDate;
     const dayStr = schedule.day;
 
     if (startDateStr && endDateStr && dayStr) {

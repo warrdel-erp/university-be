@@ -365,10 +365,6 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
         const { employeeId } = req.query;
         const academicYearId = getAcademicYearId();
 
-        if (!employeeId) {
-            return res.status(400).send("employeeId is required");
-        }
-
         if (!academicYearId) {
             return res.status(400).send("academicYearId not found in user session");
         }

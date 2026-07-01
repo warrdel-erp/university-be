@@ -550,9 +550,6 @@ courseModel.hasMany(timeTableRoutineModel, { foreignKey: "course_id", as: "timeT
 timeTableRoutineModel.belongsTo(campusModel, { foreignKey: "campus_id", as: "timeTableCampus" });
 campusModel.hasMany(timeTableRoutineModel, { foreignKey: "campus_id", as: "timeTableCampus" });
 
-timeTableRoutineModel.belongsTo(classSectionModel, { foreignKey: "class_sections_id", as: "timeTableClassSection" });
-classSectionModel.hasMany(timeTableRoutineModel, { foreignKey: "class_sections_id", as: "timeTableClassSection" });
-
 timeTableRoutineModel.belongsTo(classSectionTermModel, { foreignKey: "class_section_term_id", as: "timeTableClassSectionTerm" });
 classSectionTermModel.hasMany(timeTableRoutineModel, { foreignKey: "class_section_term_id", as: "timeTableRoutines" });
 

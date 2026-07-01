@@ -9,7 +9,7 @@ import {
 import sequelize from "../database/sequelizeConfig.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
 import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
-import { resolveProgramTerm } from "../utility/classSectionIncludes.js";
+import { resolveProgramTerm, resolveTimeTableRoutineSection, stripRoutinePersistPayload } from "../utility/classSectionIncludes.js";
 import {
   findClassSectionTermById,
 } from "../repository/classSectionTermRepository.js";
@@ -214,6 +214,7 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
     delete placement.term;
     delete placement.classSectionId;
+    delete placement.classSectionsId;
 
     if (
       placement.classSectionTermId
@@ -324,13 +325,14 @@ export async function getTimeTableByCourseAndSection(courseId, classSectionTermI
         maximumPeriod: item?.timeTableCreateName?.timeTableName?.[0]?.maximumPeriod,
         isCourse: item?.timeTableCreateName?.timeTableName?.[0]?.isCourse,
         courseId: item.courseId,
-        classSectionsId: item.classSectionsId,
+        classSectionsId: resolveTimeTableRoutineSection(item)?.classSectionsId ?? null,
         classSectionTermId: item.classSectionTermId,
-        classSectionsName: item?.timeTableClassSection?.section,
+        classSectionsName: resolveTimeTableRoutineSection(item)?.section,
         courseName: item?.timeTableCourse?.courseName,
         startingDate: item.startingDate,
         endingDate: item.endingDate,
-        timeTableClassSection: item?.timeTableClassSection,
+        timeTableClassSectionTerm: item?.timeTableClassSectionTerm,
+        timeTableClassSection: resolveTimeTableRoutineSection(item),
         periods,
       };
     });
@@ -445,8 +447,9 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
           conflictOptions,
         );
         if (conflict) {
-          const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || '';
-          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.year || '';
+          const routineSection = resolveTimeTableRoutineSection(conflict.timeTablecreate);
+          const conflictSection = routineSection?.section || '';
+          const conflictClass = routineSection?.year || '';
           throw new Error(
             `Teacher Conflict: Teacher already has class on ${day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`,
           );
@@ -464,8 +467,9 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
           conflictOptions,
         );
         if (roomConflict) {
-          const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || '';
-          const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.year || '';
+          const routineSection = resolveTimeTableRoutineSection(roomConflict.timeTablecreate);
+          const conflictSection = routineSection?.section || '';
+          const conflictClass = routineSection?.year || '';
           throw new Error(
             `Room Conflict: Classroom is already occupied on ${day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`,
           );
@@ -553,7 +557,6 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     // Check for routine overlap for the same class section
     const overlap = await timeTableCreateRepository.checkRoutineOverlapRepository({
       classSectionTermId: previousRoutine.classSectionTermId,
-      classSectionsId: previousRoutine.classSectionsId,
       startingDate: start,
       endingDate: end,
     });
@@ -576,6 +579,7 @@ export async function cloneTimeTableRoutine(previousRoutineId, startingDate, end
     delete newRoutineData.createdAt;
     delete newRoutineData.updatedAt;
     delete newRoutineData.deletedAt;
+    delete newRoutineData.classSectionsId;
 
     const newRoutine = await timeTableCreateRepository.addTimeTableCreate(newRoutineData, transaction);
     const newRoutineId = newRoutine.timeTableRoutineId;
@@ -618,7 +622,6 @@ export async function changeTimeTableCreate(body, updatedBy) {
       placementFields = {
         ...placementFields,
         classSectionTermId: placement.classSectionTermId,
-        classSectionsId: placement.classSectionsId,
       };
     }
 
@@ -717,8 +720,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
       );
 
       if (roomConflict) {
-        const conflictSection = roomConflict.timeTablecreate?.timeTableClassSection?.section || "";
-        const conflictClass = roomConflict.timeTablecreate?.timeTableClassSection?.year || "";
+        const routineSection = resolveTimeTableRoutineSection(roomConflict.timeTablecreate);
+        const conflictSection = routineSection?.section || "";
+        const conflictClass = routineSection?.year || "";
         throw new Error(
           `Room Conflict: Classroom is already occupied on ${baseRow.day} at ${startTime}-${endTime} by ${conflictClass} - ${conflictSection}`
         );
@@ -739,8 +743,9 @@ export async function updateSimpleTeacherMapping(mappingArray, createdBy, update
         );
 
         if (conflict) {
-          const conflictSection = conflict.timeTablecreate?.timeTableClassSection?.section || "";
-          const conflictClass = conflict.timeTablecreate?.timeTableClassSection?.year || "";
+          const routineSection = resolveTimeTableRoutineSection(conflict.timeTablecreate);
+          const conflictSection = routineSection?.section || "";
+          const conflictClass = routineSection?.year || "";
           throw new Error(
             `Teacher Conflict: Teacher already has class on ${baseRow.day} at ${startTime}-${endTime} in ${conflictClass} - ${conflictSection}`
           );
@@ -864,11 +869,11 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
     const item = rawItem.toJSON ? rawItem.toJSON() : rawItem;
     const timeTableCreate = item?.timeTablecreate;
 
-    const classSectionsId = timeTableCreate?.classSectionsId;
+    const classSectionTermId = timeTableCreate?.classSectionTermId;
     const startingDateStr = timeTableCreate?.startingDate;
     const endingDateStr = timeTableCreate?.endingDate;
 
-    if (!classSectionsId || !startingDateStr || !endingDateStr) {
+    if (!classSectionTermId || !startingDateStr || !endingDateStr) {
       item.totalClasses = 0;
       result.push(item);
       continue;
@@ -971,7 +976,7 @@ export async function getTimeTableElective(courseId) {
   //  Format final output
   const formatted = combined.map((item) => {
     const course = item.timeTableCourse || {};
-    const classSection = item.timeTableClassSection || {};
+    const classSection = resolveTimeTableRoutineSection(item) || {};
 
     //  Build sectionRountine only for elective type
     const sectionRoutine = (item?.timeTablecreate || []).reduce((acc, curr) => {
@@ -1097,7 +1102,7 @@ export async function getTimeTableElective(courseId) {
 
 //   for (const item of itemsToProcess) {
 //     const course = item.timeTableCourse || {};
-//     const classSection = item.timeTableClassSection || {};
+//     const classSection = resolveTimeTableRoutineSection(item) || {};
 
 //     (item?.timeTablecreate || []).forEach(curr => {
 //       const {
@@ -1290,7 +1295,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
     //  STEP 4: FLATTEN (NO CHANGE)
     for (const item of itemsToProcess) {
       const course = item.timeTableCourse || {};
-      const classSection = item.timeTableClassSection || {};
+      const classSection = resolveTimeTableRoutineSection(item) || {};
 
       (item?.timeTablecreate || []).forEach((curr) => {
         const {
@@ -1375,7 +1380,7 @@ export async function getTimeTableCellData(courseId, classSectionTermId) {
 
         const course = sourceItem?.timeTableCourse || baseMetadata.course || {};
 
-        const classSection = sourceItem?.timeTableClassSection || baseMetadata.classSection || {};
+        const classSection = resolveTimeTableRoutineSection(sourceItem) || baseMetadata.classSection || {};
 
         timeTableObj = {
           courseName: course.courseName || "",
@@ -1850,7 +1855,7 @@ export async function getRoutineByTeacherAndAcademicYear(employeeId, courseId, s
       const timeTableCreateName = routine.timeTableCreateName || {};
       const periods = timeTableCreateName.timeTableName || [];
       const normalScheduleItems = routine.timeTablecreate || [];
-      const classSection = mapRoutineClassSection(routine.timeTableClassSection);
+      const classSection = mapRoutineClassSection(resolveTimeTableRoutineSection(routine));
 
       let weekOffList = [];
       try {

@@ -4,1440 +4,9 @@
     "name": "univ-v2",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "18684798",
-    "description": "University BE v2 collection.\n\n**Class Section Term smoke order:** Run folders `CST — 00` … `CST — 11` at the top (or import class-section-term-smoke.postman_collection.json).\n\nGuide: docs/postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md\n\nTenant: PUT /user/saveUserDefaults before scoped routes. Do not send academicYearId on most list/create APIs."
+    "description": "University BE v2 collection.\n\n**Student / employee** folders are after **course** (bottom). Placement key: **classSectionTermId**.\n\nTenant: PUT /user/saveUserDefaults before scoped routes."
   },
   "item": [
-    {
-      "name": "CST — 00 - Auth & Tenant",
-      "description": "Run once per session. See docs/postman/CLASS_SECTION_TERM_POSTMAN_ORDER.md",
-      "item": [
-        {
-          "name": "0.1 POST login",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/user/login",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "user",
-                "login"
-              ]
-            },
-            "description": "Set email/password for your env. Saves {{token}}."
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const j = pm.response.json();",
-                  "if (j.token) pm.collectionVariables.set('token', j.token);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "0.2 PUT saveUserDefaults",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"defaultInstituteId\": \"{{instituteId}}\",\n  \"defaultAcademicYearId\": \"{{academicYearId}}\",\n  \"defaultRole\": \"admin\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/user/saveUserDefaults",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "user",
-                "saveUserDefaults"
-              ]
-            },
-            "description": "Active tenant for scoped routes. No academicYearId on later calls."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 01 - Master (Course / Session / Section)",
-      "item": [
-        {
-          "name": "1.1 GET courses",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.2 GET course sessions",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/{{courseId}}/sessions",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "{{courseId}}",
-                "sessions"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.3 GET course withSubjects",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/withSubjects?instituteId={{instituteId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "withSubjects"
-              ],
-              "query": [
-                {
-                  "key": "instituteId",
-                  "value": "{{instituteId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.4 GET sessions",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/session/",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "session"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.5 POST session",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionName\": \"CST Test Session\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classTillDate\": \"2026-06-30\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/session/",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "session"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.6 POST courseSessionMapping",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"courseId\": \"{{courseId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/session/courseSessionMapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "session",
-                "courseSessionMapping"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.7 GET sections",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/section/",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "section"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.8 POST section",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sectionName\": \"A1\",\n  \"sectionCode\": \"A1\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/section/",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "section"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 02 - Options",
-      "item": [
-        {
-          "name": "2.1 GET courseTerms",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/options/courseTerms?courseId={{courseId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "options",
-                "courseTerms"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.2 GET classSections",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/options/classSections?courseId={{courseId}}&term=1&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "options",
-                "classSections"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const j = pm.response.json();",
-                  "const pick = (o, ...keys) => keys.find((k) => o?.[k] != null) && o[keys.find((k) => o?.[k] != null)];",
-                  "const arr = Array.isArray(j) ? j : j.data || j.result || [];",
-                  "if (arr[0]?.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(arr[0].classSectionTermId));",
-                  "if (arr[0]?.classSectionsId) pm.collectionVariables.set('classSectionsId', String(arr[0].classSectionsId));",
-                  "if (arr[0]?.courseId) pm.collectionVariables.set('courseId', String(arr[0].courseId));",
-                  "if (arr[0]?.sessionId) pm.collectionVariables.set('sessionId', String(arr[0].sessionId));"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "CST — 03 - Class Section Master",
-      "item": [
-        {
-          "name": "3.1 POST classSections",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"courseId\": \"{{courseId}}\",\n  \"sessionId\": \"{{sessionId}}\",\n  \"sections\": [\n    {\n      \"sectionId\": \"{{sectionId}}\",\n      \"section\": \"A1\",\n      \"year\": 1,\n      \"term\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/main/classSections",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "classSections"
-              ]
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const j = pm.response.json();",
-                  "const pick = (o, ...keys) => keys.find((k) => o?.[k] != null) && o[keys.find((k) => o?.[k] != null)];",
-                  "const arr = Array.isArray(j) ? j : j.data || j.result || [];",
-                  "if (arr[0]?.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(arr[0].classSectionTermId));",
-                  "if (arr[0]?.classSectionsId) pm.collectionVariables.set('classSectionsId', String(arr[0].classSectionsId));",
-                  "if (arr[0]?.courseId) pm.collectionVariables.set('courseId', String(arr[0].courseId));",
-                  "if (arr[0]?.sessionId) pm.collectionVariables.set('sessionId', String(arr[0].sessionId));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "3.2 GET classSections",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/main/classSections",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "classSections"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.3 GET classSectionSpecific",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/main/classSectionSpecific?courseId={{courseId}}&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "classSectionSpecific"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.4 GET termsWithClassSections",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{courseId}}&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "termsWithClassSections"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.5 GET classSections filter",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/classSections/?courseId={{courseId}}&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "classSections"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.6 GET classSectionRecord",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/main/classSectionRecord?courseId={{courseId}}&classSectionTermId={{classSectionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "classSectionRecord"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 04 - Subject Mapping",
-      "item": [
-        {
-          "name": "4.3 GET sectionSubjectMapper",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/main/sectionSubjectMapper?term=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "main",
-                "sectionSubjectMapper"
-              ],
-              "query": [
-                {
-                  "key": "term",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.4 GET terms list withSubject",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/terms/list/withSubject?instituteId={{instituteId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "terms",
-                "list",
-                "withSubject"
-              ],
-              "query": [
-                {
-                  "key": "instituteId",
-                  "value": "{{instituteId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 05 - Student",
-      "item": [
-        {
-          "name": "5.2 GET sectionStudentMapping",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/sectionStudentMapping?classSectionTermId={{classSectionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "sectionStudentMapping"
-              ],
-              "query": [
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.3 POST sectionStudentMapping",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"classSectionTermId\": \"{{classSectionTermId}}\",\n  \"sessionId\": \"{{sessionId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/student/sectionStudentMapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "sectionStudentMapping"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 06 - Promotion",
-      "item": [
-        {
-          "name": "6.2 GET available-section",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/promotion/available-section?courseId={{courseId}}&term=1&classSectionId={{classSectionsId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promotion",
-                "available-section"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "classSectionId",
-                  "value": "{{classSectionsId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.3 POST promoteStudent",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"classSectionTermId\": \"{{classSectionTermId}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/student/promoteStudent",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promoteStudent"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 07 - Timetable",
-      "item": [
-        {
-          "name": "7.2 GET getRoutine",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "timeTableCreate",
-                "getRoutine"
-              ],
-              "query": [
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "7.6 GET studentTimetable",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/studentTimetable?studentId={{studentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "studentTimetable"
-              ],
-              "query": [
-                {
-                  "key": "studentId",
-                  "value": "{{studentId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 08 - Teacher Mapping",
-      "item": [
-        {
-          "name": "8.1 GET teacherSection",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/teacher/teacherSection",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacher",
-                "teacherSection"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "8.3 GET teacherSubject",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/teacher/teacherSubject",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "teacher",
-                "teacherSubject"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 09 - Attendance",
-      "item": [
-        {
-          "name": "9.1 GET employee sectionDates",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=1&employeeId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "sectionDates"
-              ],
-              "query": [
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "1"
-                },
-                {
-                  "key": "employeeId",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "9.2 GET attendance sectionDates",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/attendance/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=1&employeeId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "attendance",
-                "sectionDates"
-              ],
-              "query": [
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "1"
-                },
-                {
-                  "key": "employeeId",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "9.4 GET previous-sessions",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/attendance/previous-sessions/1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "attendance",
-                "previous-sessions",
-                "1"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 10 - Syllabus & CO",
-      "item": [
-        {
-          "name": "10.1 GET semesterSubject",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/syllabus/semesterSubject?term=1&semesterId=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "syllabus",
-                "semesterSubject"
-              ],
-              "query": [
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "semesterId",
-                  "value": "1"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "10.3 GET co",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/co",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "co"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "CST — 11 - Exam",
-      "item": [
-        {
-          "name": "11.1 GET course terms",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/course/{{courseId}}/terms",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "{{courseId}}",
-                "terms"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "11.2 GET examType single",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/examStructure/examType/single?courseId={{courseId}}&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructure",
-                "examType",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "11.3 GET withExamTypesPerCourse",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/terms/withExamTypesPerCourse?courseId={{courseId}}&sessionId={{sessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "terms",
-                "withExamTypesPerCourse"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{sessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "11.4 GET examScheduleMapping student",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/examScheduleMapping/student?studentId={{studentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examScheduleMapping",
-                "student"
-              ],
-              "query": [
-                {
-                  "key": "studentId",
-                  "value": "{{studentId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
     {
       "name": "campus",
       "item": [
@@ -5425,845 +3994,6 @@
               "response": []
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "employee",
-      "description": "Employee APIs under `/employee`.\n\n**Teacher helpers:** `courses` (mapping-based courses), `coursesFromSchedule` (timetable-based courses/subjects) — both scoped by auth academic year; no `acedmicYearId` query.",
-      "item": [
-        {
-          "name": "schedule",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "schedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49"
-                },
-                {
-                  "key": "date",
-                  "value": "2026-03-06"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "schedule past",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "pastSchedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "45",
-                  "description": "Required — teacher employeeId"
-                },
-                {
-                  "key": "groupPeriods",
-                  "value": "true",
-                  "description": "true = merge consecutive periods (same date, routine, subject). false = one row per period."
-                },
-                {
-                  "key": "date",
-                  "value": "2026-06-24",
-                  "description": "Optional — cutoff date (YYYY-MM-DD). Defaults to today. Only dates strictly before this are returned.",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=true`)\nConsecutive periods merge into one object with `classScheduleItems[]` and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
-          },
-          "response": []
-        },
-        {
-          "name": "schedule upcoming",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/upcomingSchedule?employeeId=49",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "upcomingSchedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "courses",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/courses?employeeId=49",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "courses"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49",
-                  "description": "Required"
-                }
-              ]
-            },
-            "description": "**GET /employee/courses?employeeId=**\n\nDistinct courses for a teacher from `teacher_subject_mapping` → `subject` → `courseInfo`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` (academic year from auth). No `acedmicYearId` query param.\n\n**200:** `{ success: true, result: [{ courseId, courseName, courseCode }] }`."
-          },
-          "response": []
-        },
-        {
-          "name": "courses from schedule",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/coursesFromSchedule?employeeId=49",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "coursesFromSchedule"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49",
-                  "description": "Required"
-                }
-              ]
-            },
-            "description": "**GET /employee/coursesFromSchedule?employeeId=**\n\nCourses + subjects assigned via timetable cells (`class_schedule_item`) for the teacher.\n\n**Scoped:** `timeTableRoutineModel` + `subjectModel` academic year from auth context.\n\n**200:** `{ success: true, result: { courses: [...], subjects: [...] } }`."
-          },
-          "response": []
-        },
-        {
-          "name": "unique ClassSection Subjects",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/uniqueClassSectionSubjects?employeeId=49",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "uniqueClassSectionSubjects"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "49"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "class dates",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=52&employeeId=41",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "sectionDates"
-              ],
-              "query": [
-                {
-                  "key": "classSectionTermId",
-                  "value": "{{classSectionTermId}}"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "52"
-                },
-                {
-                  "key": "employeeId",
-                  "value": "41"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "class dates Copy",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/employee/classCounts?employeeId=41",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "employee",
-                "classCounts"
-              ],
-              "query": [
-                {
-                  "key": "employeeId",
-                  "value": "41"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Students",
-      "description": "Student read APIs and **promotion** flow.\n\n### Promotion run order\n1. **GET /student?studentId=** — note `courseId`, `sessionId`, `semesterId`, `classSectionsId`, current `term`\n2. **GET /student/promotion/available-section** — `courseId`, `term`, `classSectionId` → target sections for next term/year\n3. **POST /student/promoteStudent** — body: `studentId`, current `semesterId`, target `classSectionsId`\n\n**Updates on promote:** `students` (semesterId, classSectionsId, sessionId), `class_student_mapper` (acedmicYearId, semesterId, sessionId), `student_class_sections_history` (passed + current).",
-      "item": [
-        {
-          "name": "class section students",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/classSectionStudents?timeTableMappingId=79&academicYearId=59&date=2026-03-09",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "classSectionStudents"
-              ],
-              "query": [
-                {
-                  "key": "timeTableMappingId",
-                  "value": "79"
-                },
-                {
-                  "key": "academicYearId",
-                  "value": "59"
-                },
-                {
-                  "key": "date",
-                  "value": "2026-03-09",
-                  "type": "text"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "students",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const body = pm.response.json();",
-                  "const s = body && (body.data || body);",
-                  "if (s && s.semesterId) pm.collectionVariables.set('student_semester_id', String(s.semesterId));",
-                  "if (s && s.courseId) pm.collectionVariables.set('course_id', String(s.courseId));",
-                  "if (s && s.sessionId) pm.collectionVariables.set('session_id', String(s.sessionId));",
-                  "if (s && s.classSectionsId) pm.collectionVariables.set('classSections_id', String(s.classSectionsId));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student?studentId={{student_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student"
-              ],
-              "query": [
-                {
-                  "key": "studentId",
-                  "value": "{{student_id}}"
-                }
-              ]
-            },
-            "description": "**GET /student?studentId=** — step 1 of promotion flow. Test script saves `student_semester_id`, `course_id`, `session_id`, `classSections_id` to collection variables."
-          },
-          "response": []
-        },
-        {
-          "name": "get all answer sheet qrs",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
-            "url": {
-              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "getallanswerSheetQrs"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "101"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
-                  "host": [
-                    "{{baseurl}}"
-                  ],
-                  "path": [
-                    "student",
-                    "getallanswerSheetQrs"
-                  ],
-                  "query": [
-                    {
-                      "key": "examScheduleId",
-                      "value": "101"
-                    }
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Answer sheets fetched successfully\",\n  \"data\": [\n    {\n      \"enrollNumber\": \"ENR-001\",\n      \"scholarNumber\": \"SCH-001\",\n      \"fullName\": \"Akash Choudhary\",\n      \"isMapped\": true\n    },\n    {\n      \"enrollNumber\": \"ENR-002\",\n      \"scholarNumber\": \"SCH-002\",\n      \"fullName\": \"Riya Sharma\",\n      \"isMapped\": false\n    }\n  ]\n}"
-            }
-          ]
-        },
-        {
-          "name": "promotion — class sections dropdown",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "const data = body.data || body;",
-                  "const groups = Array.isArray(data) ? data : [];",
-                  "for (const g of groups) {",
-                  "  const sections = g.classSections || [];",
-                  "  if (sections[0] && sections[0].id) {",
-                  "    pm.collectionVariables.set('promotion_target_classSectionsId', String(sections[0].id));",
-                  "    break;",
-                  "  }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [
-              {
-                "key": "X-Academic-Year-Id",
-                "value": "{{acedmicYear_id}}",
-                "description": "Target academic year (e.g. 2026 after rollover)"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "course",
-                "termsWithClassSections"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{course_id}}",
-                  "description": "Student's courseId"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "{{promotion_target_session_id}}",
-                  "description": "Target year session (Morning 2026, not 2025)"
-                }
-              ]
-            },
-            "description": "**GET /course/termsWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-section** for term + academic-year aware promotion targets."
-          },
-          "response": []
-        },
-        {
-          "name": "promotion — available class sections",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "const data = body.data || body;",
-                  "if (data.acedmicYearId) pm.collectionVariables.set('promotion_target_acedmicYear_id', String(data.acedmicYearId));",
-                  "if (Array.isArray(data.classSections) && data.classSections[0]) {",
-                  "  const s = data.classSections[0];",
-                  "  if (s.classSectionsId) pm.collectionVariables.set('promotion_target_classSectionsId', String(s.classSectionsId));",
-                  "  if (s.sessionId) pm.collectionVariables.set('promotion_target_session_id', String(s.sessionId));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/promotion/available-section?courseId={{course_id}}&term={{promotion_current_term}}&classSectionId={{classSections_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promotion",
-                "available-section"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{course_id}}"
-                },
-                {
-                  "key": "term",
-                  "value": "{{promotion_current_term}}",
-                  "description": "Current term number (from class.term)"
-                },
-                {
-                  "key": "classSectionId",
-                  "value": "{{classSections_id}}",
-                  "description": "Student's current classSectionsId"
-                }
-              ]
-            },
-            "description": "**GET /student/promotion/available-section**\n\n**Query:** `courseId`, `term` (current), `classSectionId` (current section).\n\nComputes next term from course `termType` + `totalTerms` / `courseDuration`:\n- Semester → year rolls after every 2 terms\n- Quarterly → year rolls after every 4 terms\n\n**Response `data`:** `promotedTerm`, `acedmicYearId`, `crossYear`, `classSections[]` (`classSectionsId`, `name`, `sessionId`).\n\nEmpty `classSections` when final term reached."
-          },
-          "response": []
-        },
-        {
-          "name": "promotion — all students history",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/promotion/history?programCourseId={{course_id}}&page=1&limit=20",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promotion",
-                "history"
-              ],
-              "query": [
-                {
-                  "key": "programCourseId",
-                  "value": "{{course_id}}"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "studentSearch",
-                  "value": "",
-                  "disabled": true
-                },
-                {
-                  "key": "promotionTerm",
-                  "value": "",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "**GET /student/promotion/history?programCourseId=**\n\nPaginated list of all students in a course with promotion history.\n\nEach row includes: `studentName`, `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]`, `promotedTo`, `promotionTermHistory[]` with `yearTitle` (e.g. 2026-2027)."
-          },
-          "response": []
-        },
-        {
-          "name": "promotion — student history",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "const data = body.data || body;",
-                  "pm.test('promotionTermHistory is array', () => Array.isArray(data.promotionTermHistory));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/student/promotion/history?studentId={{student_id}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promotion",
-                "history"
-              ],
-              "query": [
-                {
-                  "key": "studentId",
-                  "value": "{{student_id}}"
-                }
-              ]
-            },
-            "description": "**GET /student/promotion/history?studentId=**\n\nSingle student promotion profile.\n\nIncludes `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]` (passed term + section + yearTitle), `promotedTo` (current term + yearTitle), and full `promotionTermHistory`."
-          },
-          "response": [
-            {
-              "name": "200 OK",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentName\": \"John Doe\",\n    \"scholarNumber\": \"SCH-001\",\n    \"currentPromotionTerm\": 2,\n    \"currentClassSectionId\": 195,\n    \"currentClassSectionName\": \"A\",\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": null,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"current\",\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      }\n    ]\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "promotion — promote student",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('status 200', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "const promo = body.promotion && body.promotion.current;",
-                  "if (promo) {",
-                  "  if (promo.semesterId) pm.collectionVariables.set('student_semester_id', String(promo.semesterId));",
-                  "  if (promo.classSectionsId) pm.collectionVariables.set('promotion_target_classSectionsId', String(promo.classSectionsId));",
-                  "  if (promo.sessionId) pm.collectionVariables.set('promotion_target_session_id', String(promo.sessionId));",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Academic-Year-Id",
-                "value": "{{acedmicYear_id}}",
-                "description": "Target academic year context"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"studentId\": {{student_id}},\n  \"semesterId\": {{student_semester_id}},\n  \"classSectionsId\": {{promotion_target_classSectionsId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/student/promoteStudent",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promoteStudent"
-              ]
-            },
-            "description": "**POST /student/promoteStudent** (updated)\n\n**Required body:**\n- `studentId`\n- `semesterId` — **current** semester (before promotion)\n- `classSectionsId` — **target** section from dropdown (must match student's institute, course, next semester, target academic year/session)\n\n**Server validates** target section, resolves next semester from course progression, sets `sessionId` from target section.\n\n**Updates:**\n- `students`: semesterId, classSectionsId, sessionId\n- `class_student_mapper`: acedmicYearId, semesterId, sessionId\n- `student_class_sections_history`: old → passed, new → current\n\n**Bulk:** send JSON array of objects with the same fields.\n\n**200 response** includes `promotion.previous`, `promotion.current`, `promotion.crossYear`.\n\n**400** on validation failure (institute/course/year/semester mismatch)."
-          },
-          "response": [
-            {
-              "name": "200 OK — promoted",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [],
-              "body": "{\n  \"message\": \"Student promoted\",\n  \"result\": {\n    \"result1\": [1],\n    \"result2\": [1]\n  },\n  \"promotion\": {\n    \"previous\": {\n      \"acedmicYearId\": 59,\n      \"semesterId\": 102,\n      \"classSectionsId\": 195,\n      \"sessionId\": 6\n    },\n    \"current\": {\n      \"acedmicYearId\": 60,\n      \"semesterId\": 208,\n      \"classSectionsId\": 882,\n      \"sessionId\": 25\n    },\n    \"crossYear\": true\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "promotion — promote students (bulk)",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-Academic-Year-Id",
-                "value": "{{acedmicYear_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  {\n    \"studentId\": {{student_id}},\n    \"semesterId\": {{student_semester_id}},\n    \"classSectionsId\": {{promotion_target_classSectionsId}}\n  }\n]",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/student/promoteStudent",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "student",
-                "promoteStudent"
-              ]
-            },
-            "description": "**POST /student/promoteStudent** — same endpoint, **array body** for bulk promotion. Each item requires `studentId`, `semesterId` (current), `classSectionsId` (target). All-or-nothing per item; failed item returns 400 for the whole request when using sequential loop in controller."
-          },
-          "response": []
         }
       ]
     },
@@ -16848,6 +14578,1003 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "employee",
+      "description": "Employee / teacher APIs. **GET /employee/uniqueClassSectionSubjects** returns `classSectionTermId`, `year`, `term`, `section` per combination.",
+      "item": [
+        {
+          "name": "schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/schedule?employeeId=49&date=2026-03-06",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-03-06"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "schedule past",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/pastSchedule?employeeId=45&groupPeriods=true",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "pastSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "45",
+                  "description": "Required — teacher employeeId"
+                },
+                {
+                  "key": "groupPeriods",
+                  "value": "true",
+                  "description": "true = merge consecutive periods (same date, routine, subject). false = one row per period."
+                },
+                {
+                  "key": "date",
+                  "value": "2026-06-24",
+                  "description": "Optional — cutoff date (YYYY-MM-DD). Defaults to today. Only dates strictly before this are returned.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /employee/pastSchedule**\n\nPast timetable slots for a teacher (published routines, scoped by auth academic year).\n\n### Query\n| Param | Required | Notes |\n|-------|----------|--------|\n| `employeeId` | yes | Teacher employeeId |\n| `groupPeriods` | no | `true` / `false` (default `false`) |\n| `date` | no | Cutoff date; slots before this date only |\n\n### Attendance status (per period)\nEach schedule row includes **`attendanceStatus`**:\n- `MARKED` — at least one attendance row exists for `timeTableMappingId` + `date`\n- `PENDING` — not marked yet\n\n### Grouped mode (`groupPeriods=true`)\nConsecutive periods merge into one object with `classScheduleItems[]` and group-level **`attendanceStatus`**:\n- `MARKED` — all periods in the group are marked\n- `PARTIAL` — some marked, some pending\n- `PENDING` — none marked\n\n**Note:** `POST /attendance` accepts `timeTableMappingId` as a number or array — one POST can mark all periods in a group.\n\n### 200 response shape\n```json\n{\n  \"teacher\": { \"employeeId\", \"employeeName\", \"employeeCode\", \"pickColor\" },\n  \"schedules\": [ ... ]\n}\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "schedule upcoming",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/upcomingSchedule?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "upcomingSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "courses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/courses?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "courses"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**GET /employee/courses?employeeId=**\n\nDistinct courses for a teacher from `teacher_subject_mapping` → `subject` → `courseInfo`.\n\n**Scoped:** `scoped(teacherSubjectMapping)` + `buildScope(subjectModel)` (academic year from auth). No `acedmicYearId` query param.\n\n**200:** `{ success: true, result: [{ courseId, courseName, courseCode }] }`."
+          },
+          "response": []
+        },
+        {
+          "name": "courses from schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/coursesFromSchedule?employeeId=49",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "coursesFromSchedule"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "49",
+                  "description": "Required"
+                }
+              ]
+            },
+            "description": "**GET /employee/coursesFromSchedule?employeeId=**\n\nCourses + subjects assigned via timetable cells (`class_schedule_item`) for the teacher.\n\n**Scoped:** `timeTableRoutineModel` + `subjectModel` academic year from auth context.\n\n**200:** `{ success: true, result: { courses: [...], subjects: [...] } }`."
+          },
+          "response": []
+        },
+        {
+          "name": "unique ClassSection Subjects",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const combos = (body.result && body.result.combinations) || [];",
+                  "if (combos[0] && combos[0].classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(combos[0].classSectionTermId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/uniqueClassSectionSubjects?employeeId={{employeeId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "uniqueClassSectionSubjects"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "{{employeeId}}"
+                }
+              ]
+            },
+            "description": "**GET /employee/uniqueClassSectionSubjects** — `combinations[]`: `classSectionTermId`, `year`, `term`, `section`, subject, `totalClasses`."
+          },
+          "response": []
+        },
+        {
+          "name": "class dates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/sectionDates?classSectionTermId={{classSectionTermId}}&subjectId=52&employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "sectionDates"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                },
+                {
+                  "key": "subjectId",
+                  "value": "52"
+                },
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "section counts",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/employee/sectionCounts?employeeId=41",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "employee",
+                "sectionCounts"
+              ],
+              "query": [
+                {
+                  "key": "employeeId",
+                  "value": "41"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "description": "Student APIs — **classSectionTermId** placement key.\n\nPromotion: GET student → GET promotion/available-section (`classSectionTermId`) → POST promoteStudent.\nMapping: GET/POST /student/sectionStudentMapping with `classSectionTermId`.",
+      "item": [
+        {
+          "name": "GET sectionStudentMapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/sectionStudentMapping?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "sectionStudentMapping"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}"
+                }
+              ]
+            },
+            "description": "GET students mapped to **classSectionTermId**."
+          },
+          "response": []
+        },
+        {
+          "name": "POST sectionStudentMapping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{studentId}},\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/sectionStudentMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "sectionStudentMapping"
+              ]
+            },
+            "description": "Map student(s) to **classSectionTermId**."
+          },
+          "response": []
+        },
+        {
+          "name": "GET student all",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/all?page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "GET /student/all with studentClassSectionTerm join."
+          },
+          "response": []
+        },
+        {
+          "name": "GET emptyEnrollNumber",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/emptyEnrollNumber",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "emptyEnrollNumber"
+              ]
+            },
+            "description": "Students missing enroll number."
+          },
+          "response": []
+        },
+        {
+          "name": "class section students",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/classSectionStudents?timeTableMappingId=79&academicYearId=59&date=2026-03-09",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "classSectionStudents"
+              ],
+              "query": [
+                {
+                  "key": "timeTableMappingId",
+                  "value": "79"
+                },
+                {
+                  "key": "academicYearId",
+                  "value": "59"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-03-09",
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "students",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const s = body && (body.data || body);",
+                  "if (s && s.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(s.classSectionTermId));",
+                  "if (s && s.courseId) pm.collectionVariables.set('course_id', String(s.courseId));",
+                  "if (s && s.sessionId) pm.collectionVariables.set('session_id', String(s.sessionId));",
+                  "const term = s && s.studentClassSectionTerm && s.studentClassSectionTerm.term;",
+                  "if (term != null) pm.collectionVariables.set('promotion_current_term', String(term));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student?studentId={{student_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{student_id}}"
+                }
+              ]
+            },
+            "description": "**GET /student?studentId=** — saves `classSectionTermId`, `course_id`, `promotion_current_term`."
+          },
+          "response": []
+        },
+        {
+          "name": "get all answer sheet qrs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "description": "**GET /student/getallanswerSheetQrs**\n\nReturns students with answer-sheet mapping status for selected `examScheduleId`.\n\nEach row includes only: `enrollNumber`, `scholarNumber`, `fullName`, `isMapped`.",
+            "url": {
+              "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "getallanswerSheetQrs"
+              ],
+              "query": [
+                {
+                  "key": "examScheduleId",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseurl}}/student/getallanswerSheetQrs?examScheduleId=101",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "getallanswerSheetQrs"
+                  ],
+                  "query": [
+                    {
+                      "key": "examScheduleId",
+                      "value": "101"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Answer sheets fetched successfully\",\n  \"data\": [\n    {\n      \"enrollNumber\": \"ENR-001\",\n      \"scholarNumber\": \"SCH-001\",\n      \"fullName\": \"Akash Choudhary\",\n      \"isMapped\": true\n    },\n    {\n      \"enrollNumber\": \"ENR-002\",\n      \"scholarNumber\": \"SCH-002\",\n      \"fullName\": \"Riya Sharma\",\n      \"isMapped\": false\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — class sections dropdown",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "const groups = Array.isArray(data) ? data : [];",
+                  "for (const g of groups) {",
+                  "  const sections = g.classSections || [];",
+                  "  if (sections[0] && sections[0].id) {",
+                  "    pm.collectionVariables.set('promotion_target_classSectionsId', String(sections[0].id));",
+                  "    break;",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Target academic year (e.g. 2026 after rollover)"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/course/termsWithClassSections?courseId={{course_id}}&sessionId={{promotion_target_session_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "course",
+                "termsWithClassSections"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}",
+                  "description": "Student's courseId"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{promotion_target_session_id}}",
+                  "description": "Target year session (Morning 2026, not 2025)"
+                }
+              ]
+            },
+            "description": "**GET /course/termsWithClassSections** — legacy promotion dropdown (session-based).\n\nPrefer **GET /student/promotion/available-section** for term + academic-year aware promotion targets."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — available class sections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "if (data.academicYearId) pm.collectionVariables.set('promotion_target_academicYear_id', String(data.academicYearId));",
+                  "if (Array.isArray(data.classSections) && data.classSections[0]) {",
+                  "  const row = data.classSections[0];",
+                  "  if (row.classSectionTermId) pm.collectionVariables.set('targetClassSectionTermId', String(row.classSectionTermId));",
+                  "  if (row.sessionId) pm.collectionVariables.set('promotion_target_session_id', String(row.sessionId));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/available-section?courseId={{course_id}}&term={{promotion_current_term}}&classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "available-section"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "term",
+                  "value": "{{promotion_current_term}}",
+                  "description": "Current term number (from class.term)"
+                },
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Student's current classSectionTermId"
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/available-section** — `courseId`, `term`, `classSectionTermId`. Response `classSections[]` includes target `classSectionTermId`."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — all students history",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/history?programCourseId={{course_id}}&page=1&limit=20",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "programCourseId",
+                  "value": "{{course_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "studentSearch",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "promotionTerm",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/history?programCourseId=**\n\nPaginated list of all students in a course with promotion history.\n\nEach row includes: `studentName`, `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]`, `promotedTo`, `promotionTermHistory[]` with `yearTitle` (e.g. 2026-2027)."
+          },
+          "response": []
+        },
+        {
+          "name": "promotion — student history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const data = body.data || body;",
+                  "pm.test('promotionTermHistory is array', () => Array.isArray(data.promotionTermHistory));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/student/promotion/history?studentId={{student_id}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promotion",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{student_id}}"
+                }
+              ]
+            },
+            "description": "**GET /student/promotion/history?studentId=**\n\nSingle student promotion profile.\n\nIncludes `termType`, `admissionAcedmicYearTitle`, `passedClassSections[]` (passed term + section + yearTitle), `promotedTo` (current term + yearTitle), and full `promotionTermHistory`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Student promotion history fetched successfully\",\n  \"data\": {\n    \"studentId\": 101,\n    \"studentName\": \"John Doe\",\n    \"scholarNumber\": \"SCH-001\",\n    \"currentPromotionTerm\": 2,\n    \"currentClassSectionId\": 195,\n    \"currentClassSectionName\": \"A\",\n    \"admissionAcedmicYearId\": 59,\n    \"admissionAcedmicYearTitle\": \"2024-25\",\n    \"promotionTermHistory\": [\n      {\n        \"promotionHistoryId\": 12,\n        \"promotionTerm\": 1,\n        \"promotionStatus\": \"passed\",\n        \"classSectionId\": 180,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      },\n      {\n        \"promotionHistoryId\": null,\n        \"promotionTerm\": 2,\n        \"promotionStatus\": \"current\",\n        \"classSectionId\": 195,\n        \"classSectionName\": \"A\",\n        \"acedmicYearId\": 59,\n        \"acedmicYearTitle\": \"2024-25\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — promote student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const promo = body.promotion && body.promotion.current;",
+                  "if (promo && promo.classSectionTermId) pm.collectionVariables.set('classSectionTermId', String(promo.classSectionTermId));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}",
+                "description": "Target academic year context"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{studentId}},\n  \"classSectionTermId\": {{targetClassSectionTermId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promoteStudent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promoteStudent"
+              ]
+            },
+            "description": "**POST /student/promoteStudent** — `studentId`, `classSectionTermId` (target)."
+          },
+          "response": [
+            {
+              "name": "200 OK — promoted",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [],
+              "body": "{\n  \"message\": \"Student promoted\",\n  \"result\": {\n    \"result1\": [1],\n    \"result2\": [1]\n  },\n  \"promotion\": {\n    \"previous\": {\n      \"acedmicYearId\": 59,\n      \"semesterId\": 102,\n      \"classSectionsId\": 195,\n      \"sessionId\": 6\n    },\n    \"current\": {\n      \"acedmicYearId\": 60,\n      \"semesterId\": 208,\n      \"classSectionsId\": 882,\n      \"sessionId\": 25\n    },\n    \"crossYear\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "promotion — promote students (bulk)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Academic-Year-Id",
+                "value": "{{acedmicYear_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"studentId\": {{studentId}},\n    \"classSectionTermId\": {{targetClassSectionTermId}}\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/student/promoteStudent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "student",
+                "promoteStudent"
+              ]
+            },
+            "description": "**POST /student/promoteStudent** — `studentId`, `classSectionTermId` (target)."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -17203,6 +15930,14 @@
     {
       "key": "studentId",
       "value": "1"
+    },
+    {
+      "key": "employeeId",
+      "value": ""
+    },
+    {
+      "key": "targetClassSectionTermId",
+      "value": ""
     }
   ]
 }

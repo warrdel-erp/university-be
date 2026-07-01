@@ -4,7 +4,6 @@ import campusModel from "./campusModel.js";
 import instituteModel from "./instituteModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
-import classSectionModel from "./classSectionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 import users from "./userModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
@@ -43,15 +42,6 @@ const timeTableRoutineModel = sequelize.define(
             references: {
                 model: acedmicYearModel,
                 key: 'acedmic_year_id'
-            }
-        },
-        classSectionsId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'class_sections_id',
-            references: {
-                model: classSectionModel,
-                key: 'class_sections_id'
             }
         },
         classSectionTermId: {

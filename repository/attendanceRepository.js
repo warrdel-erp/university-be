@@ -72,7 +72,7 @@ export async function getAttendanceDetails() {
                         {
                             model: model.timeTableRoutineModel,
                             as: 'timeTablecreate',
-                            attributes: ['classSectionsId', 'timeTableType'],
+                            attributes: ['classSectionTermId', 'timeTableType'],
                         },
                         {
                             model: model.teacherSubjectMappingModel,

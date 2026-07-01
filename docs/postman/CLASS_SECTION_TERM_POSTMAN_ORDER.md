@@ -2,7 +2,7 @@
 
 Use this as a **folder order** in Postman (or Insomnia). Run top to bottom within each section; do not skip prerequisites.
 
-**Collection file:** [class-section-term-smoke.postman_collection.json](./class-section-term-smoke.postman_collection.json) (import standalone) or run folders **`CST — 00` … `CST — 11`** at the top of [univ-v2.postman_collection.json](./univ-v2.postman_collection.json).
+**Collection file:** [univ-v2.postman_collection.json](./univ-v2.postman_collection.json) — **Students** and **employee** folders are at the bottom (after **course**). Placement key: **classSectionTermId**.
 
 **Base URL:** `http://localhost:8080` (collection variable `{{baseurl}}`)  
 **Auth:** Login first → save JWT → `Authorization: Bearer {{token}}`  
@@ -159,8 +159,7 @@ Routes are registered in dependency-friendly groups. When debugging 404s, confir
 ```json
 {
   "studentId": 1,
-  "classSectionTermId": 1001,
-  "sessionId": 22
+  "classSectionTermId": 1001
 }
 ```
 

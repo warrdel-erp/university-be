@@ -49,7 +49,7 @@ export async function assertMappingsBelongToTerm(mappingIds, classSectionTermId,
       {
         model: model.timeTableRoutineModel,
         as: 'timeTablecreate',
-        attributes: ['timeTableRoutineId', 'classSectionTermId', 'classSectionsId', 'startingDate', 'endingDate'],
+        attributes: ['timeTableRoutineId', 'classSectionTermId', 'startingDate', 'endingDate'],
         required: true,
       },
       {
