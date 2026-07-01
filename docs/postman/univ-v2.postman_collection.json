@@ -3563,7 +3563,7 @@
     },
     {
       "name": "time table",
-      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Bell schedule template + period rows |\n| Routine | `/timeTableCreate` | Link structure to section + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Tenant scope:** GET structure/routine lists use `scoped()` — institute + academic year from auth context. Query `acedmicYearId` is optional (accepted for frontend compat, **not used** by API).\n\n**Validation:** All `/timeTable` and `/timeTableCreate` routes use Zod. Invalid input → **400** `{ status: \"error\", message, errors[] }`.\n\n**Suggested flow:** structure → create routine → mapping cells → subjectCount → publish → getRoutine.\n\nFolder vars `timetable_*` on Variables tab. Auth: Bearer `{{token}}`.",
+      "description": "Timetable APIs under `/timeTable` (structure/periods) and `/timeTableCreate` (routine + grid cells).\n\n| Phase | Base | Purpose |\n|-------|------|--------|\n| Structure | `/timeTable` | Bell schedule template + period rows |\n| Routine | `/timeTableCreate` | Link structure to **classSectionTermId** + date range |\n| Mapping | `/timeTableCreate/mapping` | Fill day/period cells (`class_schedule_item`) |\n| Publish | `/timeTableCreate/publish` | Lock routine for students/teachers |\n\n**Placement key:** `classSectionTermId` (from `class_section_term`). `classSectionsId` + `term` are not sent on routine create — backend resolves `classSectionsId` from the term row.\n\n**Tenant scope:** `scoped()` injects institute + academic year from auth context. Do not send `acedmicYearId` on create.\n\n**Validation:** Zod on `/timeTableCreate` routes. Invalid input → **400**.\n\n**Suggested flow:** `POST /timeTable` (structure) → `POST /timeTableCreate/` with `timeTableNameId` + `classSectionTermId` → mapping → publish → getRoutine.\n\nFolder vars `timetable_*` + collection `classSectionTermId`. Auth: Bearer `{{token}}`.",
       "variable": [
         {
           "key": "timetable_courseId",
@@ -3611,7 +3611,13 @@
           "key": "timetable_classSectionsId",
           "value": "197",
           "type": "string",
-          "description": "Class section PK"
+          "description": "Class section PK (legacy — prefer classSectionTermId for routines)"
+        },
+        {
+          "key": "timetable_classSectionTermId",
+          "value": "{{classSectionTermId}}",
+          "type": "string",
+          "description": "class_section_term PK — required on POST /timeTableCreate/ (normal)"
         },
         {
           "key": "timetable_employeeId",
@@ -3951,7 +3957,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"courseId\": {{timetable_courseId}},\n  \"acedmicYearId\": {{timetable_acedmicYearId}},\n  \"classSectionsId\": {{timetable_classSectionsId}},\n  \"campusId\": {{timetable_campusId}},\n  \"timeTableType\": \"{{timetable_timeTableType}}\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
+                  "raw": "{\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"classSectionTermId\": {{classSectionTermId}},\n  \"campusId\": {{timetable_campusId}},\n  \"timeTableType\": \"{{timetable_timeTableType}}\",\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3959,7 +3965,7 @@
                   }
                 },
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate",
+                  "raw": "{{baseurl}}/timeTableCreate/",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -3967,7 +3973,7 @@
                     "timeTableCreate"
                   ]
                 },
-                "description": "**POST /timeTableCreate**\n\nCreates a **routine** — links a structure to a class section for a date range.\n\n**Body (Zod — fields optional at route):** `timeTableNameId`, `courseId`, `classSectionsId`, `campusId`, `startingDate`, `endingDate`, `timeTableType`, optional `acedmicYearId` (ignored on create — `scoped` injects tenant).\n\n**Optional split flow:** `previousDate` + `timeTableRoutineId`.\n\nValidates no overlapping date range for the section. Saves `timeTableRoutineId` to `timetable_routineId`."
+                "description": "**POST /timeTableCreate/**\n\nCreates a **routine** after structure exists — links `timeTableNameId` to a **classSectionTermId** for a date range.\n\n**Required body (Zod):**\n| Field | Notes |\n|-------|--------|\n| `timeTableNameId` | From **POST /timeTable** (structure) |\n| `classSectionTermId` | Required when `timeTableType` is `normal` (default) |\n| `campusId` | Campus PK |\n| `startingDate`, `endingDate` | Routine active range |\n\n**Optional:** `courseId` (defaults from structure/term), `timeTableType` (`normal` \\| `elective`), `timeTableRoutineId` + `previousDate` (split/replace flow).\n\n**Not accepted:** `classSectionsId`, `term`, `acedmicYearId` — `classSectionsId` is resolved from `class_section_term`; academic year from `scoped()`.\n\n**400** if structure missing, term not found, course/session mismatch, or overlapping dates for the same term.\n\nSaves `timeTableRoutineId` → `timetable_routineId`."
               },
               "response": []
             },
@@ -4016,6 +4022,28 @@
             },
             {
               "name": "get all routines",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const arr = pm.response.json();",
+                      "  if (!Array.isArray(arr) || !arr.length) return;",
+                      "  const termRow = arr.find((row) => row.classSectionTermId) || arr[0];",
+                      "  if (termRow.classSectionTermId) {",
+                      "    pm.collectionVariables.set('classSectionTermId', String(termRow.classSectionTermId));",
+                      "  }",
+                      "  const routines = termRow.timeTableRoutines || [];",
+                      "  if (routines[0] && routines[0].timeTableRoutineId) {",
+                      "    pm.collectionVariables.set('timetable_routineId', String(routines[0].timeTableRoutineId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
               "request": {
                 "auth": {
                   "type": "bearer",
@@ -4030,15 +4058,27 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate",
+                  "raw": "{{baseurl}}/timeTableCreate?courseId={{timetable_courseId}}&sessionId={{timetable_sessionId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
                   "path": [
                     "timeTableCreate"
+                  ],
+                  "query": [
+                    {
+                      "key": "courseId",
+                      "value": "{{timetable_courseId}}",
+                      "description": "Optional filter"
+                    },
+                    {
+                      "key": "sessionId",
+                      "value": "{{timetable_sessionId}}",
+                      "description": "Optional filter"
+                    }
                   ]
                 },
-                "description": "**GET /timeTableCreate**\n\nLists all routines with structure, course, campus, class section, and academic year."
+                "description": "**GET /timeTableCreate/**\n\nLists **class_section_term** rows (scoped via section) with nested `classSection` and `timeTableRoutines[]`.\n\nOne array item per program term. Terms without a routine have `timeTableRoutines: []`.\n\n**Optional query:** `courseId`, `sessionId`."
               },
               "response": []
             },
@@ -4093,7 +4133,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/create?courseId={{timetable_courseId}}&classSectionsId={{timetable_classSectionsId}}&timeTableType={{timetable_timeTableType}}",
+                  "raw": "{{baseurl}}/timeTableCreate/create?courseId={{timetable_courseId}}&classSectionTermId={{classSectionTermId}}&timeTableType={{timetable_timeTableType}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -4108,9 +4148,15 @@
                       "description": "Required"
                     },
                     {
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
+                      "description": "Preferred — resolves classSectionsId from term"
+                    },
+                    {
                       "key": "classSectionsId",
                       "value": "{{timetable_classSectionsId}}",
-                      "description": "Optional"
+                      "description": "Legacy — use with term query if classSectionTermId omitted",
+                      "disabled": true
                     },
                     {
                       "key": "timeTableType",
@@ -4119,7 +4165,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/section with flattened `periods` array for the UI builder.\n\n**Required query:** `courseId`."
+                "description": "**GET /timeTableCreate/create**\n\nRoutines for a course/term with flattened `periods` array for the UI builder.\n\n**Required query:** `courseId`.\n\n**Preferred:** `classSectionTermId` — `classSectionsId` + `term` not needed when term id is sent."
               },
               "response": []
             },
@@ -4145,7 +4191,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionsId\": {{timetable_classSectionsId}}\n}",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"startingDate\": \"2026-01-01\",\n  \"endingDate\": \"2026-06-30\",\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4162,7 +4208,7 @@
                     "create"
                   ]
                 },
-                "description": "**PATCH /timeTableCreate/create**\n\nUpdates routine metadata. **Required:** `timeTableRoutineId`. Re-validates date overlap for the section."
+                "description": "**PATCH /timeTableCreate/create**\n\nUpdates routine metadata. **Required:** `timeTableRoutineId`. Prefer `classSectionTermId` for placement changes. Re-validates date overlap for the term."
               },
               "response": []
             },
@@ -4595,7 +4641,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionsId={{timetable_classSectionsId}}",
+                  "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
                   "host": [
                     "{{baseurl}}"
                   ],
@@ -4605,13 +4651,19 @@
                   ],
                   "query": [
                     {
+                      "key": "classSectionTermId",
+                      "value": "{{classSectionTermId}}",
+                      "description": "Preferred — positive integer"
+                    },
+                    {
                       "key": "classSectionsId",
                       "value": "{{timetable_classSectionsId}}",
-                      "description": "Required — positive integer"
+                      "description": "Legacy fallback",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/getRoutine?classSectionsId=**\n\nFull weekly grid for a class section (normal + elective, weekOff, teacher/subject/room per slot)."
+                "description": "**GET /timeTableCreate/getRoutine**\n\nFull weekly grid for a class section term (normal + elective, weekOff, teacher/subject/room per slot).\n\n**Preferred query:** `classSectionTermId`. Alternative: `classSectionsId` + `term`."
               },
               "response": []
             },
