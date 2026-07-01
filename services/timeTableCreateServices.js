@@ -490,6 +490,9 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
         delete rowData.classSectionTermIds;
         delete rowData.slots;
         delete rowData.timeTableCreationIds;
+        delete rowData.classSectionsId;
+        delete rowData.classSectionId;
+        delete rowData.classSectionTermId;
 
         if (rowData.timeTableType === 'elective') {
           rowData.isSameTeacher = false;
