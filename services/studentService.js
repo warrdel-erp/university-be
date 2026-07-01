@@ -259,6 +259,7 @@ export async function addStudent(
       },
       transaction,
     );
+    const mapperAcademicYearId = mapperPayload.academicYearId;
     const result = await studentRepository.sectionStudentMapping(
       mapperPayload,
       transaction,
@@ -368,7 +369,9 @@ export async function addStudent(
       allDropDownData,
     };
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error("Error adding student:", error);
     throw error;
   }
