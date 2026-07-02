@@ -2585,7 +2585,7 @@
                     "clone"
                   ]
                 },
-                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range.\n\n**Required body:** `previousRoutineId`, `startingDate`, `endingDate` (`endingDate` >= `startingDate`)."
+                "description": "**POST /timeTableCreate/clone**\n\nCopies a routine and all its mapping cells to a new date range.\n\n### Body (Zod)\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `previousRoutineId` | yes | int | Source routine PK (`timeTableRoutineId`) |\n| `startingDate` | yes | string | `YYYY-MM-DD` |\n| `endingDate` | yes | string | `YYYY-MM-DD`; must be >= `startingDate` |\n\nNo optional fields on this route.\n\nPreserves `classSectionTermId`, course, campus, and all period mappings from the source routine. New routine is created unpublished (`isPublish: false`). Overlap is checked for the same `classSectionTermId`.\n\n**400** if source routine not found or dates overlap an existing routine for that term."
               },
               "response": []
             },
@@ -2597,15 +2597,21 @@
                   "script": {
                     "exec": [
                       "if (pm.response.code === 200) {",
-                      "  const arr = pm.response.json();",
-                      "  if (!Array.isArray(arr) || !arr.length) return;",
-                      "  const termRow = arr.find((row) => row.classSectionTermId) || arr[0];",
-                      "  if (termRow.classSectionTermId) {",
-                      "    pm.collectionVariables.set('classSectionTermId', String(termRow.classSectionTermId));",
-                      "  }",
-                      "  const routines = termRow.timeTableRoutines || [];",
-                      "  if (routines[0] && routines[0].timeTableRoutineId) {",
-                      "    pm.collectionVariables.set('timetable_routineId', String(routines[0].timeTableRoutineId));",
+                      "  const body = pm.response.json();",
+                      "  const years = body.years || [];",
+                      "  for (const yearRow of years) {",
+                      "    for (const termRow of yearRow.terms || []) {",
+                      "      for (const section of termRow.sections || []) {",
+                      "        if (section.classSectionTermId) {",
+                      "          pm.collectionVariables.set('classSectionTermId', String(section.classSectionTermId));",
+                      "          const routines = section.timeTableRoutines || [];",
+                      "          if (routines[0] && routines[0].timeTableRoutineId) {",
+                      "            pm.collectionVariables.set('timetable_routineId', String(routines[0].timeTableRoutineId));",
+                      "          }",
+                      "          return;",
+                      "        }",
+                      "      }",
+                      "    }",
                       "  }",
                       "}"
                     ],
@@ -2647,7 +2653,7 @@
                     }
                   ]
                 },
-                "description": "**GET /timeTableCreate/**\n\nLists **class_section_term** rows (scoped via section) with nested `classSection` and `timeTableRoutines[]`.\n\nOne array item per program term. Terms without a routine have `timeTableRoutines: []`.\n\n**Optional query:** `courseId`, `sessionId`."
+                "description": "**GET /timeTableCreate/**\n\nLists class sections nested **year → term → section** with `timeTableRoutines[]` on each section.\n\n**Optional query:** `courseId`, `sessionId`.\n\nWhen `courseId` is sent, all program years and terms are returned (empty `sections: []` where no placement exists).\n\n**Response root:** `courseId`, `sessionId`, `courseName`, `termType`, `years[]` → `terms[]` → `sections[]`."
               },
               "response": []
             },
@@ -2813,7 +2819,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableCreationId\": {{timetable_creationId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"period\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\"\n}",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableCreationId\": {{timetable_creationId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"period\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2830,7 +2836,110 @@
                     "mapping"
                   ]
                 },
-                "description": "**POST /timeTableCreate/mapping**\n\nCreates one timetable **cell** (`class_schedule_item`).\n\n**Required:** `timeTableRoutineId`, `timeTableCreationId`, `timeTableNameId`, `day`, `period`.\n\n**Typical:** `employeeId`, `subjectId`, `classRoomSectionId`, `timeTableType`.\n\nChecks teacher/room conflicts and updates faculty load. **400** on conflict."
+                "description": "**POST /timeTableCreate/mapping**\n\nCreates timetable **cell(s)** (`class_schedule_item`). Three valid body shapes (Zod):\n\n### 1. Create single cell\n**Required:** `timeTableRoutineId`, `timeTableCreationId`, `period` (and typically `day`).\n\n### 2. Create multiple slots\n**Required:** `timeTableRoutineId`, `day`, `slots[]` with `{ timeTableCreationId, period }` per item.\n\n### 3. Copy existing cell\n**Required:** `sourceTimeTableMappingId`, `copyTarget` (`nextPeriod` | `nextDay`).\n\n### All body fields\n| Field | Required | Type | Notes |\n|-------|----------|------|-------|\n| `timeTableRoutineId` | mode 1–2 | int | Routine PK |\n| `timeTableCreationId` | mode 1 | int | Period row PK |\n| `timeTableNameId` | no | int | Structure PK |\n| `employeeId` | no | int | Teacher PK |\n| `subjectId` | no | int | Subject PK |\n| `electiveSubjectId` | no | int | Elective subject PK |\n| `teacherSubjectMappingId` | no | int | Teacher–subject mapping PK |\n| `day` | mode 1–2 | string | e.g. `Monday` |\n| `period` | mode 1 | int | Period number |\n| `classRoomSectionId` | no | int | Room PK |\n| `timeTableType` | no | enum | `normal` \\| `elective` |\n| `isSameTeacher` | no | boolean | |\n| `teacherType` | no | string | |\n| `isAttendence` | no | boolean | |\n| `isOverridingSyblingElectives` | no | boolean | |\n| `classSectionTermId` | no | int | Defaults from routine when omitted |\n| `classSectionTermIds` | no | int[] | Combined sections (min 1) |\n| `slots` | mode 2 | array | `{ timeTableCreationId, period }[]` |\n| `combinedGroupId` | no | uuid | Reuse for combined-group updates |\n| `sourceTimeTableMappingId` | mode 3 | int | Source cell to copy |\n| `copyTarget` | mode 3 | enum | `nextPeriod` \\| `nextDay` |\n\nRoutine must not have started yet. On copy, optional fields override copied values.\n\n- `nextPeriod` — same day, next teachable period\n- `nextDay` — same period, next working day (skips structure `weekOff`)\n\nResponse may include `copiedFromTimeTableMappingId` (logical link only).\n\n**400** on validation error, teacher/room conflict, duplicate target cell, or routine already started."
+              },
+              "response": []
+            },
+            {
+              "name": "add mapping (copy cell)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "  const data = pm.response.json();",
+                      "  const row = data.mappings ? data.mappings[0] : data;",
+                      "  if (row && row.timeTableMappingId) {",
+                      "    pm.collectionVariables.set('timetable_mappingId', String(row.timeTableMappingId));",
+                      "  }",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"sourceTimeTableMappingId\": {{timetable_mappingId}},\n  \"copyTarget\": \"nextPeriod\",\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"classSectionTermId\": {{classSectionTermId}}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "mapping"
+                  ]
+                },
+                "description": "**POST /timeTableCreate/mapping** — copy mode\n\n**Required:** `sourceTimeTableMappingId`, `copyTarget` (`nextPeriod` | `nextDay`).\n\n**Optional overrides:** `timeTableRoutineId`, `employeeId`, `subjectId`, `electiveSubjectId`, `teacherSubjectMappingId`, `classRoomSectionId`, `timeTableType`, `isSameTeacher`, `teacherType`, `isAttendence`, `isOverridingSyblingElectives`, `classSectionTermId`.\n\nChange `copyTarget` to `nextDay` to copy to the next working day (same period)."
+              },
+              "response": []
+            },
+            {
+              "name": "add mapping (multi-slot / combined)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"timeTableRoutineId\": {{timetable_routineId}},\n  \"timeTableNameId\": {{timetable_timeTableNameId}},\n  \"employeeId\": {{timetable_employeeId}},\n  \"subjectId\": 304,\n  \"electiveSubjectId\": 305,\n  \"teacherSubjectMappingId\": 1,\n  \"day\": \"Monday\",\n  \"classRoomSectionId\": 1,\n  \"timeTableType\": \"normal\",\n  \"isSameTeacher\": true,\n  \"teacherType\": \"primary\",\n  \"isAttendence\": true,\n  \"isOverridingSyblingElectives\": false,\n  \"classSectionTermIds\": [{{classSectionTermId}}],\n  \"combinedGroupId\": \"00000000-0000-4000-8000-000000000001\",\n  \"slots\": [\n    {\n      \"timeTableCreationId\": {{timetable_creationId}},\n      \"period\": 1\n    },\n    {\n      \"timeTableCreationId\": 2,\n      \"period\": 2\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseurl}}/timeTableCreate/mapping",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "timeTableCreate",
+                    "mapping"
+                  ]
+                },
+                "description": "**POST /timeTableCreate/mapping** — multi-slot / combined mode\n\n**Required:** `timeTableRoutineId`, `day`, `slots[]` (`timeTableCreationId` + `period` per item).\n\n**Optional:** `classSectionTermIds[]` (combined sections), `combinedGroupId` (uuid — omit to auto-generate), plus teacher/subject/room fields from the single-cell example."
               },
               "response": []
             },

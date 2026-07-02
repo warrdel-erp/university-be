@@ -55,7 +55,19 @@ export async function addTimeTableCreate(data, transaction) {
   }
 }
 
-export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
+export async function findCourseById(courseId) {
+  try {
+    return scoped(model.courseModel).findOne({
+      where: { courseId: Number(courseId) },
+      attributes: ['courseId', 'courseName', 'termType', 'courseDuration', 'totalTerms'],
+    });
+  } catch (error) {
+    console.error('Error in findCourseById:', error);
+    throw error;
+  }
+}
+
+export async function findClassSectionTermsWithRoutines({ courseId, sessionId } = {}) {
   try {
     const sectionScope = buildScope(model.classSectionModel);
     const sectionWhere = { ...sectionScope };
@@ -66,7 +78,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
       sectionWhere.sessionId = Number(sessionId);
     }
 
-    const rows = await scoped(model.classSectionTermModel).findAll({
+    return scoped(model.classSectionTermModel).findAll({
       attributes: ['classSectionTermId', 'term', 'classSectionsId'],
       include: [
         {
@@ -143,22 +155,13 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
         },
       ],
       order: [
+        [{ model: model.classSectionModel, as: 'classSection' }, 'year', 'ASC'],
         ['term', 'ASC'],
         [{ model: model.classSectionModel, as: 'classSection' }, 'section', 'ASC'],
       ],
     });
-
-    const result = [];
-    for (const row of rows) {
-      const plain = row.get({ plain: true });
-      const course = plain.classSection.courseSection;
-      plain.courseName = course ? course.courseName : null;
-      plain.termType = course ? course.termType : null;
-      result.push(plain);
-    }
-    return result;
   } catch (error) {
-    console.error('Error in getting time table create:', error);
+    console.error('Error in findClassSectionTermsWithRoutines:', error);
     throw error;
   }
 }
@@ -577,6 +580,66 @@ export async function getMappingByIdRepository(timeTableMappingId, options = {})
     throw error;
   }
 };
+
+export async function getMappingCopySourceRepository(timeTableMappingId, options = {}) {
+  try {
+    return assertScopedSchedule(timeTableMappingId, {
+      transaction: options.transaction,
+      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+    });
+  } catch (error) {
+    console.error('Error in getMappingCopySourceRepository:', error);
+    throw error;
+  }
+}
+
+export async function getStructurePeriodsRepository(timeTableNameId, options = {}) {
+  try {
+    return scoped(model.timeTableStructurePeriodsModel).findAll({
+      where: { timeTableNameId: Number(timeTableNameId) },
+      attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'isCourse', 'startTime', 'endTime'],
+      order: [['timeTableCreationId', 'ASC']],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in getStructurePeriodsRepository:', error);
+    throw error;
+  }
+}
+
+export async function getStructureWeekOffRepository(timeTableNameId, options = {}) {
+  try {
+    return scoped(model.timeTableStructureModel).findOne({
+      where: { timeTableNameId: Number(timeTableNameId) },
+      attributes: ['weekOff'],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in getStructureWeekOffRepository:', error);
+    throw error;
+  }
+}
+
+export async function findMappingAtSlotRepository(
+  { timeTableRoutineId, day, period, timeTableCreationId },
+  options = {},
+) {
+  try {
+    return scoped(model.classScheduleModel).findOne({
+      where: {
+        timeTableRoutineId: Number(timeTableRoutineId),
+        day,
+        period: Number(period),
+        timeTableCreationId: Number(timeTableCreationId),
+      },
+      attributes: ['timeTableMappingId'],
+      transaction: options.transaction,
+    });
+  } catch (error) {
+    console.error('Error in findMappingAtSlotRepository:', error);
+    throw error;
+  }
+}
 
 export async function getMappingsByCombinedGroupIdRepository(combinedGroupId, options = {}) {
   try {
