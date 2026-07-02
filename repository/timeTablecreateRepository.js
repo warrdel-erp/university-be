@@ -78,7 +78,6 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
             'classSectionsId',
             'section',
             'year',
-            'sectionId',
             'courseId',
             'sessionId',
             'academicYearId',
@@ -120,7 +119,7 @@ export async function getTimeTableCreateDetails({ courseId, sessionId } = {}) {
               attributes: ['campusName'],
             },
             timeTableRoutineClassSectionInclude({
-              sectionAttributes: ['section', 'year', 'sectionId', 'classSectionsId'],
+              sectionAttributes: ['section', 'year', 'classSectionsId'],
               sectionNestedIncludes: [
                 {
                   model: model.sessionModel,
@@ -267,7 +266,7 @@ export async function getSingleTimeTableCreateDetails(courseId) {
           attributes: ["campusName"],
         },
         timeTableRoutineClassSectionInclude({
-          sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+          sectionAttributes: ["section", "year", "classSectionsId"],
         }),
         {
           model: model.acedmicYearModel,
@@ -843,7 +842,7 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
               attributes: ["campusName"],
             },
             timeTableRoutineClassSectionInclude({
-              sectionAttributes: ["section", "year", "sectionId", "classSectionsId"],
+              sectionAttributes: ["section", "year", "classSectionsId"],
               sectionWhere: buildScope(model.classSectionModel),
             }),
             {

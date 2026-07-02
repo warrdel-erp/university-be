@@ -256,30 +256,60 @@ export async function addClassSections(data) {
     }
 }
 
-export async function createClassSections(data, options = {}) {
+export async function findClassSectionForYear(
+    { courseId, sessionId, section, year },
+    options = {},
+) {
+    try {
+        const sectionName = String(section).trim();
+        if (!sectionName) {
+            return null;
+        }
+
+        return scoped(model.classSectionModel).findOne({
+            where: {
+                courseId: Number(courseId),
+                sessionId: Number(sessionId),
+                section: sectionName,
+                year: Number(year),
+            },
+            transaction: options.transaction,
+        });
+    } catch (error) {
+        console.error('Error finding class section for year:', error);
+        throw error;
+    }
+}
+
+export async function createClassSectionRow(data, options = {}) {
     try {
         if (data.year == null) {
             throw new Error('year is required to create class sections');
         }
 
-        const where = {
-            courseId: data.courseId,
-            sessionId: data.sessionId,
-            sectionId: data.sectionId,
-            year: Number(data.year),
-        };
+        const sectionName = String(data.section).trim();
+        if (!sectionName) {
+            throw new Error('section is required to create class sections');
+        }
 
-        const existing = await scoped(model.classSectionModel).findOne({
-            where,
-            transaction: options.transaction,
-        });
+        return scoped(model.classSectionModel).create(
+            { ...data, section: sectionName, year: Number(data.year) },
+            { transaction: options.transaction },
+        );
+    } catch (error) {
+        console.error('Error creating class section row:', error);
+        throw error;
+    }
+}
+
+export async function createClassSections(data, options = {}) {
+    try {
+        const existing = await findClassSectionForYear(data, options);
         if (existing) {
             return existing;
         }
 
-        return scoped(model.classSectionModel).create(data, {
-            transaction: options.transaction,
-        });
+        return createClassSectionRow(data, options);
     } catch (error) {
         console.error("Error in add class directly :", error);
         throw error;
@@ -393,7 +423,7 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                     model: model.classSectionModel,
                                     as: "courseSection",
                                     required: false,
-                                    attributes: ["classSectionsId", "sessionId", "sectionId", "section", "year"],
+                                    attributes: ["classSectionsId", "sessionId", "section", "year"],
                                     where: {
                                         ...buildScope(model.classSectionModel),
                                         ...(sessionId && { sessionId }),

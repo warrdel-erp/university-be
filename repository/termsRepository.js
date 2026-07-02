@@ -82,7 +82,6 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
       attributes: [
         'classSectionsId',
         'section',
-        'sectionId',
         'year',
         'specializationId',
       ],

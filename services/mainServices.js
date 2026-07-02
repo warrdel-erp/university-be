@@ -333,14 +333,9 @@ export async function updateSubject(data) {
 
 export async function addClassSections(data, createdBy) {
     try {
-        if (!data) throw new Error('Data is required');
-        if (!createdBy) throw new Error('CreatedBy is required');
-
-        const { courseId, sections, sessionId } = data;
-
-        if (!courseId) throw new Error('CourseId is required');
-        if (!sections?.length) throw new Error('Sections are required and must be a non-empty array');
-        if (!sessionId) throw new Error('SessionId is required');
+        const { courseId, sessionId, section, year } = data;
+        const yearNum = Number(year);
+        const sectionName = String(section).trim();
 
         const course = await getCourseByCourseId(Number(courseId));
         if (!course) throw new Error('Course not found');
@@ -351,78 +346,72 @@ export async function addClassSections(data, createdBy) {
         }
 
         const courseDuration = Number(course.courseDuration) || 1;
+        if (yearNum < 1 || yearNum > courseDuration) {
+            throw new Error(
+                `year must be between 1 and ${courseDuration} for course ${courseId}`,
+            );
+        }
+
+        const termNumbers = termsForYear(yearNum, course);
+        if (!termNumbers.length) {
+            throw new Error(`No program terms found for year ${yearNum}`);
+        }
+
         const transaction = await sequelize.transaction();
         try {
-            const sectionResults = [];
+            let classSectionRow = await mainRepository.findClassSectionForYear(
+                {
+                    courseId: Number(courseId),
+                    sessionId: Number(sessionId),
+                    section: sectionName,
+                    year: yearNum,
+                },
+                { transaction },
+            );
 
-            for (const section of sections) {
-                const { sectionId, section: sectionName, year } = section;
+            const classSectionCreated = !classSectionRow;
 
-                if (!sectionId) throw new Error('sectionId is required for each section');
-                if (year == null || year === '') throw new Error('year is required for each section');
-
-                const yearNum = Number(year);
-                if (yearNum < 1 || yearNum > courseDuration) {
-                    throw new Error(
-                        `year must be between 1 and ${courseDuration} for course ${courseId}`,
-                    );
-                }
-
-                const termNumbers = termsForYear(yearNum, course);
-                if (!termNumbers.length) {
-                    throw new Error(`No program terms found for year ${yearNum}`);
-                }
-
-                const classSectionRow = await mainRepository.createClassSections({
+            if (!classSectionRow) {
+                classSectionRow = await mainRepository.createClassSectionRow({
                     courseId: Number(courseId),
                     sessionId: Number(sessionId),
                     year: yearNum,
-                    sectionId: Number(sectionId),
                     section: sectionName,
                     instituteId: course.instituteId,
                     createdBy,
                 }, { transaction });
+            }
 
-                const classSectionsId =
-                    classSectionRow.classSectionsId ??
-                    classSectionRow.dataValues?.classSectionsId;
+            const classSectionPlain = classSectionRow.get({ plain: true });
+            const classSectionsId = classSectionPlain.classSectionsId;
 
-                const terms = [];
-                for (const termNum of termNumbers) {
-                    const classSectionTermRow = await mainRepository.findOrCreateClassSectionTerm(
-                        {
-                            classSectionsId,
-                            term: termNum,
-                            createdBy,
-                            universityId: course.universityId,
-                            instituteId: course.instituteId,
-                        },
-                        { transaction },
-                    );
+            const terms = [];
+            for (const termNum of termNumbers) {
+                const classSectionTermRow = await mainRepository.findOrCreateClassSectionTerm(
+                    {
+                        classSectionsId,
+                        term: termNum,
+                        createdBy,
+                        universityId: course.universityId,
+                        instituteId: course.instituteId,
+                    },
+                    { transaction },
+                );
 
-                    const termPlain = classSectionTermRow.get
-                        ? classSectionTermRow.get({ plain: true })
-                        : classSectionTermRow;
-
-                    terms.push({
-                        classSectionTermId: termPlain.classSectionTermId,
-                        term: termPlain.term,
-                    });
-                }
-
-                const sectionPlain = classSectionRow.get
-                    ? classSectionRow.get({ plain: true })
-                    : classSectionRow;
-
-                sectionResults.push({
-                    ...sectionPlain,
-                    year: yearNum,
-                    terms,
+                const termPlain = classSectionTermRow.get({ plain: true });
+                terms.push({
+                    classSectionTermId: termPlain.classSectionTermId,
+                    term: termPlain.term,
                 });
             }
 
             await transaction.commit();
-            return { sections: sectionResults };
+            return {
+                ...classSectionPlain,
+                year: yearNum,
+                terms,
+                classSectionCreated,
+            };
         } catch (error) {
             await transaction.rollback();
             throw error;

@@ -93,11 +93,8 @@ const classSectionRecordQuerySchema = z.object({
 const addClassSectionsSchema = z.object({
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
-    sections: z.array(z.object({
-        sectionId: positiveIntegerId,
-        section: z.string().min(1, 'section is required'),
-        year: z.coerce.number().int().positive('year must be a positive integer'),
-    })).min(1, 'sections array is required'),
+    section: z.string().trim().min(1, 'section is required'),
+    year: z.coerce.number().int().positive('year must be a positive integer'),
 }).strict();
 
 const router = Router();

@@ -188,7 +188,6 @@ export function formatClassSectionTermPlacement(sectionPlain, termRow) {
     const row = {
         classSectionTermId: termRow.classSectionTermId,
         classSectionsId: sectionPlain.classSectionsId,
-        sectionId: sectionPlain.sectionId,
         section: sectionPlain.section,
         year: sectionPlain.year,
     };

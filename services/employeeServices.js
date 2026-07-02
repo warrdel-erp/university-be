@@ -636,6 +636,9 @@ export async function deleteEmployeeDetail(employeeId) {
     }
   } catch (error) {
     console.error('Error deleting employee:', error);
+    if (error.statusCode) {
+      throw error;
+    }
     return { message: 'An error occurred while trying to delete the employee', error: error.message };
   }
 };
