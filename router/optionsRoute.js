@@ -25,11 +25,9 @@ const courseTermsQuerySchema = z.object({
 
 const classSectionsQuerySchema = z.object({
     courseId: positiveIntegerId,
-    term: z.coerce
-        .number({ required_error: 'term is required', invalid_type_error: 'term must be a number' })
-        .int({ message: 'term must be an integer' })
-        .positive({ message: 'term must be positive' }),
+    term: optionalPositiveIntegerId,
     sessionId: optionalPositiveIntegerId,
+    year: optionalPositiveIntegerId,
 });
 
 const specializationsQuerySchema = z.object({
