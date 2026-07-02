@@ -2,7 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import institute from './instituteModel.js';
 import acedmicYear from './acedmicYearModel.js';
-import semesterModel from './semesterModel.js';
 import subjectModel from './subjectModel.js';
 import users from './userModel.js';
 import universityModel from "./universityModel.js";
@@ -35,7 +34,7 @@ const syllabusUnitModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
@@ -44,14 +43,10 @@ const syllabusUnitModel = sequelize.define(
                 key: 'acedmic_year_id'
             }
         },
-        semesterId: {
+        term: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
+            comment: 'Program term number',
         },
         sessionId: {
             type: DataTypes.INTEGER,

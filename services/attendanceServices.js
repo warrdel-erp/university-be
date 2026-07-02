@@ -4,6 +4,11 @@ import * as helper from "../utility/helper.js";
 import xlsx from 'xlsx';
 import sequelize from "../database/sequelizeConfig.js";
 import { ATTENDANCE_STATUS } from "../constant.js";
+import { resolveProgramYear, resolveStudentClassSectionsId } from "../utility/classSectionIncludes.js";
+import {
+  assertMappingsBelongToTerm,
+  resolveAttendancePlacement,
+} from "../utility/attendancePlacement.js";
 
 export { ATTENDANCE_STATUS };
 
@@ -21,6 +26,8 @@ function normalizeTimeTableMappingIds(timeTableMappingId) {
 
 export async function addAttendance(attendanceData, createdBy, updatedBy) {
   const mappingIds = normalizeTimeTableMappingIds(attendanceData.timeTableMappingId);
+  const placement = await resolveAttendancePlacement(attendanceData.classSectionTermId);
+  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
 
   const pendingMappingIds = [];
   const skippedMappingIds = [];
@@ -47,7 +54,8 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
     const attendanceRecords = pendingMappingIds.flatMap((mappingId) =>
       attendanceData.attendance.map((attendance) => ({
         ...attendance,
-        classSectionsId: attendanceData.classSectionsId,
+        classSectionsId: placement.classSectionsId,
+        classSectionTermId: placement.classSectionTermId,
         timeTableMappingId: mappingId,
         date: attendanceData.date,
         createdBy,
@@ -187,8 +195,6 @@ function validateAttendanceRow(attendance) {
     "studentId",
     "classSectionsId",
     "timeTableMappingId",
-    "instituteId",
-    "universityId",
     "createdBy",
     "updatedBy",
     "attendanceStatus",
@@ -263,8 +269,8 @@ export async function importAttendanceData(excelData, commonData) {
 };
 
 
-export async function getAttendanceByDate(date, classSectionsId, employeeId) {
-  const data = await attendanceService.getAttendanceByDate(date, classSectionsId, employeeId);
+export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
+  const data = await attendanceService.getAttendanceByDate(date, classSectionTermId, employeeId);
 
   const { attendanceDetails = [], subjectDetail = {} } = data;
 
@@ -275,7 +281,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
     if (!classAtt) return;
 
     const courseName = classAtt.courseSection?.courseName || '';
-    const className = classAtt.class || '';
+    const className = classAtt.year != null ? String(classAtt.year) : '';
     const sectionName = classAtt.section || '';
     const dateStr = att.date?.toISOString().split('T')[0] || '';
 
@@ -312,118 +318,9 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
   };
 };
 
-// export async function getPreviousClasses(employeeId, req) {
-//   const mappings = await attendanceService.getTeacherMappings(employeeId);
 
-//   // Guard against null or empty mappings
-//   if (!Array.isArray(mappings) || !mappings.length) {
-//     return { data: [] };
-//   }
 
-//   // ===== DATE RANGE =====
-//   const startDates = mappings
-//     .map(m => m.timeTablecreate?.startingDate)
-//     .filter(d => d && moment(d).isValid())
-//     .map(d => moment(d));
-
-//   const endDates = mappings
-//     .map(m => m.timeTablecreate?.endingDate)
-//     .filter(d => d && moment(d).isValid())
-//     .map(d => moment(d));
-
-//   // Ensure we have valid dates to calculate min/max
-//   if (!startDates.length || !endDates.length) {
-//     return { data: [] };
-//   }
-
-//   const startDate = moment.min(startDates);
-//   const endDate = moment.min(
-//     moment.max(endDates),
-//     moment().subtract(1, "day")
-//   );
-
-//   if (endDate.isBefore(startDate)) {
-//     return { data: [] };
-//   }
-
-//   // ===== WEEK OFF (FIXED) =====
-//   // This handles if weekOff is an Object, Array, or Null
-//   const rawWeekOff = mappings[0]?.timeTablecreation?.weekOff || [];
-//   console.log(`>>>>>>>rawWeekOff>>>`,JSON.stringify(rawWeekOff));
-
-//   const weekOffArray = Array.isArray(rawWeekOff) 
-//     ? rawWeekOff 
-//     : (rawWeekOff && typeof rawWeekOff === 'object' ? Object.values(rawWeekOff) : []);
-//   console.log(`>>>>>>>weekOffArray>>>`,JSON.stringify(weekOffArray));
-
-//   const weekOff = weekOffArray.map(d => String(d).toLowerCase());
-//   console.log(`>>>>>>>weekOff>>>`,JSON.stringify(weekOff));
-//   // ===== ATTENDANCE MAP =====
-//   const attendanceMap = (await attendanceService.getAttendanceMap(
-//     mappings.map(m => m.timeTableMappingId),
-//     startDate.format("YYYY-MM-DD"),
-//     endDate.format("YYYY-MM-DD")
-//   )) || {};
-
-//   const studentCountCache = {};
-//   const flatData = []; 
-
-//   // ===== MAIN LOOP =====
-//   for (const map of mappings) {
-//     let date = startDate.clone();
-//     const sectionId = map.timeTablecreate?.classSectionsId;
-//     if (!sectionId) continue;
-
-//     if (!studentCountCache[sectionId]) {
-//       studentCountCache[sectionId] = await attendanceService.getStudentCount(sectionId);
-//     }
-
-//     const totalStudents = studentCountCache[sectionId] || 0;
-
-//     while (date.isSameOrBefore(endDate)) {
-//       const dayName = date.format("dddd");
-//       const dateStr = date.format("YYYY-MM-DD");
-
-//       // Check if this mapping applies to this day and is NOT a week off
-//       if (
-//         map.day === dayName &&
-//         !weekOff.includes(dayName.toLowerCase())
-//       ) {
-//         const key = `${map.timeTableMappingId}_${dateStr}`;
-//         const presentCount = attendanceMap[key] ?? 0;
-
-//         flatData.push({
-//           date: dateStr,
-//           day: dayName,
-//           period: map.period,
-//           subject: map.timeTableSubject?.subjectName || map.timeTableTeacherSubject?.subject?.subjectName || null,       
-//           class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
-//           section: map.timeTablecreate?.timeTableClassSection?.section || null,
-//           classSectionsId: sectionId,
-//           attendance: `${presentCount} / ${totalStudents}`,
-//           status: attendanceMap[key] !== undefined ? "MARKED" : "PENDING",
-//           timeTableMappingId: map.timeTableMappingId
-//         });
-//       }
-//       date.add(1, "day");
-//     }
-//   }
-
-//   // ===== SORT BY DATE DESCENDING, THEN BY PERIOD ASCENDING =====
-//   flatData.sort((a, b) => {
-//     const dateDiff = new Date(b.date) - new Date(a.date);
-//     if (dateDiff !== 0) return dateDiff;
-//     return (Number(a.period) || 0) - (Number(b.period) || 0);
-//   });
-
-//   return {
-//     fromDate: startDate.format("YYYY-MM-DD"),
-//     toDate: endDate.format("YYYY-MM-DD"),
-//     data: flatData
-//   };
-// };
-
-export async function getPreviousClasses(employeeId, req) {
+export async function getPreviousSessions(employeeId, req) {
   const mappings = await attendanceService.getTeacherMappings(employeeId);
 
   if (!Array.isArray(mappings) || !mappings.length) {
@@ -492,6 +389,8 @@ export async function getPreviousClasses(employeeId, req) {
       if (map.day === dayName && !weekOff.includes(dayName.toLowerCase())) {
         const key = `${map.timeTableMappingId}_${dateStr}`;
         const presentCount = attendanceMap[key]; // Do not use ?? 0 yet to check for undefined
+        const timeTableClassSection = map.timeTablecreate?.timeTableClassSection;
+        const programYear = resolveProgramYear(timeTableClassSection);
 
         flatData.push({
           date: dateStr,
@@ -501,8 +400,10 @@ export async function getPreviousClasses(employeeId, req) {
           subject: map.timeTableSubject?.subjectName ||
             map.timeTableTeacherSubject?.subject?.subjectName ||
             "N/A",
-          class: map.timeTablecreate?.timeTableClassSection?.classGroup?.className || null,
-          section: map.timeTablecreate?.timeTableClassSection?.section || null,
+          class: (programYear != null ? `Year ${programYear}` : null)
+            || (timeTableClassSection?.year != null ? String(timeTableClassSection.year) : null)
+            || null,
+          section: timeTableClassSection?.section || null,
           classSectionsId: sectionId,
           attendance: `${presentCount ?? 0} / ${totalStudents}`,
           status: presentCount !== undefined ? "MARKED" : "PENDING",
@@ -533,10 +434,11 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
 
 };
 
-export async function getEmployeeClassDates(classSectionId, subjectId, employeeId) {
+export async function getEmployeeSectionDates(classSectionTermId, subjectId, employeeId) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
   const [scheduleItems, details] = await Promise.all([
-    attendanceService.getEmployeeScheduleWithRoutine(classSectionId, subjectId, employeeId),
-    attendanceService.getDetailsByIds(classSectionId, subjectId, employeeId)
+    attendanceService.getEmployeeScheduleWithRoutine(placement.classSectionTermId, subjectId, employeeId),
+    attendanceService.getDetailsByTerm(placement.classSectionTermId, subjectId, employeeId),
   ]);
 
   const dateMap = {};
@@ -581,10 +483,17 @@ export async function getEmployeeClassDates(classSectionId, subjectId, employeeI
   };
 }
 
-export async function getStudentsBatchAttendance(classSectionsId, filters) {
-  const students = await attendanceService.getStudentsBatchAttendance(classSectionsId, filters);
+export async function getStudentsBatchAttendance(classSectionTermId, filters) {
+  const placement = await resolveAttendancePlacement(classSectionTermId);
+  const mappingIds = filters.map((f) => f.timeTableMappingId);
+  await assertMappingsBelongToTerm(mappingIds, placement.classSectionTermId);
 
-  return students
+  const students = await attendanceService.getStudentsBatchAttendance(
+    placement.classSectionTermId,
+    filters,
+  );
+
+  return students;
 }
 
 /* ----------------  Extract Student ID from Name ---------------- */
@@ -684,7 +593,9 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
 
     const attendanceEntry = {
       studentId: entry.studentId,
-      classSectionsId: student.classSectionsId,
+      classSectionsId: resolveStudentClassSectionsId(
+        typeof student.get === "function" ? student.get({ plain: true }) : student,
+      ),
       timeTableMappingId: entry.timeTableMappingId,
       date: entry.date,
       attendanceStatus: entry.attendanceStatus,

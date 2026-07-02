@@ -1,12 +1,15 @@
 import * as syllabusCreation from '../services/syllabusServices.js';
+import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
 
 export async function addSyllabus(req, res) {
-  const { courseId, acedmicYearId, instituteId } = req.body;
+  const { courseId } = req.body;
+  const academicYearId = getAcademicYearId();
+  const instituteId = getTenantStore().instituteId;
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    if (!courseId || !acedmicYearId || !instituteId) {
-      return res.status(400).send('courseId,acedmicYearId and instituteId is required');
+    if (!courseId || !academicYearId || !instituteId) {
+      return res.status(400).send('courseId and active academic year / institute context is required');
     }
     const Syllabus = await syllabusCreation.addSyllabus(req.body, createdBy, updatedBy);
     if (Syllabus) {
@@ -20,9 +23,8 @@ export async function addSyllabus(req, res) {
 }
 
 export async function getAllSyllabus(req, res) {
-  const { acedmicYearId } = req.query;
   try {
-    const syllabus = await syllabusCreation.getSyllabusDetails(acedmicYearId);
+    const syllabus = await syllabusCreation.getSyllabusDetails(getAcademicYearId());
     res.status(200).json(syllabus);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -95,7 +97,11 @@ export async function addSyllabusUnit(req, res) {
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
   try {
-    const Syllabus = await syllabusCreation.addSyllabusUnit(req.body, createdBy, updatedBy);
+    const Syllabus = await syllabusCreation.addSyllabusUnit(
+      { ...req.body, academicYearId: getAcademicYearId() },
+      createdBy,
+      updatedBy,
+    );
     if (Syllabus) {
       res.status(201).json({ message: 'Data added successfully', Syllabus });
     } else {
@@ -121,11 +127,11 @@ export async function syllabusUnitGet(req, res) {
 
 export async function updateSyllabusUnit(req, res) {
   try {
-    const { syllabusUnitId, acedmicYearId } = req.body;
+    const { syllabusUnitId } = req.body;
     const updatedBy = req.user.userId;
     const updated = await syllabusCreation.updateSyllabusUnit(
       syllabusUnitId,
-      acedmicYearId,
+      getAcademicYearId(),
       req.body,
       updatedBy
     );
@@ -155,13 +161,13 @@ export async function deleteSyllabusUnit(req, res) {
   }
 }
 
-export async function semesterAllSubject(req, res) {
+export async function termAllSubject(req, res) {
   try {
-    const { semesterId } = req.query;
-    if (!semesterId) {
-      return res.status(400).send('semesterId is required');
+    const { courseId, term } = req.query;
+    if (!courseId || term == null) {
+      return res.status(400).send('courseId and term are required');
     }
-    const Syllabus = await syllabusCreation.semesterAllSubject(semesterId);
+    const Syllabus = await syllabusCreation.termAllSubject(courseId, term);
     if (Syllabus) {
       res.status(200).json(Syllabus);
     } else {

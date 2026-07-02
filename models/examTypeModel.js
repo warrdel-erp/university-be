@@ -14,7 +14,7 @@ const examTypeModel = sequelize.define(
             autoIncrement: true,
             field: 'exam_type_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

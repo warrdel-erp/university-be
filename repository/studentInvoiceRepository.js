@@ -1,97 +1,23 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
-function feePlanStudentInclude() {
+function feePlanProfileStudentInclude() {
   return {
-    model: model.feePlanModel,
-    as: "studentFeePlan",
+    model: model.feePlanProfileModel,
+    as: "studentFeePlanProfile",
     attributes: {
-      exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "description"],
+      exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
     },
-    where: buildScope(model.feePlanModel),
+    where: buildScope(model.feePlanProfileModel),
     required: false,
-    include: [
-      {
-        model: model.feeNewInvoiceModel,
-        as: "invoices",
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-        include: [
-          {
-            model: model.feePlanSemesterModel,
-            as: "semesters",
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-          },
-          {
-            model: model.feePlanTypeModel,
-            as: "additionalFees",
-            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-          },
-        ],
-      },
-      {
-        model: model.sessionModel,
-        as: "sessionFee",
-        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "acedmic_year_id"] },
-      },
-      {
-        model: model.courseModel,
-        as: "courseFee",
-        attributes: {
-          exclude: [
-            "createdAt",
-            "updatedAt",
-            "deletedAt",
-            "createdBy",
-            "updatedBy",
-            "affiliated_university_id",
-            "institute_id",
-            "acedmic_year_id",
-          ],
-        },
-      },
-      {
-        model: model.acedmicYearModel,
-        as: "acedmicYearFee",
-        attributes: {
-          exclude: [
-            "createdAt",
-            "updatedAt",
-            "deletedAt",
-            "createdBy",
-            "updatedBy",
-            "affiliated_university_id",
-            "institute_id",
-          ],
-        },
-      },
-    ],
   };
 }
 
 function studentListIncludes() {
   return [
-    feePlanStudentInclude(),
-    {
-      model: model.classSectionModel,
-      as: "studentSections",
-      attributes: {
-        exclude: [
-          "createdAt",
-          "updatedAt",
-          "deletedAt",
-          "createdBy",
-          "updatedBy",
-          "affiliated_university_id",
-          "institute_id",
-          "course_id",
-          "semester_id",
-          "class_id",
-          "acedmic_year_id",
-          "specialization_id",
-          "session_id",
-        ],
-      },
-    },
+    feePlanProfileStudentInclude(),
+    studentClassSectionTermWithSectionInclude(),
   ];
 }
 

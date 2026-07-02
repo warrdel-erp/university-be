@@ -12,7 +12,7 @@ import { requestContext } from "./requestContext.js";
  * Scoping is skipped when no requestContext exists (e.g. background jobs).
  */
 
-const ACADEMIC_YEAR_FIELD = "acedmicYearId";
+const ACADEMIC_YEAR_FIELD = "academicYearId";
 
 function isScoped(configValue, field, attrs) {
   return configValue === true && field in attrs;

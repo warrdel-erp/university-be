@@ -5,7 +5,6 @@ import specialization from "./specializationModel.js";
 import acedmicYearModel from "./acedmicYearModel.js";
 import users from "./userModel.js";
 import section from "./sectionModel.js";
-import classModel from "./classModel.js";
 import instituteModel from "./instituteModel.js";
 import sessionModel from "./sessionModel.js";
 
@@ -45,7 +44,7 @@ const classSectionModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
@@ -63,15 +62,6 @@ const classSectionModel = sequelize.define(
                 key: 'section_id'
             }
         },
-        classId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'class_id',
-            references: {
-                model: classModel,
-                key: 'class_id'
-            }
-        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -85,9 +75,10 @@ const classSectionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        class: {
-            type: DataTypes.STRING,
+        year: {
+            type: DataTypes.INTEGER,
             allowNull: true,
+            comment: 'Program year level (1, 2, 3...)',
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -110,15 +101,6 @@ const classSectionModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

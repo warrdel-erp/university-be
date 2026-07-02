@@ -16,9 +16,9 @@ export async function addExamType(req, res) {
 }
 
 export async function getAllExamType(req, res) {
-    const { acedmicYearId } = req.query;
+    const { academicYearId } = req.query;
     try {
-        const libraries = await examTypeServices.getExamType(acedmicYearId);
+        const libraries = await examTypeServices.getExamType(academicYearId);
         res.status(200).json(libraries);
     } catch (error) {
         res.status(500).json({ error: error.message });

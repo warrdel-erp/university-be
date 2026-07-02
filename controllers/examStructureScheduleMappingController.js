@@ -1,15 +1,16 @@
 import * as examStructureScheduleServices from "../services/examStructureScheduleMappingServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-import { getTenantStore } from "../utility/requestContext.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addExamStructureSchedule(req, res) {
-  const { acedmicYearId, sessionId } = req.body;
+  const { sessionId } = req.body;
+  const academicYearId = getAcademicYearId();
   try {
-    if (!(acedmicYearId && sessionId)) {
+    if (!(academicYearId && sessionId)) {
       return res.status(400).send("Required fields are missing");
     }
     const examStructureSchedule = await examStructureScheduleServices.addExamStructureSchedule(
-      req.body,
+      { ...req.body, academicYearId },
       req.user.userId,
       req.user.userId,
     );
@@ -88,7 +89,7 @@ export async function addExamSchedule(req, res) {
     const examSchedule = await examStructureScheduleServices.addExamSchedule(
       {
         ...req.body,
-        acedmicYearId: req.body.acedmicYearId ?? getTenantStore().academicYearId,
+        academicYearId: getAcademicYearId(),
       },
       req.user.userId,
       req.user.userId,

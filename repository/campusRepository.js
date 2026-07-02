@@ -125,7 +125,7 @@ export async function getCampusHierarchy(universityId) {
         specializationCode: plain.specializationCode,
         courseId: plain.course_Id,
         instituteId: plain.instituteId,
-        acedmicYearId: plain.acedmicYearId,
+        academicYearId: plain.academicYearId,
       });
       acc.set(plain.instituteId, list);
       return acc;

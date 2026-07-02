@@ -7,7 +7,7 @@ import users from "./userModel.js";
 const acedmicYearModel = sequelize.define(
     'acedmic_year',
     {
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
             autoIncrement: true,

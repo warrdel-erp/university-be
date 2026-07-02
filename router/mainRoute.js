@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { SUBJECT_TYPES, SUBJECT_CATEGORIES } from '../constant.js';
-import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClass, getClass, addClassSubjectMapper, getClassSubjectMapper, addSemester, getSemester, createClass, subjectExcel, updateCourse, changeCourseStatus, getClassSpecific, getClassRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
+import { getAllCollegesAndCourses, addCampus, addInstitute, addAffiliatedUniversity, addCourse, addSpecialization, addSubject, addClassSections, getClassSections, addSectionSubjectMapper, getSectionSubjectMapper, subjectExcel, updateCourse, changeCourseStatus, getClassSectionSpecific, getClassSectionRecord, updateSubject, getMonthlyIncome } from '../controllers/mainController.js';
 import userAuth from '../middleware/authUser.js'
 
 const positiveIntegerId = z.coerce
@@ -22,7 +22,6 @@ const addCourseItemSchema = z.object({
 const addCourseSchema = z.object({
     course_levelId: z.coerce.number().int().positive('course_levelId is required'),
     departmentId: positiveIntegerId.optional(),
-    acedmicYearId: z.coerce.number().int().positive().optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
     courses: z.array(addCourseItemSchema).min(1, 'courses array is required'),
@@ -33,9 +32,14 @@ const updateCourseSchema = z.object({
     courseName: z.string().min(1, 'courseName cannot be empty').optional(),
     courseCode: z.string().min(1, 'courseCode cannot be empty').optional(),
     departmentId: positiveIntegerId.nullable().optional(),
+    affiliatedUniversityId: positiveIntegerId.nullable().optional(),
 }).refine(
-    (body) => body.courseName != null || body.courseCode != null || body.departmentId !== undefined,
-    { message: 'At least one of courseName, courseCode, or departmentId is required' },
+    (body) =>
+        body.courseName != null
+        || body.courseCode != null
+        || body.departmentId !== undefined
+        || body.affiliatedUniversityId !== undefined,
+    { message: 'At least one of courseName, courseCode, departmentId, or affiliatedUniversityId is required' },
 );
 
 const changeCourseStatusSchema = z.object({
@@ -81,16 +85,20 @@ const updateSubjectSchema = z.object({
     { message: 'At least one field to update is required' },
 );
 
-const classRecordQuerySchema = z.object({
+const classSectionRecordQuerySchema = z.object({
     courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
-    classSectionsId: z.coerce.number().int().positive().optional(),
-    classSectionId: z.coerce.number().int().positive().optional(),
-    semesterId: z.coerce.number().int().positive().optional(),
-    acedmicYearId: z.coerce.number().int().positive().optional(),
-}).refine(
-    (query) => query.classSectionsId != null || query.classSectionId != null,
-    { message: 'classSectionsId is required' },
-);
+    classSectionTermId: z.coerce.number({ required_error: 'classSectionTermId is required' }).int().positive(),
+});
+
+const addClassSectionsSchema = z.object({
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    sections: z.array(z.object({
+        sectionId: positiveIntegerId,
+        section: z.string().min(1, 'section is required'),
+        year: z.coerce.number().int().positive('year must be a positive integer'),
+    })).min(1, 'sections array is required'),
+}).strict();
 
 const router = Router();
 
@@ -112,30 +120,20 @@ router.post('/subject', userAuth, validate({ body: addSubjectSchema }), addSubje
 
 router.patch('/subject/update', userAuth, validate({ body: updateSubjectSchema }), updateSubject);
 
-router.post('/class', userAuth, addClass);
-
-router.get('/class', userAuth, getClass);
-
-router.get('/classSpecific', userAuth, getClassSpecific);
-
-router.post('/classSubjectMapper', userAuth, addClassSubjectMapper);
-
-router.get('/classSubjectMapper', userAuth, getClassSubjectMapper);
-
-router.post('/semester', userAuth, addSemester);
-
-router.get('/semester', userAuth, getSemester);
-
-router.post('/createClass', userAuth, createClass);
+// Section master (class table removed)
+router.post('/classSections', userAuth, validate({ body: addClassSectionsSchema }), addClassSections);
+router.get('/classSections', userAuth, getClassSections);
+router.get('/classSectionSpecific', userAuth, getClassSectionSpecific);
+router.post('/sectionSubjectMapper', userAuth, addSectionSubjectMapper);
+router.get('/sectionSubjectMapper', userAuth, getSectionSubjectMapper);
+router.get(
+    '/classSectionRecord',
+    userAuth,
+    validate({ query: classSectionRecordQuerySchema }),
+    getClassSectionRecord,
+);
 
 router.post('/subjectExcel', userAuth, subjectExcel);
-
-router.get(
-    '/classRecord',
-    userAuth,
-    validate({ query: classRecordQuerySchema }),
-    getClassRecord,
-);
 
 router.get("/monthly-income", getMonthlyIncome);
 

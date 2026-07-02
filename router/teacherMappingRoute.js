@@ -23,7 +23,6 @@ const positiveIntegerId = z.coerce
 const getTeacherSectionQuerySchema = z.object({
     employeeId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
-    acedmicYearId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
     page: z.coerce
         .number()
@@ -44,7 +43,6 @@ const getTeacherSubjectQuerySchema = z.object({
     employeeId: positiveIntegerId.optional(),
     subjectId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
-    acedmicYearId: positiveIntegerId.optional(),
     search: z.string().trim().optional(),
     page: z.coerce
         .number()
@@ -73,7 +71,6 @@ const createTeacherSubjectSchema = z.object({
     subjectId: idOrNonEmptyIdArray,
     instituteId: positiveIntegerId.optional(),
     campusId: positiveIntegerId.optional(),
-    acedmicYearId: positiveIntegerId.optional(),
 });
 
 const createTeacherSectionSchema = z.object({
@@ -90,7 +87,6 @@ const teacherSubjectMappingItemSchema = z.object({
 const updateTeacherSubjectSchema = z.object({
     data: z.array(teacherSubjectMappingItemSchema).min(1, 'data must be a non-empty array'),
     instituteId: positiveIntegerId.optional(),
-    acedmicYearId: positiveIntegerId.optional(),
 });
 
 const updateTeacherSectionSchema = z.object({

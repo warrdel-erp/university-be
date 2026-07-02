@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import classSection from "./classSectionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import users from "./userModel.js";
 
 const studentClassSectionsHistoryModel = sequelize.define(
@@ -20,6 +21,15 @@ const studentClassSectionsHistoryModel = sequelize.define(
             references: {
                 model: classSection,
                 key: 'class_sections_id'
+            }
+        },
+        classSectionTermId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTermModel,
+                key: 'class_section_term_id'
             }
         },
         studentId: {

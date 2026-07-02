@@ -16,10 +16,10 @@ export async function addFeeType(req, res) {
 }
 
 export async function getAllFeeType(req, res) {
-  const { acedmicYearId } = req.query;
+  const { academicYearId } = req.query;
   try {
     const FeeType = await feeTypeCreation.getFeeTypeDetails(
-      acedmicYearId ? { acedmicYearId } : {}
+      academicYearId ? { academicYearId } : {}
     );
     res.status(200).json(FeeType);
   } catch (error) {

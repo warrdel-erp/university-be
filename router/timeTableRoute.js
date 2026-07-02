@@ -18,19 +18,16 @@ const optionalPositiveId = z.preprocess(
 
 const getTimeTableQuerySchema = z.object({
     courseId: optionalPositiveId,
-    acedmicYearId: optionalPositiveId,
 });
 
 const getAllTimeTableNameQuerySchema = z.object({
     courseId: optionalPositiveId,
     sessionId: optionalPositiveId,
-    acedmicYearId: optionalPositiveId,
 });
 
 const getSingleTimeTableQuerySchema = z.object({
     courseId: optionalPositiveId,
     sessionId: optionalPositiveId,
-    acedmicYearId: optionalPositiveId,
 });
 
 const addTimeTableSchema = z.object({
@@ -42,7 +39,6 @@ const addTimeTableSchema = z.object({
     type: z.enum(['Automatic', 'Manual']).optional(),
     courseId: optionalPositiveId,
     sessionId: optionalPositiveId,
-    acedmicYearId: optionalPositiveId,
     weekOff: z.array(z.string()).optional(),
     isCourse: z.boolean().optional(),
 });

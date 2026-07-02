@@ -33,7 +33,7 @@ const specializationModel = sequelize.define(
                 key: 'university_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

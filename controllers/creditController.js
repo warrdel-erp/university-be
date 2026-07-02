@@ -1,25 +1,17 @@
 import * as creditService from '../services/creditServices.js';
-import { getTenantStore } from '../utility/requestContext.js';
 
 export async function addCredit(req, res) {
   const { credits } = req.body;
 
   const createdBy = req.user.userId;
   const updatedBy = req.user.userId;
-  const { universityId, instituteId } = getTenantStore();
 
   try {
     if (!Array.isArray(credits) || credits.length === 0) {
       return res.status(400).send('credits array is required');
     }
 
-    const enrichedCredits = credits.map((item) => ({
-      ...item,
-      universityId,
-      instituteId,
-    }));
-
-    const result = await creditService.addCredit(enrichedCredits, createdBy, updatedBy);
+    const result = await creditService.addCredit(credits, createdBy, updatedBy);
 
     res.status(201).json({
       message: 'Credits added successfully',

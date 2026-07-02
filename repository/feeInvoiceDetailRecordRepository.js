@@ -121,7 +121,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
             {
               model: model.classSectionModel,
               as: "studentSectionDetail",
-              attributes: ["section", "classSectionsId", "class"],
+              attributes: ["section", "classSectionsId", "year"],
             },
           ],
         },

@@ -5,7 +5,7 @@ import * as electiveSubjectRepository from '../repository/electiveSubjectReposit
 import * as sessionRepository from '../repository/sessionRepository.js';
 import * as model from '../models/index.js';
 import sequelize from '../database/sequelizeConfig.js';
-import { requestContext } from '../utility/requestContext.js';
+import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
 import moment from 'moment';
 import { parseCustomDate } from '../utility/dateFormat.js';
 
@@ -73,7 +73,7 @@ const copyExcludeMeta = [...copyExclude, 'createdBy', 'updatedBy'];
 
 async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
     const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
-    const { universityId, instituteId } = requestContext.getStore() ?? {};
+    const { universityId, instituteId } = getTenantStore();
 
     if (!universityId || !instituteId) {
         throw badRequest('Active university and institute are required');
@@ -89,12 +89,12 @@ async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
 
     const forInstitute = await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
     if (forInstitute) {
-        const acedmicYearId = forInstitute.acedmicYearId ?? forInstitute.dataValues?.acedmicYearId;
-        const updated = await acedmicYearCreationService.updateacedmicYear(acedmicYearId, activatePayload, options);
+        const academicYearId = forInstitute.academicYearId ?? forInstitute.dataValues?.academicYearId;
+        const updated = await acedmicYearCreationService.updateacedmicYear(academicYearId, activatePayload, options);
         if (!updated) {
             throw badRequest('Failed to update academic year');
         }
-        const record = await acedmicYearCreationService.getSingleacedmicYearDetails(acedmicYearId, options);
+        const record = await acedmicYearCreationService.getSingleacedmicYearDetails(academicYearId, options);
         if (!record) {
             throw badRequest('Academic year not found after update');
         }
@@ -106,9 +106,9 @@ async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
         universityId,
     );
     if (withoutInstitute) {
-        const acedmicYearId = withoutInstitute.acedmicYearId ?? withoutInstitute.dataValues?.acedmicYearId;
+        const academicYearId = withoutInstitute.academicYearId ?? withoutInstitute.dataValues?.academicYearId;
         const claimed = await acedmicYearCreationService.claimUniversityAcedmicYear(
-            acedmicYearId,
+            academicYearId,
             universityId,
             { ...activatePayload, instituteId },
             options,
@@ -127,7 +127,7 @@ async function upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
 /** Always create a new year for active university + institute (scoped create). */
 async function createAndActivateAcedmicYear(acedmicYearData, updatedBy, options = {}) {
     const { yearTitle, startingDate, endingDate } = resolveAcademicYearFields(acedmicYearData);
-    const { universityId, instituteId } = requestContext.getStore() ?? {};
+    const { universityId, instituteId } = getTenantStore();
 
     if (!universityId || !instituteId) {
         throw badRequest('Active university and institute are required');
@@ -142,72 +142,72 @@ async function createAndActivateAcedmicYear(acedmicYearData, updatedBy, options 
     }, options);
 }
 
-async function getAcedmicYearById(acedmicYearId, options = {}) {
+async function getAcedmicYearById(academicYearId, options = {}) {
     return model.acedmicYearModel.findOne({
         attributes: yearListAttributes,
-        where: { acedmicYearId: Number(acedmicYearId) },
+        where: { academicYearId: Number(academicYearId) },
         ...options,
     });
 }
 
-async function findRowsByAcedmicYearId(sequelizeModel, sourceAcedmicYearId, attributes, options = {}) {
+async function findRowsByacademicYearId(sequelizeModel, sourceacademicYearId, attributes, options = {}) {
     return sequelizeModel.findAll({
         ...options,
         attributes,
-        where: { acedmicYearId: Number(sourceAcedmicYearId) },
+        where: { academicYearId: Number(sourceacademicYearId) },
     });
 }
 
-function cloneRowForYear(row, pkField, acedmicYearId, updatedBy, withAudit = false) {
+function cloneRowForYear(row, pkField, academicYearId, updatedBy, withAudit = false) {
     const { [pkField]: _pk, createdAt, updatedAt, deletedAt, ...rest } = row.get({ plain: true });
     return withAudit
-        ? { ...rest, acedmicYearId, createdBy: updatedBy, updatedBy }
-        : { ...rest, acedmicYearId };
+        ? { ...rest, academicYearId, createdBy: updatedBy, updatedBy }
+        : { ...rest, academicYearId };
 }
 
-async function copyYearData(copyAcedmicYearId, copyData, acedmicYearId, updatedBy, options) {
+async function copyYearData(copyacademicYearId, copyData, academicYearId, updatedBy, options) {
     for (const dataType of copyData) {
         switch (dataType) {
             case 'subject': {
-                const subjects = await findRowsByAcedmicYearId(
+                const subjects = await findRowsByacademicYearId(
                     model.subjectModel,
-                    copyAcedmicYearId,
+                    copyacademicYearId,
                     { exclude: copyExclude },
                     options,
                 );
                 if (subjects.length) {
                     await mainRepository.subjectBulkCreate(
-                        subjects.map((row) => cloneRowForYear(row, 'subjectId', acedmicYearId)),
+                        subjects.map((row) => cloneRowForYear(row, 'subjectId', academicYearId)),
                         options,
                     );
                 }
                 break;
             }
             case 'electiveSubject': {
-                const electives = await findRowsByAcedmicYearId(
+                const electives = await findRowsByacademicYearId(
                     model.electiveSubjectModel,
-                    copyAcedmicYearId,
+                    copyacademicYearId,
                     { exclude: copyExcludeMeta },
                     options,
                 );
                 if (electives.length) {
                     await electiveSubjectRepository.addBulkElectiveSubject(
-                        electives.map((row) => cloneRowForYear(row, 'electiveSubjectId', acedmicYearId, updatedBy, true)),
+                        electives.map((row) => cloneRowForYear(row, 'electiveSubjectId', academicYearId, updatedBy, true)),
                         options,
                     );
                 }
                 break;
             }
             case 'session': {
-                const sessions = await findRowsByAcedmicYearId(
+                const sessions = await findRowsByacademicYearId(
                     model.sessionModel,
-                    copyAcedmicYearId,
+                    copyacademicYearId,
                     { exclude: copyExcludeMeta },
                     options,
                 );
                 if (sessions.length) {
                     await sessionRepository.addBulkSession(
-                        sessions.map((row) => cloneRowForYear(row, 'sessionId', acedmicYearId, updatedBy, true)),
+                        sessions.map((row) => cloneRowForYear(row, 'sessionId', academicYearId, updatedBy, true)),
                         options,
                     );
                 }
@@ -232,8 +232,8 @@ export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
     return await acedmicYearCreationService.getSingleacedmicYearDetailsByTitle(yearTitle);
 }
 
-export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedBy) {
-    const resolvedId = acedmicYearId ?? requestContext.getStore()?.academicYearId;
+export async function updateacedmicYear(academicYearId, acedmicYearData, updatedBy) {
+    const resolvedId = academicYearId ?? getAcademicYearId();
     if (!resolvedId) {
         const error = new Error('Active academic year is required');
         error.statusCode = 400;
@@ -243,7 +243,7 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedB
     const {
         instituteId: _instituteId,
         universityId: _universityId,
-        acedmicYearId: _id,
+        academicYearId: _id,
         isActive: _isActive,
         ...updateData
     } = acedmicYearData;
@@ -258,12 +258,12 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData, updatedB
     return await acedmicYearCreationService.updateacedmicYear(resolvedId, updateData);
 }
 
-export async function deleteacedmicYear(acedmicYearId) {
-    return await acedmicYearCreationService.deleteacedmicYear(acedmicYearId);
+export async function deleteacedmicYear(academicYearId) {
+    return await acedmicYearCreationService.deleteacedmicYear(academicYearId);
 }
 
 export async function getActiveAcedmicYearByInstitute() {
-    const { universityId, instituteId } = requestContext.getStore() ?? {};
+    const { universityId, instituteId } = getTenantStore();
     if (!instituteId) {
         throw new Error('Active institute is required');
     }
@@ -289,26 +289,26 @@ export async function getActiveAcedmicYearListByInstituteId(instituteId) {
 }
 
 export async function newActivateAndCopyData(data, updatedBy) {
-    const { copyAcedmicYearId, copyData, ...activateData } = data;
+    const { copyacademicYearId, copyData, ...activateData } = data;
 
     return sequelize.transaction(async (transaction) => {
         const options = { transaction };
 
         const created = await createAndActivateAcedmicYear(activateData, updatedBy, options);
-        const acedmicYearId = created.acedmicYearId ?? created.dataValues?.acedmicYearId;
+        const academicYearId = created.academicYearId ?? created.dataValues?.academicYearId;
 
-        if (copyAcedmicYearId == null || !Array.isArray(copyData) || copyData.length === 0) {
+        if (copyacademicYearId == null || !Array.isArray(copyData) || copyData.length === 0) {
             return created;
         }
 
-        const sourceYear = await getAcedmicYearById(copyAcedmicYearId, options);
+        const sourceYear = await getAcedmicYearById(copyacademicYearId, options);
         if (!sourceYear) {
-            const error = new Error(`Source academic year ${copyAcedmicYearId} not found`);
+            const error = new Error(`Source academic year ${copyacademicYearId} not found`);
             error.statusCode = 404;
             throw error;
         }
 
-        await copyYearData(copyAcedmicYearId, copyData, acedmicYearId, updatedBy, options);
+        await copyYearData(copyacademicYearId, copyData, academicYearId, updatedBy, options);
         return created;
     });
 }

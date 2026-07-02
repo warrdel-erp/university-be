@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Keep the code simple and explicit. Avoid excessive normalization, functional programming, and unnecessary abstractions. Minimize the use of map(), filter(), reduce(), flatMap(), chained array operations, and nested callbacks. Prefer straightforward for...of loops, clear if/else statements, and intermediate variables when they improve readability. Optimize only when there is a measurable benefit, not for brevity.

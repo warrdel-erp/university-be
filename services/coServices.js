@@ -24,14 +24,14 @@ export async function deleteCo(coId) {
 }
 
 export async function addCoWeightage(coData, createdBy, updatedBy) {
-    const { acedmicYearId, coId, term, total, data } = coData;
+    const { academicYearId, coId, term, total, data } = coData;
 
     if (!Array.isArray(data)) {
         throw new Error("Invalid 'data' format. Expected an array.");
     }
 
     const entries = data.map((item) => ({
-        acedmicYearId,
+        academicYearId,
         coId,
         term,
         total,
@@ -53,7 +53,7 @@ export async function getSingleCoDetailsWeightage(coWeightageId) {
 }
 
 export async function updateCoWeightage(coData, updatedBy) {
-    const { acedmicYearId, coId, term, total, data } = coData;
+    const { academicYearId, coId, term, total, data } = coData;
 
     if (!Array.isArray(data)) {
         throw new Error("Invalid 'data' format. Expected an array.");
@@ -67,7 +67,7 @@ export async function updateCoWeightage(coData, updatedBy) {
         }
 
         const updatePayload = {
-            acedmicYearId,
+            academicYearId,
             coId,
             term,
             total,

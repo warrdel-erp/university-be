@@ -43,7 +43,7 @@ const feePlanModel = sequelize.define(
                 key: 'course_id'
             }
         }, 
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

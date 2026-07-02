@@ -53,7 +53,7 @@ const subjectModel = sequelize.define(
                 key: 'specialization_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
@@ -86,10 +86,7 @@ const subjectModel = sequelize.define(
             allowNull: false,
             enum: SUBJECT_TYPES,
             field: 'subject_type'
-        },
-
-          
-         
+        }, 
         shortName: {
             type: DataTypes.STRING,
             allowNull: true,

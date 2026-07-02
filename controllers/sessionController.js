@@ -1,11 +1,16 @@
 import * as sessionCreation from "../services/sesssionServices.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addSession(req, res) {
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
     try {
-        const session = await sessionCreation.addSession(req.body, createdBy, updatedBy);
+        const session = await sessionCreation.addSession(
+            { ...req.body, academicYearId: getAcademicYearId() },
+            createdBy,
+            updatedBy,
+        );
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -35,7 +35,7 @@ export async function getAllSubjects(filter = {}) {
     const {
       universityId: _u,
       instituteId: _i,
-      acedmicYearId: _y,
+      academicYearId: _y,
       ...subjectFilter
     } = filter;
 

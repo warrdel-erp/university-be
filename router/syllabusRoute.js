@@ -11,7 +11,7 @@ import {
   syllabusUnitGet,
   updateSyllabusUnit,
   deleteSyllabusUnit,
-  semesterAllSubject,
+  termAllSubject,
 } from '../controllers/syllabusController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
@@ -27,9 +27,8 @@ const syllabusUnitSlabSchema = z.object({
 
 const addSyllabusUnitSchema = z.object({
   subjectId: z.coerce.number({ required_error: 'subjectId is required' }).int().positive(),
-  acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
   sessionId: z.coerce.number({ required_error: 'sessionId is required' }).int().positive(),
-  semesterId: z.coerce.number().int().positive().optional().nullable(),
+  term: z.coerce.number().int().positive().optional().nullable(),
   slab: z.array(syllabusUnitSlabSchema).min(1, 'At least one unit is required'),
 });
 
@@ -43,7 +42,6 @@ const updateSyllabusUnitSchema = z
       .number({ required_error: 'syllabusUnitId is required' })
       .int()
       .positive(),
-    acedmicYearId: z.coerce.number({ required_error: 'acedmicYearId is required' }).int().positive(),
     unitNumber: z.coerce.number().int().positive().optional(),
     name: z.string().min(1).optional(),
     description: z.string().optional().nullable(),
@@ -90,6 +88,16 @@ router.delete(
   deleteSyllabusUnit
 );
 
-router.get('/semesterSubject', userAuth, semesterAllSubject);
+const termSubjectQuerySchema = z.object({
+  courseId: z.coerce.number({ required_error: 'courseId is required' }).int().positive(),
+  term: z.coerce.number({ required_error: 'term is required' }).int().positive(),
+});
+
+router.get(
+  '/semesterSubject',
+  userAuth,
+  validate({ query: termSubjectQuerySchema }),
+  termAllSubject,
+);
 
 export default router;

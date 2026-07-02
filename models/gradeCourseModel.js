@@ -24,7 +24,7 @@ const gradeCourseModel = sequelize.define(
            key: "grade_id"
          }
     },
-    acedmicYearId: {
+    academicYearId: {
          type: DataTypes.INTEGER,
          allowNull: false,
          field: "acedmic_year_id",

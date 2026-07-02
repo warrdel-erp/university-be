@@ -11,6 +11,7 @@ import * as userRoleRepository from "../repository/userRoleRepository.js";
 import {
   requestContext,
   buildRequestContextStore,
+  getTenantStore,
 } from "../utility/requestContext.js";
 
 // register
@@ -368,7 +369,7 @@ export const saveUserDefaults = async (req, res) => {
 
     const result = await userService.saveUserDefaults(userId, req.body);
 
-    const currentStore = requestContext.getStore();
+    const currentStore = getTenantStore();
     requestContext.enterWith(
       await buildRequestContextStore({
         userId,

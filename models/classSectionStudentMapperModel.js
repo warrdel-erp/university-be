@@ -3,8 +3,8 @@ import { DataTypes } from 'sequelize';
 import student from "./studentModel.js";
 import users from "./userModel.js";
 import acedmicYear from "./acedmicYearModel.js";
-import semesterModel from "./semesterModel.js";
 import sessionModel from "./sessionModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 
 const classSectionStudentMapperModel = sequelize.define(
     'class_student_mapper',
@@ -24,13 +24,13 @@ const classSectionStudentMapperModel = sequelize.define(
                 key: 'student_id'
             }
         },
-        semesterId: {
+        classSectionTermId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
+            allowNull: true,
+            field: 'class_section_term_id',
             references: {
-                model: semesterModel,
-                key: 'semester_id'
+                model: classSectionTermModel,
+                key: 'class_section_term_id'
             }
         },
         sessionId: {
@@ -42,7 +42,7 @@ const classSectionStudentMapperModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',
@@ -78,15 +78,6 @@ const classSectionStudentMapperModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,

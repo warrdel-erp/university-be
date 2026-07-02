@@ -1,7 +1,7 @@
 import * as studentService from '../services/studentService.js'
 import * as fileHandler from '../utility/fileHandler.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 export const addStudentWithFeePlanProfile = async (req, res) => {
     try {
         const result = await studentService.addStudentWithFeePlanProfile({
@@ -55,9 +55,8 @@ export const getSingleStudentDetail = async (req, res) => {
 export const importStudentData = async (req, res) => {
     try {
         const { campusId, instituteId, affiliatedUniversityId, sessionId } = req.body;
-        const universityId = getTenantStore().universityId;
         const createdBy = req.user.userId;
-        const data = { ...req.body, universityId, createdBy };
+        const data = { ...req.body, createdBy };
 
         if (!(campusId && instituteId && affiliatedUniversityId && sessionId)) {
             return res.status(400).send('campusId, instituteId, affiliatedUniversityId, and sessionId are required');
@@ -98,7 +97,6 @@ export const updateStudentDetails = async (req, res) => {
             studentId,
             info,
             file,
-            getTenantStore().instituteId,
             req.user.userId,
         );
         return SuccessResponse(res, 200, "Student updated successfully", result);
@@ -124,9 +122,8 @@ export const deleteStudentDetail = async (req, res) => {
 };
 
 export const getEmptyEnrollNumber = async (req, res) => {
-    const { acedmicYearId } = req.query;
     try {
-        const result = await studentService.getEmptyEnrollNumber(acedmicYearId);
+        const result = await studentService.getEmptyEnrollNumber(getAcademicYearId());
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting EMpty Enroll Number:`, error);
@@ -135,52 +132,54 @@ export const getEmptyEnrollNumber = async (req, res) => {
 };
 
 export const studentCourseMapping = async (req, res) => {
-    let { subjectId, studentId, courseId, semesterId } = req.body;
-    const data = req.body
+    const { subjectId, studentId, courseId, classSectionTermId } = req.body;
+    const data = req.body;
     try {
-        // required fields
-        if (!(subjectId && studentId && courseId && semesterId)) {
-            return res.status(400).send(" subjectId, studentId, courseId, semesterId is required");
+        if (!(subjectId && studentId && courseId)) {
+            return res.status(400).send("subjectId, studentId, courseId is required");
         }
 
-        // Add the student course mapping
-        const info = req.body;
+        if (classSectionTermId != null) {
+            data.classSectionTermId = Number(classSectionTermId);
+        }
+
         const result = await studentService.studentCourseMapping(data);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in student course mapping:", error);
+        if (error.message === 'classSectionTermId could not be resolved') {
+            return res.status(400).send(error.message);
+        }
         return res.status(500).send("Internal Server Error");
     }
 };
 
-export const classStudentMapping = async (req, res) => {
-    let { studentId, classSectionId } = req.body;
-    const data = req.body
+export const sectionStudentMapping = async (req, res) => {
+    const { studentId, classSectionTermId } = req.body;
+    const data = req.body;
     const createdBy = req.user.userId;
     try {
-        //  required fields
-        if (!(studentId && classSectionId)) {
-            return res.status(400).send(" studentId, classSectionId is required");
+        if (!(studentId && classSectionTermId)) {
+            return res.status(400).send("studentId and classSectionTermId are required");
         }
 
-        const info = req.body;
-        const result = await studentService.classStudentMapping(data, createdBy);
+        const result = await studentService.sectionStudentMapping(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in class Student Mapping:", error);
+        console.error("Error in section student mapping:", error);
         return res.status(error.statusCode || 500).json({ error: error.message || "Internal Server Error" });
     }
 };
 
-export const getclassStudentMapping = async (req, res) => {
-    const semesterId = req.query.semesterId || 0;
-    const acedmicYearId = req.query.acedmicYearId;
+export const getSectionStudentMapping = async (req, res) => {
+    const classSectionTermId = req.query.classSectionTermId ?? 0;
+    const term = req.query.term != null ? Number(req.query.term) : undefined;
 
     try {
-        const result = await studentService.getclassStudentMapping(semesterId, acedmicYearId);
+        const result = await studentService.getSectionStudentMapping(classSectionTermId, undefined, term);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class Student Mapping:", error);
+        console.error("Error in getting section student mapping:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
@@ -209,15 +208,14 @@ export const promoteStudent = async (req, res) => {
 
     try {
         const promoteOne = async (payload) => {
-            const classSectionsId = payload.classSectionsId ?? payload.classSectionId;
-            if (!(payload.studentId && classSectionsId)) {
+            if (!(payload.studentId && payload.classSectionTermId)) {
                 const error = new Error(
-                    "studentId and classSectionsId are required for all students.",
+                    "studentId and classSectionTermId are required for all students.",
                 );
                 error.statusCode = 400;
                 throw error;
             }
-            return studentService.promoteStudent({ ...payload, classSectionsId, createdBy });
+            return studentService.promoteStudent({ ...payload, createdBy });
         };
 
         if (Array.isArray(data)) {
@@ -239,33 +237,21 @@ export const promoteStudent = async (req, res) => {
     }
 };
 
-export const getPromotionAvailableClassSection = async (req, res) => {
+export const getPromotionAvailableSection = async (req, res) => {
     try {
-        const { courseId, term, classSectionId } = req.query;
+        const { courseId, term, classSectionTermId } = req.query;
 
-        const data = await studentService.getAvailablePromotionClassSections({
+        const data = await studentService.getAvailablePromotionSections({
             courseId,
             term,
-            classSectionId,
+            classSectionTermId,
         });
 
-        if (data.finalTerm) {
-            return SuccessResponse(res, 200, "Final term reached", {
-                promotedTerm: data.promotedTerm,
-                acedmicYearId: data.acedmicYearId,
-                crossYear: data.crossYear,
-                classSections: data.classSections,
-            });
-        }
+        const message = data.finalTerm
+            ? "Final term reached"
+            : "Promotion class sections fetched successfully";
 
-        return SuccessResponse(res, 200, "Promotion class sections fetched successfully", {
-            promotedTerm: data.promotedTerm,
-            acedmicYearId: data.acedmicYearId,
-            crossYear: data.crossYear,
-            termsPerYear: data.termsPerYear,
-            totalTerms: data.totalTerms,
-            classSections: data.classSections,
-        });
+        return SuccessResponse(res, 200, message, data);
     } catch (error) {
         return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
     }
@@ -325,9 +311,13 @@ export const getFeePlanInitiate = async (req, res) => {
 };
 
 export const getEmptyFeeDetails = async (req, res) => {
-    const { acedmicYearId, courseId, sessionId } = req.query;
+    const { courseId, sessionId } = req.query;
     try {
-        const result = await studentService.getEmptyFeeDetails({ acedmicYearId, courseId, sessionId });
+        const result = await studentService.getEmptyFeeDetails({
+            academicYearId: getAcademicYearId(),
+            courseId,
+            sessionId,
+        });
         res.status(200).send(result);
     } catch (error) {
         console.error(`Error in getting empty fee details:`, error);
@@ -402,34 +392,29 @@ export const getStudentTimeTable = async (req, res) => {
 
 
 export async function getStudentsByClassSection(req, res) {
-
     try {
-
         const { timeTableMappingId, date } = req.query;
 
-        const students = await studentService.getStudentsByClassSection(
+        const result = await studentService.getStudentsByClassSection({
             timeTableMappingId,
-            undefined,
-            date
-        );
+            date,
+        });
+
+        const students = result.students ?? [];
 
         return res.status(200).json({
             success: true,
             count: students.length,
-            data: students
+            data: result,
         });
-
     } catch (error) {
-
         console.error("Controller Error:", error);
 
-        return res.status(500).json({
+        return res.status(error.statusCode || 500).json({
             success: false,
-            message: error.message
+            message: error.message,
         });
-
     }
-
 }
 
 

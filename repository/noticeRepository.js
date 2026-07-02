@@ -10,7 +10,6 @@ const stripTenantFields = (data = {}) => {
     noticeId,
     instituteId,
     universityId,
-    acedmicYearId,
     academicYearId,
     campusId,
     ...rest

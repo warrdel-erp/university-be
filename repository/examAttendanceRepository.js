@@ -26,10 +26,10 @@ export async function createExamAttendance(data) {
     return await scoped(model.examAttendanceModel).create(data);
 }
 
-export async function getAllExamAttendance(acedmicYearId) {
+export async function getAllExamAttendance(academicYearId) {
     const studentWhere = {
         ...buildScope(model.studentModel),
-        ...(acedmicYearId && { acedmicYearId }),
+        ...(academicYearId && { academicYearId }),
     };
 
     return await scoped(model.examAttendanceModel).findAll({

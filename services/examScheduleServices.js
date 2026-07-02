@@ -8,7 +8,7 @@ export async function getExamSchedules(filters) {
         const sessions = [...new Set(result.map(r => r.sessionId))];
         const courses = [...new Set(result.map(r => r.examSetupTypeTerm?.courseId).filter(Boolean))];
         const terms = [...new Set(result.map(r => r.examSetupTypeTerm?.term).filter(Boolean))];
-        const acedmicYears = [...new Set(result.map(r => r.acedmicYearId))];
+        const acedmicYears = [...new Set(result.map(r => r.academicYearId))];
 
         if (sessions.length > 0 && courses.length > 0 && terms.length > 0) {
             const counts = await examScheduleRepository.getStudentCountsByGroups(sessions, courses, terms, acedmicYears);
@@ -17,13 +17,13 @@ export async function getExamSchedules(filters) {
                 const term = schedule.examSetupTypeTerm?.term;
                 const courseId = schedule.examSetupTypeTerm?.courseId;
                 const sessionId = schedule.sessionId;
-                const acedmicYearId = schedule.acedmicYearId;
+                const academicYearId = schedule.academicYearId;
 
                 const countObj = counts.find(c =>
                     c.sessionId === sessionId &&
                     c.term === term &&
                     c.courseId === courseId &&
-                    c.acedmicYearId === acedmicYearId
+                    c.academicYearId === academicYearId
                 );
                 schedule.setDataValue('studentCount', countObj ? parseInt(countObj.studentCount) : 0);
             });
@@ -48,10 +48,10 @@ export async function getExamScheduleById(examScheduleId) {
         const term = result.examSetupTypeTerm?.term;
         const courseId = result.examSetupTypeTerm?.courseId;
         const sessionId = result.sessionId;
-        const acedmicYearId = result.acedmicYearId;
+        const academicYearId = result.academicYearId;
 
         if (term && courseId && sessionId) {
-            const count = await examScheduleRepository.getStudentCountByGroup(sessionId, courseId, term, acedmicYearId);
+            const count = await examScheduleRepository.getStudentCountByGroup(sessionId, courseId, term, academicYearId);
             result.setDataValue('studentCount', count);
         } else {
             result.setDataValue('studentCount', 0);
@@ -106,14 +106,14 @@ async function allocateSeatsByStrategy(examScheduleId, userId, strategy = "rando
         const term = schedule.examSetupTypeTerm?.term;
         const courseId = schedule.examSetupTypeTerm?.courseId;
         const sessionId = schedule.sessionId;
-        const acedmicYearId = schedule.acedmicYearId;
+        const academicYearId = schedule.academicYearId;
 
         if (!term || !courseId || !sessionId) {
             throw new Error("Incomplete schedule details for seat allocation");
         }
 
         // 1. Get students
-        const students = await examScheduleRepository.getStudentsForSchedule(sessionId, courseId, term, acedmicYearId);
+        const students = await examScheduleRepository.getStudentsForSchedule(sessionId, courseId, term, academicYearId);
         if (students.length === 0) {
             throw new Error("No students found for this schedule");
         }

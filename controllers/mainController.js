@@ -1,6 +1,6 @@
 import * as mainServices from '../services/mainServices.js';
 import * as fileHandler from '../utility/fileHandler.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAllCollegesAndCourses = async (req, res) => {
     try {
@@ -98,11 +98,12 @@ export const changeCourseStatus = async (req, res) => {
 
 export const addSpecialization = async (req, res) => {
     try {
-        const { course_Id, acedmicYearId } = req.body;
+        const { course_Id } = req.body;
         const createdBy = req.user.userId;
         const data = req.body
-        if (!(getTenantStore().universityId && course_Id && acedmicYearId && getTenantStore().instituteId)) {
-            return res.status(400).send('University Id,instituteId, course Id and acedmicYearId is required')
+        const academicYearId = getAcademicYearId();
+        if (!(getTenantStore().universityId && course_Id && academicYearId && getTenantStore().instituteId)) {
+            return res.status(400).send('University Id,instituteId, course Id and academicYearId is required')
         }
         const result = await mainServices.addSpecialization(data, createdBy);
         return res.status(200).send(result);
@@ -138,127 +139,79 @@ export const updateSubject = async (req, res) => {
     }
 };
 
-export const addClass = async (req, res) => {
+export const addClassSections = async (req, res) => {
     try {
         if (!req.body?.courseId) {
             return res.status(400).send('course Id is required');
         }
-        const result = await mainServices.addClass(req.body, req.user.userId);
+        const result = await mainServices.addClassSections(req.body, req.user.userId);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in  Add Class:", error);
+        console.error("Error in add class sections:", error);
         const message = error.message || 'Internal Server Error';
         return res.status(/required|found|Active institute/.test(message) ? 400 : 500).send(message);
     }
 };
 
-export const getClass = async (req, res) => {
+export const getClassSections = async (req, res) => {
     try {
         const rawClassSectionId = req.query.classSectionId ?? req.query.classSectionsId;
         const classSectionId =
             rawClassSectionId != null && rawClassSectionId !== ''
                 ? Number(rawClassSectionId)
                 : 0;
-        const acedmicYearId = req.query.acedmicYearId
-            ? Number(req.query.acedmicYearId)
-            : undefined;
-        const result = await mainServices.getClassDetails(classSectionId, acedmicYearId);
+        const result = await mainServices.getClassSectionDetails(classSectionId);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class Section Details:", error);
+        console.error("Error in getting class section details:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
 
-export const getClassSpecific = async (req, res) => {
+export const getClassSectionSpecific = async (req, res) => {
     try {
-        const { campusId, instituteId, acedmicYearId, courseId, sessionId } = req.query
-        const result = await mainServices.getClassSpecific(campusId, instituteId, acedmicYearId, courseId, sessionId);
+        const { campusId, courseId, sessionId } = req.query
+        const result = await mainServices.getClassSectionSpecific(campusId, undefined, undefined, courseId, sessionId);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class specific Details:", error);
+        console.error("Error in getting class section specific details:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
 
-export const addClassSubjectMapper = async (req, res) => {
+export const addSectionSubjectMapper = async (req, res) => {
     try {
         const createdBy = req.user.userId;
         const data = req.body;
         if (!getTenantStore().instituteId) {
             return res.status(400).send('instituteId is required')
         }
-        const result = await mainServices.addClassSubjectMapper(data, createdBy);
+        const result = await mainServices.addSectionSubjectMapper(data, createdBy);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in  Add semester Subject Mapper:", error);
+        console.error("Error in add section subject mapper:", error);
         return res.status(500).send("Internal Server Error");
     }
 };
 
-export const getClassSubjectMapper = async (req, res) => {
+export const getSectionSubjectMapper = async (req, res) => {
     try {
-        const semesterId = req.query.semesterId ? Number(req.query.semesterId) : undefined;
-        const acedmicYearId = req.query.acedmicYearId ? Number(req.query.acedmicYearId) : undefined;
-        const result = await mainServices.getClassSubjectMapper(semesterId, acedmicYearId);
+        const term = req.query.term ? Number(req.query.term) : undefined;
+        const result = await mainServices.getSectionSubjectMapper(term);
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class Section Details:", error);
+        console.error("Error in getting section subject mapper:", error);
         return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const addSemester = async (req, res) => {
-    try {
-        const { courseId, acedmicYearId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body
-        if (!(getTenantStore().universityId && courseId && acedmicYearId && getTenantStore().instituteId)) {
-            return res.status(400).send('universityId,instituteId,acedmicYearId and courseId is required')
-        }
-        const result = await mainServices.addSemester(data, createdBy);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in  Add semester:", error);
-        return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const getSemester = async (req, res) => {
-    try {
-        const courseId = req.query.courseId || 0;
-        const acedmicYearId = req.query.acedmicYearId
-        const specializationId = req.query.specializationId;
-        const result = await mainServices.getSemester(courseId, specializationId, acedmicYearId);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in getting semester:", error);
-        return res.status(500).send("Internal Server Error");
-    }
-};
-
-export const createClass = async (req, res) => {
-    try {
-        const { acedmicYearId, courseId } = req.body;
-        const createdBy = req.user.userId;
-        const data = req.body
-        if (!(acedmicYearId && courseId && getTenantStore().instituteId)) {
-            return res.status(400).send('acedmicYearId ,instituteId and courseId is required')
-        }
-        const result = await mainServices.createClass(data, createdBy);
-        return res.status(200).send(result);
-    } catch (error) {
-        console.error("Error in  Add directly class:", error);
-        res.status(500).send("Internal Server Error");
     }
 };
 
 export const subjectExcel = async (req, res) => {
     try {
-        const { courseId, specializationId, acedmicYearId } = req.body;
+        const { courseId, specializationId } = req.body;
         const createdBy = req.user.userId;
-        if (!(courseId && getTenantStore().instituteId && acedmicYearId)) {
-            return res.status(400).send('acedmicYearId, courseId and instituteId is required')
+        const academicYearId = getAcademicYearId();
+        if (!(courseId && getTenantStore().instituteId && academicYearId)) {
+            return res.status(400).send('academicYearId, courseId and instituteId is required')
         }
         const excelFile = req.files?.subject;
         if (!excelFile) {
@@ -266,7 +219,7 @@ export const subjectExcel = async (req, res) => {
         }
 
         const excelData = fileHandler.readExcelFile(excelFile.data);
-        const result = await mainServices.subjectExcel(excelData, courseId, acedmicYearId, specializationId, createdBy);
+        const result = await mainServices.subjectExcel(excelData, courseId, academicYearId, specializationId, createdBy);
 
         res.status(200).send(result);
     } catch (error) {
@@ -277,16 +230,16 @@ export const subjectExcel = async (req, res) => {
     }
 };
 
-export const getClassRecord = async (req, res) => {
+export const getClassSectionRecord = async (req, res) => {
     try {
-        const { courseId, classSectionsId, classSectionId } = req.query;
-        const result = await mainServices.getClassRecord(
+        const { courseId, classSectionTermId } = req.query;
+        const result = await mainServices.getClassSectionRecord(
             courseId,
-            classSectionsId ?? classSectionId,
+            classSectionTermId,
         );
         return res.status(200).send(result);
     } catch (error) {
-        console.error("Error in getting class record Details:", error);
+        console.error("Error in getting class section record:", error);
         const statusCode = error.statusCode || 500;
         return res.status(statusCode).send(error.message || "Internal Server Error");
     }
@@ -304,12 +257,12 @@ export async function getMonthlyIncome(req, res) {
 
 export const getClassSectionsByFilter = async (req, res) => {
     try {
-        const { sessionId, courseId, acedmicYearId } = req.query;
+        const { sessionId, courseId } = req.query;
         if (!sessionId || !courseId) {
             return res.status(400).send("sessionId and courseId are required");
         }
 
-        const result = await mainServices.getClassSectionsByFilter(sessionId, courseId, acedmicYearId);
+        const result = await mainServices.getClassSectionsByFilter(sessionId, courseId);
         return res.status(200).send(result);
     } catch (error) {
         console.error("Error in getClassSectionsByFilter Details:", error);

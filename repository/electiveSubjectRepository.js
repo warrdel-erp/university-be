@@ -61,11 +61,11 @@ export async function getSingleElectiveSubjectDetails(electiveSubjectId) {
     }
 }
 
-export async function getSingleElectiveSubjectByAcedmicId(acedmicYearId) {
+export async function getSingleElectiveSubjectByAcedmicId(academicYearId) {
     try {
         return await scoped(model.electiveSubjectModel).findAll({
             attributes: { exclude: excludeMeta },
-            where: { acedmicYearId: parseInt(acedmicYearId, 10) },
+            where: { academicYearId: parseInt(academicYearId, 10) },
         });
     } catch (error) {
         console.error('Error fetching electiveSubject details by acedmic Id:', error);

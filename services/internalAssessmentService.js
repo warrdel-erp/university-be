@@ -1,7 +1,18 @@
 import * as InternalAssessmentRepository from "../repository/internalAssessmentRepository.js";
 import { uploadFile } from "../utility/awsServices.js";
+import { buildTermName } from "../utility/courseTerms.js";
+
+function normalizeAssessmentPayload(data) {
+    const payload = { ...data };
+    if (payload.term == null && payload.semesterId != null) {
+        payload.term = Number(payload.semesterId);
+    }
+    delete payload.semesterId;
+    return payload;
+}
 
 export async function addInternalAssessment(data,files) {
+    const payload = normalizeAssessmentPayload(data);
     if(files){
                 const uploadPromises = Object.keys(files).map(async key => {
                     const file = files[key];
@@ -12,7 +23,7 @@ export async function addInternalAssessment(data,files) {
               
                   await Promise.all(uploadPromises);
             }
-    return await InternalAssessmentRepository.addInternalAssessment(data);
+    return await InternalAssessmentRepository.addInternalAssessment(payload);
 }
 
 export async function getAllInternalAssessment(examSetupTypeId) {
@@ -42,7 +53,7 @@ export async function getAllInternalAssessment(examSetupTypeId) {
         return {
             examAssessmentId: ia.examAssessmentId,
             subjectId: ia.subjectId,
-            semesterId: ia.semesterId,
+            term: ia.term,
             examSetupTypeId: ia.examSetupTypeId,
             type: ia.type,
 
@@ -67,7 +78,6 @@ export async function getInternalAssessmentById(examAssessmentId) {
     const ia = data.dataValues;
 
     const subject = ia.assessmentSubject || {};
-    const semester = ia.assessmentSemester || {};
     const examType = ia.assessmentExamType || {};
 
     const syllabusList = Array.isArray(examType.syllabusDetailsExam)
@@ -94,10 +104,10 @@ export async function getInternalAssessmentById(examAssessmentId) {
             code: subject.subjectCode  || null
         },
 
-        semester: {
-            semesterId: ia.semesterId,
-            name: semester.name  || null
-        },
+        term: ia.term,
+        termName: ia.term != null && subject.courseInfo?.termType
+            ? buildTermName(subject.courseInfo.termType, ia.term)
+            : null,
 
         examSetupType: {
             examSetupTypeId: ia.examSetupTypeId,
@@ -240,7 +250,7 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
 
   const division = Number(((weightage * syllabusMarks) / 100).toFixed(2));
 
-  const semesterStudents = ia.assessmentSemester?.studentSemester ?? [];
+  const semesterStudents = ia.termStudents ?? [];
 
   const students = semesterStudents.map(student => {
     const results = Array.isArray(student.studentresult) ? student.studentresult : [];
@@ -276,7 +286,9 @@ export async function evaluationInternalAssessment(subjectId, employeeId) {
      assessmentType: ia.type ?? null,
 
       subject: ia.assessmentSubject?.subjectName ?? null,
-      term: ia.assessmentSemester?.name ?? null,
+      term: ia.term != null && ia.assessmentSubject?.courseInfo?.termType
+        ? buildTermName(ia.assessmentSubject.courseInfo.termType, ia.term)
+        : null,
       marks: totalMarks,
       attachedFile: ia.file ?? null,
       description: ia.description ?? null,

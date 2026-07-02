@@ -1,13 +1,13 @@
 import * as electiveSubject  from  "../services/electiveSubjectService.js";
 
 export async function addElectiveSubject(req, res) {
-    const { electiveSubjectName, acedmicYearId, electiveSubjectType } = req.body;
+    const { electiveSubjectName, academicYearId, electiveSubjectType } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
     try {
-        if (!(electiveSubjectName && acedmicYearId && electiveSubjectType)) {
-            return res.status(400).send('Elective Subject Name, acedmicYearId and electiveSubjectType is required');
+        if (!(electiveSubjectName && academicYearId && electiveSubjectType)) {
+            return res.status(400).send('Elective Subject Name, academicYearId and electiveSubjectType is required');
         }
 
         const electiveSubjects = await electiveSubject.addElectiveSubject(req.body, createdBy, updatedBy);

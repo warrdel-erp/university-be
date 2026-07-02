@@ -2,19 +2,19 @@ import * as InternalAssessmentServices from "../services/internalAssessmentServi
 
 export async function addInternalAssessment(req, res) {
     const {
-        subjectId, semesterId, examSetupTypeId, type, totalMarks,
+        subjectId, term, examSetupTypeId, type, totalMarks,
         publishDate, dueDate, description,employeeId,
     } = req.body;
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     const file = req.files;
 
-    if (!subjectId || !semesterId || !examSetupTypeId || !type || !totalMarks || !publishDate || !dueDate || !description) {
+    if (!subjectId || term == null || !examSetupTypeId || !type || !totalMarks || !publishDate || !dueDate || !description) {
         return res.status(400).send("Required fields are missing");
     }
     try {
         const data = {
-            subjectId, semesterId, examSetupTypeId, type, totalMarks,
+            subjectId, term: Number(term), examSetupTypeId, type, totalMarks,
             publishDate, dueDate, description,
             createdBy, updatedBy,employeeId
         };

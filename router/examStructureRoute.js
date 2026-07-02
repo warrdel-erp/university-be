@@ -22,19 +22,11 @@ const emptyToUndefined = (val) =>
 
 const positiveIntegerId = z.coerce.number().int().positive();
 
-const optionalAcedmicYearId = z.preprocess(
-  emptyToUndefined,
-  positiveIntegerId.optional(),
-);
-
-const getAllExamStructureQuerySchema = z.object({
-  acedmicYearId: optionalAcedmicYearId,
-});
+const getAllExamStructureQuerySchema = z.object({});
 
 const getSingleExamStructureQuerySchema = z.object({
   courseId: positiveIntegerId,
   sessionId: positiveIntegerId,
-  acedmicYearId: optionalAcedmicYearId,
 });
 
 const getDetailByExamTypeQuerySchema = z.object({
@@ -44,7 +36,6 @@ const getDetailByExamTypeQuerySchema = z.object({
 const getSingleExamTypeQuerySchema = z.object({
   courseId: positiveIntegerId,
   sessionId: positiveIntegerId,
-  acedmicYearId: optionalAcedmicYearId,
   termNumber: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
 });
 

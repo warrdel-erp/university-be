@@ -14,7 +14,7 @@ const dormitoryListModel = sequelize.define(
             autoIncrement: true,
             field: 'dormitory_list_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

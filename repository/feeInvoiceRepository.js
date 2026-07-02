@@ -1,7 +1,8 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
+import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 function feeInvoiceExcludedAttributes() {
   return [
@@ -66,7 +67,7 @@ function classStudentMapperInclude(businessWhere = {}) {
       {
         model: model.classSectionModel,
         as: "studentSectionDetail",
-        attributes: ["section", "classSectionsId", "class"],
+        attributes: ["section", "classSectionsId", "year"],
       },
     ],
   };
@@ -93,7 +94,7 @@ function feeInvoiceDetailsInclude() {
 }
 
 function feeInvoiceListIncludes(filters = {}) {
-  const mapperWhere = filters.acedmicYearId ? { acedmicYearId: filters.acedmicYearId } : {};
+  const mapperWhere = filters.academicYearId ? { academicYearId: filters.academicYearId } : {};
 
   return [
     userFeeInvoiceInclude(),
@@ -205,7 +206,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
             {
               model: model.classSectionModel,
               as: "studentSectionDetail",
-              attributes: ["section", "classSectionsId", "class"],
+              attributes: ["section", "classSectionsId", "year"],
             },
           ],
         },
@@ -255,7 +256,7 @@ export async function deleteFeeInvoice(feeInvoiceId) {
 }
 
 export async function findInstituteCodeForScope(options = {}) {
-  const store = requestContext.getStore();
+  const store = getTenantStore();
   if (!store?.instituteId) {
     throw new Error("Institute scope required");
   }
@@ -418,18 +419,7 @@ export async function getFeeDetailsByStudentId(studentId, options = {}) {
               as: "studentSemester",
               attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
-            {
-              model: model.classSectionModel,
-              as: "studentSections",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
-              include: [
-                {
-                  model: model.classModel,
-                  as: "classGroup",
-                  attributes: ["term", "semesterId", "className", "classId"],
-                },
-              ],
-            },
+            studentClassSectionTermWithSectionInclude(),
             {
               model: model.sessionModel,
               as: "studentSession",
