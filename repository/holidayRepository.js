@@ -5,7 +5,7 @@ import { scoped } from '../utility/scoped.js';
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
 const stripTenantFields = (data = {}) => {
-    const { holidayId, instituteId, acedmicYearId, universityId, ...rest } = data;
+    const { holidayId, instituteId, academicYearId, universityId, ...rest } = data;
     return rest;
 };
 
@@ -14,6 +14,19 @@ export async function addHoliday(holidayData) {
         return await scoped(model.holidayModel).create(stripTenantFields(holidayData));
     } catch (error) {
         console.error('Error in add Holiday :', error);
+        throw error;
+    }
+}
+
+export async function getAllHolidays(filter = {}) {
+    try {
+        return await scoped(model.holidayModel).findAll({
+            where: { ...filter },
+            attributes: { exclude: excludeMeta },
+            order: [['date', 'DESC']],
+        });
+    } catch (error) {
+        console.error('Error fetching Holiday details:', error);
         throw error;
     }
 }

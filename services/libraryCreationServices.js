@@ -2,7 +2,7 @@ import * as libraryCreationService from "../repository/libraryCreationRepository
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { LOW_STOCK_THRESHOLD } from "../constant.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 const httpError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -122,7 +122,7 @@ function splitBookMappingPayload(bookData) {
 }
 
 async function validateBookMappingIds({ subjectId, categoryId }, transaction) {
-  const instituteId = requestContext.getStore()?.instituteId;
+  const instituteId = getTenantStore().instituteId;
   if (!instituteId) {
     throw httpError("instituteId is required for book subject/category mappings");
   }

@@ -10,9 +10,7 @@ import { documentStatus, studentAdmissionStatus, studentStatus } from '../consta
 import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import sessionModel from "./sessionModel.js";
-import semesterModel from "./semesterModel.js";
-import classSectionModel from "./classSectionModel.js";
-import feePlanModel from "./feePlanModel.js";
+import classSectionTermModel from "./classSectionTermModel.js";
 import feePlanProfileModel from "./feePlanProfileModel.js";
 
 const studentModel = sequelize.define(
@@ -105,28 +103,14 @@ const studentModel = sequelize.define(
                 key: 'session_id'
             }
         },
-        semesterId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'semester_id',
-            references: {
-                model: semesterModel,
-                key: 'semester_id'
-            }
-        },
-        classSectionsId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'class_sections_id',
-            references: {
-                model: classSectionModel,
-                key: 'class_sections_id'
-            }
-        },
-        feePlanId: {
+        classSectionTermId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'fee_plan_id',
+            field: 'class_section_term_id',
+            references: {
+                model: classSectionTermModel,
+                key: 'class_section_term_id'
+            }
         },
         feePlanProfileId: {
             type: DataTypes.INTEGER,

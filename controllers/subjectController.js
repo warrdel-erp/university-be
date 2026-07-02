@@ -1,7 +1,7 @@
 import * as subjectService from '../services/subjectService.js';
 import * as examStructureScheduleServices from '../services/examStructureScheduleMappingServices.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAllSubjects = async (req, res) => {
   try {
@@ -30,11 +30,11 @@ export const setSubjectTerms = async (req, res) => {
 export const getSubjectsWithExamSchedule = async (req, res) => {
   try {
     const { examSetupTypeTermId, sessionId } = req.query;
-    const acedmicYearId = getTenantStore().academicYearId;
+    const academicYearId = getAcademicYearId();
 
     const result = await examStructureScheduleServices.getSubjectsWithExamSchedule(
       examSetupTypeTermId,
-      acedmicYearId,
+      academicYearId,
       sessionId
     );
 

@@ -7,7 +7,7 @@ import * as model from "../models/index.js";
  * - defaultInstituteId, instituteId
  * - defaultRole
  * - defaultAcademicYearId, academicYearId
- * - universityId (from institute row via active instituteId)
+ * - universityId (from user or institute row)
  * - userId
  * - bypass
  */
@@ -17,11 +17,17 @@ export function getTenantStore() {
     return requestContext.getStore() ?? {};
 }
 
+/** Active academic year from user defaults / request context. */
+export function getAcademicYearId() {
+    return getTenantStore().academicYearId;
+}
+
 export async function buildRequestContextStore({
     userId,
     defaultInstituteId,
     defaultRole,
     defaultAcademicYearId,
+    universityId: universityIdFromUser,
     bypass = false,
 }) {
     let instituteId;
@@ -35,12 +41,15 @@ export async function buildRequestContextStore({
     }
 
     let universityId;
-    if (instituteId) {
-        const institute = await model.instituteModel.findOne({
+    if (universityIdFromUser != null && universityIdFromUser !== "") {
+        universityId = parseInt(universityIdFromUser, 10);
+    } else if (instituteId) {
+        const institute = await model.instituteModel.findByPk(instituteId, {
             attributes: ["universityId"],
-            where: { instituteId },
         });
-        universityId = institute?.universityId;
+        if (institute) {
+            universityId = institute.universityId ?? institute.get?.("universityId");
+        }
     }
 
     return {

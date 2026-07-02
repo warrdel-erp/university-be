@@ -16,7 +16,7 @@ const examStructureScheduleMappingModel = sequelize.define(
             autoIncrement: true,
             field: 'exam_structure_schedule_mapper_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

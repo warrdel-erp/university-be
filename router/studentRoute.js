@@ -7,11 +7,11 @@ import {
   deleteStudentDetail,
   getEmptyEnrollNumber,
   studentCourseMapping,
-  classStudentMapping,
+  sectionStudentMapping,
   addElectiveSubject,
-  getclassStudentMapping,
+  getSectionStudentMapping,
   promoteStudent,
-  getPromotionAvailableClassSection,
+  getPromotionAvailableSection,
   getPromotionStudentList,
   getStudentPromotionHistory,
   getFeePlanInitiate,
@@ -39,6 +39,9 @@ const KEY_ALIASES = {
   additionalNotes: "AdditionalNotes",
 };
 
+const emptyToUndefined = (val) =>
+  val === "" || val === null || val === undefined ? undefined : val;
+
 const positiveIntegerId = z.coerce
   .number({ invalid_type_error: "id must be a number" })
   .int({ message: "id must be an integer" })
@@ -53,8 +56,10 @@ const requiredFeePlanProfileId = z.coerce
 
 const dateField = z.string().trim().min(1, "date is required");
 
-const emptyToUndefined = (val) =>
-  val === "" || val === null || val === undefined ? undefined : val;
+const optionalPositiveIntegerId = z.preprocess(
+  emptyToUndefined,
+  positiveIntegerId.optional(),
+);
 
 const optionalString = z.preprocess(
   emptyToUndefined,
@@ -74,11 +79,6 @@ const optionalEmail = z.preprocess(
 const optionalDateField = z.preprocess(
   emptyToUndefined,
   z.string().trim().min(1).optional(),
-);
-
-const optionalPositiveIntegerId = z.preprocess(
-  emptyToUndefined,
-  positiveIntegerId.optional(),
 );
 
 const nullableAffiliatedUniversityId = z.preprocess(
@@ -130,9 +130,18 @@ const jsonObjectField = z.preprocess(
   z.record(z.string(), z.any()).optional(),
 );
 
+
+const classSectionStudentsQuerySchema = z.object({
+  timeTableMappingId: positiveIntegerId,
+  date: dateField,
+  academicYearId: optionalPositiveIntegerId,
+  groupPeriods: z.union([z.boolean(), z.string()]).optional(),
+}).passthrough();
+
 const studentSharedOptionalFields = {
   specializationId: optionalPositiveIntegerId,
-  semesterId: optionalPositiveIntegerId,
+  term: optionalPositiveIntegerId,
+  classSectionTermId: optionalPositiveIntegerId,
   scholarNumber: optionalNonEmptyString,
   enrollNumber: optionalNonEmptyString,
   middleName: optionalString,
@@ -188,7 +197,6 @@ const studentUpdateBodyFields = {
   courseLevelId: optionalPositiveIntegerId,
   courseId: optionalPositiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).optional(),
-  classSectionsId: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
   email: optionalEmail,
   firstName: optionalNonEmptyString,
@@ -197,6 +205,20 @@ const studentUpdateBodyFields = {
   birthDate: optionalDateField,
   ...studentSharedOptionalFields,
 };
+
+const importStudentBodySchema = z.object({
+  campusId: positiveIntegerId,
+  instituteId: positiveIntegerId,
+  sessionId: positiveIntegerId,
+  courseLevelId: positiveIntegerId,
+  courseId: positiveIntegerId,
+  classSectionTermId: positiveIntegerId,
+  academicYearId: optionalPositiveIntegerId,
+  acedmicYearId: optionalPositiveIntegerId,
+  affiliatedUniversityId: nullableAffiliatedUniversityId.optional(),
+  universityId: optionalPositiveIntegerId,
+  roleId: z.union([z.literal(ROLES.STUDENT), positiveIntegerId]).optional(),
+});
 
 const addStudentWithFeePlanProfileBodySchema = z.object({
   feePlanProfileId: requiredFeePlanProfileId,
@@ -207,7 +229,6 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
   courseLevelId: positiveIntegerId,
   courseId: positiveIntegerId,
   roleId: z.literal(ROLES.STUDENT).default(ROLES.STUDENT),
-  classSectionsId: positiveIntegerId,
   sessionId: positiveIntegerId,
   email: z.string().trim().email(),
   firstName: z.string().trim().min(1),
@@ -215,6 +236,7 @@ const addStudentWithFeePlanProfileBodySchema = z.object({
   phoneNumber: z.string().trim().min(1),
   birthDate: dateField,
   ...studentSharedOptionalFields,
+  classSectionTermId: positiveIntegerId,
 });
 
 const updateStudentDetailsParamsSchema = z.object({
@@ -230,12 +252,7 @@ const getAllAnswerSheetsQuerySchema = z.object({
     .positive("examScheduleId must be greater than 0"),
 });
 
-const acedmicYearIdQuerySchema = z.object({
-  acedmicYearId: positiveIntegerId,
-});
-
 const emptyFeeDetailsQuerySchema = z.object({
-  acedmicYearId: positiveIntegerId,
   courseId: positiveIntegerId.optional(),
   sessionId: positiveIntegerId.optional(),
 });
@@ -317,6 +334,45 @@ const mapStudentBody = (req, res, next) => {
   }
 };
 
+const mapStudentImportBody = (req, res, next) => {
+  try {
+    const body = { ...req.body };
+
+    if (body.acedmicYearId != null && body.academicYearId == null) {
+      body.academicYearId = body.acedmicYearId;
+    }
+    delete body.acedmicYearId;
+
+    const hasLegacySemester =
+      body.semesterId != null && body.semesterId !== "";
+    const hasLegacySection =
+      body.classSectionsId != null && body.classSectionsId !== "";
+
+    if (
+      (hasLegacySemester || hasLegacySection) &&
+      (body.classSectionTermId == null || body.classSectionTermId === "")
+    ) {
+      return ErrorResponse(
+        res,
+        400,
+        "classSectionTermId is required; semesterId and classSectionsId are no longer supported",
+      );
+    }
+
+    delete body.semesterId;
+    delete body.classSectionsId;
+
+    if (body.affiliatedUniversityId === "") {
+      body.affiliatedUniversityId = null;
+    }
+
+    req.body = body;
+    next();
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Invalid import payload");
+  }
+};
+
 router.get(
   "/all",
   userAuth,
@@ -329,7 +385,6 @@ router.get(
   validate({ query: studentIdQuerySchema }),
   getSingleStudentDetail
 );
-router.post("/import", userAuth, importStudentData);
 
 router.patch(
   "/:studentId",
@@ -344,9 +399,42 @@ router.patch(
 router.delete("/:studentId", userAuth, deleteStudentDetail);
 
 router.get("/emptyEnrollNumber", userAuth, getEmptyEnrollNumber);
+const sectionStudentMappingBodySchema = z.object({
+  studentId: z.union([positiveIntegerId, z.array(positiveIntegerId)]),
+  classSectionTermId: positiveIntegerId,
+}).passthrough();
+
+const promoteStudentBodySchema = z.union([
+  z.object({
+    studentId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId,
+  }),
+  z.array(
+    z.object({
+      studentId: positiveIntegerId,
+      classSectionTermId: positiveIntegerId,
+    }),
+  ),
+]);
+
+const sectionStudentMappingQuerySchema = z.object({
+  classSectionTermId: z.coerce.number().int().nonnegative().optional(),
+  term: z.coerce.number().int().positive().optional(),
+});
+
 router.post("/studentMapping", userAuth, studentCourseMapping);
-router.post("/classStudentMapping", userAuth, classStudentMapping);
-router.get("/classStudentMapping", userAuth, getclassStudentMapping);
+router.post(
+  "/sectionStudentMapping",
+  userAuth,
+  validate({ body: sectionStudentMappingBodySchema }),
+  sectionStudentMapping,
+);
+router.get(
+  "/sectionStudentMapping",
+  userAuth,
+  validate({ query: sectionStudentMappingQuerySchema }),
+  getSectionStudentMapping,
+);
 router.post("/electiveSubject", userAuth, addElectiveSubject);
 
 const promotionStudentListQuerySchema = z.object({
@@ -395,22 +483,28 @@ router.get(
   getStudentPromotionHistory,
 );
 
-router.post("/promoteStudent", userAuth, promoteStudent);
-
 const promotionAvailableClassSectionQuerySchema = z.object({
   courseId: z.coerce.number({ required_error: "courseId is required" }).int().positive(),
+  /** Student's current program term or the next promotion term */
   term: z.coerce.number({ required_error: "term is required" }).int().positive(),
-  classSectionId: z.coerce
-    .number({ required_error: "classSectionId is required" })
+  classSectionTermId: z.coerce
+    .number({ required_error: "classSectionTermId is required" })
     .int()
     .positive(),
 });
 
+router.post(
+  "/promoteStudent",
+  userAuth,
+  validate({ body: promoteStudentBodySchema }),
+  promoteStudent,
+);
+
 router.get(
-  "/promotion/available-class-section",
+  "/promotion/available-section",
   userAuth,
   validate({ query: promotionAvailableClassSectionQuerySchema }),
-  getPromotionAvailableClassSection,
+  getPromotionAvailableSection,
 );
 
 router.get(
@@ -429,7 +523,12 @@ router.get("/:studentId/studentSubject", userAuth, getStudentSubject);
 router.get("/:studentId/feeDetails", userAuth, getFeeDetailsByStudentId);
 router.get("/issuedBook", userAuth, getBooksIssuedToStudent);
 router.get("/studentTimetable", userAuth, getStudentTimeTable);
-router.get("/classSectionStudents", userAuth, getStudentsByClassSection);
+router.get(
+  "/classSectionStudents",
+  userAuth,
+  validate({ query: classSectionStudentsQuerySchema }),
+  getStudentsByClassSection,
+);
 router.get(
   "/getallanswerSheetQrs",
   userAuth,
@@ -444,5 +543,14 @@ router.post(
   mapStudentBody,
   addStudentWithFeePlanProfile
 );
+
+router.post(
+  "/import",
+  userAuth,
+  mapStudentImportBody,
+  validate({ body: importStudentBodySchema }),
+  importStudentData,
+);
+
 
 export default router;

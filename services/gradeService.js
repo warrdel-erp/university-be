@@ -69,7 +69,7 @@ export async function addGradeScheme(data) {
         const gradeCourse = await gradeRepo.addGradeCourse(
           {
             gradeId,
-            acedmicYearId: course.academicYearId,
+            academicYearId: course.academicYearId,
             courseId: course.courseId,
             sessionId: course.sessionId,
             createdBy: data.createdBy,
@@ -188,7 +188,7 @@ export async function getSingleGradeScheme(gradeId) {
       courses: (raw.coursesGrade || []).map(c => ({
         gradeCourseId: c.gradeCourseId,
         gradeId: c.gradeId,
-        academicYearId: c.acedmicYearId,
+        academicYearId: c.academicYearId,
         courseId: c.courseId,
         sessionId: c.sessionId,
 
@@ -319,7 +319,7 @@ export async function updateGradeScheme(gradeId, data) {
         const gradeCourse = await gradeRepo.addGradeCourse(
           {
             gradeId,
-            acedmicYearId: course.academicYearId,
+            academicYearId: course.academicYearId,
             courseId: course.courseId,
             sessionId: course.sessionId,
             createdBy: data.createdBy,

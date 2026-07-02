@@ -292,7 +292,7 @@ export async function findSessionCourseMappingWithSession(sessionCourseMappingId
         model: model.sessionModel,
         as: "session",
         required: true,
-        attributes: ["sessionId", "acedmicYearId"],
+        attributes: ["sessionId", "academicYearId"],
         where: buildScopeWithoutAcademicYear(model.sessionModel),
       },
     ],

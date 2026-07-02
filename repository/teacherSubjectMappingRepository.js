@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
-import { requestContext } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 import { ROLES } from '../const/roles.js';
 
 export function teacherSubjectWhere(subjectIds) {
@@ -28,16 +28,16 @@ async function findSubjectInInstitute(subjectId) {
     });
 }
 
-export async function findSubjectIdsForYear(acedmicYearId) {
+export async function findSubjectIdsForYear(academicYearId) {
     const rows = await scoped(model.subjectModel).findAll({
         attributes: ['subjectId'],
-        where: { acedmicYearId },
+        where: { academicYearId },
         raw: true,
     });
     return rows.map((row) => row.subjectId);
 }
 
-export async function findSubjectIdsForSession(sessionId, acedmicYearId) {
+export async function findSubjectIdsForSession(sessionId, academicYearId) {
     const mappings = await scoped(model.sessionCouseMappingModel).findAll({
         attributes: ['courseId'],
         where: { sessionId },
@@ -49,8 +49,8 @@ export async function findSubjectIdsForSession(sessionId, acedmicYearId) {
     }
 
     const where = { courseId: { [Op.in]: courseIds } };
-    if (acedmicYearId != null) {
-        where.acedmicYearId = acedmicYearId;
+    if (academicYearId != null) {
+        where.academicYearId = academicYearId;
     }
 
     const rows = await scoped(model.subjectModel).findAll({
@@ -61,15 +61,15 @@ export async function findSubjectIdsForSession(sessionId, acedmicYearId) {
     return rows.map((row) => row.subjectId);
 }
 
-export async function resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId } = {}) {
+export async function resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId } = {}) {
     let subjectIds = null;
 
-    if (acedmicYearId != null) {
-        subjectIds = await findSubjectIdsForYear(acedmicYearId);
+    if (academicYearId != null) {
+        subjectIds = await findSubjectIdsForYear(academicYearId);
     }
 
     if (sessionId != null) {
-        const sessionSubjectIds = await findSubjectIdsForSession(sessionId, acedmicYearId);
+        const sessionSubjectIds = await findSubjectIdsForSession(sessionId, academicYearId);
         subjectIds = subjectIds != null
             ? subjectIds.filter((id) => sessionSubjectIds.includes(id))
             : sessionSubjectIds;
@@ -153,14 +153,14 @@ export async function getTeacherSubjectMapping({
     employeeId,
     subjectId,
     sessionId,
-    acedmicYearId = requestContext.getStore()?.academicYearId,
+    academicYearId = getAcademicYearId(),
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const subjectIds = acedmicYearId != null || sessionId != null
-            ? await resolveSubjectIdsForTeacherFilters({ acedmicYearId, sessionId })
+        const subjectIds = academicYearId != null || sessionId != null
+            ? await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId })
             : null;
 
         const teacherWhere = {
@@ -229,7 +229,7 @@ export async function getTeacherSubjectMapping({
                     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
                     where: {
                         ...(subjectId && { subjectId }),
-                        ...(acedmicYearId != null && { acedmicYearId }),
+                        ...(academicYearId != null && { academicYearId }),
                         ...buildScope(model.subjectModel),
                     },
                     required: true,

@@ -1,18 +1,19 @@
 import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
-  const { acedmicYearId, ...rest } = scopeWhere;
+  const { academicYearId, ...rest } = scopeWhere;
   return rest;
 }
 
-function buildUnitWhere({ acedmicYearId, syllabusUnitId, subjectId, sessionId, semesterId }) {
+function buildUnitWhere({ academicYearId, syllabusUnitId, subjectId, sessionId, term }) {
   const where = {};
-  if (acedmicYearId != null) where.acedmicYearId = Number(acedmicYearId);
+  if (academicYearId != null) where.academicYearId = Number(academicYearId);
   if (syllabusUnitId != null) where.syllabusUnitId = Number(syllabusUnitId);
   if (subjectId != null) where.subjectId = Number(subjectId);
   if (sessionId != null) where.sessionId = Number(sessionId);
-  if (semesterId != null) where.semesterId = Number(semesterId);
+  if (term != null) where.term = Number(term);
   return where;
 }
 const unitIncludes = [
@@ -32,14 +33,17 @@ const unitIncludes = [
     attributes: ['sessionName'],
   },
   {
-    model: model.semesterModel,
-    as: 'semesterUnit',
-    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-  },
-  {
     model: model.subjectModel,
     as: 'subjectUnit',
     attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+    include: [
+      {
+        model: model.courseModel,
+        as: 'courseInfo',
+        attributes: ['termType'],
+        required: false,
+      },
+    ],
   },
 ];
 
@@ -61,11 +65,11 @@ export async function addSyllabusDetails(syllabusData, options = {}) {
   }
 }
 
-export async function getSyllabusDetails(acedmicYearId) {
+export async function getSyllabusDetails(academicYearId) {
   try {
     return await scoped(model.syllabusModel).findAll({
       where: {
-        ...(acedmicYearId && { acedmicYearId }),
+        ...(academicYearId && { academicYearId }),
       },
       attributes: {
         exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'],
@@ -205,7 +209,7 @@ export async function getSubjectForUnitResolution(subjectId) {
   try {
     return scoped(model.subjectModel).findOne({
       where: { subjectId: Number(subjectId) },
-      attributes: ['subjectId', 'courseId', 'term', 'instituteId', 'campusId', 'acedmicYearId'],
+      attributes: ['subjectId', 'courseId', 'term', 'instituteId', 'campusId', 'academicYearId'],
       include: [
         {
           model: model.courseModel,
@@ -220,13 +224,13 @@ export async function getSubjectForUnitResolution(subjectId) {
   }
 }
 
-export async function validateSubjectForSyllabusUnit({ subjectId, acedmicYearId, sessionId }) {
+export async function validateSubjectForSyllabusUnit({ subjectId, academicYearId, sessionId }) {
   const subject = await scoped(model.subjectModel).findOne({
     where: {
       subjectId: Number(subjectId),
-      acedmicYearId: Number(acedmicYearId),
+      academicYearId: Number(academicYearId),
     },
-    attributes: ['subjectId', 'courseId', 'acedmicYearId'],
+    attributes: ['subjectId', 'courseId', 'academicYearId'],
   });
 
   if (!subject) {
@@ -236,7 +240,7 @@ export async function validateSubjectForSyllabusUnit({ subjectId, acedmicYearId,
   const session = await scoped(model.sessionModel).findOne({
     where: {
       sessionId: Number(sessionId),
-      acedmicYearId: Number(acedmicYearId),
+      academicYearId: Number(academicYearId),
     },
     attributes: ['sessionId'],
   });
@@ -262,18 +266,13 @@ export async function validateSubjectForSyllabusUnit({ subjectId, acedmicYearId,
 
 export async function getSemestersForCourse(courseId) {
   try {
-    return scoped(model.semesterModel).findAll({
-      where: {
-        courseId: Number(courseId),
-        ...omitAcademicYearScope(buildScope(model.semesterModel)),
-      },
-      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId'],
-      order: [
-        ['acedmicYearId', 'ASC'],
-        ['semesterId', 'ASC'],
-      ],
+    const course = await scoped(model.courseModel).findOne({
+      where: { courseId: Number(courseId) },
+      attributes: ['courseId', 'termType', 'totalTerms', 'courseDuration'],
       raw: true,
     });
+    if (!course) return [];
+    return buildCourseTermOptions(course);
   } catch (error) {
     console.error('Error fetching semesters for syllabus unit:', error);
     throw error;
@@ -336,10 +335,10 @@ export async function syllabusUnitGet(subjectId) {
   }
 }
 
-export async function getSyllabusUnitById(syllabusUnitId, acedmicYearId) {
+export async function getSyllabusUnitById(syllabusUnitId, academicYearId) {
   try {
     return await scoped(model.syllabusUnitModel).findOne({
-      where: buildUnitWhere({ syllabusUnitId, acedmicYearId }),
+      where: buildUnitWhere({ syllabusUnitId, academicYearId }),
       attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
     });  } catch (error) {
     console.error('Error fetching syllabus unit by id:', error);
@@ -347,17 +346,17 @@ export async function getSyllabusUnitById(syllabusUnitId, acedmicYearId) {
   }
 }
 
-export async function updateSyllabusUnit(syllabusUnitId, acedmicYearId, data) {
+export async function updateSyllabusUnit(syllabusUnitId, academicYearId, data) {
   try {
-    const existing = await getSyllabusUnitById(syllabusUnitId, acedmicYearId);
+    const existing = await getSyllabusUnitById(syllabusUnitId, academicYearId);
     if (!existing) {
       return null;
     }
 
     await scoped(model.syllabusUnitModel).update(data, {
-      where: buildUnitWhere({ syllabusUnitId, acedmicYearId }),
+      where: buildUnitWhere({ syllabusUnitId, academicYearId }),
     });
-    return getSyllabusUnitById(syllabusUnitId, acedmicYearId);
+    return getSyllabusUnitById(syllabusUnitId, academicYearId);
   } catch (error) {
     console.error('Error updating syllabus unit:', error);
     throw error;
@@ -381,40 +380,38 @@ export async function deleteSyllabusUnit(syllabusUnitId) {
   }
 }
 
-export async function semesterAllSubject(semesterId) {
+export async function getCourseTermMetadata(courseId) {
+  return scoped(model.courseModel).findOne({
+    where: { courseId: Number(courseId) },
+    attributes: ['courseId', 'termType', 'totalTerms', 'courseDuration'],
+    raw: true,
+  });
+}
+
+export async function findSubjectsWithSyllabusByTerm(courseId, term, academicYearId) {
   try {
-    return await scoped(model.semesterModel).findAll({
-      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-      where: { semesterId },
+    return await scoped(model.subjectModel).findAll({
+      where: {
+        courseId: Number(courseId),
+        term: Number(term),
+        ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
+      },
+      attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
       include: [
         {
-          model: model.classSubjectMapperModel,
-          as: 'semestermapping',
-          attributes: ['classSubjectMapperId', 'subjectId', 'semesterId'],
+          model: model.syllabusDetailsModel,
+          as: 'syllabusSubject',
+          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
           include: [
             {
-              model: model.subjectModel,
-              as: 'subjects',
-              attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType'],
+              model: model.examSetupTypeModel,
+              as: 'examSetupTypeSyllabus',
+              attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
               include: [
                 {
-                  model: model.syllabusDetailsModel,
-                  as: 'syllabusSubject',
+                  model: model.examStructureModel,
+                  as: 'examStructure',
                   attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                  include: [
-                    {
-                      model: model.examSetupTypeModel,
-                      as: 'examSetupTypeSyllabus',
-                      attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                      include: [
-                        {
-                          model: model.examStructureModel,
-                          as: 'examStructure',
-                          attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-                        },
-                      ],
-                    },
-                  ],
                 },
               ],
             },
@@ -423,7 +420,7 @@ export async function semesterAllSubject(semesterId) {
       ],
     });
   } catch (error) {
-    console.error('Error fetching Syllabus details subject:', error);
+    console.error('Error fetching syllabus subjects by term:', error);
     throw error;
   }
 }

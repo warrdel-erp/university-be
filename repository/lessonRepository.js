@@ -1,6 +1,7 @@
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, resolveProgramTerm } from "../utility/classSectionIncludes.js";
 
 export async function addLesson(data) {
   try {
@@ -11,12 +12,12 @@ export async function addLesson(data) {
   }
 }
 
-export async function getLessonDetails(acedmicYearId) {
+export async function getLessonDetails(academicYearId) {
   try {
     const lesson = await scoped(model.lessonModel).findAll({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
       where: {
-        ...(acedmicYearId && { acedmicYearId }),
+        ...(academicYearId && { academicYearId }),
       },
       include: [
         {
@@ -193,10 +194,10 @@ export async function addLessionMapping(data, transaction) {
   }
 }
 
-export async function getMapping(acedmicYearId) {
+export async function getMapping(academicYearId) {
   try {
     const lessonWhereClause = {
-      ...(acedmicYearId && { acedmicYearId }),
+      ...(academicYearId && { academicYearId }),
       ...buildScope(model.lessonModel),
     };
     const lesson = await scoped(model.lessonMappingModel).findAll({
@@ -272,7 +273,7 @@ export async function getMapping(acedmicYearId) {
                 {
                   model: model.classSectionModel,
                   as: "timeTableClassSection",
-                  attributes: ["section", "class", "section_id", "class_sections_id"],
+                  attributes: ["section", "year", "section_id", "class_sections_id"],
                 },
               ],
             },
@@ -420,11 +421,11 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
   }
 }
 
-// export async function getEmployeeSubjectAndLesson(acedmicYearId,employeeId,courseId,sessionId) {
+// export async function getEmployeeSubjectAndLesson(academicYearId,employeeId,courseId,sessionId) {
 //   try {
 //     const whereClause = {
 //       ...(employeeId && { employeeId }),
-//       ...(acedmicYearId && { acedmicYearId }),
+//       ...(academicYearId && { academicYearId }),
 //     };
 //     const lesson = await model.teacherSubjectMappingModel.findAll({
 //       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
@@ -519,14 +520,9 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         model: model.classSectionModel,
         as: 'courseSection',
         required: false,
-        attributes: ['class', 'section', 'sessionId'],
+        attributes: ['year', 'section', 'sessionId'],
         where: classSectionWhere,
-        include: [{
-          model: model.classModel,
-          as: 'classGroup',
-          required: false,
-          attributes: ['term', 'className'],
-        }],
+        include: [classSectionTermsInclude({ term, required: term != null })],
       }],
     };
     const toEmployeeSubject = (employeeSubject) => {
@@ -540,14 +536,14 @@ export async function getEmployeeSubjectAndLesson(employeeId, courseId, sessionI
         if (hasSessionId && Number(section.sessionId) !== parsedSessionId) {
           return false;
         }
-        if (term != null && section.classGroup?.term != null) {
-          return Number(section.classGroup.term) === Number(term);
+        if (term != null && resolveProgramTerm(section) != null) {
+          return Number(resolveProgramTerm(section)) === Number(term);
         }
-        return term != null && String(section.class) === String(term);
+        return term != null && section.year != null && String(section.year) === String(term);
       });
 
-      const termName = matchedSection?.class && courseInfo?.termType
-        ? `${courseInfo.termType} ${matchedSection.class}`
+      const termName = matchedSection?.year != null && courseInfo?.termType
+        ? `${courseInfo.termType} ${matchedSection.year}`
         : subjects?.[0]?.semestermapping?.name ?? null;
 
       return { ...subjectData, term, termName };

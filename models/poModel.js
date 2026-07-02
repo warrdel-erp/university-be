@@ -33,7 +33,7 @@ const poModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

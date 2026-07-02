@@ -26,11 +26,11 @@ export async function getacedmicYearDetails() {
     }
 }
 
-export async function getSingleacedmicYearDetails(acedmicYearId, options = {}) {
+export async function getSingleacedmicYearDetails(academicYearId, options = {}) {
     try {
         return await scoped(model.acedmicYearModel).findOne({
             attributes: listAttributes,
-            where: { acedmicYearId },
+            where: { academicYearId },
             ...options,
         });
     } catch (error) {
@@ -70,11 +70,11 @@ export async function findByYearTitleAndUniversityWithoutInstitute(yearTitle, un
 }
 
 /** Claim a university-level row for the active institute (instituteId must be null on row). */
-export async function claimUniversityAcedmicYear(acedmicYearId, universityId, acedmicYearData, options = {}) {
+export async function claimUniversityAcedmicYear(academicYearId, universityId, acedmicYearData, options = {}) {
     try {
         const [updated] = await model.acedmicYearModel.update(acedmicYearData, {
             where: {
-                acedmicYearId,
+                academicYearId,
                 universityId,
                 instituteId: { [Op.is]: null },
             },
@@ -84,21 +84,21 @@ export async function claimUniversityAcedmicYear(acedmicYearId, universityId, ac
             return null;
         }
         return await scoped(model.acedmicYearModel).findOne({
-            where: { acedmicYearId },
+            where: { academicYearId },
             attributes: listAttributes,
             ...options,
         });
     } catch (error) {
-        console.error(`Error claiming acedmicYear ${acedmicYearId}:`, error);
+        console.error(`Error claiming acedmicYear ${academicYearId}:`, error);
         throw error;
     }
 }
 
-export async function updateacedmicYear(acedmicYearId, acedmicYearData, options = {}) {
+export async function updateacedmicYear(academicYearId, acedmicYearData, options = {}) {
     try {
         const existing = await scoped(model.acedmicYearModel).findOne({
-            where: { acedmicYearId },
-            attributes: ['acedmicYearId'],
+            where: { academicYearId },
+            attributes: ['academicYearId'],
             ...options,
         });
         if (!existing) {
@@ -106,27 +106,27 @@ export async function updateacedmicYear(acedmicYearId, acedmicYearData, options 
         }
 
         await scoped(model.acedmicYearModel).update(acedmicYearData, {
-            where: { acedmicYearId },
+            where: { academicYearId },
             ...options,
         });
         return true;
     } catch (error) {
-        console.error(`Error updating acedmicYear creation ${acedmicYearId}:`, error);
+        console.error(`Error updating acedmicYear creation ${academicYearId}:`, error);
         throw error;
     }
 }
 
-export async function deleteacedmicYear(acedmicYearId) {
+export async function deleteacedmicYear(academicYearId) {
     const existing = await scoped(model.acedmicYearModel).findOne({
-        where: { acedmicYearId },
-        attributes: ['acedmicYearId'],
+        where: { academicYearId },
+        attributes: ['academicYearId'],
     });
     if (!existing) {
         return false;
     }
 
     const deleted = await scoped(model.acedmicYearModel).destroy({
-        where: { acedmicYearId },
+        where: { academicYearId },
     });
     return deleted > 0;
 }

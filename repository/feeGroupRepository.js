@@ -26,7 +26,7 @@ export async function addFeeGroup(feeGroupData) {
 
 export async function getFeeGroupDetails(filters = {}) {
   try {
-    const businessWhere = filters.acedmicYearId ? { acedmicYearId: filters.acedmicYearId } : {};
+    const businessWhere = filters.academicYearId ? { academicYearId: filters.academicYearId } : {};
 
     return scoped(model.feeGroupModel).findAll({
       attributes: { exclude: feeGroupExcludedAttributes() },

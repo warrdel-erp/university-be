@@ -3,6 +3,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import moment from "moment";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { classSectionTermsInclude, studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
@@ -71,7 +72,7 @@ export async function getAttendanceDetails() {
                         {
                             model: model.timeTableRoutineModel,
                             as: 'timeTablecreate',
-                            attributes: ['classSectionsId', 'timeTableType'],
+                            attributes: ['classSectionTermId', 'timeTableType'],
                         },
                         {
                             model: model.teacherSubjectMappingModel,
@@ -130,7 +131,7 @@ export async function addImportAttendance(attendanceRecords) {
     }
 };
 
-export async function getAttendanceByDate(date, classSectionsId, employeeId) {
+export async function getAttendanceByDate(date, classSectionTermId, employeeId) {
     try {
         const attendanceDetails = await scoped(model.attendanceModel).findAll({
             attributes: {
@@ -145,7 +146,7 @@ export async function getAttendanceByDate(date, classSectionsId, employeeId) {
                 ],
             },
             where: {
-                classSectionsId,
+                classSectionTermId: Number(classSectionTermId),
                 date: { [Op.eq]: fn("DATE", date) },
             },
             include: [
@@ -374,13 +375,7 @@ export async function getTeacherMappings(employeeId) {
                         model: model.classSectionModel,
                         as: "timeTableClassSection",
                         required: false,
-                        include: [
-                            {
-                                model: model.classModel,
-                                as: "classGroup",
-                                required: false,
-                            },
-                        ],
+                        include: [classSectionTermsInclude()],
                     },
                 ],
             },
@@ -443,7 +438,7 @@ export async function getStudentAttendanceReport(classSectionsId, subjectId, emp
     }
 };
 
-export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId, employeeId) {
+export async function getEmployeeScheduleWithRoutine(classSectionTermId, subjectId, employeeId) {
     try {
         const employee = await scoped(model.employeeModel).findOne({
             where: { employeeId },
@@ -463,9 +458,12 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
                 {
                     model: model.timeTableRoutineModel,
                     as: 'timeTablecreate',
-                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate'],
+                    attributes: ['timeTableRoutineId', 'startingDate', 'endingDate', 'classSectionTermId'],
                     required: true,
-                    where: { classSectionsId, ...buildScope(model.timeTableRoutineModel) },
+                    where: {
+                        classSectionTermId: Number(classSectionTermId),
+                        ...buildScope(model.timeTableRoutineModel),
+                    },
                 },
                 {
                     model: model.timeTableStructurePeriodsModel,
@@ -481,10 +479,13 @@ export async function getEmployeeScheduleWithRoutine(classSectionsId, subjectId,
     }
 }
 
-export async function getStudentsBatchAttendance(classSectionsId, filters) {
+export async function getStudentsBatchAttendance(classSectionTermId, filters) {
     try {
         return await scoped(model.studentModel).findAll({
-            where: { classSectionsId, deletedAt: null },
+            where: {
+                classSectionTermId: Number(classSectionTermId),
+                deletedAt: null,
+            },
             attributes: ['studentId', 'firstName', 'middleName', 'lastName', 'scholarNumber', 'enrollNumber'],
             include: [
                 {
@@ -514,7 +515,8 @@ export async function getStudentsByScholarNumbers(scholarNumbers) {
                 scholarNumber: { [Op.in]: scholarNumbers },
                 deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
+            attributes: ['studentId', 'scholarNumber'],
+            include: [studentClassSectionTermWithSectionInclude({ termAttributes: ['classSectionsId'] })],
         });
     } catch (error) {
         console.error("Error in getStudentsByScholarNumbers:", error);
@@ -529,7 +531,8 @@ export async function getStudentsByIds(studentIds) {
                 studentId: { [Op.in]: studentIds },
                 deletedAt: null,
             },
-            attributes: ['studentId', 'scholarNumber', 'classSectionsId'],
+            attributes: ['studentId', 'scholarNumber'],
+            include: [studentClassSectionTermWithSectionInclude({ termAttributes: ['classSectionsId'] })],
         });
     } catch (error) {
         console.error("Error in getStudentsByIds:", error);
@@ -537,12 +540,20 @@ export async function getStudentsByIds(studentIds) {
     }
 }
 
-export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
+export async function getDetailsByTerm(classSectionTermId, subjectId, employeeId) {
     try {
-        const [sectionDetails, subjectDetails, employeeDetails] = await Promise.all([
-            scoped(model.classSectionModel).findOne({
-                where: { classSectionsId, deletedAt: null },
-                attributes: ['class', 'section'],
+        const [termDetails, subjectDetails, employeeDetails] = await Promise.all([
+            scoped(model.classSectionTermModel).findOne({
+                where: { classSectionTermId: Number(classSectionTermId) },
+                attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                include: [
+                    {
+                        model: model.classSectionModel,
+                        as: 'classSection',
+                        attributes: ['year', 'section'],
+                        required: false,
+                    },
+                ],
             }),
             scoped(model.subjectModel).findOne({
                 where: { subjectId, deletedAt: null },
@@ -555,12 +566,13 @@ export async function getDetailsByIds(classSectionsId, subjectId, employeeId) {
         ]);
 
         return {
-            sectionDetails,
+            termDetails,
+            sectionDetails: termDetails?.classSection ?? null,
             subjectDetails,
             employeeDetails,
         };
     } catch (error) {
-        console.error("Error in getDetailsByIds:", error);
+        console.error("Error in getDetailsByTerm:", error);
         throw error;
     }
 }

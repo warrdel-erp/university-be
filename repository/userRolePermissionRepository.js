@@ -188,56 +188,59 @@ export async function getUserRolePermissionByUserId(userId) {
                                     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                                 },
                                 {
-                                    model: model.classSectionModel,
-                                    as: 'studentSections',
+                                    model: model.classSectionTermModel,
+                                    as: 'studentClassSectionTerm',
                                     distinct: true,
-                                    // attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                    include: [
-                                        {
-                                            model: model.teacherSectionMappingModel,
-                                            as: "employeeSection",
-                                            distinct: true,
-                                            // attributes: ["employeeId", 'classSectionsId', 'isCordinatory'],
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                            include: [
-                                                {
-                                                    model: model.employeeModel,
-                                                    as: 'employeeData',
-                                                    distinct: true,
-                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            model: model.semesterModel,
-                                            as: 'semester',
-                                            distinct: true,
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                            include: [
-                                                {
-                                                    model: model.classSubjectMapperModel,
-                                                    as: 'semestermapping',
-                                                    distinct: true,
-                                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                                    include: [
-                                                        {
-                                                            model: model.subjectModel,
-                                                            as: "subjects",
-                                                            distinct: true,
-                                                            // attributes: ["subjectName", 'subjectId', 'courseId', 'specializationId'],
-                                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                                        },
-                                                        {
-                                                            model: model.teacherSubjectMappingModel,
-                                                            as: "employeeSubject",
-                                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                                    attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+                                    include: [{
+                                        model: model.classSectionModel,
+                                        as: 'classSection',
+                                        distinct: true,
+                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                        include: [
+                                            {
+                                                model: model.teacherSectionMappingModel,
+                                                as: "employeeSection",
+                                                distinct: true,
+                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                include: [
+                                                    {
+                                                        model: model.employeeModel,
+                                                        as: 'employeeData',
+                                                        distinct: true,
+                                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                model: model.semesterModel,
+                                                as: 'semester',
+                                                distinct: true,
+                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                include: [
+                                                    {
+                                                        model: model.classSubjectMapperModel,
+                                                        as: 'semestermapping',
+                                                        distinct: true,
+                                                        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                        include: [
+                                                            {
+                                                                model: model.subjectModel,
+                                                                as: "subjects",
+                                                                distinct: true,
+                                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                            },
+                                                            {
+                                                                model: model.teacherSubjectMappingModel,
+                                                                as: "employeeSubject",
+                                                                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                    }],
                                 }
                             ]
                         }
@@ -269,7 +272,7 @@ export async function getUserRolePermissionByUserId(userId) {
                         //             model: model.classSectionModel,
                         //             as: 'studentSections',
                         //             distinct: true,
-                        //             // attributes: [ "classSectionsId", 'courseId', 'specializationId','acedmicYearId', 'section'],
+                        //             // attributes: [ "classSectionsId", 'courseId', 'specializationId','academicYearId', 'section'],
                         //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         //             include: [
                         //                 {

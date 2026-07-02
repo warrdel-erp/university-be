@@ -31,7 +31,7 @@ export async function getAssignVehicle() {
         {
           model: model.transportRouteModel,
           as: "transportRoute",
-          attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
+          attributes: ["routeTitle", "fare", "academicYearId", "instituteId"],
           where: buildScope(model.transportRouteModel),
           required: true,
         },
@@ -65,7 +65,7 @@ export async function getSingleAssignVehicle(assignVehicleId) {
       {
         model: model.transportRouteModel,
         as: "transportRoute",
-        attributes: ["routeTitle", "fare", "acedmicYearId", "instituteId"],
+        attributes: ["routeTitle", "fare", "academicYearId", "instituteId"],
         where: buildScope(model.transportRouteModel),
         required: true,
       },

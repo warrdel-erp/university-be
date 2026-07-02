@@ -2,7 +2,7 @@ import * as scheduleCreation from "../services/scheduleServices.js";
 
 export async function addSchedule(req, res) {
     const requiredFields = [
-        "acedmicYearId",
+        "academicYearId",
         "scheduleName",
         "shiftHours",
         "minStartTime",

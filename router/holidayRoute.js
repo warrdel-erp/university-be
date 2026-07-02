@@ -16,30 +16,32 @@ const optionalPositiveId = z.preprocess(
     positiveIntegerId.optional()
 );
 
+const optionalTenantFields = {
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+};
+
 const addHolidaySchema = z.object({
     name: z.string().optional(),
     date: z.string().optional(),
     event: z.string().optional(),
     remark: z.string().optional(),
-    acedmicYearId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-});
+    ...optionalTenantFields,
+}).passthrough();
 
 const getAllHolidayQuerySchema = z.object({
-    page: z.coerce.number().int().min(1).optional().default(1),
-    limit: z.coerce.number().int().min(1).max(100).optional().default(10),
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
     name: z.string().optional(),
     event: z.string().optional(),
     date: z.string().optional(),
-    acedmicYearId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-});
+    ...optionalTenantFields,
+}).passthrough();
 
 const getSingleHolidayQuerySchema = z.object({
     holidayId: positiveIntegerId,
-    acedmicYearId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-});
+    ...optionalTenantFields,
+}).passthrough();
 
 const updateHolidaySchema = z.object({
     holidayId: positiveIntegerId,
@@ -47,15 +49,13 @@ const updateHolidaySchema = z.object({
     date: z.string().optional(),
     event: z.string().optional(),
     remark: z.string().optional(),
-    acedmicYearId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-});
+    ...optionalTenantFields,
+}).passthrough();
 
 const deleteHolidayQuerySchema = z.object({
     holidayId: positiveIntegerId,
-    acedmicYearId: optionalPositiveId,
-    instituteId: optionalPositiveId,
-});
+    ...optionalTenantFields,
+}).passthrough();
 
 router.post('/', userAuth, validate({ body: addHolidaySchema }), addHoliday);
 router.get('/', userAuth, validate({ query: getAllHolidayQuerySchema }), getAllHoliday);

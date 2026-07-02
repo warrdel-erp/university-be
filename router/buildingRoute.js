@@ -20,7 +20,7 @@ const addBuildingSchema = z.object({
         required_error: 'buildingType is required',
         invalid_type_error: `buildingType must be one of: ${buildingTypes.join(', ')}`,
     }),
-    description: z.string({ required_error: 'description is required' }).min(1, 'description cannot be empty'),
+    description: z.string({ required_error: 'description is required' }).optional(),
     openingTime: z.string({ required_error: 'openingTime is required' }),
     closingTime: z.string({ required_error: 'closingTime is required' }),
 });

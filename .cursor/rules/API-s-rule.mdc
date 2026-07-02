@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+Always use Sequelize ORM features to build queries. Prefer include, association joins, fn, col, where, Op, subQuery, and query builders. Do not write raw SQL or SQL inside Sequelize.literal() unless explicitly approved or there is no Sequelize alternative.

@@ -4,7 +4,7 @@ import { Op } from "sequelize";
 
 import { scoped } from "../utility/scoped.js";
 
-import { getTenantStore } from "../utility/requestContext.js";
+import { buildScope } from "../utility/scoped.js";
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt"];
 
@@ -143,7 +143,7 @@ export async function getAllEmployeeType() {
 
 export async function addEmployeeCode(data) {
   try {
-    const { instituteId } = getTenantStore();
+    const { instituteId } = buildScope(model.employeeCodeMasterType);
 
     if (!instituteId) {
       const error = new Error(
@@ -161,10 +161,7 @@ export async function addEmployeeCode(data) {
       code: data.code,
     });
 
-    return scoped(model.employeeCodeMasterType).create({
-      ...data,
-      instituteId,
-    });
+    return scoped(model.employeeCodeMasterType).create(data);
   } catch (error) {
     console.error("Error in add employee code:", error);
 

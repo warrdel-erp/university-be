@@ -1,10 +1,12 @@
 import * as model from '../models/index.js';
 import { Op } from 'sequelize';
-import { requestContext } from '../utility/requestContext.js';
+import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
+import { buildCourseTermOptions } from '../utility/courseTerms.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
-  const { acedmicYearId, ...rest } = scopeWhere;
+  const { academicYearId, ...rest } = scopeWhere;
   return rest;
 }
 
@@ -90,11 +92,11 @@ export async function assertCourseIsActive(courseId, action = 'perform this acti
   return course;
 }
 
-export async function getCourseByAcedmicId(acedmicYearId) {
+export async function getCourseByAcedmicId(academicYearId) {
   try {
     return await scoped(model.courseModel).findAll({
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
-      where: { acedmicYearId },
+      where: { academicYearId },
     });
   } catch (error) {
     console.error('Error in getting course details By Acedmic Year:', error);
@@ -104,7 +106,7 @@ export async function getCourseByAcedmicId(acedmicYearId) {
 
 export async function getAllCourseByInstituteId(instituteId) {
   try {
-    const store = requestContext.getStore();
+    const store = getTenantStore();
     if (!store?.universityId) {
       throw new Error('University scope required');
     }
@@ -141,12 +143,13 @@ export async function getCourseByName(courseName) {
 
 export async function getClassByName(className, Section) {
   try {
+    const parsedYear = Number(className);
+    const where = Number.isInteger(parsedYear) && parsedYear > 0
+      ? { year: parsedYear }
+      : {};
+
     const results = await scoped(model.classSectionModel).findAll({
-      where: {
-        class: {
-          [Op.like]: `%${className}%`,
-        },
-      },
+      where,
     });
 
     if (results.length === 0) {
@@ -248,7 +251,7 @@ export async function getAllCourses({ campusId } = {}) {
             {
               model: model.sessionModel,
               as: 'session',
-              attributes: ['sessionId', 'sessionName', 'acedmicYearId'],
+              attributes: ['sessionId', 'sessionName', 'academicYearId'],
               where: buildScope(model.sessionModel),
               required: true,
             },
@@ -264,7 +267,6 @@ export async function getAllCourses({ campusId } = {}) {
 
 export async function getCourseWithSessionsData(courseId) {
   try {
-    const classScope = buildScope(model.classModel);
     const classSectionScope = buildScope(model.classSectionModel);
 
     const course = await scoped(model.courseModel).findOne({
@@ -285,7 +287,7 @@ export async function getCourseWithSessionsData(courseId) {
                 'startingDate',
                 'endingDate',
                 'classTillDate',
-                'acedmicYearId',
+                'academicYearId',
               ],
               where: buildScope(model.sessionModel),
               required: true,
@@ -296,13 +298,7 @@ export async function getCourseWithSessionsData(courseId) {
                   attributes: ['classSectionsId', 'section'],
                   required: false,
                   where: { courseId, ...classSectionScope },
-                },
-                {
-                  model: model.classModel,
-                  as: 'classes',
-                  attributes: ['classId', 'term'],
-                  required: false,
-                  where: { courseId, ...classScope },
+                  include: [classSectionTermsInclude()],
                 },
               ],
             },
@@ -331,13 +327,17 @@ export async function getCourseWithSessionsData(courseId) {
       const session = sessionCourseMapping.session;
       if (!session) continue;
 
-      const termNumbersHavingClasses = new Set(
-        (session.classes || []).map((classRow) => classRow.term).filter(Boolean)
-      );
+      const termNumbersHavingClasses = new Set();
+      for (const classSectionRow of session.classSession || []) {
+        for (const termRow of classSectionRow.classSectionTerms || []) {
+          if (termRow.term) {
+            termNumbersHavingClasses.add(termRow.term);
+          }
+        }
+      }
       session.missingTerms = Array.from({ length: totalTerms }, (_, index) => index + 1)
         .filter((termNumber) => !termNumbersHavingClasses.has(termNumber))
         .map((termNumber) => termTypePrefix + termNumber);
-      delete session.classes;
 
       const dedupedClassSectionIds = new Set();
       session.classSession = (session.classSession || [])
@@ -364,14 +364,8 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
     return await scoped(model.classSectionModel).findAll({
       where: { courseId, sessionId },
-      include: [
-        {
-          model: model.classModel,
-          as: 'classGroup',
-          attributes: ['term'],
-        },
-      ],
-      attributes: ['classSectionsId', 'section'],
+      include: [classSectionTermsInclude()],
+      attributes: ['classSectionsId', 'section', 'year', 'sectionId'],
     });
   } catch (error) {
     console.error('Error in Course Repository (getClassSectionsByCourseAndSession):', error);
@@ -379,7 +373,7 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   }
 }
 
-export async function getCourseListWithSubjects(acedmicYearId) {
+export async function getCourseListWithSubjects(academicYearId) {
   try {
     const subjectScope = buildScope(model.subjectModel);
 
@@ -391,7 +385,7 @@ export async function getCourseListWithSubjects(acedmicYearId) {
           attributes: ['subjectId', 'subjectCode'],
           where: {
             ...subjectScope,
-            ...(acedmicYearId && { acedmicYearId }),
+            ...(academicYearId && { academicYearId }),
           },
           required: false,
         },
@@ -419,10 +413,10 @@ export async function getSessionAcademicYearId(sessionId) {
   try {
     const session = await scoped(model.sessionModel).findOne({
       where: { sessionId },
-      attributes: ['acedmicYearId'],
+      attributes: ['academicYearId'],
       raw: true,
     });
-    return session?.acedmicYearId ?? null;
+    return session?.academicYearId ?? null;
   } catch (error) {
     console.error('Error in Course Repository (getSessionAcademicYearId):', error);
     throw error;
@@ -431,18 +425,13 @@ export async function getSessionAcademicYearId(sessionId) {
 
 export async function getSemestersByCourseId(courseId) {
   try {
-    return scoped(model.semesterModel).findAll({
-      where: {
-        courseId,
-        ...omitAcademicYearScope(buildScope(model.semesterModel)),
-      },
-      attributes: ['semesterId', 'name', 'acedmicYearId', 'courseId', 'termType', 'semesterDuration', 'courseDuration', 'totalTerms'],
-      order: [
-        ['acedmicYearId', 'ASC'],
-        ['semesterId', 'ASC'],
-      ],
+    const course = await scoped(model.courseModel).findOne({
+      where: { courseId: Number(courseId) },
+      attributes: ['courseId', 'termType', 'totalTerms', 'courseDuration'],
       raw: true,
     });
+    if (!course) return [];
+    return buildCourseTermOptions(course);
   } catch (error) {
     console.error('Error in Course Repository (getSemestersByCourseId):', error);
     throw error;
@@ -450,27 +439,11 @@ export async function getSemestersByCourseId(courseId) {
 }
 
 /** Explicit academic year — scoped() would override with request context year. */
-export async function getSemestersByCourseAndYear(courseId, acedmicYearId) {
+export async function getSemestersByCourseAndYear(courseId, academicYearId) {
   try {
-    return model.semesterModel.findAll({
-      where: {
-        courseId: Number(courseId),
-        acedmicYearId: Number(acedmicYearId),
-        ...omitAcademicYearScope(buildScope(model.semesterModel)),
-      },
-      attributes: [
-        'semesterId',
-        'name',
-        'acedmicYearId',
-        'courseId',
-        'termType',
-        'semesterDuration',
-        'courseDuration',
-        'totalTerms',
-      ],
-      order: [['semesterId', 'ASC']],
-      raw: true,
-    });
+    const options = await getSemestersByCourseId(courseId);
+    const yearId = Number(academicYearId);
+    return options.map((opt) => ({ ...opt, academicYearId: yearId }));
   } catch (error) {
     console.error('Error in Course Repository (getSemestersByCourseAndYear):', error);
     throw error;

@@ -1,14 +1,16 @@
 import * as examStructureServices from "../services/examStructureServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
+import { getAcademicYearId } from "../utility/requestContext.js";
 
 export async function addExamStructure(req, res) {
-  const { acedmicYearId, courseId } = req.body;
+  const { courseId } = req.body;
+  const academicYearId = getAcademicYearId();
   try {
-    if (!(acedmicYearId && courseId)) {
+    if (!(academicYearId && courseId)) {
       return ErrorResponse(res, 400, "Required fields are missing");
     }
     const examStructure = await examStructureServices.addExamStructure(
-      req.body,
+      { ...req.body, academicYearId },
       req.user.userId,
       req.user.userId,
     );
@@ -20,7 +22,7 @@ export async function addExamStructure(req, res) {
 
 export async function getAllExamStructure(req, res) {
   try {
-    const Structures = await examStructureServices.getExamStructure(req.query.acedmicYearId);
+    const Structures = await examStructureServices.getExamStructure();
     return SuccessResponse(res, 200, "Exam Structures fetched successfully", Structures);
   } catch (error) {
     return ErrorResponse(res, 500, error.message);
@@ -29,11 +31,10 @@ export async function getAllExamStructure(req, res) {
 
 export async function getSingleExamStructure(req, res) {
   try {
-    const { courseId, sessionId, acedmicYearId } = req.query;
+    const { courseId, sessionId } = req.query;
     const examDetails = await examStructureServices.getSingleExamStructure(
       courseId,
       sessionId,
-      acedmicYearId,
     );
 
     if (examDetails) {
@@ -107,11 +108,11 @@ export async function getDetailByExamType(req, res) {
 
 export async function getSingleExamType(req, res) {
   try {
-    const { courseId, sessionId, acedmicYearId, termNumber } = req.query;
+    const { courseId, sessionId, termNumber } = req.query;
     const examDetails = await examStructureServices.getSingleExamType(
       courseId,
       sessionId,
-      acedmicYearId,
+      undefined,
       termNumber ?? null,
     );
 

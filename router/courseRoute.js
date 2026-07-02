@@ -6,19 +6,15 @@ import { validate } from "../utility/validation.js";
 
 const router = Router();
 
-const getCourseSessionsSchema = z.object({
-    acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
-});
+const getCourseSessionsSchema = z.object({});
 
 const listCoursesSchema = z.object({
     instituteId: z.string().regex(/^\d+$/, "Institute Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
-    acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
     campusId: z.string().regex(/^\d+$/, "Campus Id must be a number").optional().transform(val => val ? parseInt(val) : undefined),
 });
 
 const courseListWithSubjectsSchema = z.object({
     instituteId: z.string().regex(/^\d+$/, "Institute Id must be a number").transform(val => parseInt(val)),
-    acedmicYearId: z.string().regex(/^\d+$/, "Academic Year Id must be a number").transform(val => parseInt(val)),
 });
 
 const classSectionsGroupedSchema = z.object({
@@ -38,8 +34,7 @@ router.get("/withSubjects", userAuth, validate({ query: courseListWithSubjectsSc
 router.get("/:courseId/sessions", userAuth, validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
 
 
-router.get("/semesterWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getClassSectionsGrouped);
-
+router.get("/termsWithClassSections", userAuth, validate({ query: classSectionsGroupedSchema }), courseController.getTermsWithClassSections);
 
 router.get("/:courseId/terms", userAuth, courseController.getTermOptionsByCourse);
 

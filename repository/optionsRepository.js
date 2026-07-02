@@ -2,6 +2,7 @@ import * as model from '../models/index.js';
 import { Op } from 'sequelize';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { ROLES } from '../const/roles.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 
 export async function getAffiliatedUniversityOptions() {
     return await scoped(model.affiliatedIniversityModel).findAll({
@@ -21,22 +22,25 @@ export async function getCourseData(courseId) {
     });
 }
 
-export async function getClassSectionOptions(courseId, term, sessionId) {
+export async function getCourseProgramData(courseId) {
+    return await scoped(model.courseModel).findByPk(courseId, {
+        attributes: ['courseDuration', 'totalTerms', 'termType'],
+    });
+}
+
+export async function getClassSectionOptions(courseId, term, sessionId, year) {
     return await scoped(model.classSectionModel).findAll({
-        attributes: [['section', 'label'], ['class_sections_id', 'value']],
+        attributes: [
+            ['section', 'label'],
+            ['class_sections_id', 'value'],
+            'year',
+        ],
         where: {
             ...(courseId && { courseId }),
             ...(sessionId && { sessionId }),
+            ...(year != null && { year: Number(year) }),
         },
-        include: [{
-            model: model.classModel,
-            as: 'classGroup',
-            where: {
-                ...(term && { term }),
-                ...buildScope(model.classModel),
-            },
-            attributes: [],
-        }],
+        include: [classSectionTermsInclude({ term, required: term != null })],
     });
 }
 
@@ -49,11 +53,11 @@ export async function getSpecializationOptions(courseId) {
     });
 }
 
-export async function getSubjectOptions(courseId, term, acedmicYearId) {
+export async function getSubjectOptions(courseId, term, academicYearId) {
     const subjectWhere = {
         ...(courseId && { courseId: Number(courseId) }),
         ...(term && { term: Number(term) }),
-        ...(acedmicYearId && { acedmicYearId: Number(acedmicYearId) }),
+        ...(academicYearId && { academicYearId: Number(academicYearId) }),
     };
 
     const mappedRows = await scoped(model.classSubjectMapperModel).findAll({

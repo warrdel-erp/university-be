@@ -33,9 +33,9 @@ export async function addExamAttendance(req, res) {
 };
 
 export async function getAllExamAttendance(req, res) {
-    const { acedmicYearId } = req.query;
+    const { academicYearId } = req.query;
     try {
-        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(acedmicYearId);
+        const attendanceRecords = await examAttendanceServices.getAllExamAttendance(academicYearId);
         res.status(200).json(attendanceRecords);
     } catch (error) {
         res.status(500).json({ error: error.message });

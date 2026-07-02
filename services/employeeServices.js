@@ -26,8 +26,11 @@ import * as attendanceRepository from '../repository/attendanceRepository.js';
 import * as evaluationRepository from "../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from '../repository/roleRepository.js';
 import { addHead } from '../repository/headRepository.js';
-import { countWeekdayInRange } from '../utility/helper.js';
+import { countWeekdayInRange, formatQueryDate, parseLocalDateOnly } from '../utility/helper.js';
+import { resolveTimeTableRoutineSection } from '../utility/classSectionIncludes.js';
+import { ROLES } from '../const/roles.js';
 import moment from 'moment';
+import { getTenantStore } from '../utility/requestContext.js';
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -158,7 +161,9 @@ function mapLongLeaveForEmployeeDetails(rows = []) {
   }));
 }
 
-export async function addEmployee(data, files, createdBy, universityId, roleId, instituteId) {
+export async function addEmployee(data, files, createdBy, roleId) {
+  const { universityId, instituteId: contextInstituteId } = getTenantStore();
+  const instituteId = data.instituteId ?? contextInstituteId;
 
   const transaction = await sequelize.transaction();
   try {
@@ -423,37 +428,89 @@ export async function addEmployee(data, files, createdBy, universityId, roleId, 
 };
 // addEmployee(data,1)
 
-export async function getAllEmployee(campusId, instituteId) {
-  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
-  return Promise.all((result || []).map(async (row) => {
-    const item = toPlain(row) || {};
-    const authUser = item?.user || item?.userEmployee || {};
-    const mappedRoleData = mapRoleData(authUser);
-    const officeEntry = await resolveOfficeEntry(item);
-    const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
-    const employment = mapEmployment(item, officeEntry, addressEntry);
+function isTeacherRole(role) {
+  return String(role ?? '').toUpperCase() === ROLES.TEACHER;
+}
 
+function formatTeacherSubjectMappings(rows) {
+  return (rows || []).map((row) => {
+    const plain = toPlain(row) || {};
+    const subject = plain.employeeSubject || {};
+    const course = subject.courseInfo || {};
     return {
-      employeeId: item?.employeeId,
-      userId: item?.userId,
-      employeeCode: item?.employeeCode,
-      employeeName: item?.employeeName || "",
-      dateOfBirth: item?.dateOfBirth || "",
-      department: item?.department || "",
-      employmentType: item?.employmentType || "",
-      pickColor: item?.pickColor || "",
-      campusId: item?.campusId,
-      instituteId: item?.instituteId,
-      roleId: item?.roleId || mappedRoleData?.role || "",
-      roleData: mappedRoleData,
-      role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
-      joiningDate: employment.joiningDate,
-      gender: getMetaCode(item, "gender"),
-      religion: getMetaCode(item, "religion"),
-      nationality: getMetaCode(item, "nationality"),
-      employment
+      teacherSubjectMappingId: plain.teacherSubjectMappingId,
+      subjectId: plain.subjectId ?? subject.subjectId,
+      subjectName: subject.subjectName ?? null,
+      subjectCode: subject.subjectCode ?? null,
+      subjectType: subject.subjectType ?? null,
+      subjectCategory: subject.subjectCategory ?? null,
+      courseId: subject.courseId ?? null,
+      courseName: course.courseName ?? null,
+      courseCode: course.courseCode ?? null,
     };
-  }));
+  });
+}
+
+async function formatEmployeeListItem(row) {
+  const item = toPlain(row) || {};
+  const authUser = item?.user || item?.userEmployee || {};
+  const mappedRoleData = mapRoleData(authUser);
+  const officeEntry = await resolveOfficeEntry(item);
+  const addressEntry = Array.isArray(item?.address) ? (item.address[0] || {}) : (item?.address || {});
+  const employment = mapEmployment(item, officeEntry, addressEntry);
+
+  return {
+    employeeId: item?.employeeId,
+    userId: item?.userId,
+    employeeCode: item?.employeeCode,
+    employeeName: item?.employeeName || "",
+    dateOfBirth: item?.dateOfBirth || "",
+    department: item?.department || "",
+    employmentType: item?.employmentType || "",
+    pickColor: item?.pickColor || "",
+    campusId: item?.campusId,
+    instituteId: item?.instituteId,
+    roleId: item?.roleId || mappedRoleData?.role || "",
+    roleData: mappedRoleData,
+    role: mappedRoleData?.role ? [mappedRoleData.role] : (item?.role || []),
+    joiningDate: employment.joiningDate,
+    gender: getMetaCode(item, "gender"),
+    religion: getMetaCode(item, "religion"),
+    nationality: getMetaCode(item, "nationality"),
+    employment,
+  };
+}
+
+export async function getAllEmployee(campusId, instituteId, auth = {}) {
+  const { userId, role, employeeId: authEmployeeId } = auth;
+
+  if (isTeacherRole(role)) {
+    const employeeId = await employeeRepository.resolveEmployeeIdForAuth({
+      userId,
+      employeeId: authEmployeeId,
+    });
+    if (!employeeId) {
+      throw new Error('Employee not found for user');
+    }
+
+    const [employees, subjectMappings] = await Promise.all([
+      employeeRepository.getAllEmployee(undefined, undefined, { employeeId }),
+      employeeRepository.getTeacherSubject(employeeId, {}),
+    ]);
+
+    const formatted = await Promise.all((employees || []).map(formatEmployeeListItem));
+    if (!formatted.length) {
+      return [];
+    }
+
+    return [{
+      ...formatted[0],
+      subjects: formatTeacherSubjectMappings(subjectMappings),
+    }];
+  }
+
+  const result = await employeeRepository.getAllEmployee(campusId, instituteId);
+  return Promise.all((result || []).map(formatEmployeeListItem));
 };
 
 export async function getSingleEmployeeDetails(employeeId) {
@@ -607,6 +664,7 @@ function validateEmployeeRow(employee) {
 
 export async function importEmployeeData(excelData, commonData) {
   const transaction = await sequelize.transaction();
+  const { universityId } = getTenantStore();
 
   try {
     for (const [index, employee] of excelData.entries()) {
@@ -670,7 +728,7 @@ export async function importEmployeeData(excelData, commonData) {
         instituteId: convertedData.instituteId,
         roleId: convertedData.roleId,
         employeeName: convertedData.employeeName,
-        universityId: convertedData.universityId,
+        universityId,
         employeeId
       }
       const employeePersonalDetail = {
@@ -692,7 +750,7 @@ export async function importEmployeeData(excelData, commonData) {
     return { success: false, error: error.message };
   }
 };
-export async function updateEmployee(employeeId, data, files, updatedBy, createdBy, universityId, roleId, instituteId) {
+export async function updateEmployee(employeeId, data, files, updatedBy, createdBy) {
 
   const transaction = await sequelize.transaction();
   try {
@@ -1124,7 +1182,7 @@ export async function getTeacherTimeTable(employeeId) {
           courseName: course.courseName,
           courseCode: course.courseCode,
           courseId: item.courseId,
-          class: classSection.class,
+          class: classSection.year != null ? String(classSection.year) : "",
           section: classSection.section,
           classSectionsId: item.classSectionsId,
           startingDate: item.startingDate,
@@ -1199,20 +1257,59 @@ export async function getSubjectEvalution(employeeId) {
 }
 
 
-export async function getTodayClassSchedule(employeeId, currentDate, dayString, sessionId, groupPeriods = false) {
-  const result = await timeTableCreateRepository.getTodayClassScheduleForEmployee(employeeId, currentDate, dayString, sessionId);
+const SCHEDULE_DAY_INDEX = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
 
-  // Add date to each item for grouping logic
-  const resultWithDate = result.map(item => ({
-    ...item,
-    date: currentDate
-  }));
+function expandScheduleForExactDate(rawSchedules, currentDate) {
+  const targetDate = parseLocalDateOnly(currentDate);
+  const dateString = typeof currentDate === 'string' ? currentDate.split('T')[0] : formatQueryDate(currentDate);
+  const results = [];
 
-  if (groupPeriods) {
-    return groupConsecutivePeriods(resultWithDate);
+  for (const schedule of rawSchedules) {
+    const routine = schedule.timeTablecreate;
+    if (!routine?.startingDate || !routine?.endingDate) continue;
+
+    const start = parseLocalDateOnly(routine.startingDate);
+    const end = parseLocalDateOnly(routine.endingDate);
+    if (targetDate < start || targetDate > end) continue;
+
+    const targetDay = SCHEDULE_DAY_INDEX[schedule.day];
+    if (targetDay === undefined || targetDate.getDay() !== targetDay) continue;
+
+    results.push({
+      ...JSON.parse(JSON.stringify(schedule)),
+      date: dateString,
+    });
   }
 
-  return resultWithDate;
+  results.sort((a, b) => (a.period || 0) - (b.period || 0));
+  return results;
+}
+
+export async function getTodayClassSchedule(employeeId, currentDate, sessionId, groupPeriods = false) {
+  const rawSchedules = await timeTableCreateRepository.getTodayClassScheduleForEmployee(
+    Number(employeeId),
+    currentDate,
+    sessionId,
+  );
+
+  const expanded = expandScheduleForExactDate(rawSchedules, currentDate);
+  const schedules = await enrichSchedulesWithAttendance(
+    expanded.map(stripTeacherFieldsFromSchedule),
+  );
+
+  if (groupPeriods) {
+    return applyGroupAttendanceStatus(groupConsecutivePeriods(schedules));
+  }
+
+  return schedules;
 }
 
 export async function getTeacherCourses(employeeId) {
@@ -1296,8 +1393,8 @@ function applyGroupAttendanceStatus(groups) {
   return groups;
 }
 
-export async function getPastClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+export async function getPastClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
+  const rawSchedules = await timeTableCreateRepository.getPastClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
 
   const daysOfWeek = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
@@ -1357,8 +1454,8 @@ export async function getPastClassSchedules(employeeId, acedmicYearId, currentDa
   return { teacher, schedules };
 }
 
-export async function getUpcomingClassSchedules(employeeId, acedmicYearId, currentDateString, groupPeriods = false) {
-  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, acedmicYearId, currentDateString);
+export async function getUpcomingClassSchedules(employeeId, academicYearId, currentDateString, groupPeriods = false) {
+  const rawSchedules = await timeTableCreateRepository.getUpcomingClassSchedulesForEmployee(employeeId, academicYearId, currentDateString);
 
   const daysOfWeek = {
     'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
@@ -1499,21 +1596,34 @@ function processScheduleCombinations(schedules) {
   const uniqueCombinationsMap = new Map();
 
   for (const schedule of schedules) {
-    if (!schedule.timeTablecreate || !schedule.timeTablecreate.timeTableClassSection) continue;
+    const routine = schedule.timeTablecreate;
+    if (!routine) continue;
 
-    const classSection = schedule.timeTablecreate.timeTableClassSection;
-    const course = schedule.timeTablecreate.timeTableCourse;
+    const classSection = resolveTimeTableRoutineSection(routine);
+    if (!classSection) continue;
+
+    const routinePlain = routine.get ? routine.get({ plain: true }) : routine;
+    const classSectionTermId =
+      routinePlain.classSectionTermId
+      ?? routinePlain.timeTableClassSectionTerm?.classSectionTermId
+      ?? null;
+    if (!classSectionTermId) continue;
+
+    const term = routinePlain.timeTableClassSectionTerm?.term ?? null;
+    const course = routine.timeTableCourse;
 
     const subject = extractSubjectDetails(schedule);
     if (!subject) continue;
 
-    const key = `${classSection.classSectionsId}_${subject.subjectId}`;
+    const key = `${classSectionTermId}_${subject.subjectId}`;
     if (!uniqueCombinationsMap.has(key)) {
       uniqueCombinationsMap.set(key, {
         courseId: course?.courseId,
         courseName: course?.courseName,
+        classSectionTermId,
         classSectionsId: classSection.classSectionsId,
-        class: classSection.class,
+        year: classSection.year != null ? Number(classSection.year) : null,
+        term: term != null ? Number(term) : null,
         section: classSection.section,
         subjectId: subject.subjectId,
         subjectName: subject.subjectName,
@@ -1522,8 +1632,8 @@ function processScheduleCombinations(schedules) {
     }
 
     const entry = uniqueCombinationsMap.get(key);
-    const startDateStr = schedule.timeTablecreate.startingDate;
-    const endDateStr = schedule.timeTablecreate.endingDate;
+    const startDateStr = routine.startingDate;
+    const endDateStr = routine.endingDate;
     const dayStr = schedule.day;
 
     if (startDateStr && endDateStr && dayStr) {
@@ -1543,8 +1653,8 @@ function getEmployeeDetails(schedules) {
     : null;
 }
 
-export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
-  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+export async function getUniqueClassSectionSubjects(employeeId, academicYearId) {
+  const schedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
 
   return {
     employeeDetails: getEmployeeDetails(schedules),
@@ -1552,9 +1662,9 @@ export async function getUniqueClassSectionSubjects(employeeId, acedmicYearId) {
   };
 }
 
-export async function getClassCounts(employeeId, acedmicYearId, currentDateString) {
-  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, acedmicYearId);
-  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, acedmicYearId);
+export async function getSectionCounts(employeeId, academicYearId, currentDateString) {
+  const recurringSchedules = await timeTableCreateRepository.getEmployeeRecurringSchedules(employeeId, academicYearId);
+  const allSchedules = await timeTableCreateRepository.getUniqueClassSectionSubjectsForEmployee(employeeId, academicYearId);
 
   const referenceDate = new Date(currentDateString);
   referenceDate.setHours(0, 0, 0, 0);

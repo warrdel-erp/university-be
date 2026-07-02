@@ -56,8 +56,8 @@ export async function addFeeType(feeTypeData, options = {}) {
 
 export async function getFeeTypeDetails(filters = {}) {
   try {
-    const feeGroupBusinessWhere = filters.acedmicYearId
-      ? { acedmicYearId: filters.acedmicYearId }
+    const feeGroupBusinessWhere = filters.academicYearId
+      ? { academicYearId: filters.academicYearId }
       : {};
 
     return scoped(model.feeTypeModel).findAll({

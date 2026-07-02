@@ -13,12 +13,13 @@ export async function addHoliday(req, res) {
 
 export async function getAllHoliday(req, res) {
     try {
-        const { page, limit, name, event, date } = req.query;
+        const { name, event, date } = req.query;
         const filter = { ...(name && { name }), ...(event && { event }), ...(date && { date }) };
-        const result = await holidayCreation.getHolidayDetails(page, limit, filter);
-        res.status(200).json(result);
+        const holidays = await holidayCreation.getAllHolidays(filter);
+        res.status(200).json(holidays);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = /scope/i.test(error.message) ? 400 : 500;
+        res.status(statusCode).json({ error: error.message });
     }
 }
 

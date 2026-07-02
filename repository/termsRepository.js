@@ -1,4 +1,5 @@
 import * as model from '../models/index.js';
+import { classSectionTermsInclude } from '../utility/classSectionIncludes.js';
 import { scoped } from '../utility/scoped.js';
 
 function whereFromSession(session, model, where = {}) {
@@ -6,7 +7,7 @@ function whereFromSession(session, model, where = {}) {
   const tenant = {
     universityId: s.universityId,
     instituteId: s.instituteId,
-    acedmicYearId: s.acedmicYearId,
+    academicYearId: s.academicYearId,
   };
   const attrs = model.rawAttributes || {};
   const merged = { ...where, ...tenant };
@@ -33,10 +34,10 @@ export async function getSubjectsByCourseAndSession(courseId, session) {
   }
 }
 
-export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId) {
+export async function getSubjectsByCourseAndAcademicYear(courseId, academicYearId) {
   try {
     return await scoped(model.subjectModel).findAll({
-      where: { courseId, acedmicYearId },
+      where: { courseId, academicYearId },
       attributes: ['subjectId', 'subjectName', 'term'],
       raw: true,
       nest: true,
@@ -50,7 +51,7 @@ export async function getSubjectsByCourseAndAcademicYear(courseId, acedmicYearId
 export async function getSubjectsByCourseAndAcademicYearAndInstitute(
   courseId,
   instituteId,
-  acedmicYearId
+  academicYearId
 ) {
   try {
 
@@ -58,7 +59,7 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(
       where: {
         courseId,
         instituteId,
-        acedmicYearId,
+        academicYearId,
       },
       attributes: ['subjectId', 'subjectName', 'term', 'subjectCode'],
       order: [
@@ -74,21 +75,29 @@ export async function getSubjectsByCourseAndAcademicYearAndInstitute(
   }
 }
 
-export async function getClassSectionsByCourseAndSession(courseId, sessionId, session) {
+export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   try {
-    return await model.classSectionModel.findAll({
-      where: whereFromSession(session, model.classSectionModel, { courseId, sessionId }),
-      attributes: ['classSectionsId', 'section'],
-      include: [
-        {
-          model: model.classModel,
-          as: 'classGroup',
-          attributes: ['classId', 'term'],
-        },
+    const rows = await scoped(model.classSectionModel).findAll({
+      where: { courseId, sessionId },
+      attributes: [
+        'classSectionsId',
+        'section',
+        'sectionId',
+        'year',
+        'specializationId',
       ],
-      raw: true,
-      nest: true,
+      include: [classSectionTermsInclude()],
+      order: [
+        ['section', 'ASC'],
+        [{ model: model.classSectionTermModel, as: 'classSectionTerms' }, 'term', 'ASC'],
+      ],
     });
+
+    const plainRows = [];
+    for (const row of rows) {
+      plainRows.push(row.get({ plain: true }));
+    }
+    return plainRows;
   } catch (error) {
     console.error('Error fetching class sections:', error);
     throw error;
@@ -98,11 +107,13 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId, se
 export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session) {
   try {
     return await model.examSetupTypeTermModel.findAll({
+      attributes: ['examSetupTypeTermId', 'examSetupTypeId', 'term'],
       where: whereFromSession(session, model.examSetupTypeTermModel, { courseId }),
       include: [
         {
           model: model.examSetupTypeModel,
           as: 'examSetupType',
+          attributes: ['examType', 'examName'],
           required: true,
           include: [
             {
@@ -125,10 +136,10 @@ export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionI
   }
 }
 
-export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, acedmicYearId) {
+export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, academicYearId) {
   try {
     return await scoped(model.examSetupTypeTermModel).findAll({
-      where: { courseId, acedmicYearId },
+      where: { courseId, academicYearId },
       include: [
         {
           model: model.examSetupTypeModel,

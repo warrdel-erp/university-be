@@ -43,7 +43,7 @@ const timeTableStructureModel = sequelize.define(
                 key: 'institute_id'
             }
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'acedmic_year_id',

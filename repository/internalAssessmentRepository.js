@@ -25,8 +25,19 @@ async function assertScopedInternalAssessment(examAssessmentId, transaction) {
 }
 
 const assessmentIncludes = [
-    { model: model.subjectModel, as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: false },
-    { model: model.semesterModel, as: "assessmentSemester", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.semesterModel), required: false },
+    {
+        model: model.subjectModel,
+        as: "assessmentSubject",
+        attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+        where: buildScope(model.subjectModel),
+        required: false,
+        include: [{
+            model: model.courseModel,
+            as: 'courseInfo',
+            attributes: ['termType'],
+            required: false,
+        }],
+    },
     {
         model: model.examSetupTypeModel,
         as: "assessmentExamType",
@@ -49,6 +60,33 @@ const assessmentIncludes = [
         ],
     },
 ];
+
+async function findStudentsForAssessmentTerm({ term, courseId, examAssessmentId }) {
+    if (term == null || courseId == null) {
+        return [];
+    }
+
+    return scoped(model.studentModel).findAll({
+        attributes: ["studentId", "scholarNumber", "firstName", "middleName", "lastName"],
+        where: { courseId: Number(courseId) },
+        include: [
+            {
+                model: model.classSectionTermModel,
+                as: 'studentClassSectionTerm',
+                required: true,
+                attributes: ['classSectionTermId', 'term'],
+                where: { term: Number(term) },
+            },
+            {
+                model: model.assessmentEvaluationModel,
+                as: 'studentresult',
+                attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
+                required: false,
+                where: { examAssessmentId: Number(examAssessmentId) },
+            },
+        ],
+    });
+}
 
 export async function addInternalAssessment(data) {
     const setupType = await assertScopedExamSetupType(data.examSetupTypeId);
@@ -87,8 +125,13 @@ export async function updateInternalAssessment(examAssessmentId, data) {
         if (!existing) {
             return [0];
         }
+        const payload = { ...data };
+        if (payload.term == null && payload.semesterId != null) {
+            payload.term = Number(payload.semesterId);
+        }
+        delete payload.semesterId;
         return await model.internalAssessmentModel.update(
-            data,
+            payload,
             { where: { examAssessmentId } },
         );
     } catch (error) {
@@ -109,37 +152,46 @@ export async function deleteInternalAssessment(examAssessmentId) {
 };
 
 export async function evaluationInternalAssessment(subjectId, employeeId) {
-    return await model.internalAssessmentModel.findOne({
+    const assessment = await model.internalAssessmentModel.findOne({
         where: { subjectId, employeeId },
         include: [
-            { model: model.subjectModel, as: "assessmentSubject", attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] }, where: buildScope(model.subjectModel), required: true },
             {
-                model: model.semesterModel,
-                as: "assessmentSemester",
+                model: model.subjectModel,
+                as: "assessmentSubject",
                 attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
-                where: buildScope(model.semesterModel),
-                required: false,
-                include: [
-                    {
-                        model: model.studentModel,
-                        as: 'studentSemester',
-                        attributes: ["studentId", "scholarNumber", "firstName", "middleName", "lastName"],
-                        where: buildScope(model.studentModel),
-                        required: false,
-                        include: [
-                            {
-                                model: model.assessmentEvaluationModel,
-                                as: 'studentresult',
-                                attributes: { exclude: ["deletedAt", "createdBy", "updatedBy"] },
-                            },
-                        ],
-                    },
-                ],
+                where: buildScope(model.subjectModel),
+                required: true,
+                include: [{
+                    model: model.courseModel,
+                    as: 'courseInfo',
+                    attributes: ['termType', 'courseId'],
+                    required: false,
+                }],
             },
-            ...assessmentIncludes.filter((i) => i.as !== 'assessmentSubject' && i.as !== 'assessmentSemester'),
-            { model: model.employeeModel, as: "employees", attributes: ["employeeId", "employeeCode", "employeeName"], where: buildScope(model.employeeModel), required: true },
+            ...assessmentIncludes.filter((includeRow) => includeRow.as !== 'assessmentSubject'),
+            {
+                model: model.employeeModel,
+                as: "employees",
+                attributes: ["employeeId", "employeeCode", "employeeName"],
+                where: buildScope(model.employeeModel),
+                required: true,
+            },
         ],
     });
+
+    if (!assessment) {
+        return null;
+    }
+
+    const plain = assessment.get({ plain: true });
+    const termStudents = await findStudentsForAssessmentTerm({
+        term: plain.term,
+        courseId: plain.assessmentSubject?.courseId,
+        examAssessmentId: plain.examAssessmentId,
+    });
+
+    assessment.setDataValue('termStudents', termStudents);
+    return assessment;
 };
 
 export async function bulkInsertEvaluation(dataArray) {

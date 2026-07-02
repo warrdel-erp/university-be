@@ -28,9 +28,9 @@ export async function addFeeInvoiceDetailRecord(req, res) {
 }
 
 export async function getAllFeeInvoiceDetailRecord(req, res) {
-  const { acedmicYearId } = req.query;
+  const { academicYearId } = req.query;
   try {
-    const feeInvoice = await feeInvoiceRecordService.getAllFeeInvoiceDetailRecord({ acedmicYearId });
+    const feeInvoice = await feeInvoiceRecordService.getAllFeeInvoiceDetailRecord({ academicYearId });
     res.status(200).json(feeInvoice);
   } catch (error) {
     res.status(500).json({ error: error.message });

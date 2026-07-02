@@ -2,12 +2,12 @@ import * as lesson from "../services/lessonServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addLesson(req, res) {
-    const { name, subjectId, acedmicYearId, sessionId } = req.body
+    const { name, subjectId, academicYearId, sessionId } = req.body
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
     try {
-        if (!(name && subjectId && acedmicYearId && sessionId)) {
-            return res.status(400).send('name,subjectId,acedmicYearId and sessionId is required')
+        if (!(name && subjectId && academicYearId && sessionId)) {
+            return res.status(400).send('name,subjectId,academicYearId and sessionId is required')
         }
         const lessonData = await lesson.addLesson(req.body, createdBy, updatedBy);
         res.status(201).json({ message: "Data added successfully", lessonData });
@@ -17,9 +17,9 @@ export async function addLesson(req, res) {
 };
 
 export async function getAllLesson(req, res) {
-    const { acedmicYearId } = req.query
+    const { academicYearId } = req.query
     try {
-        const Lessons = await lesson.getLessonDetails(acedmicYearId);
+        const Lessons = await lesson.getLessonDetails(academicYearId);
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -71,9 +71,9 @@ export async function addMapping(req, res) {
 };
 
 export async function getMapping(req, res) {
-    const { acedmicYearId } = req.query
+    const { academicYearId } = req.query
     try {
-        const Lessons = await lesson.getMapping(acedmicYearId);
+        const Lessons = await lesson.getMapping(academicYearId);
         res.status(200).json(Lessons);
     } catch (error) {
         res.status(500).json({ error: error.message });

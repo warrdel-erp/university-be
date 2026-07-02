@@ -20,17 +20,14 @@ const optionalPositiveId = z.preprocess(
     positiveIntegerId.optional()
 );
 
-const optionalAcademicYearId = optionalPositiveId;
-
 const getRoutineSchema = z.object({
-    classSectionsId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId,
 });
 
 const getRoutineByTeacherSchema = z.object({
     employeeId: positiveIntegerId,
     courseId: positiveIntegerId,
     sessionId: positiveIntegerId,
-    acedmicYearId: optionalAcademicYearId,
 });
 
 const cloneRoutineSchema = z
@@ -46,63 +43,83 @@ const cloneRoutineSchema = z
 
 const getSingleQuerySchema = z.object({
     courseId: optionalPositiveId,
-    acedmicYearId: optionalAcademicYearId,
+});
+
+const getTimeTableCreateListQuerySchema = z.object({
+    courseId: optionalPositiveId,
+    sessionId: optionalPositiveId,
 });
 
 const getTimeTableByCourseAndSectionQuerySchema = z.object({
     courseId: positiveIntegerId,
-    classSectionsId: optionalPositiveId,
+    classSectionTermId: positiveIntegerId,
     timeTableType: z.string().optional(),
-    acedmicYearId: optionalAcademicYearId,
 });
 
 const addTimeTableCreateSchema = z.object({
-    timeTableNameId: optionalPositiveId,
+    timeTableNameId: positiveIntegerId,
+    classSectionTermId: optionalPositiveId,
     courseId: optionalPositiveId,
-    acedmicYearId: optionalAcademicYearId,
-    classSectionsId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
     startingDate: z.string().optional(),
     endingDate: z.string().optional(),
     timeTableRoutineId: optionalPositiveId,
     previousDate: z.string().optional(),
-});
+}).refine(
+    (data) => data.timeTableType === 'elective' || data.classSectionTermId != null,
+    { message: 'classSectionTermId is required', path: ['classSectionTermId'] },
+);
 
 const changeTimeTableCreateSchema = z.object({
     timeTableRoutineId: positiveIntegerId,
     startingDate: z.string().optional(),
     endingDate: z.string().optional(),
-    classSectionsId: optionalPositiveId,
+    classSectionTermId: optionalPositiveId,
     timeTableNameId: optionalPositiveId,
     courseId: optionalPositiveId,
     campusId: optionalPositiveId,
     timeTableType: z.enum(['normal', 'elective']).optional(),
-    acedmicYearId: optionalAcademicYearId,
 });
 
-const addTimeTableMappingSchema = z.object({
-    timeTableRoutineId: optionalPositiveId,
-    timeTableCreationId: optionalPositiveId,
-    timeTableNameId: optionalPositiveId,
-    employeeId: optionalPositiveId,
-    subjectId: optionalPositiveId,
-    electiveSubjectId: optionalPositiveId,
-    teacherSubjectMappingId: optionalPositiveId,
-    day: z.string().optional(),
-    period: z.coerce.number().int().optional(),
-    classRoomSectionId: optionalPositiveId,
-    timeTableType: z.enum(['normal', 'elective']).optional(),
-    isSameTeacher: z.boolean().optional(),
-    teacherType: z.string().optional(),
-    isAttendence: z.boolean().optional(),
-    isOverridingSyblingElectives: z.boolean().optional(),
-    acedmicYearId: optionalAcademicYearId,
+const mappingSlotSchema = z.object({
+    timeTableCreationId: positiveIntegerId,
+    period: z.coerce.number().int().positive('period must be greater than 0'),
 });
+
+const addTimeTableMappingSchema = z
+    .object({
+        timeTableRoutineId: positiveIntegerId,
+        timeTableCreationId: optionalPositiveId,
+        timeTableNameId: optionalPositiveId,
+        employeeId: optionalPositiveId,
+        subjectId: optionalPositiveId,
+        electiveSubjectId: optionalPositiveId,
+        teacherSubjectMappingId: optionalPositiveId,
+        day: z.string().optional(),
+        period: z.coerce.number().int().optional(),
+        classRoomSectionId: optionalPositiveId,
+        timeTableType: z.enum(['normal', 'elective']).optional(),
+        isSameTeacher: z.boolean().optional(),
+        teacherType: z.string().optional(),
+        isAttendence: z.boolean().optional(),
+        isOverridingSyblingElectives: z.boolean().optional(),
+        classSectionTermId: optionalPositiveId,
+        classSectionTermIds: z.array(positiveIntegerId).min(1).optional(),
+        slots: z.array(mappingSlotSchema).min(1).optional(),
+        combinedGroupId: z.string().uuid().optional(),
+    })
+    .refine(
+        (body) => (Array.isArray(body.slots) && body.slots.length > 0)
+            || (body.timeTableCreationId != null && body.period != null),
+        {
+            message: 'Provide slots[] or both timeTableCreationId and period',
+            path: ['slots'],
+        },
+    );
 
 const getTimeTableMappingBodySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
-    acedmicYearId: optionalAcademicYearId,
 });
 
 const updateTimeTableMappingSchema = z.object({
@@ -131,34 +148,33 @@ const updateSimpleTeacherMappingSchema = z
 
 const deleteTimeTableMappingQuerySchema = z.object({
     timeTableMappingId: positiveIntegerId,
+    deleteCombinedGroup: z
+        .preprocess((val) => val === 'true' || val === true, z.boolean())
+        .optional(),
 });
 
 const getTimeTableCellDataQuerySchema = z.object({
     courseId: positiveIntegerId,
-    classSectionsId: optionalPositiveId,
-    acedmicYearId: optionalAcademicYearId,
+    classSectionTermId: positiveIntegerId,
 });
 
 const getTimeTableElectiveQuerySchema = z.object({
     courseId: positiveIntegerId,
-    acedmicYearId: optionalAcademicYearId,
 });
 
 const publishTimeTableQuerySchema = z.object({
     timeTableRoutineId: positiveIntegerId,
-    acedmicYearId: optionalAcademicYearId,
 });
 
 const classSubjectCountQuerySchema = z.object({
-    classSectionsId: positiveIntegerId,
-    acedmicYearId: optionalAcademicYearId,
+    classSectionTermId: positiveIntegerId,
 });
 
 router.get('/getRoutine', userAuth, validate({ query: getRoutineSchema }), getRoutineByClassSectionId);
 router.get('/getRoutineByTeacher', userAuth, validate({ query: getRoutineByTeacherSchema }), getRoutineByTeacherAndAcademicYear);
 router.post('/', userAuth, validate({ body: addTimeTableCreateSchema }), addtimeTableCreate);
 router.post('/clone', userAuth, validate({ body: cloneRoutineSchema }), cloneTimeTableRoutine);
-router.get('/', userAuth, validate({ query: z.object({ acedmicYearId: optionalAcademicYearId }) }), gettimeTableCreateDetails);
+router.get('/', userAuth, validate({ query: getTimeTableCreateListQuerySchema }), gettimeTableCreateDetails);
 router.get('/single', userAuth, validate({ query: getSingleQuerySchema }), getSingletimeTableCreateDetails);
 router.get('/create', userAuth, validate({ query: getTimeTableByCourseAndSectionQuerySchema }), getTimeTableByCourseAndSection);
 router.patch('/create', userAuth, validate({ body: changeTimeTableCreateSchema }), changeTimeTableCreate);

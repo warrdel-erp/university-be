@@ -129,6 +129,11 @@ const classScheduleModel = sequelize.define(
             defaultValue: false,
             field: 'is_overriding_sybling_electives'
         },
+        combinedGroupId: {
+            type: DataTypes.STRING(36),
+            allowNull: true,
+            field: 'combined_group_id',
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,

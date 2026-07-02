@@ -15,8 +15,8 @@ export async function addNotice(data, createdBy, updatedBy, role) {
   }
 }
 
-export async function getAllStudentNotice() {
-  return notice.getAllStudentNotice();
+export async function getAllStudentNotice(role) {
+  return notice.getAllStudentNotice(role);
 }
 
 export async function getAllEmployeeNotice(createdBy, role) {
@@ -24,8 +24,7 @@ export async function getAllEmployeeNotice(createdBy, role) {
 }
 
 export async function updateNotice(noticeId, data, updatedBy) {
-  data.updatedBy = updatedBy;
-  return notice.updateNotice(noticeId, data);
+  return notice.updateNotice(noticeId, { ...data, updatedBy });
 }
 
 export async function deleteNotice(noticeId) {

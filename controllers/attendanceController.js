@@ -1,7 +1,6 @@
 import * as AttendanceCreation from "../services/attendanceServices.js";
 import * as fileHandler from '../utility/fileHandler.js';
 import { ErrorResponse, SuccessResponse } from "../utility/response.js";
-import { getTenantStore } from "../utility/requestContext.js";
 
 export async function addAttendance(req, res) {
   const createdBy = req.user.userId;
@@ -51,15 +50,10 @@ export async function updateAttendance(req, res) {
 
 export const importAttendance = async (req, res) => {
   try {
-    const { universityId, instituteId } = getTenantStore();
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
-    const data = { universityId, createdBy, instituteId, updatedBy };
-
-    if (!(universityId && instituteId)) {
-      return res.status(400).json({ error: 'universityId, instituteId are required' });
-    }
+    const data = { createdBy, updatedBy };
 
     const excelFile = req.files?.attendance;
     if (!excelFile) {
@@ -87,15 +81,10 @@ export const importAttendance = async (req, res) => {
 
 export const importBulkAttendance = async (req, res) => {
   try {
-    const { universityId, instituteId } = getTenantStore();
     const createdBy = req.user.userId;
     const updatedBy = req.user.userId;
 
-    const data = { universityId, createdBy, instituteId, updatedBy };
-
-    if (!(universityId && instituteId)) {
-      return res.status(400).json({ error: 'universityId, instituteId are required' });
-    }
+    const data = { createdBy, updatedBy };
 
     const excelFile = req.files?.attendance;
     if (!excelFile) {
@@ -118,14 +107,10 @@ export const importBulkAttendance = async (req, res) => {
 };
 
 export async function getAttendanceByDate(req, res) {
-  const { date, classSectionsId, employeeId } = req.query;
-
-  if (!date || !classSectionsId || !employeeId) {
-    return res.status(400).json({ error: "required date,employeeId and classSectionsId" });
-  }
+  const { date, classSectionTermId, employeeId } = req.query;
 
   try {
-    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionsId, employeeId);
+    const attendance = await AttendanceCreation.getAttendanceByDate(date, classSectionTermId, employeeId);
 
     if (!attendance || attendance.length === 0) {
       return res.status(200).json({ message: "No data available" });
@@ -138,7 +123,7 @@ export async function getAttendanceByDate(req, res) {
   }
 };
 
-export async function getPreviousClasses(req, res) {
+export async function getPreviousSessions(req, res) {
   try {
     const employeeId = req.params.employeeId
 
@@ -146,7 +131,7 @@ export async function getPreviousClasses(req, res) {
       throw new Error("employeeId is required");
     }
 
-    const data = await AttendanceCreation.getPreviousClasses(
+    const data = await AttendanceCreation.getPreviousSessions(
       employeeId,
       req
     );
@@ -175,10 +160,10 @@ export async function getStudentAttendanceReport(req, res) {
 
 export async function getStudentsBatchAttendance(req, res) {
   try {
-    const { classSectionId, filters } = req.body;
+    const { classSectionTermId, filters } = req.body;
 
     const data = await AttendanceCreation.getStudentsBatchAttendance(
-      classSectionId,
+      classSectionTermId,
       filters
     );
 
@@ -189,17 +174,17 @@ export async function getStudentsBatchAttendance(req, res) {
   }
 };
 
-export async function getEmployeeClassDates(req, res) {
+export async function getEmployeeSectionDates(req, res) {
   try {
-    const { classSectionId, subjectId, employeeId } = req.query;
+    const { classSectionTermId, subjectId, employeeId } = req.query;
 
-    const data = await AttendanceCreation.getEmployeeClassDates(
-      classSectionId,
+    const data = await AttendanceCreation.getEmployeeSectionDates(
+      classSectionTermId,
       subjectId,
       employeeId
     );
 
-    return SuccessResponse(res, 200, "Employee Class Dates Fetched Successfully", data);
+    return SuccessResponse(res, 200, "Employee section dates fetched successfully", data);
   } catch (error) {
     console.error("Controller Error:", error);
     ErrorResponse(res, 500, error.message || 'An unexpected error occurred');

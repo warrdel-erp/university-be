@@ -83,7 +83,7 @@ const formatEmployeeDetailsDeep = (employee) => {
     return {
       sectionId: section?.classSectionsId,
       sectionName: section?.section,
-      className: section?.class,
+      className: section?.year != null ? String(section.year) : null,
       semesterId: section?.semesterId,
       courseId: section?.courseId,
       studentCount: section?.studentSections?.length || 0,
@@ -643,7 +643,7 @@ export async function initialSetup(info) {
     // 7. Update User Defaults
     await user.update({
       defaultInstituteId: institute.instituteId,
-      defaultAcademicYearId: academicYear.acedmicYearId
+      defaultAcademicYearId: academicYear.academicYearId
     }, { transaction });
 
     // 8. Assign new roles and permissions

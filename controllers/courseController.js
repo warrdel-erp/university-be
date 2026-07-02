@@ -1,5 +1,6 @@
 import * as courseService from '../services/courseService.js';
 import { ErrorResponse, SuccessResponse } from '../utility/response.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const listCourses = async (req, res) => {
   try {
@@ -23,9 +24,7 @@ export const listCourses = async (req, res) => {
 
 export const getCourseWithSubjects = async (req, res) => {
   try {
-    const { acedmicYearId } = req.query;
-
-    const result = await courseService.getCourseWithSubjects(acedmicYearId);
+    const result = await courseService.getCourseWithSubjects(getAcademicYearId());
 
     return res.status(200).json({
       status: 'success',
@@ -75,18 +74,18 @@ export const getCourseSessions = async (req, res) => {
   }
 };
 
-export const getClassSectionsGrouped = async (req, res) => {
+export const getTermsWithClassSections = async (req, res) => {
   try {
     const { courseId, sessionId } = req.query;
 
-    const result = await courseService.getClassSectionsGroupedByTerm(courseId, sessionId);
+    const result = await courseService.getTermsWithClassSections(courseId, sessionId);
 
     return res.status(200).json({
       status: 'success',
       data: result,
     });
   } catch (error) {
-    console.error('Error in Get Class Sections Grouped Controller:', error);
+    console.error('Error in getTermsWithClassSections controller:', error);
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       status: 'error',

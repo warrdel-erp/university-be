@@ -38,15 +38,15 @@ export async function addExamSetup(examDetail) {
     }
 }
 
-export async function getExamSetup(acedmicYearId) {
+export async function getExamSetup(academicYearId) {
     try {
         const examTypeWhere = {
             ...buildScope(model.examTypeModel),
-            ...(acedmicYearId && { acedmicYearId }),
+            ...(academicYearId && { academicYearId }),
         };
         const employeeWhere = {
             ...buildScope(model.employeeModel),
-            ...(acedmicYearId && { acedmicYearId }),
+            ...(academicYearId && { academicYearId }),
         };
 
         const result = await model.examSetupModel.findAll({

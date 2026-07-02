@@ -1,11 +1,11 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
-function resolveAcedmicYearId(explicit) {
+function resolveAcademicYearId(explicit) {
   if (explicit != null && explicit !== "") {
     return Number(explicit);
   }
-  return buildScope(model.examStructureModel).acedmicYearId;
+  return buildScope(model.examStructureModel).academicYearId;
 }
 
 export async function addExamStructure(examDetail) {
@@ -18,15 +18,15 @@ export async function addExamStructure(examDetail) {
   }
 };
 
-export async function getExamStructure(acedmicYearId) {
+export async function getExamStructure(academicYearId) {
   try {
-    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const yearId = resolveAcademicYearId(academicYearId);
     const result = await scoped(model.examStructureModel).findAll({
       attributes: {
         exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
       },
       where: {
-        ...(yearId && { acedmicYearId: yearId }),
+        ...(yearId && { academicYearId: yearId }),
       },
       include: [
         {
@@ -48,12 +48,12 @@ export async function getExamStructure(acedmicYearId) {
   }
 };
 
-export async function getSingleExamStructure(courseId, sessionId, acedmicYearId) {
+export async function getSingleExamStructure(courseId, sessionId, academicYearId) {
   try {
-    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const yearId = resolveAcademicYearId(academicYearId);
     const result = await scoped(model.examStructureModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-      where: { courseId, sessionId, acedmicYearId: yearId },
+      where: { courseId, sessionId, academicYearId: yearId },
       include: [
         {
           model: model.courseModel,
@@ -170,13 +170,13 @@ export async function getDetailByExamType(examSetupTypeId) {
   }
 };
 
-export async function getSingleExamType(courseId, sessionId, acedmicYearId, termNumber) {
+export async function getSingleExamType(courseId, sessionId, academicYearId, termNumber) {
   try {
-    const yearId = resolveAcedmicYearId(acedmicYearId);
+    const yearId = resolveAcademicYearId(academicYearId);
     const structureWhere = {
       courseId,
       sessionId,
-      acedmicYearId: yearId,
+      academicYearId: yearId,
     };
 
     const termInclude = {
@@ -184,7 +184,7 @@ export async function getSingleExamType(courseId, sessionId, acedmicYearId, term
       as: "examSetupTypeTerms",
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: {
-        acedmicYearId: yearId,
+        academicYearId: yearId,
         courseId,
         ...(termNumber != null && { term: termNumber }),
       },

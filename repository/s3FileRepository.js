@@ -1,5 +1,5 @@
 import * as model from "../models/index.js";
-import { requestContext } from "../utility/requestContext.js";
+import { getTenantStore } from "../utility/requestContext.js";
 import { scoped } from "../utility/scoped.js";
 
 export async function createS3FileEntry(data, transaction) {
@@ -51,7 +51,7 @@ export async function updateS3File(id, data, transaction) {
 
 export async function getAllS3Files(query = {}) {
   try {
-    const store = requestContext.getStore();
+    const store = getTenantStore();
     const businessWhere = store?.instituteId ? { companyId: store.instituteId } : {};
 
     return scoped(model.s3FileModel).findAll({

@@ -11,12 +11,12 @@ export async function addExamType(examDetail) {
     }
 };
 
-export async function getExamType(acedmicYearId) {
+export async function getExamType(academicYearId) {
     try {
         const DormitoryList = await scoped(model.examTypeModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where: {
-                ...(acedmicYearId && { acedmicYearId }),
+                ...(academicYearId && { academicYearId }),
             },
             include: [{
                 model: model.userModel,

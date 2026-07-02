@@ -1,6 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
-import { getTenantStore } from '../utility/requestContext.js';
+import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
@@ -33,10 +33,22 @@ export const getTermOptions = async (req, res) => {
     }
 };
 
+export const getCourseProgramOptions = async (req, res) => {
+    try {
+        const { courseId } = req.query;
+        const result = await optionsServices.getCourseProgramOptions(courseId);
+        return SuccessResponse(res, 200, "Course program details fetched successfully", result);
+    } catch (error) {
+        console.error("Error in getCourseProgramOptions:", error);
+        const status = error.message?.includes('not found') ? 400 : 500;
+        return ErrorResponse(res, status, error.message || 'Internal Server Error');
+    }
+};
+
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term, sessionId } = req.query;
-        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId);
+        const { courseId, term, sessionId, year } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);
@@ -58,11 +70,11 @@ export const getSpecializationOptions = async (req, res) => {
 export async function getSubjectOptions(req, res) {
     try {
         const { courseId, term, sessionId } = req.query;
-        const acedmicYearId = getTenantStore().academicYearId;
+        const academicYearId = getAcademicYearId();
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            acedmicYearId,
+            academicYearId,
             sessionId,
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);

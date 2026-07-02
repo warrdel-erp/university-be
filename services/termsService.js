@@ -1,6 +1,38 @@
 import * as termsRepository from '../repository/termsRepository.js';
 import * as sessionRepository from '../repository/sessionRepository.js';
 import * as courseRepository from '../repository/courseRepository.js';
+import { groupClassSectionsByTerm } from '../utility/classSectionIncludes.js';
+
+function maxTermKey(...maps) {
+    let max = 0;
+    for (const map of maps) {
+        for (const key of Object.keys(map)) {
+            const termNum = Number(key);
+            if (termNum > max) {
+                max = termNum;
+            }
+        }
+    }
+    return max;
+}
+
+function formatSubjectRow(subject) {
+    return {
+        subjectId: subject.subjectId,
+        subjectName: subject.subjectName,
+    };
+}
+
+function formatExamSetupTypeTermRow(plain) {
+    const setup = plain.examSetupType ?? {};
+    return {
+        examSetupTypeTermId: plain.examSetupTypeTermId,
+        examSetupTypeId: plain.examSetupTypeId,
+        examType: setup.examType ?? null,
+        examName: setup.examName ?? null,
+    };
+}
+
 export async function getTermsData(courseId, sessionId) {
     try {
         const mapping = await sessionRepository.getMappingByCourseAndSession(courseId, sessionId);
@@ -24,88 +56,64 @@ export async function getTermsData(courseId, sessionId) {
 
         const [subjects, classSections, examSetupTypeTerms] = await Promise.all([
             termsRepository.getSubjectsByCourseAndSession(courseId, session),
-            termsRepository.getClassSectionsByCourseAndSession(courseId, sessionId, session),
+            termsRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
             termsRepository.getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session),
         ]);
 
-        const plainExamSetupTypeTerms = examSetupTypeTerms.map((e) => e.get({ plain: true }));
+        const classSectionsByTerm = groupClassSectionsByTerm(classSections, coursePlain);
 
-        const termsMap = {};
-        const examSetupMap = {};
-
-        const ensureTerm = (termNum) => {
-            if (!termsMap[termNum]) {
-                termsMap[termNum] = {
-                    termName: `${termType} ${termNum}`,
-                    term: termNum,
-                    classSections: [],
-                    subjects: [],
-                    examSetupTypeTerms: [],
-                };
+        const subjectsByTerm = {};
+        for (const subject of subjects) {
+            if (!subject.term) continue;
+            const termNum = Number(subject.term);
+            if (!subjectsByTerm[termNum]) {
+                subjectsByTerm[termNum] = [];
             }
-        };
+            subjectsByTerm[termNum].push(formatSubjectRow(subject));
+        }
 
-        plainExamSetupTypeTerms.forEach((estt) => {
-            const termNum = Number(estt.term);
-            if (!termNum) return;
+        const examSetupMap = {};
+        for (const estt of examSetupTypeTerms) {
+            const plain = estt.get({ plain: true });
+            const termNum = Number(plain.term);
+            if (!termNum) continue;
             if (!examSetupMap[termNum]) {
                 examSetupMap[termNum] = [];
             }
-            examSetupMap[termNum].push(estt);
-        });
+            examSetupMap[termNum].push(formatExamSetupTypeTermRow(plain));
+        }
 
-        subjects.forEach((subject) => {
-            if (!subject.term) return;
-            const termNum = Number(subject.term);
-            ensureTerm(termNum);
-            delete subject.term;
-            termsMap[termNum].subjects.push(subject);
-        });
-
-        classSections.forEach((cs) => {
-            if (!cs.classGroup?.term) return;
-            const termNum = Number(cs.classGroup.term);
-            ensureTerm(termNum);
-            delete cs.classGroup;
-            termsMap[termNum].classSections.push(cs);
-        });
-
-        const maxTermFound = Math.max(
-            ...Object.keys(termsMap).map(Number),
-            ...Object.keys(examSetupMap).map(Number),
-            0,
-        );
+        const maxTermFound = maxTermKey(subjectsByTerm, classSectionsByTerm, examSetupMap);
         const endTerm = totalTerms > 0 ? totalTerms : maxTermFound;
 
-        const result = [];
+        const terms = [];
         for (let i = 1; i <= endTerm; i++) {
-            const term = termsMap[i];
-            result.push({
-                termName: `${termType} ${i}`,
+            terms.push({
                 term: i,
-                classSections: term?.classSections || [],
-                subjects: term?.subjects || [],
-                examSetupTypeTerms: examSetupMap[i] || [],
+                termName: `${termType} ${i}`,
+                classSections: classSectionsByTerm[i] ?? [],
+                subjects: subjectsByTerm[i] ?? [],
+                examSetupTypeTerms: examSetupMap[i] ?? [],
             });
         }
 
         const sessionPlain = session.get({ plain: true });
 
         return {
-            result,
-            session: {
-                sessionId: sessionPlain.sessionId,
-                universityId: sessionPlain.universityId,
-                instituteId: sessionPlain.instituteId,
-                acedmicYearId: sessionPlain.acedmicYearId,
-            },
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
             course: {
-                universityId: coursePlain.universityId,
-                courseDuration: coursePlain.courseDuration,
-                isActive: coursePlain.isActive,
+                courseId: coursePlain.courseId,
                 termType: coursePlain.termType,
                 totalTerms: coursePlain.totalTerms,
+                courseDuration: coursePlain.courseDuration,
+                isActive: coursePlain.isActive,
             },
+            session: {
+                sessionId: sessionPlain.sessionId,
+                academicYearId: sessionPlain.academicYearId,
+            },
+            terms,
         };
     } catch (error) {
         console.error('Error in getTermsData service:', error);
@@ -113,7 +121,7 @@ export async function getTermsData(courseId, sessionId) {
     }
 }
 
-export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => {
+export const getTermsWithSubjectService = async (instituteId, academicYearId) => {
     try {
         const courses = await courseRepository.getAllCourseByInstituteId(instituteId);
 
@@ -131,14 +139,14 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                 await termsRepository.getSubjectsByCourseAndAcademicYearAndInstitute(
                     courseId,
                     instituteId,
-                    acedmicYearId
+                    academicYearId,
                 );
 
             const termsMap = {};
 
-            subjects.forEach((subject) => {
+            for (const subject of subjects) {
                 const termNumber = Number(subject.term);
-                if (!termNumber) return;
+                if (!termNumber) continue;
 
                 if (!termsMap[termNumber]) {
                     termsMap[termNumber] = {
@@ -148,26 +156,25 @@ export const getTermsWithSubjectService = async (instituteId, acedmicYearId) => 
                     };
                 }
 
-                delete subject.term;
-                termsMap[termNumber].subjects.push(subject);
-            });
+                const subjectRow = { ...subject };
+                delete subjectRow.term;
+                termsMap[termNumber].subjects.push(subjectRow);
+            }
 
-            Object.keys(termsMap)
-                .sort((a, b) => Number(a) - Number(b))
-                .forEach((termKey) => {
-                    const term = termsMap[termKey];
-
-                    finalResult.push({
-                        termName: term.termName,
-                        term: term.term,
-                        acedmicYearId,
-                        course: {
-                            courseId: course.courseId,
-                            courseName: course.courseName,
-                        },
-                        subjects: term.subjects,
-                    });
+            const termKeys = Object.keys(termsMap).sort((a, b) => Number(a) - Number(b));
+            for (const termKey of termKeys) {
+                const term = termsMap[termKey];
+                finalResult.push({
+                    termName: term.termName,
+                    term: term.term,
+                    academicYearId,
+                    course: {
+                        courseId: course.courseId,
+                        courseName: course.courseName,
+                    },
+                    subjects: term.subjects,
                 });
+            }
         }
 
         return finalResult;
@@ -204,21 +211,18 @@ export async function getTermsWithExamTypes(courseId, sessionId) {
             session,
         );
 
-        const plainExamSetupTypeTerms = examSetupTypeTerms.map((e) => e.get({ plain: true }));
-
         const termsMap = {};
-        plainExamSetupTypeTerms.forEach((estt) => {
-            const termNum = Number(estt.term);
+        for (const estt of examSetupTypeTerms) {
+            const plain = estt.get({ plain: true });
+            const termNum = Number(plain.term);
+            if (!termNum) continue;
             if (!termsMap[termNum]) {
                 termsMap[termNum] = [];
             }
-            termsMap[termNum].push(estt);
-        });
+            termsMap[termNum].push(plain);
+        }
 
-        const maxTermFound = Object.keys(termsMap).reduce(
-            (max, curr) => Math.max(max, Number(curr)),
-            0,
-        );
+        const maxTermFound = maxTermKey(termsMap);
         const endTerm = totalTerms > 0 ? totalTerms : maxTermFound;
 
         const result = [];
@@ -226,7 +230,7 @@ export async function getTermsWithExamTypes(courseId, sessionId) {
             result.push({
                 termName: `${termType} ${i}`,
                 term: i,
-                examSetupTypeTerms: termsMap[i] || [],
+                examSetupTypeTerms: termsMap[i] ?? [],
             });
         }
 

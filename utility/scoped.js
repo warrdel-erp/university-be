@@ -12,7 +12,7 @@ import { requestContext } from "./requestContext.js";
  * Scoping is skipped when no requestContext exists (e.g. background jobs).
  */
 
-const ACADEMIC_YEAR_FIELD = "acedmicYearId";
+const ACADEMIC_YEAR_FIELD = "academicYearId";
 
 function isScoped(configValue, field, attrs) {
   return configValue === true && field in attrs;
@@ -47,10 +47,11 @@ function scopeFieldsForModel(model, scopeWhere) {
 /**
  * Builds tenant WHERE filters for a model based on requestContext.
  * Override per model via model.scopeConfig: { university, institute, academicYear, teacherRestricted }
+ * Pass options.scopeConfig to override fields for a single query (e.g. { academicYear: false }).
  */
-export const buildScope = (model) => {
+export const buildScope = (model, options = {}) => {
   const where = {};
-  const config = model.scopeConfig || {};
+  const config = { ...(model.scopeConfig || {}), ...(options.scopeConfig || {}) };
   const store = requestContext.getStore();
   const attrs = model.rawAttributes || {};
 

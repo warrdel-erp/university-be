@@ -16,7 +16,7 @@ const examStructureModel = sequelize.define(
             autoIncrement: true,
             field: 'exam_structure_id'
         },
-        acedmicYearId: {
+        academicYearId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'acedmic_year_id',

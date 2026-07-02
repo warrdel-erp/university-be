@@ -1,27 +1,54 @@
 import { Router } from 'express';
 import { z } from "zod";
 const router = Router();
-import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeClassDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
+import { addEmployee, getAllEmployee, getSingleEmployeeDetails, deleteEmployeeDetail, importEmployeeData, updateEmployee, getBooksIssuedToEmployee, getTeacherTimeTable, getTeacherSubject, getSubjectEvalution, getTeacherCourses, getEmployeeSectionDates, getTeacherSubjectsFromSchedule } from '../controllers/employeeController.js';
 import userAuth from "../middleware/authUser.js"
-import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getClassCounts } from '../controllers/employeeController.js';
+import { getTodayClassSchedule, getPastClassSchedules, getUpcomingClassSchedules, getUniqueClassSectionSubjects, getSectionCounts } from '../controllers/employeeController.js';
 import { validate } from "../utility/validation.js";
 
-const studentAttendanceReportSchema = z.object({
-    classSectionId: z.string().regex(/^\d+$/, "classSectionId must be a number").transform(val => parseInt(val)),
+const positiveIntegerId = z.coerce
+    .number()
+    .int('id must be an integer')
+    .positive('id must be greater than 0');
+
+const sectionDatesQuerySchema = z.object({
+    classSectionTermId: positiveIntegerId,
     subjectId: z.string().regex(/^\d+$/, "subjectId must be a number").transform(val => parseInt(val)),
     employeeId: z.string().regex(/^\d+$/, "employeeId must be a number").transform(val => parseInt(val)),
 });
 
-router.get('/uniqueClassSectionSubjects', userAuth, getUniqueClassSectionSubjects);
+const optionalPositiveId = z.preprocess(
+    (val) => (val === '' || val == null ? undefined : val),
+    z.coerce.number().int().positive().optional(),
+);
 
-router.get('/schedule', userAuth, getTodayClassSchedule);
+const scheduleQuerySchema = z.object({
+    employeeId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(['true', 'false']).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+}).passthrough();
 
-router.get('/classDates', userAuth, validate({ query: studentAttendanceReportSchema }), getEmployeeClassDates);
+const uniqueClassSectionSubjectsQuerySchema = z.object({
+    employeeId: positiveIntegerId,
+});
 
-router.get('/classCounts', userAuth, getClassCounts);
+router.get(
+    '/uniqueClassSectionSubjects',
+    userAuth,
+    validate({ query: uniqueClassSectionSubjectsQuerySchema }),
+    getUniqueClassSectionSubjects,
+);
+
+router.get('/schedule', userAuth, validate({ query: scheduleQuerySchema }), getTodayClassSchedule);
+
+router.get('/sectionDates', userAuth, validate({ query: sectionDatesQuerySchema }), getEmployeeSectionDates);
+
+router.get('/sectionCounts', userAuth, getSectionCounts);
 
 router.get('/pastSchedule', userAuth, getPastClassSchedules);
-
 router.get('/upcomingSchedule', userAuth, getUpcomingClassSchedules);
 
 router.get('/courses', userAuth, getTeacherCourses);

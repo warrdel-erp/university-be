@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+- Never use `as` while importing modules.
+- Never rename constants, object keys, exported members, or function names unless explicitly requested or required to fix a functional issue.
+- Preserve existing naming conventions across the codebase.
+- Minimize unnecessary refactoring. Only modify code directly related to the requested task.

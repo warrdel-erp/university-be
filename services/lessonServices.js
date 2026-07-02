@@ -15,8 +15,8 @@ export async function addLesson(data, createdBy, updatedBy) {
     }
 }
 
-export async function getLessonDetails(acedmicYearId) {
-    return await lesson.getLessonDetails(acedmicYearId);
+export async function getLessonDetails(academicYearId) {
+    return await lesson.getLessonDetails(academicYearId);
 }
 
 export async function getSingleLessonDetails(lessonId) {
@@ -78,9 +78,9 @@ export async function addMapping(data, createdBy, updatedBy) {
   }
 }
 
-export async function getMapping(acedmicYearId) {
+export async function getMapping(academicYearId) {
   try {
-    const originalData = await lesson.getMapping(acedmicYearId);
+    const originalData = await lesson.getMapping(academicYearId);
 
     const grouped = {};
 

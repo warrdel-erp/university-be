@@ -1,5 +1,5 @@
 import * as model from '../models/index.js'
-import { requestContext } from '../utility/requestContext.js';
+import { getTenantStore } from '../utility/requestContext.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import * as sessionRepository from './sessionRepository.js';
 
@@ -9,7 +9,7 @@ const structureInclude = (extra = {}) => ({
     model: model.timeTableStructureModel,
     as: 'timeTableName',
     required: true,
-    attributes: ['name', 'courseId', 'instituteId', 'acedmicYearId'],
+    attributes: ['name', 'courseId', 'instituteId', 'academicYearId'],
     where: buildScope(model.timeTableStructureModel),
     include: [
         {
@@ -23,7 +23,7 @@ const structureInclude = (extra = {}) => ({
 
 async function findPeriodInScope(timeTableCreationId) {
     const scopeWhere = buildScope(model.timeTableStructureModel);
-    if (!scopeWhere.instituteId || !scopeWhere.acedmicYearId) {
+    if (!scopeWhere.instituteId || !scopeWhere.academicYearId) {
         return null;
     }
 
@@ -34,7 +34,7 @@ async function findPeriodInScope(timeTableCreationId) {
 }
 
 export async function getCourseInScope(courseId) {
-    const store = requestContext.getStore();
+    const store = getTenantStore();
     if (!store?.universityId || !store?.instituteId || !courseId) {
         return null;
     }
@@ -55,7 +55,7 @@ async function resolveSessionForStructure(data, scopeWhere, transaction) {
     if (sessionId) {
         const session = await scoped(model.sessionModel).findOne({
             where: { sessionId },
-            attributes: ['sessionId', 'universityId', 'instituteId', 'acedmicYearId'],
+            attributes: ['sessionId', 'universityId', 'instituteId', 'academicYearId'],
             transaction,
         });
         if (!session) {
@@ -67,7 +67,7 @@ async function resolveSessionForStructure(data, scopeWhere, transaction) {
         if (Number(session.instituteId) !== Number(scopeWhere.instituteId)) {
             throw new Error('Session does not belong to this institute');
         }
-        if (Number(session.acedmicYearId) !== Number(scopeWhere.acedmicYearId)) {
+        if (Number(session.academicYearId) !== Number(scopeWhere.academicYearId)) {
             throw new Error('Session does not belong to this academic year');
         }
         return session.sessionId;
@@ -87,7 +87,7 @@ async function resolveSessionForStructure(data, scopeWhere, transaction) {
             where: {
                 instituteId: scopeWhere.instituteId,
                 universityId: scopeWhere.universityId,
-                acedmicYearId: scopeWhere.acedmicYearId,
+                academicYearId: scopeWhere.academicYearId,
             },
             attributes: ['sessionId'],
         }],
@@ -107,7 +107,7 @@ async function resolveSessionForStructure(data, scopeWhere, transaction) {
 
 export async function buildTimeTableStructureCreatePayload(data, transaction) {
     const scopeWhere = buildScope(model.timeTableStructureModel);
-    if (!scopeWhere.universityId || !scopeWhere.instituteId || !scopeWhere.acedmicYearId) {
+    if (!scopeWhere.universityId || !scopeWhere.instituteId || !scopeWhere.academicYearId) {
         throw new Error('universityId, instituteId and academicYearId are required in request context');
     }
 
@@ -145,7 +145,7 @@ export async function buildTimeTableStructureCreatePayload(data, transaction) {
         sessionId,
         universityId: scopeWhere.universityId,
         instituteId: scopeWhere.instituteId,
-        acedmicYearId: scopeWhere.acedmicYearId,
+        academicYearId: scopeWhere.academicYearId,
     };
 }
 
@@ -169,6 +169,18 @@ export async function addTimeTable(data, transaction) {
     }
 }
 
+export async function getTimeTableStructureById(timeTableNameId, options = {}) {
+    try {
+        return await scoped(model.timeTableStructureModel).findByPk(Number(timeTableNameId), {
+            attributes: ['timeTableNameId', 'courseId', 'sessionId'],
+            transaction: options.transaction,
+        });
+    } catch (error) {
+        console.error('Error in getting time table structure by id:', error);
+        throw error;
+    }
+}
+
 export async function getTimeTableStructures({ courseId, sessionId } = {}) {
     try {
         const where = {
@@ -176,14 +188,14 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
             ...(sessionId && { sessionId: Number(sessionId) }),
         };
 
-        return await scoped(model.timeTableStructureModel).findAll({
+        const rows = await scoped(model.timeTableStructureModel).findAll({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             where,
             include: [
                 {
                     model: model.sessionModel,
                     as: "timeTableSession",
-                    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "acedmicYearId", "instituteId"],
+                    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate", "academicYearId", "instituteId"],
                     required: false,
                 },
                 {
@@ -194,11 +206,20 @@ export async function getTimeTableStructures({ courseId, sessionId } = {}) {
                 {
                     model: model.courseModel,
                     as: "timeTableStructureCourse",
-                    attributes: ["courseId", "courseName", "courseCode"],
+                    attributes: ["courseId", "courseName", "courseCode", "termType"],
                     required: false,
                 },
             ],
         });
+
+        const result = [];
+        for (const row of rows) {
+            const plain = row.get({ plain: true });
+            const course = plain.timeTableStructureCourse;
+            plain.termType = course ? course.termType : null;
+            result.push(plain);
+        }
+        return result;
     } catch (error) {
         console.error('Error in getting time table:', error);
         throw error;

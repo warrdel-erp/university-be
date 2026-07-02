@@ -16,10 +16,10 @@ export async function addFeePlan(req, res) {
 }
 
 export async function getAllFeePlan(req, res) {
-  const { acedmicYearId } = req.query;
+  const { academicYearId } = req.query;
   try {
     const feePlans = await feePlan.getFeePlanDetails(
-      acedmicYearId ? { acedmicYearId } : {}
+      academicYearId ? { academicYearId } : {}
     );
     res.status(200).json(feePlans);
   } catch (error) {
